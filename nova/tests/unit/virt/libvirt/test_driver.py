@@ -18115,7 +18115,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             drvr.image_backend.rollback_to_snap.assert_called_once_with(
                     libvirt_utils.RESIZE_SNAPSHOT_NAME)
             drvr.image_backend.remove_snap.assert_called_once_with(
-                    libvirt_utils.RESIZE_SNAPSHOT_NAME, ignore_errors=True)
+                    libvirt_utils.RESIZE_SNAPSHOT_NAME)
 
     def test_finish_revert_migration_snap_backend_snapshot_not_found(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -18124,18 +18124,17 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         ins_ref = self._create_instance()
 
         with test.nested(
-                mock.patch.object(rbd_utils, 'RBDDriver'),
                 mock.patch.object(utils, 'get_image_from_system_metadata'),
                 mock.patch.object(drvr, '_create_domain_and_network'),
                 mock.patch.object(drvr, '_get_guest_xml')) as (
-                mock_rbd, mock_image, mock_cdn, mock_ggx):
+                mock_image, mock_cdn, mock_ggx):
             mock_image.return_value = {'disk_format': 'raw'}
-            mock_rbd.rollback_to_snap.side_effect = exception.SnapshotNotFound(
-                    snapshot_id='testing')
-            drvr.finish_revert_migration('', ins_ref, None, power_on=False)
-
-            drvr.image_backend.remove_snap.assert_called_once_with(
-                    libvirt_utils.RESIZE_SNAPSHOT_NAME, ignore_errors=True)
+            drvr.image_backend.rollback_to_snap.side_effect = (
+                exception.SnapshotNotFound(snapshot_id='testing'))
+            self.assertRaises(exception.SnapshotNotFound,
+                              drvr.finish_revert_migration,
+                              '', ins_ref, None, power_on=False)
+            drvr.image_backend.remove_snap.assert_not_called()
 
     def test_finish_revert_migration_snap_backend_image_does_not_exist(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -18282,7 +18281,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 self.context, ins_ref, _fake_network_info(self, 1))
             mock_get_path.assert_called_once_with(ins_ref)
             mock_remove.assert_called_once_with(
-                    libvirt_utils.RESIZE_SNAPSHOT_NAME, ignore_errors=True)
+                    libvirt_utils.RESIZE_SNAPSHOT_NAME)
             self.assertEqual(5, mock_rmtree.call_count)
 
     def test_cleanup_resize_snap_backend_image_does_not_exist(self):
