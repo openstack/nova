@@ -28,6 +28,7 @@ def add_inventory(rp, rc, total, **kwargs):
                            resource_class=rc, total=total, **kwargs)
     inv.obj_set_defaults()
     rp.add_inventory(inv)
+    return inv
 
 
 def set_traits(rp, *traits):
@@ -40,17 +41,21 @@ def set_traits(rp, *traits):
             trait.create()
         tlist.append(trait)
     rp.set_traits(rp_obj.TraitList(objects=tlist))
+    return tlist
 
 
-def allocate_from_provider(rp, rc, used):
-    # NOTE(efried): Always use a random consumer UUID - we don't want to
-    # override any existing allocations from the test case.
-    rp_obj.AllocationList(
+def allocate_from_provider(rp, rc, used, consumer_id=None):
+    # NOTE(efried): If not specified, use a random consumer UUID - we don't
+    # want to override any existing allocations from the test case.
+    consumer_id = consumer_id or uuidutils.generate_uuid()
+    alloc_list = rp_obj.AllocationList(
         rp._context, objects=[
             rp_obj.Allocation(
                 rp._context, resource_provider=rp, resource_class=rc,
-                consumer_id=uuidutils.generate_uuid(), used=used)]
-    ).create_all()
+                consumer_id=consumer_id, used=used)]
+    )
+    alloc_list.create_all()
+    return alloc_list
 
 
 class PlacementDbBaseTestCase(test.NoDBTestCase):
@@ -77,10 +82,13 @@ class PlacementDbBaseTestCase(test.NoDBTestCase):
 
     def _create_provider(self, name, *aggs, **kwargs):
         parent = kwargs.get('parent')
-        rp = rp_obj.ResourceProvider(self.ctx, name=name,
-                                     uuid=getattr(uuids, name))
+        root = kwargs.get('root')
+        uuid = kwargs.get('uuid', getattr(uuids, name))
+        rp = rp_obj.ResourceProvider(self.ctx, name=name, uuid=uuid)
         if parent:
             rp.parent_provider_uuid = parent
+        if root:
+            rp.root_provider_uuid = root
         rp.create()
         if aggs:
             rp.set_aggregates(aggs)
@@ -88,12 +96,7 @@ class PlacementDbBaseTestCase(test.NoDBTestCase):
         return rp
 
     def _make_allocation(self, inv_dict, alloc_dict):
-        rp_uuid = uuids.allocation_resource_provider
-        rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=rp_uuid,
-            name=rp_uuid)
-        rp.create()
+        rp = self._create_provider('allocation_resource_provider')
         disk_inv = rp_obj.Inventory(context=self.ctx,
                 resource_provider=rp, **inv_dict)
         inv_list = rp_obj.InventoryList(objects=[disk_inv])
