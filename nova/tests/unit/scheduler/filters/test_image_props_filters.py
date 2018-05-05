@@ -43,6 +43,21 @@ class TestImagePropsFilter(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
+    def test_image_properties_filter_uses_default_conf_value(self):
+        self.flags(image_properties_default_architecture='x86_64',
+                   group='filter_scheduler')
+        img_props = objects.ImageMeta(properties=objects.ImageMetaProps())
+        hypervisor_version = versionutils.convert_version_to_int('6.0.0')
+        spec_obj = objects.RequestSpec(image=img_props)
+        capabilities = {
+            'supported_instances': [(
+                obj_fields.Architecture.AARCH64,
+                obj_fields.HVType.KVM,
+                obj_fields.VMMode.HVM)],
+            'hypervisor_version': hypervisor_version}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
     def test_image_properties_filter_fails_different_inst_props(self):
         img_props = objects.ImageMeta(
             properties=objects.ImageMetaProps(
