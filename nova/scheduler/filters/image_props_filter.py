@@ -19,11 +19,14 @@ from distutils import versionpredicate
 from oslo_log import log as logging
 from oslo_utils import versionutils
 
+import nova.conf
 from nova.objects import fields
 from nova.scheduler import filters
 
 
 LOG = logging.getLogger(__name__)
+
+CONF = nova.conf.CONF
 
 
 class ImagePropertiesFilter(filters.BaseHostFilter):
@@ -41,9 +44,14 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
     # a request
     run_filter_once_per_request = True
 
+    def _get_default_architecture(self):
+        return CONF.filter_scheduler.image_properties_default_architecture
+
     def _instance_supported(self, host_state, image_props,
                             hypervisor_version):
-        img_arch = image_props.get('hw_architecture')
+        default_img_arch = self._get_default_architecture()
+
+        img_arch = image_props.get('hw_architecture', default_img_arch)
         img_h_type = image_props.get('img_hv_type')
         img_vm_mode = image_props.get('hw_vm_mode')
         checked_img_props = (

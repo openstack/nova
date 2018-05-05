@@ -22,6 +22,7 @@ import six
 from nova import exception
 from nova.i18n import _
 from nova.network import model as network_model
+from nova.virt import arch
 
 
 # Import field errors from oslo.versionedobjects
@@ -103,56 +104,48 @@ class Architecture(BaseNovaEnum):
     ever adding new ones then ensure it matches libvirt's expectation.
     """
 
-    ALPHA = 'alpha'
-    ARMV6 = 'armv6'
-    ARMV7 = 'armv7l'
-    ARMV7B = 'armv7b'
+    ALPHA = arch.ALPHA
+    ARMV6 = arch.ARMV6
+    ARMV7 = arch.ARMV7
+    ARMV7B = arch.ARMV7B
 
-    AARCH64 = 'aarch64'
-    CRIS = 'cris'
-    I686 = 'i686'
-    IA64 = 'ia64'
-    LM32 = 'lm32'
+    AARCH64 = arch.AARCH64
+    CRIS = arch.CRIS
+    I686 = arch.I686
+    IA64 = arch.IA64
+    LM32 = arch.LM32
 
-    M68K = 'm68k'
-    MICROBLAZE = 'microblaze'
-    MICROBLAZEEL = 'microblazeel'
-    MIPS = 'mips'
-    MIPSEL = 'mipsel'
+    M68K = arch.M68K
+    MICROBLAZE = arch.MICROBLAZE
+    MICROBLAZEEL = arch.MICROBLAZEEL
+    MIPS = arch.MIPS
+    MIPSEL = arch.MIPSEL
 
-    MIPS64 = 'mips64'
-    MIPS64EL = 'mips64el'
-    OPENRISC = 'openrisc'
-    PARISC = 'parisc'
-    PARISC64 = 'parisc64'
+    MIPS64 = arch.MIPS64
+    MIPS64EL = arch.MIPS64EL
+    OPENRISC = arch.OPENRISC
+    PARISC = arch.PARISC
+    PARISC64 = arch.PARISC64
 
-    PPC = 'ppc'
-    PPCLE = 'ppcle'
-    PPC64 = 'ppc64'
-    PPC64LE = 'ppc64le'
-    PPCEMB = 'ppcemb'
+    PPC = arch.PPC
+    PPCLE = arch.PPCLE
+    PPC64 = arch.PPC64
+    PPC64LE = arch.PPC64LE
+    PPCEMB = arch.PPCEMB
 
-    S390 = 's390'
-    S390X = 's390x'
-    SH4 = 'sh4'
-    SH4EB = 'sh4eb'
-    SPARC = 'sparc'
+    S390 = arch.S390
+    S390X = arch.S390X
+    SH4 = arch.SH4
+    SH4EB = arch.SH4EB
+    SPARC = arch.SPARC
 
-    SPARC64 = 'sparc64'
-    UNICORE32 = 'unicore32'
-    X86_64 = 'x86_64'
-    XTENSA = 'xtensa'
-    XTENSAEB = 'xtensaeb'
+    SPARC64 = arch.SPARC64
+    UNICORE32 = arch.UNICORE32
+    X86_64 = arch.X86_64
+    XTENSA = arch.XTENSA
+    XTENSAEB = arch.XTENSAEB
 
-    ALL = (
-        ALPHA, ARMV6, ARMV7, ARMV7B,
-        AARCH64, CRIS, I686, IA64, LM32,
-        M68K, MICROBLAZE, MICROBLAZEEL, MIPS, MIPSEL,
-        MIPS64, MIPS64EL, OPENRISC, PARISC, PARISC64,
-        PPC, PPCLE, PPC64, PPC64LE, PPCEMB,
-        S390, S390X, SH4, SH4EB, SPARC,
-        SPARC64, UNICORE32, X86_64, XTENSA, XTENSAEB,
-    )
+    ALL = arch.ALL
 
     @classmethod
     def from_host(cls):

@@ -15,6 +15,8 @@
 
 from oslo_config import cfg
 
+from nova.virt import arch
+
 
 scheduler_group = cfg.OptGroup(name="scheduler",
                                title="Scheduler configuration")
@@ -572,6 +574,21 @@ In such case enabling this option will reduce contention and chances for
 rescheduling events.
 At the same time it will make the instance packing (even in unweighed case)
 less dense.
+"""),
+    cfg.StrOpt(
+        "image_properties_default_architecture",
+        choices=arch.ALL,
+        help="""
+The default architecture to be used when using the image properties filter.
+
+When using the ImagePropertiesFilter, it is possible that you want to define
+a default architecture to make the user experience easier and avoid having
+something like x86_64 images landing on aarch64 compute nodes because the
+user did not specify the 'hw_architecture' property in Glance.
+
+Possible values:
+
+* CPU Architectures such as x86_64, aarch64, s390x.
 """),
     # TODO(mikal): replace this option with something involving host aggregates
     cfg.ListOpt("isolated_images",
