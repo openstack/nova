@@ -53,7 +53,7 @@ several key concepts:
    A collection of files used to create or rebuild a server. Operators
    provide a number of pre-built OS images by default. You may also
    create custom images from cloud servers you have launched. These
-   custom images are useful for backup purposes or for producing “gold”
+   custom images are useful for backup purposes or for producing "gold"
    server images if you plan to deploy a particular server configuration
    frequently.
 
