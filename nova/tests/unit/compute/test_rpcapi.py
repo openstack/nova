@@ -122,6 +122,14 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         base_version = rpcapi.router.target.version
         expected_version = kwargs.pop('version', base_version)
 
+        prepare_extra_kwargs = {}
+        cm_timeout = kwargs.pop('call_monitor_timeout', None)
+        timeout = kwargs.pop('timeout', None)
+        if cm_timeout:
+            prepare_extra_kwargs['call_monitor_timeout'] = cm_timeout
+        if timeout:
+            prepare_extra_kwargs['timeout'] = timeout
+
         expected_kwargs = kwargs.copy()
         if expected_args:
             expected_kwargs.update(expected_args)
@@ -170,7 +178,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             self.assertEqual(retval, rpc_mock.return_value)
 
             prepare_mock.assert_called_once_with(version=expected_version,
-                                                 server=host)
+                                                 server=host,
+                                                 **prepare_extra_kwargs)
             rpc_mock.assert_called_once_with(ctxt, method, **expected_kwargs)
 
     def test_add_aggregate_host(self):
@@ -354,10 +363,12 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 instance=self.fake_instance_obj, version='5.0')
 
     def test_pre_live_migration(self):
+        self.flags(long_rpc_timeout=1234)
         self._test_compute_api('pre_live_migration', 'call',
                 instance=self.fake_instance_obj,
                 block_migration='block_migration', disk='disk', host='host',
-                migrate_data=None, version='5.0')
+                migrate_data=None, version='5.0',
+                call_monitor_timeout=60, timeout=1234)
 
     def test_prep_resize(self):
         expected_args = {'migration': 'migration'}

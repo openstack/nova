@@ -51,6 +51,10 @@ LEGACY_NOTIFIER = None
 NOTIFICATION_TRANSPORT = None
 NOTIFIER = None
 
+# NOTE(danms): If rpc_response_timeout is over this value (per-call or
+# globally), we will enable heartbeating
+HEARTBEAT_THRESHOLD = 60
+
 ALLOWED_EXMODS = [
     nova.exception.__name__,
 ]
@@ -172,7 +176,8 @@ def get_transport_url(url_str=None):
     return messaging.TransportURL.parse(CONF, url_str)
 
 
-def get_client(target, version_cap=None, serializer=None):
+def get_client(target, version_cap=None, serializer=None,
+               call_monitor_timeout=None):
     assert TRANSPORT is not None
 
     if profiler:
@@ -183,7 +188,8 @@ def get_client(target, version_cap=None, serializer=None):
     return messaging.RPCClient(TRANSPORT,
                                target,
                                version_cap=version_cap,
-                               serializer=serializer)
+                               serializer=serializer,
+                               call_monitor_timeout=call_monitor_timeout)
 
 
 def get_server(target, endpoints, serializer=None):
@@ -413,8 +419,10 @@ class ClientRouter(periodic_task.PeriodicTasks):
     def client(self, context):
         transport = context.mq_connection
         if transport:
+            cmt = self.default_client.call_monitor_timeout
             return messaging.RPCClient(transport, self.target,
                                        version_cap=self.version_cap,
-                                       serializer=self.serializer)
+                                       serializer=self.serializer,
+                                       call_monitor_timeout=cmt)
         else:
             return self.default_client
