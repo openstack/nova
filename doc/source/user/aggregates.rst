@@ -26,8 +26,8 @@ a way to use Xen hypervisor resource pools, but has been generalized to provide
 a mechanism to allow administrators to assign key-value pairs to groups of
 machines.  Each node can have multiple aggregates, each aggregate can have
 multiple key-value pairs, and the same key-value pair can be assigned to
-multiple aggregate.  This information can be used in the scheduler to enable
-advanced scheduling, to set up xen hypervisor resources pools or to define
+multiple aggregates.  This information can be used in the scheduler to enable
+advanced scheduling, to set up Xen hypervisor resources pools or to define
 logical groups for migration.  For more information, including an example of
 associating a group of hosts to a flavor, see :ref:`host-aggregates`.
 
@@ -88,13 +88,13 @@ The OSAPI Admin API is extended to support the following operations:
 
   * list all hosts by service
 
-    * It has been depricated since microversion 2.43. Use `list hypervisors` instead.
+    * It has been deprecated since microversion 2.43. Use `list hypervisors` instead.
   * start host maintenance (or evacuate-host): disallow a host to serve API requests and migrate instances to other hosts of the aggregate
 
-    * It has been depricated since microversion 2.43. Use `disable service` instead.
+    * It has been deprecated since microversion 2.43. Use `disable service` instead.
   * stop host maintenance: (or rebalance-host): put the host back into operational mode, migrating instances back onto that host
 
-    * It has been depricated since microversion 2.43. Use `enable service` instead.
+    * It has been deprecated since microversion 2.43. Use `enable service` instead.
 
 * Hypervisors
 

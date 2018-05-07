@@ -986,14 +986,14 @@ nova aggregate-update [--name <name>] [--availability-zone <availability-zone>] 
   Update the name and/or availability zone for the aggregate.
 
 nova host-list
-  List all hosts by service. It has been depricated since microversion 2.43.
+  List all hosts by service. It has been deprecated since microversion 2.43.
   Use :command:`nova hypervisor-list` instead.
 
 nova hypervisor-list [--matching <hostname>] [--marker <marker>] [--limit <limit>]
   List hypervisors.
 
 nova host-update [--status <enable|disable>] [--maintenance <enable|disable>] <hostname>
-  Put/resume host into/from maintenance. It has been depricated since
+  Put/resume host into/from maintenance. It has been deprecated since
   microversion 2.43. To enable or disable a service,
   use :command:`nova service-enable` or :command:`nova service-disable` instead.
 
