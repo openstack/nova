@@ -35,13 +35,9 @@ class LockServerTestsV21(admin_only_action_common.CommonTests):
         super(LockServerTestsV21, self).setUp()
         self.controller = getattr(self.lock_server, self.controller_name)()
         self.compute_api = self.controller.compute_api
-
-        def _fake_controller(*args, **kwargs):
-            return self.controller
-
-        self.stubs.Set(self.lock_server, self.controller_name,
-                       _fake_controller)
-        self.mox.StubOutWithMock(self.compute_api, 'get')
+        self.stub_out('nova.api.openstack.compute.lock_server.'
+                      'LockServerController',
+                      lambda *a, **kw: self.controller)
 
     def test_lock_unlock(self):
         self._test_actions(['_lock', '_unlock'])
@@ -50,18 +46,19 @@ class LockServerTestsV21(admin_only_action_common.CommonTests):
         self._test_actions_with_non_existed_instance(['_lock', '_unlock'])
 
     def test_unlock_not_authorized(self):
-        self.mox.StubOutWithMock(self.compute_api, 'unlock')
-
         instance = self._stub_instance_get()
 
-        self.compute_api.unlock(self.context, instance).AndRaise(
-                exception.PolicyNotAuthorized(action='unlock'))
-
-        self.mox.ReplayAll()
         body = {}
-        self.assertRaises(self.authorization_error,
-                          self.controller._unlock,
-                          self.req, instance.uuid, body)
+        with mock.patch.object(
+                self.compute_api, 'unlock',
+                side_effect=exception.PolicyNotAuthorized(
+                    action='unlock')) as mock_unlock:
+            self.assertRaises(self.authorization_error,
+                              self.controller._unlock,
+                              self.req, instance.uuid, body)
+            mock_unlock.assert_called_once_with(self.context, instance)
+        self.mock_get.assert_called_once_with(self.context, instance.uuid,
+                                              expected_attrs=None)
 
     @mock.patch.object(common, 'get_instance')
     def test_unlock_override_not_authorized_with_non_admin_user(

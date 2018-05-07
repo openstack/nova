@@ -27,14 +27,9 @@ class AdminActionsTestV21(admin_only_action_common.CommonTests):
         super(AdminActionsTestV21, self).setUp()
         self.controller = self.admin_actions.AdminActionsController()
         self.compute_api = self.controller.compute_api
-
-        def _fake_controller(*args, **kwargs):
-            return self.controller
-
-        self.stubs.Set(self.admin_actions, 'AdminActionsController',
-                       _fake_controller)
-
-        self.mox.StubOutWithMock(self.compute_api, 'get')
+        self.stub_out('nova.api.openstack.compute.admin_actions.'
+                      'AdminActionsController',
+                      lambda *a, **k: self.controller)
 
     def test_actions(self):
         actions = ['_reset_network', '_inject_network_info']

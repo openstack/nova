@@ -32,13 +32,9 @@ class SuspendServerTestsV21(admin_only_action_common.CommonTests):
         super(SuspendServerTestsV21, self).setUp()
         self.controller = getattr(self.suspend_server, self.controller_name)()
         self.compute_api = self.controller.compute_api
-
-        def _fake_controller(*args, **kwargs):
-            return self.controller
-
-        self.stubs.Set(self.suspend_server, self.controller_name,
-                       _fake_controller)
-        self.mox.StubOutWithMock(self.compute_api, 'get')
+        self.stub_out('nova.api.openstack.compute.suspend_server.'
+                      'SuspendServerController',
+                      lambda *a, **kw: self.controller)
 
     def test_suspend_resume(self):
         self._test_actions(['_suspend', '_resume'])
