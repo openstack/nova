@@ -36,7 +36,6 @@ redirectmatch 301 ^/nova/([^/]+)/man/nova-api-os-compute.html$ /nova/$1/cli/nova
 redirectmatch 301 ^/nova/([^/]+)/man/nova-api.html$ /nova/$1/cli/nova-api.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-cells.html$ /nova/$1/cli/nova-cells.html
 # this is gone and never coming back, indicate that to the end users
-redirectmatch 410 ^/nova/([^/]+)/man/nova-cert.html$
 redirectmatch 301 ^/nova/([^/]+)/man/nova-compute.html$ /nova/$1/cli/nova-compute.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-conductor.html$ /nova/$1/cli/nova-conductor.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-console.html$ /nova/$1/cli/nova-console.html

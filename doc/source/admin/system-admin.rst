@@ -40,9 +40,6 @@ responsibilities of services and drivers are:
   routes and authenticates requests. Supports the OpenStack Compute APIs. A
   ``nova.conf`` configuration file is created when Compute is installed.
 
-``nova-cert``
-  Manages certificates.
-
 ``nova-compute``
   Manages virtual machines. Loads a Service object, and exposes the public
   methods on ComputeManager through a Remote Procedure Call (RPC).
