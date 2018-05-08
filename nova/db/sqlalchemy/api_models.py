@@ -138,6 +138,7 @@ class InstanceMapping(API_BASE):
     cell_id = Column(Integer, ForeignKey('cell_mappings.id'),
             nullable=True)
     project_id = Column(String(255), nullable=False)
+    queued_for_delete = Column(Boolean, default=False)
     cell_mapping = orm.relationship('CellMapping',
             backref=backref('instance_mapping', uselist=False),
             foreign_keys=cell_id,

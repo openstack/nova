@@ -716,6 +716,10 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def _check_060(self, engine, data):
         self.assertColumnExists(engine, 'instance_group_policy', 'rules')
 
+    def _check_061(self, engine, data):
+        self.assertColumnExists(engine, 'instance_mappings',
+            'queued_for_delete')
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
