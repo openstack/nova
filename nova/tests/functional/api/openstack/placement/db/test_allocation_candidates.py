@@ -1050,7 +1050,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         ss = self._create_provider('ss', uuids.agg1)
         tb.set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
-        tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 1600)
+        tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 2000)
 
         alloc_cands = self._get_allocation_candidates()
 
@@ -1074,7 +1074,39 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
             'ss': set([
-                (fields.ResourceClass.DISK_GB, 1600, 0),
+                (fields.ResourceClass.DISK_GB, 2000, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
+        # Next let's increase the requested DISK_GB
+        requested_resources = {
+            fields.ResourceClass.VCPU: 1,
+            fields.ResourceClass.MEMORY_MB: 64,
+            fields.ResourceClass.DISK_GB: 1800,
+        }
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=requested_resources,
+            )}
+        )
+
+        expected = [
+            [('cn', fields.ResourceClass.VCPU, 1),
+             ('cn', fields.ResourceClass.MEMORY_MB, 64),
+             ('ss', fields.ResourceClass.DISK_GB, 1800)],
+        ]
+
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn': set([
+                (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
+            ]),
+            'ss': set([
+                (fields.ResourceClass.DISK_GB, 2000, 0),
             ]),
         }
         self._validate_provider_summary_resources(expected, alloc_cands)
@@ -1403,44 +1435,6 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             ]),
             'ss3': set([
                 (fields.ResourceClass.IPV4_ADDRESS, 24, 0),
-            ]),
-        }
-        self._validate_provider_summary_resources(expected, alloc_cands)
-
-    def test_rc_split_between_sharing_and_non_sharing(self):
-        # cn1(VCPU,MEM,DISK)   Non-sharing RP with all resources
-        #        | agg1        aggregated with
-        #     ss1(DISK)        a sharing RP that also has some of the resources
-        #                      (common-RC split case)
-        cn1 = self._create_provider('cn1', uuids.agg1)
-        tb.add_inventory(cn1, fields.ResourceClass.VCPU, 24)
-        tb.add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
-        tb.add_inventory(cn1, fields.ResourceClass.DISK_GB, 2000)
-        ss1 = self._create_provider('ss1', uuids.agg1)
-        tb.add_inventory(ss1, fields.ResourceClass.DISK_GB, 2000)
-        tb.set_traits(ss1, 'MISC_SHARES_VIA_AGGREGATE')
-
-        alloc_cands = self._get_allocation_candidates()
-        expected = [
-            # Aggregate 1 should have two permutations: one where the disk
-            # comes from the sharing provider.
-            [('cn1', fields.ResourceClass.VCPU, 1),
-             ('cn1', fields.ResourceClass.MEMORY_MB, 64),
-             ('cn1', fields.ResourceClass.DISK_GB, 1500)],
-            [('cn1', fields.ResourceClass.VCPU, 1),
-             ('cn1', fields.ResourceClass.MEMORY_MB, 64),
-             ('ss1', fields.ResourceClass.DISK_GB, 1500)],
-        ]
-        self._validate_allocation_requests(expected, alloc_cands)
-
-        expected = {
-            'cn1': set([
-                (fields.ResourceClass.VCPU, 24, 0),
-                (fields.ResourceClass.MEMORY_MB, 2048, 0),
-                (fields.ResourceClass.DISK_GB, 2000, 0),
-            ]),
-            'ss1': set([
-                (fields.ResourceClass.DISK_GB, 2000, 0),
             ]),
         }
         self._validate_provider_summary_resources(expected, alloc_cands)
