@@ -38,7 +38,11 @@ NOTE: 1) 'driver' might already be configured to the default scheduler
       2) Add turbonomic_driver to <Python 2.7>/site-packages/nova-16.1.0-py2.7.egg-info/entry_points.txt:
       turbonomic_scheduler = nova.scheduler.turbonomic_scheduler:TurbonomicScheduler
 
-      3) driver should be enabled across all regions.
+      3) 'scheduler_driver' should be enabled across all regions. 'openstack_target_address' must be equal to the address specified
+      by the customer while discovering the target. 'openstack_scheduler_region' must be equal to the region where this scheduler will de deployed
+      For example - a target consists of RegionOne (X.X.X.10) and RegionTwo (X.X.X.11) and the user adds the target as X.X.X.10 in Turbonomic:
+      - 'openstack_target_address' must be set to X.X.X.10 in the schedulers of both RegionOne and RegionTwo
+      - 'openstack_scheduler_region' must be RegionOne for the scheduler in RegionOne and RegionTwo for the scheduler in RegionTwo
 
       4) In order to force NOVA deploy a new VM on a specific host, run the following command:
         nova boot --flavor <FLAVOR_ID> --image <IMG_UUID> --nic net-id=<NIC_ID> --availability-zone <AVAILABILITY_ZONE>:<HOST_NAME> <VM_NAME>
