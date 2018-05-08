@@ -389,11 +389,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         bdms = virt_driver.block_device_info_get_mapping(block_device_info)
 
         for bdm in bdms:
-            # TODO(TheJulia): In Queens, we should refactor the check below
-            # to something more elegent, as is_volume is not proxied through
-            # to the DriverVolumeBlockDevice object. Until then, we are
-            # checking the underlying object's status.
-            if not bdm._bdm_obj.is_volume:
+            if not bdm.is_volume:
                 continue
 
             connection_info = jsonutils.loads(bdm._bdm_obj.connection_info)

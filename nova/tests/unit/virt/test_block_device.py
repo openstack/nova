@@ -1239,11 +1239,15 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             _proxy_as_attr_inherited = set('E')
 
         bdm = objects.BlockDeviceMapping(self.context, no_device=False)
-        self.assertEqual(set(['uuid']), A(bdm)._proxy_as_attr)
-        self.assertEqual(set(['uuid', 'B']), B(bdm)._proxy_as_attr)
-        self.assertEqual(set(['uuid', 'C']), C(bdm)._proxy_as_attr)
-        self.assertEqual(set(['uuid', 'B', 'D']), D(bdm)._proxy_as_attr)
-        self.assertEqual(set(['uuid', 'B', 'C', 'E']), E(bdm)._proxy_as_attr)
+        self.assertEqual(set(['uuid', 'is_volume']), A(bdm)._proxy_as_attr)
+        self.assertEqual(set(['uuid', 'is_volume', 'B']),
+                         B(bdm)._proxy_as_attr)
+        self.assertEqual(set(['uuid', 'is_volume', 'C']),
+                         C(bdm)._proxy_as_attr)
+        self.assertEqual(set(['uuid', 'is_volume', 'B', 'D']),
+                         D(bdm)._proxy_as_attr)
+        self.assertEqual(set(['uuid', 'is_volume', 'B', 'C', 'E']),
+                         E(bdm)._proxy_as_attr)
 
 
 class TestDriverBlockDeviceNewFlow(TestDriverBlockDevice):
