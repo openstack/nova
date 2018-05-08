@@ -40,8 +40,8 @@ See `Comparison with Cells V1`_ for more detail.
 Status
 ~~~~~~
 
-.. warning:: Cells v1 is deprecated in favor of Cells v2 as of the
-             16.0.0 Pike release.
+.. deprecated:: 16.0.0
+    Cells v1 is deprecated in favor of Cells v2 as of the 16.0.0 Pike release.
 
 Cells v1 is considered experimental and receives much less testing than the
 rest of Nova. For example, there is no job for testing cells v1 with Neutron.
@@ -576,8 +576,11 @@ FAQs
    There are a couple of ways to do this.
 
    1. Run ``nova-manage --config-file <cell config> host list``. This will
-      only lists hosts in the provided cell nova.conf. Note, however, that
-      this command is deprecated as of the 16.0.0 Pike release.
+      only lists hosts in the provided cell nova.conf.
+
+      .. deprecated:: 16.0.0
+         The ``nova-manage host list`` command is deprecated as of the
+         16.0.0 Pike release.
 
    2. Run ``nova-manage cell_v2 discover_hosts --verbose``. This does not
       produce a report but if you are trying to determine if a host is in a

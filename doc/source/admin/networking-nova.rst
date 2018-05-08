@@ -2,7 +2,7 @@
 Networking with nova-network
 ============================
 
-.. important::
+.. deprecated:: 14.0.0
 
    ``nova-network`` was deprecated in the OpenStack Newton release.  In Ocata
    and future releases, you can start ``nova-network`` only with a cells v1

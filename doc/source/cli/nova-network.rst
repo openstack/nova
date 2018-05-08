@@ -24,7 +24,7 @@ Description
 `nova-network` is a server daemon that serves the Nova Network service, which
 is responsible for allocating IPs and setting up the network
 
-.. warning::
+.. deprecated:: 14.0.0
 
    `nova-network` is deprecated and will be removed in an upcoming release. Use
    `neutron` or another networking solution instead.
