@@ -7562,6 +7562,27 @@ class LibvirtDriver(driver.ComputeDriver):
                 if os.path.exists(instance_dir):
                     shutil.rmtree(instance_dir)
 
+    def _pre_live_migration_plug_vifs(self, instance, network_info):
+        # We call plug_vifs before the compute manager calls
+        # ensure_filtering_rules_for_instance, to ensure bridge is set up
+        # Retry operation is necessary because continuously request comes,
+        # concurrent request occurs to iptables, then it complains.
+        LOG.debug('Plugging VIFs before live migration.', instance=instance)
+        max_retry = CONF.live_migration_retry_count
+        for cnt in range(max_retry):
+            try:
+                self.plug_vifs(instance, network_info)
+                break
+            except processutils.ProcessExecutionError:
+                if cnt == max_retry - 1:
+                    raise
+                else:
+                    LOG.warning('plug_vifs() failed %(cnt)d. Retry up to '
+                                '%(max_retry)d.',
+                                {'cnt': cnt, 'max_retry': max_retry},
+                                instance=instance)
+                    greenthread.sleep(1)
+
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data):
         """Preparation live migration."""
@@ -7659,25 +7680,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._connect_volume(context, connection_info, instance,
                                  allow_native_luks=allow_native_luks)
 
-        # We call plug_vifs before the compute manager calls
-        # ensure_filtering_rules_for_instance, to ensure bridge is set up
-        # Retry operation is necessary because continuously request comes,
-        # concurrent request occurs to iptables, then it complains.
-        LOG.debug('Plugging VIFs before live migration.', instance=instance)
-        max_retry = CONF.live_migration_retry_count
-        for cnt in range(max_retry):
-            try:
-                self.plug_vifs(instance, network_info)
-                break
-            except processutils.ProcessExecutionError:
-                if cnt == max_retry - 1:
-                    raise
-                else:
-                    LOG.warning('plug_vifs() failed %(cnt)d. Retry up to '
-                                '%(max_retry)d.',
-                                {'cnt': cnt, 'max_retry': max_retry},
-                                instance=instance)
-                    greenthread.sleep(1)
+        self._pre_live_migration_plug_vifs(instance, network_info)
 
         # Store server_listen and latest disk device info
         if not migrate_data:
