@@ -2143,6 +2143,20 @@ class API(base.Base):
             cb(context, instance, bdms, local=True)
             instance.destroy()
 
+    @staticmethod
+    def _update_queued_for_deletion(context, instance, qfd):
+        # NOTE(tssurya): We query the instance_mapping record of this instance
+        # and update the queued_for_delete flag to True (or False according to
+        # the state of the instance). This just means that the instance is
+        # queued for deletion (or is no longer queued for deletion). It does
+        # not guarantee its successful deletion (or restoration). Hence the
+        # value could be stale which is fine, considering its use is only
+        # during down cell (desperate) situation.
+        im = objects.InstanceMapping.get_by_instance_uuid(context,
+                                                          instance.uuid)
+        im.queued_for_delete = qfd
+        im.save()
+
     def _do_delete(self, context, instance, bdms, local=False):
         if local:
             instance.vm_state = vm_states.DELETED
@@ -2152,6 +2166,7 @@ class API(base.Base):
         else:
             self.compute_rpcapi.terminate_instance(context, instance, bdms,
                                                    delete_type='delete')
+        self._update_queued_for_deletion(context, instance, True)
 
     def _do_force_delete(self, context, instance, bdms, local=False):
         if local:
@@ -2162,6 +2177,7 @@ class API(base.Base):
         else:
             self.compute_rpcapi.terminate_instance(context, instance, bdms,
                                                    delete_type='force_delete')
+        self._update_queued_for_deletion(context, instance, True)
 
     def _do_soft_delete(self, context, instance, bdms, local=False):
         if local:
@@ -2171,6 +2187,7 @@ class API(base.Base):
             instance.save()
         else:
             self.compute_rpcapi.soft_delete_instance(context, instance)
+        self._update_queued_for_deletion(context, instance, True)
 
     # NOTE(maoy): we allow delete to be called no matter what vm_state says.
     @check_instance_lock
@@ -2225,6 +2242,7 @@ class API(base.Base):
             instance.task_state = None
             instance.deleted_at = None
             instance.save(expected_task_state=[None])
+        self._update_queued_for_deletion(context, instance, False)
 
     @check_instance_lock
     @check_instance_state(task_state=None,

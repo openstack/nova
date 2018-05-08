@@ -288,10 +288,12 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
                            'instance_delete_everywhere')
         @mock.patch.object(compute_api.API, '_lookup_instance',
                            return_value=(None, inst))
-        def _test(_mock_lookup_inst, _mock_delete_everywhere):
+        @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+        def _test(mock_get_im, _mock_lookup_inst, _mock_delete_everywhere):
             self.assertRaises(exception.ObjectActionError,
                     self.compute_api.delete, self.context, inst)
             inst.destroy.assert_called_once_with()
+            mock_get_im.assert_called_once_with(self.context, inst.uuid)
 
         _test()
 
@@ -313,12 +315,14 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
                 'instance_delete_everywhere', side_effect=add_cell_name)
         @mock.patch.object(compute_api.API, '_lookup_instance',
                            return_value=(None, inst))
-        def _test(_mock_lookup_inst, mock_delete_everywhere,
+        @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+        def _test(mock_get_im, _mock_lookup_inst, mock_delete_everywhere,
                   mock_compute_delete):
             self.compute_api.delete(self.context, inst)
             inst.destroy.assert_called_once_with()
 
             mock_compute_delete.assert_called_once_with(self.context, inst)
+            mock_get_im.assert_called_once_with(self.context, inst.uuid)
 
         _test()
 

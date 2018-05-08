@@ -9813,7 +9813,8 @@ class ComputeAPITestCase(BaseTestCase):
         i_ref = self._create_fake_instance_obj()
         self.assertEqual(i_ref['name'], i_ref['uuid'])
 
-    def test_add_remove_fixed_ip(self):
+    @mock.patch('nova.compute.api.API._update_queued_for_deletion')
+    def test_add_remove_fixed_ip(self, mock_update_queued_for_delete):
         instance = self._create_fake_instance_obj(params={'host': CONF.host})
         self.compute_api.add_fixed_ip(self.context, instance, '1')
         self.compute_api.remove_fixed_ip(self.context,
