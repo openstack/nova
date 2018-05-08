@@ -1,0 +1,17 @@
+---
+deprecations:
+  - |
+    Support to monitor performance events for Intel CMT (Cache
+    Monitoring Technology, or "CQM" in Linux kernel parlance) -- namely
+    ``cmt``, ``mbm_local`` and ``mbm_total`` -- via the config attribute
+    ``[libvirt]/enabled_perf_events`` is now *deprecated* from Nova, and
+    will be *removed* in the "Stein" release.  Otherwise, if you have
+    enabled those events, and upgraded to Linux kernel 4.14 (or suitable
+    downstream version), it will result in instances failing to boot.
+
+    That is because the Linux kernel has deleted the `perf` framework
+    integration with Intel CMT, as the feature was broken by design --
+    an incompatibility between Linux's `perf` infrastructure and Intel
+    CMT.  It was removed in upstream Linux version v4.14; but bear in
+    mind that downstream Linux distributions with lower kernel versions
+    than 4.14 have backported the said change.

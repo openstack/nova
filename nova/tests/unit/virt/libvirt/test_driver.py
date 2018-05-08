@@ -6567,34 +6567,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(events, cfg.perf_events)
 
-    @mock.patch.object(fakelibvirt, 'VIR_PERF_PARAM_CMT', True,
-                       create=True)
-    @mock.patch.object(fakelibvirt, 'VIR_PERF_PARAM_MBMT', True,
-                       create=True)
-    @mock.patch.object(fakelibvirt, 'VIR_PERF_PARAM_MBML', True,
-                       create=True)
-    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
-    def test_get_guest_with_perf_supported(self,
-                                 mock_min_version):
-        self.flags(enabled_perf_events=['cmt', 'mbml', 'mbmt'],
-                   group='libvirt')
-        caps = vconfig.LibvirtConfigCaps()
-        caps.host = vconfig.LibvirtConfigCapsHost()
-        caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = fakelibvirt.NUMATopology()
-
-        features = []
-        for f in ('cmt', 'mbm_local', 'mbm_total'):
-            feature = vconfig.LibvirtConfigGuestCPUFeature()
-            feature.name = f
-            feature.policy = fields.CPUFeaturePolicy.REQUIRE
-            features.append(feature)
-
-        caps.host.cpu.features = set(features)
-
-        self._test_get_guest_with_perf(caps, ['cmt', 'mbml', 'mbmt'])
-
     @mock.patch.object(host.Host, 'has_min_version')
     def test_get_guest_with_perf_libvirt_unsupported(self, mock_min_version):
 
@@ -6626,6 +6598,46 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         caps.host.topology = fakelibvirt.NUMATopology()
 
         self._test_get_guest_with_perf(caps, [])
+
+    @mock.patch.object(fakelibvirt, 'VIR_PERF_PARAM_CMT', True,
+                       create=True)
+    @mock.patch.object(fakelibvirt, 'VIR_PERF_PARAM_MBMT', True,
+                       create=True)
+    @mock.patch.object(fakelibvirt, 'VIR_PERF_PARAM_MBML', True,
+                       create=True)
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    def test_intel_cmt_perf_deprecation_warning(self,
+                                             mock_min_version,
+                                             mock_warn):
+        perf_events = ['cmt', 'mbml', 'mbmt']
+        self.flags(enabled_perf_events=['cmt', 'mbml', 'mbmt'],
+                   group='libvirt')
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = fields.Architecture.X86_64
+        caps.host.topology = fakelibvirt.NUMATopology()
+
+        features = []
+        for f in ('cmt', 'mbm_local', 'mbm_total'):
+            feature = vconfig.LibvirtConfigGuestCPUFeature()
+            feature.name = f
+            feature.policy = fields.CPUFeaturePolicy.REQUIRE
+            features.append(feature)
+
+        caps.host.cpu.features = set(features)
+        self._test_get_guest_with_perf(caps, ['cmt', 'mbml', 'mbmt'])
+        warning_count = 0
+        call_args_list = mock_warn.call_args_list
+        for call in call_args_list:
+            # Call can be unpackaged as a tuple of args and kwargs
+            # so we want to check the first arg in the args list
+            if (len(call) == 2 and len(call[0]) == 2 and
+                call[0][1] in perf_events and
+                'Monitoring Intel CMT' in call[0][0]):
+                    warning_count += 1
+        self.assertEqual(3, warning_count)
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)

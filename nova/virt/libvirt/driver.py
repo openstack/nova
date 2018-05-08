@@ -4740,11 +4740,17 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.warning("Libvirt doesn't support event type %s.", event)
             return False
 
-        if (event in PERF_EVENTS_CPU_FLAG_MAPPING
-            and PERF_EVENTS_CPU_FLAG_MAPPING[event] not in cpu_features):
-            LOG.warning("Host does not support event type %s.", event)
-            return False
-
+        if event in PERF_EVENTS_CPU_FLAG_MAPPING:
+            LOG.warning('Monitoring Intel CMT `perf` event(s) %s is '
+                        'deprecated and will be removed in the "Stein" '
+                        'release.  It was broken by design in the '
+                        'Linux kernel, so support for Intel CMT was '
+                        'removed from Linux 4.14 onwards. Therefore '
+                        'it is recommended to not enable them.',
+                        event)
+            if PERF_EVENTS_CPU_FLAG_MAPPING[event] not in cpu_features:
+                LOG.warning("Host does not support event type %s.", event)
+                return False
         return True
 
     def _configure_guest_by_virt_type(self, guest, virt_type, caps, instance,
