@@ -2840,10 +2840,9 @@ class ProviderSummary(base.VersionedObject):
 
 
 @db_api.api_context_manager.reader
-def _get_usages_by_provider_and_rc(ctx, rp_ids, rc_ids):
+def _get_usages_by_provider(ctx, rp_ids):
     """Returns a row iterator of usage records grouped by resource provider ID
-    and resource class ID for all resource providers and resource classes
-    involved in our request
+    and resource class ID for all resource providers
     """
     # We build up a SQL expression that looks like this:
     # SELECT
@@ -2862,14 +2861,12 @@ def _get_usages_by_provider_and_rc(ctx, rp_ids, rc_ids):
     #   SELECT resource_provider_id, resource_class_id, SUM(used) as used
     #   FROM allocations
     #   WHERE resource_provider_id IN ($rp_ids)
-    #   AND resource_class_id IN ($rc_ids)
     #   GROUP BY resource_provider_id, resource_class_id
     # )
     # AS usages
     #   ON inv.resource_provider_id = usage.resource_provider_id
     #   AND inv.resource_class_id = usage.resource_class_id
     # WHERE rp.id IN ($rp_ids)
-    # AND inv.resource_class_id IN ($rc_ids)
     rpt = sa.alias(_RP_TBL, name="rp")
     inv = sa.alias(_INV_TBL, name="inv")
     # Build our derived table (subquery in the FROM clause) that sums used
@@ -2881,8 +2878,7 @@ def _get_usages_by_provider_and_rc(ctx, rp_ids, rc_ids):
             sql.func.sum(_ALLOC_TBL.c.used).label('used'),
         ]).where(
             sa.and_(
-                _ALLOC_TBL.c.resource_provider_id.in_(rp_ids),
-                _ALLOC_TBL.c.resource_class_id.in_(rc_ids),
+                _ALLOC_TBL.c.resource_provider_id.in_(rp_ids)
             ),
         ).group_by(
             _ALLOC_TBL.c.resource_provider_id,
@@ -2910,9 +2906,7 @@ def _get_usages_by_provider_and_rc(ctx, rp_ids, rc_ids):
         inv.c.allocation_ratio,
         inv.c.max_unit,
         usage.c.used,
-    ]).select_from(usage_join).where(
-        sa.and_(rpt.c.id.in_(rp_ids),
-                inv.c.resource_class_id.in_(rc_ids)))
+    ]).select_from(usage_join).where(rpt.c.id.in_(rp_ids))
     return ctx.session.execute(query).fetchall()
 
 
@@ -3234,10 +3228,10 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     :param forbidden_traits: A map, keyed by trait string name, of trait
                              internal IDs that a resource provider must
                              not have.
-    :param member_of: An optional list of list of aggregate UUIDs. If provided,
-                      the allocation_candidates returned will only be for
-                      resource providers that are members of one or more of the
-                      supplied aggregates in each aggregate UUID list.
+    :param member_of: An optional list of lists of aggregate UUIDs. If
+                      provided, the allocation_candidates returned will only be
+                      for resource providers that are members of one or more of
+                      the supplied aggregates in each aggregate UUID list.
     """
     # We first grab the provider trees that have nodes that meet the request
     # for each resource class.  Once we have this information, we'll then do a
@@ -3255,6 +3249,7 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
             # If there's no providers that have one of the resource classes,
             # then we can short-circuit
             return []
+        rc_provs_with_inv = set((p[0], p[1], rc_id) for p in rc_provs_with_inv)
         rc_trees = set(p[1] for p in rc_provs_with_inv)
         provs_with_inv |= rc_provs_with_inv
         if trees_with_inv:
@@ -3272,7 +3267,21 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     if not provs_with_inv:
         return []
 
-    # TODO(jaypipes): Handle filtering on member_of parameter
+    # If 'member_of' has values, do a separate lookup to identify the
+    # resource providers that meet the member_of constraints.
+    # TODO(tetsuro): This approach is not efficient. We could potentially
+    # change _provider_ids_matching_aggregates() to accept an optional root_ids
+    # parameter that would further winnow results to a set of resource provider
+    # IDs (which we have here as we've already looked up the providers that
+    # have appropriate inventory capacity)
+    if member_of:
+        rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of)
+        if not rps_in_aggs:
+            # Short-circuit. The user either asked for a non-existing
+            # aggregate or there were no resource providers that matched
+            # the requirements...
+            return []
+        provs_with_inv = set(p for p in provs_with_inv if p[1] in rps_in_aggs)
 
     if not required_traits and not forbidden_traits:
         # If there were no traits required, there's no difference in how we
@@ -3294,7 +3303,7 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     # JOIN (
     #   SELECT rp.root_provider_id
     #   FROM resource_providers AS rp
-    #   JOIN resource_provider_traits AS rptt
+    #   LEFT JOIN resource_provider_traits AS rptt
     #   ON rp.id = rptt.resource_provider_id
     #   WHERE rp.id IN ($RP_IDS_WITH_INV)
     #   AND rptt.trait_id IN ($REQUIRED_TRAIT_IDS)
@@ -3307,14 +3316,11 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     # Build our inner subquery
     rpt = sa.alias(_RP_TBL, name="rp")
     rptt = sa.alias(_RP_TRAIT_TBL, name="rptt")
-    rpt_to_rptt = sa.join(
+    rpt_to_rptt = sa.outerjoin(
         rpt, rptt, rpt.c.id == rptt.c.resource_provider_id)
     subq = sa.select([rpt.c.root_provider_id])
     subq = subq.select_from(rpt_to_rptt)
-    subq = subq.where(
-        sa.and_(
-            rpt.c.id.in_(rp_ids_with_inv),
-            rptt.c.trait_id.in_(required_traits.values())))
+    cond = [rpt.c.id.in_(rp_ids_with_inv)]
 
     # Tack on an additional WHERE clause for the derived table if we've got
     # forbidden traits in the mix.
@@ -3326,15 +3332,19 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     if forbidden_traits:
         forbidden_rp_ids = _get_provider_ids_having_any_trait(
             ctx, forbidden_traits)
-        subq = subq.where(~rpt.c.id.in_(forbidden_rp_ids))
+        cond.append(~rpt.c.id.in_(forbidden_rp_ids))
 
+    if required_traits:
+        # Only get the resource providers that have ALL the required traits,
+        # so we need to GROUP BY the root provider and ensure that the
+        # COUNT(trait_id) is equal to the number of traits we are requiring
+        cond.append(rptt.c.trait_id.in_(required_traits.values()))
+        num_traits = len(required_traits)
+        having_cond = sa.func.count(sa.distinct(rptt.c.trait_id)) == num_traits
+        subq = subq.having(having_cond)
+
+    subq = subq.where(sa.and_(*cond))
     subq = subq.group_by(rpt.c.root_provider_id)
-    # Only get the resource providers that have ALL the required traits, so we
-    # need to GROUP BY the resource provider and ensure that the
-    # COUNT(trait_id) is equal to the number of traits we are requiring
-    num_traits = len(required_traits)
-    having_cond = sa.func.count(sa.distinct(rptt.c.trait_id)) == num_traits
-    subq = subq.having(having_cond)
     trees_with_traits = sa.alias(subq, name="trees_with_traits")
 
     outer_rps = sa.alias(_RP_TBL, name="outer_rps")
@@ -3346,7 +3356,12 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
 
     res = ctx.session.execute(sel).fetchall()
 
-    return [(rp_id, root_id) for rp_id, root_id in res]
+    rp_tuples_with_trait = [(rp_id, root_id) for rp_id, root_id in res]
+
+    ret = [rp_tuple for rp_tuple in provs_with_inv if (
+        rp_tuple[0], rp_tuple[1]) in rp_tuples_with_trait]
+
+    return ret
 
 
 def _build_provider_summaries(context, usages, prov_traits):
@@ -3508,10 +3523,9 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rps):
     """
     if not rps:
         return [], []
-    # Grab usage summaries for each provider and resource class requested
-    requested_rc_ids = list(requested_resources)
+    # Grab usage summaries for each provider
     rp_ids = set(p[0] for p in rps)
-    usages = _get_usages_by_provider_and_rc(ctx, rp_ids, requested_rc_ids)
+    usages = _get_usages_by_provider(ctx, rp_ids)
 
     # Get a dict, keyed by resource provider internal ID, of trait string names
     # that provider has associated with it
@@ -3542,6 +3556,83 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rps):
                 req_obj = copy.deepcopy(req_obj)
                 req_obj.anchor_root_provider_uuid = anchor
                 alloc_requests.append(req_obj)
+    return alloc_requests, list(summaries.values())
+
+
+def _alloc_candidates_nested_no_shared(ctx, requested_resources, rp_tuples):
+    """Returns a tuple of (allocation requests, provider summaries) for a
+    supplied set of requested resource amounts and tuples of
+    (rp_id, root_id, rc_id). The supplied resource provider trees have
+    capacity to satisfy ALL of the resources in the requested resources as
+    well as ALL required traits that were requested by the user.
+
+    This is a code path to get results for a RequestGroup with
+    use_same_provider=False. In this scenario, we determine requests across
+    multiple providers being aware of nested resource provider trees.
+
+    Currently this function should be used only for cases where no sharing
+    providers exist in the system for any requested resource. If sharing
+    providers exist, we use _alloc_candidates_with_shared() instead,
+    but it is not aware of nested trees yet.
+
+    :param ctx: nova.context.RequestContext object
+    :param requested_resources: dict, keyed by resource class ID, of amounts
+                                being requested for that resource class
+    :param rp_tuples: List of tuples of (provider ID, root provider ID,
+                      resource class ID)s for providers that matched the
+                      requested resources
+    """
+    if not rp_tuples:
+        return [], []
+
+    # Grab usage summaries for each provider including root providers
+    # that don't provide the requested resources
+    rp_ids = set(p[0] for p in rp_tuples) | set(p[1] for p in rp_tuples)
+    usages = _get_usages_by_provider(ctx, rp_ids)
+
+    # Get a dict, keyed by resource provider internal ID, of trait string names
+    # that provider has associated with it
+    prov_traits = _provider_traits(ctx, rp_ids)
+
+    # Get a dict, keyed by resource provider internal ID, of ProviderSummary
+    # objects for all providers
+    summaries = _build_provider_summaries(ctx, usages, prov_traits)
+
+    # Get a dict, keyed by root provider internal ID, of a dict, keyed by
+    # resource class internal ID, of lists of AllocationRequestResource objects
+    tree_dict = collections.defaultdict(lambda: collections.defaultdict(list))
+
+    for rp_id, root_id, rc_id in rp_tuples:
+        rp_summary = summaries[rp_id]
+        rp_uuid = rp_summary.resource_provider.uuid
+        tree_dict[root_id][rc_id].append(
+            AllocationRequestResource(
+                ctx, resource_provider=ResourceProvider.get_by_uuid(ctx,
+                                                                    rp_uuid),
+                resource_class=_RC_CACHE.string_from_id(rc_id),
+                amount=requested_resources[rc_id]))
+
+    # Next, build up a list of allocation requests. These allocation requests
+    # are AllocationRequest objects, containing resource provider UUIDs,
+    # resource class names and amounts to consume from that resource provider
+    alloc_requests = []
+
+    # Let's look into each tree
+    for root_id, alloc_dict in tree_dict.items():
+        # Get request_groups, which is a list of lists of
+        # AllocationRequestResource per requested resource class.
+        request_groups = alloc_dict.values()
+
+        root_summary = summaries[root_id]
+        root_uuid = root_summary.resource_provider.uuid
+
+        # Using itertools.product, we get all the combinations of resource
+        # providers in a tree.
+        for res_requests in itertools.product(*request_groups):
+            alloc_requests.append(
+                AllocationRequest(ctx, resource_requests=list(res_requests),
+                                  anchor_root_provider_uuid=root_uuid)
+            )
     return alloc_requests, list(summaries.values())
 
 
@@ -3588,10 +3679,8 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
     if not all_rp_ids:
         return [], []
 
-    # Grab usage summaries for each provider (local or sharing) and resource
-    # class requested
-    requested_rc_ids = list(requested_resources)
-    usages = _get_usages_by_provider_and_rc(ctx, all_rp_ids, requested_rc_ids)
+    # Grab usage summaries for each provider (local or sharing)
+    usages = _get_usages_by_provider(ctx, all_rp_ids)
 
     # Get a dict, keyed by resource provider internal ID, of trait string names
     # that provider has associated with it
@@ -4217,6 +4306,11 @@ class AllocationCandidates(base.VersionedObject):
                 return _alloc_candidates_with_shared(
                     context, resources, required_trait_map,
                     forbidden_trait_map, rp_ids, sharing_providers)
+            else:
+                rp_tuples = _get_trees_matching_all(context, resources,
+                    required_trait_map, forbidden_trait_map, member_of)
+                return _alloc_candidates_nested_no_shared(context, resources,
+                                                          rp_tuples)
 
         # Either we are processing a single-RP request group, or there are no
         # sharing providers that (help) satisfy the request.  Get a list of

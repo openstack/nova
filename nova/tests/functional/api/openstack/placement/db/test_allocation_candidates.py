@@ -1806,49 +1806,42 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             )}
         )
 
-        # TODO(jaypipes): This should be the following once nested providers
-        # are handled by allocation candidates:
-        # expected = [
-        #    [('cn', fields.ResourceClass.VCPU, 2),
-        #     ('cn', fields.ResourceClass.MEMORY_MB, 1024),
-        #     ('pf0', fields.ResourceClass.SRIOV_NET_VF, 1)],
-        #    [('cn', fields.ResourceClass.VCPU, 2),
-        #     ('cn', fields.ResourceClass.MEMORY_MB, 1024),
-        #     ('pf1', fields.ResourceClass.SRIOV_NET_VF, 1)],
-        # ]
-        # self._validate_allocation_requests(expected, alloc_cands)
-        self._validate_allocation_requests([], alloc_cands)
+        expected = [
+            [('cn', fields.ResourceClass.VCPU, 2),
+             ('cn', fields.ResourceClass.MEMORY_MB, 256),
+             ('cn_numa0_pf0', fields.ResourceClass.SRIOV_NET_VF, 1)],
+            [('cn', fields.ResourceClass.VCPU, 2),
+             ('cn', fields.ResourceClass.MEMORY_MB, 256),
+             ('cn_numa1_pf1', fields.ResourceClass.SRIOV_NET_VF, 1)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
 
-        # TODO(jaypipes): This should be the following once nested providers
-        # are handled by allocation candidates:
-        # expected = {
-        #     'cn': set([
-        #         (fields.ResourceClass.VCPU, 16, 0),
-        #         (fields.ResourceClass.MEMORY_MB, 32768, 0),
-        #      ]),
-        #      'cn_numa0': set([]),
-        #      'cn_numa1': set([]),
-        #      'pf0': set([
-        #         (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
-        #      ]),
-        #      'pf1': set([
-        #         (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
-        #      ]),
-        # }
-        # self._validate_provider_summary_resources(expected, alloc_cands)
-        self._validate_provider_summary_resources({}, alloc_cands)
+        expected = {
+            'cn': set([
+                (fields.ResourceClass.VCPU, 16, 0),
+                (fields.ResourceClass.MEMORY_MB, 32768, 0),
+            ]),
+            # TODO(tetsuro): Return all resource providers in the tree
+            #  'cn_numa0': set([]),
+            #  'cn_numa1': set([]),
+            'cn_numa0_pf0': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+            ]),
+            'cn_numa1_pf1': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
-        # TODO(jaypipes): This should be the following once nested providers
-        # handle traits processing
-        # expected = {
-        #     'cn': set([]),
-        #      'cn_numa0': set([]),
-        #      'cn_numa1': set([]),
-        #      'pf0': set([]),
-        #      'pf1': set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
-        # }
-        # self._validate_provider_summary_traits(expected, alloc_cands)
-        self._validate_provider_summary_traits({}, alloc_cands)
+        expected = {
+            'cn': set([]),
+            # TODO(tetsuro): Return all resource providers in the tree
+            #  'cn_numa0': set([]),
+            #  'cn_numa1': set([]),
+            'cn_numa0_pf0': set([]),
+            'cn_numa1_pf1': set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
+        }
+        self._validate_provider_summary_traits(expected, alloc_cands)
 
         # Now add required traits to the mix and verify we still get the same
         # result (since we haven't yet consumed the second physical function's
@@ -1865,46 +1858,95 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             )}
         )
 
-        # TODO(jaypipes): This should be the following once nested providers
-        # are handled by allocation candidates:
+        # Bug #1771707: If a tree has one combination of resource
+        # providers that satisfies required traits, the combinations
+        # without required traits in that tree are also returned.
+        # We should't get the following first combination since
+        # 'cn_numa0_pf0' has no traits
         # expected = [
-        #    [('cn', fields.ResourceClass.VCPU, 2),
-        #     ('cn', fields.ResourceClass.MEMORY_MB, 1024),
-        #     ('pf1', fields.ResourceClass.SRIOV_NET_VF, 1)],
+        #     [('cn', fields.ResourceClass.VCPU, 2),
+        #      ('cn', fields.ResourceClass.MEMORY_MB, 256),
+        #      ('cn_numa1_pf1', fields.ResourceClass.SRIOV_NET_VF, 1)],
         # ]
-        # self._validate_allocation_requests(expected, alloc_cands)
-        self._validate_allocation_requests([], alloc_cands)
+        expected = [
+            [('cn', fields.ResourceClass.VCPU, 2),
+             ('cn', fields.ResourceClass.MEMORY_MB, 256),
+             ('cn_numa0_pf0', fields.ResourceClass.SRIOV_NET_VF, 1)],
+            [('cn', fields.ResourceClass.VCPU, 2),
+             ('cn', fields.ResourceClass.MEMORY_MB, 256),
+             ('cn_numa1_pf1', fields.ResourceClass.SRIOV_NET_VF, 1)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
 
-        # TODO(jaypipes): This should be the following once nested providers
-        # are handled by allocation candidates:
-        # expected = {
-        #     'cn': set([
-        #         (fields.ResourceClass.VCPU, 16, 0),
-        #         (fields.ResourceClass.MEMORY_MB, 32768, 0),
-        #      ]),
-        #      'cn_numa0': set([]),
-        #      'cn_numa1': set([]),
-        #      'pf0': set([
-        #         (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
-        #      ]),
-        #      'pf1': set([
-        #         (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
-        #      ]),
-        # }
-        # self._validate_provider_summary_resources(expected, alloc_cands)
-        self._validate_provider_summary_resources({}, alloc_cands)
+        expected = {
+            'cn': set([
+                (fields.ResourceClass.VCPU, 16, 0),
+                (fields.ResourceClass.MEMORY_MB, 32768, 0),
+            ]),
+            # TODO(tetsuro): Return all resource providers in the tree
+            #  'cn_numa0': set([]),
+            #  'cn_numa1': set([]),
+            'cn_numa0_pf0': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+            ]),
+            'cn_numa1_pf1': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
-        # TODO(jaypipes): This should be the following once nested providers
-        # handle traits processing
-        # expected = {
-        #     'cn': set([]),
-        #      'cn_numa0': set([]),
-        #      'cn_numa1': set([]),
-        #      'pf0': set([]),
-        #      'pf1': set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
-        # }
-        # self._validate_provider_summary_traits(expected, alloc_cands)
-        self._validate_provider_summary_traits({}, alloc_cands)
+        expected = {
+            'cn': set([]),
+            # TODO(tetsuro): Return all resource providers in the tree
+            #  'cn_numa0': set([]),
+            #  'cn_numa1': set([]),
+            'cn_numa0_pf0': set([]),
+            'cn_numa1_pf1': set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
+        }
+        self._validate_provider_summary_traits(expected, alloc_cands)
+
+        # Next we test that we get resources only on non-root providers
+        # without root providers involved
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    fields.ResourceClass.SRIOV_NET_VF: 1,
+                },
+            )}
+        )
+
+        expected = [
+            [('cn_numa0_pf0', fields.ResourceClass.SRIOV_NET_VF, 1)],
+            [('cn_numa1_pf1', fields.ResourceClass.SRIOV_NET_VF, 1)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            # TODO(tetsuro): Return all resource providers in the tree
+            # 'cn': set([
+            #     (fields.ResourceClass.VCPU, 16, 0),
+            #     (fields.ResourceClass.MEMORY_MB, 32768, 0),
+            # ]),
+            # 'cn_numa0': set([]),
+            # 'cn_numa1': set([]),
+            'cn_numa0_pf0': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+            ]),
+            'cn_numa1_pf1': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
+        expected = {
+            # 'cn': set([]),
+            # 'cn_numa0': set([]),
+            # 'cn_numa1': set([]),
+            'cn_numa0_pf0': set([]),
+            'cn_numa1_pf1': set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
+        }
+        self._validate_provider_summary_traits(expected, alloc_cands)
 
         # Now consume all the inventory of SRIOV_NET_VF on the second physical
         # function (the one with HW_NIC_OFFLOAD_GENEVE associated with it) and
@@ -2085,13 +2127,10 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # let's validate providers in tree as well
         provider_ids = set(p[0] for p in trees)
-        # NOTE(tetsuro): Ideally, we want to have only pf1 from cn3,
+        # Bug #1771707: Ideally, we want to have only pf1 from cn3 here,
         # provider_names = cn_names + ['cn3_numa1_pf1']
-        # At least we should have only compute node and pf providers,
-        # provider_names = cn_names + ['cn3_numa0_pf0', 'cn3_numa1_pf1']
-        # but actually we have all the rps in the tree of 'cn3'
-        provider_names = cn_names + ['cn3_numa0', 'cn3_numa0_pf0',
-                                     'cn3_numa1', 'cn3_numa1_pf1']
+        # But actually we also get providers without traits
+        provider_names = cn_names + ['cn3_numa0_pf0', 'cn3_numa1_pf1']
         expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
         self.assertEqual(expect_provider_ids, provider_ids)
 
@@ -2128,13 +2167,10 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # let's validate providers in tree as well
         provider_ids = set(p[0] for p in trees)
-        # NOTE(tetsuro): Ideally, we want to have only pf1 from cn3,
+        # Bug #1771707: Ideally, we want to have only pf1 from cn3 here,
         # provider_names = cn_names + ['cn3_numa1_pf1']
-        # At least we should have only compute node and pf providers,
-        # provider_names = cn_names + ['cn3_numa0_pf0', 'cn3_numa1_pf1']
-        # but actually we have all the rps in the tree of 'cn3'
-        provider_names = cn_names + ['cn3_numa0', 'cn3_numa0_pf0',
-                                     'cn3_numa1', 'cn3_numa1_pf1']
+        # But actually we also get providers without traits
+        provider_names = cn_names + ['cn3_numa0_pf0', 'cn3_numa1_pf1']
         expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
         self.assertEqual(expect_provider_ids, provider_ids)
 
