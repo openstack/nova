@@ -27,6 +27,7 @@ def get_db_mapping(**updates):
             'project_id': 'fake-project',
             'created_at': None,
             'updated_at': None,
+            'queued_for_delete': False,
             }
     db_mapping["cell_mapping"] = test_cell_mapping.get_db_mapping(id=42)
     db_mapping['cell_id'] = db_mapping["cell_mapping"]["id"]
@@ -137,6 +138,18 @@ class _TestInstanceMappingObject(object):
         mapping_obj = objects.InstanceMapping(self.context)
         # Just ensure this doesn't raise an exception
         mapping_obj.cell_mapping = None
+
+    def test_obj_make_compatible(self):
+        uuid = uuidutils.generate_uuid()
+        im_obj = instance_mapping.InstanceMapping(context=self.context)
+        fake_im_obj = instance_mapping.InstanceMapping(context=self.context,
+                                                       instance_uuid=uuid,
+                                                       queued_for_delete=False)
+        obj_primitive = fake_im_obj.obj_to_primitive('1.0')
+        obj = im_obj.obj_from_primitive(obj_primitive)
+        self.assertIn('instance_uuid', obj)
+        self.assertEqual(uuid, obj.instance_uuid)
+        self.assertNotIn('queued_for_delete', obj)
 
 
 class TestInstanceMappingObject(test_objects._LocalTest,
