@@ -12,10 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from oslo_log import log
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
+from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
@@ -70,6 +73,25 @@ class VIFMigrateData(obj_base.NovaObject):
     @profile.setter
     def profile(self, profile_dict):
         self.profile_json = jsonutils.dumps(profile_dict)
+
+    def get_dest_vif(self):
+        """Get a destination VIF representation of this object.
+
+        This method takes the source_vif and updates it to include the
+        destination host port binding information using the other fields
+        on this object.
+
+        :return: nova.network.model.VIF object
+        """
+        if 'source_vif' not in self:
+            raise exception.ObjectActionError(
+                action='get_dest_vif', reason='source_vif is not set')
+        vif = copy.deepcopy(self.source_vif)
+        vif['type'] = self.vif_type
+        vif['vnic_type'] = self.vnic_type
+        vif['profile'] = self.profile
+        vif['details'] = self.vif_details
+        return vif
 
 
 @obj_base.NovaObjectRegistry.register_if(False)

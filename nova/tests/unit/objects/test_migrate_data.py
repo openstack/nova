@@ -15,9 +15,11 @@
 from oslo_serialization import jsonutils
 from oslo_versionedobjects import base as ovo_base
 
+from nova import exception
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import migrate_data
+from nova import test
 from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel as uuids
 
@@ -550,3 +552,31 @@ class TestPowerVMLiveMigrateData(test_objects._LocalTest,
 class TestRemotePowerVMLiveMigrateData(test_objects._RemoteTest,
                                       _TestPowerVMLiveMigrateData):
     pass
+
+
+class TestVIFMigrateData(test.NoDBTestCase):
+
+    def test_get_dest_vif_source_vif_not_set(self):
+        migrate_vif = objects.VIFMigrateData(
+            port_id=uuids.port_id, vnic_type=network_model.VNIC_TYPE_NORMAL,
+            vif_type=network_model.VIF_TYPE_OVS, vif_details={},
+            profile={}, host='fake-dest-host')
+        self.assertRaises(
+            exception.ObjectActionError, migrate_vif.get_dest_vif)
+
+    def test_get_dest_vif(self):
+        source_vif = network_model.VIF(
+            id=uuids.port_id, type=network_model.VIF_TYPE_OVS, details={},
+            vnic_type=network_model.VNIC_TYPE_DIRECT, profile={'foo': 'bar'},
+            ovs_interfaceid=uuids.ovs_interfaceid)
+        migrate_vif = objects.VIFMigrateData(
+            port_id=uuids.port_id, vnic_type=network_model.VNIC_TYPE_NORMAL,
+            vif_type=network_model.VIF_TYPE_BRIDGE, vif_details={'bar': 'baz'},
+            profile={}, host='fake-dest-host', source_vif=source_vif)
+        dest_vif = migrate_vif.get_dest_vif()
+        self.assertEqual(migrate_vif.port_id, dest_vif['id'])
+        self.assertEqual(migrate_vif.vnic_type, dest_vif['vnic_type'])
+        self.assertEqual(migrate_vif.vif_type, dest_vif['type'])
+        self.assertEqual(migrate_vif.vif_details, dest_vif['details'])
+        self.assertEqual(migrate_vif.profile, dest_vif['profile'])
+        self.assertEqual(uuids.ovs_interfaceid, dest_vif['ovs_interfaceid'])
