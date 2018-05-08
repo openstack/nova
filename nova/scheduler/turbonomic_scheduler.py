@@ -32,24 +32,22 @@ turbonomic_protocol = <Turbonomic_Protocol> - optional, defaults to https
 turbonomic_timeout = <Turbonomic_Timeout> - optional, defaults to 300 seconds
 turbonomic_verify_ssl = <Verify_ssl_certificate> - optional, defaults to False
 ------------------------------------------------------------
-NOTE: 1) 'scheduler_driver' might already be configured to the default scheduler
+NOTE: 1) 'driver' might already be configured to the default scheduler
        Needs to be replaced if that's the case
 
-      2) 'scheduler_driver' should be enabled across all regions. 'openstack_target_address' must be equal to the address specified
-      by the customer while discovering the target. 'openstack_scheduler_region' must be equal to the region where this scheduler will de deployed
-      For example - a target consists of RegionOne (X.X.X.10) and RegionTwo (X.X.X.11) and the user adds the target as X.X.X.10 in Turbonomic:
-      - 'openstack_target_address' must be set to X.X.X.10 in the schedulers of both RegionOne and RegionTwo
-      - 'openstack_scheduler_region' must be RegionOne for the scheduler in RegionOne and RegionTwo for the scheduler in RegionTwo
+      2) Add turbonomic_driver to <Python 2.7>/site-packages/nova-16.1.0-py2.7.egg-info/entry_points.txt:
+      turbonomic_scheduler = nova.scheduler.turbonomic_scheduler:TurbonomicScheduler
 
-      3) In order to force NOVA deploy a new VM on a specific host, run the following command:
+      3) driver should be enabled across all regions.
+
+      4) In order to force NOVA deploy a new VM on a specific host, run the following command:
         nova boot --flavor <FLAVOR_ID> --image <IMG_UUID> --nic net-id=<NIC_ID> --availability-zone <AVAILABILITY_ZONE>:<HOST_NAME> <VM_NAME>
 
-      4) In order to force NOVA deploy a new VM in an affinity group, run the following command:
-        nova boot --flavor <FLAVOR_ID> --image <IMG_UUID> --nic net-id=<NIC_ID> --availability-zone <AZ,e.x. nova> --hint group=<AFFINITY_GROUP_UUID> <VM_NAME>
+      5) This script should be placed to /lib/python2.7/site-packages/nova/scheduler
 
-      5) This script should be placed in the following directory - /lib/python2.7/site-packages/nova/scheduler
+      6) This script is designed for OpenStack Pike
 
-      6) This script is designed for OpenStack Mitaka
+    At the time of writing features 4 wwas unavailable in OpenStack UI and could be used only from CLI.
 
     At the time of writing features 3 and 4 were unavailable in OpenStack UI and could be used only from CLI.
 """
