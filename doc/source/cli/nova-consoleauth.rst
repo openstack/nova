@@ -24,6 +24,11 @@ Description
 `nova-consoleauth` is a server daemon that serves the Nova Console Auth
 service, which provides authentication for Nova consoles.
 
+.. deprecated:: 18.0.0
+
+   `nova-consoleauth` is deprecated since 18.0.0 (Rocky) and will be removed in
+   an upcoming release.
+
 Options
 =======
 

@@ -29,6 +29,7 @@ from nova import service
 from nova import version
 
 CONF = nova.conf.CONF
+LOG = logging.getLogger('nova.consoleauth')
 
 
 def main():
@@ -38,6 +39,10 @@ def main():
     gmr_opts.set_defaults(CONF)
 
     gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
+
+    LOG.warning('The nova-consoleauth service is deprecated as console token '
+                'authorization storage has moved from the nova-consoleauth '
+                'service backend to the database backend.')
 
     server = service.Service.create(binary='nova-consoleauth',
                                     topic=rpcapi.RPC_TOPIC)

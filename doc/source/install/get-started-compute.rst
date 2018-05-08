@@ -65,6 +65,11 @@ OpenStack Compute consists of the following areas and their components:
   single nova-consoleauth service in a cluster configuration. For information,
   see :ref:`about-nova-consoleauth`.
 
+  .. deprecated:: 18.0.0
+
+    ``nova-consoleauth`` is deprecated since 18.0.0 (Rocky) and will be removed
+    in an upcoming release.
+
 ``nova-novncproxy`` daemon
   Provides a proxy for accessing running instances through a VNC connection.
   Supports browser-based novnc clients.

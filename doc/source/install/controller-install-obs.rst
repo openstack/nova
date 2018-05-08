@@ -278,9 +278,8 @@ Install and configure components
    .. code-block:: console
 
       # zypper install openstack-nova-api openstack-nova-scheduler \
-        openstack-nova-conductor openstack-nova-consoleauth \
-        openstack-nova-novncproxy openstack-nova-placement-api \
-        iptables
+        openstack-nova-conductor openstack-nova-novncproxy \
+        openstack-nova-placement-api iptables
 
 #. Edit the ``/etc/nova/nova.conf`` file and complete the following actions:
 
@@ -492,8 +491,8 @@ Finalize installation
   .. code-block:: console
 
      # systemctl enable openstack-nova-api.service \
-       openstack-nova-consoleauth.service openstack-nova-scheduler.service \
-       openstack-nova-conductor.service openstack-nova-novncproxy.service
+       openstack-nova-scheduler.service openstack-nova-conductor.service \
+       openstack-nova-novncproxy.service
      # systemctl start openstack-nova-api.service \
-       openstack-nova-consoleauth.service openstack-nova-scheduler.service \
-       openstack-nova-conductor.service openstack-nova-novncproxy.service
+       openstack-nova-scheduler.service openstack-nova-conductor.service \
+       openstack-nova-novncproxy.service

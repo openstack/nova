@@ -47,7 +47,6 @@ daemonize correctly after starting up.
    nova-compute
    nova-conductor
    nova-console
-   nova-consoleauth
    nova-novncproxy
    nova-scheduler
    nova-serialproxy
@@ -91,3 +90,4 @@ deployments, but are documented for existing ones.
    nova-cells
    nova-dhcpbridge
    nova-network
+   nova-consoleauth
