@@ -1896,7 +1896,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                                fake_inst)
             if flavor_id_passed:
                 compute_utils.upsize_quota_delta(
-                    self.context, mox.IsA(objects.Flavor),
+                    mox.IsA(objects.Flavor),
                     mox.IsA(objects.Flavor)).AndReturn({'cores': 0, 'ram': 0})
 
                 proj_count = {'instances': 1, 'cores': current_flavor.vcpus,
@@ -2245,7 +2245,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 'flavor-id', read_deleted='no').AndReturn(fake_flavor)
         deltas = dict(cores=0)
         compute_utils.upsize_quota_delta(
-            self.context, mox.IsA(objects.Flavor),
+            mox.IsA(objects.Flavor),
             mox.IsA(objects.Flavor)).AndReturn(deltas)
         quotas = {'cores': 0}
         overs = ['cores']

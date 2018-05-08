@@ -3159,7 +3159,7 @@ class API(base.Base):
         project_id, user_id = quotas_obj.ids_from_instance(context,
                                                            instance)
         # Deltas will be empty if the resize is not an upsize.
-        deltas = compute_utils.upsize_quota_delta(context, new_flavor,
+        deltas = compute_utils.upsize_quota_delta(new_flavor,
                                                   current_flavor)
         if deltas:
             try:

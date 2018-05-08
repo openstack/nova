@@ -767,52 +767,22 @@ def get_machine_ips():
     return addresses
 
 
-def resize_quota_delta(context, new_flavor, old_flavor, sense, compare):
-    """Calculate any quota adjustment required at a particular point
-    in the resize cycle.
+def upsize_quota_delta(new_flavor, old_flavor):
+    """Calculate deltas required to adjust quota for an instance upsize.
 
-    :param context: the request context
     :param new_flavor: the target instance type
     :param old_flavor: the original instance type
-    :param sense: the sense of the adjustment, 1 indicates a
-                  forward adjustment, whereas -1 indicates a
-                  reversal of a prior adjustment
-    :param compare: the direction of the comparison, 1 indicates
-                    we're checking for positive deltas, whereas
-                    -1 indicates negative deltas
     """
     def _quota_delta(resource):
-        return sense * (new_flavor[resource] - old_flavor[resource])
+        return (new_flavor[resource] - old_flavor[resource])
 
     deltas = {}
-    if compare * _quota_delta('vcpus') > 0:
+    if _quota_delta('vcpus') > 0:
         deltas['cores'] = _quota_delta('vcpus')
-    if compare * _quota_delta('memory_mb') > 0:
+    if _quota_delta('memory_mb') > 0:
         deltas['ram'] = _quota_delta('memory_mb')
 
     return deltas
-
-
-def upsize_quota_delta(context, new_flavor, old_flavor):
-    """Calculate deltas required to adjust quota for an instance upsize.
-    """
-    return resize_quota_delta(context, new_flavor, old_flavor, 1, 1)
-
-
-def reverse_upsize_quota_delta(context, instance):
-    """Calculate deltas required to reverse a prior upsizing
-    quota adjustment.
-    """
-    return resize_quota_delta(context, instance.new_flavor,
-                              instance.old_flavor, -1, -1)
-
-
-def downsize_quota_delta(context, instance):
-    """Calculate deltas required to adjust quota for an instance downsize.
-    """
-    old_flavor = instance.get_flavor('old')
-    new_flavor = instance.get_flavor('new')
-    return resize_quota_delta(context, new_flavor, old_flavor, 1, -1)
 
 
 def get_headroom(quotas, usages, deltas):
