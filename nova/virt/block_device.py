@@ -680,7 +680,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                             {'volume_id': volume_id, 'exc': exc})
 
 
-class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
+class DriverVolSnapshotBlockDevice(DriverVolumeBlockDevice):
 
     _valid_source = 'snapshot'
     _proxy_as_attr_inherited = set(['snapshot_id'])
@@ -703,11 +703,11 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
             # make us go down the new-style attach flow.
 
         # Call the volume attach now
-        super(DriverSnapshotBlockDevice, self).attach(
+        super(DriverVolSnapshotBlockDevice, self).attach(
             context, instance, volume_api, virt_driver)
 
 
-class DriverImageBlockDevice(DriverVolumeBlockDevice):
+class DriverVolImageBlockDevice(DriverVolumeBlockDevice):
 
     _valid_source = 'image'
     _proxy_as_attr_inherited = set(['image_id'])
@@ -727,11 +727,11 @@ class DriverImageBlockDevice(DriverVolumeBlockDevice):
             # TODO(mriedem): Create an attachment to reserve the volume and
             # make us go down the new-style attach flow.
 
-        super(DriverImageBlockDevice, self).attach(
+        super(DriverVolImageBlockDevice, self).attach(
             context, instance, volume_api, virt_driver)
 
 
-class DriverBlankBlockDevice(DriverVolumeBlockDevice):
+class DriverVolBlankBlockDevice(DriverVolumeBlockDevice):
 
     _valid_source = 'blank'
     _proxy_as_attr_inherited = set(['image_id'])
@@ -751,7 +751,7 @@ class DriverBlankBlockDevice(DriverVolumeBlockDevice):
             # TODO(mriedem): Create an attachment to reserve the volume and
             # make us go down the new-style attach flow.
 
-        super(DriverBlankBlockDevice, self).attach(
+        super(DriverVolBlankBlockDevice, self).attach(
             context, instance, volume_api, virt_driver)
 
 
@@ -779,13 +779,13 @@ convert_volumes = functools.partial(_convert_block_devices,
 
 
 convert_snapshots = functools.partial(_convert_block_devices,
-                                     DriverSnapshotBlockDevice)
+                                     DriverVolSnapshotBlockDevice)
 
 convert_images = functools.partial(_convert_block_devices,
-                                     DriverImageBlockDevice)
+                                     DriverVolImageBlockDevice)
 
 convert_blanks = functools.partial(_convert_block_devices,
-                                   DriverBlankBlockDevice)
+                                   DriverVolBlankBlockDevice)
 
 
 def convert_all_volumes(*volume_bdms):
@@ -878,8 +878,8 @@ def get_swap(transformed_list):
 
 
 _IMPLEMENTED_CLASSES = (DriverSwapBlockDevice, DriverEphemeralBlockDevice,
-                        DriverVolumeBlockDevice, DriverSnapshotBlockDevice,
-                        DriverImageBlockDevice, DriverBlankBlockDevice)
+                        DriverVolumeBlockDevice, DriverVolSnapshotBlockDevice,
+                        DriverVolImageBlockDevice, DriverVolBlankBlockDevice)
 
 
 def is_implemented(bdm):
