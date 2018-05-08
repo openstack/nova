@@ -20,7 +20,7 @@ Our scheduler works as a replacement for the default filter_scheduler
 
 For integrating this scheduler to get Placement recommendations,
 the following entries must be added in the /etc/nova/nova.conf file
-under the [DEFAULT] section
+under the [scheduler] section
 ------------------------------------------------------------
 scheduler_driver = nova.scheduler.turbonomic_scheduler.TurbonomicScheduler
 turbonomic_address = <Turbonomic_Address>  - mandatory
