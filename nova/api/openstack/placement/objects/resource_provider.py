@@ -3507,7 +3507,8 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rps):
         alloc_requests.append(req_obj)
         # If this is a sharing provider, we have to include an extra
         # AllocationRequest for every possible anchor.
-        if os_traits.MISC_SHARES_VIA_AGGREGATE in rp_summary.traits:
+        traits = [trait.name for trait in rp_summary.traits]
+        if os_traits.MISC_SHARES_VIA_AGGREGATE in traits:
             for anchor in _anchors_for_sharing_provider(
                     ctx, rp_summary.resource_provider.id):
                 # We already added self
@@ -3778,6 +3779,265 @@ def _trait_ids_from_names(ctx, names):
     return {r[0]: r[1] for r in ctx.session.execute(sel)}
 
 
+def _rp_rc_key(rp, rc):
+    """Creates hashable key unique to a provider + resource class."""
+    return rp.uuid, rc
+
+
+def _consolidate_allocation_requests(areqs):
+    """Consolidates a list of AllocationRequest into one.
+
+    :param areqs: A list containing one AllocationRequest for each input
+            RequestGroup.  This may mean that multiple resource_requests
+            contain resource amounts of the same class from the same provider.
+    :return: A single consolidated AllocationRequest, containing no
+            resource_requests with duplicated (resource_provider,
+            resource_class).
+    """
+    # Construct a dict, keyed by resource provider UUID + resource class, of
+    # AllocationRequestResource, consolidating as we go.
+    arrs_by_rp_rc = {}
+    # areqs must have at least one element.  Save the anchor to populate the
+    # returned AllocationRequest.
+    anchor_rp_uuid = areqs[0].anchor_root_provider_uuid
+    for areq in areqs:
+        # Sanity check: the anchor should be the same for every areq
+        if anchor_rp_uuid != areq.anchor_root_provider_uuid:
+            # This should never happen.  If it does, it's a dev bug.
+            raise ValueError(
+                _("Expected every AllocationRequest in `deflate` to have the "
+                  "same anchor!"))
+        for arr in areq.resource_requests:
+            key = _rp_rc_key(arr.resource_provider, arr.resource_class)
+            if key not in arrs_by_rp_rc:
+                arrs_by_rp_rc[key] = copy.deepcopy(arr)
+            else:
+                arrs_by_rp_rc[key].amount += arr.amount
+    return AllocationRequest(
+        resource_requests=list(arrs_by_rp_rc.values()),
+        anchor_root_provider_uuid=anchor_rp_uuid)
+
+
+def _satisfies_group_policy(areqs, group_policy, num_granular_groups):
+    """Applies group_policy to a list of AllocationRequest.
+
+    Returns True or False, indicating whether this list of
+    AllocationRequest satisfies group_policy, as follows:
+
+    * "isolate": Each AllocationRequest with use_same_provider=True
+                 is satisfied by a single resource provider.  If the "isolate"
+                 policy is in effect, each such AllocationRequest must be
+                 satisfied by a *unique* resource provider.
+    * "none" or None: Always returns True.
+
+    :param areqs: A list containing one AllocationRequest for each input
+            RequestGroup.
+    :param group_policy: String indicating how RequestGroups should interact
+            with each other.  If the value is "isolate", we will return False
+            if AllocationRequests that came from RequestGroups keyed by
+            nonempty suffixes are satisfied by the same provider.
+    :param num_granular_groups: The number of granular (use_same_provider=True)
+            RequestGroups in the request.
+    :return: True if areqs satisfies group_policy; False otherwise.
+    """
+    if group_policy != 'isolate':
+        # group_policy="none" means no filtering
+        return True
+
+    # The number of unique resource providers referenced in the request groups
+    # having use_same_provider=True must be equal to the number of granular
+    # groups.
+    return num_granular_groups == len(set(
+        # We can reliably use the first resource_request's provider: all the
+        # resource_requests are satisfied by the same provider by definition
+        # because use_same_provider is True.
+        areq.resource_requests[0].resource_provider.uuid
+        for areq in areqs
+        if areq.use_same_provider))
+
+
+def _exceeds_capacity(areq, psum_res_by_rp_rc):
+    """Checks a (consolidated) AllocationRequest against the provider summaries
+    to ensure that it does not exceed capacity.
+
+    Exceeding capacity can mean the total amount (already used plus this
+    allocation) exceeds the total inventory amount; or this allocation exceeds
+    the max_unit in the inventory record.
+
+    :param areq: An AllocationRequest produced by the
+            `_consolidate_allocation_requests` method.
+    :param psum_res_by_rp_rc: A dict, keyed by provider + resource class via
+            _rp_rc_key, of ProviderSummaryResource.
+    :return: True if areq exceeds capacity; False otherwise.
+    """
+    for arr in areq.resource_requests:
+        key = _rp_rc_key(arr.resource_provider, arr.resource_class)
+        psum_res = psum_res_by_rp_rc[key]
+        if psum_res.used + arr.amount > psum_res.capacity:
+            return True
+        if arr.amount > psum_res.max_unit:
+            return True
+    return False
+
+
+def _merge_candidates(candidates, group_policy=None):
+    """Given a dict, keyed by RequestGroup suffix, of tuples of
+    (allocation_requests, provider_summaries), produce a single tuple of
+    (allocation_requests, provider_summaries) that appropriately incorporates
+    the elements from each.
+
+    Each (alloc_reqs, prov_sums) in `candidates` satisfies one RequestGroup.
+    This method creates a list of alloc_reqs, *each* of which satisfies *all*
+    of the RequestGroups.
+
+    For that merged list of alloc_reqs, a corresponding provider_summaries is
+    produced.
+
+    :param candidates: A dict, keyed by integer suffix or '', of tuples of
+            (allocation_requests, provider_summaries) to be merged.
+    :param group_policy: String indicating how RequestGroups should interact
+            with each other.  If the value is "isolate", we will filter out
+            candidates where AllocationRequests that came from RequestGroups
+            keyed by nonempty suffixes are satisfied by the same provider.
+    :return: A tuple of (allocation_requests, provider_summaries).
+    """
+    # Build a dict, keyed by anchor root provider UUID, of dicts, keyed by
+    # suffix, of nonempty lists of AllocationRequest.  Each inner dict must
+    # possess all of the suffix keys to be viable (i.e. contains at least
+    # one AllocationRequest per RequestGroup).
+    #
+    # areq_lists_by_anchor =
+    #   { anchor_root_provider_uuid: {
+    #         '': [AllocationRequest, ...],   \  This dict must contain
+    #         '1': [AllocationRequest, ...],   \ exactly one nonempty list per
+    #         ...                              / suffix to be viable. That
+    #         '42': [AllocationRequest, ...], /  filtering is done later.
+    #     },
+    #     ...
+    #   }
+    areq_lists_by_anchor = collections.defaultdict(
+            lambda: collections.defaultdict(list))
+    # Save off all the provider summaries lists - we'll use 'em later.
+    all_psums = []
+    # Construct a dict, keyed by resource provider + resource class, of
+    # ProviderSummaryResource.  This will be used to do a final capacity
+    # check/filter on each merged AllocationRequest.
+    psum_res_by_rp_rc = {}
+    for suffix, (areqs, psums) in candidates.items():
+        for areq in areqs:
+            anchor = areq.anchor_root_provider_uuid
+            areq_lists_by_anchor[anchor][suffix].append(areq)
+        for psum in psums:
+            all_psums.append(psum)
+            for psum_res in psum.resources:
+                key = _rp_rc_key(
+                        psum.resource_provider, psum_res.resource_class)
+                psum_res_by_rp_rc[key] = psum_res
+
+    # Create all combinations picking one AllocationRequest from each list
+    # for each anchor.
+    areqs = []
+    all_suffixes = set(candidates)
+    num_granular_groups = len(all_suffixes - set(['']))
+    for areq_lists_by_suffix in areq_lists_by_anchor.values():
+        # Filter out any entries that don't have allocation requests for
+        # *all* suffixes (i.e. all RequestGroups)
+        if set(areq_lists_by_suffix) != all_suffixes:
+            continue
+        # We're using itertools.product to go from this:
+        # areq_lists_by_suffix = {
+        #     '':   [areq__A,   areq__B,   ...],
+        #     '1':  [areq_1_A,  areq_1_B,  ...],
+        #     ...
+        #     '42': [areq_42_A, areq_42_B, ...],
+        # }
+        # to this:
+        # [ [areq__A, areq_1_A, ..., areq_42_A],  Each of these lists is one
+        #   [areq__A, areq_1_A, ..., areq_42_B],  areq_list in the loop below.
+        #   [areq__A, areq_1_B, ..., areq_42_A],  each areq_list contains one
+        #   [areq__A, areq_1_B, ..., areq_42_B],  AllocationRequest from each
+        #   [areq__B, areq_1_A, ..., areq_42_A],  RequestGroup. So taken as a
+        #   [areq__B, areq_1_A, ..., areq_42_B],  whole, each list is a viable
+        #   [areq__B, areq_1_B, ..., areq_42_A],  (preliminary) candidate to
+        #   [areq__B, areq_1_B, ..., areq_42_B],  return.
+        #   ...,
+        # ]
+        for areq_list in itertools.product(
+                *list(areq_lists_by_suffix.values())):
+            # At this point, each AllocationRequest in areq_list is still
+            # marked as use_same_provider. This is necessary to filter by group
+            # policy, which enforces how these interact with each other.
+            if not _satisfies_group_policy(
+                    areq_list, group_policy, num_granular_groups):
+                continue
+            # Now we go from this (where 'arr' is AllocationRequestResource):
+            # [ areq__B(arrX, arrY, arrZ),
+            #   areq_1_A(arrM, arrN),
+            #   ...,
+            #   areq_42_B(arrQ)
+            # ]
+            # to this:
+            # areq_combined(arrX, arrY, arrZ, arrM, arrN, arrQ)
+            # Note that this discards the information telling us which
+            # RequestGroup led to which piece of the final AllocationRequest.
+            # We needed that to be present for the previous filter; we need it
+            # to be *absent* for the next one (and for the final output).
+            areq = _consolidate_allocation_requests(areq_list)
+            # Since we sourced this AllocationRequest from multiple
+            # *independent* queries, it's possible that the combined result
+            # now exceeds capacity where amounts of the same RP+RC were
+            # folded together.  So do a final capacity check/filter.
+            if _exceeds_capacity(areq, psum_res_by_rp_rc):
+                continue
+            areqs.append(areq)
+
+    # It's possible we've filtered out everything.  If so, short out.
+    if not areqs:
+        return [], []
+
+    # Now we have to produce provider summaries.  The provider summaries in
+    # the candidates input contain all the information; we just need to
+    # filter it down to only the providers and resource classes* in our
+    # merged list of allocation requests.
+    # *With blueprint placement-return-all-resources, all resource classes
+    # should be included, so that condition will need to be removed either
+    # here or there, depending which lands first.
+    # To make this easier, first index all our allocation requests as a
+    # dict, keyed by resource provider UUID, of sets of resource class
+    # names.
+    rcs_by_rp = collections.defaultdict(set)
+    for areq in areqs:
+        for arr in areq.resource_requests:
+            rcs_by_rp[arr.resource_provider.uuid].add(arr.resource_class)
+    # Now walk the input candidates' provider summaries, building a dict,
+    # keyed by resource provider UUID, of ProviderSummary representing
+    # that provider, and including any of its resource classes found in the
+    # index we built from our allocation requests above*.
+    # *See above.
+    psums_by_rp = {}
+    for psum in all_psums:
+        rp_uuid = psum.resource_provider.uuid
+        # If everything from this provider was filtered out, don't add an
+        # (empty) entry for it.
+        if rp_uuid not in rcs_by_rp:
+            continue
+        if rp_uuid not in psums_by_rp:
+            psums_by_rp[rp_uuid] = ProviderSummary(
+                resource_provider=psum.resource_provider, resources=[],
+                # Should always be the same; no need to check/update below.
+                traits=psum.traits)
+        # NOTE(efried): To subsume blueprint placement-return-all-resources
+        # replace this loop with:
+        # psums_by_rp[rp_uuid].resources = psum.resources
+        resources = set(psums_by_rp[rp_uuid].resources)
+        for psumres in psum.resources:
+            if psumres.resource_class in rcs_by_rp[rp_uuid]:
+                resources.add(psumres)
+        psums_by_rp[rp_uuid].resources = list(resources)
+
+    return areqs, list(psums_by_rp.values())
+
+
 @base.VersionedObjectRegistry.register_if(False)
 class AllocationCandidates(base.VersionedObject):
     """The AllocationCandidates object is a collection of possible allocations
@@ -3797,7 +4057,7 @@ class AllocationCandidates(base.VersionedObject):
     }
 
     @classmethod
-    def get_by_requests(cls, context, requests, limit=None):
+    def get_by_requests(cls, context, requests, limit=None, group_policy=None):
         """Returns an AllocationCandidates object containing all resource
         providers matching a set of supplied resource constraints, with a set
         of allocation requests constructed from that list of resource
@@ -3805,7 +4065,9 @@ class AllocationCandidates(base.VersionedObject):
         (default is False) then the order of the allocation requests will
         be randomized.
 
-        :param requests: List of nova.api.openstack.placement.util.RequestGroup
+        :param context: Nova RequestContext.
+        :param requests: Dict, keyed by suffix, of
+                         nova.api.openstack.placement.util.RequestGroup
         :param limit: An integer, N, representing the maximum number of
                       allocation candidates to return. If
                       CONF.placement.randomize_allocation_candidates is True
@@ -3814,12 +4076,19 @@ class AllocationCandidates(base.VersionedObject):
                       order the database picked them, will be returned. In
                       either case if there are fewer than N total results,
                       all the results will be returned.
+        :param group_policy: String indicating how RequestGroups with
+                             use_same_provider=True should interact with each
+                             other.  If the value is "isolate", we will filter
+                             out allocation requests where any such
+                             RequestGroups are satisfied by the same RP.
+        :return: An instance of AllocationCandidates with allocation_requests
+                 and provider_summaries satisfying `requests`, limited
+                 according to `limit`.
         """
         _ensure_rc_cache(context)
         _ensure_trait_sync(context)
-        alloc_reqs, provider_summaries = cls._get_by_requests(context,
-                                                              requests,
-                                                              limit)
+        alloc_reqs, provider_summaries = cls._get_by_requests(
+            context, requests, limit=limit, group_policy=group_policy)
         return cls(
             context,
             allocation_requests=alloc_reqs,
@@ -3827,36 +4096,29 @@ class AllocationCandidates(base.VersionedObject):
         )
 
     @staticmethod
-    # TODO(efried): This is only a writer context because it accesses the
-    # resource_providers table via ResourceProvider.get_by_uuid, which does
-    # data migration to populate the root_provider_uuid.  Change this back to a
-    # reader when that migration is no longer happening.
-    @db_api.api_context_manager.writer
-    def _get_by_requests(context, requests, limit=None):
-        # We first get the list of "root providers" that either have the
-        # requested resources or are associated with the providers that
-        # share one or more of the requested resource(s)
-        # TODO(efried): Handle non-sharing groups.
-        # For now, this extracts just the sharing group's resources & traits.
-        sharing_groups = [request_group for request_group in requests
-                          if not request_group.use_same_provider]
-        if len(sharing_groups) != 1 or not sharing_groups[0].resources:
-            raise ValueError(_("The requests parameter must contain one "
-                               "RequestGroup with use_same_provider=False and "
-                               "nonempty resources."))
+    def _get_by_one_request(context, request):
+        """Get allocation candidates for one RequestGroup.
 
+        Must be called from within an api_context_manager.reader (or writer)
+        context.
+
+        :param context: Nova RequestContext.
+        :param request: One nova.api.openstack.placement.util.RequestGroup
+        :return: A tuple of (allocation_requests, provider_summaries)
+                 satisfying `request`.
+        """
         # Transform resource string names to internal integer IDs
         resources = {
             _RC_CACHE.id_from_string(key): value
-            for key, value in sharing_groups[0].resources.items()
+            for key, value in request.resources.items()
         }
 
         # maps the trait name to the trait internal ID
         required_trait_map = {}
         forbidden_trait_map = {}
         for trait_map, traits in (
-            (required_trait_map, sharing_groups[0].required_traits),
-            (forbidden_trait_map, sharing_groups[0].forbidden_traits)):
+                (required_trait_map, request.required_traits),
+                (forbidden_trait_map, request.forbidden_traits)):
             if traits:
                 trait_map.update(_trait_ids_from_names(context, traits))
                 # Double-check that we found a trait ID for each requested name
@@ -3866,66 +4128,100 @@ class AllocationCandidates(base.VersionedObject):
 
         # Microversions prior to 1.21 will not have 'member_of' in the groups.
         # This allows earlier microversions to continue to work.
-        member_of = ""
-        if hasattr(sharing_groups[0], "member_of"):
-            member_of = sharing_groups[0].member_of
+        member_of = getattr(request, "member_of", "")
 
-        # Contains a set of resource provider IDs that share some inventory for
-        # each resource class requested. We do this here as an optimization. If
-        # we have no sharing providers, the SQL to find matching providers for
-        # the requested resources is much simpler.
-        # TODO(jaypipes): Consider caching this for some amount of time since
-        # sharing providers generally don't change often and here we aren't
-        # concerned with how *much* inventory/capacity the sharing provider
-        # has, only that it is sharing *some* inventory of a particular
-        # resource class.
-        sharing_providers = {
-            rc_id: _get_providers_with_shared_capacity(context, rc_id, amount)
-            for rc_id, amount in resources.items()
-        }
-        have_sharing = any(sharing_providers.values())
-        if not have_sharing:
-            # We know there's no sharing providers, so we can more efficiently
-            # get a list of resource provider IDs that have ALL the requested
-            # resources and more efficiently construct the allocation requests
-            # NOTE(jaypipes): When we start handling nested providers, we may
-            # add new code paths or modify this code path to return root
-            # provider IDs of provider trees instead of the resource provider
-            # IDs.
-            rp_ids = _get_provider_ids_matching(context, resources,
-                                                required_trait_map,
-                                                forbidden_trait_map,
-                                                member_of)
-            alloc_request_objs, summary_objs = (
-                _alloc_candidates_single_provider(context, resources, rp_ids))
-        else:
-            if required_trait_map:
-                # TODO(cdent): Now that there is also a forbidden_trait_map
-                # it should be possible to further optimize this attempt at
-                # a quick return, but we leave that to future patches for now.
-                trait_rps = _get_provider_ids_having_any_trait(
-                    context, required_trait_map)
-                if not trait_rps:
-                    # If there aren't any providers that have any of the
-                    # required traits, just exit early...
-                    return [], []
+        if not request.use_same_provider:
+            # TODO(jaypipes): The check/callout to handle trees goes here.
+            # Build a dict, keyed by resource class internal ID, of lists of
+            # internal IDs of resource providers that share some inventory for
+            # each resource class requested.
+            # TODO(jaypipes): Consider caching this for some amount of time
+            # since sharing providers generally don't change often and here we
+            # aren't concerned with how *much* inventory/capacity the sharing
+            # provider has, only that it is sharing *some* inventory of a
+            # particular resource class.
+            sharing_providers = {
+                rc_id: _get_providers_with_shared_capacity(context, rc_id,
+                                                           amount)
+                for rc_id, amount in resources.items()
+            }
+            # We check this here as an optimization: if we have no sharing
+            # providers, we fall through to the (simpler, more efficient)
+            # algorithm below.
+            if any(sharing_providers.values()):
+                # Okay, we have to do it the hard way: the request may be
+                # satisfied by one or more sharing providers as well as (maybe)
+                # the non-sharing provider.
+                if required_trait_map:
+                    # TODO(cdent): Now that there is also a forbidden_trait_map
+                    # it should be possible to further optimize this attempt at
+                    # a quick return, but we leave that to future patches for
+                    # now.
+                    trait_rps = _get_provider_ids_having_any_trait(
+                        context, required_trait_map)
+                    if not trait_rps:
+                        # If there aren't any providers that have any of the
+                        # required traits, just exit early...
+                        return [], []
 
-            # rp_ids contains a list of resource provider IDs that EITHER have
-            # all the requested resources themselves OR have some resources
-            # and are related to a provider that is sharing some resources
-            # with it. In other words, this is the list of resource provider
-            # IDs that are NOT sharing resources.
-            rps = _get_all_with_shared(context, resources, member_of)
-            rp_ids = set([r[0] for r in rps])
-            alloc_request_objs, summary_objs = _alloc_candidates_with_shared(
-                context, resources, required_trait_map, forbidden_trait_map,
-                rp_ids, sharing_providers)
+                # rp_ids contains a list of resource provider IDs that EITHER
+                # have all the requested resources themselves OR have some
+                # resources and are related to a provider that is sharing some
+                # resources with it. In other words, this is the list of
+                # resource provider IDs that are NOT sharing resources.
+                rps = _get_all_with_shared(context, resources, member_of)
+                rp_ids = set([r[0] for r in rps])
+                return _alloc_candidates_with_shared(
+                    context, resources, required_trait_map,
+                    forbidden_trait_map, rp_ids, sharing_providers)
+
+        # Either we are processing a single-RP request group, or there are no
+        # sharing providers that (help) satisfy the request.  Get a list of
+        # resource provider IDs that have ALL the requested resources and more
+        # efficiently construct the allocation requests.
+        # NOTE(jaypipes): When we start handling nested providers, we may
+        # add new code paths or modify this code path to return root
+        # provider IDs of provider trees instead of the resource provider
+        # IDs.
+        rp_ids = _get_provider_ids_matching(context, resources,
+                                            required_trait_map,
+                                            forbidden_trait_map, member_of)
+        return _alloc_candidates_single_provider(context, resources, rp_ids)
+
+    @classmethod
+    # TODO(efried): This is only a writer context because it accesses the
+    # resource_providers table via ResourceProvider.get_by_uuid, which does
+    # data migration to populate the root_provider_uuid.  Change this back to a
+    # reader when that migration is no longer happening.
+    @db_api.api_context_manager.writer
+    def _get_by_requests(cls, context, requests, limit=None,
+                         group_policy=None):
+        candidates = {}
+        for suffix, request in requests.items():
+            alloc_reqs, summaries = cls._get_by_one_request(context, request)
+            if not alloc_reqs:
+                # Shortcut: If any one request resulted in no candidates, the
+                # whole operation is shot.
+                return [], []
+            # Mark each allocation request according to whether its
+            # corresponding RequestGroup required it to be restricted to a
+            # single provider.  We'll need this later to evaluate group_policy.
+            for areq in alloc_reqs:
+                areq.use_same_provider = request.use_same_provider
+            candidates[suffix] = alloc_reqs, summaries
+
+        # At this point, each (alloc_requests, summary_obj) in `candidates` is
+        # independent of the others. We need to fold them together such that
+        # each allocation request satisfies *all* the incoming `requests`.  The
+        # `candidates` dict is guaranteed to contain entries for all suffixes,
+        # or we would have short-circuited above.
+        alloc_request_objs, summary_objs = _merge_candidates(
+                candidates, group_policy=group_policy)
 
         # Limit the number of allocation request objects. We do this after
         # creating all of them so that we can do a random slice without
         # needing to mess with the complex sql above or add additional
         # columns to the DB.
-
         if limit and limit <= len(alloc_request_objs):
             if CONF.placement.randomize_allocation_candidates:
                 alloc_request_objs = random.sample(alloc_request_objs, limit)

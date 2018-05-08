@@ -426,7 +426,8 @@ def parse_qs_request_groups(req):
     are only processed  if ``allow_forbidden`` is True. This allows the
     caller to control processing based on microversion handling.
 
-    The return is a list of these RequestGroup instances.
+    The return is a dict, keyed by the numeric suffix of these RequestGroup
+    instances (or the empty string for the unnumbered group).
 
     As an example, if qsdict represents the query string:
 
@@ -440,42 +441,43 @@ def parse_qs_request_groups(req):
 
     ...the return value will be:
 
-    [ RequestGroup(
-          use_same_provider=False,
-          resources={
-              "VCPU": 2,
-              "MEMORY_MB": 1024,
-              "DISK_GB" 50,
-          },
-          required_traits=[
-              "HW_CPU_X86_VMX",
-              "CUSTOM_STORAGE_RAID",
-          ],
-          member_of=[
-            9323b2b1-82c9-4e91-bdff-e95e808ef954,
-            8592a199-7d73-4465-8df6-ab00a6243c82,
-          ],
-      ),
-      RequestGroup(
-          use_same_provider=True,
-          resources={
-              "SRIOV_NET_VF": 2,
-          },
-          required_traits=[
-              "CUSTOM_PHYSNET_PUBLIC",
-              "CUSTOM_SWITCH_A",
-          ],
-      ),
-      RequestGroup(
-          use_same_provider=True,
-          resources={
-              "SRIOV_NET_VF": 1,
-          },
-          forbidden_traits=[
-              "CUSTOM_PHYSNET_PUBLIC",
-          ],
-      ),
-    ]
+    { '': RequestGroup(
+              use_same_provider=False,
+              resources={
+                  "VCPU": 2,
+                  "MEMORY_MB": 1024,
+                  "DISK_GB" 50,
+              },
+              required_traits=[
+                  "HW_CPU_X86_VMX",
+                  "CUSTOM_STORAGE_RAID",
+              ],
+              member_of=[
+                [9323b2b1-82c9-4e91-bdff-e95e808ef954],
+                [8592a199-7d73-4465-8df6-ab00a6243c82,
+                 ddbd9226-d6a6-475e-a85f-0609914dd058],
+              ],
+          ),
+      '1': RequestGroup(
+              use_same_provider=True,
+              resources={
+                  "SRIOV_NET_VF": 2,
+              },
+              required_traits=[
+                  "CUSTOM_PHYSNET_PUBLIC",
+                  "CUSTOM_SWITCH_A",
+              ],
+           ),
+      '2': RequestGroup(
+              use_same_provider=True,
+              resources={
+                  "SRIOV_NET_VF": 1,
+              },
+              forbidden_traits=[
+                  "CUSTOM_PHYSNET_PUBLIC",
+              ],
+           ),
+    }
 
     :param req: webob.Request object
     :return: A list of RequestGroup instances.
@@ -533,8 +535,18 @@ def parse_qs_request_groups(req):
     if orphans:
         msg = _('All member_of parameters must be associated with '
                 'resources. Found the following orphaned member_of '
-                ' values: %s')
+                'keys: %s')
         raise webob.exc.HTTPBadRequest(msg % ', '.join(orphans))
+    # All request groups must have resources (which is almost, but not quite,
+    # verified by the orphan checks above).
+    if not all(grp.resources for grp in by_suffix.values()):
+        msg = _("All request groups must specify resources.")
+        raise webob.exc.HTTPBadRequest(msg)
+    # The above would still pass if there were no request groups
+    if not by_suffix:
+        msg = _("At least one request group (`resources` or `resources{N}`) "
+                "is required.")
+        raise webob.exc.HTTPBadRequest(msg)
 
     # Make adjustments for forbidden traits by stripping forbidden out
     # of required.
@@ -555,6 +567,4 @@ def parse_qs_request_groups(req):
                     'following traits keys: %s')
             raise webob.exc.HTTPBadRequest(msg % ', '.join(conflicting_traits))
 
-    # NOTE(efried): The sorting is not necessary for the API, but it makes
-    # testing easier.
-    return [by_suffix[suff] for suff in sorted(by_suffix)]
+    return by_suffix

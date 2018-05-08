@@ -1,0 +1,471 @@
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+# Tests for granular resource requests
+
+fixtures:
+    # See the layout diagram in this fixture's docstring in ../fixtures.py
+    - GranularFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        content-type: application/json
+        accept: application/json
+        openstack-api-version: placement 1.25
+
+tests:
+
+- name: different groups hit with group_policy=none
+  GET: /allocation_candidates
+  query_parameters:
+      resources1: VCPU:1
+      resources2: MEMORY_MB:1024
+      group_policy: none
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 3
+      $.provider_summaries.`len`: 3
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources:
+          VCPU: 1
+          MEMORY_MB: 1024
+      $.allocation_requests..allocations["$ENVIRON['CN_MIDDLE']"].resources:
+          VCPU: 1
+          MEMORY_MB: 1024
+      $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources:
+          VCPU: 1
+          MEMORY_MB: 1024
+      $.provider_summaries["$ENVIRON['CN_LEFT']"].resources:
+          VCPU:
+            capacity: 8
+            used: 0
+          MEMORY_MB:
+            capacity: 4096
+            used: 0
+      $.provider_summaries["$ENVIRON['CN_MIDDLE']"].resources:
+          VCPU:
+            capacity: 8
+            used: 0
+          MEMORY_MB:
+            capacity: 4096
+            used: 0
+      $.provider_summaries["$ENVIRON['CN_RIGHT']"].resources:
+          VCPU:
+            capacity: 8
+            used: 0
+          MEMORY_MB:
+            capacity: 4096
+            used: 0
+
+- name: different groups miss with group_policy=isolate
+  GET: /allocation_candidates
+  query_parameters:
+      resources1: VCPU:1
+      resources2: MEMORY_MB:1024
+      group_policy: isolate
+  status: 200
+  response_json_paths:
+      # We asked for VCPU and MEMORY_MB to be satisfied by *different*
+      # providers, because they're in separate numbered request groups and
+      # group_policy=isolate.  Since there are no sharing providers of these
+      # resources, we get no results.
+      $.allocation_requests.`len`: 0
+      $.provider_summaries.`len`: 0
+
+- name: resources combine
+  GET: /allocation_candidates
+  query_parameters:
+      resources: VCPU:3,MEMORY_MB:512
+      resources1: VCPU:1,MEMORY_MB:1024
+      resources2: VCPU:2
+      group_policy: none
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 3
+      $.provider_summaries.`len`: 3
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources:
+          VCPU: 6
+          MEMORY_MB: 1536
+      $.allocation_requests..allocations["$ENVIRON['CN_MIDDLE']"].resources:
+          VCPU: 6
+          MEMORY_MB: 1536
+      $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources:
+          VCPU: 6
+          MEMORY_MB: 1536
+
+- name: group policy not required with only one numbered group
+  GET: /allocation_candidates?resources=VCPU:1&resources1=MEMORY_MB:2048
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 3
+      $.provider_summaries.`len`: 3
+
+- name: disk sharing isolated
+  GET: /allocation_candidates
+  query_parameters:
+      resources1: VCPU:1,MEMORY_MB:1024
+      resources2: DISK_GB:100
+      group_policy: isolate
+  status: 200
+  response_json_paths:
+      # Here we've asked for VCPU and MEMORY_MB to be satisfied by the same
+      # provider - all three of our non-sharing providers can do that - and
+      # the DISK_GB to be satisfied by a *different* provider than the VCPU and
+      # MEMORY_MB.  So we'll get all permutations where cn_* provide VCPU and
+      # MEMORY_MB and shr_disk_* provide the DISK_GB; but *no* results where
+      # DISK_GB is provided by the cn_*s themselves.
+      $.allocation_requests.`len`: 5
+      $.provider_summaries.`len`: 5
+
+- name: disk sharing non-isolated
+  GET: /allocation_candidates
+  query_parameters:
+      resources1: VCPU:1,MEMORY_MB:1024
+      resources2: DISK_GB:100
+      group_policy: none
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 7
+      $.provider_summaries.`len`: 5
+
+- name: isolated ssd
+  GET: /allocation_candidates
+  query_parameters:
+      resources1: VCPU:1,MEMORY_MB:1024
+      resources2: DISK_GB:100
+      required2: CUSTOM_DISK_SSD
+      group_policy: isolate
+  status: 200
+  response_json_paths:
+      # We get candidates [cn_left + shr_disk_1] and [cn_middle + shr_disk_1]
+      # We don't get [cn_right + shr_disk_1] because they're not associated via aggregate.
+      # We don't get [cn_left/middle + shr_disk_2] because shr_disk_2 doesn't have the SSD trait
+      # We don't get [cn_left] or [cn_right] even though they have SSD disk because we asked to isolate
+      $.allocation_requests.`len`: 2
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources:
+          VCPU: 1
+          MEMORY_MB: 1024
+      $.allocation_requests..allocations["$ENVIRON['CN_MIDDLE']"].resources:
+          VCPU: 1
+          MEMORY_MB: 1024
+      # shr_disk_1 satisfies the disk for both allocation requests
+      $.allocation_requests..allocations["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB]: [100, 100]
+      $.provider_summaries.`len`: 3
+      $.provider_summaries["$ENVIRON['CN_LEFT']"].resources:
+          VCPU:
+            capacity: 8
+            used: 0
+          MEMORY_MB:
+            capacity: 4096
+            used: 0
+      $.provider_summaries["$ENVIRON['CN_MIDDLE']"].resources:
+          VCPU:
+            capacity: 8
+            used: 0
+          MEMORY_MB:
+            capacity: 4096
+            used: 0
+      $.provider_summaries["$ENVIRON['SHR_DISK_1']"].resources:
+          DISK_GB:
+            capacity: 1000
+            used: 0
+
+- name: no isolation, forbid ssd
+  GET: /allocation_candidates
+  query_parameters:
+      resources1: VCPU:1
+      resources2: DISK_GB:100
+      required2: "!CUSTOM_DISK_SSD"
+      group_policy: none
+  status: 200
+  response_json_paths:
+      # The permutations we *don't* get are:
+      # cn_right by itself because it has SSD
+      # - anything involving shr_disk_1 because it has SSD
+      $.allocation_requests.`len`: 4
+      # We get two allocation requests involving cn_left - one where it
+      # satisfies the disk itself and one where shr_disk_2 provides it
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources[VCPU]: [1, 1]
+      # We get one for [cn_middle + shr_disk_2] - it doesn't have disk to provide for itself
+      $.allocation_requests..allocations["$ENVIRON['CN_MIDDLE']"].resources[VCPU]: 1
+      # We get one for [cn_right + shr_disk_2] - cn_right can't provide its own
+      # disk due to the forbidden SSD trait.
+      $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[VCPU]: 1
+      # shr_disk_2 satisfies the disk for three out of the four allocation
+      # requests (all except the one where cn_left provides for itself)
+      $.allocation_requests..allocations["$ENVIRON['SHR_DISK_2']"].resources[DISK_GB]: [100, 100, 100]
+      # Validate that we got the correct four providers in the summaries
+      $.provider_summaries.`len`: 4
+      $.provider_summaries["$ENVIRON['CN_LEFT']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['CN_MIDDLE']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['CN_RIGHT']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['SHR_DISK_2']"].resources[DISK_GB][capacity]: 1000
+
+- name: member_of filters
+  GET: /allocation_candidates
+  query_parameters:
+      resources1: VCPU:1
+      resources2: DISK_GB:100
+      member_of2: $ENVIRON['AGGC']
+      group_policy: none
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 1
+      $.allocation_requests[0].allocations["$ENVIRON['CN_RIGHT']"].resources:
+          VCPU: 1
+          DISK_GB: 100
+      $.provider_summaries.`len`: 1
+      $.provider_summaries["$ENVIRON['CN_RIGHT']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['CN_RIGHT']"].resources[DISK_GB][capacity]: 500
+
+- name: required, forbidden, member_of in
+  GET: /allocation_candidates
+  query_parameters:
+      resources1: VCPU:1
+      required1: "!HW_CPU_X86_SSE"
+      resources2: DISK_GB:100
+      required2: CUSTOM_DISK_SSD
+      member_of2: in:$ENVIRON['AGGA'],$ENVIRON['AGGC']
+      group_policy: none
+  status: 200
+  response_json_paths:
+      # cn_middle won't appear (forbidden SSE trait)
+      # shr_disk_2 won't appear (required SSD trait is absent)
+      # [cn_left] won't be in the results (required SSD trait is absent)
+      # So we'll get:
+      # [cn_left, shr_disk_1]
+      # [cn_right]
+      $.allocation_requests.`len`: 2
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources[VCPU]: 1
+      $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[VCPU]: 1
+      $.allocation_requests..allocations["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB]: 100
+      $.provider_summaries.`len`: 3
+      $.provider_summaries["$ENVIRON['CN_LEFT']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['CN_RIGHT']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['CN_RIGHT']"].resources[DISK_GB][capacity]: 500
+      $.provider_summaries["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB][capacity]: 1000
+
+- name: multiple member_of
+  GET: /allocation_candidates
+  query_parameters:
+      resources1: VCPU:1
+      resources2: DISK_GB:100
+      member_of2: $ENVIRON['AGGA']
+      member_of2: in:$ENVIRON['AGGB'],$ENVIRON['AGGC']
+      group_policy: isolate
+  status: 200
+  response_json_paths:
+      # The member_of2 specifications say that the DISK_GB resource must come
+      # from a provider that's in aggA and also in (aggB and/or aggC). Only
+      # shr_disk_2 qualifies; so we'll get results anchored at cn_middle and
+      # cn_right.  But note that we'll also get a result anchored at cn_left:
+      # it doesn't meet the member_of criteria, but it doesn't need to, since
+      # it's not providing the DISK_GB resource.
+      $.allocation_requests.`len`: 3
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources[VCPU]: 1
+      $.allocation_requests..allocations["$ENVIRON['CN_MIDDLE']"].resources[VCPU]: 1
+      $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[VCPU]: 1
+      $.allocation_requests..allocations["$ENVIRON['SHR_DISK_2']"].resources[DISK_GB]: [100, 100, 100]
+      $.provider_summaries.`len`: 4
+      $.provider_summaries["$ENVIRON['CN_LEFT']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['CN_MIDDLE']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['CN_RIGHT']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['SHR_DISK_2']"].resources[DISK_GB][capacity]: 1000
+
+- name: multiple disks, multiple networks
+  GET: /allocation_candidates
+  query_parameters:
+      resources1: VCPU:1
+      resources2: VGPU:1
+      required2: HW_GPU_API_DXVA
+      resources3: MEMORY_MB:1024
+      resources4: DISK_GB:100
+      required4: CUSTOM_DISK_SSD
+      resources5: DISK_GB:50
+      required5: "!CUSTOM_DISK_SSD"
+      resources6: SRIOV_NET_VF:1,CUSTOM_NET_MBPS:1000
+      resources7: SRIOV_NET_VF:2,CUSTOM_NET_MBPS:2000
+      group_policy: none
+  # Breaking it down:
+  #   => These could come from cn_left, cn_middle, or cn_right
+  #     ?resources1=VCPU:1
+  #     &resources3=MEMORY_MB:1024
+  #   => But this limits us to cn_left and cn_right
+  #     &resources2=VGPU:1&required2=HW_GPU_API_DXVA
+  #   => Since we're not isolating, this SSD can come from cn_right or shr_disk_1
+  #     &resources4=DISK_GB:100&required4=CUSTOM_DISK_SSD
+  #   => This non-SSD can come from cn_left or shr_disk_2
+  #     &resources5=DISK_GB:50&required5=!CUSTOM_DISK_SSD
+  #   => These VFs and bandwidth can come from cn_left or shr_net.  Since cn_left
+  #      can't be an anchor for shr_net, these will always combine.
+  #     &resources6=SRIOV_NET_VF:1,CUSTOM_NET_MBPS:1000
+  #     &resources7=SRIOV_NET_VF:2,CUSTOM_NET_MBPS:2000
+  #   => If we didn't do this, the separated VCPU/MEMORY_MB/VGPU resources would
+  #      cause us to get no results
+  #     &group_policy=none
+  status: 200
+  response_json_paths:
+      # We have two permutations involving cn_left.
+      # - One where the non-SSD is satisfied by cn_left itself
+      # [cn_left(VCPU:1, MEMORY_MB:1024, VGPU:1, DISK_GB:50, SRIOV_NET_VF:3, CUSTOM_NET_MBPS:3000),
+      #  shr_disk_1(DISK_GB:100)]
+      # - And one where the non-SSD is satisfied by shr_disk_2
+      # [cn_left(VCPU:1, MEMORY_MB:1024, VGPU:1, SRIOV_NET_VF:3, CUSTOM_NET_MBPS:3000),
+      #  shr_disk_1(DISK_GB:100),
+      #  shr_disk_2(DISK_GB: 50)]
+      # There's only one result involving cn_right.
+      # - We must satisfy the SSD from cn_right and the non-SSD from shr_disk_2
+      # - We must satisfy the network stuff from shr_net
+      # [cn_right(VCPU:1, MEMORY_MB:1024, VGPU:1, DISK_GB:100),
+      #  shr_disk_2(DISK_GB:50),
+      #  shr_net(SRIOV_NET_VF:3, CUSTOM_NET_MBPS:3000)]
+      $.allocation_requests.`len`: 3
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources[VCPU]: [1, 1]
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources[MEMORY_MB]: [1024, 1024]
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources[VGPU]: [1, 1]
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources[SRIOV_NET_VF]: [3, 3]
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources[CUSTOM_NET_MBPS]: [3000, 3000]
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources[DISK_GB]: 50
+      # These come from the cn_left results
+      $.allocation_requests..allocations["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB]: [100, 100]
+      # One of these comes from the second cn_left result, the other from the cn_right result
+      $.allocation_requests..allocations["$ENVIRON['SHR_DISK_2']"].resources[DISK_GB]: [50, 50]
+      $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[VCPU]: 1
+      $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[MEMORY_MB]: 1024
+      $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[VGPU]: 1
+      $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[DISK_GB]: 100
+      $.allocation_requests..allocations["$ENVIRON['SHR_NET']"].resources[SRIOV_NET_VF]: 3
+      $.allocation_requests..allocations["$ENVIRON['SHR_NET']"].resources[CUSTOM_NET_MBPS]: 3000
+      # Just make sure we got the correct four providers in the summaries
+      $.provider_summaries.`len`: 5
+      $.provider_summaries["$ENVIRON['CN_LEFT']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['CN_RIGHT']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['SHR_DISK_1']"].resources[DISK_GB][capacity]: 1000
+      $.provider_summaries["$ENVIRON['SHR_DISK_2']"].resources[DISK_GB][capacity]: 1000
+      $.provider_summaries["$ENVIRON['SHR_NET']"].resources[SRIOV_NET_VF][capacity]: 16
+
+- name: combining request groups exceeds capacity
+  GET: /allocation_candidates
+  query_parameters:
+      resources: VCPU:2,MEMORY_MB:2048,SRIOV_NET_VF:1,CUSTOM_NET_MBPS:2000
+      resources1: SRIOV_NET_VF:1,CUSTOM_NET_MBPS:3000
+  status: 200
+  response_json_paths:
+      # CUSTOM_NET_MBPS of 2000 + 3000 = 5000 is too much for cn_left, but
+      # shr_net can accomodate it.
+      $.allocation_requests.`len`: 1
+      $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[VCPU]: 2
+      $.allocation_requests..allocations["$ENVIRON['CN_RIGHT']"].resources[MEMORY_MB]: 2048
+      $.allocation_requests..allocations["$ENVIRON['SHR_NET']"].resources[SRIOV_NET_VF]: 2
+      $.allocation_requests..allocations["$ENVIRON['SHR_NET']"].resources[CUSTOM_NET_MBPS]: 5000
+      $.provider_summaries.`len`: 2
+      $.provider_summaries["$ENVIRON['CN_RIGHT']"].resources[VCPU][capacity]: 8
+      $.provider_summaries["$ENVIRON['SHR_NET']"].resources[CUSTOM_NET_MBPS][capacity]: 40000
+
+- name: combining request groups exceeds max_unit
+  GET: /allocation_candidates
+  query_parameters:
+      resources: VGPU:1
+      resources1: VGPU:1
+      resources2: VGPU:1
+      group_policy: none
+  status: 200
+  response_json_paths:
+      # VGPU of 1 + 1 + 1 = 3 exceeds max_unit on cn_right, but cn_left can handle it.
+      $.allocation_requests.`len`: 1
+      $.allocation_requests..allocations["$ENVIRON['CN_LEFT']"].resources[VGPU]: 3
+      $.provider_summaries.`len`: 1
+      $.provider_summaries["$ENVIRON['CN_LEFT']"].resources[VGPU][capacity]: 8
+
+#################
+# Error scenarios
+#################
+- name: numbered resources bad microversion
+  GET: /allocation_candidates?resources=MEMORY_MB:1024&resources1=VCPU:1
+  request_headers:
+      openstack-api-version: placement 1.24
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "'resources1' was unexpected"
+
+- name: numbered traits bad microversion
+  GET: /allocation_candidates?resources=MEMORY_MB:1024&required2=HW_CPU_X86_AVX2
+  request_headers:
+      openstack-api-version: placement 1.24
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "'required2' was unexpected"
+
+- name: numbered member_of bad microversion
+  GET: /allocation_candidates?resources=MEMORY_MB:1024&member_of3=$ENVIRON['AGGB']
+  request_headers:
+      openstack-api-version: placement 1.24
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "'member_of3' was unexpected"
+
+- name: group_policy bad microversion
+  GET: /allocation_candidates?resources=VCPU:1&group_policy=isolate
+  request_headers:
+      openstack-api-version: placement 1.24
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "'group_policy' was unexpected"
+
+- name: bogus numbering
+  GET: /allocation_candidates?resources01=VCPU:1
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "'resources01' does not match any of the regexes"
+
+- name: bogus suffix
+  GET: /allocation_candidates?resources1a=VCPU:1
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "'resources1a' does not match any of the regexes"
+
+- name: invalid group_policy value
+  GET: /allocation_candidates?resources=VCPU:1&group_policy=bogus
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "'bogus' is not one of ['none', 'isolate']"
+
+- name: group_policy required when more than one numbered group
+  GET: /allocation_candidates?resources1=VCPU:1&resources2=VCPU:1
+  status: 400
+  response_strings:
+      - The \"group_policy\" parameter is required when specifying more than one \"resources{N}\" parameter.
+
+- name: orphaned traits keys
+  GET: /allocation_candidates?required=FOO&required1=BAR
+  status: 400
+  response_strings:
+      - 'Found the following orphaned traits keys: required, required1'
+
+- name: orphaned member_of keys
+  GET: /allocation_candidates?member_of=$ENVIRON['AGGA']&member_of3=$ENVIRON['AGGC']
+  status: 400
+  response_strings:
+      - 'Found the following orphaned member_of keys: member_of, member_of3'
+
+- name: at least one request group required
+  GET: /allocation_candidates?group_policy=isolate
+  status: 400
+  response_strings:
+      - At least one request group (`resources` or `resources{N}`) is required.

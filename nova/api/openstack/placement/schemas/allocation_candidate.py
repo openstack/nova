@@ -52,3 +52,27 @@ GET_SCHEMA_1_21 = copy.deepcopy(GET_SCHEMA_1_17)
 GET_SCHEMA_1_21['properties']['member_of'] = {
     "type": ["string"]
 }
+
+GET_SCHEMA_1_25 = copy.deepcopy(GET_SCHEMA_1_21)
+# We're going to *replace* 'resources', 'required', and 'member_of'.
+del GET_SCHEMA_1_25["properties"]["resources"]
+del GET_SCHEMA_1_25["required"]
+del GET_SCHEMA_1_25["properties"]["required"]
+del GET_SCHEMA_1_25["properties"]["member_of"]
+# Pattern property key format for a numbered or un-numbered grouping
+_GROUP_PAT_FMT = "^%s([1-9][0-9]*)?$"
+GET_SCHEMA_1_25["patternProperties"] = {
+    _GROUP_PAT_FMT % "resources": {
+        "type": "string",
+    },
+    _GROUP_PAT_FMT % "required": {
+        "type": "string",
+    },
+    _GROUP_PAT_FMT % "member_of": {
+        "type": "string",
+    },
+}
+GET_SCHEMA_1_25["properties"]["group_policy"] = {
+    "type": "string",
+    "enum": ["none", "isolate"],
+}

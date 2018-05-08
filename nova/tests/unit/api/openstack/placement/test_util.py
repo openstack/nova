@@ -440,15 +440,18 @@ class TestParseQsRequestGroups(test.NoDBTestCase):
         mv_parsed.min_version = microversion_parse.parse_version_string(
             microversion.min_version_string())
         req.environ['placement.microversion'] = mv_parsed
-        return util.parse_qs_request_groups(req)
+        d = util.parse_qs_request_groups(req)
+        # Sort for easier testing
+        return [d[suff] for suff in sorted(d)]
 
     def assertRequestGroupsEqual(self, expected, observed):
         self.assertEqual(len(expected), len(observed))
         for exp, obs in zip(expected, observed):
             self.assertEqual(vars(exp), vars(obs))
 
-    def test_empty(self):
-        self.assertRequestGroupsEqual([], self.do_parse(''))
+    def test_empty_raises(self):
+        # TODO(efried): Check the specific error code
+        self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, '')
 
     def test_unnumbered_only(self):
         """Unnumbered resources & traits - no numbered groupings."""

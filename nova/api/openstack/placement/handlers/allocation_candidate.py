@@ -212,7 +212,9 @@ def list_allocation_candidates(req):
     context = req.environ['placement.context']
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     get_schema = schema.GET_SCHEMA_1_10
-    if want_version.matches((1, 21)):
+    if want_version.matches((1, 25)):
+        get_schema = schema.GET_SCHEMA_1_25
+    elif want_version.matches((1, 21)):
         get_schema = schema.GET_SCHEMA_1_21
     elif want_version.matches((1, 17)):
         get_schema = schema.GET_SCHEMA_1_17
@@ -227,9 +229,21 @@ def list_allocation_candidates(req):
     if limit:
         limit = int(limit[0])
 
+    group_policy = req.GET.getall('group_policy') or None
+    # Schema ensures we get either "none" or "isolate"
+    if group_policy:
+        group_policy = group_policy[0]
+    else:
+        # group_policy is required if more than one numbered request group was
+        # specified.
+        if len([rg for rg in requests.values() if rg.use_same_provider]) > 1:
+            raise webob.exc.HTTPBadRequest(
+                _('The "group_policy" parameter is required when specifying '
+                  'more than one "resources{N}" parameter.'))
+
     try:
-        cands = rp_obj.AllocationCandidates.get_by_requests(context, requests,
-                                                            limit)
+        cands = rp_obj.AllocationCandidates.get_by_requests(
+            context, requests, limit=limit, group_policy=group_policy)
     except exception.ResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
             _('Invalid resource class in resources parameter: %(error)s') %

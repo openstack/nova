@@ -66,6 +66,8 @@ VERSIONS = [
     '1.23',  # Add support for error codes in error response JSON
     '1.24',  # Support multiple ?member_of=<agg UUIDs> queryparams on
              # GET /resource_providers
+    '1.25',  # Adds support for granular resource requests via numbered
+             # querystring groups in GET /allocation_candidates
 ]
 
 
