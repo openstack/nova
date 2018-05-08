@@ -36,55 +36,14 @@ In OpenStack, SMP CPUs are known as *cores*, NUMA cells or nodes are known as
 eight core system with Hyper-Threading would have four sockets, eight cores per
 socket and two threads per core, for a total of 64 CPUs.
 
-Configuring compute nodes for instances with NUMA placement policies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Hyper-V is configured by default to allow instances to span multiple NUMA
-nodes, regardless if the instances have been configured to only span N NUMA
-nodes. This behaviour allows Hyper-V instances to have up to 64 vCPUs and 1 TB
-of memory.
-
-Checking NUMA spanning can easily be done by running this following powershell
-command:
-
-.. code-block:: console
-
-   (Get-VMHost).NumaSpanningEnabled
-
-In order to disable this behaviour, the host will have to be configured to
-disable NUMA spanning. This can be done by executing these following
-powershell commands:
-
-.. code-block:: console
-
-   Set-VMHost -NumaSpanningEnabled $false
-   Restart-Service vmms
-
-In order to restore this behaviour, execute these powershell commands:
-
-.. code-block:: console
-
-   Set-VMHost -NumaSpanningEnabled $true
-   Restart-Service vmms
-
-The ``vmms`` service (Virtual Machine Management Service) is responsible for
-managing the Hyper-V VMs. The VMs will still run while the service is down
-or restarting, but they will not be manageable by the ``nova-compute``
-service. In order for the effects of the Host NUMA spanning configuration
-to take effect, the VMs will have to be restarted.
-
-Hyper-V does not allow instances with a NUMA topology to have dynamic
-memory allocation turned on. The Hyper-V driver will ignore the configured
-``dynamic_memory_ratio`` from the given ``nova.conf`` file when spawning
-instances with a NUMA topology.
-
 Customizing instance NUMA placement policies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. important::
 
    The functionality described below is currently only supported by the
-   libvirt/KVM and Hyper-V driver.
+   libvirt/KVM and Hyper-V driver. The Hyper-V driver may require :ref:`some
+   host configuration <configure-hyperv-numa>` for this to work.
 
 When running workloads on NUMA hosts, it is important that the vCPUs executing
 processes are on the same NUMA node as the memory used by these processes.
@@ -383,6 +342,50 @@ topologies that might, for example, incur an additional licensing fees.
 
 For more information about image metadata, refer to the `Image metadata`_
 guide.
+
+.. _configure-hyperv-numa:
+
+Configuring Hyper-V compute nodes for instance NUMA policies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Hyper-V is configured by default to allow instances to span multiple NUMA
+nodes, regardless if the instances have been configured to only span N NUMA
+nodes. This behaviour allows Hyper-V instances to have up to 64 vCPUs and 1 TB
+of memory.
+
+Checking NUMA spanning can easily be done by running this following PowerShell
+command:
+
+.. code-block:: console
+
+   (Get-VMHost).NumaSpanningEnabled
+
+In order to disable this behaviour, the host will have to be configured to
+disable NUMA spanning. This can be done by executing these following
+PowerShell commands:
+
+.. code-block:: console
+
+   Set-VMHost -NumaSpanningEnabled $false
+   Restart-Service vmms
+
+In order to restore this behaviour, execute these PowerShell commands:
+
+.. code-block:: console
+
+   Set-VMHost -NumaSpanningEnabled $true
+   Restart-Service vmms
+
+The *Virtual Machine Management Service* (*vmms*) is responsible for managing
+the Hyper-V VMs. The VMs will still run while the service is down or
+restarting, but they will not be manageable by the ``nova-compute`` service. In
+order for the effects of the host NUMA spanning configuration to take effect,
+the VMs will have to be restarted.
+
+Hyper-V does not allow instances with a NUMA topology to have dynamic
+memory allocation turned on. The Hyper-V driver will ignore the configured
+``dynamic_memory_ratio`` from the given ``nova.conf`` file when spawning
+instances with a NUMA topology.
 
 .. Links
 .. _`Image metadata`: https://docs.openstack.org/image-guide/image-metadata.html
