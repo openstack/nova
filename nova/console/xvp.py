@@ -27,7 +27,6 @@ import nova.conf
 from nova import context
 from nova import db
 from nova.i18n import _
-from nova import utils
 
 
 CONF = nova.conf.CONF
@@ -119,10 +118,10 @@ class XVPConsoleProxy(object):
             return
         LOG.debug('Starting xvp')
         try:
-            utils.execute('xvp',
-                          '-p', CONF.xvp.console_xvp_pid,
-                          '-c', CONF.xvp.console_xvp_conf,
-                          '-l', CONF.xvp.console_xvp_log)
+            processutils.execute('xvp',
+                                 '-p', CONF.xvp.console_xvp_pid,
+                                 '-c', CONF.xvp.console_xvp_conf,
+                                 '-l', CONF.xvp.console_xvp_log)
         except processutils.ProcessExecutionError as err:
             LOG.error('Error starting xvp: %s', err)
 
@@ -178,7 +177,7 @@ class XVPConsoleProxy(object):
             flag = '-x'
         # xvp will blow up on passwords that are too long (mdragon)
         password = password[:maxlen]
-        out, err = utils.execute('xvp', flag, process_input=password)
+        out, err = processutils.execute('xvp', flag, process_input=password)
         if err:
             raise processutils.ProcessExecutionError(_("Failed to run xvp."))
         return out.strip()
