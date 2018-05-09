@@ -26,7 +26,6 @@ from nova.scheduler import caching_scheduler
 from nova.scheduler import chance
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
-from nova.scheduler import ironic_host_manager
 from nova.scheduler import manager
 from nova import servicegroup
 from nova import test
@@ -366,16 +365,6 @@ class SchedulerInitTestCase(test.NoDBTestCase):
                                             mock_init_inst):
         manager = self.driver_cls().host_manager
         self.assertIsInstance(manager, host_manager.HostManager)
-
-    @mock.patch.object(ironic_host_manager.IronicHostManager,
-                       '_init_instance_info')
-    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
-    def test_init_using_ironic_hostmanager(self,
-                                           mock_init_agg,
-                                           mock_init_inst):
-        self.flags(host_manager='ironic_host_manager', group='scheduler')
-        manager = self.driver_cls().host_manager
-        self.assertIsInstance(manager, ironic_host_manager.IronicHostManager)
 
 
 class SchedulerTestCase(test.NoDBTestCase):

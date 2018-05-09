@@ -20,9 +20,11 @@ scheduler_group = cfg.OptGroup(name="scheduler",
                                title="Scheduler configuration")
 
 scheduler_opts = [
+    # TODO(mriedem): We should be able to remove this now since it's not an
+    # option anymore.
     cfg.StrOpt("host_manager",
         default="host_manager",
-        choices=("host_manager", "ironic_host_manager"),
+        choices=("host_manager",),
         deprecated_name="scheduler_host_manager",
         deprecated_group="DEFAULT",
         help="""
@@ -31,9 +33,6 @@ The scheduler host manager to use.
 The host manager manages the in-memory picture of the hosts that the scheduler
 uses. The options values are chosen from the entry points under the namespace
 'nova.scheduler.host_manager' in 'setup.cfg'.
-
-NOTE: The "ironic_host_manager" option is deprecated as of the 17.0.0 Queens
-release.
 """),
     cfg.StrOpt("driver",
         default="filter_scheduler",
@@ -333,73 +332,6 @@ Related options:
 * All of the filters in this option *must* be present in the
   'available_filters' option, or a SchedulerHostFilterNotFound
   exception will be raised.
-"""),
-    cfg.ListOpt("baremetal_enabled_filters",
-        default=[
-            "RetryFilter",
-            "AvailabilityZoneFilter",
-            "ComputeFilter",
-            "ComputeCapabilitiesFilter",
-            "ImagePropertiesFilter",
-        ],
-        deprecated_name="baremetal_scheduler_default_filters",
-        deprecated_group="DEFAULT",
-        deprecated_for_removal=True,
-        deprecated_reason="""
-These filters were used to overcome some of the baremetal scheduling
-limitations in Nova prior to the use of the Placement API. Now scheduling will
-use the custom resource class defined for each baremetal node to make its
-selection.
-""",
-        help="""
-Filters used for filtering baremetal hosts.
-
-Filters are applied in order, so place your most restrictive filters first to
-make the filtering process more efficient.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-
-Possible values:
-
-* A list of zero or more strings, where each string corresponds to the name of
-  a filter to be used for selecting a baremetal host
-
-Related options:
-
-* If the 'scheduler_use_baremetal_filters' option is False, this option has
-  no effect.
-"""),
-    cfg.BoolOpt("use_baremetal_filters",
-        deprecated_name="scheduler_use_baremetal_filters",
-        deprecated_group="DEFAULT",
-        # NOTE(mriedem): We likely can't remove this option until the
-        # IronicHostManager is removed, and we likely can't remove that
-        # until all filters can at least not fail on ironic nodes, like the
-        # NUMATopologyFilter.
-        deprecated_for_removal=True,
-        deprecated_reason="""
-These filters were used to overcome some of the baremetal scheduling
-limitations in Nova prior to the use of the Placement API. Now scheduling will
-use the custom resource class defined for each baremetal node to make its
-selection.
-""",
-        default=False,
-        help="""
-Enable baremetal filters.
-
-Set this to True to tell the nova scheduler that it should use the filters
-specified in the 'baremetal_enabled_filters' option. If you are not
-scheduling baremetal nodes, leave this at the default setting of False.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-
-Related options:
-
-* If this option is set to True, then the filters specified in the
-  'baremetal_enabled_filters' are used instead of the filters
-  specified in 'enabled_filters'.
 """),
     cfg.ListOpt("weight_classes",
         default=["nova.scheduler.weights.all_weighers"],
