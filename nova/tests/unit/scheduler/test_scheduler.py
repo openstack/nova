@@ -353,20 +353,6 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.manager._discover_hosts_in_cells(mock.sentinel.context)
 
 
-class SchedulerInitTestCase(test.NoDBTestCase):
-    """Test case for base scheduler driver initiation."""
-
-    driver_cls = fakes.FakeScheduler
-
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
-    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
-    def test_init_using_default_hostmanager(self,
-                                            mock_init_agg,
-                                            mock_init_inst):
-        manager = self.driver_cls().host_manager
-        self.assertIsInstance(manager, host_manager.HostManager)
-
-
 class SchedulerTestCase(test.NoDBTestCase):
     """Test case for base scheduler driver class."""
 

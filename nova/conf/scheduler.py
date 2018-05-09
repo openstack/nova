@@ -20,20 +20,6 @@ scheduler_group = cfg.OptGroup(name="scheduler",
                                title="Scheduler configuration")
 
 scheduler_opts = [
-    # TODO(mriedem): We should be able to remove this now since it's not an
-    # option anymore.
-    cfg.StrOpt("host_manager",
-        default="host_manager",
-        choices=("host_manager",),
-        deprecated_name="scheduler_host_manager",
-        deprecated_group="DEFAULT",
-        help="""
-The scheduler host manager to use.
-
-The host manager manages the in-memory picture of the hosts that the scheduler
-uses. The options values are chosen from the entry points under the namespace
-'nova.scheduler.host_manager' in 'setup.cfg'.
-"""),
     cfg.StrOpt("driver",
         default="filter_scheduler",
         deprecated_name="scheduler_driver",

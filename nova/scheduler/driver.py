@@ -22,13 +22,10 @@ Scheduler base class that all Schedulers should inherit from
 import abc
 
 import six
-from stevedore import driver
 
-import nova.conf
 from nova import objects
+from nova.scheduler import host_manager
 from nova import servicegroup
-
-CONF = nova.conf.CONF
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -42,10 +39,7 @@ class Scheduler(object):
     """
 
     def __init__(self):
-        self.host_manager = driver.DriverManager(
-                "nova.scheduler.host_manager",
-                CONF.scheduler.host_manager,
-                invoke_on_load=True).driver
+        self.host_manager = host_manager.HostManager()
         self.servicegroup_api = servicegroup.API()
 
     def run_periodic_tasks(self, context):
