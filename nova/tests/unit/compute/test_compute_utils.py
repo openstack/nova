@@ -1201,38 +1201,7 @@ class ComputeUtilsQuotaTestCase(test.TestCase):
             'ram': new_flavor['memory_mb'] - old_flavor['memory_mb']
         }
 
-        deltas = compute_utils.upsize_quota_delta(self.context, new_flavor,
-                                                  old_flavor)
-        self.assertEqual(expected_deltas, deltas)
-
-    def test_downsize_quota_delta(self):
-        inst = create_instance(self.context, params=None)
-        inst.old_flavor = flavors.get_flavor_by_name('m1.medium')
-        inst.new_flavor = flavors.get_flavor_by_name('m1.tiny')
-
-        expected_deltas = {
-            'cores': (inst.new_flavor['vcpus'] -
-                      inst.old_flavor['vcpus']),
-            'ram': (inst.new_flavor['memory_mb'] -
-                    inst.old_flavor['memory_mb'])
-        }
-
-        deltas = compute_utils.downsize_quota_delta(self.context, inst)
-        self.assertEqual(expected_deltas, deltas)
-
-    def test_reverse_quota_delta(self):
-        inst = create_instance(self.context, params=None)
-        inst.old_flavor = flavors.get_flavor_by_name('m1.tiny')
-        inst.new_flavor = flavors.get_flavor_by_name('m1.medium')
-
-        expected_deltas = {
-            'cores': -1 * (inst.new_flavor['vcpus'] -
-                           inst.old_flavor['vcpus']),
-            'ram': -1 * (inst.new_flavor['memory_mb'] -
-                         inst.old_flavor['memory_mb'])
-        }
-
-        deltas = compute_utils.reverse_upsize_quota_delta(self.context, inst)
+        deltas = compute_utils.upsize_quota_delta(new_flavor, old_flavor)
         self.assertEqual(expected_deltas, deltas)
 
     @mock.patch('nova.objects.Quotas.count_as_dict')
