@@ -1858,20 +1858,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             )}
         )
 
-        # Bug #1771707: If a tree has one combination of resource
-        # providers that satisfies required traits, the combinations
-        # without required traits in that tree are also returned.
-        # We should't get the following first combination since
-        # 'cn_numa0_pf0' has no traits
-        # expected = [
-        #     [('cn', fields.ResourceClass.VCPU, 2),
-        #      ('cn', fields.ResourceClass.MEMORY_MB, 256),
-        #      ('cn_numa1_pf1', fields.ResourceClass.SRIOV_NET_VF, 1)],
-        # ]
         expected = [
-            [('cn', fields.ResourceClass.VCPU, 2),
-             ('cn', fields.ResourceClass.MEMORY_MB, 256),
-             ('cn_numa0_pf0', fields.ResourceClass.SRIOV_NET_VF, 1)],
             [('cn', fields.ResourceClass.VCPU, 2),
              ('cn', fields.ResourceClass.MEMORY_MB, 256),
              ('cn_numa1_pf1', fields.ResourceClass.SRIOV_NET_VF, 1)],
@@ -1886,9 +1873,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             # TODO(tetsuro): Return all resource providers in the tree
             #  'cn_numa0': set([]),
             #  'cn_numa1': set([]),
-            'cn_numa0_pf0': set([
-                (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
-            ]),
+            #  'cn_numa0_pf0': set([
+            #      (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+            #  ]),
             'cn_numa1_pf1': set([
                 (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
             ]),
@@ -1900,7 +1887,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             # TODO(tetsuro): Return all resource providers in the tree
             #  'cn_numa0': set([]),
             #  'cn_numa1': set([]),
-            'cn_numa0_pf0': set([]),
+            #  'cn_numa0_pf0': set([]),
             'cn_numa1_pf1': set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
         }
         self._validate_provider_summary_traits(expected, alloc_cands)
@@ -2127,9 +2114,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # let's validate providers in tree as well
         provider_ids = set(p[0] for p in trees)
-        # Bug #1771707: Ideally, we want to have only pf1 from cn3 here,
+        # NOTE(tetsuro): Actually we also get providers without traits here.
+        # This is reported as bug#1771707 and from users' view the bug is now
+        # fixed out of this _get_trees_matching_all() function by checking
+        # traits later again in _check_traits_for_alloc_request().
+        # But ideally, we'd like to have only pf1 from cn3 here using SQL
+        # query in _get_trees_matching_all() function for optimization.
         # provider_names = cn_names + ['cn3_numa1_pf1']
-        # But actually we also get providers without traits
         provider_names = cn_names + ['cn3_numa0_pf0', 'cn3_numa1_pf1']
         expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
         self.assertEqual(expect_provider_ids, provider_ids)
@@ -2167,9 +2158,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # let's validate providers in tree as well
         provider_ids = set(p[0] for p in trees)
-        # Bug #1771707: Ideally, we want to have only pf1 from cn3 here,
+        # NOTE(tetsuro): Actually we also get providers without traits here.
+        # This is reported as bug#1771707 and from users' view the bug is now
+        # fixed out of this _get_trees_matching_all() function by checking
+        # traits later again in _check_traits_for_alloc_request().
+        # But ideally, we'd like to have only pf1 from cn3 here using SQL
+        # query in _get_trees_matching_all() function for optimization.
         # provider_names = cn_names + ['cn3_numa1_pf1']
-        # But actually we also get providers without traits
         provider_names = cn_names + ['cn3_numa0_pf0', 'cn3_numa1_pf1']
         expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
         self.assertEqual(expect_provider_ids, provider_ids)
