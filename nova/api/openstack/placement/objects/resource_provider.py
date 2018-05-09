@@ -1200,6 +1200,7 @@ def _get_all_with_shared(ctx, resources, member_of=None):
 
     :param resources: Dict keyed by resource class integer ID of requested
                       amounts of that resource
+    :param member_of: a list of list of aggregate UUIDs or None
     """
     # NOTE(jaypipes): The SQL we generate here depends on which resource
     # classes have providers that share that resource via an aggregate.
@@ -1547,7 +1548,8 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
         #  filters = {
         #      'name': <name>,
         #      'uuid': <uuid>,
-        #      'member_of': [<aggregate_uuid>, <aggregate_uuid>]
+        #      'member_of': [[<aggregate_uuid>, <aggregate_uuid>],
+        #                    [<aggregate_uuid>]]
         #      'resources': {
         #          'VCPU': 1,
         #          'MEMORY_MB': 1024
@@ -1753,11 +1755,12 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
         :param context: `nova.context.RequestContext` that may be used to grab
                         a DB connection.
         :param filters: Can be `name`, `uuid`, `member_of`, `in_tree` or
-                        `resources` where `member_of` is a list of aggregate
-                        uuids, `in_tree` is a UUID of a resource provider that
-                        we can use to find the root provider ID of the tree of
-                        providers to filter results by and `resources` is a
-                        dict of amounts keyed by resource classes.
+                        `resources` where `member_of` is a list of list of
+                        aggregate UUIDs, `in_tree` is a UUID of a resource
+                        provider that we can use to find the root provider ID
+                        of the tree of providers to filter results by and
+                        `resources` is a dict of amounts keyed by resource
+                        classes.
         :type filters: dict
         """
         _ensure_rc_cache(context)
@@ -2977,10 +2980,10 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
     :param forbidden_traits: A map, keyed by trait string name, of forbidden
                              trait internal IDs that each provider must not
                              have associated with it
-    :param member_of: An optional list of aggregate UUIDs. If provided, the
-                      allocation_candidates returned will only be for resource
-                      providers that are members of one or more of the supplied
-                      aggregates.
+    :param member_of: An optional list of list of aggregate UUIDs. If provided,
+                      the allocation_candidates returned will only be for
+                      resource providers that are members of one or more of the
+                      supplied aggregates of each aggregate UUID list.
     """
     trait_rps = None
     forbidden_rp_ids = None
@@ -3209,10 +3212,10 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     :param forbidden_traits: A map, keyed by trait string name, of trait
                              internal IDs that a resource provider must
                              not have.
-    :param member_of: An optional list of aggregate UUIDs. If provided, the
-                      allocation_candidates returned will only be for resource
-                      providers that are members of one or more of the supplied
-                      aggregates.
+    :param member_of: An optional list of list of aggregate UUIDs. If provided,
+                      the allocation_candidates returned will only be for
+                      resource providers that are members of one or more of the
+                      supplied aggregates in each aggregate UUID list.
     """
     # We first grab the provider trees that have nodes that meet the request
     # for each resource class.  Once we have this information, we'll then do a
@@ -4128,7 +4131,7 @@ class AllocationCandidates(base.VersionedObject):
 
         # Microversions prior to 1.21 will not have 'member_of' in the groups.
         # This allows earlier microversions to continue to work.
-        member_of = getattr(request, "member_of", "")
+        member_of = getattr(request, "member_of", None)
 
         if not request.use_same_provider:
             # TODO(jaypipes): The check/callout to handle trees goes here.

@@ -29,7 +29,8 @@ class RequestGroup(object):
         :param resources: A dict of { resource_class: amount, ... }
         :param required_traits: A set of { trait_name, ... }
         :param forbidden_traits: A set of { trait_name, ... }
-        :param member_of: A list of [ aggregate_UUID, ... ]
+        :param member_of: A list of [ [aggregate_UUID],
+                                      [aggregate_UUID, aggregate_UUID] ... ]
         """
         self.use_same_provider = use_same_provider
         self.resources = resources or {}

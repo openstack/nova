@@ -266,7 +266,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         rps = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx,
             filters={
-                'member_of': [uuidsentinel.agg],
+                'member_of': [[uuidsentinel.agg]],
                 'in_tree': uuidsentinel.grandchild_rp,
             }
         )
