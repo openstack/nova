@@ -513,17 +513,6 @@ class API(base.Base):
             'auto_disk_config': auto_disk_config
         }
 
-    def _apply_instance_name_template(self, instance, index):
-        original_name = instance.display_name
-        new_name = '%s-%d' % (original_name, index + 1)
-        instance.display_name = new_name
-        if not instance.get('hostname', None):
-            if utils.sanitize_hostname(original_name) == "":
-                instance.hostname = self._default_host_name(instance.uuid)
-            else:
-                instance.hostname = utils.sanitize_hostname(new_name)
-        return instance
-
     def _check_config_drive(self, config_drive):
         if config_drive:
             try:
@@ -1409,7 +1398,7 @@ class API(base.Base):
         self.volume_api.check_availability_zone(context, volume,
                                                 instance=instance)
 
-    def _populate_instance_names(self, instance, num_instances):
+    def _populate_instance_names(self, instance, num_instances, index):
         """Populate instance display_name and hostname."""
         display_name = instance.get('display_name')
         if instance.obj_attr_is_set('hostname'):
@@ -1435,6 +1424,16 @@ class API(base.Base):
             default_hostname = self._default_host_name(instance.uuid)
             instance.hostname = utils.sanitize_hostname(hostname,
                                                         default_hostname)
+
+        if num_instances > 1 and self.cell_type != 'api':
+            original_name = instance.display_name
+            new_name = '%s-%d' % (original_name, index + 1)
+            instance.display_name = new_name
+            if not instance.get('hostname', None):
+                if utils.sanitize_hostname(original_name) == "":
+                    instance.hostname = self._default_host_name(instance.uuid)
+                else:
+                    instance.hostname = utils.sanitize_hostname(new_name)
 
     def _default_display_name(self, instance_uuid):
         return "Server %s" % instance_uuid
@@ -1497,10 +1496,8 @@ class API(base.Base):
         else:
             instance.security_groups = security_groups
 
-        self._populate_instance_names(instance, num_instances)
+        self._populate_instance_names(instance, num_instances, index)
         instance.shutdown_terminate = shutdown_terminate
-        if num_instances > 1 and self.cell_type != 'api':
-            instance = self._apply_instance_name_template(instance, index)
 
         return instance
 
