@@ -12,6 +12,7 @@
 
 from nova.cmd import manage
 from nova import context
+from nova import exception
 from nova import objects
 from nova import test
 
@@ -312,6 +313,36 @@ class NovaManageCellV2Test(test.TestCase):
             r = self.commands.delete_host(cell.uuid, 'fake-host1')
             if r == 0:
                 break
+
+        # Our node should now be unmapped
+        cns = objects.ComputeNodeList.get_all(self.context)
+        self.assertEqual(1, len(cns))
+        self.assertEqual(0, cns[0].mapped)
+
+    def test_delete_cell_force_unmaps_computes(self):
+        cells = objects.CellMappingList.get_all(self.context)
+
+        self.commands.discover_hosts()
+
+        # We should have one host mapping
+        objects.HostMapping.get_by_host(self.context, 'fake-host1')
+
+        # We should have one mapped node
+        cns = objects.ComputeNodeList.get_all(self.context)
+        self.assertEqual(1, len(cns))
+        self.assertEqual(1, cns[0].mapped)
+
+        for cell in cells:
+            res = self.commands.delete_cell(cell.uuid, force=True)
+            self.assertEqual(0, res)
+
+        # The host mapping should be deleted since the force option is used
+        self.assertRaises(exception.HostMappingNotFound,
+            objects.HostMapping.get_by_host, self.context, 'fake-host1')
+
+        # All our cells should be deleted
+        cells = objects.CellMappingList.get_all(self.context)
+        self.assertEqual(0, len(cells))
 
         # Our node should now be unmapped
         cns = objects.ComputeNodeList.get_all(self.context)
