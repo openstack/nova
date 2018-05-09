@@ -295,6 +295,16 @@ Bandwidth I/O
      using `Data rate units on Wikipedia
      <https://en.wikipedia.org/wiki/Data_rate_units>`_.
 
+Hardware video RAM
+  Specify ``hw_video:ram_max_mb`` to control the maximum RAM for the video
+  image. Used in conjunction with the ``hw_video_ram`` image property.
+  ``hw_video_ram`` must be less than or equal to ``hw_video:ram_max_mb``.
+
+  This is currently only supported by the libvirt driver.
+
+  See https://libvirt.org/formatdomain.html#elementsVideo for more information
+  on how this is used to set the ``vram`` attribute with the libvirt driver.
+
 Watchdog behavior
   For the libvirt driver, you can enable and set the behavior of a virtual
   hardware watchdog device for each flavor. Watchdog devices keep an eye on the
