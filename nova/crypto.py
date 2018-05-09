@@ -30,6 +30,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography import x509
+from oslo_concurrency import processutils
 from oslo_log import log as logging
 import paramiko
 import six
@@ -119,14 +120,14 @@ def generate_winrm_x509_cert(user_id, bits=2048):
 
         _create_x509_openssl_config(conffile, upn)
 
-        (certificate, _err) = utils.execute(
+        (certificate, _err) = processutils.execute(
              'openssl', 'req', '-x509', '-nodes', '-days', '3650',
              '-config', conffile, '-newkey', 'rsa:%s' % bits,
              '-outform', 'PEM', '-keyout', keyfile, '-subj', subject,
              '-extensions', 'v3_req_client',
              binary=True)
 
-        (out, _err) = utils.execute('openssl', 'pkcs12', '-export',
+        (out, _err) = processutils.execute('openssl', 'pkcs12', '-export',
                                     '-inkey', keyfile, '-password', 'pass:',
                                     process_input=certificate,
                                     binary=True)
