@@ -749,3 +749,27 @@ tests:
   status: 400
   response_strings:
       - 'creating loop in the provider tree is not allowed.'
+
+- name: create a resource provider with dashed uuid
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: rp with dashed uuid
+      uuid: 2290d4af-9e6e-400b-9d65-1ee01376f71a
+  status: 200
+  response_headers:
+      location: //resource_providers/[a-f0-9-]+/
+
+- name: try to create with the same uuid but without dashes
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: rp with dashless uuid
+      uuid: 2290d4af9e6e400b9d651ee01376f71a
+  status: 409
+  response_strings:
+      - "Conflicting resource provider uuid: 2290d4af-9e6e-400b-9d65-1ee01376f71a already exists"
+  response_json_paths:
+      $.errors[0].title: Conflict

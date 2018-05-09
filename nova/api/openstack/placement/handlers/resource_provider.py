@@ -11,6 +11,8 @@
 #    under the License.
 """Placement API handlers for resource providers."""
 
+import uuid as uuidlib
+
 from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
@@ -88,7 +90,13 @@ def create_resource_provider(req):
     data = util.extract_json(req.body, schema)
 
     try:
-        uuid = data.setdefault('uuid', uuidutils.generate_uuid())
+        if data.get('uuid'):
+            # Normalize UUID with no proper dashes into dashed one
+            # with format {8}-{4}-{4}-{4}-{12}
+            data['uuid'] = str(uuidlib.UUID(data['uuid']))
+        else:
+            data['uuid'] = uuidutils.generate_uuid()
+
         resource_provider = rp_obj.ResourceProvider(context, **data)
         resource_provider.create()
     except db_exc.DBDuplicateEntry as exc:
@@ -105,7 +113,7 @@ def create_resource_provider(req):
         raise webob.exc.HTTPBadRequest(
             _('Unable to create resource provider "%(name)s", %(rp_uuid)s: '
               '%(error)s') %
-            {'name': data['name'], 'rp_uuid': uuid, 'error': exc})
+            {'name': data['name'], 'rp_uuid': data['uuid'], 'error': exc})
 
     req.response.location = util.resource_provider_url(
         req.environ, resource_provider)
