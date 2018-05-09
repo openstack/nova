@@ -427,19 +427,23 @@ def _get_aggregates_by_provider_id(context, rp_id):
 
 
 @db_api.api_context_manager.reader
-def _anchors_for_sharing_provider(context, rp_id):
-    """Given the internal ID of a sharing provider, return the UUIDs of all the
-    unique root providers of trees associated with the same aggregate as the
-    sharing provider. (These are the providers that can "anchor" a single
-    AllocationRequest.)
+def _anchors_for_sharing_providers(context, rp_ids, get_id=False):
+    """Given a list of internal IDs of sharing providers, returns a set of
+    tuples of (sharing provider UUID, anchor provider UUID), where each of
+    anchor is the unique root provider of a tree associated with the same
+    aggregate as the sharing provider. (These are the providers that can
+    "anchor" a single AllocationRequest.)
 
     The sharing provider may or may not itself be part of a tree; in either
-    case, its root provider UUID is included in the result.
+    case, an entry for this root provider is included in the result.
 
     If the sharing provider is not part of any aggregate, the empty list is
     returned.
+
+    If get_id is True, it returns a set of tuples of (sharing provider ID,
+    anchor provider ID) instead.
     """
-    # SELECT COALESCE(rps.uuid, shr_with_sps.uuid)
+    # SELECT sps.uuid, COALESCE(rps.uuid, shr_with_sps.uuid)
     # FROM resource_providers AS sps
     # INNER JOIN resource_provider_aggregates AS shr_aggs
     #   ON sps.id = shr_aggs.resource_provider_id
@@ -449,7 +453,7 @@ def _anchors_for_sharing_provider(context, rp_id):
     #   ON shr_with_sps_aggs.resource_provider_id = shr_with_sps.id
     # LEFT JOIN resource_providers AS rps
     #   ON shr_with_sps.root_provider_id = rps.id
-    # WHERE sps.id = $RP_ID
+    # WHERE sps.id IN $(RP_IDs)
     # GROUP by shr_with_sps.root_provider_id
     rps = sa.alias(_RP_TBL, name='rps')
     sps = sa.alias(_RP_TBL, name='sps')
@@ -468,11 +472,14 @@ def _anchors_for_sharing_provider(context, rp_id):
     # root_provider_id values are NOT NULL
     join_chain = sa.outerjoin(
         join_chain, rps, shr_with_sps.c.root_provider_id == rps.c.id)
-    sel = sa.select([func.coalesce(rps.c.uuid, shr_with_sps.c.uuid)])
+    if get_id:
+        sel = sa.select([sps.c.id, func.coalesce(rps.c.id, shr_with_sps.c.id)])
+    else:
+        sel = sa.select([sps.c.uuid, func.coalesce(rps.c.uuid,
+                                                   shr_with_sps.c.uuid)])
     sel = sel.select_from(join_chain)
-    sel = sel.where(sps.c.id == rp_id)
-    sel = sel.group_by(shr_with_sps.c.root_provider_id)
-    return [r[0] for r in context.session.execute(sel).fetchall()]
+    sel = sel.where(sps.c.id.in_(rp_ids))
+    return set([(r[0], r[1]) for r in context.session.execute(sel).fetchall()])
 
 
 @db_api.api_context_manager.writer
@@ -1200,348 +1207,6 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount, member_of=None):
     sel = sel.group_by(rp_tbl.c.id)
 
     return [r[0] for r in ctx.session.execute(sel)]
-
-
-@db_api.api_context_manager.reader
-def _get_all_with_shared(ctx, resources, member_of=None):
-    """Uses some more advanced SQL to find providers that either have the
-    requested resources "locally" or are associated with a provider that shares
-    those requested resources.
-
-    :param resources: Dict keyed by resource class integer ID of requested
-                      amounts of that resource
-    :param member_of: a list of list of aggregate UUIDs or None
-    """
-    # NOTE(jaypipes): The SQL we generate here depends on which resource
-    # classes have providers that share that resource via an aggregate.
-    #
-    # We begin building a "join chain" by starting with a projection from the
-    # resource_providers table:
-    #
-    # SELECT rp.id
-    # FROM resource_providers AS rp
-    #
-    # in addition to a copy of resource_provider_aggregates for each resource
-    # class that has a shared provider:
-    #
-    #  resource_provider_aggregates AS sharing_{RC_NAME},
-    #
-    # We then join to a copy of the inventories table for each resource we are
-    # requesting:
-    #
-    # {JOIN TYPE} JOIN inventories AS inv_{RC_NAME}
-    #  ON rp.id = inv_{RC_NAME}.resource_provider_id
-    #  AND inv_{RC_NAME}.resource_class_id = $RC_ID
-    # LEFT JOIN (
-    #  SELECT resource_provider_id, SUM(used) AS used
-    #  FROM allocations
-    #  WHERE resource_class_id = $RC_ID
-    #  GROUP BY resource_provider_id
-    # ) AS usage_{RC_NAME}
-    #  ON rp.id = usage_{RC_NAME}.resource_provider_id
-    #
-    # For resource classes that DO NOT have any shared resource providers, the
-    # {JOIN TYPE} will be an INNER join, because we are filtering out any
-    # resource providers that do not have local inventory of that resource
-    # class.
-    #
-    # For resource classes that DO have shared resource providers, the {JOIN
-    # TYPE} will be a LEFT (OUTER) join.
-    #
-    # For the first join, {JOINING TABLE} will be resource_providers. For each
-    # subsequent resource class that is added to the SQL expression, {JOINING
-    # TABLE} will be the alias of the inventories table that refers to the
-    # previously-processed resource class.
-    #
-    # For resource classes that DO have shared providers, we also perform a
-    # "butterfly join" against two copies of the resource_provider_aggregates
-    # table:
-    #
-    # +-----------+  +------------+  +-------------+  +------------+
-    # | last_inv  |  | rpa_shared |  | rpa_sharing |  | rp_sharing |
-    # +-----------|  +------------+  +-------------+  +------------+
-    # | rp_id     |=>| rp_id      |  | rp_id       |<=| id         |
-    # |           |  | agg_id     |<=| agg_id      |  |            |
-    # +-----------+  +------------+  +-------------+  +------------+
-    #
-    # Note in the diagram above, we call the _get_providers_sharing_capacity()
-    # for a resource class to construct the "rp_sharing" set/table.
-    #
-    # The first part of the butterfly join is an outer join against a copy of
-    # the resource_provider_aggregates table in order to winnow results to
-    # providers that are associated with any aggregate that the sharing
-    # provider is associated with:
-    #
-    # LEFT JOIN resource_provider_aggregates AS shared_{RC_NAME}
-    #  ON rp.id = shared_{RC_NAME}.resource_provider_id
-    #
-    # The above is then joined to the set of aggregates associated with the set
-    # of sharing providers for that resource:
-    #
-    # LEFT JOIN resource_provider_aggregates AS sharing_{RC_NAME}
-    #  ON shared_{RC_NAME}.aggregate_id = sharing_{RC_NAME}.aggregate_id
-    #  AND sharing_{RC_NAME}.resource_provider_id IN($RPS_{RC_NAME})
-    #
-    # If the request specified limiting resource providers to one or more
-    # specific aggregates, we then join the above to another copy of the
-    # aggregate table and filter on the provided aggregates.
-    #
-    # We calculate the WHERE conditions based on whether the resource class has
-    # any shared providers.
-    #
-    # For resource classes that DO NOT have any shared resource providers, the
-    # WHERE clause constructed finds resource providers that have inventory for
-    # "local" resource providers:
-    #
-    # WHERE (COALESCE(usage_vcpu.used, 0) + $AMOUNT <=
-    #   (inv_{RC_NAME}.total - inv_{RC_NAME}.reserved)
-    #   * inv_{RC_NAME}.allocation_ratio
-    # AND
-    # inv_{RC_NAME}.min_unit <= $AMOUNT AND
-    # inv_{RC_NAME}.max_unit >= $AMOUNT AND
-    # $AMOUNT % inv_{RC_NAME}.step_size == 0)
-    #
-    # For resource classes that DO have shared resource providers, the WHERE
-    # clause is slightly more complicated:
-    #
-    # WHERE (
-    #   inv_{RC_NAME}.resource_provider_id IS NOT NULL AND
-    #   (
-    #     (
-    #     COALESCE(usage_{RC_NAME}.used, 0) + $AMOUNT <=
-    #       (inv_{RC_NAME}.total - inv_{RC_NAME}.reserved)
-    #       * inv_{RC_NAME}.allocation_ratio
-    #     ) AND
-    #     inv_{RC_NAME}.min_unit <= $AMOUNT AND
-    #     inv_{RC_NAME}.max_unit >= $AMOUNT AND
-    #     $AMOUNT % inv_{RC_NAME}.step_size == 0
-    #   ) OR
-    #   sharing_{RC_NAME}.resource_provider_id IS NOT NULL
-    # )
-    #
-    # Finally, we GROUP BY the resource provider ID:
-    #
-    # GROUP BY rp.id
-    #
-    # To show an example, here is the exact SQL that will be generated in an
-    # environment that has a shared storage pool and compute nodes that have
-    # vCPU and RAM associated with the same aggregate as the provider
-    # representing the shared storage pool, and where the request specified
-    # aggregates that the compute nodes had to be associated with:
-    #
-    # SELECT rp.id
-    # FROM resource_providers AS rp
-    # INNER JOIN inventories AS inv_vcpu
-    #  ON rp.id = inv_vcpu.resource_provider_id
-    #  AND inv_vcpu.resource_class_id = $VCPU_ID
-    # LEFT JOIN (
-    #  SELECT resource_provider_id, SUM(used) AS used
-    #  FROM allocations
-    #  WHERE resource_class_id = $VCPU_ID
-    #  GROUP BY resource_provider_id
-    # ) AS usage_vcpu
-    #  ON rp.id = usage_vcpu.resource_provider_id
-    # INNER JOIN inventories AS inv_memory_mb
-    #  ON rp.id = inv_memory_mb.resource_provider_id
-    #  AND inv_memory_mb.resource_class_id = $MEMORY_MB_ID
-    # LEFT JOIN (
-    #  SELECT resource_provider_id, SUM(used) AS used
-    #  FROM allocations
-    #  WHERE resource_class_id = $MEMORY_MB_ID
-    #  GROUP BY resource_provider_id
-    # ) AS usage_memory_mb
-    #  ON rp.id = usage_memory_mb.resource_provider_id
-    # LEFT JOIN inventories AS inv_disk_gb
-    #  ON inv_memory_mb.resource_provider_id = \
-    #       inv_disk_gb.resource_provider_id
-    #  AND inv_disk_gb.resource_class_id = $DISK_GB_ID
-    # LEFT JOIN (
-    #  SELECT resource_provider_id, SUM(used) AS used
-    #  FROM allocations
-    #  WHERE resource_class_id = $DISK_GB_ID
-    #  GROUP BY resource_provider_id
-    # ) AS usage_disk_gb
-    #  ON rp.id = usage_disk_gb.resource_provider_id
-    # LEFT JOIN resource_provider_aggregates AS shared_disk_gb
-    #  ON rp.id = shared_disk.resource_provider_id
-    # LEFT JOIN resource_provider_aggregates AS sharing_disk_gb
-    #  ON shared_disk_gb.aggregate_id = sharing_disk_gb.aggregate_id
-    #  AND sharing_disk_gb.resource_provider_id IN ($RPS_SHARING_DISK)
-    # INNER JOIN resource_provider_aggregates AS member_aggs
-    #  ON rp.id = member_aggs.resource_provider_id
-    # INNER JOIN placement_aggregates AS p_aggs
-    #  ON member_aggs.aggregate_id = p_aggs.id
-    #  AND p_aggs.uuid IN ($MEMBER_OF)
-    # WHERE (
-    #   (
-    #     COALESCE(usage_vcpu.used, 0) + $AMOUNT_VCPU <=
-    #     (inv_vcpu.total - inv_vcpu.reserved)
-    #     * inv_vcpu.allocation_ratio
-    #   ) AND
-    #   inv_vcpu.min_unit <= $AMOUNT_VCPU AND
-    #   inv_vcpu.max_unit >= $AMOUNT_VCPU AND
-    #   $AMOUNT_VCPU % inv_vcpu.step_size == 0
-    # ) AND (
-    #   (
-    #     COALESCE(usage_memory_mb.used, 0) + $AMOUNT_MEMORY_MB <=
-    #     (inv_memory_mb.total - inv_memory_mb.reserved)
-    #     * inv_memory_mb.allocation_ratio
-    #   ) AND
-    #   inv_memory_mb.min_unit <= $AMOUNT_MEMORY_MB AND
-    #   inv_memory_mb.max_unit >= $AMOUNT_MEMORY_MB AND
-    #   $AMOUNT_MEMORY_MB % inv_memory_mb.step_size == 0
-    # ) AND (
-    #   inv_disk.resource_provider_id IS NOT NULL AND
-    #   (
-    #     (
-    #       COALESCE(usage_disk_gb.used, 0) + $AMOUNT_DISK_GB <=
-    #         (inv_disk_gb.total - inv_disk_gb.reserved)
-    #         * inv_disk_gb.allocation_ratio
-    #     ) AND
-    #     inv_disk_gb.min_unit <= $AMOUNT_DISK_GB AND
-    #     inv_disk_gb.max_unit >= $AMOUNT_DISK_GB AND
-    #     $AMOUNT_DISK_GB % inv_disk_gb.step_size == 0
-    #   ) OR
-    #     sharing_disk_gb.resource_provider_id IS NOT NULL
-    # )
-    # GROUP BY rp.id
-
-    rpt = sa.alias(_RP_TBL, name="rp")
-
-    # Contains a set of resource provider IDs for each resource class requested
-    sharing_providers = {
-        rc_id: _get_providers_with_shared_capacity(ctx, rc_id, amount)
-        for rc_id, amount in resources.items()
-    }
-
-    name_map = {
-        rc_id: _RC_CACHE.string_from_id(rc_id).lower() for rc_id in resources
-    }
-
-    # Dict, keyed by resource class ID, of an aliased table object for the
-    # inventories table winnowed to only that resource class.
-    inv_tables = {
-        rc_id: sa.alias(_INV_TBL, name='inv_%s' % name_map[rc_id])
-        for rc_id in resources
-    }
-
-    # Dict, keyed by resource class ID, of a derived table (subquery in the
-    # FROM clause or JOIN) against the allocations table  winnowed to only that
-    # resource class, grouped by resource provider.
-    usage_tables = {
-        rc_id: sa.alias(
-            sa.select([
-                _ALLOC_TBL.c.resource_provider_id,
-                sql.func.sum(_ALLOC_TBL.c.used).label('used'),
-            ]).where(
-                _ALLOC_TBL.c.resource_class_id == rc_id
-            ).group_by(
-                _ALLOC_TBL.c.resource_provider_id
-            ),
-            name='usage_%s' % name_map[rc_id],
-        )
-        for rc_id in resources
-    }
-
-    # Dict, keyed by resource class ID, of an aliased table of
-    # resource_provider_aggregates representing the aggregates associated with
-    # a provider sharing the resource class
-    sharing_tables = {
-        rc_id: sa.alias(_RP_AGG_TBL, name='sharing_%s' % name_map[rc_id])
-        for rc_id in resources
-        if len(sharing_providers[rc_id]) > 0
-    }
-
-    # Dict, keyed by resource class ID, of an aliased table of
-    # resource_provider_aggregates representing the resource providers
-    # associated by aggregate to the providers sharing a particular resource
-    # class.
-    shared_tables = {
-        rc_id: sa.alias(_RP_AGG_TBL, name='shared_%s' % name_map[rc_id])
-        for rc_id in resources
-        if len(sharing_providers[rc_id]) > 0
-    }
-
-    # List of the WHERE conditions we build up by looking at the contents
-    # of the sharing providers
-    where_conds = []
-
-    # Primary selection is on the resource_providers table and all of the
-    # aliased table copies of resource_provider_aggregates for each resource
-    # being shared
-    sel = sa.select([rpt.c.id])
-
-    # The chain of joins that we eventually pass to select_from()
-    join_chain = None
-
-    for rc_id, sps in sharing_providers.items():
-        it = inv_tables[rc_id]
-        ut = usage_tables[rc_id]
-        amount = resources[rc_id]
-
-        rp_link = join_chain if join_chain is not None else rpt
-
-        # We can do a more efficient INNER JOIN when we don't have shared
-        # resource providers for this resource class
-        joiner = sa.join
-        if sps:
-            joiner = sa.outerjoin
-        # Add a join condition winnowing this copy of inventories table
-        # to only the resource class being analyzed in this loop...
-        inv_join = joiner(rp_link, it,
-            sa.and_(rpt.c.id == it.c.resource_provider_id,
-                    it.c.resource_class_id == rc_id))
-        usage_join = sa.outerjoin(inv_join, ut,
-            rpt.c.id == ut.c.resource_provider_id)
-        join_chain = usage_join
-
-        usage_cond = sa.and_(
-            ((sql.func.coalesce(ut.c.used, 0) + amount) <=
-             (it.c.total - it.c.reserved) * it.c.allocation_ratio),
-            it.c.min_unit <= amount,
-            it.c.max_unit >= amount,
-            amount % it.c.step_size == 0)
-        if not sps:
-            where_conds.append(usage_cond)
-        else:
-            sharing = sharing_tables[rc_id]
-            shared = shared_tables[rc_id]
-            cond = sa.or_(
-                sa.and_(
-                    it.c.resource_provider_id != sa.null(),
-                    usage_cond,
-                ),
-                sharing.c.resource_provider_id != sa.null())
-            where_conds.append(cond)
-
-            # We need to add the "butterfly" join now that produces the set of
-            # resource providers associated with a provider that is sharing the
-            # resource via an aggregate
-            shared_join = sa.outerjoin(join_chain, shared,
-                rpt.c.id == shared.c.resource_provider_id)
-            sharing_join = sa.outerjoin(shared_join, sharing,
-                sa.and_(
-                    shared.c.aggregate_id == sharing.c.aggregate_id,
-                    sharing.c.resource_provider_id.in_(sps),
-                ))
-            join_chain = sharing_join
-
-    # If 'member_of' has values, do a separate lookup to identify the
-    # resource providers that meet the member_of constraints.
-    if member_of:
-        rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of)
-        if not rps_in_aggs:
-            # Short-circuit. The user either asked for a non-existing
-            # aggregate or there were no resource providers that matched
-            # the requirements...
-            return []
-        where_conds.append(rpt.c.id.in_(rps_in_aggs))
-
-    sel = sel.select_from(join_chain)
-    sel = sel.where(sa.and_(*where_conds))
-    sel = sel.group_by(rpt.c.id)
-
-    return [r for r in ctx.session.execute(sel)]
 
 
 @base.VersionedObjectRegistry.register_if(False)
@@ -3197,7 +2862,7 @@ def _get_providers_with_resource(ctx, rc_id, amount):
 
 @db_api.api_context_manager.reader
 def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
-        member_of):
+                            sharing, member_of):
     """Returns a list of two-tuples (provider internal ID, root provider
     internal ID) for providers that satisfy the request for resources.
 
@@ -3230,6 +2895,9 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     :param forbidden_traits: A map, keyed by trait string name, of trait
                              internal IDs that a resource provider must
                              not have.
+    :param sharing: dict, keyed by resource class ID, of lists of resource
+                    provider IDs that share that resource class and can
+                    contribute to the overall allocation request
     :param member_of: An optional list of lists of aggregate UUIDs. If
                       provided, the allocation_candidates returned will only be
                       for resource providers that are members of one or more of
@@ -3254,12 +2922,29 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
             return []
         rc_trees = set(p[1] for p in rc_provs_with_inv)
         provs_with_inv |= set((p[0], p[1], rc_id) for p in rc_provs_with_inv)
+
+        sharing_providers = sharing.get(rc_id)
+        if sharing_providers:
+            # There are sharing providers for this resource class, so we
+            # should also get combinations of (sharing provider, anchor root)
+            # in addition to (nested provider, anchor root) we already have.
+            rc_provs_with_inv = _anchors_for_sharing_providers(
+                                        ctx, sharing_providers, get_id=True)
+            rc_provs_with_inv = set(
+                (p[0], p[1], rc_id) for p in rc_provs_with_inv)
+            rc_trees |= set(p[1] for p in rc_provs_with_inv)
+            provs_with_inv |= rc_provs_with_inv
+
+        # Filter trees_with_inv to have only trees with enough inventories
+        # for this resource class. Here "tree" includes sharing providers
+        # in its terminology
         if trees_with_inv:
             trees_with_inv &= rc_trees
-            if not trees_with_inv:
-                return []
         else:
             trees_with_inv = rc_trees
+
+        if not trees_with_inv:
+            return []
 
     # Select only those tuples where there are providers for all requested
     # resource classes (trees_with_inv contains the root provider IDs of those
@@ -3285,10 +2970,13 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
             return []
         provs_with_inv = set(p for p in provs_with_inv if p[1] in rps_in_aggs)
 
-    if not required_traits and not forbidden_traits:
+    if (not required_traits and not forbidden_traits) or (
+            any(sharing.values())):
         # If there were no traits required, there's no difference in how we
         # calculate allocation requests between nested and non-nested
-        # environments, so just short-circuit and return
+        # environments, so just short-circuit and return. Or if sharing
+        # providers are in play, we check the trait constraints later
+        # in _alloc_candidates_multiple_providers(), so skip.
         return list(provs_with_inv)
 
     # Return the providers where the providers have the available inventory
@@ -3607,8 +3295,9 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rps):
         # AllocationRequest for every possible anchor.
         traits = [trait.name for trait in rp_summary.traits]
         if os_traits.MISC_SHARES_VIA_AGGREGATE in traits:
-            for anchor in _anchors_for_sharing_provider(
-                    ctx, rp_summary.resource_provider.id):
+            anchors = set([p[1] for p in _anchors_for_sharing_providers(
+                ctx, [rp_summary.resource_provider.id])])
+            for anchor in anchors:
                 # We already added self
                 if anchor == rp_summary.resource_provider.root_provider_uuid:
                     continue
@@ -3618,7 +3307,7 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rps):
     return alloc_requests, list(summaries.values())
 
 
-def _alloc_candidates_nested_no_shared(ctx, requested_resources,
+def _alloc_candidates_multiple_providers(ctx, requested_resources,
         required_traits, forbidden_traits, rp_tuples):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and tuples of
@@ -3628,13 +3317,8 @@ def _alloc_candidates_nested_no_shared(ctx, requested_resources,
 
     This is a code path to get results for a RequestGroup with
     use_same_provider=False. In this scenario, we are able to use multiple
-    providers within the same provider tree to satisfy different resources
-    involved in a single request group.
-
-    Currently this function should be used only for cases where no sharing
-    providers exist in the system for any requested resource. If sharing
-    providers exist, we use _alloc_candidates_with_shared() instead,
-    but it is not aware of nested trees yet.
+    providers within the same provider tree including sharing providers to
+    satisfy different resources involved in a single request group.
 
     :param ctx: nova.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
@@ -3685,6 +3369,11 @@ def _alloc_candidates_nested_no_shared(ctx, requested_resources,
     # resource class names and amounts to consume from that resource provider
     alloc_requests = []
 
+    # Build a list of the sets of provider internal IDs that end up in
+    # allocation request objects. This is used to ensure we don't end up
+    # having allocation requests with duplicate sets of resource providers.
+    alloc_prov_ids = []
+
     # Let's look into each tree
     for root_id, alloc_dict in tree_dict.items():
         # Get request_groups, which is a list of lists of
@@ -3697,198 +3386,19 @@ def _alloc_candidates_nested_no_shared(ctx, requested_resources,
         # Using itertools.product, we get all the combinations of resource
         # providers in a tree.
         for res_requests in itertools.product(*request_groups):
-            if not _check_traits_for_alloc_request(res_requests, summaries,
-                            prov_traits, required_traits, forbidden_traits):
+            all_prov_ids = _check_traits_for_alloc_request(res_requests,
+                summaries, prov_traits, required_traits, forbidden_traits)
+            if (not all_prov_ids) or (all_prov_ids in alloc_prov_ids):
+                # This combination doesn't satisfy trait constraints,
+                # ...or we already have this permutation, which happens
+                # when multiple sharing providers with different resource
+                # classes are in one request.
                 continue
+            alloc_prov_ids.append(all_prov_ids)
             alloc_requests.append(
                 AllocationRequest(ctx, resource_requests=list(res_requests),
                                   anchor_root_provider_uuid=root_uuid)
             )
-    return alloc_requests, list(summaries.values())
-
-
-def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
-                                  forbidden_traits, ns_rp_ids, sharing):
-    """Returns a tuple of (allocation requests, provider summaries) for a
-    supplied set of requested resource amounts and resource providers.
-
-    The allocation requests will contain BOTH resource providers that locally
-    have all the resources to satisfy each requested resource amount AND
-    combinations of resource providers and shared providers in same aggregate
-    that can collectively satisfy requested resource.
-
-    :param ctx: nova.context.RequestContext object
-    :param requested_resources: dict, keyed by resource class ID, of amounts
-                                being requested for that resource class
-    :param required_traits: A map, keyed by trait string name, of required
-                            trait internal IDs that each *allocation request's
-                            set of providers* must *collectively* have
-                            associated with them
-    :param forbidden_traits: A map, keyed by trait string name, of trait
-                             internal IDs that a resource provider must
-                             not have.
-    :param ns_rp_ids: List of resource provider IDs for providers that EITHER
-                      match all of the requested resources or are associated
-                      with sharing providers that can satisfy missing requested
-                      resources. In other words, this is the list of resource
-                      provider IDs for all providers that are NOT sharing a
-                      resource.
-    :param sharing: dict, keyed by resource class ID, of a list of resource
-                    provider IDs that share that resource class
-    """
-    # We need to grab usage information for all the providers identified as
-    # potentially fulfilling part of the resource request. This includes
-    # non-sharing providers returned from the call to _get_all_with_shared() as
-    # well as all the providers of shared resources. Here, we simply grab a
-    # unique set of all those resource provider internal IDs by set union'ing
-    # them together
-    all_rp_ids = set(ns_rp_ids)
-    for rps in sharing.values():
-        all_rp_ids |= set(rps)
-
-    # Short out if no providers have been found at this point.
-    if not all_rp_ids:
-        return [], []
-
-    # Grab usage summaries for each provider (local or sharing)
-    usages = _get_usages_by_provider(ctx, all_rp_ids)
-
-    # Get a dict, keyed by resource provider internal ID, of trait string names
-    # that provider has associated with it
-    prov_traits = _provider_traits(ctx, all_rp_ids)
-
-    # Get a dict, keyed by resource provider internal ID, of ProviderSummary
-    # objects for all providers involved in the request
-    summaries = _build_provider_summaries(ctx, usages, prov_traits)
-
-    # Next, build up a list of allocation requests. These allocation requests
-    # are AllocationRequest objects, containing resource provider UUIDs,
-    # resource class names and amounts to consume from that resource provider
-    alloc_requests = []
-
-    # Build a list of the sets of provider internal IDs that end up in
-    # allocation request objects. This is used to ensure we don't end up
-    # having allocation requests with duplicate sets of resource providers.
-    alloc_prov_ids = []
-
-    # Get a dict, keyed by resource provider internal ID, of sets of aggregate
-    # ids that provider has associated with it
-    prov_aggregates = _provider_aggregates(ctx, all_rp_ids)
-
-    for ns_rp_id in ns_rp_ids:
-        # Build a dict, keyed by resource class ID, of lists of
-        # AllocationRequestResource objects
-        res_req_dict = collections.defaultdict(list)
-
-        if ns_rp_id not in summaries:
-            # This resource provider is not providing any resources that have
-            # been requested. This means that this resource provider has some
-            # requested resources shared *with* it but the allocation of the
-            # requested resource will not be made against it. Since this
-            # provider won't actually have an allocation request written for
-            # it, we just ignore it and continue
-            continue
-        # NOTE(jaypipes): The "ns_" prefix for variables in this code block
-        # indicates the variable is something related to the non-sharing
-        # provider involved in the request
-        ns_rp_summary = summaries[ns_rp_id]
-        ns_rp_uuid = ns_rp_summary.resource_provider.uuid
-        anchor_rp_uuid = ns_rp_summary.resource_provider.root_provider_uuid
-        ns_resource_class_names = ns_rp_summary.resource_class_names
-        ns_resources = set(
-            rc_id for rc_id in requested_resources
-            if _RC_CACHE.string_from_id(rc_id) in ns_resource_class_names
-        )
-
-        # Identify traits which are forbidden and exclude those providers.
-        ns_prov_traits = set(prov_traits.get(ns_rp_id, []))
-        conflict_traits = set(forbidden_traits) & ns_prov_traits
-
-        if conflict_traits:
-            LOG.debug('Excluding non-sharing provider %s: it has '
-                      'forbidden traits: (%s).',
-                      ns_rp_uuid, ', '. join(conflict_traits))
-            continue
-
-        has_none = len(ns_resources) == 0
-        if has_none:
-            # This resource provider doesn't actually provide any requested
-            # resource. It only has requested resources shared *with* it.
-            # We do not list this provider in allocation_requests but do
-            # list it in provider_summaries.
-            continue
-
-        # Get AllocationRequestResource(s) from the non-sharing provider
-        for rc_id, amount in requested_resources.items():
-            if rc_id not in ns_resources:
-                continue
-            res_req_dict[rc_id].append(
-                AllocationRequestResource(
-                    ctx, resource_provider=ResourceProvider(ctx,
-                                                            uuid=ns_rp_uuid),
-                    resource_class=_RC_CACHE.string_from_id(rc_id),
-                    amount=amount))
-
-        # Build a dict, keyed by resource class ID, of lists of
-        # AllocationRequestResource objects that represent each
-        # resource provider for a shared resource
-        sharing_resource_requests = _shared_allocation_request_resources(
-                                    ctx, ns_rp_id, requested_resources,
-                                    sharing, summaries, prov_aggregates)
-
-        # Get AllocationRequestResource(s) from sharing provider(s)
-        for rc_id in sharing_resource_requests:
-            sharing_res_reqs = sharing_resource_requests[rc_id]
-            res_req_dict[rc_id].extend(sharing_res_reqs)
-
-        # Get request_groups, lists of lists of AllocationRequestResource
-        # for each resource class, which makes no distinction between
-        # non-sharing resource providers and sharing resource providers.
-        request_groups = res_req_dict.values()
-
-        # Add an AllocationRequest that includes resources from the
-        # non-sharing provider AND shared resources from each sharing
-        # provider of that resource class. This is where we construct all the
-        # possible permutations of non-shared resources and shared resources.
-        for res_requests in itertools.product(*request_groups):
-            # Before we add the allocation request to our list, we first need
-            # to ensure that the resource providers involved in this allocation
-            # request have all of the traits and that we don't have this
-            # combination in alloc_requests yet
-            all_prov_ids = _check_traits_for_alloc_request(res_requests,
-                summaries, prov_traits, required_traits, forbidden_traits)
-
-            if not all_prov_ids or all_prov_ids in alloc_prov_ids:
-                continue
-
-            alloc_prov_ids.append(all_prov_ids)
-            req = AllocationRequest(ctx, resource_requests=list(res_requests),
-                                    anchor_root_provider_uuid=anchor_rp_uuid)
-            alloc_requests.append(req)
-
-    # The process above may have removed some previously-identified resource
-    # providers from being included in the allocation requests due to the
-    # sharing providers not satisfying trait requirements that were missing
-    # from "local providers". So, here, we need to remove any provider
-    # summaries for resource providers that do not appear in any allocation
-    # requests.
-    alloc_req_rp_uuids = set()
-    for ar in alloc_requests:
-        for rr in ar.resource_requests:
-            alloc_req_rp_uuids.add(rr.resource_provider.uuid)
-
-    # Look up the internal ID for each identified rp UUID
-    alloc_req_rp_ids = set()
-    for rp_uuid in alloc_req_rp_uuids:
-        for rp_id, summary in summaries.items():
-            if summary.resource_provider.uuid == rp_uuid:
-                alloc_req_rp_ids.add(rp_id)
-
-    p_sums_ids = set(summaries)
-    eliminated_rp_ids = p_sums_ids - alloc_req_rp_ids
-    for elim_id in eliminated_rp_ids:
-        del summaries[elim_id]
-
     return alloc_requests, list(summaries.values())
 
 
@@ -4322,40 +3832,23 @@ class AllocationCandidates(base.VersionedObject):
                                                            amount, member_of)
                 for rc_id, amount in resources.items()
             }
-            # We check this here as an optimization: if we have no sharing
-            # providers, we fall through to the (simpler, more efficient)
-            # algorithm below.
-            if any(sharing_providers.values()):
-                # Okay, we have to do it the hard way: the request may be
-                # satisfied by one or more sharing providers as well as (maybe)
-                # the non-sharing provider.
-                if required_trait_map:
-                    # TODO(cdent): Now that there is also a forbidden_trait_map
-                    # it should be possible to further optimize this attempt at
-                    # a quick return, but we leave that to future patches for
-                    # now.
-                    trait_rps = _get_provider_ids_having_any_trait(
-                        context, required_trait_map)
-                    if not trait_rps:
-                        # If there aren't any providers that have any of the
-                        # required traits, just exit early...
-                        return [], []
 
-                # rp_ids contains a list of resource provider IDs that EITHER
-                # have all the requested resources themselves OR have some
-                # resources and are related to a provider that is sharing some
-                # resources with it. In other words, this is the list of
-                # resource provider IDs that are NOT sharing resources.
-                rps = _get_all_with_shared(context, resources, member_of)
-                rp_ids = set([r[0] for r in rps])
-                return _alloc_candidates_with_shared(
-                    context, resources, required_trait_map,
-                    forbidden_trait_map, rp_ids, sharing_providers)
-            else:
-                rp_tuples = _get_trees_matching_all(context, resources,
-                    required_trait_map, forbidden_trait_map, member_of)
-                return _alloc_candidates_nested_no_shared(context, resources,
-                    required_trait_map, forbidden_trait_map, rp_tuples)
+            # If there aren't any providers that have any of the
+            # required traits, just exit early...
+            if required_trait_map:
+                # TODO(cdent): Now that there is also a forbidden_trait_map
+                # it should be possible to further optimize this attempt at
+                # a quick return, but we leave that to future patches for
+                # now.
+                trait_rps = _get_provider_ids_having_any_trait(
+                    context, required_trait_map)
+                if not trait_rps:
+                    return [], []
+            rp_tuples = _get_trees_matching_all(context, resources,
+                required_trait_map, forbidden_trait_map,
+                sharing_providers, member_of)
+            return _alloc_candidates_multiple_providers(context, resources,
+                required_trait_map, forbidden_trait_map, rp_tuples)
 
         # Either we are processing a single-RP request group, or there are no
         # sharing providers that (help) satisfy the request.  Get a list of
