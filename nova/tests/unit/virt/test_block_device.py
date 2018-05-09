@@ -28,6 +28,7 @@ from nova.tests.unit import matchers
 from nova.tests import uuidsentinel as uuids
 from nova.virt import block_device as driver_block_device
 from nova.virt import driver
+from nova.virt import fake as fake_virt
 from nova.volume import cinder
 
 
@@ -704,20 +705,61 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                          instance, self.volume_api, self.virt_driver,
                          do_driver_attach=True)
 
-    def test_volume_attach_volume_attach_fails(self):
+    @mock.patch('nova.objects.BlockDeviceMapping.save')
+    @mock.patch('nova.volume.cinder.API')
+    @mock.patch('os_brick.encryptors.get_encryption_metadata',
+                return_value={})
+    def test_volume_attach_volume_attach_fails(self, mock_get_encryption,
+                                               mock_volume_api, mock_bdm_save):
+        """Tests that attaching the volume fails and driver rollback occurs."""
         test_bdm = self.driver_classes['volume'](
             self.volume_bdm)
         volume = {'id': 'fake-volume-id-1',
                   'attach_status': 'detached'}
+        mock_volume_api.get.return_value = volume
+        instance = fake_instance.fake_instance_obj(self.context)
+        virt_driver = fake_virt.SmallFakeDriver(virtapi=mock.MagicMock())
 
-        instance, _ = self._test_volume_attach(
-                test_bdm, self.volume_bdm, volume, driver_attach=True,
-                fail_volume_attach=True)
-        self.mox.ReplayAll()
+        fake_conn_info = {
+            'serial': volume['id'],
+            'data': {
+                'foo': 'bar'
+            }
+        }
+        if self.attachment_id:
+            mock_volume_api.attachment_update.return_value = {
+                'connection_info': fake_conn_info
+            }
+            mock_volume_api.attachment_complete.side_effect = (
+                test.TestingException)
+        else:
+            # legacy flow, stub out the volume_api accordingly
+            mock_volume_api.attach.side_effect = test.TestingException
+            mock_volume_api.initialize_connection.return_value = fake_conn_info
 
-        self.assertRaises(test.TestingException, test_bdm.attach, self.context,
-                         instance, self.volume_api, self.virt_driver,
-                         do_driver_attach=True)
+        with mock.patch.object(virt_driver, 'detach_volume') as drvr_detach:
+            with mock.patch.object(self.context, 'elevated',
+                                   return_value=self.context):
+                self.assertRaises(test.TestingException, test_bdm.attach,
+                                  self.context, instance, mock_volume_api,
+                                  virt_driver, do_driver_attach=True)
+
+        drvr_detach.assert_called_once_with(
+            self.context, fake_conn_info, instance,
+            self.volume_bdm.device_name,
+            encryption=mock_get_encryption.return_value)
+
+        if self.attachment_id:
+            mock_volume_api.attachment_delete.assert_called_once_with(
+                self.context, self.attachment_id)
+        else:
+            mock_volume_api.terminate_connection.assert_called_once_with(
+                self.context, volume['id'],
+                virt_driver.get_volume_connector(instance))
+            mock_volume_api.detach.assert_called_once_with(
+                self.context, volume['id'])
+
+        self.assertEqual(2, mock_bdm_save.call_count)
 
     def test_volume_attach_no_driver_attach_volume_attach_fails(self):
         test_bdm = self.driver_classes['volume'](
