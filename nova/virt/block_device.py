@@ -144,14 +144,28 @@ class DriverBlockDevice(dict):
     def __getattr__(self, name):
         if name in self._proxy_as_attr:
             return getattr(self._bdm_obj, name)
+        elif name in self._fields:
+            return self[name]
         else:
-            super(DriverBlockDevice, self).__getattr__(name)
+            return super(DriverBlockDevice, self).__getattr__(name)
 
     def __setattr__(self, name, value):
         if name in self._proxy_as_attr:
-            return setattr(self._bdm_obj, name, value)
+            setattr(self._bdm_obj, name, value)
+        elif name in self._fields:
+            self[name] = value
         else:
             super(DriverBlockDevice, self).__setattr__(name, value)
+
+    def __getitem__(self, name):
+        if name in self._proxy_as_attr:
+            return getattr(self._bdm_obj, name)
+        return super(DriverBlockDevice, self).__getitem__(name)
+
+    def __setitem__(self, name, value):
+        if name in self._proxy_as_attr:
+            setattr(self._bdm_obj, name, value)
+        super(DriverBlockDevice, self).__setitem__(name, value)
 
     def _transform(self):
         """Transform bdm to the format that is passed to drivers."""
