@@ -1309,12 +1309,13 @@ class ResourceTracker(object):
                 # that contains this source compute host information anyway and
                 # recreate an allocation that only refers to itself. So we
                 # don't need to do anything in that case. Just log the
-                # situation here for debugging information but don't attempt to
-                # delete or change the allocation.
-                LOG.debug("Instance %s has been moved to another host %s(%s). "
-                          "There are allocations remaining against the source "
-                          "host that might need to be removed: %s.",
-                          instance_uuid, instance.host, instance.node, alloc)
+                # situation here for information but don't attempt to delete or
+                # change the allocation.
+                LOG.warning("Instance %s has been moved to another host "
+                            "%s(%s). There are allocations remaining against "
+                            "the source host that might need to be removed: "
+                            "%s.",
+                            instance_uuid, instance.host, instance.node, alloc)
 
     def delete_allocation_for_evacuated_instance(self, context, instance, node,
                                                  node_type='source'):
