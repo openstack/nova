@@ -1151,6 +1151,18 @@ class CellV2Commands(object):
         that all instances have been mapped.
         """
 
+        # NOTE(stephenfin): The support for batching in this command relies on
+        # a bit of a hack. We initially process N instance-cell mappings, where
+        # N is the value of '--max-count' if provided else 50. To ensure we
+        # can continue from N on the next iteration, we store a instance-cell
+        # mapping object with a special name and the UUID of the last
+        # instance-cell mapping processed (N - 1) in munged form. On the next
+        # iteration, we search for the special name and unmunge the UUID to
+        # pick up where we left off. This is done until all mappings are
+        # processed. The munging is necessary as there's a unique constraint on
+        # the UUID field and we need something reversable. For more
+        # information, see commit 9038738d0.
+
         if max_count is not None:
             try:
                 max_count = int(max_count)
