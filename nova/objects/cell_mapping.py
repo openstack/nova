@@ -11,6 +11,7 @@
 #    under the License.
 
 from oslo_utils import versionutils
+from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql import false
 from sqlalchemy.sql import true
@@ -164,4 +165,23 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_disabled(cls, context, disabled):
         db_mappings = cls._get_by_disabled_from_db(context, disabled)
+        return base.obj_make_list(context, cls(), CellMapping, db_mappings)
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_by_project_id_from_db(context, project_id):
+        mappings = context.session.query(
+            api_models.InstanceMapping).\
+            filter_by(project_id=project_id).\
+            group_by(api_models.InstanceMapping.cell_id).\
+            options(joinedload('cell_mapping', innerjoin=True)).\
+            all()
+        return (mapping.cell_mapping for mapping in mappings)
+
+    @classmethod
+    def get_by_project_id(cls, context, project_id):
+        """Return a list of CellMapping objects which correspond to cells in
+        which project_id has InstanceMappings.
+        """
+        db_mappings = cls._get_by_project_id_from_db(context, project_id)
         return base.obj_make_list(context, cls(), CellMapping, db_mappings)
