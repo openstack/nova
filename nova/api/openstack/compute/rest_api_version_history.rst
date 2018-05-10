@@ -383,6 +383,8 @@ the generic request format is::
 
   GET /os-keypairs?limit={limit}&marker={kp_name}
 
+.. _2.36 microversion:
+
 2.36
 ----
 

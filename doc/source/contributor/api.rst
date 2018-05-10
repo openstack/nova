@@ -252,3 +252,64 @@ be found here: https://wiki.openstack.org/wiki/NovaAPIRef
 For more detailed documentation of certain aspects of the API, consider
 writing something into the compute API guide found under path
 ``api-guide/source/``.
+
+
+Deprecating APIs
+----------------
+
+Compute REST API routes may be deprecated by capping a method or functionality
+using microversions. For example, the
+:ref:`2.36 microversion <2.36 microversion>` deprecated
+several compute REST API routes which only work when using the ``nova-network``
+service, which itself was deprecated, or are proxies to other external
+services like Cinder, Neutron, etc.
+
+The point of deprecating with microversions is users can still get the same
+functionality at a lower microversion but there is at least some way to signal
+to users that they should stop using the REST API.
+
+The general steps for deprecating a REST API are:
+
+* Set a maximum allowed microversion for the route. Requests beyond that
+  microversion on that route will result in a ``404 HTTPNotFound`` error.
+* Update the Compute API reference documentation to indicate the route is
+  deprecated and move it to the bottom of the list with the other deprecated
+  APIs.
+* Deprecate, and eventually remove, related CLI / SDK functionality in other
+  projects like python-novaclient.
+
+
+Removing deprecated APIs
+------------------------
+
+Nova tries to maintain backward compatibility with all REST APIs as much as
+possible, but when enough time has lapsed, there are few (if any) users or
+there are supported alternatives, the underlying service code that supports a
+deprecated REST API, like in the case of ``nova-network``, is removed and the
+REST API must also be effectively removed.
+
+The general steps for removing support for a deprecated REST API are:
+
+* The `route mapping`_ will remain but all methods will return a
+  ``410 HTTPGone`` error response. This is slightly different then the
+  ``404 HTTPNotFound`` error response a user will get for trying to use a
+  microversion that does not support a deprecated API. 410 means the resource
+  is gone and not coming back, which is more appropriate when the API is
+  fully removed and will not work at any microversion.
+* Related configuration options, policy rules, and schema validation are
+  removed.
+* The API reference documentation should be updated to move the documentation
+  for the removed API to the `Obsolete APIs`_ section and mention in which
+  release the API was removed.
+* Unit tests can be removed.
+* API sample functional tests can be changed to assert the 410 response
+  behavior, but can otherwise be mostly gutted. Related \*.tpl files for the
+  API sample functional tests can be deleted since they will not be used.
+* An "upgrade" :doc:`release note <releasenotes>` should be added to mention
+  the REST API routes that were removed along with any related configuration
+  options that were also removed.
+
+Here is an example of the above steps: https://review.openstack.org/567682/
+
+.. _route mapping: http://git.openstack.org/cgit/openstack/nova/tree/nova/api/openstack/compute/routes.py
+.. _Obsolete APIs: https://developer.openstack.org/api-ref/compute/#obsolete-apis
