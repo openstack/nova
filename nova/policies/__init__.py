@@ -46,7 +46,6 @@ from nova.policies import floating_ip_dns
 from nova.policies import floating_ip_pools
 from nova.policies import floating_ips
 from nova.policies import floating_ips_bulk
-from nova.policies import fping
 from nova.policies import hide_server_addresses
 from nova.policies import hosts
 from nova.policies import hypervisors
@@ -124,7 +123,6 @@ def list_rules():
         floating_ip_pools.list_rules(),
         floating_ips.list_rules(),
         floating_ips_bulk.list_rules(),
-        fping.list_rules(),
         hide_server_addresses.list_rules(),
         hosts.list_rules(),
         hypervisors.list_rules(),

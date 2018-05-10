@@ -1,0 +1,14 @@
+---
+upgrade:
+  - |
+    The *nova-network* service has been deprecated since the 14.0.0 Newton
+    release and now the following *nova-network* specific REST APIs have been
+    removed along with their related policy rules. Calling these APIs will now
+    result in a ``410 HTTPGone`` error response.
+
+    * ``GET /os-fping``
+    * ``GET /os-fping/{server_id}``
+
+    In addition, the following configuration options have been removed.
+
+    * ``[api]/fping_path``
