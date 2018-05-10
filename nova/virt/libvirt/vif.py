@@ -18,7 +18,6 @@
 
 """VIF drivers for libvirt."""
 
-import copy
 import os
 
 import os_vif
@@ -230,9 +229,6 @@ class LibvirtGenericVIFDriver(object):
     def get_ovs_interfaceid(self, vif):
         return vif.get('ovs_interfaceid') or vif['id']
 
-    def get_br_name(self, iface_id):
-        return ("qbr" + iface_id)[:network_model.NIC_NAME_LEN]
-
     def get_veth_pair_names(self, iface_id):
         return (("qvb%s" % iface_id)[:network_model.NIC_NAME_LEN],
                 ("qvo%s" % iface_id)[:network_model.NIC_NAME_LEN])
@@ -241,79 +237,12 @@ class LibvirtGenericVIFDriver(object):
     def is_no_op_firewall():
         return CONF.firewall_driver == "nova.virt.firewall.NoopFirewallDriver"
 
-    def get_firewall_required(self, vif):
-        if vif.is_neutron_filtering_enabled():
-            return False
-        if self.is_no_op_firewall():
-            return False
-        return True
-
     def get_firewall_required_os_vif(self, vif):
         if vif.has_traffic_filtering:
             return False
         if self.is_no_op_firewall():
             return False
         return True
-
-    def get_config_bridge(self, instance, vif, image_meta,
-                          inst_type, virt_type, host):
-        """Get VIF configurations for bridge type."""
-        conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'],
-                                    host)
-
-        designer.set_vif_host_backend_bridge_config(
-            conf, self.get_bridge_name(vif),
-            self.get_vif_devname(vif))
-
-        mac_id = vif['address'].replace(':', '')
-        name = "nova-instance-" + instance.name + "-" + mac_id
-        if self.get_firewall_required(vif):
-            conf.filtername = name
-        designer.set_vif_bandwidth_config(conf, inst_type)
-
-        return conf
-
-    def get_config_ivs_hybrid(self, instance, vif, image_meta,
-                              inst_type, virt_type, host):
-        newvif = copy.deepcopy(vif)
-        newvif['network']['bridge'] = self.get_br_name(vif['id'])
-        return self.get_config_bridge(instance,
-                                      newvif,
-                                      image_meta,
-                                      inst_type,
-                                      virt_type,
-                                      host)
-
-    def get_config_ivs_ethernet(self, instance, vif, image_meta,
-                                inst_type, virt_type, host):
-        conf = self.get_base_config(instance,
-                                    vif['address'],
-                                    image_meta,
-                                    inst_type,
-                                    virt_type,
-                                    vif['vnic_type'],
-                                    host)
-
-        dev = self.get_vif_devname(vif)
-        designer.set_vif_host_backend_ethernet_config(conf, dev, host)
-
-        return conf
-
-    def get_config_ivs(self, instance, vif, image_meta,
-                       inst_type, virt_type, host):
-        if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
-            return self.get_config_ivs_hybrid(instance, vif,
-                                              image_meta,
-                                              inst_type,
-                                              virt_type,
-                                              host)
-        else:
-            return self.get_config_ivs_ethernet(instance, vif,
-                                                image_meta,
-                                                inst_type,
-                                                virt_type,
-                                                host)
 
     def get_config_802qbg(self, instance, vif, image_meta,
                           inst_type, virt_type, host):
@@ -530,6 +459,10 @@ class LibvirtGenericVIFDriver(object):
         designer.set_vif_bandwidth_config(conf, inst_type)
         return conf
 
+    def _set_config_VIFGeneric(self, instance, vif, conf, host):
+        dev = self.get_vif_devname(vif)
+        designer.set_vif_host_backend_ethernet_config(conf, dev, host)
+
     def _set_config_VIFBridge(self, instance, vif, conf, host=None):
         conf.net_type = "bridge"
         conf.source_dev = vif.bridge_name
@@ -657,46 +590,6 @@ class LibvirtGenericVIFDriver(object):
                 _("Unexpected vif_type=%s") % vif_type)
         return func(instance, vif, image_meta,
                     inst_type, virt_type, host)
-
-    def plug_ivs_hybrid(self, instance, vif):
-        """Plug using hybrid strategy (same as OVS)
-
-        Create a per-VIF linux bridge, then link that bridge to the OVS
-        integration bridge via a veth device, setting up the other end
-        of the veth device just like a normal IVS port.  Then boot the
-        VIF on the linux bridge using standard libvirt mechanisms.
-        """
-        iface_id = self.get_ovs_interfaceid(vif)
-        br_name = self.get_br_name(vif['id'])
-        v1_name, v2_name = self.get_veth_pair_names(vif['id'])
-
-        if not linux_net_utils.device_exists(br_name):
-            nova.privsep.libvirt.add_bridge(br_name)
-            nova.privsep.libvirt.zero_bridge_forward_delay(br_name)
-            nova.privsep.libvirt.disable_bridge_stp(br_name)
-            nova.privsep.libvirt.disable_multicast_snooping(br_name)
-            nova.privsep.libvirt.disable_ipv6(br_name)
-
-        if not linux_net_utils.device_exists(v2_name):
-            mtu = vif['network'].get_meta('mtu')
-            linux_net_utils.create_veth_pair(v1_name, v2_name, mtu)
-            nova.privsep.libvirt.toggle_interface(br_name, 'up')
-            nova.privsep.libvirt.bridge_add_interface(br_name, v1_name)
-            linux_net.create_ivs_vif_port(v2_name, iface_id,
-                                          vif['address'], instance.uuid)
-
-    def plug_ivs_ethernet(self, instance, vif):
-        iface_id = self.get_ovs_interfaceid(vif)
-        dev = self.get_vif_devname(vif)
-        linux_net.create_tap_dev(dev)
-        linux_net.create_ivs_vif_port(dev, iface_id, vif['address'],
-                                      instance.uuid)
-
-    def plug_ivs(self, instance, vif):
-        if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
-            self.plug_ivs_hybrid(instance, vif)
-        else:
-            self.plug_ivs_ethernet(instance, vif)
 
     def plug_ib_hostdev(self, instance, vif):
         fabric = vif.get_physical_network()
@@ -869,36 +762,6 @@ class LibvirtGenericVIFDriver(object):
                 _("Plug vif failed because of unexpected "
                   "vif_type=%s") % vif_type)
         func(instance, vif)
-
-    def unplug_ivs_hybrid(self, instance, vif):
-        """UnPlug using hybrid strategy (same as OVS)
-
-        Unhook port from IVS, unhook port from bridge, delete
-        bridge, and delete both veth devices.
-        """
-        try:
-            br_name = self.get_br_name(vif['id'])
-            v1_name, v2_name = self.get_veth_pair_names(vif['id'])
-
-            nova.privsep.libvirt.bridge_delete_interface(br_name, v1_name)
-            nova.privsep.libvirt.toggle_interface(br_name, 'down')
-            nova.privsep.libvirt.delete_bridge(br_name)
-            linux_net.delete_ivs_vif_port(v2_name)
-        except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
-
-    def unplug_ivs_ethernet(self, instance, vif):
-        """Unplug the VIF by deleting the port from the bridge."""
-        try:
-            linux_net.delete_ivs_vif_port(self.get_vif_devname(vif))
-        except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
-
-    def unplug_ivs(self, instance, vif):
-        if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
-            self.unplug_ivs_hybrid(instance, vif)
-        else:
-            self.unplug_ivs_ethernet(instance, vif)
 
     def unplug_ib_hostdev(self, instance, vif):
         fabric = vif.get_physical_network()

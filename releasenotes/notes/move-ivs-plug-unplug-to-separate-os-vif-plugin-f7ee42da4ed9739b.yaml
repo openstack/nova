@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    This release moves the livirt driver ``IVS`` VIF plug-unplug to a separate
+    package called ``os-vif-bigswitch``. This package is a requirement on
+    compute nodes when using ``networking-bigswitch`` as neutron ML2 and L3
+    driver.
+    Releases are available on https://pypi.org/project/os-vif-bigswitch/. Major
+    version for the package matches upstream neutron version number. Minor
+    version tracks compatiblity with Big Cloud Fabric (BCF) releases, and
+    typically is set to the lowest supported BCF release.

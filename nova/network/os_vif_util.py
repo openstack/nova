@@ -410,7 +410,20 @@ def _nova_to_osvif_vif_vhostuser(vif):
 
 # VIF_TYPE_IVS = 'ivs'
 def _nova_to_osvif_vif_ivs(vif):
-    raise NotImplementedError()
+    if _is_firewall_required(vif) or vif.is_hybrid_plug_enabled():
+        obj = _get_vif_instance(
+            vif,
+            objects.vif.VIFBridge,
+            plugin="ivs",
+            vif_name=_get_vif_name(vif),
+            bridge_name=_get_hybrid_bridge_name(vif))
+    else:
+        obj = _get_vif_instance(
+            vif,
+            objects.vif.VIFGeneric,
+            plugin="ivs",
+            vif_name=_get_vif_name(vif))
+    return obj
 
 
 # VIF_TYPE_DVS = 'dvs'
