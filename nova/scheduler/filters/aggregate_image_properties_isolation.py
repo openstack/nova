@@ -17,7 +17,6 @@ from oslo_log import log as logging
 
 
 import nova.conf
-from nova.i18n import _LW
 from nova.scheduler import filters
 from nova.scheduler.filters import utils
 
@@ -54,8 +53,8 @@ class AggregateImagePropertiesIsolation(filters.BaseHostFilter):
             try:
                 prop = image_props.get(key)
             except AttributeError:
-                LOG.warning(_LW("Host '%(host)s' has a metadata key '%(key)s' "
-                                "that is not present in the image metadata."),
+                LOG.warning("Host '%(host)s' has a metadata key '%(key)s' "
+                            "that is not present in the image metadata.",
                             {"host": host_state.host, "key": key})
                 continue
 

@@ -16,7 +16,6 @@
 from oslo_log import log as logging
 
 import nova.conf
-from nova.i18n import _LW
 from nova.scheduler import filters
 from nova.scheduler.filters import utils
 
@@ -43,9 +42,9 @@ class IoOpsFilter(filters.BaseHostFilter):
         passes = num_io_ops < max_io_ops
         if not passes:
             LOG.debug("%(host_state)s fails I/O ops check: Max IOs per host "
-                        "is set to %(max_io_ops)s",
-                        {'host_state': host_state,
-                         'max_io_ops': max_io_ops})
+                      "is set to %(max_io_ops)s",
+                      {'host_state': host_state,
+                       'max_io_ops': max_io_ops})
         return passes
 
 
@@ -65,7 +64,7 @@ class AggregateIoOpsFilter(IoOpsFilter):
             value = utils.validate_num_values(
                 aggregate_vals, max_io_ops_per_host, cast_to=int)
         except ValueError as e:
-            LOG.warning(_LW("Could not decode max_io_ops_per_host: '%s'"), e)
+            LOG.warning("Could not decode max_io_ops_per_host: '%s'", e)
             value = max_io_ops_per_host
 
         return value

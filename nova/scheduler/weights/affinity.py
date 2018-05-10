@@ -25,7 +25,6 @@ by preferring the hosts that has less instances from the given group.
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from nova.i18n import _LW
 from nova.scheduler import weights
 
 CONF = cfg.CONF
@@ -60,13 +59,13 @@ class ServerGroupSoftAffinityWeigher(_SoftAffinityWeigherBase):
     def weight_multiplier(self):
         if (CONF.filter_scheduler.soft_affinity_weight_multiplier < 0 and
                 not self.warning_sent):
-            LOG.warning(_LW('For the soft_affinity_weight_multiplier only a '
-                            'positive value is meaningful as a negative value '
-                            'would mean that the affinity weigher would '
-                            'prefer non-collocating placement. Future '
-                            'versions of nova will restrict the config '
-                            'option to values >=0. Update your configuration '
-                            'file to mitigate future upgrade issues.'))
+            LOG.warning('For the soft_affinity_weight_multiplier only a '
+                        'positive value is meaningful as a negative value '
+                        'would mean that the affinity weigher would '
+                        'prefer non-collocating placement. Future '
+                        'versions of nova will restrict the config '
+                        'option to values >=0. Update your configuration '
+                        'file to mitigate future upgrade issues.')
             self.warning_sent = True
 
         return CONF.filter_scheduler.soft_affinity_weight_multiplier
@@ -79,14 +78,14 @@ class ServerGroupSoftAntiAffinityWeigher(_SoftAffinityWeigherBase):
     def weight_multiplier(self):
         if (CONF.filter_scheduler.soft_anti_affinity_weight_multiplier < 0 and
                 not self.warning_sent):
-            LOG.warning(_LW('For the soft_anti_affinity_weight_multiplier '
-                            'only a positive value is meaningful as a '
-                            'negative value would mean that the anti-affinity '
-                            'weigher would prefer collocating placement. '
-                            'Future versions of nova will restrict the '
-                            'config option to values >=0. Update your '
-                            'configuration file to mitigate future upgrade '
-                            'issues.'))
+            LOG.warning('For the soft_anti_affinity_weight_multiplier '
+                        'only a positive value is meaningful as a '
+                        'negative value would mean that the anti-affinity '
+                        'weigher would prefer collocating placement. '
+                        'Future versions of nova will restrict the '
+                        'config option to values >=0. Update your '
+                        'configuration file to mitigate future upgrade '
+                        'issues.')
             self.warning_sent = True
 
         return CONF.filter_scheduler.soft_anti_affinity_weight_multiplier

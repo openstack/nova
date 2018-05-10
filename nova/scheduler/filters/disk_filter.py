@@ -15,7 +15,6 @@
 
 from oslo_log import log as logging
 
-from nova.i18n import _LW
 from nova.scheduler import filters
 from nova.scheduler.filters import utils
 
@@ -61,10 +60,10 @@ class DiskFilter(filters.BaseHostFilter):
 
         if not usable_disk_mb >= requested_disk:
             LOG.debug("%(host_state)s does not have %(requested_disk)s MB "
-                    "usable disk, it only has %(usable_disk_mb)s MB usable "
-                    "disk.", {'host_state': host_state,
-                               'requested_disk': requested_disk,
-                               'usable_disk_mb': usable_disk_mb})
+                      "usable disk, it only has %(usable_disk_mb)s MB usable "
+                      "disk.", {'host_state': host_state,
+                                'requested_disk': requested_disk,
+                                'usable_disk_mb': usable_disk_mb})
             return False
 
         disk_gb_limit = disk_mb_limit / 1024
@@ -90,7 +89,7 @@ class AggregateDiskFilter(DiskFilter):
                 aggregate_vals, host_state.disk_allocation_ratio,
                 cast_to=float)
         except ValueError as e:
-            LOG.warning(_LW("Could not decode disk_allocation_ratio: '%s'"), e)
+            LOG.warning("Could not decode disk_allocation_ratio: '%s'", e)
             ratio = host_state.disk_allocation_ratio
 
         return ratio

@@ -47,7 +47,7 @@ class MetricsFilter(filters.BaseHostFilter):
         if not self.keys.issubset(metrics_on_host):
             unavail = metrics_on_host - self.keys
             LOG.debug("%(host_state)s does not have the following "
-                        "metrics: %(metrics)s",
+                      "metrics: %(metrics)s",
                       {'host_state': host_state,
                        'metrics': ', '.join(unavail)})
             return False

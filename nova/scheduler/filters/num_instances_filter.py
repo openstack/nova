@@ -16,7 +16,6 @@
 from oslo_log import log as logging
 
 import nova.conf
-from nova.i18n import _LW
 from nova.scheduler import filters
 from nova.scheduler.filters import utils
 
@@ -40,9 +39,9 @@ class NumInstancesFilter(filters.BaseHostFilter):
         passes = num_instances < max_instances
         if not passes:
             LOG.debug("%(host_state)s fails num_instances check: Max "
-                        "instances per host is set to %(max_instances)s",
-                        {'host_state': host_state,
-                         'max_instances': max_instances})
+                      "instances per host is set to %(max_instances)s",
+                      {'host_state': host_state,
+                       'max_instances': max_instances})
         return passes
 
 
@@ -63,8 +62,7 @@ class AggregateNumInstancesFilter(NumInstancesFilter):
             value = utils.validate_num_values(
                 aggregate_vals, max_instances_per_host, cast_to=int)
         except ValueError as e:
-            LOG.warning(_LW("Could not decode max_instances_per_host: '%s'"),
-                        e)
+            LOG.warning("Could not decode max_instances_per_host: '%s'", e)
             value = max_instances_per_host
 
         return value

@@ -17,7 +17,6 @@
 
 from oslo_log import log as logging
 
-from nova.i18n import _LW
 from nova.scheduler import filters
 from nova.scheduler.filters import utils
 
@@ -40,7 +39,7 @@ class BaseCoreFilter(filters.BaseHostFilter):
         """
         if not host_state.vcpus_total:
             # Fail safe
-            LOG.warning(_LW("VCPUs not set; assuming CPU collection broken"))
+            LOG.warning("VCPUs not set; assuming CPU collection broken")
             return True
 
         instance_vcpus = spec_obj.vcpus
@@ -97,7 +96,7 @@ class AggregateCoreFilter(BaseCoreFilter):
             ratio = utils.validate_num_values(
                 aggregate_vals, host_state.cpu_allocation_ratio, cast_to=float)
         except ValueError as e:
-            LOG.warning(_LW("Could not decode cpu_allocation_ratio: '%s'"), e)
+            LOG.warning("Could not decode cpu_allocation_ratio: '%s'", e)
             ratio = host_state.cpu_allocation_ratio
 
         return ratio
