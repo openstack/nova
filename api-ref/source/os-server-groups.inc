@@ -38,13 +38,15 @@ Response
   - name: name_server_group
   - policies: policies
   - members: members
-  - metadata: metadata_object 
+  - metadata: metadata_server_group_max_2_63
   - project_id: project_id_server_group
   - user_id: user_id_server_group
+  - policy: policy_name
+  - rules: policy_rules
 
 **Example List Server Groups: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-server-groups/server-groups-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-server-groups/v2.64/server-groups-list-resp.json
    :language: javascript
 
 Create Server Group
@@ -56,7 +58,7 @@ Creates a server group.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409)
 
 Request
 -------
@@ -66,10 +68,12 @@ Request
   - server_group: server_group
   - name: name_server_group
   - policies: policies
+  - policy: policy_name
+  - rules: policy_rules_optional
 
 **Example Create Server Group: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-server-groups/server-groups-post-req.json
+.. literalinclude:: ../../doc/api_samples/os-server-groups/v2.64/server-groups-post-req.json
    :language: javascript
 
 Response
@@ -82,13 +86,15 @@ Response
   - name: name_server_group
   - policies: policies
   - members: members
-  - metadata: metadata_object 
+  - metadata: metadata_server_group_max_2_63
   - project_id: project_id_server_group
   - user_id: user_id_server_group
+  - policy: policy_name
+  - rules: policy_rules
 
 **Example Create Server Group: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-server-groups/server-groups-post-resp.json
+.. literalinclude:: ../../doc/api_samples/os-server-groups/v2.64/server-groups-post-resp.json
    :language: javascript
 
 Show Server Group Details
@@ -119,13 +125,15 @@ Response
   - name: name_server_group
   - policies: policies
   - members: members
-  - metadata: metadata_object 
+  - metadata: metadata_server_group_max_2_63
   - project_id: project_id_server_group
   - user_id: user_id_server_group
+  - policy: policy_name
+  - rules: policy_rules
 
 **Example Show Server Group Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-server-groups/server-groups-get-resp.json
+.. literalinclude:: ../../doc/api_samples/os-server-groups/v2.64/server-groups-get-resp.json
    :language: javascript
 
 Delete Server Group

@@ -27,7 +27,9 @@ class TestServerGroupNotificationSample(
     def test_server_group_create_delete(self):
         group_req = {
             "name": "test-server-group",
-            "policies": ["anti-affinity"]}
+            "policy": "anti-affinity",
+            "rules": {"max_server_per_host": 3}
+        }
         group = self.api.post_server_groups(group_req)
 
         self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
@@ -48,7 +50,9 @@ class TestServerGroupNotificationSample(
     def test_server_group_add_member(self):
         group_req = {
             "name": "test-server-group",
-            "policies": ["anti-affinity"]}
+            "policy": "anti-affinity",
+            "rules": {"max_server_per_host": 3}
+        }
         group = self.api.post_server_groups(group_req)
         fake_notifier.reset()
 

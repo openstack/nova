@@ -68,3 +68,13 @@ class ServerGroupsV213SampleJsonTest(ServerGroupsSampleJsonTest):
     def setUp(self):
         super(ServerGroupsV213SampleJsonTest, self).setUp()
         self.api.microversion = self.microversion
+
+
+class ServerGroupsV264SampleJsonTest(ServerGroupsV213SampleJsonTest):
+    scenarios = [
+        ("v2_64", {'api_major_version': 'v2.1', 'microversion': '2.64'})
+    ]
+
+    def setUp(self):
+        super(ServerGroupsV264SampleJsonTest, self).setUp()
+        self.api.microversion = self.microversion

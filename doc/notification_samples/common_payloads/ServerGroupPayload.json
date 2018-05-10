@@ -11,7 +11,7 @@
           "anti-affinity"
         ],
         "policy": "anti-affinity",
-        "rules": {},
+        "rules": {"max_server_per_host": "3"},
         "members": [],
         "hosts": null
     }

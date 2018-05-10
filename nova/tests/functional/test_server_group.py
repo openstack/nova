@@ -93,8 +93,9 @@ class ServerGroupTestBase(test.TestCase,
 
     def _boot_a_server_to_group(self, group,
                                 expected_status='ACTIVE', flavor=None):
-        server = self._build_minimal_create_server_request(self.api,
-                                                           'some-server')
+        server = self._build_minimal_create_server_request(
+            self.api, 'some-server',
+            image_uuid='a2459075-d96c-40d5-893e-577ff92e721c', networks=[])
         if flavor:
             server['flavorRef'] = ('http://fake.server/%s'
                                                   % flavor['id'])
@@ -686,6 +687,11 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
         host.start()
 
+    def _check_group_format(self, group, created_group):
+        self.assertEqual(group['policies'], created_group['policies'])
+        self.assertEqual({}, created_group['metadata'])
+        self.assertNotIn('rules', created_group)
+
     def test_create_and_delete_groups(self):
         groups = [self.anti_affinity,
                   self.affinity,
@@ -698,9 +704,8 @@ class ServerGroupTestV215(ServerGroupTestV21):
             created_group = self.api.post_server_groups(group)
             created_groups.append(created_group)
             self.assertEqual(group['name'], created_group['name'])
-            self.assertEqual(group['policies'], created_group['policies'])
+            self._check_group_format(group, created_group)
             self.assertEqual([], created_group['members'])
-            self.assertEqual({}, created_group['metadata'])
             self.assertIn('id', created_group)
 
             group_details = self.api.get_server_group(created_group['id'])
@@ -845,3 +850,47 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
     def test_soft_affinity_not_supported(self):
         pass
+
+
+class ServerGroupTestV264(ServerGroupTestV215):
+    api_major_version = 'v2.1'
+    microversion = '2.64'
+    anti_affinity = {'name': 'fake-name-1', 'policy': 'anti-affinity'}
+    affinity = {'name': 'fake-name-2', 'policy': 'affinity'}
+    soft_anti_affinity = {'name': 'fake-name-3',
+                          'policy': 'soft-anti-affinity'}
+    soft_affinity = {'name': 'fake-name-4', 'policy': 'soft-affinity'}
+
+    def _check_group_format(self, group, created_group):
+        self.assertEqual(group['policy'], created_group['policy'])
+        self.assertEqual(group.get('rules', {}), created_group['rules'])
+        self.assertNotIn('metadata', created_group)
+        self.assertNotIn('policies', created_group)
+
+    def test_boot_server_with_anti_affinity_rules(self):
+        anti_affinity_max_2 = {
+            'name': 'fake-name-1',
+            'policy': 'anti-affinity',
+            'rules': {'max_server_per_host': 2}
+        }
+        created_group = self.api.post_server_groups(anti_affinity_max_2)
+        servers1st = self._boot_servers_to_group(created_group)
+        servers2nd = self._boot_servers_to_group(created_group)
+
+        # We have 2 computes so the fifth server won't fit into the same group
+        failed_server = self._boot_a_server_to_group(created_group,
+                                                     expected_status='ERROR')
+        self.assertEqual('No valid host was found. '
+                         'There are not enough hosts available.',
+                         failed_server['fault']['message'])
+
+        hosts = map(lambda x: x['OS-EXT-SRV-ATTR:host'],
+                    servers1st + servers2nd)
+        hosts = [h for h in hosts]
+        # 4 servers
+        self.assertEqual(4, len(hosts))
+        # schedule to 2 host
+        self.assertEqual(2, len(set(hosts)))
+        # each host has 2 servers
+        for host in set(hosts):
+            self.assertEqual(2, hosts.count(host))

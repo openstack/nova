@@ -1,0 +1,13 @@
+{
+    "server_groups": [
+        {
+            "id": "616fb98f-46ca-475e-917e-2563e5a8cd19",
+            "name": "test",
+            "policy": "anti-affinity",
+            "rules": {"max_server_per_host": 3},
+            "members": [],
+            "project_id": "6f70656e737461636b20342065766572",
+            "user_id": "fake"
+        }
+    ]
+}
