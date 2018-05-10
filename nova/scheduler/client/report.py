@@ -16,6 +16,7 @@
 import contextlib
 import copy
 import functools
+import random
 import re
 import time
 
@@ -100,8 +101,10 @@ def retries(f):
     """
     @functools.wraps(f)
     def wrapper(self, *a, **k):
-        for retry in range(0, 3):
+        for retry in range(0, 4):
             try:
+                sleep_time = random.uniform(0, retry * 2)
+                time.sleep(sleep_time)
                 return f(self, *a, **k)
             except Retry as e:
                 LOG.debug(
