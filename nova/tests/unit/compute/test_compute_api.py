@@ -17,6 +17,7 @@ import contextlib
 import datetime
 
 import ddt
+import fixtures
 import iso8601
 import mock
 from mox3 import mox
@@ -36,9 +37,11 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import conductor
 import nova.conf
+from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import db
 from nova import exception
+from nova.image import api as image_api
 from nova.network.neutronv2 import api as neutron_api
 from nova import objects
 from nova.objects import base as obj_base
@@ -46,8 +49,9 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import fields as fields_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import security_group as secgroup_obj
+from nova.servicegroup import api as servicegroup_api
 from nova import test
-from nova.tests import fixtures
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_build_request
 from nova.tests.unit import fake_instance
@@ -973,81 +977,48 @@ class _ComputeAPIUnitTestMixIn(object):
         deltas['cores'] = -old_flavor.vcpus
         deltas['ram'] = -old_flavor.memory_mb
 
-    def _test_delete_resized_part(self, inst):
-        migration = objects.Migration._from_db_object(
-                self.context, objects.Migration(),
-                test_migration.fake_db_migration())
-
-        self.mox.StubOutWithMock(objects.Migration,
-                                 'get_by_instance_and_status')
-
-        self.context.elevated().AndReturn(self.context)
-        objects.Migration.get_by_instance_and_status(
-            self.context, inst.uuid, 'finished').AndReturn(migration)
-        self.compute_api._record_action_start(
-            self.context, inst, instance_actions.CONFIRM_RESIZE)
-        self.compute_api.compute_rpcapi.confirm_resize(
-            self.context, inst, migration,
-            migration['source_compute'], cast=False)
-
-    def _test_delete_shelved_part(self, inst):
-        image_api = self.compute_api.image_api
-        self.mox.StubOutWithMock(image_api, 'delete')
-
+    def _set_delete_shelved_part(self, inst, mock_image_delete):
         snapshot_id = inst.system_metadata.get('shelved_image_id')
         if snapshot_id == SHELVED_IMAGE:
-            image_api.delete(self.context, snapshot_id).AndReturn(True)
+            mock_image_delete.return_value = True
         elif snapshot_id == SHELVED_IMAGE_NOT_FOUND:
-            image_api.delete(self.context, snapshot_id).AndRaise(
-                exception.ImageNotFound(image_id=snapshot_id))
+            mock_image_delete.side_effect = exception.ImageNotFound(
+                image_id=snapshot_id)
         elif snapshot_id == SHELVED_IMAGE_NOT_AUTHORIZED:
-            image_api.delete(self.context, snapshot_id).AndRaise(
-                exception.ImageNotAuthorized(image_id=snapshot_id))
+            mock_image_delete.side_effect = exception.ImageNotAuthorized(
+                image_id=snapshot_id)
         elif snapshot_id == SHELVED_IMAGE_EXCEPTION:
-            image_api.delete(self.context, snapshot_id).AndRaise(
-                test.TestingException("Unexpected error"))
+            mock_image_delete.side_effect = test.TestingException(
+                "Unexpected error")
 
-    def _test_downed_host_part(self, inst, updates, delete_time, delete_type):
-        if 'soft' in delete_type:
-            compute_utils.notify_about_instance_usage(
-                self.compute_api.notifier, self.context, inst,
-                'delete.start')
-        else:
-            compute_utils.notify_about_instance_usage(
-                self.compute_api.notifier, self.context, inst,
-                '%s.start' % delete_type)
-        self.context.elevated().AndReturn(self.context)
-        self.compute_api.network_api.deallocate_for_instance(
-            self.context, inst)
-        state = ('soft' in delete_type and vm_states.SOFT_DELETED or
-                 vm_states.DELETED)
-        updates.update({'vm_state': state,
-                        'task_state': None,
-                        'terminated_at': delete_time})
-        inst.save()
+        return snapshot_id
 
-        updates.update({'deleted_at': delete_time,
-                        'deleted': True})
-        fake_inst = fake_instance.fake_db_instance(**updates)
-        self.compute_api._local_cleanup_bdm_volumes([], inst, self.context)
-        db.instance_destroy(self.context, inst.uuid,
-                            constraint=None).AndReturn(fake_inst)
-        if 'soft' in delete_type:
-            compute_utils.notify_about_instance_usage(
-                self.compute_api.notifier,
-                self.context, inst, 'delete.end')
-        else:
-            compute_utils.notify_about_instance_usage(
-                self.compute_api.notifier,
-                self.context, inst, '%s.end' % delete_type)
-        cell = objects.CellMapping(uuid=uuids.cell,
-                                   transport_url='fake://',
-                                   database_connection='fake://')
-        im = objects.InstanceMapping(cell_mapping=cell)
-        objects.InstanceMapping.get_by_instance_uuid(
-            self.context, inst.uuid).AndReturn(im)
-
-    def _test_delete(self, delete_type, **attrs):
+    @mock.patch.object(objects.Migration, 'get_by_instance_and_status')
+    @mock.patch.object(image_api.API, 'delete')
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    @mock.patch.object(consoleauth_rpcapi.ConsoleAuthAPI,
+                       'delete_tokens_for_instance')
+    @mock.patch.object(compute_utils,
+                       'notify_about_instance_usage')
+    @mock.patch.object(db, 'instance_destroy')
+    @mock.patch.object(db, 'instance_system_metadata_get')
+    @mock.patch.object(neutron_api.API, 'deallocate_for_instance')
+    @mock.patch.object(db, 'instance_update_and_get_original')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    @mock.patch.object(servicegroup_api.API, 'service_is_up')
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    @mock.patch.object(context.RequestContext, 'elevated')
+    @mock.patch.object(objects.BlockDeviceMappingList,
+                       'get_by_instance_uuid', return_value=[])
+    @mock.patch.object(objects.Instance, 'save')
+    def _test_delete(self, delete_type, mock_save, mock_bdm_get, mock_elevated,
+                     mock_get_cn, mock_up, mock_record, mock_inst_update,
+                     mock_deallocate, mock_inst_meta, mock_inst_destroy,
+                     mock_notify, mock_del_token, mock_get_inst,
+                     mock_image_delete, mock_mig_get, **attrs):
+        expected_save_calls = [mock.call()]
+        expected_record_calls = []
+        expected_elevated_calls = []
         inst = self._create_instance_obj()
         inst.update(attrs)
         inst._context = self.context
@@ -1062,40 +1033,23 @@ class _ComputeAPIUnitTestMixIn(object):
         updates = {'progress': 0, 'task_state': task_state}
         if delete_type == 'soft_delete':
             updates['deleted_at'] = delete_time
-        self.mox.StubOutWithMock(inst, 'save')
-        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
-                                 'get_by_instance_uuid')
-        self.mox.StubOutWithMock(self.context, 'elevated')
-        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
-        self.mox.StubOutWithMock(self.compute_api.servicegroup_api,
-                                 'service_is_up')
-        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(self.compute_api.network_api,
-                                 'deallocate_for_instance')
-        self.mox.StubOutWithMock(db, 'instance_system_metadata_get')
-        self.mox.StubOutWithMock(db, 'instance_destroy')
-        self.mox.StubOutWithMock(compute_utils,
-                                 'notify_about_instance_usage')
         rpcapi = self.compute_api.compute_rpcapi
-        self.mox.StubOutWithMock(rpcapi, 'confirm_resize')
-        self.mox.StubOutWithMock(self.compute_api.consoleauth_rpcapi,
-                                 'delete_tokens_for_instance')
-        self.mox.StubOutWithMock(objects.InstanceMapping,
-                                 'get_by_instance_uuid')
+        mock_confirm = self.useFixture(
+            fixtures.MockPatchObject(rpcapi, 'confirm_resize')).mock
 
-        if (inst.vm_state in
-            (vm_states.SHELVED, vm_states.SHELVED_OFFLOADED)):
-            self._test_delete_shelved_part(inst)
+        is_shelved = inst.vm_state in (vm_states.SHELVED,
+                                       vm_states.SHELVED_OFFLOADED)
+        if is_shelved:
+            snapshot_id = self._set_delete_shelved_part(inst,
+                                                        mock_image_delete)
 
         if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
-        self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
-        self.mox.StubOutWithMock(rpcapi, 'soft_delete_instance')
+        mock_terminate = self.useFixture(
+            fixtures.MockPatchObject(rpcapi, 'terminate_instance')).mock
+        mock_soft_delete = self.useFixture(
+            fixtures.MockPatchObject(rpcapi, 'soft_delete_instance')).mock
 
-        objects.BlockDeviceMappingList.get_by_instance_uuid(
-            self.context, inst.uuid).AndReturn([])
-        inst.save()
         if inst.task_state == task_states.RESIZE_FINISH:
             self._test_delete_resizing_part(inst, deltas)
 
@@ -1113,43 +1067,109 @@ class _ComputeAPIUnitTestMixIn(object):
         #     * Cast to compute_rpcapi.<method>
 
         cast = True
+        is_downed_host = inst.host == 'down-host' or inst.host is None
         if self.cell_type != 'api':
             if inst.vm_state == vm_states.RESIZED:
-                self._test_delete_resized_part(inst)
+                migration = objects.Migration._from_db_object(
+                    self.context, objects.Migration(),
+                    test_migration.fake_db_migration())
+                mock_elevated.return_value = self.context
+                expected_elevated_calls.append(mock.call())
+                mock_mig_get.return_value = migration
+                expected_record_calls.append(
+                    mock.call(self.context, inst,
+                              instance_actions.CONFIRM_RESIZE))
             if inst.host is not None:
-                self.context.elevated().AndReturn(self.context)
-                objects.Service.get_by_compute_host(self.context,
-                        inst.host).AndReturn(objects.Service())
-                self.compute_api.servicegroup_api.service_is_up(
-                        mox.IsA(objects.Service)).AndReturn(
-                                inst.host != 'down-host')
+                mock_elevated.return_value = self.context
+                expected_elevated_calls.append(mock.call())
+                mock_get_cn.return_value = objects.Service()
+                mock_up.return_value = (inst.host != 'down-host')
 
-            if inst.host == 'down-host' or inst.host is None:
-                self._test_downed_host_part(inst, updates, delete_time,
-                                            delete_type)
+            if is_downed_host:
+                mock_elevated.return_value = self.context
+                expected_elevated_calls.append(mock.call())
+                expected_save_calls.append(mock.call())
+                state = ('soft' in delete_type and vm_states.SOFT_DELETED or
+                         vm_states.DELETED)
+                updates.update({'vm_state': state,
+                                'task_state': None,
+                                'terminated_at': delete_time,
+                                'deleted_at': delete_time,
+                                'deleted': True})
+                fake_inst = fake_instance.fake_db_instance(**updates)
+                mock_inst_destroy.return_value = fake_inst
+                cell = objects.CellMapping(uuid=uuids.cell,
+                                           transport_url='fake://',
+                                           database_connection='fake://')
+                im = objects.InstanceMapping(cell_mapping=cell)
+                mock_get_inst.return_value = im
                 cast = False
 
-        if cast:
-            if self.cell_type != 'api':
-                self.compute_api._record_action_start(self.context, inst,
-                                                      instance_actions.DELETE)
-            if delete_type == 'soft_delete':
-                rpcapi.soft_delete_instance(self.context, inst)
-            elif delete_type in ['delete', 'force_delete']:
-                rpcapi.terminate_instance(self.context, inst, [],
-                                          delete_type=delete_type)
+        if cast and self.cell_type != 'api':
+            expected_record_calls.append(mock.call(self.context, inst,
+                                                   instance_actions.DELETE))
 
-        if self.cell_type is None or self.cell_type == 'api':
-            self.compute_api.consoleauth_rpcapi.delete_tokens_for_instance(
-                self.context, inst.uuid)
-
-        self.mox.ReplayAll()
-
+        # NOTE(takashin): If objects.Instance.destroy() is called,
+        # objects.Instance.uuid (inst.uuid) and host (inst.host) are changed.
+        # So preserve them before calling the method to test.
+        instance_uuid = inst.uuid
+        instance_host = inst.host
         getattr(self.compute_api, delete_type)(self.context, inst)
         for k, v in updates.items():
             self.assertEqual(inst[k], v)
 
-        self.mox.UnsetStubs()
+        mock_save.assert_has_calls(expected_save_calls)
+        mock_bdm_get.assert_called_once_with(self.context, instance_uuid)
+
+        if expected_record_calls:
+            mock_record.assert_has_calls(expected_record_calls)
+        if expected_elevated_calls:
+            mock_elevated.assert_has_calls(expected_elevated_calls)
+
+        if self.cell_type != 'api':
+            if inst.vm_state == vm_states.RESIZED:
+                mock_mig_get.assert_called_once_with(
+                    self.context, instance_uuid, 'finished')
+                mock_confirm.assert_called_once_with(
+                    self.context, inst, migration, migration['source_compute'],
+                    cast=False)
+            if instance_host is not None:
+                mock_get_cn.assert_called_once_with(self.context,
+                                                    instance_host)
+                mock_up.assert_called_once_with(
+                    test.MatchType(objects.Service))
+            if is_downed_host:
+                if 'soft' in delete_type:
+                    mock_notify.assert_has_calls([
+                        mock.call(self.compute_api.notifier, self.context,
+                                  inst, 'delete.start'),
+                        mock.call(self.compute_api.notifier, self.context,
+                                  inst, 'delete.end')])
+                else:
+                    mock_notify.assert_has_calls([
+                        mock.call(self.compute_api.notifier, self.context,
+                                  inst, '%s.start' % delete_type),
+                        mock.call(self.compute_api.notifier, self.context,
+                                  inst, '%s.end' % delete_type)])
+                mock_deallocate.assert_called_once_with(self.context, inst)
+                mock_inst_destroy.assert_called_once_with(
+                    self.context, instance_uuid, constraint=None)
+                mock_get_inst.assert_called_once_with(self.context,
+                                                      instance_uuid)
+
+        if cast:
+            if delete_type == 'soft_delete':
+                mock_soft_delete.assert_called_once_with(self.context, inst)
+            elif delete_type in ['delete', 'force_delete']:
+                mock_terminate.assert_called_once_with(
+                    self.context, inst, [], delete_type=delete_type)
+
+        if self.cell_type is None or self.cell_type == 'api':
+            mock_del_token.assert_called_once_with(self.context, instance_uuid)
+
+        if is_shelved:
+            mock_image_delete.assert_called_once_with(self.context,
+                                                      snapshot_id)
 
     def test_delete(self):
         self._test_delete('delete')
@@ -1290,7 +1310,7 @@ class _ComputeAPIUnitTestMixIn(object):
                               task_state=task_states.RESIZE_MIGRATING)
 
     def test_delete_fast_if_host_not_set(self):
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
         inst = self._create_instance_obj()
         inst.host = ''
         updates = {'progress': 0, 'task_state': task_states.DELETING}
@@ -1591,7 +1611,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                          'nova-osapi_compute')
 
     def test_delete_while_booting_buildreq_not_deleted(self):
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
         inst = self._create_instance_obj()
         with mock.patch.object(self.compute_api,
                                '_attempt_delete_of_buildrequest',
@@ -1600,7 +1620,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.compute_api._delete_while_booting(self.context, inst))
 
     def test_delete_while_booting_buildreq_deleted_instance_none(self):
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
         inst = self._create_instance_obj()
 
         @mock.patch.object(self.compute_api, '_attempt_delete_of_buildrequest',
@@ -1615,7 +1635,7 @@ class _ComputeAPIUnitTestMixIn(object):
         test()
 
     def test_delete_while_booting_buildreq_deleted_instance_not_found(self):
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
         inst = self._create_instance_obj()
 
         @mock.patch.object(self.compute_api, '_attempt_delete_of_buildrequest',
@@ -5167,7 +5187,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_get_instance_no_mapping(self, mock_get_inst, mock_get_build_req,
             mock_get_inst_map):
 
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
         if self.cell_type is None:
             # No Mapping means NotFound
             self.assertRaises(exception.InstanceNotFound,
@@ -5225,7 +5245,7 @@ class _ComputeAPIUnitTestMixIn(object):
         # because the instance was put in a cell and mapped while while
         # attempting to get the BuildRequest. So pull the instance from the
         # cell.
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
         build_req_obj = fake_build_request.fake_req_obj(self.context)
         instance = build_req_obj.instance
         inst_map = objects.InstanceMapping(cell_mapping=objects.CellMapping())
@@ -5272,7 +5292,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         # TODO(alaski): The tested case will eventually be an error condition.
         # But until we force cellsv2 migrations we need this to work.
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
         build_req_obj = fake_build_request.fake_req_obj(self.context)
         instance = build_req_obj.instance
 
@@ -5305,7 +5325,7 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_get_instance_in_cell(self, mock_get_inst, mock_get_build_req,
             mock_get_inst_map, mock_target_cell):
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
         # This just checks that the instance is looked up normally and not
         # synthesized from a BuildRequest object. Verification of pulling the
         # instance from the proper cell will be added when that capability is.
@@ -5492,7 +5512,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                   mock_buildreq_get):
         mock_instmap_get.side_effect = exception.InstanceMappingNotFound(
             uuid='fake')
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
 
         instance = self._create_instance_obj()
         # Just making sure that the instance has been created
@@ -5513,7 +5533,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                               mock_buildreq_get):
         inst_map = objects.InstanceMapping(cell_mapping=objects.CellMapping())
         mock_instmap_get.return_value = inst_map
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
 
         instance = self._create_instance_obj()
         # Just making sure that the instance has been created
@@ -5538,7 +5558,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         build_req_obj = fake_build_request.fake_req_obj(self.context)
         mock_buildreq_get.return_value = build_req_obj
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
 
         instance = self._create_instance_obj()
         # Fake the fact that the instance is not yet persisted in DB
@@ -5571,7 +5591,7 @@ class _ComputeAPIUnitTestMixIn(object):
         #    meanwhile and the BuildRequest was deleted
         #  - if the instance is mapped, lookup the cell DB to find the instance
 
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
 
         instance = self._create_instance_obj()
         # Fake the fact that the instance is not yet persisted in DB
@@ -5610,7 +5630,7 @@ class _ComputeAPIUnitTestMixIn(object):
         #  - if the instance is not mapped, lookup the API DB to find whether
         #    the instance was deleted, or if the cellv2 migration is not done
 
-        self.useFixture(fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
 
         instance = self._create_instance_obj()
         # Fake the fact that the instance is not yet persisted in DB
