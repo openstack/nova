@@ -66,6 +66,10 @@ class NotFound(_BaseException):
     msg_fmt = _("Resource could not be found.")
 
 
+class Exists(_BaseException):
+        msg_fmt = _("Resource already exists.")
+
+
 class InvalidInventory(_BaseException):
     msg_fmt = _("Inventory for '%(resource_class)s' on "
                 "resource provider '%(resource_provider)s' invalid.")
@@ -172,3 +176,27 @@ class TraitInUse(_BaseException):
 
 class TraitNotFound(NotFound):
     msg_fmt = _("No such trait(s): %(names)s.")
+
+
+class ProjectNotFound(NotFound):
+    msg_fmt = _("No such project(s): %(external_id)s.")
+
+
+class ProjectExists(Exists):
+        msg_fmt = _("The project %(external_id)s already exists.")
+
+
+class UserNotFound(NotFound):
+    msg_fmt = _("No such user(s): %(external_id)s.")
+
+
+class UserExists(Exists):
+        msg_fmt = _("The user %(external_id)s already exists.")
+
+
+class ConsumerNotFound(NotFound):
+    msg_fmt = _("No such consumer(s): %(uuid)s.")
+
+
+class ConsumerExists(Exists):
+    msg_fmt = _("The consumer %(uuid)s already exists.")

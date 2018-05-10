@@ -18,18 +18,24 @@ import datetime
 import fixtures
 import microversion_parse
 import mock
+from oslo_config import cfg
 from oslo_middleware import request_id
 from oslo_utils import timeutils
 import webob
 
 import six
 
+from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import lib as pl
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.api.openstack.placement.objects import user as user_obj
 from nova.api.openstack.placement import util
 from nova import test
 from nova.tests import uuidsentinel
+
+CONF = cfg.CONF
 
 
 class TestCheckAccept(test.NoDBTestCase):
@@ -894,3 +900,86 @@ class TestPickLastModified(test.NoDBTestCase):
                 None, self.resource_provider)
             self.assertEqual(now, chosen_time)
             mock_utc.assert_called_once_with(with_timezone=True)
+
+
+class TestEnsureConsumer(test.NoDBTestCase):
+    def setUp(self):
+        super(TestEnsureConsumer, self).setUp()
+        self.mock_project_get = self.useFixture(fixtures.MockPatch(
+            'nova.api.openstack.placement.objects.project.'
+            'Project.get_by_external_id')).mock
+        self.mock_user_get = self.useFixture(fixtures.MockPatch(
+            'nova.api.openstack.placement.objects.user.'
+            'User.get_by_external_id')).mock
+        self.mock_consumer_get = self.useFixture(fixtures.MockPatch(
+            'nova.api.openstack.placement.objects.consumer.'
+            'Consumer.get_by_uuid')).mock
+        self.mock_project_create = self.useFixture(fixtures.MockPatch(
+            'nova.api.openstack.placement.objects.project.'
+            'Project.create')).mock
+        self.mock_user_create = self.useFixture(fixtures.MockPatch(
+            'nova.api.openstack.placement.objects.user.'
+            'User.create')).mock
+        self.mock_consumer_create = self.useFixture(fixtures.MockPatch(
+            'nova.api.openstack.placement.objects.consumer.'
+            'Consumer.create')).mock
+        self.ctx = mock.sentinel.ctx
+        self.consumer_id = uuidsentinel.consumer
+        self.project_id = uuidsentinel.project
+        self.user_id = uuidsentinel.user
+
+    def test_no_existing_project_user_consumer(self):
+        self.mock_project_get.side_effect = exception.NotFound
+        self.mock_user_get.side_effect = exception.NotFound
+        self.mock_consumer_get.side_effect = exception.NotFound
+
+        util.ensure_consumer(
+            self.ctx, self.consumer_id, self.project_id, self.user_id)
+
+        self.mock_project_get.assert_called_once_with(
+            self.ctx, self.project_id)
+        self.mock_user_get.assert_called_once_with(
+            self.ctx, self.user_id)
+        self.mock_consumer_get.assert_called_once_with(
+            self.ctx, self.consumer_id)
+        self.mock_project_create.assert_called_once()
+        self.mock_user_create.assert_called_once()
+        self.mock_consumer_create.assert_called_once()
+
+    def test_no_existing_project_user_consumer_use_incomplete(self):
+        """Verify that if the project_id arg is None, that we fall back to the
+        CONF options for incomplete project and user ID.
+        """
+        self.mock_project_get.side_effect = exception.NotFound
+        self.mock_user_get.side_effect = exception.NotFound
+        self.mock_consumer_get.side_effect = exception.NotFound
+
+        util.ensure_consumer(
+            self.ctx, self.consumer_id, None, None)
+
+        self.mock_project_get.assert_called_once_with(
+            self.ctx, CONF.placement.incomplete_consumer_project_id)
+        self.mock_user_get.assert_called_once_with(
+            self.ctx, CONF.placement.incomplete_consumer_user_id)
+        self.mock_consumer_get.assert_called_once_with(
+            self.ctx, self.consumer_id)
+        self.mock_project_create.assert_called_once()
+        self.mock_user_create.assert_called_once()
+        self.mock_consumer_create.assert_called_once()
+
+    def test_existing_project_user_no_existing_consumer(self):
+        """Check that if we find an existing project and user, that we use
+        those found objects in creating the consumer.
+        """
+        proj = project_obj.Project(self.ctx, id=1, external_id=self.project_id)
+        self.mock_project_get.return_value = proj
+        user = user_obj.User(self.ctx, id=1, external_id=self.user_id)
+        self.mock_user_get.return_value = user
+        self.mock_consumer_get.side_effect = exception.NotFound
+
+        util.ensure_consumer(
+            self.ctx, self.consumer_id, self.project_id, self.user_id)
+
+        self.mock_project_create.assert_not_called()
+        self.mock_user_create.assert_not_called()
+        self.mock_consumer_create.assert_called_once()

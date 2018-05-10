@@ -1,0 +1,41 @@
+# Tests of the ensure consumer behaviour for versions of the API from <1.7 to
+# 1.8-1.26 and finally 1.27+
+fixtures:
+    - AllocationFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        openstack-api-version: placement 1.7
+
+vars:
+- &default_incomplete_id 00000000-0000-0000-0000-0000000000000
+- &consumer_id fbad1a87-c341-4ac0-be49-777b21ce1b7b
+tests:
+
+- name: put an allocation without project/user (1.7)
+  PUT: /allocations/*consumer_id
+  request_headers:
+      content-type: application/json
+      openstack-api-version: placement 1.7
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 10
+  status: 204
+
+# We now ALWAYS create a consumer record, and if project or user isn't
+# specified (as was the case in 1.7) we should get the project/user
+# corresponding to the CONF option for incomplete consumers when asking for the
+# allocation information at a microversion that shows project/user information
+# (1.12+)
+- name: get with 1.12 microversion and check project and user are filled
+  GET: /allocations/*consumer_id
+  request_headers:
+      openstack-api-version: placement 1.12
+  response_json_paths:
+      $.project_id: *default_incomplete_id
+      $.user_id: *default_incomplete_id

@@ -44,6 +44,7 @@ import six
 import six.moves.urllib.parse as urlparse
 from sqlalchemy.engine import url as sqla_url
 
+from nova.api.openstack.placement.objects import consumer as consumer_obj
 from nova.cmd import common as cmd_common
 import nova.conf
 from nova import config
@@ -400,6 +401,8 @@ class DbCommands(object):
         # Queens and Pike since instance.avz of instances before Pike
         # need to be populated if it was not specified during boot time.
         instance_obj.populate_missing_availability_zones,
+        # Added in Rocky
+        consumer_obj.create_incomplete_consumers,
     )
 
     def __init__(self):

@@ -1,0 +1,11 @@
+---
+features:
+    - |
+      Prior to microversion 1.8 of the placement API, one could create
+      allocations and not supply a project or user ID for the consumer of the
+      allocated resources. While this is no longer allowed after placement API
+      1.8, older allocations exist and we now ensure that a consumer record is
+      created for these older allocations. Use the two new CONF options
+      ``CONF.placement.incomplete_consumer_project_id`` and
+      ``CONF.placement.incomplete_consumer_user_id`` to control the project and
+      user identifiers that are written for these incomplete consumer records.

@@ -1555,15 +1555,15 @@ class Allocation(base.VersionedObject, base.TimestampedObject):
         :param ctx: `nova.context.RequestContext` object that has the oslo.db
                     Session object in it
         """
-        # If project_id and user_id are not set then silently
-        # move on. This allows microversion <1.8 to continue to work. Since
-        # then the fields are required and the enforcement is at the HTTP
-        # API layer.
-        if not ('project_id' in self and
-                self.project_id is not None and
-                'user_id' in self and
-                self.user_id is not None):
-            return
+        # If project_id and user_id are not set then create a consumer record
+        # pointing to the incomplete consumer project and user ID.
+        # This allows microversion <1.8 to continue to work. Since then the
+        # fields are required and the enforcement is at the HTTP API layer.
+        if 'project_id' not in self or self.project_id is None:
+            self.project_id = CONF.placement.incomplete_consumer_project_id
+        if 'user_id' not in self or self.user_id is None:
+            self.user_id = CONF.placement.incomplete_consumer_user_id
+
         # Grab the project internal ID if it exists in the projects table
         pid = _ensure_project(ctx, self.project_id)
         # Grab the user internal ID if it exists in the users table
