@@ -38,7 +38,7 @@ class FakeInstanceMD(object):
 
 class ConfigDriveTestCase(test.NoDBTestCase):
 
-    @mock.patch.object(utils, 'execute', return_value=None)
+    @mock.patch('oslo_concurrency.processutils.execute', return_value=None)
     def test_create_configdrive_iso(self, mock_execute):
         CONF.set_override('config_drive_format', 'iso9660')
         imagefile = None

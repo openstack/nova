@@ -18,6 +18,7 @@
 import os
 import shutil
 
+from oslo_concurrency import processutils
 from oslo_utils import fileutils
 from oslo_utils import units
 import six
@@ -81,21 +82,21 @@ class ConfigDriveBuilder(object):
             'version': version.version_string_with_package()
             }
 
-        utils.execute(CONF.mkisofs_cmd,
-                      '-o', path,
-                      '-ldots',
-                      '-allow-lowercase',
-                      '-allow-multidot',
-                      '-l',
-                      '-publisher',
-                      publisher,
-                      '-quiet',
-                      '-J',
-                      '-r',
-                      '-V', 'config-2',
-                      tmpdir,
-                      attempts=1,
-                      run_as_root=False)
+        processutils.execute(CONF.mkisofs_cmd,
+                             '-o', path,
+                             '-ldots',
+                             '-allow-lowercase',
+                             '-allow-multidot',
+                             '-l',
+                             '-publisher',
+                             publisher,
+                             '-quiet',
+                             '-J',
+                             '-r',
+                             '-V', 'config-2',
+                             tmpdir,
+                             attempts=1,
+                             run_as_root=False)
 
     def _make_vfat(self, path, tmpdir):
         # NOTE(mikal): This is a little horrible, but I couldn't find an
