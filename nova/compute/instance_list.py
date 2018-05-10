@@ -13,11 +13,15 @@
 import copy
 
 from nova.compute import multi_cell_list
+import nova.conf
 from nova import context
 from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj
+
+
+CONF = nova.conf.CONF
 
 
 class InstanceSortContext(multi_cell_list.RecordSortContext):
@@ -41,9 +45,9 @@ class InstanceSortContext(multi_cell_list.RecordSortContext):
 
 
 class InstanceLister(multi_cell_list.CrossCellLister):
-    def __init__(self, sort_keys, sort_dirs):
+    def __init__(self, sort_keys, sort_dirs, cells=None):
         super(InstanceLister, self).__init__(
-            InstanceSortContext(sort_keys, sort_dirs))
+            InstanceSortContext(sort_keys, sort_dirs), cells=cells)
 
     @property
     def marker_identifier(self):
@@ -85,18 +89,31 @@ class InstanceLister(multi_cell_list.CrossCellLister):
 # NOTE(danms): These methods are here for legacy glue reasons. We should not
 # replicate these for every data type we implement.
 def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
-                         sort_keys, sort_dirs):
-    return InstanceLister(sort_keys, sort_dirs).get_records_sorted(
+                         sort_keys, sort_dirs, cell_mappings=None):
+    return InstanceLister(sort_keys, sort_dirs,
+                          cells=cell_mappings).get_records_sorted(
         ctx, filters, limit, marker, columns_to_join=columns_to_join)
 
 
 def get_instance_objects_sorted(ctx, filters, limit, marker, expected_attrs,
                                 sort_keys, sort_dirs):
     """Same as above, but return an InstanceList."""
+    query_cell_subset = CONF.api.instance_list_per_project_cells
+    # NOTE(danms): Replicated in part from instance_get_all_by_sort_filters(),
+    # where if we're not admin we're restricted to our context's project. Use
+    # this to get a subset of cell mappings.
+    if query_cell_subset and not ctx.is_admin:
+        cell_mappings = objects.CellMappingList.get_by_project_id(
+            ctx, ctx.project_id)
+    else:
+        # If we're admin then query all cells
+        cell_mappings = None
     columns_to_join = instance_obj._expected_cols(expected_attrs)
     instance_generator = get_instances_sorted(ctx, filters, limit, marker,
                                               columns_to_join, sort_keys,
-                                              sort_dirs)
+                                              sort_dirs,
+                                              cell_mappings=cell_mappings)
+
     if 'fault' in expected_attrs:
         # We join fault above, so we need to make sure we don't ask
         # make_instance_list to do it again for us

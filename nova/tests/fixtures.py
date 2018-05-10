@@ -292,6 +292,9 @@ class SingleCellSimple(fixtures.Fixture):
             'nova.objects.CellMappingList._get_all_from_db',
             self._fake_cell_list))
         self.useFixture(fixtures.MonkeyPatch(
+            'nova.objects.CellMappingList._get_by_project_id_from_db',
+            self._fake_cell_list))
+        self.useFixture(fixtures.MonkeyPatch(
             'nova.objects.CellMapping._get_by_uuid_from_db',
             self._fake_cell_get))
         self.useFixture(fixtures.MonkeyPatch(
