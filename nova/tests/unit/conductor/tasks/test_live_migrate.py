@@ -60,7 +60,9 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             servicegroup.API(), scheduler_client.SchedulerClient(),
             self.fake_spec)
 
-    def test_execute_with_destination(self):
+    @mock.patch('nova.availability_zones.get_host_availability_zone',
+                return_value='fake-az')
+    def test_execute_with_destination(self, mock_get_az):
         with test.nested(
             mock.patch.object(self.task, '_check_host_is_up'),
             mock.patch.object(self.task, '_check_requested_destination',
@@ -87,7 +89,9 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 migration=self.migration,
                 migrate_data=None)
 
-    def test_execute_without_destination(self):
+    @mock.patch('nova.availability_zones.get_host_availability_zone',
+                return_value='nova')
+    def test_execute_without_destination(self, mock_get_az):
         self.destination = None
         self._generate_task()
         self.assertIsNone(self.task.destination)
@@ -112,6 +116,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 migration=self.migration,
                 migrate_data=None)
             self.assertTrue(mock_save.called)
+            mock_get_az.assert_called_once_with(self.context, 'found_host')
             self.assertEqual('found_host', self.migration.dest_compute)
 
     def test_check_instance_is_active_passes_when_paused(self):
