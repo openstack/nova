@@ -1309,71 +1309,85 @@ class _ComputeAPIUnitTestMixIn(object):
             self._test_delete('force_delete', vm_state=vm_state,
                               task_state=task_states.RESIZE_MIGRATING)
 
-    def test_delete_fast_if_host_not_set(self):
+    @mock.patch.object(compute_utils, 'notify_about_instance_usage')
+    @mock.patch.object(db, 'instance_destroy')
+    @mock.patch.object(db, 'constraint')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
+    def test_delete_fast_if_host_not_set(self, mock_br_get, mock_save,
+                                         mock_bdm_get, mock_cons,
+                                         mock_inst_destroy, mock_notify):
         self.useFixture(nova_fixtures.AllServicesCurrent())
         inst = self._create_instance_obj()
         inst.host = ''
         updates = {'progress': 0, 'task_state': task_states.DELETING}
 
-        self.mox.StubOutWithMock(objects.BuildRequest,
-                                 'get_by_instance_uuid')
-        self.mox.StubOutWithMock(inst, 'save')
-        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
-                                 'get_by_instance_uuid')
+        mock_lookup = self.useFixture(
+            fixtures.MockPatchObject(self.compute_api,
+                                     '_lookup_instance')).mock
 
-        self.mox.StubOutWithMock(db, 'constraint')
-        self.mox.StubOutWithMock(db, 'instance_destroy')
-        self.mox.StubOutWithMock(self.compute_api, '_lookup_instance')
-        self.mox.StubOutWithMock(compute_utils,
-                                 'notify_about_instance_usage')
         if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
-        self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
+        mock_terminate = self.useFixture(
+            fixtures.MockPatchObject(rpcapi,
+                                     'terminate_instance')).mock
 
-        self.compute_api._lookup_instance(self.context,
-                                          inst.uuid).AndReturn((None, inst))
-        objects.BlockDeviceMappingList.get_by_instance_uuid(
-            self.context, inst.uuid).AndReturn(
-                objects.BlockDeviceMappingList())
-        objects.BuildRequest.get_by_instance_uuid(
-            self.context, inst.uuid).AndRaise(
-                exception.BuildRequestNotFound(uuid=inst.uuid))
-        inst.save()
+        mock_lookup.return_value = (None, inst)
+        mock_bdm_get.return_value = objects.BlockDeviceMappingList()
+        mock_br_get.side_effect = exception.BuildRequestNotFound(
+            uuid=inst.uuid)
 
-        if self.cell_type == 'api':
-            rpcapi.terminate_instance(
-                    self.context, inst,
-                    mox.IsA(objects.BlockDeviceMappingList),
-                    delete_type='delete')
-        else:
-            compute_utils.notify_about_instance_usage(
-                    self.compute_api.notifier, self.context,
-                    inst, 'delete.start')
-            db.constraint(host=mox.IgnoreArg()).AndReturn('constraint')
+        if self.cell_type != 'api':
+            mock_cons.return_value = 'constraint'
             delete_time = datetime.datetime(1955, 11, 5, 9, 30,
                                             tzinfo=iso8601.UTC)
             updates['deleted_at'] = delete_time
             updates['deleted'] = True
             fake_inst = fake_instance.fake_db_instance(**updates)
-            db.instance_destroy(self.context, inst.uuid,
-                                constraint='constraint').AndReturn(fake_inst)
-            compute_utils.notify_about_instance_usage(
-                    self.compute_api.notifier, self.context,
-                    inst, 'delete.end')
+            mock_inst_destroy.return_value = fake_inst
 
-        self.mox.ReplayAll()
-
+        instance_uuid = inst.uuid
         self.compute_api.delete(self.context, inst)
+
         for k, v in updates.items():
             self.assertEqual(inst[k], v)
+
+        mock_lookup.assert_called_once_with(self.context, instance_uuid)
+        mock_bdm_get.assert_called_once_with(self.context, instance_uuid)
+        mock_br_get.assert_called_once_with(self.context, instance_uuid)
+        mock_save.assert_called_once_with()
+
+        if self.cell_type == 'api':
+            mock_terminate.assert_called_once_with(
+                self.context, inst,
+                test.MatchType(objects.BlockDeviceMappingList),
+                delete_type='delete')
+        else:
+            mock_notify.assert_has_calls([
+                mock.call(self.compute_api.notifier, self.context,
+                          inst, 'delete.start'),
+                mock.call(self.compute_api.notifier, self.context,
+                          inst, 'delete.end')])
+            mock_cons.assert_called_once_with(host=mock.ANY)
+            mock_inst_destroy.assert_called_once_with(
+                self.context, instance_uuid, constraint='constraint')
 
     def _fake_do_delete(context, instance, bdms,
                         rservations=None, local=False):
         pass
 
-    def test_local_delete_with_deleted_volume(self):
+    @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
+    @mock.patch.object(cinder.API, 'detach')
+    @mock.patch.object(compute_utils, 'notify_about_instance_usage')
+    @mock.patch.object(neutron_api.API, 'deallocate_for_instance')
+    @mock.patch.object(context.RequestContext, 'elevated')
+    @mock.patch.object(objects.Instance, 'destroy')
+    def test_local_delete_with_deleted_volume(
+            self, mock_inst_destroy, mock_elevated, mock_dealloc,
+            mock_notify, mock_detach, mock_bdm_destroy):
         bdms = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 42, 'volume_id': 'volume_id',
@@ -1382,40 +1396,25 @@ class _ComputeAPIUnitTestMixIn(object):
 
         inst = self._create_instance_obj()
         inst._context = self.context
+        mock_elevated.return_value = self.context
+        mock_detach.side_effect = exception.VolumeNotFound('volume_id')
 
-        self.mox.StubOutWithMock(inst, 'destroy')
-        self.mox.StubOutWithMock(self.context, 'elevated')
-        self.mox.StubOutWithMock(self.compute_api.network_api,
-                                 'deallocate_for_instance')
-        self.mox.StubOutWithMock(db, 'instance_system_metadata_get')
-        self.mox.StubOutWithMock(compute_utils,
-                                 'notify_about_instance_usage')
-        self.mox.StubOutWithMock(self.compute_api.volume_api,
-                                 'detach')
-        self.mox.StubOutWithMock(objects.BlockDeviceMapping, 'destroy')
-
-        compute_utils.notify_about_instance_usage(
-                    self.compute_api.notifier, self.context,
-                    inst, 'delete.start')
-        self.context.elevated().MultipleTimes().AndReturn(self.context)
-        if self.cell_type != 'api':
-            self.compute_api.network_api.deallocate_for_instance(
-                        self.context, inst)
-
-        self.compute_api.volume_api.detach(
-            mox.IgnoreArg(), 'volume_id', inst.uuid).\
-               AndRaise(exception.VolumeNotFound('volume_id'))
-        bdms[0].destroy()
-
-        inst.destroy()
-        compute_utils.notify_about_instance_usage(
-                    self.compute_api.notifier, self.context,
-                    inst, 'delete.end')
-
-        self.mox.ReplayAll()
         self.compute_api._local_delete(self.context, inst, bdms,
                                        'delete',
                                        self._fake_do_delete)
+
+        mock_notify.assert_has_calls([
+            mock.call(self.compute_api.notifier, self.context,
+                      inst, 'delete.start'),
+            mock.call(self.compute_api.notifier, self.context,
+                      inst, 'delete.end')])
+        mock_elevated.assert_has_calls([mock.call(), mock.call()])
+        mock_detach.assert_called_once_with(mock.ANY, 'volume_id', inst.uuid)
+        mock_bdm_destroy.assert_called_once_with()
+        mock_inst_destroy.assert_called_once_with()
+
+        if self.cell_type != 'api':
+            mock_dealloc.assert_called_once_with(self.context, inst)
 
     @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
     def test_local_cleanup_bdm_volumes_stashed_connector(self, mock_destroy):
@@ -1540,30 +1539,26 @@ class _ComputeAPIUnitTestMixIn(object):
         do_test(self)
 
     def test_delete_disabled(self):
+        # If 'disable_terminate' is True, log output is executed only and
+        # just return immediately.
         inst = self._create_instance_obj()
         inst.disable_terminate = True
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.ReplayAll()
         self.compute_api.delete(self.context, inst)
 
-    def test_delete_soft_rollback(self):
+    @mock.patch.object(objects.Instance, 'save',
+                       side_effect=test.TestingException)
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid',
+                       return_value=objects.BlockDeviceMappingList())
+    def test_delete_soft_rollback(self, mock_get, mock_save):
         inst = self._create_instance_obj()
-        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
-                                 'get_by_instance_uuid')
-        self.mox.StubOutWithMock(inst, 'save')
 
         delete_time = datetime.datetime(1955, 11, 5)
         self.useFixture(utils_fixture.TimeFixture(delete_time))
 
-        objects.BlockDeviceMappingList.get_by_instance_uuid(
-            self.context, inst.uuid).AndReturn(
-                objects.BlockDeviceMappingList())
-        inst.save().AndRaise(test.TestingException)
-
-        self.mox.ReplayAll()
-
         self.assertRaises(test.TestingException,
                           self.compute_api.soft_delete, self.context, inst)
+        mock_get.assert_called_once_with(self.context, inst.uuid)
+        mock_save.assert_called_once_with()
 
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     def test_attempt_delete_of_buildrequest_success(self, mock_get_by_inst):
@@ -1738,45 +1733,49 @@ class _ComputeAPIUnitTestMixIn(object):
 
         test()
 
-    def _test_confirm_resize(self, mig_ref_passed=False):
+    @mock.patch.object(objects.Migration, 'save')
+    @mock.patch.object(objects.Migration, 'get_by_instance_and_status')
+    @mock.patch.object(context.RequestContext, 'elevated')
+    def _test_confirm_resize(self, mock_elevated, mock_get, mock_save,
+                             mig_ref_passed=False):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
         fake_mig = objects.Migration._from_db_object(
                 self.context, objects.Migration(),
                 test_migration.fake_db_migration())
 
-        self.mox.StubOutWithMock(self.context, 'elevated')
-        self.mox.StubOutWithMock(objects.Migration,
-                                 'get_by_instance_and_status')
-        self.mox.StubOutWithMock(fake_mig, 'save')
-        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
-        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
-                                 'confirm_resize')
+        mock_record = self.useFixture(
+            fixtures.MockPatchObject(self.compute_api,
+                                     '_record_action_start')).mock
+        mock_confirm = self.useFixture(
+            fixtures.MockPatchObject(self.compute_api.compute_rpcapi,
+                                     'confirm_resize')).mock
 
-        self.context.elevated().AndReturn(self.context)
+        mock_elevated.return_value = self.context
         if not mig_ref_passed:
-            objects.Migration.get_by_instance_and_status(
-                    self.context, fake_inst['uuid'], 'finished').AndReturn(
-                            fake_mig)
+            mock_get.return_value = fake_mig
 
         def _check_mig(expected_task_state=None):
             self.assertEqual('confirming', fake_mig.status)
 
-        fake_mig.save().WithSideEffects(_check_mig)
-
-        self.compute_api._record_action_start(self.context, fake_inst,
-                                              'confirmResize')
-
-        self.compute_api.compute_rpcapi.confirm_resize(
-                self.context, fake_inst, fake_mig, 'compute-source')
-
-        self.mox.ReplayAll()
+        mock_save.side_effect = _check_mig
 
         if mig_ref_passed:
             self.compute_api.confirm_resize(self.context, fake_inst,
                                             migration=fake_mig)
         else:
             self.compute_api.confirm_resize(self.context, fake_inst)
+
+        mock_elevated.assert_called_once_with()
+        mock_save.assert_called_once_with()
+        mock_record.assert_called_once_with(self.context, fake_inst,
+                                            'confirmResize')
+        mock_confirm.assert_called_once_with(self.context, fake_inst, fake_mig,
+                                             'compute-source')
+
+        if not mig_ref_passed:
+            mock_get.assert_called_once_with(self.context, fake_inst['uuid'],
+                                             'finished')
 
     def test_confirm_resize(self):
         self._test_confirm_resize()
