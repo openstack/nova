@@ -111,7 +111,11 @@ def get_pvm_uuid(instance):
     :param instance: nova.objects.instance.Instance.
     :return: The PowerVM UUID for the LPAR corresponding to the instance.
     """
-    return pvm_uuid.convert_uuid_to_pvm(instance.uuid).upper()
+    # NOTE(esberglu): To work around bug ##1766692, we explicitly use str()
+    # rather than six.text_type here because of this pypowervm check for
+    # isinstance(..., str) at L50 of
+    # https://github.com/powervm/pypowervm/blob/1.1.10/pypowervm/utils/uuid.py
+    return pvm_uuid.convert_uuid_to_pvm(str(instance.uuid)).upper()
 
 
 def get_instance_wrapper(adapter, instance):
