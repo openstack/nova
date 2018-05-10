@@ -18200,9 +18200,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         fake_net = _fake_network_info(self, 1)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.image_backend = mock.Mock()
-        drvr.image_backend.by_name.return_value = drvr.image_backend
-        drvr.image_backend.exists.return_value = False
 
         with test.nested(
                 mock.patch('nova.compute.utils.is_volume_backed_instance',
@@ -18210,17 +18207,20 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 mock.patch.object(os.path, 'exists'),
                 mock.patch.object(libvirt_utils, 'get_instance_path'),
                 mock.patch.object(shutil, 'rmtree'),
+                mock.patch.object(drvr.image_backend, 'by_name',
+                                  new_callable=mock.NonCallableMock),
                 mock.patch.object(drvr, '_undefine_domain'),
                 mock.patch.object(drvr, 'unplug_vifs'),
                 mock.patch.object(drvr, 'unfilter_instance')
         ) as (mock_volume_backed, mock_exists, mock_get_path,
-              mock_rmtree, mock_undef, mock_unplug, mock_unfilter):
+              mock_rmtree, mock_image_by_name, mock_undef, mock_unplug,
+              mock_unfilter):
             mock_exists.return_value = True
             mock_get_path.return_value = '/fake/inst'
 
             drvr._cleanup_resize(self.context, ins_ref, fake_net)
             mock_get_path.assert_called_once_with(ins_ref)
-            self.assertEqual(6, mock_rmtree.call_count)
+            self.assertEqual(5, mock_rmtree.call_count)
             mock_undef.assert_called_once_with(ins_ref)
             mock_unplug.assert_called_once_with(ins_ref, fake_net)
             mock_unfilter.assert_called_once_with(ins_ref, fake_net)
@@ -18263,6 +18263,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
     def test_cleanup_resize_snap_backend(self):
         CONF.set_override('policy_dirs', [], group='oslo_policy')
+        self.flags(images_type='rbd', group='libvirt')
         ins_ref = self._create_instance({'host': CONF.host})
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()

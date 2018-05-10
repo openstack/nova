@@ -1149,32 +1149,26 @@ class LibvirtDriver(driver.ComputeDriver):
                 time.sleep(random.randint(20, 200) / 100.0)
             attempts += 1
 
-        root_disk = self.image_backend.by_name(instance, 'disk')
-        # TODO(nic): Set ignore_errors=False in a future release.
-        # It is set to True here to avoid any upgrade issues surrounding
-        # instances being in pending resize state when the software is updated;
-        # in that case there will be no snapshot to remove.  Once it can be
-        # reasonably assumed that no such instances exist in the wild
-        # anymore, it should be set back to False (the default) so it will
-        # throw errors, like it should.
-        if root_disk.exists():
-            root_disk.remove_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME,
-                                  ignore_errors=True)
-
-        # NOTE(mjozefcz):
-        # self.image_backend.image for some backends recreates instance
-        # directory and image disk.info - remove it here if exists
-        # Do not remove inst_base for volume-backed instances since that
-        # could potentially remove the files on the destination host
-        # if using shared storage.
-        if (os.path.exists(inst_base) and not root_disk.exists() and
-                not compute_utils.is_volume_backed_instance(
-                    context, instance)):
-            try:
-                shutil.rmtree(inst_base)
-            except OSError as e:
-                if e.errno != errno.ENOENT:
-                    raise
+        # NOTE(mriedem): Some image backends will recreate the instance path
+        # and disk.info during init, and all we need the root disk for
+        # here is removing cloned snapshots which is backend-specific, so
+        # check that first before initializing the image backend object. If
+        # there is ever an image type that supports clone *and* re-creates
+        # the instance directory and disk.info on init, this condition will
+        # need to be re-visited to make sure that backend doesn't re-create
+        # the disk. Refer to bugs: 1666831 1728603 1769131
+        if self.image_backend.backend(CONF.libvirt.images_type).SUPPORTS_CLONE:
+            root_disk = self.image_backend.by_name(instance, 'disk')
+            # TODO(nic): Set ignore_errors=False in a future release.
+            # It is set to True here to avoid any upgrade issues surrounding
+            # instances being in pending resize state when the software is
+            # updated; in that case there will be no snapshot to remove.
+            # Once it can be reasonably assumed that no such instances exist
+            # in the wild anymore, it should be set back to False
+            # (the default) so it will throw errors, like it should.
+            if root_disk.exists():
+                root_disk.remove_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME,
+                                      ignore_errors=True)
 
         if instance.host != CONF.host:
             self._undefine_domain(instance)
