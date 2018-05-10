@@ -1231,31 +1231,6 @@ def _ovs_vsctl(args):
         raise exception.OvsConfigurationFailure(inner_exception=e)
 
 
-def create_tap_dev(dev, mac_address=None, multiqueue=False):
-    if not linux_net_utils.device_exists(dev):
-        try:
-            # First, try with 'ip'
-            cmd = ('ip', 'tuntap', 'add', dev, 'mode', 'tap')
-            if multiqueue:
-                cmd = cmd + ('multi_queue', )
-            utils.execute(*cmd, run_as_root=True, check_exit_code=[0, 2, 254])
-        except processutils.ProcessExecutionError:
-            if multiqueue:
-                LOG.warning(
-                    'Failed to create a tap device with ip tuntap. '
-                    'tunctl does not support creation of multi-queue '
-                    'enabled devices, skipping fallback.')
-                raise
-
-            # Second option: tunctl
-            utils.execute('tunctl', '-b', '-t', dev, run_as_root=True)
-        if mac_address:
-            utils.execute('ip', 'link', 'set', dev, 'address', mac_address,
-                          run_as_root=True, check_exit_code=[0, 2, 254])
-        utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
-                      check_exit_code=[0, 2, 254])
-
-
 def create_fp_dev(dev, sockpath, sockmode):
     if not linux_net_utils.device_exists(dev):
         utils.execute('fp-vdev', 'add', dev, '--sockpath', sockpath,
@@ -1755,7 +1730,7 @@ class NeutronLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             for rule in get_gateway_rules(bridge):
                 iptables_manager.ipv4['filter'].add_rule(*rule)
 
-        create_tap_dev(dev, mac_address)
+        linux_net_utils.create_tap_dev(dev, mac_address)
 
         if not linux_net_utils.device_exists(bridge):
             LOG.debug("Starting bridge %s ", bridge)

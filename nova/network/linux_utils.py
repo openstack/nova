@@ -68,3 +68,28 @@ def create_veth_pair(dev1_name, dev2_name, mtu=None):
         utils.execute('ip', 'link', 'set', dev, 'promisc', 'on',
                       run_as_root=True)
         set_device_mtu(dev, mtu)
+
+
+def create_tap_dev(dev, mac_address=None, multiqueue=False):
+    if not device_exists(dev):
+        try:
+            # First, try with 'ip'
+            cmd = ('ip', 'tuntap', 'add', dev, 'mode', 'tap')
+            if multiqueue:
+                cmd = cmd + ('multi_queue', )
+            utils.execute(*cmd, run_as_root=True, check_exit_code=[0, 2, 254])
+        except processutils.ProcessExecutionError:
+            if multiqueue:
+                LOG.warning(
+                    'Failed to create a tap device with ip tuntap. '
+                    'tunctl does not support creation of multi-queue '
+                    'enabled devices, skipping fallback.')
+                raise
+
+            # Second option: tunctl
+            utils.execute('tunctl', '-b', '-t', dev, run_as_root=True)
+        if mac_address:
+            utils.execute('ip', 'link', 'set', dev, 'address', mac_address,
+                          run_as_root=True, check_exit_code=[0, 2, 254])
+        utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
+                      check_exit_code=[0, 2, 254])
