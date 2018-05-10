@@ -3511,10 +3511,13 @@ class ComputeTestCase(BaseTestCase,
     def test_snapshot_fails_cleanup_ignores_exception(self):
         self._test_snapshot_fails(True, 'snapshot')
 
-    def _test_snapshot_deletes_image_on_failure(self, status, exc):
+    def _test_snapshot_deletes_image_on_failure(self, status, exc,
+                                                image_not_exist=False):
         self.fake_image_delete_called = False
 
         def fake_show(self_, context, image_id, **kwargs):
+            if image_not_exist:
+                raise exception.ImageNotFound(image_id=uuids.snapshot)
             self.assertEqual(uuids.snapshot, image_id)
             image = {'id': image_id,
                      'status': status}
@@ -3568,6 +3571,15 @@ class ComputeTestCase(BaseTestCase,
         self._test_snapshot_deletes_image_on_failure(
             'active', instance_not_found)
         self.assertFalse(self.fake_image_delete_called)
+
+    @mock.patch.object(compute_manager.LOG, 'warning')
+    def test_snapshot_fails_with_instance_not_found_and_image_not_found(self,
+            mock_warning):
+        instance_not_found = exception.InstanceNotFound(instance_id='uuid')
+        self._test_snapshot_deletes_image_on_failure(
+            'active', instance_not_found, image_not_exist=True)
+        self.assertFalse(self.fake_image_delete_called)
+        mock_warning.assert_not_called()
 
     def test_snapshot_handles_cases_when_instance_is_deleted(self):
         inst_obj = self._get_snapshotting_instance()
