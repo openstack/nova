@@ -106,7 +106,7 @@ class TestInstanceList(test.NoDBTestCase):
         mock_gi.assert_called_once_with(admin_context, {}, None, None, [],
                                         None, None,
                                         cell_mappings=None)
-        self.assertFalse(mock_cm.called)
+        mock_cm.assert_not_called()
 
     @mock.patch('nova.objects.BuildRequestList.get_by_filters')
     @mock.patch('nova.compute.instance_list.get_instances_sorted')
@@ -136,4 +136,4 @@ class TestInstanceList(test.NoDBTestCase):
         mock_gi.assert_called_once_with(admin_context, {}, None, None, [],
                                         None, None,
                                         cell_mappings=None)
-        self.assertFalse(mock_cm.called)
+        mock_cm.assert_not_called()

@@ -146,7 +146,8 @@ class CellMappingListTestCase(test.NoDBTestCase):
                                          project_id='proj2')
             im.create()
 
-        # One mapping has no cell because it's a BuildRequest
+        # One mapping has no cell. This helps ensure that our query
+        # filters out any mappings that aren't tied to a cell.
         im = objects.InstanceMapping(context=ctxt,
                                      instance_uuid=uuidutils.generate_uuid(),
                                      cell_mapping=None,
