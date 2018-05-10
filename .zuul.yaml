@@ -161,6 +161,22 @@
         - nova-cells-v1
         - nova-live-migration
         - nova-multiattach
+        - nova-next
+        - tempest-slow:
+            irrelevant-files:
+              - ^(placement-)?api-.*$
+              - ^(test-|)requirements.txt$
+              - ^.*\.rst$
+              - ^.git.*$
+              - ^doc/.*$
+              - ^nova/hacking/.*$
+              - ^nova/locale/.*$
+              - ^nova/tests/.*$
+              - ^releasenotes/.*$
+              - ^setup.cfg$
+              - ^tests-py3.txt$
+              - ^tools/.*$
+              - ^tox.ini$
         - nova-tox-functional
         - nova-tox-functional-py35
         - neutron-grenade-multinode:
@@ -280,6 +296,22 @@
         - nova-cells-v1
         - nova-live-migration
         - nova-multiattach
+        - nova-next
+        - tempest-slow:
+            irrelevant-files:
+              - ^(placement-)?api-.*$
+              - ^(test-|)requirements.txt$
+              - ^.*\.rst$
+              - ^.git.*$
+              - ^doc/.*$
+              - ^nova/hacking/.*$
+              - ^nova/locale/.*$
+              - ^nova/tests/.*$
+              - ^releasenotes/.*$
+              - ^setup.cfg$
+              - ^tests-py3.txt$
+              - ^tools/.*$
+              - ^tox.ini$
         - nova-tox-functional
         - nova-tox-functional-py35
         - tempest-full:
