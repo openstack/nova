@@ -1859,11 +1859,19 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, fake_inst['uuid'], 'finished')
             mock_inst_save.assert_called_once_with(expected_task_state=[None])
 
+    @mock.patch('nova.objects.Migration')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    @mock.patch.object(quotas_obj.Quotas, 'limit_check_project_and_user')
+    @mock.patch.object(quotas_obj.Quotas, 'count_as_dict')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(compute_utils, 'upsize_quota_delta')
+    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     def _test_resize(self, mock_get_all_by_host,
-                     mock_get_by_instance_uuid,
-                     flavor_id_passed=True,
+                     mock_get_by_instance_uuid, mock_get_flavor, mock_upsize,
+                     mock_inst_save, mock_count, mock_limit, mock_record,
+                     mock_migration, flavor_id_passed=True,
                      same_host=False, allow_same_host=False,
                      project_id=None,
                      extra_kwargs=None,
@@ -1883,15 +1891,9 @@ class _ComputeAPIUnitTestMixIn(object):
             params['project_id'] = project_id
         fake_inst = self._create_instance_obj(params=params)
 
-        self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
-        self.mox.StubOutWithMock(compute_utils, 'upsize_quota_delta')
-        self.mox.StubOutWithMock(fake_inst, 'save')
-        self.mox.StubOutWithMock(quotas_obj.Quotas, 'count_as_dict')
-        self.mox.StubOutWithMock(quotas_obj.Quotas,
-                                 'limit_check_project_and_user')
-        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
-        self.mox.StubOutWithMock(self.compute_api.compute_task_api,
-                                 'resize_instance')
+        mock_resize = self.useFixture(
+            fixtures.MockPatchObject(self.compute_api.compute_task_api,
+                                     'resize_instance')).mock
 
         if host_name:
             mock_get_all_by_host.return_value = [objects.ComputeNode(
@@ -1903,9 +1905,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                 name='new_flavor', disabled=False)
             if same_flavor:
                 new_flavor.id = current_flavor.id
-            flavors.get_flavor_by_flavor_id(
-                    'new-flavor-id',
-                    read_deleted='no').AndReturn(new_flavor)
+            mock_get_flavor.return_value = new_flavor
         else:
             new_flavor = current_flavor
 
@@ -1914,27 +1914,13 @@ class _ComputeAPIUnitTestMixIn(object):
             project_id, user_id = quotas_obj.ids_from_instance(self.context,
                                                                fake_inst)
             if flavor_id_passed:
-                compute_utils.upsize_quota_delta(
-                    mox.IsA(objects.Flavor),
-                    mox.IsA(objects.Flavor)).AndReturn({'cores': 0, 'ram': 0})
+                mock_upsize.return_value = {'cores': 0, 'ram': 0}
 
                 proj_count = {'instances': 1, 'cores': current_flavor.vcpus,
                               'ram': current_flavor.memory_mb}
                 user_count = proj_count.copy()
-                # mox.IgnoreArg() might be 'instances', 'cores', or 'ram'
-                # depending on how the deltas dict is iterated in check_deltas
-                quotas_obj.Quotas.count_as_dict(self.context, mox.IgnoreArg(),
-                                                project_id,
-                                                user_id=user_id).AndReturn(
-                                                    {'project': proj_count,
-                                                     'user': user_count})
-                # The current and new flavor have the same cores/ram
-                req_cores = current_flavor.vcpus
-                req_ram = current_flavor.memory_mb
-                values = {'cores': req_cores, 'ram': req_ram}
-                quotas_obj.Quotas.limit_check_project_and_user(
-                    self.context, user_values=values, project_values=values,
-                    project_id=project_id, user_id=user_id)
+                mock_count.return_value = {'project': proj_count,
+                                           'user': user_count}
 
             def _check_state(expected_task_state=None):
                 self.assertEqual(task_states.RESIZE_PREP,
@@ -1943,8 +1929,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 for key, value in extra_kwargs.items():
                     self.assertEqual(value, getattr(fake_inst, key))
 
-            fake_inst.save(expected_task_state=[None]).WithSideEffects(
-                    _check_state)
+            mock_inst_save.side_effect = _check_state
 
             if allow_same_host:
                 filter_properties = {'ignore_hosts': []}
@@ -1952,10 +1937,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 filter_properties = {'ignore_hosts': [fake_inst['host']]}
 
             if self.cell_type == 'api':
-                mig = objects.Migration()
-
-                def _get_migration(context=None):
-                    return mig
+                mig = mock.MagicMock()
+                mock_migration.return_value = mig
 
                 def _check_mig():
                     self.assertEqual(fake_inst.uuid, mig.instance_uuid)
@@ -1969,19 +1952,10 @@ class _ComputeAPIUnitTestMixIn(object):
                     else:
                         self.assertEqual('migration', mig.migration_type)
 
-                self.stubs.Set(objects, 'Migration', _get_migration)
-                self.mox.StubOutWithMock(self.context, 'elevated')
-                self.mox.StubOutWithMock(mig, 'create')
-
-                self.context.elevated().AndReturn(self.context)
-                mig.create().WithSideEffects(_check_mig)
-
-            if flavor_id_passed:
-                self.compute_api._record_action_start(self.context, fake_inst,
-                                                      'resize')
-            else:
-                self.compute_api._record_action_start(self.context, fake_inst,
-                                                      'migrate')
+                mock_elevated = self.useFixture(
+                    fixtures.MockPatchObject(self.context, 'elevated')).mock
+                mock_elevated.return_value = self.context
+                mig.create.side_effect = _check_mig
 
             if request_spec:
                 fake_spec = objects.RequestSpec()
@@ -1996,15 +1970,6 @@ class _ComputeAPIUnitTestMixIn(object):
                 fake_spec = None
 
             scheduler_hint = {'filter_properties': filter_properties}
-
-            self.compute_api.compute_task_api.resize_instance(
-                    self.context, fake_inst, extra_kwargs,
-                    scheduler_hint=scheduler_hint,
-                    flavor=mox.IsA(objects.Flavor),
-                    clean_shutdown=clean_shutdown,
-                    request_spec=fake_spec)
-
-        self.mox.ReplayAll()
 
         if flavor_id_passed:
             self.compute_api.resize(self.context, fake_inst,
@@ -2033,6 +1998,57 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.assertIn('node', fake_spec.requested_destination)
                 self.assertEqual('hypervisor_host',
                                  fake_spec.requested_destination.node)
+
+        if host_name:
+            mock_get_all_by_host.assert_called_once_with(
+                self.context, host_name, True)
+
+        if flavor_id_passed:
+            mock_get_flavor.assert_called_once_with('new-flavor-id',
+                                                    read_deleted='no')
+
+        if (self.cell_type == 'compute' or
+                not (flavor_id_passed and same_flavor)):
+            if flavor_id_passed:
+                mock_upsize.assert_called_once_with(
+                    test.MatchType(objects.Flavor),
+                    test.MatchType(objects.Flavor))
+                # mock.ANY might be 'instances', 'cores', or 'ram'
+                # depending on how the deltas dict is iterated in check_deltas
+                mock_count.assert_called_once_with(
+                    self.context, mock.ANY, project_id, user_id=user_id)
+                # The current and new flavor have the same cores/ram
+                req_cores = current_flavor.vcpus
+                req_ram = current_flavor.memory_mb
+                values = {'cores': req_cores, 'ram': req_ram}
+                mock_limit.assert_called_once_with(
+                    self.context, user_values=values, project_values=values,
+                    project_id=project_id, user_id=user_id)
+
+                mock_inst_save.assert_called_once_with(
+                    expected_task_state=[None])
+
+            if self.cell_type == 'api':
+                mock_migration.assert_called_once_with(context=self.context)
+                mock_elevated.assert_called_once_with()
+                mig.create.assert_called_once_with()
+
+            mock_get_by_instance_uuid.assert_called_once_with(self.context,
+                                                              fake_inst.uuid)
+
+            if flavor_id_passed:
+                mock_record.assert_called_once_with(self.context, fake_inst,
+                                                    'resize')
+            else:
+                mock_record.assert_called_once_with(self.context, fake_inst,
+                                                    'migrate')
+
+            mock_resize.assert_called_once_with(
+                self.context, fake_inst, extra_kwargs,
+                scheduler_hint=scheduler_hint,
+                flavor=test.MatchType(objects.Flavor),
+                clean_shutdown=clean_shutdown,
+                request_spec=fake_spec)
 
     def _test_migrate(self, *args, **kwargs):
         self._test_resize(*args, flavor_id_passed=False, **kwargs)
@@ -2154,54 +2170,56 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.resize, self.context,
                           fake_inst, host_name='fake_host')
 
-    def test_resize_invalid_flavor_fails(self):
-        self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
-        # Should never reach these.
-        self.mox.StubOutWithMock(quotas_obj.Quotas, 'count_as_dict')
-        self.mox.StubOutWithMock(quotas_obj.Quotas,
-                                 'limit_check_project_and_user')
-        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
-        self.mox.StubOutWithMock(self.compute_api.compute_task_api,
-                                 'resize_instance')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    @mock.patch.object(quotas_obj.Quotas, 'limit_check_project_and_user')
+    @mock.patch.object(quotas_obj.Quotas, 'count_as_dict')
+    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
+    def test_resize_invalid_flavor_fails(self, mock_get_flavor, mock_count,
+                                         mock_limit, mock_record, mock_save):
+        mock_resize = self.useFixture(fixtures.MockPatchObject(
+            self.compute_api.compute_task_api, 'resize_instance')).mock
 
         fake_inst = self._create_instance_obj()
         exc = exception.FlavorNotFound(flavor_id='flavor-id')
+        mock_get_flavor.side_effect = exc
 
-        flavors.get_flavor_by_flavor_id('flavor-id',
-                                        read_deleted='no').AndRaise(exc)
-
-        self.mox.ReplayAll()
-
-        with mock.patch.object(fake_inst, 'save') as mock_save:
-            self.assertRaises(exception.FlavorNotFound,
-                              self.compute_api.resize, self.context,
-                              fake_inst, flavor_id='flavor-id')
-            self.assertFalse(mock_save.called)
-
-    def test_resize_disabled_flavor_fails(self):
-        self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
+        self.assertRaises(exception.FlavorNotFound,
+                          self.compute_api.resize, self.context,
+                          fake_inst, flavor_id='flavor-id')
+        mock_get_flavor.assert_called_once_with('flavor-id', read_deleted='no')
         # Should never reach these.
-        self.mox.StubOutWithMock(quotas_obj.Quotas, 'count_as_dict')
-        self.mox.StubOutWithMock(quotas_obj.Quotas,
-                                 'limit_check_project_and_user')
-        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
-        self.mox.StubOutWithMock(self.compute_api.compute_task_api,
-                                 'resize_instance')
+        mock_count.assert_not_called()
+        mock_limit.assert_not_called()
+        mock_record.assert_not_called()
+        mock_resize.assert_not_called()
+        mock_save.assert_not_called()
+
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    @mock.patch.object(quotas_obj.Quotas, 'limit_check_project_and_user')
+    @mock.patch.object(quotas_obj.Quotas, 'count_as_dict')
+    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
+    def test_resize_disabled_flavor_fails(self, mock_get_flavor, mock_count,
+                                          mock_limit, mock_record, mock_save):
+        mock_resize = self.useFixture(fixtures.MockPatchObject(
+            self.compute_api.compute_task_api, 'resize_instance')).mock
 
         fake_inst = self._create_instance_obj()
         fake_flavor = self._create_flavor(id=200, flavorid='flavor-id',
                             name='foo', disabled=True)
+        mock_get_flavor.return_value = fake_flavor
 
-        flavors.get_flavor_by_flavor_id(
-                'flavor-id', read_deleted='no').AndReturn(fake_flavor)
-
-        self.mox.ReplayAll()
-
-        with mock.patch.object(fake_inst, 'save') as mock_save:
-            self.assertRaises(exception.FlavorNotFound,
-                              self.compute_api.resize, self.context,
-                              fake_inst, flavor_id='flavor-id')
-            self.assertFalse(mock_save.called)
+        self.assertRaises(exception.FlavorNotFound,
+                          self.compute_api.resize, self.context,
+                          fake_inst, flavor_id='flavor-id')
+        mock_get_flavor.assert_called_once_with('flavor-id', read_deleted='no')
+        # Should never reach these.
+        mock_count.assert_not_called()
+        mock_limit.assert_not_called()
+        mock_record.assert_not_called()
+        mock_resize.assert_not_called()
+        mock_save.assert_not_called()
 
     @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
     def test_resize_to_zero_disk_flavor_fails(self, get_flavor_by_flavor_id):
