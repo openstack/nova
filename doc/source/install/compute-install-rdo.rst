@@ -169,7 +169,7 @@ Install and configure components
 
          [placement]
          # ...
-         os_region_name = RegionOne
+         region_name = RegionOne
          project_domain_name = Default
          project_name = service
          auth_type = password
