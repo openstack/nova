@@ -255,8 +255,8 @@ Possible values:
 * Any string, including an empty string (the default).
 """),
     cfg.BoolOpt("instance_list_per_project_cells",
-                default=False,
-                help="""
+        default=False,
+        help="""
 When enabled, this will cause the API to only query cell databases
 in which the tenant has mapped instances. This requires an additional
 (fast) query in the API database before each list, but also
@@ -264,7 +264,8 @@ in which the tenant has mapped instances. This requires an additional
 to provide the result. If you have a small number of cells, or tenants
 are likely to have instances in all cells, then this should be
 False. If you have many cells, especially if you confine tenants to a
-small subset of those cells, this should be True.  """),
+small subset of those cells, this should be True.
+"""),
 ]
 
 # NOTE(edleafe): I would like to import the value directly from

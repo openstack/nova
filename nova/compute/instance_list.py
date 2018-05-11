@@ -100,13 +100,15 @@ def get_instance_objects_sorted(ctx, filters, limit, marker, expected_attrs,
     """Same as above, but return an InstanceList."""
     query_cell_subset = CONF.api.instance_list_per_project_cells
     # NOTE(danms): Replicated in part from instance_get_all_by_sort_filters(),
-    # where if we're not admin we're restricted to our context's project. Use
-    # this to get a subset of cell mappings.
+    # where if we're not admin we're restricted to our context's project
     if query_cell_subset and not ctx.is_admin:
+        # We are not admin, and configured to only query the subset of cells
+        # we could possibly have instances in.
         cell_mappings = objects.CellMappingList.get_by_project_id(
             ctx, ctx.project_id)
     else:
-        # If we're admin then query all cells
+        # Either we are admin, or configured to always hit all cells,
+        # so don't limit the list to a subset.
         cell_mappings = None
     columns_to_join = instance_obj._expected_cols(expected_attrs)
     instance_generator = get_instances_sorted(ctx, filters, limit, marker,

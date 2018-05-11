@@ -67,10 +67,11 @@ class CrossCellLister(object):
     """An implementation of a cross-cell efficient lister.
 
     This primarily provides a listing implementation for fetching
-    records from across all cells, paginated and sorted appropriately.
-    The external interface is the get_records_sorted() method. You should
-    implement this if you need to efficiently list your data type from
-    cell databases.
+    records from across multiple cells, paginated and sorted
+    appropriately.  The external interface is the get_records_sorted()
+    method. You should implement this if you need to efficiently list
+    your data type from cell databases.
+
     """
     def __init__(self, sort_ctx, cells=None):
         self.sort_ctx = sort_ctx

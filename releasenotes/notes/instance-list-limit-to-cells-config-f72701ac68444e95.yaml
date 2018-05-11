@@ -1,0 +1,16 @@
+---
+other:
+  - |
+    The `[api]/instance_list_per_project_cells` configuration option
+    was added, which controls whether or not an instance list for
+    non-admin users checks all cell databases for results.  If
+    disabled (the default), then a list will always contact each cell
+    database looking for instances. This is appropriate if you have a
+    small number of cells, and/or if you spread instances from tenants
+    evenly across cells. If you confine tenants to a subset of cells,
+    then enabling this will result in fewer cell database calls, as
+    nova will only query the cells for which the tenant has instances
+    mapped. Doing this requires one more (fast) call to the API
+    database to get the relevant subset of cells, so if that is likely
+    to always be the same, disabling this feature will provide better
+    performance.
