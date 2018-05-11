@@ -101,7 +101,7 @@ class ResourceRequest(object):
         return
 
     @classmethod
-    def from_extra_specs(cls, extra_specs):
+    def from_extra_specs(cls, extra_specs, req=None):
         """Processes resources and traits in numbered groupings in extra_specs.
 
         Examines extra_specs for items of the following forms:
@@ -111,10 +111,16 @@ class ResourceRequest(object):
             "trait$N:$TRAIT_NAME": "required"
 
         :param extra_specs: The flavor extra_specs dict.
+        :param req: the ResourceRequest object to add the requirements to or
+               None to create a new ResourceRequest
         :return: A ResourceRequest object representing the resources and
                  required traits in the extra_specs.
         """
-        ret = cls()
+        if req is not None:
+            ret = req
+        else:
+            ret = cls()
+
         for key, val in extra_specs.items():
             match = cls.XS_KEYPAT.match(key)
             if not match:
@@ -132,6 +138,31 @@ class ResourceRequest(object):
             # Process "trait[$N]"
             elif prefix == cls.XS_TRAIT_PREFIX:
                 ret._add_trait(suffix, name, val)
+
+        return ret
+
+    @classmethod
+    def from_image_props(cls, image_meta_props, req=None):
+        """Processes image properties and adds trait requirements to the
+           ResourceRequest
+
+        :param image_meta_props: The ImageMetaProps object.
+        :param req: the ResourceRequest object to add the requirements to or
+               None to create a new ResourceRequest
+        :return: A ResourceRequest object representing the required traits on
+                the image.
+        """
+        if req is not None:
+            ret = req
+        else:
+            ret = cls()
+
+        if 'traits_required' in image_meta_props:
+            for trait in image_meta_props.traits_required:
+                # required traits from the image are always added to the
+                # unnumbered request group, granular request groups are not
+                # supported in image traits
+                ret._add_trait(None, trait, "required")
 
         return ret
 
@@ -331,6 +362,11 @@ def resources_from_request_spec(spec_obj):
     else:
         # Start with an empty one
         res_req = ResourceRequest()
+
+    # Process any image properties
+    if 'image' in spec_obj and 'properties' in spec_obj.image:
+        res_req = ResourceRequest.from_image_props(spec_obj.image.properties,
+                                                   req=res_req)
 
     # Add the (remaining) items from the spec_resources to the sharing group
     for rclass, amount in spec_resources.items():

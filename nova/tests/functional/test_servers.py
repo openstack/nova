@@ -3706,36 +3706,225 @@ class TraitsBasedSchedulingTest(ProviderUsageBaseTestCase):
         self.admin_api.post_extra_spec(
             self.flavor_with_trait['id'],
             {'extra_specs': {'trait:HW_CPU_X86_VMX': 'required'}})
+        self.flavor_without_trait = flavors[1]
 
-    def _create_server(self):
-        # Create the server using the flavor with the required trait.
+        # Note that we're using v2.35 explicitly as the api returns 404
+        # starting with 2.36
+        with nova.utils.temporary_mutation(self.api, microversion='2.35'):
+            images = self.api.get_images()
+            self.image_id_with_trait = images[0]['id']
+            self.api.api_put('/images/%s/metadata' % self.image_id_with_trait,
+                             {'metadata': {
+                                 'trait:HW_CPU_X86_SGX': 'required'}})
+            self.image_id_without_trait = images[1]['id']
+
+    def _create_server_with_traits(self, flavor_id, image_id):
+        """Create a server with given flavor and image id's
+        :param flavor_id: the flavor id
+        :param image_id: the image id
+        :return: create server response
+        """
+
         server_req = self._build_minimal_create_server_request(
             self.api, 'trait-based-server',
-            image_uuid='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-            flavor_id=self.flavor_with_trait['id'], networks='none')
+            image_uuid=image_id,
+            flavor_id=flavor_id, networks='none')
         return self.api.post_server({'server': server_req})
 
-    def test_traits_based_scheduling(self):
-        """Tests that a server create request using a required trait ends
-        up on the single compute node resource provider that also has that
+    def _create_server_with_volume(self, flavor_id, volume_id):
+        """Create a server with block device mapping(volume) with the given
+        flavor and volume id's
+        :param flavor_id: the flavor id
+        :param volume_id: the volume id
+        :return: create server response
+        """
+
+        server_req_body = {
+            # There is no imageRef because this is boot from volume.
+            'server': {
+                'flavorRef': flavor_id,
+                'name': 'test_image_trait_on_volume_backed',
+                # We don't care about networking for this test. This
+                # requires
+                # microversion >= 2.37.
+                'networks': 'none',
+                'block_device_mapping_v2': [{
+                    'boot_index': 0,
+                    'uuid': volume_id,
+                    'source_type': 'volume',
+                    'destination_type': 'volume'
+                }]
+            }
+        }
+        server = self.api.post_server(server_req_body)
+        return server
+
+    def test_flavor_traits_based_scheduling(self):
+        """Tests that a server create request using a required trait on flavor
+        ends up on the single compute node resource provider that also has that
         trait in Placement.
         """
-        # Decorate the compute_with_trait resource provider with that same
-        # trait.
+
+        # Decorate compute1 resource provider with that same trait.
         rp_uuid = self._get_provider_uuid_by_host(self.compute1.host)
         self._set_provider_traits(rp_uuid, ['HW_CPU_X86_VMX'])
-        server = self._create_server()
+
+        # Create server using only flavor trait
+        server = self._create_server_with_traits(self.flavor_with_trait['id'],
+                                                 self.image_id_without_trait)
         server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
         # Assert the server ended up on the expected compute host that has
         # the required trait.
         self.assertEqual(self.compute1.host, server['OS-EXT-SRV-ATTR:host'])
 
-    def test_traits_based_scheduling_no_valid_host(self):
-        """Tests that a server create request using a required trait
-        fails to find a valid host since no compute node resource providers
-        have the trait.
+    def test_image_traits_based_scheduling(self):
+        """Tests that a server create request using a required trait on image
+        ends up on the single compute node resource provider that also has that
+        trait in Placement.
         """
-        server = self._create_server()
+
+        # Decorate compute2 resource provider with image trait.
+        rp_uuid = self._get_provider_uuid_by_host(self.compute2.host)
+        self._set_provider_traits(rp_uuid, ['HW_CPU_X86_SGX'])
+
+        # Create server using only image trait
+        server = self._create_server_with_traits(
+            self.flavor_without_trait['id'], self.image_id_with_trait)
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        # Assert the server ended up on the expected compute host that has
+        # the required trait.
+        self.assertEqual(self.compute2.host, server['OS-EXT-SRV-ATTR:host'])
+
+    def test_flavor_image_traits_based_scheduling(self):
+        """Tests that a server create request using a required trait on flavor
+        AND a required trait on the image ends up on the single compute node
+        resource provider that also has that trait in Placement.
+        """
+
+        # Decorate compute2 resource provider with both flavor and image trait.
+        rp_uuid = self._get_provider_uuid_by_host(self.compute2.host)
+        self._set_provider_traits(rp_uuid, ['HW_CPU_X86_VMX',
+                                            'HW_CPU_X86_SGX'])
+
+        # Create server using flavor and image trait
+        server = self._create_server_with_traits(
+            self.flavor_with_trait['id'], self.image_id_with_trait)
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        # Assert the server ended up on the expected compute host that has
+        # the required trait.
+        self.assertEqual(self.compute2.host, server['OS-EXT-SRV-ATTR:host'])
+
+    def test_image_trait_on_volume_backed_instance(self):
+        """Tests that when trying to launch a volume-backed instance with a
+        required trait on the image, the instance ends up on the single compute
+        node resource provider that also has that trait in Placement.
+        """
+        # Decorate compute2 resource provider with volume image metadata trait.
+        rp_uuid = self._get_provider_uuid_by_host(self.compute2.host)
+        self._set_provider_traits(rp_uuid, ['HW_CPU_X86_SGX'])
+
+        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        # Create our server with a volume containing the image meta data with a
+        # required trait
+        server = self._create_server_with_volume(
+            self.flavor_without_trait['id'],
+            nova_fixtures.CinderFixtureNewAttachFlow.
+            IMAGE_WITH_TRAITS_BACKED_VOL)
+
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        # Assert the server ended up on the expected compute host that has
+        # the required trait.
+        self.assertEqual(self.compute2.host, server['OS-EXT-SRV-ATTR:host'])
+
+    def test_flavor_image_trait_on_volume_backed_instance(self):
+        """Tests that when trying to launch a volume-backed instance with a
+        required trait on flavor AND a required trait on the image,
+        the instance ends up on the single compute node resource provider that
+        also has those traits in Placement.
+        """
+        # Decorate compute2 resource provider with volume image metadatz trait.
+        rp_uuid = self._get_provider_uuid_by_host(self.compute2.host)
+        self._set_provider_traits(rp_uuid, ['HW_CPU_X86_VMX',
+                                            'HW_CPU_X86_SGX'])
+
+        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        # Create our server with a flavor trait and a volume containing the
+        # image meta data with a required trait
+        server = self._create_server_with_volume(
+            self.flavor_with_trait['id'],
+            nova_fixtures.CinderFixtureNewAttachFlow.
+            IMAGE_WITH_TRAITS_BACKED_VOL)
+
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        # Assert the server ended up on the expected compute host that has
+        # the required trait.
+        self.assertEqual(self.compute2.host, server['OS-EXT-SRV-ATTR:host'])
+
+    def test_flavor_traits_based_scheduling_no_valid_host(self):
+        """Tests that a server create request using a required trait expressed
+         in flavor fails to find a valid host since no compute node resource
+         providers have the trait.
+        """
+
+        # Decorate compute1 resource provider with the image trait.
+        rp_uuid = self._get_provider_uuid_by_host(self.compute1.host)
+        self._set_provider_traits(rp_uuid, ['HW_CPU_X86_SGX'])
+
+        server = self._create_server_with_traits(self.flavor_with_trait['id'],
+                                                 self.image_id_without_trait)
+        # The server should go to ERROR state because there is no valid host.
+        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
+        # Make sure the failure was due to NoValidHost by checking the fault.
+        self.assertIn('fault', server)
+        self.assertIn('No valid host', server['fault']['message'])
+
+    def test_image_traits_based_scheduling_no_valid_host(self):
+        """Tests that a server create request using a required trait expressed
+         in image fails to find a valid host since no compute node resource
+         providers have the trait.
+        """
+
+        # Decorate compute1 resource provider with that flavor trait.
+        rp_uuid = self._get_provider_uuid_by_host(self.compute1.host)
+        self._set_provider_traits(rp_uuid, ['HW_CPU_X86_VMX'])
+
+        server = self._create_server_with_traits(
+            self.flavor_without_trait['id'], self.image_id_with_trait)
+        # The server should go to ERROR state because there is no valid host.
+        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
+        # Make sure the failure was due to NoValidHost by checking the fault.
+        self.assertIn('fault', server)
+        self.assertIn('No valid host', server['fault']['message'])
+
+    def test_flavor_image_traits_based_scheduling_no_valid_host(self):
+        """Tests that a server create request using a required trait expressed
+         in flavor AND a required trait expressed in the image fails to find a
+         valid host since no compute node resource providers have the trait.
+        """
+
+        server = self._create_server_with_traits(
+            self.flavor_with_trait['id'], self.image_id_with_trait)
+        # The server should go to ERROR state because there is no valid host.
+        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
+        # Make sure the failure was due to NoValidHost by checking the fault.
+        self.assertIn('fault', server)
+        self.assertIn('No valid host', server['fault']['message'])
+
+    def test_image_trait_on_volume_backed_instance_no_valid_host(self):
+        """Tests that when trying to launch a volume-backed instance with a
+        required trait on the image fails to find a valid host since no compute
+        node resource providers have the trait.
+        """
+        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        # Create our server with a volume
+        server = self._create_server_with_volume(
+            self.flavor_without_trait['id'],
+            nova_fixtures.CinderFixtureNewAttachFlow.
+            IMAGE_WITH_TRAITS_BACKED_VOL)
+
         # The server should go to ERROR state because there is no valid host.
         server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
         self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])

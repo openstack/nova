@@ -36,12 +36,25 @@ class TestUtils(test.NoDBTestCase):
         for ident in ex_by_id:
             self.assertEqual(vars(ex_by_id[ident]), vars(ob_by_id[ident]))
 
-    def _test_resources_from_request_spec(self, flavor, expected):
-        fake_spec = objects.RequestSpec(flavor=flavor)
+    @staticmethod
+    def _get_image_with_traits():
+        image_prop = {
+            'properties': {
+                'trait:CUSTOM_IMAGE_TRAIT1': 'required',
+                'trait:CUSTOM_IMAGE_TRAIT2': 'required',
+            },
+            'id': 'c8b1790e-a07d-4971-b137-44f2432936cd'
+        }
+        image = objects.ImageMeta.from_dict(image_prop)
+        return image
+
+    def _test_resources_from_request_spec(self, expected, flavor,
+                                          image=objects.ImageMeta()):
+        fake_spec = objects.RequestSpec(flavor=flavor, image=image)
         resources = utils.resources_from_request_spec(fake_spec)
         self.assertResourceRequestsEqual(expected, resources)
 
-    def test_resources_from_request_spec(self):
+    def test_resources_from_request_spec_flavor_only(self):
         flavor = objects.Flavor(vcpus=1,
                                 memory_mb=1024,
                                 root_gb=10,
@@ -56,7 +69,36 @@ class TestUtils(test.NoDBTestCase):
                 'DISK_GB': 15,
             }
         )
-        self._test_resources_from_request_spec(flavor, expected_resources)
+        self._test_resources_from_request_spec(expected_resources, flavor)
+
+    def test_resources_from_request_spec_flavor_and_image_traits(self):
+        image = self._get_image_with_traits()
+        flavor = objects.Flavor(vcpus=1,
+                                memory_mb=1024,
+                                root_gb=10,
+                                ephemeral_gb=5,
+                                swap=0,
+                                extra_specs={
+                                    'trait:CUSTOM_FLAVOR_TRAIT': 'required',
+                                    'trait:CUSTOM_IMAGE_TRAIT2': 'required'})
+        expected_resources = utils.ResourceRequest()
+        expected_resources._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+            required_traits={
+                # trait:CUSTOM_IMAGE_TRAIT2 is defined in both extra_specs and
+                # image metadata. We get a union of both.
+                'CUSTOM_IMAGE_TRAIT1',
+                'CUSTOM_IMAGE_TRAIT2',
+                'CUSTOM_FLAVOR_TRAIT',
+            }
+        )
+        self._test_resources_from_request_spec(expected_resources, flavor,
+                                               image)
 
     def test_resources_from_request_spec_with_no_disk(self):
         flavor = objects.Flavor(vcpus=1,
@@ -72,7 +114,7 @@ class TestUtils(test.NoDBTestCase):
                 'MEMORY_MB': 1024,
             }
         )
-        self._test_resources_from_request_spec(flavor, expected_resources)
+        self._test_resources_from_request_spec(expected_resources, flavor)
 
     def test_get_resources_from_request_spec_custom_resource_class(self):
         flavor = objects.Flavor(vcpus=1,
@@ -91,7 +133,7 @@ class TestUtils(test.NoDBTestCase):
                 "CUSTOM_TEST_CLASS": 1,
             }
         )
-        self._test_resources_from_request_spec(flavor, expected_resources)
+        self._test_resources_from_request_spec(expected_resources, flavor)
 
     def test_get_resources_from_request_spec_override_flavor_amounts(self):
         flavor = objects.Flavor(vcpus=1,
@@ -112,7 +154,7 @@ class TestUtils(test.NoDBTestCase):
                 "DISK_GB": 99,
             }
         )
-        self._test_resources_from_request_spec(flavor, expected_resources)
+        self._test_resources_from_request_spec(expected_resources, flavor)
 
     def test_get_resources_from_request_spec_remove_flavor_amounts(self):
         flavor = objects.Flavor(vcpus=1,
@@ -130,7 +172,7 @@ class TestUtils(test.NoDBTestCase):
                 "MEMORY_MB": 1024,
             }
         )
-        self._test_resources_from_request_spec(flavor, expected_resources)
+        self._test_resources_from_request_spec(expected_resources, flavor)
 
     def test_get_resources_from_request_spec_vgpu(self):
         flavor = objects.Flavor(vcpus=1,
@@ -152,7 +194,7 @@ class TestUtils(test.NoDBTestCase):
                 "VGPU_DISPLAY_HEAD": 1,
             }
         )
-        self._test_resources_from_request_spec(flavor, expected_resources)
+        self._test_resources_from_request_spec(expected_resources, flavor)
 
     def test_get_resources_from_request_spec_bad_std_resource_class(self):
         flavor = objects.Flavor(vcpus=1,
@@ -228,7 +270,7 @@ class TestUtils(test.NoDBTestCase):
                 'SRIOV_NET_VF': 1,
             }
         )
-        self._test_resources_from_request_spec(flavor, expected_resources)
+        self._test_resources_from_request_spec(expected_resources, flavor)
 
     def test_resources_from_request_spec_aggregates(self):
         destination = objects.Destination()
@@ -441,6 +483,87 @@ class TestUtils(test.NoDBTestCase):
         )
         self.assertResourceRequestsEqual(
             expected, utils.ResourceRequest.from_extra_specs(extra_specs))
+
+    def test_resource_request_from_extra_specs_append_request(self):
+        extra_specs = {
+            'resources:VCPU': '2',
+            'resources:MEMORY_MB': '2048',
+            'trait:HW_CPU_X86_AVX': 'required',
+        }
+        existing_req = utils.ResourceRequest()
+        existing_req._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            required_traits={
+                'CUSTOM_MAGIC',
+            }
+        )
+        # Build up a ResourceRequest from the inside to compare against.
+        expected = utils.ResourceRequest()
+        expected._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 2,
+                'MEMORY_MB': 2048,
+            },
+            required_traits={
+                # In addition to traits from extra spec, we get traits from a
+                # previous existing resource request
+                'HW_CPU_X86_AVX',
+                'CUSTOM_MAGIC',
+            }
+        )
+        self.assertResourceRequestsEqual(
+            expected, utils.ResourceRequest.from_extra_specs(extra_specs,
+                                                             req=existing_req))
+
+    def test_resource_request_from_image_props(self):
+        props = {'trait:CUSTOM_TRUSTED': 'required'}
+        image_meta_props = objects.ImageMetaProps.from_dict(props)
+
+        # Build up a ResourceRequest from the inside to compare against.
+        expected = utils.ResourceRequest()
+        expected._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            required_traits={
+                'CUSTOM_TRUSTED',
+            }
+        )
+        self.assertResourceRequestsEqual(
+            expected, utils.ResourceRequest.from_image_props(image_meta_props))
+
+    def test_resource_request_from_image_props_append_request(self):
+        props = {'trait:CUSTOM_MAGIC': 'required'}
+        image_meta_props = objects.ImageMetaProps.from_dict(props)
+
+        existing_req = utils.ResourceRequest()
+        existing_req._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 2,
+                'MEMORY_MB': 2048,
+            },
+            required_traits={
+                'HW_CPU_X86_AVX',
+            }
+        )
+        # Build up a ResourceRequest from the inside to compare against.
+        expected = utils.ResourceRequest()
+        expected._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 2,
+                'MEMORY_MB': 2048,
+            },
+            required_traits={
+                # In addition to information already contained in the existing
+                # resource request, we add the traits from image properties
+                'HW_CPU_X86_AVX',
+                'CUSTOM_MAGIC',
+            }
+        )
+        self.assertResourceRequestsEqual(
+            expected, utils.ResourceRequest.from_image_props(image_meta_props,
+                                                             req=existing_req))
 
     def test_merge_resources(self):
         resources = {
