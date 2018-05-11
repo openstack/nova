@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    The ``[xenserver]/vif_driver`` configuration option was deprecated in
+    the 15.0.0 Ocata release and has now been removed. The only supported
+    vif driver is now ``XenAPIOpenVswitchDriver`` used with Neutron as the
+    backend networking service configured to run the
+    ``neutron-openvswitch-agent`` service. See the `XenServer configuration
+    guide`_ for more details on networking setup.
+
+    .. _XenServer configuration guide: https://docs.openstack.org/nova/latest/admin/configuration/hypervisor-xen-api.html

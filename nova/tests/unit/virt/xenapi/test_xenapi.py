@@ -45,6 +45,7 @@ from nova import context
 from nova import crypto
 from nova import db
 from nova import exception
+from nova.network import model as network_model
 from nova import objects
 from nova.objects import base
 from nova.objects import fields as obj_fields
@@ -796,10 +797,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                    group='xenserver')
 
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
-
-        # ipxe inject shouldn't be called
-        mock_call_plugin_serialized.assert_called_once_with(
-            'partition_utils.py', 'make_partition', 'fakedev', '2048', '-')
+        self._check_call_plugin_serialized(mock_call_plugin_serialized)
 
     @mock.patch.object(session.XenAPISession, 'call_plugin_serialized')
     def test_spawn_ipxe_iso_no_boot_menu_url(
@@ -809,10 +807,48 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                    group='xenserver')
 
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
+        self._check_call_plugin_serialized(mock_call_plugin_serialized)
+
+    def _check_call_plugin_serialized(self, mock_call_plugin_serialized):
+        vifs = xenapi_fake.get_all_records('VIF')
+        iface_id = vifs[list(vifs)[0]]['other_config']['neutron-port-id']
+
+        def _get_qbr_name(iface_id):
+            return ("qbr" + iface_id)[:network_model.NIC_NAME_LEN]
+
+        def _get_veth_pair_names(iface_id):
+            return (("qvb%s" % iface_id)[:network_model.NIC_NAME_LEN],
+                    ("qvo%s" % iface_id)[:network_model.NIC_NAME_LEN])
+
+        def _get_patch_port_pair_names(iface_id):
+            return (("vif%s" % iface_id)[:network_model.NIC_NAME_LEN],
+                    ("tap%s" % iface_id)[:network_model.NIC_NAME_LEN])
 
         # ipxe inject shouldn't be called
-        mock_call_plugin_serialized.assert_called_once_with(
-            'partition_utils.py', 'make_partition', 'fakedev', '2048', '-')
+        call1 = mock.call('partition_utils.py', 'make_partition', 'fakedev',
+                          '2048', '-')
+        linux_br_name = _get_qbr_name(iface_id)
+        qvb_name, qvo_name = _get_veth_pair_names(iface_id)
+        patch_port1, tap_name = _get_patch_port_pair_names(iface_id)
+
+        args = {'cmd': 'ip_link_get_dev',
+                'args': {'device_name': linux_br_name}
+                }
+        call2 = mock.call('xenhost.py', 'network_config', args)
+
+        args = {'cmd': 'ip_link_get_dev',
+                'args': {'device_name': qvo_name}
+                }
+        call3 = mock.call('xenhost.py', 'network_config', args)
+
+        args = {'cmd': 'ip_link_get_dev',
+                'args': {'device_name': tap_name}
+                }
+        call4 = mock.call('xenhost.py', 'network_config', args)
+        mock_call_plugin_serialized.assert_has_calls([call1,
+                                                      call2,
+                                                      call3,
+                                                      call4])
 
     @mock.patch.object(session.XenAPISession, 'call_plugin_serialized')
     def test_spawn_ipxe_iso_unknown_network_name(
@@ -822,10 +858,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                    group='xenserver')
 
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
-
-        # ipxe inject shouldn't be called
-        mock_call_plugin_serialized.assert_called_once_with(
-            'partition_utils.py', 'make_partition', 'fakedev', '2048', '-')
+        self._check_call_plugin_serialized(mock_call_plugin_serialized)
 
     def test_spawn_empty_dns(self):
         # Test spawning with an empty dns list.
@@ -1057,9 +1090,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         self._create_instance()
         for vif_ref in xenapi_fake.get_all('VIF'):
             vif_rec = xenapi_fake.get_record('VIF', vif_ref)
-            self.assertEqual(vif_rec['qos_algorithm_type'], 'ratelimit')
-            self.assertEqual(vif_rec['qos_algorithm_params']['kbps'],
-                             str(3 * 10 * 1024))
+            self.assertEqual(vif_rec['qos_algorithm_type'], '')
+            self.assertEqual(vif_rec['qos_algorithm_params'], {})
 
     @mock.patch.object(crypto, 'ssh_encrypt_text')
     @mock.patch.object(stubs.FakeSessionForVMTests,

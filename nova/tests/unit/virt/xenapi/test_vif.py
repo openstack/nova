@@ -17,7 +17,6 @@ import mock
 
 from nova.compute import power_state
 from nova import exception
-from nova.network import model
 from nova import test
 from nova.tests.unit.virt.xenapi import stubs
 from nova.virt.xenapi import network_utils
@@ -149,37 +148,6 @@ class XenVIFDriverTestCase(XenVIFDriverTestBase):
         self.assertRaises(exception.NovaException,
                           self.base_driver.unplug,
                           instance, fake_vif, vm_ref)
-
-
-class XenAPIBridgeDriverTestCase(XenVIFDriverTestBase, object):
-    def setUp(self):
-        super(XenAPIBridgeDriverTestCase, self).setUp()
-        self.bridge_driver = vif.XenAPIBridgeDriver(self._session)
-
-    @mock.patch.object(vif.XenAPIBridgeDriver, '_ensure_vlan_bridge',
-                       return_value='fake_network_ref')
-    @mock.patch.object(vif.XenVIFDriver, '_create_vif',
-                       return_value='fake_vif_ref')
-    def test_plug_create_vlan(self, mock_create_vif, mock_ensure_vlan_bridge):
-        instance = {'name': "fake_instance_name"}
-        network = model.Network()
-        network._set_meta({'should_create_vlan': True})
-        vif = model.VIF()
-        vif._set_meta({'rxtx_cap': 1})
-        vif['network'] = network
-        vif['address'] = "fake_address"
-        vm_ref = "fake_vm_ref"
-        device = 1
-        ret_vif_ref = self.bridge_driver.plug(instance, vif, vm_ref, device)
-        self.assertEqual('fake_vif_ref', ret_vif_ref)
-
-    @mock.patch.object(vif.vm_utils, 'lookup', return_value=None)
-    def test_plug_exception(self, mock_lookup):
-        instance = {'name': "fake_instance_name"}
-        self.assertRaises(exception.VirtualInterfacePlugException,
-                          self.bridge_driver.plug, instance, fake_vif,
-                          vm_ref=None, device=1)
-        mock_lookup.assert_called_once_with(self._session, instance['name'])
 
 
 class XenAPIOpenVswitchDriverTestCase(XenVIFDriverTestBase):

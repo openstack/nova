@@ -760,6 +760,9 @@ class SessionBase(object):
     def _plugin_xenhost_host_uptime(self, method, args):
         return jsonutils.dumps({"uptime": "fake uptime"})
 
+    def _plugin_xenhost_network_config(self, method, args):
+        return pickle.dumps({"fake_network": "fake conf"})
+
     def _plugin_xenhost_get_pci_device_details(self, method, args):
         """Simulate the ouput of three pci devices.
 
@@ -1006,6 +1009,18 @@ class SessionBase(object):
             return self._get_by_field(
                 _db_content[cls], func[len('get_by_'):], params[1],
                 return_singleton=return_singleton)
+
+        if func == 'get_VIFs':
+            self._check_arg_count(params, 2)
+            # FIXME(mriedem): figure out how to use _get_by_field for VIFs,
+            # or just stop relying on this fake DB and use mock
+            return _db_content['VIF'].keys()
+
+        if func == 'get_bridge':
+            self._check_arg_count(params, 2)
+            # FIXME(mriedem): figure out how to use _get_by_field for bridge,
+            # or just stop relying on this fake DB and use mock
+            return 'fake_bridge'
 
         if len(params) == 2:
             field = func[len('get_'):]
