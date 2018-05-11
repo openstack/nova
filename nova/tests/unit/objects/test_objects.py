@@ -1072,7 +1072,7 @@ object_data = {
     'IDEDeviceBus': '1.0-29d4c9f27ac44197f01b6ac1b7e16502',
     'ImageMeta': '1.8-642d1b2eb3e880a367f37d72dd76162d',
     'ImageMetaProps': '1.21-f3721d8f744a9507a1966c81c386b532',
-    'Instance': '2.4-4437eb8b2737c3054ea579b8efe31dc5',
+    'Instance': '2.5-94e3881f0b9a06c2c3640e44816b51de',
     'InstanceAction': '1.1-f9f293e526b66fca0d05c3b3a2d13914',
     'InstanceActionEvent': '1.2-b2f368b8a29d8d872b1f6ea841e820a0',
     'InstanceActionEventList': '1.1-13d92fb953030cdbfee56481756e02be',

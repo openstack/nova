@@ -114,7 +114,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 2.2: Added keypairs
     # Version 2.3: Added device_metadata
     # Version 2.4: Added trusted_certs
-    VERSION = '2.4'
+    # Version 2.5: Added hard_delete kwarg in destroy
+    VERSION = '2.5'
 
     fields = {
         'id': fields.IntegerField(),
@@ -608,7 +609,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes(['ec2_ids'])
 
     @base.remotable
-    def destroy(self):
+    def destroy(self, hard_delete=False):
         if not self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='destroy',
                                               reason='already destroyed')
@@ -627,7 +628,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
         try:
             db_inst = db.instance_destroy(self._context, self.uuid,
-                                          constraint=constraint)
+                                          constraint=constraint,
+                                          hard_delete=hard_delete)
             self._from_db_object(self._context, self, db_inst)
         except exception.ConstraintNotMet:
             raise exception.ObjectActionError(action='destroy',

@@ -13,6 +13,7 @@
 #    under the License.
 
 import datetime
+import six
 
 import mock
 import netaddr
@@ -1234,7 +1235,8 @@ class _TestInstanceObject(object):
                          timeutils.normalize_time(inst.deleted_at))
         self.assertTrue(inst.deleted)
         mock_destroy.assert_called_once_with(self.context, uuids.instance,
-                                             constraint=None)
+                                             constraint=None,
+                                             hard_delete=False)
 
     def test_destroy(self):
         values = {'user_id': self.context.user_id,
@@ -1280,6 +1282,29 @@ class _TestInstanceObject(object):
                                 uuid=uuids.instance)
         inst.destroy()
         self.assertFalse(mock_destroy_at_top.called)
+
+    def test_destroy_hard(self):
+        values = {'user_id': self.context.user_id,
+                  'project_id': self.context.project_id}
+        db_inst = db.instance_create(self.context, values)
+        inst = objects.Instance(context=self.context, id=db_inst['id'],
+                                uuid=db_inst['uuid'])
+        inst.destroy(hard_delete=True)
+        elevated = self.context.elevated(read_deleted="yes")
+        self.assertRaises(exception.InstanceNotFound,
+                          objects.Instance.get_by_uuid, elevated,
+                          db_inst['uuid'])
+
+    def test_destroy_hard_host_constraint(self):
+        values = {'user_id': self.context.user_id,
+                  'project_id': self.context.project_id,
+                  'host': 'foo'}
+        db_inst = db.instance_create(self.context, values)
+        inst = objects.Instance.get_by_uuid(self.context, db_inst['uuid'])
+        inst.host = None
+        ex = self.assertRaises(exception.ObjectActionError,
+                               inst.destroy, hard_delete=True)
+        self.assertIn('host changed', six.text_type(ex))
 
     def test_name_does_not_trigger_lazy_loads(self):
         values = {'user_id': self.context.user_id,

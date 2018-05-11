@@ -748,9 +748,19 @@ def instance_create(context, values):
     return IMPL.instance_create(context, values)
 
 
-def instance_destroy(context, instance_uuid, constraint=None):
-    """Destroy the instance or raise if it does not exist."""
-    return IMPL.instance_destroy(context, instance_uuid, constraint)
+def instance_destroy(context, instance_uuid, constraint=None,
+                     hard_delete=False):
+    """Destroy the instance or raise if it does not exist.
+
+    :param context: request context object
+    :param instance_uuid: uuid of the instance to delete
+    :param constraint: a constraint object
+    :param hard_delete: when set to True, removes all records related to the
+                        instance
+    """
+    return IMPL.instance_destroy(context, instance_uuid,
+                                 constraint=constraint,
+                                 hard_delete=hard_delete)
 
 
 def instance_get_by_uuid(context, uuid, columns_to_join=None):
