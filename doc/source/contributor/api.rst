@@ -106,9 +106,8 @@ Complete routing list can be found in `routes.py <https://git.openstack.org/cgit
 Policy
 ~~~~~~
 
-Policy (permission) is defined ``etc/nova/policy.json``. Implementation of policy
-is changing a bit at the moment. Will add more to this document or reference
-another one in the future. Also look at the authorize call in controller currently merged.
+For more info about policy, see :doc:`policies </configuration/policy>`,
+Also look at the ``context.can(...)`` call in existing API controllers.
 
 Modularity
 ~~~~~~~~~~
