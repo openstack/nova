@@ -1112,6 +1112,13 @@ server_uuid_query:
   in: query
   required: false
   type: string
+soft_deleted_server:
+  description: |
+    Filter the server list by ``SOFT_DELETED`` status. This parameter is only valid
+    when the ``deleted=True`` filter parameter is specified.
+  in: query
+  required: false
+  type: boolean
 sort_dir_flavor:
   description: |
     Sort direction. A valid value is ``asc`` (ascending) or ``desc`` (descending).
