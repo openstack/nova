@@ -4282,7 +4282,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return pin_cpuset
 
     def _get_emulatorpin_cpuset(self, vcpu, object_numa_cell, vcpus_rt,
-                                emulator_threads_isolated, wants_realtime,
+                                emulator_threads_policy, wants_realtime,
                                 pin_cpuset):
         """Returns a set of cpu_ids to add to the cpuset for emulator threads
            with the following caveats:
@@ -4300,7 +4300,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         emulatorpin_cpuset = set([])
 
-        if emulator_threads_isolated:
+        if emulator_threads_policy == fields.CPUEmulatorThreadsPolicy.ISOLATE:
             if object_numa_cell.cpuset_reserved:
                 emulatorpin_cpuset = object_numa_cell.cpuset_reserved
         elif not wants_realtime or vcpu not in vcpus_rt:
@@ -4380,8 +4380,10 @@ class LibvirtDriver(driver.ComputeDriver):
         guest_numa_tune.memory = vconfig.LibvirtConfigGuestNUMATuneMemory()
         guest_numa_tune.memnodes = []
 
-        emulator_threads_isolated = (
-            instance_numa_topology.emulator_threads_isolated)
+        emulator_threads_policy = None
+        if 'emulator_threads_policy' in instance_numa_topology:
+            emulator_threads_policy = (
+                instance_numa_topology.emulator_threads_policy)
 
         # Set realtime scheduler for CPUTune
         vcpus_rt = set([])
@@ -4411,7 +4413,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 emu_pin_cpuset = self._get_emulatorpin_cpuset(
                     cpu, object_numa_cell, vcpus_rt,
-                    emulator_threads_isolated, wants_realtime, pin_cpuset)
+                    emulator_threads_policy, wants_realtime, pin_cpuset)
                 guest_cpu_tune.emulatorpin.cpuset.update(emu_pin_cpuset)
 
         # TODO(berrange) When the guest has >1 NUMA node, it will
