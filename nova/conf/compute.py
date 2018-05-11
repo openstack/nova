@@ -655,6 +655,17 @@ node.
 Possible values:
 
 * Any positive integer in seconds.
+"""),
+   cfg.StrOpt('cpu_shared_set',
+        help="""
+Defines which physical CPUs (pCPUs) will be used for best-effort guest vCPU
+resources.
+
+Currently only used by libvirt driver to place guest emulator threads when
+hw:emulator_threads_policy:share.
+
+::
+    cpu_shared_set = "4-12,^8,15"
 """)
 ]
 
