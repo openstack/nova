@@ -307,8 +307,7 @@ Install and configure components
 
         [keystone_authtoken]
         # ...
-        auth_uri = http://controller:5000
-        auth_url = http://controller:35357
+        auth_url = http://controller:5000/v3
         memcached_servers = controller:11211
         auth_type = password
         project_domain_name = default
@@ -398,7 +397,7 @@ Install and configure components
          project_name = service
          auth_type = password
          user_domain_name = Default
-         auth_url = http://controller:35357/v3
+         auth_url = http://controller:5000/v3
          username = placement
          password = PLACEMENT_PASS
 
