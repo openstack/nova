@@ -3362,6 +3362,8 @@ class ComputeManager(manager.Manager):
                 image = self.image_api.get(context, image_id)
                 if image['status'] != 'active':
                     self.image_api.delete(context, image_id)
+            except exception.ImageNotFound:
+                LOG.debug('Image not found during clean up %s', image_id)
             except Exception:
                 LOG.warning("Error while trying to clean up image %s",
                             image_id, instance=instance)
