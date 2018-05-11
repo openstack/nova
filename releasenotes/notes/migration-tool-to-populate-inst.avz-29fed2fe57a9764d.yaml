@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    A new online data migration has been added to populate missing
+    instance.availability_zone values for instances older than Pike whose
+    availability_zone was not specified during boot time. This can be run
+    during the normal ``nova-manage db online_data_migrations`` routine.
+    This fixes `Bug 1768876`_
+
+    .. _Bug 1768876: https://bugs.launchpad.net/nova/+bug/1768876
