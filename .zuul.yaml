@@ -46,7 +46,7 @@
       - ^doc/.*$
       - ^nova/hacking/.*$
       - ^nova/locale/.*$
-      - ^nova/tests/.*$
+      - ^nova/tests/(?!live_migration).*$
       - ^releasenotes/.*$
       - ^setup.cfg$
       - ^tests-py3.txt$
