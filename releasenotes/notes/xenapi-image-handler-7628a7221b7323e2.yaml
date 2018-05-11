@@ -1,0 +1,30 @@
+---
+features:
+  - |
+    Add a new option of ``image_handler`` in the ``xenapi`` section for
+    configuring the image handler plugin which will be used by XenServer
+    to download or upload images. The value for this option should be a
+    short name representing a supported handler.
+
+    The following are the short names and description of the plugins which
+    they represent:
+
+    * ``direct_vhd``
+
+      This plugin directly processes the VHD files in XenServer SR(Storage
+      Repository). So this plugin only works when the host's SR type is
+      file system based e.g. ext, nfs.  This is the default plugin.
+
+    * ``vdi_local_dev``
+
+      This plugin implements an image upload method which attaches the VDI
+      as a local disk in the VM in which the OpenStack Compute service runs.
+      It uploads the raw disk to glance when creating an image; When booting
+      an instance from a glance image, it downloads the image and streams it
+      into the disk which is attached to the compute VM.
+
+deprecations:
+  - |
+    The ``image_upload_handler`` option in the ``xenserver`` conf section
+    has been deprecated. Please use the new option of ``image_handler`` to
+    configure the image handler which is used to download or upload images.

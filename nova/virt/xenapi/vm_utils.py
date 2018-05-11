@@ -34,7 +34,6 @@ from os_xenapi.client import vm_management
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import excutils
-from oslo_utils import importutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
@@ -1227,7 +1226,7 @@ def _get_image_vdi_label(image_id):
 
 
 def _create_cached_image(context, session, instance, name_label,
-                         image_id, image_type):
+                         image_id, image_type, image_handler):
     sr_ref = safe_find_sr(session)
     sr_type = session.call_xenapi('SR.get_type', sr_ref)
 
@@ -1244,7 +1243,7 @@ def _create_cached_image(context, session, instance, name_label,
         if cache_vdi_ref is None:
             downloaded = True
             vdis = _fetch_image(context, session, instance, name_label,
-                                image_id, image_type)
+                                image_id, image_type, image_handler)
 
             cache_vdi_ref = session.call_xenapi(
                     'VDI.get_by_uuid', vdis['root']['uuid'])
@@ -1289,7 +1288,7 @@ def _create_cached_image(context, session, instance, name_label,
 
 
 def create_image(context, session, instance, name_label, image_id,
-                 image_type):
+                 image_type, image_handler):
     """Creates VDI from the image stored in the local cache. If the image
     is not present in the cache, it streams it from glance.
 
@@ -1320,10 +1319,10 @@ def create_image(context, session, instance, name_label, image_id,
     if cache:
         downloaded, vdis = _create_cached_image(context, session, instance,
                                                 name_label, image_id,
-                                                image_type)
+                                                image_type, image_handler)
     else:
         vdis = _fetch_image(context, session, instance, name_label,
-                            image_id, image_type)
+                            image_id, image_type, image_handler)
         downloaded = True
     duration = timeutils.delta_seconds(start_time, timeutils.utcnow())
 
@@ -1341,14 +1340,16 @@ def create_image(context, session, instance, name_label, image_id,
     return vdis
 
 
-def _fetch_image(context, session, instance, name_label, image_id, image_type):
+def _fetch_image(context, session, instance, name_label, image_id, image_type,
+                 image_handler):
     """Fetch image from glance based on image type.
 
     Returns: A single filename if image_type is KERNEL or RAMDISK
              A list of dictionaries that describe VDIs, otherwise
     """
     if image_type == ImageType.DISK_VHD:
-        vdis = _fetch_vhd_image(context, session, instance, image_id)
+        vdis = _fetch_vhd_image(context, session, instance, image_id,
+                                image_handler)
     else:
         if CONF.xenserver.independent_compute:
             raise exception.NotSupportedWithOption(
@@ -1375,12 +1376,6 @@ def _make_uuid_stack():
     return [uuidutils.generate_uuid() for i in range(MAX_VDI_CHAIN_SIZE)]
 
 
-def _default_download_handler():
-    # TODO(sirp):  This should be configurable like upload_handler
-    return importutils.import_object(
-            'nova.virt.xenapi.image.glance.GlanceStore')
-
-
 def get_compression_level():
     level = CONF.xenserver.image_compression_level
     if level is not None and (level < 1 or level > 9):
@@ -1389,20 +1384,15 @@ def get_compression_level():
     return level
 
 
-def _fetch_vhd_image(context, session, instance, image_id):
+def _fetch_vhd_image(context, session, instance, image_id, image_handler):
     """Tell glance to download an image and put the VHDs into the SR
 
     Returns: A list of dictionaries that describe VDIs
     """
     LOG.debug("Asking xapi to fetch vhd image %s", image_id,
               instance=instance)
-
-    handler = _default_download_handler()
-
-    try:
-        vdis = handler.download_image(context, session, instance, image_id)
-    except Exception:
-        raise
+    vdis = image_handler.download_image(
+        context, session, instance, image_id)
 
     # Ensure we can see the import VHDs as VDIs
     scan_default_sr(session)
