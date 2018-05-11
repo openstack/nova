@@ -30,7 +30,6 @@ class DeployTest(test.NoDBTestCase):
         the keystone middleware correctly.
         """
         auth_uri = 'http://example.com/identity'
-        authenticate_header_value = "Keystone uri='%s'" % auth_uri
         self.flags(auth_uri=auth_uri, group='keystone_authtoken')
         # ensure that the auth_token middleware is chosen
         self.flags(auth_strategy='keystone', group='api')
@@ -39,5 +38,6 @@ class DeployTest(test.NoDBTestCase):
 
         response = req.get_response(app)
 
-        self.assertEqual(authenticate_header_value,
-                         response.headers['www-authenticate'])
+        auth_header = response.headers['www-authenticate']
+        self.assertIn(auth_uri, auth_header)
+        self.assertIn('keystone uri=', auth_header.lower())
