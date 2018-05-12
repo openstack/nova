@@ -1139,7 +1139,8 @@ class TestSetAndClearAllocations(SchedulerReportClientTestCase):
         payload = args[1]
         self.assertEqual(expected_payload, payload)
 
-    def test_409_concurrent_update(self):
+    @mock.patch('time.sleep')
+    def test_409_concurrent_update(self, mock_sleep):
         self.mock_post.return_value.status_code = 409
         self.mock_post.return_value.text = 'concurrently updated'
 
@@ -1149,8 +1150,8 @@ class TestSetAndClearAllocations(SchedulerReportClientTestCase):
             consumer_to_clear=mock.sentinel.migration_uuid)
 
         self.assertFalse(resp)
-        # Post was attempted three times.
-        self.assertEqual(3, self.mock_post.call_count)
+        # Post was attempted four times.
+        self.assertEqual(4, self.mock_post.call_count)
 
     @mock.patch('nova.scheduler.client.report.LOG.warning')
     def test_not_409_failure(self, mock_log):
