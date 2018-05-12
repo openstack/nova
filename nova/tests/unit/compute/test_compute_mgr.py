@@ -5466,6 +5466,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._test_build_and_run_spawn_exceptions(
             exception.InvalidInput(reason=""))
 
+    def test_build_and_run_requested_vram_too_high(self):
+        self._test_build_and_run_spawn_exceptions(
+            exception.RequestedVRamTooHigh(req_vram=200, max_vram=100))
+
     def _test_build_and_run_spawn_exceptions(self, exc):
         with test.nested(
                 mock.patch.object(self.compute.driver, 'spawn',
