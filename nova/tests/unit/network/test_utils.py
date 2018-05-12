@@ -23,6 +23,12 @@ from nova import test
 
 
 class NetUtilsTestCase(test.NoDBTestCase):
+    def test_set_device_mtu_default(self):
+        calls = []
+        with mock.patch('nova.utils.execute', return_value=('', '')) as ex:
+            net_utils.set_device_mtu('fake-dev')
+            ex.assert_has_calls(calls)
+
     @mock.patch('nova.utils.execute')
     def test_create_tap_dev(self, mock_execute):
         net_utils.create_tap_dev('tap42')
