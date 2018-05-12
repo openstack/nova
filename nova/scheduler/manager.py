@@ -29,7 +29,6 @@ from stevedore import driver
 
 import nova.conf
 from nova import exception
-from nova.i18n import _LI
 from nova import manager
 from nova import objects
 from nova.objects import host_mapping as host_mapping_obj
@@ -71,7 +70,7 @@ class SchedulerManager(manager.Manager):
     def _discover_hosts_in_cells(self, context):
         host_mappings = host_mapping_obj.discover_hosts(context)
         if host_mappings:
-            LOG.info(_LI('Discovered %(count)i new hosts: %(hosts)s'),
+            LOG.info('Discovered %(count)i new hosts: %(hosts)s',
                      {'count': len(host_mappings),
                       'hosts': ','.join(['%s:%s' % (hm.cell_mapping.name,
                                                     hm.host)

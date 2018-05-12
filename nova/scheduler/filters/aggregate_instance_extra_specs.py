@@ -61,7 +61,8 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
             key = scope[0]
             aggregate_vals = metadata.get(key, None)
             if not aggregate_vals:
-                LOG.debug("%(host_state)s fails instance_type extra_specs "
+                LOG.debug(
+                    "%(host_state)s fails instance_type extra_specs "
                     "requirements. Extra_spec %(key)s is not in aggregate.",
                     {'host_state': host_state, 'key': key})
                 return False
@@ -70,8 +71,8 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
                     break
             else:
                 LOG.debug("%(host_state)s fails instance_type extra_specs "
-                            "requirements. '%(aggregate_vals)s' do not "
-                            "match '%(req)s'",
+                          "requirements. '%(aggregate_vals)s' do not "
+                          "match '%(req)s'",
                           {'host_state': host_state, 'req': req,
                            'aggregate_vals': aggregate_vals})
                 return False

@@ -15,7 +15,6 @@
 
 from oslo_log import log as logging
 
-from nova.i18n import _LW
 from nova.scheduler import filters
 from nova import servicegroup
 
@@ -43,7 +42,7 @@ class ComputeFilter(filters.BaseHostFilter):
             return False
         else:
             if not self.servicegroup_api.service_is_up(service):
-                LOG.warning(_LW("%(host_state)s has not been heard from in a "
-                                "while"), {'host_state': host_state})
+                LOG.warning("%(host_state)s has not been heard from in a "
+                            "while", {'host_state': host_state})
                 return False
         return True

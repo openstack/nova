@@ -19,8 +19,6 @@ import collections
 from oslo_log import log as logging
 import six
 
-from nova.i18n import _LI
-
 LOG = logging.getLogger(__name__)
 
 
@@ -61,12 +59,12 @@ def validate_num_values(vals, default=None, cast_to=int, based_on=min):
 
     if num_values > 1:
         if based_on == min:
-            LOG.info(_LI("%(num_values)d values found, "
-                         "of which the minimum value will be used."),
+            LOG.info("%(num_values)d values found, "
+                     "of which the minimum value will be used.",
                      {'num_values': num_values})
         else:
-            LOG.info(_LI("%(num_values)d values found, "
-                         "of which the maximum value will be used."),
+            LOG.info("%(num_values)d values found, "
+                     "of which the maximum value will be used.",
                      {'num_values': num_values})
     return based_on([cast_to(val) for val in vals])
 

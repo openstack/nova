@@ -28,7 +28,7 @@ from nova.compute import flavors
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import instance as obj_instance
@@ -601,12 +601,10 @@ def _log_compute_error(instance_uuid, retry):
         return  # no previously attempted hosts, skip
 
     last_host, last_node = hosts[-1]
-    LOG.error(_LE('Error from last host: %(last_host)s (node %(last_node)s):'
-                  ' %(exc)s'),
-              {'last_host': last_host,
-               'last_node': last_node,
-               'exc': exc},
-              instance_uuid=instance_uuid)
+    LOG.error(
+        'Error from last host: %(last_host)s (node %(last_node)s): %(exc)s',
+        {'last_host': last_host, 'last_node': last_node, 'exc': exc},
+        instance_uuid=instance_uuid)
 
 
 def _add_retry_host(filter_properties, host, node):
@@ -647,10 +645,9 @@ def parse_options(opts, sep='=', converter=str, name=""):
         else:
             bad.append(opt)
     if bad:
-        LOG.warning(_LW("Ignoring the invalid elements of the option "
-                        "%(name)s: %(options)s"),
-                    {'name': name,
-                     'options': ", ".join(bad)})
+        LOG.warning("Ignoring the invalid elements of the option "
+                    "%(name)s: %(options)s",
+                    {'name': name, 'options': ", ".join(bad)})
     return good
 
 
@@ -774,11 +771,11 @@ def retry_on_timeout(retries=1):
                 except messaging.MessagingTimeout:
                     attempt += 1
                     if attempt <= retries:
-                        LOG.warning(_LW(
+                        LOG.warning(
                             "Retrying %(name)s after a MessagingTimeout, "
-                            "attempt %(attempt)s of %(retries)s."),
-                                 {'attempt': attempt, 'retries': retries,
-                                  'name': func.__name__})
+                            "attempt %(attempt)s of %(retries)s.",
+                            {'attempt': attempt, 'retries': retries,
+                             'name': func.__name__})
                     else:
                         raise
         return wrapped

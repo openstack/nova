@@ -34,7 +34,6 @@ import six
 import nova.conf
 from nova import context as context_module
 from nova import exception
-from nova.i18n import _LI, _LW
 from nova import objects
 from nova.pci import stats as pci_stats
 from nova.scheduler import filters
@@ -88,8 +87,8 @@ def set_update_time_on_success(function):
             # Ignores exception raised from consume_from_request() so that
             # booting instance would fail in the resource claim of compute
             # node, other suitable node may be chosen during scheduling retry.
-            LOG.warning(_LW("Selected host: %(host)s failed to consume from "
-                            "instance. Error: %(error)s"),
+            LOG.warning("Selected host: %(host)s failed to consume from "
+                        "instance. Error: %(error)s",
                         {'host': self.host, 'error': e})
         else:
             now = timeutils.utcnow()
@@ -205,11 +204,11 @@ class HostState(object):
         if least_gb is not None:
             if least_gb > free_gb:
                 # can occur when an instance in database is not on host
-                LOG.warning(_LW("Host %(hostname)s has more disk space than "
-                                "database expected "
-                                "(%(physical)s GB > %(database)s GB)"),
-                            {'physical': least_gb, 'database': free_gb,
-                             'hostname': compute.hypervisor_hostname})
+                LOG.warning(
+                    "Host %(hostname)s has more disk space than database "
+                    "expected (%(physical)s GB > %(database)s GB)",
+                    {'physical': least_gb, 'database': free_gb,
+                     'hostname': compute.hypervisor_hostname})
             free_gb = min(least_gb, free_gb)
         free_disk_mb = free_gb * 1024
 
@@ -500,7 +499,7 @@ class HostManager(object):
                         del host_map[(hostname, nodename)]
                         ignored_hosts.append(host)
             ignored_hosts_str = ', '.join(ignored_hosts)
-            LOG.info(_LI('Host filter ignoring hosts: %s'), ignored_hosts_str)
+            LOG.info('Host filter ignoring hosts: %s', ignored_hosts_str)
 
         def _match_forced_hosts(host_map, hosts_to_force):
             forced_hosts = []
@@ -512,12 +511,12 @@ class HostManager(object):
                     forced_hosts.append(hostname)
             if host_map:
                 forced_hosts_str = ', '.join(forced_hosts)
-                msg = _LI('Host filter forcing available hosts to %s')
+                LOG.info('Host filter forcing available hosts to %s',
+                         forced_hosts_str)
             else:
                 forced_hosts_str = ', '.join(hosts_to_force)
-                msg = _LI("No hosts matched due to not matching "
-                          "'force_hosts' value of '%s'")
-            LOG.info(msg, forced_hosts_str)
+                LOG.info("No hosts matched due to not matching "
+                         "'force_hosts' value of '%s'", forced_hosts_str)
 
         def _match_forced_nodes(host_map, nodes_to_force):
             forced_nodes = []
@@ -528,12 +527,12 @@ class HostManager(object):
                     forced_nodes.append(nodename)
             if host_map:
                 forced_nodes_str = ', '.join(forced_nodes)
-                msg = _LI('Host filter forcing available nodes to %s')
+                LOG.info('Host filter forcing available nodes to %s',
+                         forced_nodes_str)
             else:
                 forced_nodes_str = ', '.join(nodes_to_force)
-                msg = _LI("No nodes matched due to not matching "
-                          "'force_nodes' value of '%s'")
-            LOG.info(msg, forced_nodes_str)
+                LOG.info("No nodes matched due to not matching "
+                         "'force_nodes' value of '%s'", forced_nodes_str)
 
         def _get_hosts_matching_request(hosts, requested_destination):
             (host, node) = (requested_destination.host,
@@ -541,14 +540,14 @@ class HostManager(object):
             requested_nodes = [x for x in hosts
                                if x.host == host and x.nodename == node]
             if requested_nodes:
-                LOG.info(_LI('Host filter only checking host %(host)s and '
-                             'node %(node)s'), {'host': host, 'node': node})
+                LOG.info('Host filter only checking host %(host)s and '
+                         'node %(node)s', {'host': host, 'node': node})
             else:
                 # NOTE(sbauza): The API level should prevent the user from
                 # providing a wrong destination but let's make sure a wrong
                 # destination doesn't trample the scheduler still.
-                LOG.info(_LI('No hosts matched due to not matching requested '
-                             'destination (%(host)s, %(node)s)'),
+                LOG.info('No hosts matched due to not matching requested '
+                         'destination (%(host)s, %(node)s)',
                          {'host': host, 'node': node})
             return iter(requested_nodes)
 
@@ -710,8 +709,8 @@ class HostManager(object):
                 service = services.get(compute.host)
 
                 if not service:
-                    LOG.warning(_LW(
-                        "No compute service record found for host %(host)s"),
+                    LOG.warning(
+                        "No compute service record found for host %(host)s",
                         {'host': compute.host})
                     continue
                 host = compute.host
@@ -807,8 +806,8 @@ class HostManager(object):
                 host_info["updated"] = True
             else:
                 self._recreate_instance_info(context, host_name)
-                LOG.info(_LI("Received an update from an unknown host '%s'. "
-                             "Re-created its InstanceList."), host_name)
+                LOG.info("Received an update from an unknown host '%s'. "
+                         "Re-created its InstanceList.", host_name)
 
     @utils.synchronized(HOST_INSTANCE_SEMAPHORE)
     def delete_instance_info(self, context, host_name, instance_uuid):
@@ -825,8 +824,8 @@ class HostManager(object):
             host_info["updated"] = True
         else:
             self._recreate_instance_info(context, host_name)
-            LOG.info(_LI("Received a delete update from an unknown host '%s'. "
-                         "Re-created its InstanceList."), host_name)
+            LOG.info("Received a delete update from an unknown host '%s'. "
+                     "Re-created its InstanceList.", host_name)
 
     @utils.synchronized(HOST_INSTANCE_SEMAPHORE)
     def sync_instance_info(self, context, host_name, instance_uuids):
@@ -843,13 +842,13 @@ class HostManager(object):
             compute_set = set(instance_uuids)
             if not local_set == compute_set:
                 self._recreate_instance_info(context, host_name)
-                LOG.info(_LI("The instance sync for host '%s' did not match. "
-                             "Re-created its InstanceList."), host_name)
+                LOG.info("The instance sync for host '%s' did not match. "
+                         "Re-created its InstanceList.", host_name)
                 return
             host_info["updated"] = True
             LOG.debug("Successfully synced instances from host '%s'.",
                       host_name)
         else:
             self._recreate_instance_info(context, host_name)
-            LOG.info(_LI("Received a sync request from an unknown host '%s'. "
-                         "Re-created its InstanceList."), host_name)
+            LOG.info("Received a sync request from an unknown host '%s'. "
+                     "Re-created its InstanceList.", host_name)
