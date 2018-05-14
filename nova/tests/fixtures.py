@@ -37,7 +37,6 @@ from requests import adapters
 from wsgi_intercept import interceptor
 
 from nova.api.openstack.compute import tenant_networks
-from nova.api.openstack.placement import deploy as placement_deploy
 from nova.api.openstack import wsgi_app
 from nova.api import wsgi
 from nova.compute import rpcapi as compute_rpcapi
@@ -53,6 +52,7 @@ from nova import quota as nova_quota
 from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
+from nova.tests.functional.api.openstack.placement.fixtures import placement
 from nova.tests import uuidsentinel
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
@@ -1691,7 +1691,7 @@ class PlacementApiClient(object):
             self.fixture._fake_put(None, url, body, **kwargs))
 
 
-class PlacementFixture(fixtures.Fixture):
+class PlacementFixture(placement.PlacementFixture):
     """A fixture to placement operations.
 
     Runs a local WSGI server bound on a free port and having the Placement
@@ -1703,20 +1703,8 @@ class PlacementFixture(fixtures.Fixture):
     all calls would be passing this token.
     """
 
-    def __init__(self, token='admin'):
-        self.token = token
-
     def setUp(self):
         super(PlacementFixture, self).setUp()
-
-        self.useFixture(ConfPatcher(group='api', auth_strategy='noauth2'))
-        loader = placement_deploy.loadapp(CONF)
-        app = lambda: loader
-        host = uuidsentinel.placement_host
-        self.endpoint = 'http://%s/placement' % host
-        intercept = interceptor.RequestsInterceptor(app, url=self.endpoint)
-        intercept.install_intercept()
-        self.addCleanup(intercept.uninstall_intercept)
 
         # Turn off manipulation of socket_options in TCPKeepAliveAdapter
         # to keep wsgi-intercept happy. Replace it with the method
