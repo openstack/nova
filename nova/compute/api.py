@@ -4775,13 +4775,13 @@ class HostAPI(base.Base):
         # and we should always iterate over the cells. However, certain
         # callers need the legacy behavior for now.
         if all_cells:
-            load_cells()
             services = []
-            for cell in CELLS:
-                with nova_context.target_cell(context, cell) as cctxt:
-                    cell_services = objects.ServiceList.get_all(
-                        cctxt, disabled, set_zones=set_zones)
-                services.extend(cell_services)
+            service_dict = nova_context.scatter_gather_all_cells(context,
+                objects.ServiceList.get_all, disabled, set_zones=set_zones)
+            for service in service_dict.values():
+                if service not in (nova_context.did_not_respond_sentinel,
+                                   nova_context.raised_exception_sentinel):
+                    services.extend(service)
         else:
             services = objects.ServiceList.get_all(context, disabled,
                                                    set_zones=set_zones)
