@@ -186,6 +186,19 @@ class ComputeHostAPITestCase(test.TestCase):
         self.assertEqual(sorted(['host-%s' % cell.uuid for cell in cells]),
                          sorted([svc.host for svc in services]))
 
+    @mock.patch('nova.context.scatter_gather_cells')
+    def test_service_get_all_cells_with_failures(self, mock_sg):
+        service = objects.Service(binary='nova-compute',
+                                  host='host-%s' % uuids.cell1)
+        mock_sg.return_value = {
+            uuids.cell1: [service],
+            uuids.cell2: context.raised_exception_sentinel
+        }
+        services = self.host_api.service_get_all(self.ctxt, all_cells=True)
+        # returns the results from cell1 and ignores cell2.
+        self.assertEqual(['host-%s' % uuids.cell1],
+                         [svc.host for svc in services])
+
     def test_service_get_all_no_zones(self):
         services = [dict(test_service.fake_service,
                          id=1, topic='compute', host='host1'),
@@ -513,6 +526,10 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
 
     @testtools.skip('cellsv1 does not use this')
     def test_service_get_all_cells(self):
+        pass
+
+    @testtools.skip('cellsv1 does not use this')
+    def test_service_get_all_cells_with_failures(self):
         pass
 
     @testtools.skip('cellsv1 does not use this')
