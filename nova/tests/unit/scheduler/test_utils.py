@@ -290,6 +290,14 @@ class TestUtils(test.NoDBTestCase):
         self.assertEqual([('foo', 'bar'), ('baz',)],
                          req.get_request_group(None).member_of)
 
+        # Test stringification
+        self.assertEqual(
+            'RequestGroup(use_same_provider=False, '
+            'resources={DISK_GB:1, MEMORY_MB:1024, VCPU:1}, '
+            'traits=[], '
+            'aggregates=[[baz], [foo, bar]])',
+            str(req))
+
     def test_resources_from_request_spec_no_aggregates(self):
         flavor = objects.Flavor(vcpus=1, memory_mb=1024,
                                 root_gb=1, ephemeral_gb=0,
@@ -481,8 +489,28 @@ class TestUtils(test.NoDBTestCase):
                 'DISK_GB': 5,
             }
         )
-        self.assertResourceRequestsEqual(
-            expected, utils.ResourceRequest.from_extra_specs(extra_specs))
+        rr = utils.ResourceRequest.from_extra_specs(extra_specs)
+        self.assertResourceRequestsEqual(expected, rr)
+
+        # Test stringification
+        self.assertEqual(
+            'RequestGroup(use_same_provider=False, '
+            'resources={MEMORY_MB:2048, VCPU:2}, '
+            'traits=[CUSTOM_MAGIC, HW_CPU_X86_AVX, !CUSTOM_BRONZE], '
+            'aggregates=[]), '
+            'RequestGroup(use_same_provider=True, '
+            'resources={DISK_GB:5}, '
+            'traits=[], '
+            'aggregates=[]), '
+            'RequestGroup(use_same_provider=True, '
+            'resources={IPV4_ADDRESS:1, SRIOV_NET_VF:1}, '
+            'traits=[CUSTOM_PHYSNET_NET1, !CUSTOM_PHYSNET_NET2], '
+            'aggregates=[]), '
+            'RequestGroup(use_same_provider=True, '
+            'resources={IPV4_ADDRESS:2, SRIOV_NET_VF:1}, '
+            'traits=[CUSTOM_PHYSNET_NET2, HW_NIC_ACCEL_SSL], '
+            'aggregates=[])',
+            str(rr))
 
     def test_resource_request_from_extra_specs_append_request(self):
         extra_specs = {

@@ -374,18 +374,13 @@ class SchedulerReportClient(object):
                     version)
 
         args = {
-            'resources': res,
+            'resource_request': str(resources),
             'status_code': resp.status_code,
             'err_text': resp.text,
         }
         msg = ("Failed to retrieve allocation candidates from placement "
-               "API for filters %(resources)s, traits %(traits)s, "
-               "aggregates %(aggregates)s. Got "
-               "%(status_code)d: %(err_text)s.")
-        query_traits = [v for k, v in qs_params if k == 'required']
-        query_aggs = [v for k, v in qs_params if k == 'member_of']
-        args['traits'] = query_traits and query_traits[0] or '(none)'
-        args['aggregates'] = ','.join(query_aggs) or '(none)'
+               "API for filters: %(resource_request)s\n"
+               "Got %(status_code)d: %(err_text)s.")
         LOG.error(msg, args)
         return None, None, None
 

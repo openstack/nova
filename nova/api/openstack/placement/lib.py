@@ -37,3 +37,17 @@ class RequestGroup(object):
         self.required_traits = required_traits or set()
         self.forbidden_traits = forbidden_traits or set()
         self.member_of = member_of or []
+
+    def __str__(self):
+        ret = 'RequestGroup(use_same_provider=%s' % str(self.use_same_provider)
+        ret += ', resources={%s}' % ', '.join(
+            '%s:%d' % (rc, amount)
+            for rc, amount in sorted(list(self.resources.items())))
+        ret += ', traits=[%s]' % ', '.join(
+            sorted(self.required_traits) +
+            ['!%s' % ft for ft in self.forbidden_traits])
+        ret += ', aggregates=[%s]' % ', '.join(
+            sorted('[%s]' % ', '.join(agglist)
+                   for agglist in sorted(self.member_of)))
+        ret += ')'
+        return ret

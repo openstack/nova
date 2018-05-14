@@ -57,6 +57,10 @@ class ResourceRequest(object):
         # { ident: RequestGroup }
         self._rg_by_id = {}
 
+    def __str__(self):
+        return ', '.join(sorted(
+            list(str(rg) for rg in list(self._rg_by_id.values()))))
+
     def get_request_group(self, ident):
         if ident not in self._rg_by_id:
             rq_grp = placement_lib.RequestGroup(use_same_provider=bool(ident))
