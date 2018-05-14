@@ -353,7 +353,7 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         mock_fsck.assert_has_calls([
             mock.call(partition_path)])
         mock_resize2fs.assert_has_calls([
-            mock.call(partition_path, None, size='10s')])
+            mock.call(partition_path, [0], size='10s')])
         mock_resize.assert_has_calls([
             mock.call(dev_path, 0, 9, True)])
         mock_disable_journal.assert_has_calls([
@@ -408,7 +408,7 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         mock_fsck.assert_has_calls([
             mock.call(partition_path)])
         mock_resize2fs.assert_has_calls([
-            mock.call(partition_path, None)])
+            mock.call(partition_path, [0])])
         mock_resize.assert_has_calls([
             mock.call(dev_path, 0, 29, False)])
         mock_disable_journal.assert_has_calls([
