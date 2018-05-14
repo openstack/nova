@@ -15,6 +15,7 @@
 
 import datetime
 import sys
+import warnings
 
 import ddt
 import fixtures
@@ -1226,6 +1227,10 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
 
     @mock.patch.object(context, 'target_cell')
     def test_map_instances_max_count(self, mock_target_cell):
+        # NOTE(gibi): map_instances command uses non canonical UUID
+        # serialization for the marker instance mapping. The db schema is not
+        # violated so we suppress the warning here.
+        warnings.filterwarnings('ignore', message=".*invalid UUID.*")
         ctxt = context.RequestContext('fake-user', 'fake_project')
         cell_uuid = uuidutils.generate_uuid()
         cell_mapping = objects.CellMapping(
@@ -1259,6 +1264,10 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
 
     @mock.patch.object(context, 'target_cell')
     def test_map_instances_marker_deleted(self, mock_target_cell):
+        # NOTE(gibi): map_instances command uses non canonical UUID
+        # serialization for the marker instance mapping. The db schema is not
+        # violated so we suppress the warning here.
+        warnings.filterwarnings('ignore', message=".*invalid UUID.*")
         ctxt = context.RequestContext('fake-user', 'fake_project')
         cell_uuid = uuidutils.generate_uuid()
         cell_mapping = objects.CellMapping(
@@ -1297,6 +1306,10 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
 
     @mock.patch.object(context, 'target_cell')
     def test_map_instances_marker_reset(self, mock_target_cell):
+        # NOTE(gibi): map_instances command uses non canonical UUID
+        # serialization for the marker instance mapping. The db schema is not
+        # violated so we suppress the warning here.
+        warnings.filterwarnings('ignore', message=".*invalid UUID.*")
         ctxt = context.RequestContext('fake-user', 'fake_project')
         cell_uuid = uuidutils.generate_uuid()
         cell_mapping = objects.CellMapping(
