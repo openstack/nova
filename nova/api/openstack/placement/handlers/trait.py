@@ -105,8 +105,7 @@ def get_trait(req):
     try:
         trait = rp_obj.Trait.get_by_name(context, name)
     except exception.TraitNotFound as ex:
-        raise webob.exc.HTTPNotFound(
-            explanation=ex.format_message())
+        raise webob.exc.HTTPNotFound(ex.format_message())
 
     req.response.status = 204
     req.response.content_type = None
@@ -126,14 +125,11 @@ def delete_trait(req):
         trait = rp_obj.Trait.get_by_name(context, name)
         trait.destroy()
     except exception.TraitNotFound as ex:
-        raise webob.exc.HTTPNotFound(
-            explanation=ex.format_message())
+        raise webob.exc.HTTPNotFound(ex.format_message())
     except exception.TraitCannotDeleteStandard as ex:
-        raise webob.exc.HTTPBadRequest(
-            explanation=ex.format_message())
+        raise webob.exc.HTTPBadRequest(ex.format_message())
     except exception.TraitInUse as ex:
-        raise webob.exc.HTTPConflict(
-            explanation=ex.format_message())
+        raise webob.exc.HTTPConflict(ex.format_message())
 
     req.response.status = 204
     req.response.content_type = None
@@ -155,8 +151,8 @@ def list_traits(req):
     if 'associated' in req.GET:
         if req.GET['associated'].lower() not in ['true', 'false']:
             raise webob.exc.HTTPBadRequest(
-                explanation=_('The query parameter "associated" only accepts '
-                              '"true" or "false"'))
+                _('The query parameter "associated" only accepts '
+                  '"true" or "false"'))
         filters['associated'] = (
             True if req.GET['associated'].lower() == 'true' else False)
 
@@ -256,7 +252,7 @@ def delete_traits_for_resource_provider(req):
     try:
         resource_provider.set_traits(rp_obj.TraitList(objects=[]))
     except exception.ConcurrentUpdateDetected as e:
-        raise webob.exc.HTTPConflict(explanation=e.format_message())
+        raise webob.exc.HTTPConflict(e.format_message())
 
     req.response.status = 204
     req.response.content_type = None
