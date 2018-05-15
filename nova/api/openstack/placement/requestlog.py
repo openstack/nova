@@ -36,9 +36,10 @@ class RequestLog(object):
         LOG.debug('Starting request: %s "%s %s"',
                   environ['REMOTE_ADDR'], environ['REQUEST_METHOD'],
                    self._get_uri(environ))
-        # Set the accept header if it is not otherwise set. This
+        # Set the accept header if it is not otherwise set or is '*/*'. This
         # ensures that error responses will be in JSON.
-        if not environ.get('HTTP_ACCEPT'):
+        accept = environ.get('HTTP_ACCEPT')
+        if not accept or accept == '*/*':
             environ['HTTP_ACCEPT'] = 'application/json'
         if LOG.isEnabledFor(logging.INFO):
             return self._log_app(environ, start_response)
