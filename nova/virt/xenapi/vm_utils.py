@@ -2294,7 +2294,7 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags):
     if new_sectors < old_sectors:
         # Resizing down, resize filesystem before partition resize
         try:
-            nova.privsep.fs.resize2fs(partition_path, None, size='%ds' % size)
+            nova.privsep.fs.resize2fs(partition_path, [0], size='%ds' % size)
         except processutils.ProcessExecutionError as exc:
             LOG.error(six.text_type(exc))
             reason = _("Shrinking the filesystem down with resize2fs "
@@ -2307,7 +2307,7 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags):
 
     if new_sectors > old_sectors:
         # Resizing up, resize filesystem after partition resize
-        nova.privsep.fs.resize2fs(partition_path, None)
+        nova.privsep.fs.resize2fs(partition_path, [0])
 
     # Add back journal
     nova.privsep.fs.ext_journal_enable(partition_path)
