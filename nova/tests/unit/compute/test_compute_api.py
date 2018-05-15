@@ -4978,28 +4978,32 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_populate_instance_names_host_name(self):
         params = dict(display_name="vm1")
         instance = self._create_instance_obj(params=params)
-        self.compute_api._populate_instance_names(instance, 1)
+        self.compute_api._populate_instance_names(instance, 1, 0)
         self.assertEqual('vm1', instance.hostname)
 
     def test_populate_instance_names_host_name_is_empty(self):
         params = dict(display_name=u'\u865a\u62df\u673a\u662f\u4e2d\u6587')
         instance = self._create_instance_obj(params=params)
-        self.compute_api._populate_instance_names(instance, 1)
+        self.compute_api._populate_instance_names(instance, 1, 0)
         self.assertEqual('Server-%s' % instance.uuid, instance.hostname)
 
     def test_populate_instance_names_host_name_multi(self):
         params = dict(display_name="vm")
         instance = self._create_instance_obj(params=params)
-        with mock.patch.object(instance, 'save'):
-            self.compute_api._apply_instance_name_template(instance, 1)
+        self.compute_api._populate_instance_names(instance, 2, 1)
+        if self.cell_type != 'api':
             self.assertEqual('vm-2', instance.hostname)
+        else:
+            self.assertNotIn('hostname', instance)
 
     def test_populate_instance_names_host_name_is_empty_multi(self):
         params = dict(display_name=u'\u865a\u62df\u673a\u662f\u4e2d\u6587')
         instance = self._create_instance_obj(params=params)
-        with mock.patch.object(instance, 'save'):
-            self.compute_api._apply_instance_name_template(instance, 1)
+        self.compute_api._populate_instance_names(instance, 2, 1)
+        if self.cell_type != 'api':
             self.assertEqual('Server-%s' % instance.uuid, instance.hostname)
+        else:
+            self.assertNotIn('hostname', instance)
 
     def test_host_statuses(self):
         instances = [
