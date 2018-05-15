@@ -7279,6 +7279,47 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                               'fake', self.instance, True, migration, {})
             self.assertEqual('error', migration.status)
 
+    @mock.patch(
+        'nova.compute.manager.ComputeManager._notify_about_instance_usage')
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch('nova.compute.manager.ComputeManager._rollback_live_migration')
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
+    def test_live_migration_aborted_before_running(self, mock_rpc,
+                                                   mock_rollback,
+                                                   mock_action_notify,
+                                                   mock_usage_notify):
+        migrate_data = objects.LibvirtLiveMigrateData(
+            wait_for_vif_plugged=True)
+        mock_rpc.return_value = migrate_data
+        self.instance.info_cache = objects.InstanceInfoCache(
+            network_info=network_model.NetworkInfo([
+                network_model.VIF(uuids.port1), network_model.VIF(uuids.port2)
+            ]))
+        self.compute._waiting_live_migrations = {}
+        fake_migration = objects.Migration(
+            uuid=uuids.migration, instance_uuid=self.instance.uuid)
+        fake_migration.save = mock.MagicMock()
+
+        with mock.patch.object(self.compute.virtapi,
+                               'wait_for_instance_event') as wait_for_event:
+            self.compute._do_live_migration(
+                self.context, 'dest-host', self.instance, 'block_migration',
+                fake_migration, migrate_data)
+
+        self.assertEqual(2, len(wait_for_event.call_args[0][1]))
+        mock_rpc.assert_called_once_with(
+            self.context, self.instance, 'block_migration', None,
+            'dest-host', migrate_data)
+        mock_rollback.assert_called_once_with(
+            self.context, self.instance, 'dest-host', migrate_data,
+            'cancelled')
+        mock_usage_notify.assert_called_once_with(
+            self.context, self.instance, 'live.migration.abort.end')
+        mock_action_notify.assert_called_once_with(
+            self.context, self.instance, self.compute.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_ABORT,
+            phase=fields.NotificationPhase.END)
+
     def test_live_migration_force_complete_succeeded(self):
         migration = objects.Migration()
         migration.status = 'running'
@@ -7708,6 +7749,34 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                     action='live_migration_abort', phase='end')]
         )
 
+    @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
+    @mock.patch.object(objects.Migration, 'get_by_id')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_live_migration_abort_queued(self, mock_notify_action,
+                                         mock_get_migration, mock_notify):
+        instance = objects.Instance(id=123, uuid=uuids.instance)
+        migration = self._get_migration(10, 'queued', 'live-migration')
+        migration.save = mock.MagicMock()
+        mock_get_migration.return_value = migration
+        fake_future = mock.MagicMock()
+        self.compute._waiting_live_migrations[instance.uuid] = (
+            migration, fake_future)
+        self.compute.live_migration_abort(self.context, instance, migration.id)
+        mock_notify.assert_has_calls(
+            [mock.call(self.context, instance,
+                       'live.migration.abort.start'),
+             mock.call(self.context, instance,
+                       'live.migration.abort.end')]
+        )
+        mock_notify_action.assert_has_calls(
+            [mock.call(self.context, instance, 'fake-mini',
+                    action='live_migration_abort', phase='start'),
+             mock.call(self.context, instance, 'fake-mini',
+                    action='live_migration_abort', phase='end')]
+        )
+        self.assertEqual('cancelled', migration.status)
+        fake_future.cancel.assert_called_once_with()
+
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
     @mock.patch.object(objects.Migration, 'get_by_id')
@@ -7731,11 +7800,13 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             'fake-mini', action='live_migration_abort', phase='start')
 
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
     @mock.patch.object(objects.Migration, 'get_by_id')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def test_live_migration_abort_wrong_migration_state(self,
                                                         mock_notify_action,
                                                         mock_get_migration,
+                                                        mock_notify,
                                                         mock_instance_fault):
         instance = objects.Instance(id=123, uuid=uuids.instance)
         migration = self._get_migration(10, 'completed', 'live-migration')
@@ -7745,7 +7816,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                           self.context,
                           instance,
                           migration.id)
-        mock_notify_action.assert_not_called()
 
     def test_live_migration_cleanup_flags_block_migrate_libvirt(self):
         migrate_data = objects.LibvirtLiveMigrateData(

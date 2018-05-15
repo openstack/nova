@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 33
+SERVICE_VERSION = 34
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -140,6 +140,8 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '5.0'},
     # Version 33: Add support for check on the server group with
     # 'max_server_per_host' rules
+    {'compute_rpc': '5.0'},
+    # Version 34: Adds support to abort queued/preparing live migrations.
     {'compute_rpc': '5.0'},
 )
 

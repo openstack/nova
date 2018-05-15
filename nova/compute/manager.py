@@ -6175,9 +6175,6 @@ class ComputeManager(manager.Manager):
         # done on source/destination. For now, this is just here for status
         # reporting
         self._set_migration_status(migration, 'preparing')
-        # NOTE(Kevin_Zheng): The migration is no longer in the `queued` status
-        # so lets remove it from the mapping.
-        self._waiting_live_migrations.pop(instance.uuid)
 
         class _BreakWaitForInstanceEvent(Exception):
             """Used as a signal to stop waiting for the network-vif-plugged
@@ -6251,8 +6248,22 @@ class ComputeManager(manager.Manager):
                 self._cleanup_pre_live_migration(
                     context, dest, instance, migration, migrate_data)
 
-        self._set_migration_status(migration, 'running')
+        # NOTE(Kevin_Zheng): Pop the migration from the waiting queue
+        # if it exist in the queue, then we are good to moving on, if
+        # not, some other process must have aborted it, then we should
+        # rollback.
+        try:
+            self._waiting_live_migrations.pop(instance.uuid)
+        except KeyError:
+            LOG.debug('Migration %s aborted by another process, rollback.',
+                      migration.uuid, instance=instance)
+            migrate_data.migration = migration
+            self._rollback_live_migration(context, instance, dest,
+                                          migrate_data, 'cancelled')
+            self._notify_live_migrate_abort_end(context, instance)
+            return
 
+        self._set_migration_status(migration, 'running')
         if migrate_data:
             migrate_data.migration = migration
         LOG.debug('live_migration data is %s', migrate_data)
@@ -6331,6 +6342,14 @@ class ComputeManager(manager.Manager):
             action=fields.NotificationAction.LIVE_MIGRATION_FORCE_COMPLETE,
             phase=fields.NotificationPhase.END)
 
+    def _notify_live_migrate_abort_end(self, context, instance):
+        self._notify_about_instance_usage(
+            context, instance, 'live.migration.abort.end')
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_ABORT,
+            phase=fields.NotificationPhase.END)
+
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
@@ -6342,26 +6361,51 @@ class ComputeManager(manager.Manager):
         :param migration_id: ID of in-progress live migration
 
         """
-        migration = objects.Migration.get_by_id(context, migration_id)
-        if migration.status != 'running':
-            raise exception.InvalidMigrationState(migration_id=migration_id,
-                    instance_uuid=instance.uuid,
-                    state=migration.status,
-                    method='abort live migration')
-
         self._notify_about_instance_usage(
             context, instance, 'live.migration.abort.start')
         compute_utils.notify_about_instance_action(
             context, instance, self.host,
             action=fields.NotificationAction.LIVE_MIGRATION_ABORT,
             phase=fields.NotificationPhase.START)
-        self.driver.live_migration_abort(instance)
-        self._notify_about_instance_usage(
-            context, instance, 'live.migration.abort.end')
-        compute_utils.notify_about_instance_action(
-            context, instance, self.host,
-            action=fields.NotificationAction.LIVE_MIGRATION_ABORT,
-            phase=fields.NotificationPhase.END)
+        # NOTE(Kevin_Zheng): Pop the migration out from the queue, this might
+        # lead to 3 scenarios:
+        # 1. The selected migration is still in queue, and the future.cancel()
+        #    succeed, then the abort action is succeed, mark the migration
+        #    status to 'cancelled'.
+        # 2. The selected migration is still in queue, but the future.cancel()
+        #    failed, then the _do_live_migration() has started executing, and
+        #    the migration status is 'preparing', then we just pop it from the
+        #    queue, and the migration process will handle it later. And the
+        #    migration status couldn't be 'running' in this scenario because
+        #    if _do_live_migration has started executing and we've already
+        #    popped it from the queue and set the migration status to
+        #    'running' at this point, popping it here will raise KeyError at
+        #    which point we check if it's running and if so, we abort the old
+        #    way.
+        # 3. The selected migration is not in the queue, then the migration
+        #    status is 'running', let the driver handle it.
+        try:
+            migration, future = (
+                self._waiting_live_migrations.pop(instance.uuid))
+            if future and future.cancel():
+                # If we got here, we've successfully aborted the queued
+                # migration and _do_live_migration won't run so we need
+                # to set the migration status to cancelled and send the
+                # notification. If Future.cancel() fails, it means
+                # _do_live_migration is running and the migration status
+                # is preparing, and _do_live_migration() itself will attempt
+                # to pop the queued migration, hit a KeyError, and rollback,
+                # set the migration to cancelled and send the
+                # live.migration.abort.end notification.
+                self._set_migration_status(migration, 'cancelled')
+        except KeyError:
+            migration = objects.Migration.get_by_id(context, migration_id)
+            if migration.status != 'running':
+                raise exception.InvalidMigrationState(
+                    migration_id=migration_id, instance_uuid=instance.uuid,
+                    state=migration.status, method='abort live migration')
+            self.driver.live_migration_abort(instance)
+        self._notify_live_migrate_abort_end(context, instance)
 
     def _live_migration_cleanup_flags(self, migrate_data):
         """Determine whether disks or instance path need to be cleaned up after
