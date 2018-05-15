@@ -362,7 +362,8 @@ def delete_inventories(req):
     except exception.InventoryInUse as ex:
         # NOTE(mriedem): This message cannot change without impacting the
         # nova.scheduler.client.report._RE_INV_IN_USE regex.
-        raise webob.exc.HTTPConflict(ex.format_message())
+        raise webob.exc.HTTPConflict(ex.format_message(),
+                                     comment=errors.INVENTORY_INUSE)
 
     response = req.response
     response.status = 204
