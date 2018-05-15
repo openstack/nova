@@ -603,16 +603,8 @@ def stub_volume_update(self, context, *args, **param):
     pass
 
 
-def stub_volume_delete(self, context, *args, **param):
-    pass
-
-
 def stub_volume_get(self, context, volume_id):
     return stub_volume(volume_id)
-
-
-def stub_volume_notfound(self, context, volume_id):
-    raise exc.VolumeNotFound(volume_id=volume_id)
 
 
 def stub_volume_get_all(context, search_opts=None):
