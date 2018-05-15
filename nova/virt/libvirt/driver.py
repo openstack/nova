@@ -7923,13 +7923,14 @@ class LibvirtDriver(driver.ComputeDriver):
                           {'path': path, 'target': target})
                 continue
 
+            # NOTE(lyarwood): Always fetch the virtual size for all disk types.
+            virt_size = disk_api.get_disk_size(path)
+
             if driver_type in ("qcow2", "ploop"):
                 backing_file = libvirt_utils.get_disk_backing_file(path)
-                virt_size = disk_api.get_disk_size(path)
                 over_commit_size = int(virt_size) - dk_size
             else:
                 backing_file = ""
-                virt_size = dk_size
                 over_commit_size = 0
 
             disk_info.append({'type': driver_type,
