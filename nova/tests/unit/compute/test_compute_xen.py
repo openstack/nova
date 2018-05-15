@@ -33,7 +33,7 @@ class ComputeXenTestCase(stubs.XenAPITestBaseNoDB):
                    connection_password='test_pass',
                    group='xenserver')
 
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        stubs.stubout_session(self, stubs.FakeSessionForVMTests)
         self.compute = manager.ComputeManager()
         # execute power syncing synchronously for testing:
         self.compute._sync_power_pool = eventlet_utils.SyncPool()

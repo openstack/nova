@@ -34,7 +34,7 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
     """Unit tests for Driver operations."""
 
     def _get_driver(self):
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        stubs.stubout_session(self, stubs.FakeSessionForVMTests)
         self.flags(connection_url='http://localhost',
                    connection_password='test_pass', group='xenserver')
         return xenapi.XenAPIDriver(fake.FakeVirtAPI(), False)

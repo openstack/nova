@@ -24,133 +24,21 @@ from os_xenapi.client import XenAPI
 from oslo_serialization import jsonutils
 
 from nova import test
-import nova.tests.unit.image.fake
 from nova.virt.xenapi import fake
-from nova.virt.xenapi import vm_utils
-from nova.virt.xenapi import vmops
 
 
-def stubout_firewall_driver(stubs, conn):
-
-    def fake_none(self, *args):
-        return
-
-    _vmops = conn._vmops
-    stubs.Set(_vmops.firewall_driver, 'prepare_instance_filter', fake_none)
-    stubs.Set(_vmops.firewall_driver, 'instance_filter_exists', fake_none)
-
-
-def stubout_instance_snapshot(stubs):
-    def fake_fetch_image(context, session, instance, name_label, image, type,
-                         image_handler):
-        return {'root': dict(uuid=_make_fake_vdi(), file=None),
-                'kernel': dict(uuid=_make_fake_vdi(), file=None),
-                'ramdisk': dict(uuid=_make_fake_vdi(), file=None)}
-
-    stubs.Set(vm_utils, '_fetch_image', fake_fetch_image)
-
-    def fake_wait_for_vhd_coalesce(*args):
-        # TODO(sirp): Should we actually fake out the data here
-        return "fakeparent", "fakebase"
-
-    stubs.Set(vm_utils, '_wait_for_vhd_coalesce', fake_wait_for_vhd_coalesce)
-
-
-def stubout_session(stubs, cls, product_version=(5, 6, 2),
+def stubout_session(test, cls, product_version=(5, 6, 2),
                     product_brand='XenServer', platform_version=(1, 9, 0),
                     **opt_args):
     """Stubs out methods from XenAPISession."""
-    stubs.Set(session.XenAPISession, '_create_session',
-              lambda s, url: cls(url, **opt_args))
-    stubs.Set(session.XenAPISession, '_get_product_version_and_brand',
-              lambda s: (product_version, product_brand))
-    stubs.Set(session.XenAPISession, '_get_platform_version',
-              lambda s: platform_version)
-
-
-def stubout_get_this_vm_uuid(stubs):
-    def f(session):
-        vms = [rec['uuid'] for rec
-               in fake.get_all_records('VM').values()
-               if rec['is_control_domain']]
-        return vms[0]
-    stubs.Set(vm_utils, 'get_this_vm_uuid', f)
-
-
-def stubout_image_service_download(stubs):
-    def fake_download(*args, **kwargs):
-        pass
-    stubs.Set(nova.tests.unit.image.fake._FakeImageService,
-        'download', fake_download)
-
-
-def stubout_stream_disk(stubs):
-    def fake_stream_disk(*args, **kwargs):
-        pass
-    stubs.Set(vm_utils, '_stream_disk', fake_stream_disk)
-
-
-def stubout_determine_is_pv_objectstore(stubs):
-    """Assumes VMs stu have PV kernels."""
-
-    def f(*args):
-        return False
-    stubs.Set(vm_utils, '_determine_is_pv_objectstore', f)
-
-
-def stubout_is_snapshot(stubs):
-    """Always returns true
-
-        xenapi fake driver does not create vmrefs for snapshots.
-    """
-
-    def f(*args):
-        return True
-    stubs.Set(vm_utils, 'is_snapshot', f)
-
-
-def stubout_lookup_image(stubs):
-    """Simulates a failure in lookup image."""
-    def f(_1, _2, _3, _4):
-        raise Exception("Test Exception raised by fake lookup_image")
-    stubs.Set(vm_utils, 'lookup_image', f)
-
-
-def stubout_fetch_disk_image(stubs, raise_failure=False):
-    """Simulates a failure in fetch image_glance_disk."""
-
-    def _fake_fetch_disk_image(context, session, instance, name_label, image,
-                               image_type):
-        if raise_failure:
-            raise XenAPI.Failure("Test Exception raised by "
-                               "fake fetch_image_glance_disk")
-        elif image_type == vm_utils.ImageType.KERNEL:
-            filename = "kernel"
-        elif image_type == vm_utils.ImageType.RAMDISK:
-            filename = "ramdisk"
-        else:
-            filename = "unknown"
-
-        vdi_type = vm_utils.ImageType.to_string(image_type)
-        return {vdi_type: dict(uuid=None, file=filename)}
-
-    stubs.Set(vm_utils, '_fetch_disk_image', _fake_fetch_disk_image)
-
-
-def stubout_create_vm(stubs):
-    """Simulates a failure in create_vm."""
-
-    def f(*args):
-        raise XenAPI.Failure("Test Exception raised by fake create_vm")
-    stubs.Set(vm_utils, 'create_vm', f)
-
-
-def stubout_attach_disks(stubs):
-    """Simulates a failure in _attach_disks."""
-
-    def f(*args):
-        raise XenAPI.Failure("Test Exception raised by fake _attach_disks")
-    stubs.Set(vmops.VMOps, '_attach_disks', f)
+    test.stub_out('os_xenapi.client.session.XenAPISession._create_session',
+                  lambda s, url: cls(url, **opt_args))
+    test.stub_out('os_xenapi.client.session.XenAPISession.'
+                  '_get_product_version_and_brand',
+                  lambda s: (product_version, product_brand))
+    test.stub_out('os_xenapi.client.session.XenAPISession.'
+                  '_get_platform_version',
+                  lambda s: platform_version)
 
 
 def _make_fake_vdi():
@@ -256,25 +144,6 @@ class FakeSessionForFirewallTests(FakeSessionForVMTests):
                     host_call_plugin(_1, _2, plugin, method, args))
 
 
-def stub_out_vm_methods(stubs):
-    def fake_acquire_bootlock(self, vm):
-        pass
-
-    def fake_release_bootlock(self, vm):
-        pass
-
-    def fake_generate_ephemeral(*args):
-        pass
-
-    def fake_wait_for_device(session, dev, dom0, max_seconds):
-        pass
-
-    stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)
-    stubs.Set(vmops.VMOps, "_release_bootlock", fake_release_bootlock)
-    stubs.Set(vm_utils, 'generate_ephemeral', fake_generate_ephemeral)
-    stubs.Set(vm_utils, '_wait_for_device', fake_wait_for_device)
-
-
 class ReplaceModule(fixtures.Fixture):
     """Replace a module with a fake module."""
 
@@ -321,50 +190,6 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
         pass
 
 
-def stub_out_migration_methods(stubs):
-    fakesr = fake.create_sr()
-
-    def fake_import_all_migrated_disks(session, instance, import_root=True):
-        vdi_ref = fake.create_vdi(instance['name'], fakesr)
-        vdi_rec = fake.get_record('VDI', vdi_ref)
-        vdi_rec['other_config']['nova_disk_type'] = 'root'
-        return {"root": {'uuid': vdi_rec['uuid'], 'ref': vdi_ref},
-                "ephemerals": {}}
-
-    def fake_wait_for_instance_to_start(self, *args):
-        pass
-
-    def fake_get_vdi(session, vm_ref, userdevice='0'):
-        vdi_ref_parent = fake.create_vdi('derp-parent', fakesr)
-        vdi_rec_parent = fake.get_record('VDI', vdi_ref_parent)
-        vdi_ref = fake.create_vdi('derp', fakesr,
-                sm_config={'vhd-parent': vdi_rec_parent['uuid']})
-        vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
-        return vdi_ref, vdi_rec
-
-    def fake_sr(session, *args):
-        return fakesr
-
-    def fake_get_sr_path(*args):
-        return "fake"
-
-    def fake_destroy(*args, **kwargs):
-        pass
-
-    def fake_generate_ephemeral(*args):
-        pass
-
-    stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
-    stubs.Set(vmops.VMOps, '_wait_for_instance_to_start',
-              fake_wait_for_instance_to_start)
-    stubs.Set(vm_utils, 'import_all_migrated_disks',
-              fake_import_all_migrated_disks)
-    stubs.Set(vm_utils, 'scan_default_sr', fake_sr)
-    stubs.Set(vm_utils, 'get_vdi_for_vm_safely', fake_get_vdi)
-    stubs.Set(vm_utils, 'get_sr_path', fake_get_sr_path)
-    stubs.Set(vm_utils, 'generate_ephemeral', fake_generate_ephemeral)
-
-
 class FakeSessionForFailedMigrateTests(FakeSessionForVMTests):
     def VM_assert_can_migrate(self, session, vmref, migrate_data,
                               live, vdi_map, vif_map, options):
@@ -376,20 +201,6 @@ class FakeSessionForFailedMigrateTests(FakeSessionForVMTests):
     def VM_migrate_send(self, session, vmref, migrate_data, islive, vdi_map,
                         vif_map, options):
         raise XenAPI.Failure("XenAPI VM.migrate_send failed")
-
-
-def get_fake_session(error=None):
-    fake_session = mock.MagicMock()
-    session.apply_session_helpers(fake_session)
-
-    if error is not None:
-        class FakeException(Exception):
-            details = [error, "a", "b", "c"]
-
-        fake_session.XenAPI.Failure = FakeException
-        fake_session.call_xenapi.side_effect = FakeException
-
-    return fake_session
 
 
 # FIXME(sirp): XenAPITestBase is deprecated, all tests should be converted
@@ -404,6 +215,14 @@ class XenAPITestBase(test.TestCase):
         self.useFixture(ReplaceModule('XenAPI', fake))
         fake.reset()
 
+    def stubout_get_this_vm_uuid(self):
+        def f(session):
+            vms = [rec['uuid'] for rec
+                   in fake.get_all_records('VM').values()
+                   if rec['is_control_domain']]
+            return vms[0]
+        self.stub_out('nova.virt.xenapi.vm_utils.get_this_vm_uuid', f)
+
 
 class XenAPITestBaseNoDB(test.NoDBTestCase):
     def setUp(self):
@@ -414,3 +233,17 @@ class XenAPITestBaseNoDB(test.NoDBTestCase):
                    group='xenserver')
         self.useFixture(ReplaceModule('XenAPI', fake))
         fake.reset()
+
+    @staticmethod
+    def get_fake_session(error=None):
+        fake_session = mock.MagicMock()
+        session.apply_session_helpers(fake_session)
+
+        if error is not None:
+            class FakeException(Exception):
+                details = [error, "a", "b", "c"]
+
+            fake_session.XenAPI.Failure = FakeException
+            fake_session.call_xenapi.side_effect = FakeException
+
+        return fake_session

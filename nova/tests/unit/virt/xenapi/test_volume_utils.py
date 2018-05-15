@@ -347,7 +347,7 @@ class TestStreamToVDI(stubs.XenAPITestBaseNoDB):
     @mock.patch.object(volume_utils, '_get_vdi_import_path',
                        return_value='vdi_import_path')
     def test_creates_task_conn(self, mock_import_path, mock_stream):
-        session = stubs.get_fake_session()
+        session = self.get_fake_session()
         session.custom_task = mock.MagicMock()
         session.custom_task.return_value.__enter__.return_value = 'task'
         session.http_connection = mock.MagicMock()
