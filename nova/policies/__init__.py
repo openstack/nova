@@ -36,7 +36,6 @@ from nova.policies import extended_server_attributes
 from nova.policies import extended_status
 from nova.policies import extended_volumes
 from nova.policies import extensions
-from nova.policies import fixed_ips
 from nova.policies import flavor_access
 from nova.policies import flavor_extra_specs
 from nova.policies import flavor_manage
@@ -112,7 +111,6 @@ def list_rules():
         extended_status.list_rules(),
         extended_volumes.list_rules(),
         extensions.list_rules(),
-        fixed_ips.list_rules(),
         flavor_access.list_rules(),
         flavor_extra_specs.list_rules(),
         flavor_manage.list_rules(),
