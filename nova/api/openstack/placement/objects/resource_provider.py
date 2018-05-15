@@ -27,6 +27,7 @@ from oslo_config import cfg
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
+from oslo_utils import encodeutils
 from oslo_versionedobjects import base
 from oslo_versionedobjects import fields
 import six
@@ -2786,6 +2787,18 @@ class AllocationRequest(base.VersionedObject):
         ),
     }
 
+    def __repr__(self):
+        anchor = (self.anchor_root_provider_uuid[-8:]
+                  if 'anchor_root_provider_uuid' in self else '<?>')
+        usp = self.use_same_provider if 'use_same_provider' in self else '<?>'
+        repr_str = ('%s(anchor=...%s, same_provider=%s, '
+                    'resource_requests=[%s])' %
+                    (self.obj_name(), anchor, usp,
+                     ', '.join([str(arr) for arr in self.resource_requests])))
+        if six.PY2:
+            repr_str = encodeutils.safe_encode(repr_str, incoming='utf-8')
+        return repr_str
+
 
 @base.VersionedObjectRegistry.register_if(False)
 class ProviderSummaryResource(base.VersionedObject):
@@ -3808,8 +3821,9 @@ def _consolidate_allocation_requests(areqs):
         if anchor_rp_uuid != areq.anchor_root_provider_uuid:
             # This should never happen.  If it does, it's a dev bug.
             raise ValueError(
-                _("Expected every AllocationRequest in `deflate` to have the "
-                  "same anchor!"))
+                _("Expected every AllocationRequest in "
+                  "`_consolidate_allocation_requests` to have the same "
+                  "anchor!"))
         for arr in areq.resource_requests:
             key = _rp_rc_key(arr.resource_provider, arr.resource_class)
             if key not in arrs_by_rp_rc:
@@ -3850,13 +3864,21 @@ def _satisfies_group_policy(areqs, group_policy, num_granular_groups):
     # The number of unique resource providers referenced in the request groups
     # having use_same_provider=True must be equal to the number of granular
     # groups.
-    return num_granular_groups == len(set(
+    num_granular_groups_in_areqs = len(set(
         # We can reliably use the first resource_request's provider: all the
         # resource_requests are satisfied by the same provider by definition
         # because use_same_provider is True.
         areq.resource_requests[0].resource_provider.uuid
         for areq in areqs
         if areq.use_same_provider))
+    if num_granular_groups == num_granular_groups_in_areqs:
+        return True
+    LOG.debug('Excluding the following set of AllocationRequest because '
+              'group_policy=isolate and the number of granular groups in the '
+              'set (%d) does not match the number of granular groups in the '
+              'request (%d): %s',
+              num_granular_groups_in_areqs, num_granular_groups, str(areqs))
+    return False
 
 
 def _exceeds_capacity(areq, psum_res_by_rp_rc):
@@ -3877,8 +3899,17 @@ def _exceeds_capacity(areq, psum_res_by_rp_rc):
         key = _rp_rc_key(arr.resource_provider, arr.resource_class)
         psum_res = psum_res_by_rp_rc[key]
         if psum_res.used + arr.amount > psum_res.capacity:
+            LOG.debug('Excluding the following AllocationRequest because used '
+                      '(%d) + amount (%d) > capacity (%d) for resource class '
+                      '%s: %s',
+                      psum_res.used, arr.amount, psum_res.capacity,
+                      arr.resource_class, str(areq))
             return True
         if arr.amount > psum_res.max_unit:
+            LOG.debug('Excluding the following AllocationRequest because '
+                      'amount (%d) > max_unit (%d) for resource class %s: %s',
+                      arr.amount, psum_res.max_unit, arr.resource_class,
+                      str(areq))
             return True
     return False
 
