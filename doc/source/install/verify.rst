@@ -54,7 +54,7 @@ Verify operation of the Compute service.
       |           |           | RegionOne                               |
       |           |           |   internal: http://controller:5000/v3/  |
       |           |           | RegionOne                               |
-      |           |           |   admin: http://controller:35357/v3/    |
+      |           |           |   admin: http://controller:5000/v3/     |
       |           |           |                                         |
       | glance    | image     | RegionOne                               |
       |           |           |   admin: http://controller:9292         |
