@@ -207,11 +207,11 @@ XenServer/6.2.0/1.0/en_gb/supplemental_pack_ddk.html>`_.
 
 .. important::
 
-   Make sure you use the EXT type of storage repository (SR).  Features that
-   require access to VHD files (such as copy on write, snapshot and migration)
-   do not work when you use the LVM SR.  Storage repository (SR) is a
-   XAPI-specific term relating to the physical storage where virtual disks are
-   stored.
+   When using ``[xenserver]image_handler=direct_vhd`` (the default), make sure
+   you use the EXT type of storage repository (SR).  Features that require access
+   to VHD files (such as copy on write, snapshot and migration) do not work when
+   you use the LVM SR. Storage repository (SR) is a XAPI-specific term relating to
+   the physical storage where virtual disks are stored.
 
    On the XenServer installation screen, choose the :guilabel:`XenDesktop
    Optimized` option. If you use an answer file, make sure you use
