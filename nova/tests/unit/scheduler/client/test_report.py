@@ -1463,7 +1463,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_query = {
             'resources': ['MEMORY_MB:1024,VCPU:1'],
             'required': ['CUSTOM_TRAIT1,!CUSTOM_TRAIT3,!CUSTOM_TRAIT4'],
-            'member_of': ['in:agg1,agg2'],
+            'member_of': ['in:agg1,agg2,agg3', 'in:agg1,agg2'],
             'limit': ['1000']
         }
 
@@ -1474,7 +1474,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 self.client.get_allocation_candidates(self.context, resources)
 
         self.ks_adap_mock.get.assert_called_once_with(
-            mock.ANY, raise_exc=False, microversion='1.21',
+            mock.ANY, raise_exc=False, microversion='1.24',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         url = self.ks_adap_mock.get.call_args[0][0]
         split_url = parse.urlsplit(url)
@@ -1506,7 +1506,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 self.client.get_allocation_candidates(self.context, resources)
 
         self.ks_adap_mock.get.assert_called_once_with(
-            mock.ANY, raise_exc=False, microversion='1.21',
+            mock.ANY, raise_exc=False, microversion='1.24',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         url = self.ks_adap_mock.get.call_args[0][0]
         split_url = parse.urlsplit(url)
@@ -1533,7 +1533,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         res = self.client.get_allocation_candidates(self.context, resources)
 
         self.ks_adap_mock.get.assert_called_once_with(
-            mock.ANY, raise_exc=False, microversion='1.21',
+            mock.ANY, raise_exc=False, microversion='1.24',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         url = self.ks_adap_mock.get.call_args[0][0]
         split_url = parse.urlsplit(url)

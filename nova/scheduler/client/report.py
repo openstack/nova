@@ -345,33 +345,26 @@ class SchedulerReportClient(object):
         resource_query = ",".join(
             sorted("%s:%s" % (rc, amount)
             for (rc, amount) in res.items()))
-        qs_params = {
-            'resources': resource_query,
-            'limit': CONF.scheduler.max_placement_results,
-        }
+        qs_params = [
+            ('resources', resource_query),
+            ('limit', CONF.scheduler.max_placement_results),
+        ]
+        required_traits_params = []
         if required_traits:
-            qs_params['required'] = ",".join(required_traits)
+            required_traits_params.extend(required_traits)
         if forbidden_traits:
             # Sorted to make testing easier to manage and for
             # predictability.
-            forbiddens = ',!'.join(sorted(forbidden_traits))
-            if qs_params['required']:
-                qs_params['required'] += ',!' + forbiddens
-            else:
-                qs_params['required'] = '!' + forbiddens
-        if aggregates:
-            # NOTE(danms): In 1.21, placement cannot take an AND'd
-            # set of aggregates, only an OR'd set. Thus, if we have
-            # required and optional sets, we must do the naive thing
-            # and AND ours together. That will not achieve the same
-            # result, but we can't do it from the client side. When
-            # placement supports AND'ing multiple sets, we can fix this.
-            # TODO(danms): Update this when placement can take multiple
-            # member_of query parameters.
-            required_agg = set.intersection(*[set(x) for x in aggregates])
-            qs_params['member_of'] = 'in:' + ','.join(sorted(required_agg))
+            required_traits_params.extend(
+                ['!%s' % trait for trait in sorted(forbidden_traits)])
+        if required_traits_params:
+            qs_params.append(('required', ','.join(required_traits_params)))
 
-        version = '1.21'
+        if aggregates:
+            for agg_list in aggregates:
+                qs_params.append(('member_of', 'in:%s' % ','.join(agg_list)))
+
+        version = '1.24'
         url = "/allocation_candidates?%s" % parse.urlencode(qs_params)
         resp = self.get(url, version=version,
                         global_request_id=context.global_id)
@@ -389,8 +382,10 @@ class SchedulerReportClient(object):
                "API for filters %(resources)s, traits %(traits)s, "
                "aggregates %(aggregates)s. Got "
                "%(status_code)d: %(err_text)s.")
-        args['traits'] = qs_params.get('required', '(none)')
-        args['aggregates'] = qs_params.get('aggregates', '(none)')
+        query_traits = [v for k, v in qs_params if k == 'required']
+        query_aggs = [v for k, v in qs_params if k == 'member_of']
+        args['traits'] = query_traits and query_traits[0] or '(none)'
+        args['aggregates'] = ','.join(query_aggs) or '(none)'
         LOG.error(msg, args)
         return None, None, None
 
