@@ -154,6 +154,7 @@
         - nova-next
         - nova-tox-functional
         - nova-tox-functional-py35
+        - openstack-tox-lower-constraints
     gate:
       jobs:
         - nova-cells-v1
@@ -162,6 +163,7 @@
         - nova-next
         - nova-tox-functional
         - nova-tox-functional-py35
+        - openstack-tox-lower-constraints
     experimental:
       jobs:
         - nova-caching-scheduler
