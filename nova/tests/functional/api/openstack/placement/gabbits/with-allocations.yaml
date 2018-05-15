@@ -55,6 +55,19 @@ tests:
   response_strings:
       - "Inventory for 'VCPU, DISK_GB' on resource provider '$ENVIRON['RP_UUID']' in use"
 
+- name: fail to delete all inventory 1.23
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      accept: application/json
+      openstack-api-version: placement 1.23
+  status: 409
+  response_headers:
+      content-type: /application/json/
+  response_strings:
+      - "Inventory for 'VCPU, DISK_GB' on resource provider '$ENVIRON['RP_UUID']' in use"
+  response_json_paths:
+      $.errors[0].code: placement.inventory.inuse
+
 - name: get total usages by project
   GET: /usages?project_id=$ENVIRON['PROJECT_ID']
   request_headers:
