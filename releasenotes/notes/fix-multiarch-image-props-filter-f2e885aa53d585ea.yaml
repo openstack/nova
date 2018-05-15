@@ -1,0 +1,9 @@
+---
+fixes:
+  - The behaviour of ImagePropertiesFilter when using multiple architectures
+    in a cloud can be unpredictable for a user if they forget to set the
+    architecture property in their image.  Nova now allows the deployer to
+    specify a fallback in ``[filter_scheduler]image_properties_default_architecture``
+    to use a default architecture if none is specified.  Without this, it
+    is possible that a VM would get scheduled on a compute node that does not
+    support the image.
