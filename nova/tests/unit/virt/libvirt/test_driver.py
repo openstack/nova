@@ -4283,7 +4283,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             [mock.call(host='127.0.0.1', port=10000),
              mock.call(host='127.0.0.1', port=10001)])
 
-    @mock.patch('os.path.getsize', return_value=0)  # size doesn't matter
+    @mock.patch('nova.virt.disk.api.get_disk_size', return_value=0)
     @mock.patch('nova.virt.libvirt.storage.lvm.get_volume_size',
                 return_value='fake-size')
     def test_detach_encrypted_volumes(self, mock_get_volume_size,
@@ -8890,8 +8890,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_getsize = mock.Mock()
         mock_getsize.return_value = "10737418240"
+        mock_get_virtual_size = mock.Mock()
+        mock_get_virtual_size.return_value = "10737418240"
 
-        return (mock_getsize, mock_lookup)
+        return (mock_getsize, mock_get_virtual_size, mock_lookup)
 
     def test_is_shared_block_storage_rbd(self):
         self.flags(images_type='rbd', group='libvirt')
@@ -8984,7 +8986,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                   {'connection_info': 'info', 'mount_device': '/dev/vda'}]}
         instance = objects.Instance(**self.test_instance)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        (mock_getsize, mock_lookup) =\
+        (mock_getsize, mock_get_virtual_size, mock_lookup) =\
             self._is_shared_block_storage_test_create_mocks(disks)
         data = objects.LibvirtLiveMigrateData(is_volume_backed=True,
                                               is_shared_instance_path=False)
@@ -9008,18 +9010,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                   {'connection_info': 'info', 'mount_device': '/dev/vda'}]}
         instance = objects.Instance(**self.test_instance)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        (mock_getsize, mock_lookup) =\
+        (mock_getsize, mock_get_virtual_size, mock_lookup) =\
             self._is_shared_block_storage_test_create_mocks(disks)
         data = objects.LibvirtLiveMigrateData(is_volume_backed=True,
                                               is_shared_instance_path=False)
         with test.nested(
                 mock.patch.object(libvirt_driver.disk_api,
                                   'get_allocated_disk_size', mock_getsize),
+                mock.patch.object(libvirt_driver.disk_api,
+                                  'get_disk_size', mock_get_virtual_size),
                 mock.patch.object(host.Host, '_get_domain', mock_lookup)):
             self.assertFalse(drvr._is_shared_block_storage(
                                     instance, data,
                                     block_device_info = bdi))
         mock_getsize.assert_called_once_with('/instance/disk.local')
+        mock_get_virtual_size.assert_called_once_with('/instance/disk.local')
         mock_lookup.assert_called_once_with(instance)
 
     def test_is_shared_block_storage_nfs(self):
@@ -11697,27 +11702,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.mox.StubOutWithMock(libvirt_driver.disk_api,
                                  'get_allocated_disk_size')
+        self.mox.StubOutWithMock(libvirt_driver.disk_api, 'get_disk_size')
+
         path = '/test/disk'
         size = 10737418240
         libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
+        libvirt_driver.disk_api.get_disk_size(path).AndReturn((size))
         path = '/test/disk.local'
         size = 3328599655
+        vsize = 21474836480
         libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
-
-        ret = ("image: /test/disk.local\n"
-               "file format: qcow2\n"
-               "virtual size: 20G (21474836480 bytes)\n"
-               "disk size: 3.1G\n"
-               "cluster_size: 2097152\n"
-               "backing file: /test/dummy (actual path: /backing/file)\n")
-
-        self.mox.StubOutWithMock(os.path, "exists")
-        os.path.exists('/test/disk.local').AndReturn(True)
-
-        self.mox.StubOutWithMock(utils, "execute")
-        utils.execute('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info',
-                      '/test/disk.local', prlimit = images.QEMU_IMG_LIMITS,
-                      ).AndReturn((ret, ''))
+        libvirt_driver.disk_api.get_disk_size(path).AndReturn((vsize))
 
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -11854,27 +11849,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.mox.StubOutWithMock(libvirt_driver.disk_api,
                                  'get_allocated_disk_size')
+        self.mox.StubOutWithMock(libvirt_driver.disk_api, 'get_disk_size')
+
         path = '/test/disk'
         size = 10737418240
         libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
+        libvirt_driver.disk_api.get_disk_size(path).AndReturn((size))
         path = '/test/disk.local'
         size = 3328599655
+        vsize = 21474836480
         libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
-
-        ret = ("image: /test/disk.local\n"
-               "file format: qcow2\n"
-               "virtual size: 20G (21474836480 bytes)\n"
-               "disk size: 3.1G\n"
-               "cluster_size: 2097152\n"
-               "backing file: /test/dummy (actual path: /backing/file)\n")
-
-        self.mox.StubOutWithMock(os.path, "exists")
-        os.path.exists('/test/disk.local').AndReturn(True)
-
-        self.mox.StubOutWithMock(utils, "execute")
-        utils.execute('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info',
-                      '/test/disk.local', prlimit = images.QEMU_IMG_LIMITS,
-                      ).AndReturn((ret, ''))
+        libvirt_driver.disk_api.get_disk_size(path).AndReturn((vsize))
 
         self.mox.ReplayAll()
         conn_info = {'driver_volume_type': 'fake'}
@@ -11925,9 +11910,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.mox.StubOutWithMock(libvirt_driver.disk_api,
                                  "get_allocated_disk_size")
+        self.mox.StubOutWithMock(libvirt_driver.disk_api,
+                                 "get_disk_size")
+
         path = '/test/disk'
         size = 10737418240
         libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
+        libvirt_driver.disk_api.get_disk_size(path).AndReturn((size))
 
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -19317,6 +19306,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.assertEqual(fields.CPUMode.HOST_MODEL, vcpu_model.mode)
         self.assertEqual(vcpu_model, vcpu_model_1)
 
+    @mock.patch('nova.virt.disk.api.get_disk_size', return_value=10)
     @mock.patch.object(lvm, 'get_volume_size', return_value=10)
     @mock.patch.object(host.Host, "get_guest")
     @mock.patch.object(dmcrypt, 'delete_volume')
@@ -19325,7 +19315,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'save')
     def test_cleanup_lvm_encrypted(self, mock_save, mock_undefine_domain,
                                    mock_unfilter, mock_delete_volume,
-                                   mock_get_guest, mock_get_size):
+                                   mock_get_guest, mock_get_lvm_size,
+                                   mock_get_size):
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance = objects.Instance(
             uuid=uuids.instance, id=1,
@@ -19355,11 +19346,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                         block_device_info=block_device_info)
         mock_delete_volume.assert_called_once_with('/dev/mapper/fake-dmcrypt')
 
+    @mock.patch('nova.virt.disk.api.get_disk_size', return_value=10)
     @mock.patch.object(lvm, 'get_volume_size', return_value=10)
     @mock.patch.object(host.Host, "get_guest")
     @mock.patch.object(dmcrypt, 'delete_volume')
-    def _test_cleanup_lvm(self, mock_delete_volume, mock_get_guest, mock_size,
-                          encrypted=False):
+    def _test_cleanup_lvm(self, mock_delete_volume, mock_get_guest,
+                          mock_lvm_size, mock_get_size, encrypted=False):
 
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance = objects.Instance(
