@@ -22,6 +22,7 @@ from nova.api.openstack.placement import errors
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.api.openstack.placement.policies import inventory as policies
 from nova.api.openstack.placement.schemas import inventory as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
@@ -157,6 +158,7 @@ def create_inventory(req):
     of the inventory.
     """
     context = req.environ['placement.context']
+    context.can(policies.CREATE)
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
@@ -197,6 +199,7 @@ def delete_inventory(req):
     On success return a 204 and an empty body.
     """
     context = req.environ['placement.context']
+    context.can(policies.DELETE)
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_class = util.wsgi_path_item(req.environ, 'resource_class')
 
@@ -229,6 +232,7 @@ def get_inventories(req):
     a collection of inventories.
     """
     context = req.environ['placement.context']
+    context.can(policies.LIST)
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     try:
         rp = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
@@ -251,6 +255,7 @@ def get_inventory(req):
     inventory.
     """
     context = req.environ['placement.context']
+    context.can(policies.SHOW)
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_class = util.wsgi_path_item(req.environ, 'resource_class')
     try:
@@ -288,6 +293,7 @@ def set_inventories(req):
     the inventories.
     """
     context = req.environ['placement.context']
+    context.can(policies.UPDATE)
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
@@ -345,6 +351,7 @@ def delete_inventories(req):
     Return 405 Method Not Allowed if the wanted microversion does not match.
     """
     context = req.environ['placement.context']
+    context.can(policies.DELETE)
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
@@ -385,6 +392,7 @@ def update_inventory(req):
     the inventory.
     """
     context = req.environ['placement.context']
+    context.can(policies.UPDATE)
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_class = util.wsgi_path_item(req.environ, 'resource_class')
 
