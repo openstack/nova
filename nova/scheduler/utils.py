@@ -24,7 +24,6 @@ import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from six.moves.urllib import parse
 
-from nova.api.openstack.placement import lib as placement_lib
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
 import nova.conf
@@ -69,7 +68,7 @@ class ResourceRequest(object):
 
     def get_request_group(self, ident):
         if ident not in self._rg_by_id:
-            rq_grp = placement_lib.RequestGroup(use_same_provider=bool(ident))
+            rq_grp = objects.RequestGroup(use_same_provider=bool(ident))
             self._rg_by_id[ident] = rq_grp
         return self._rg_by_id[ident]
 
@@ -245,13 +244,15 @@ class ResourceRequest(object):
         """Produce a querystring of the form expected by
         GET /allocation_candidates.
         """
+        # TODO(gibi): We have a RequestGroup OVO so we can move this to that
+        # class as a member function.
         # NOTE(efried): The sorting herein is not necessary for the API; it is
         # to make testing easier and logging/debugging predictable.
         def to_queryparams(request_group, suffix):
             res = request_group.resources
             required_traits = request_group.required_traits
             forbidden_traits = request_group.forbidden_traits
-            aggregates = request_group.member_of
+            aggregates = request_group.aggregates
 
             resource_query = ",".join(
                 sorted("%s:%s" % (rc, amount)
@@ -457,8 +458,8 @@ def resources_from_request_spec(spec_obj):
         destination = spec_obj.requested_destination
         if destination and destination.aggregates:
             grp = res_req.get_request_group(None)
-            grp.member_of = [tuple(ored.split(','))
-                             for ored in destination.aggregates]
+            grp.aggregates = [ored.split(',')
+                              for ored in destination.aggregates]
 
     # Don't limit allocation candidates when using force_hosts or force_nodes.
     if 'force_hosts' in spec_obj and spec_obj.force_hosts:

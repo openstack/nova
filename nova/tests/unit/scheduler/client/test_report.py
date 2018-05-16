@@ -1993,8 +1993,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'trait:HW_NIC_OFFLOAD_LRO': 'preferred',
             'group_policy3': 'none',
         })
-        resources.get_request_group(None).member_of = [
-            ('agg1', 'agg2', 'agg3'), ('agg1', 'agg2')]
+        resources.get_request_group(None).aggregates = [
+            ['agg1', 'agg2', 'agg3'], ['agg1', 'agg2']]
         expected_path = '/allocation_candidates'
         expected_query = [
             ('group_policy', 'isolate'),

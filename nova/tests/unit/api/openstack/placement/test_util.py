@@ -904,6 +904,35 @@ class TestPickLastModified(testtools.TestCase):
             mock_utc.assert_called_once_with(with_timezone=True)
 
 
+class TestRequestGroup(testtools.TestCase):
+    def test_stringification(self):
+        grp = pl.RequestGroup(
+            resources={
+                'VCPU': 2,
+                'CUSTOM_MAGIC': 1,
+            },
+            required_traits={
+                'CUSTOM_VNIC_TYPE_NORMAL',
+                'CUSTOM_PHYSNET1',
+            },
+            forbidden_traits={
+                'CUSTOM_PHYSNET2',
+                'CUSTOM_VNIC_TYPE_DIRECT'
+            },
+            member_of=[
+                ['baz'],
+                ['foo', 'bar']
+            ]
+        )
+        self.assertEqual(
+            'RequestGroup(use_same_provider=True, '
+            'resources={CUSTOM_MAGIC:1, VCPU:2}, '
+            'traits=[CUSTOM_PHYSNET1, CUSTOM_VNIC_TYPE_NORMAL, '
+            '!CUSTOM_PHYSNET2, !CUSTOM_VNIC_TYPE_DIRECT], '
+            'aggregates=[[baz], [foo, bar]])',
+            str(grp))
+
+
 class TestEnsureConsumer(testtools.TestCase):
     def setUp(self):
         super(TestEnsureConsumer, self).setUp()

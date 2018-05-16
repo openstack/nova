@@ -1240,3 +1240,7 @@ class InstanceTaskStateField(BaseEnumField):
 
 class InstancePowerStateField(BaseEnumField):
     AUTO_TYPE = InstancePowerState()
+
+
+class ListOfListsOfStringsField(fields.AutoTypedField):
+    AUTO_TYPE = List(List(fields.String()))

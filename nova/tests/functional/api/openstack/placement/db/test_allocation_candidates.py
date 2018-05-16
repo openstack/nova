@@ -1993,7 +1993,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                     fields.ResourceClass.MEMORY_MB: 256,
                     fields.ResourceClass.SRIOV_NET_VF: 1,
                 },
-                required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE],
+                required_traits=set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
             )}
         )
 
@@ -2128,7 +2128,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                     fields.ResourceClass.MEMORY_MB: 256,
                     fields.ResourceClass.SRIOV_NET_VF: 1,
                 },
-                required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE],
+                required_traits=set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
             )}
         )
 

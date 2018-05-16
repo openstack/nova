@@ -13,7 +13,6 @@
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
-from nova.api.openstack.placement import lib as plib
 from nova import context as nova_context
 from nova import exception
 from nova import objects
@@ -64,7 +63,7 @@ class TestUtils(test.NoDBTestCase):
                                 ephemeral_gb=5,
                                 swap=0)
         expected_resources = utils.ResourceRequest()
-        expected_resources._rg_by_id[None] = plib.RequestGroup(
+        expected_resources._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 'VCPU': 1,
@@ -85,7 +84,7 @@ class TestUtils(test.NoDBTestCase):
                                     'trait:CUSTOM_FLAVOR_TRAIT': 'required',
                                     'trait:CUSTOM_IMAGE_TRAIT2': 'required'})
         expected_resources = utils.ResourceRequest()
-        expected_resources._rg_by_id[None] = plib.RequestGroup(
+        expected_resources._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 'VCPU': 1,
@@ -110,7 +109,7 @@ class TestUtils(test.NoDBTestCase):
                                 ephemeral_gb=0,
                                 swap=0)
         expected_resources = utils.ResourceRequest()
-        expected_resources._rg_by_id[None] = plib.RequestGroup(
+        expected_resources._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 'VCPU': 1,
@@ -127,7 +126,7 @@ class TestUtils(test.NoDBTestCase):
                                 swap=0,
                                 extra_specs={"resources:CUSTOM_TEST_CLASS": 1})
         expected_resources = utils.ResourceRequest()
-        expected_resources._rg_by_id[None] = plib.RequestGroup(
+        expected_resources._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 "VCPU": 1,
@@ -149,7 +148,7 @@ class TestUtils(test.NoDBTestCase):
                                     "resources:MEMORY_MB": 99,
                                     "resources:DISK_GB": 99})
         expected_resources = utils.ResourceRequest()
-        expected_resources._rg_by_id[None] = plib.RequestGroup(
+        expected_resources._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 "VCPU": 99,
@@ -169,7 +168,7 @@ class TestUtils(test.NoDBTestCase):
                                     "resources:VCPU": 0,
                                     "resources:DISK_GB": 0})
         expected_resources = utils.ResourceRequest()
-        expected_resources._rg_by_id[None] = plib.RequestGroup(
+        expected_resources._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 "MEMORY_MB": 1024,
@@ -187,7 +186,7 @@ class TestUtils(test.NoDBTestCase):
                                     "resources:VGPU": 1,
                                     "resources:VGPU_DISPLAY_HEAD": 1})
         expected_resources = utils.ResourceRequest()
-        expected_resources._rg_by_id[None] = plib.RequestGroup(
+        expected_resources._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 "VCPU": 1,
@@ -243,20 +242,20 @@ class TestUtils(test.NoDBTestCase):
                          'group_policy': 'none'})
         expected_resources = utils.ResourceRequest()
         expected_resources._group_policy = 'none'
-        expected_resources._rg_by_id[None] = plib.RequestGroup(
+        expected_resources._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 'DISK_GB': 10,
                 'CUSTOM_THING': 123,
             }
         )
-        expected_resources._rg_by_id['1'] = plib.RequestGroup(
+        expected_resources._rg_by_id['1'] = objects.RequestGroup(
             resources={
                 'VGPU': 1,
                 'VGPU_DISPLAY_HEAD': 2,
             }
         )
-        expected_resources._rg_by_id['3'] = plib.RequestGroup(
+        expected_resources._rg_by_id['3'] = objects.RequestGroup(
             resources={
                 'VCPU': 2,
             },
@@ -265,12 +264,12 @@ class TestUtils(test.NoDBTestCase):
                 'CUSTOM_SILVER',
             }
         )
-        expected_resources._rg_by_id['24'] = plib.RequestGroup(
+        expected_resources._rg_by_id['24'] = objects.RequestGroup(
             resources={
                 'SRIOV_NET_VF': 2,
             },
         )
-        expected_resources._rg_by_id['42'] = plib.RequestGroup(
+        expected_resources._rg_by_id['42'] = objects.RequestGroup(
             resources={
                 'SRIOV_NET_VF': 1,
             }
@@ -299,21 +298,13 @@ class TestUtils(test.NoDBTestCase):
 
         destination.require_aggregates(['foo', 'bar'])
         req = utils.resources_from_request_spec(reqspec)
-        self.assertEqual([('foo', 'bar',)],
-                         req.get_request_group(None).member_of)
+        self.assertEqual([['foo', 'bar']],
+                         req.get_request_group(None).aggregates)
 
         destination.require_aggregates(['baz'])
         req = utils.resources_from_request_spec(reqspec)
-        self.assertEqual([('foo', 'bar'), ('baz',)],
-                         req.get_request_group(None).member_of)
-
-        # Test stringification
-        self.assertEqual(
-            'RequestGroup(use_same_provider=False, '
-            'resources={DISK_GB:1, MEMORY_MB:1024, VCPU:1}, '
-            'traits=[], '
-            'aggregates=[[baz], [foo, bar]])',
-            str(req))
+        self.assertEqual([['foo', 'bar'], ['baz']],
+                         req.get_request_group(None).aggregates)
 
     def test_resources_from_request_spec_no_aggregates(self):
         flavor = objects.Flavor(vcpus=1, memory_mb=1024,
@@ -322,19 +313,19 @@ class TestUtils(test.NoDBTestCase):
         reqspec = objects.RequestSpec(flavor=flavor)
 
         req = utils.resources_from_request_spec(reqspec)
-        self.assertEqual([], req.get_request_group(None).member_of)
+        self.assertEqual([], req.get_request_group(None).aggregates)
 
         reqspec.requested_destination = None
         req = utils.resources_from_request_spec(reqspec)
-        self.assertEqual([], req.get_request_group(None).member_of)
+        self.assertEqual([], req.get_request_group(None).aggregates)
 
         reqspec.requested_destination = objects.Destination()
         req = utils.resources_from_request_spec(reqspec)
-        self.assertEqual([], req.get_request_group(None).member_of)
+        self.assertEqual([], req.get_request_group(None).aggregates)
 
         reqspec.requested_destination.aggregates = None
         req = utils.resources_from_request_spec(reqspec)
-        self.assertEqual([], req.get_request_group(None).member_of)
+        self.assertEqual([], req.get_request_group(None).aggregates)
 
     @mock.patch("nova.scheduler.utils.ResourceRequest.from_extra_specs")
     def test_process_extra_specs_granular_called(self, mock_proc):
@@ -377,7 +368,7 @@ class TestUtils(test.NoDBTestCase):
                                 ephemeral_gb=0,
                                 swap=0)
         expected = utils.ResourceRequest()
-        expected._rg_by_id[None] = plib.RequestGroup(
+        expected._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 'VCPU': 1,
@@ -400,7 +391,7 @@ class TestUtils(test.NoDBTestCase):
                                 swap=0)
         fake_spec = objects.RequestSpec(flavor=flavor, force_nodes=['test'])
         expected = utils.ResourceRequest()
-        expected._rg_by_id[None] = plib.RequestGroup(
+        expected._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 'VCPU': 1,
@@ -424,7 +415,7 @@ class TestUtils(test.NoDBTestCase):
                                 swap=0)
         fake_spec = objects.RequestSpec(flavor=flavor, force_hosts=['test'])
         expected = utils.ResourceRequest()
-        expected._rg_by_id[None] = plib.RequestGroup(
+        expected._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 'VCPU': 1,
@@ -538,7 +529,7 @@ class TestUtils(test.NoDBTestCase):
         # Build up a ResourceRequest from the inside to compare against.
         expected = utils.ResourceRequest()
         expected._group_policy = 'isolate'
-        expected._rg_by_id[None] = plib.RequestGroup(
+        expected._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 'VCPU': 2,
@@ -552,7 +543,7 @@ class TestUtils(test.NoDBTestCase):
                 'CUSTOM_BRONZE',
             },
         )
-        expected._rg_by_id['1'] = plib.RequestGroup(
+        expected._rg_by_id['1'] = objects.RequestGroup(
             resources={
                 'SRIOV_NET_VF': 1,
                 'IPV4_ADDRESS': 1,
@@ -564,7 +555,7 @@ class TestUtils(test.NoDBTestCase):
                 'CUSTOM_PHYSNET_NET2',
             },
         )
-        expected._rg_by_id['2'] = plib.RequestGroup(
+        expected._rg_by_id['2'] = objects.RequestGroup(
             resources={
                 'SRIOV_NET_VF': 1,
                 'IPV4_ADDRESS': 2,
@@ -574,7 +565,7 @@ class TestUtils(test.NoDBTestCase):
                 'HW_NIC_ACCEL_SSL',
             }
         )
-        expected._rg_by_id['3'] = plib.RequestGroup(
+        expected._rg_by_id['3'] = objects.RequestGroup(
             resources={
                 'DISK_GB': 5,
             }
@@ -595,26 +586,6 @@ class TestUtils(test.NoDBTestCase):
         )
         self.assertEqual(expected_querystring, rr.to_querystring())
 
-        # Test stringification
-        self.assertEqual(
-            'RequestGroup(use_same_provider=False, '
-            'resources={MEMORY_MB:2048, VCPU:2}, '
-            'traits=[CUSTOM_MAGIC, HW_CPU_X86_AVX, !CUSTOM_BRONZE], '
-            'aggregates=[]), '
-            'RequestGroup(use_same_provider=True, '
-            'resources={DISK_GB:5}, '
-            'traits=[], '
-            'aggregates=[]), '
-            'RequestGroup(use_same_provider=True, '
-            'resources={IPV4_ADDRESS:1, SRIOV_NET_VF:1}, '
-            'traits=[CUSTOM_PHYSNET_NET1, !CUSTOM_PHYSNET_NET2], '
-            'aggregates=[]), '
-            'RequestGroup(use_same_provider=True, '
-            'resources={IPV4_ADDRESS:2, SRIOV_NET_VF:1}, '
-            'traits=[CUSTOM_PHYSNET_NET2, HW_NIC_ACCEL_SSL], '
-            'aggregates=[])',
-            str(rr))
-
     def test_resource_request_from_extra_specs_append_request(self):
         extra_specs = {
             'resources:VCPU': '2',
@@ -622,7 +593,7 @@ class TestUtils(test.NoDBTestCase):
             'trait:HW_CPU_X86_AVX': 'required',
         }
         existing_req = utils.ResourceRequest()
-        existing_req._rg_by_id[None] = plib.RequestGroup(
+        existing_req._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             required_traits={
                 'CUSTOM_MAGIC',
@@ -630,7 +601,7 @@ class TestUtils(test.NoDBTestCase):
         )
         # Build up a ResourceRequest from the inside to compare against.
         expected = utils.ResourceRequest()
-        expected._rg_by_id[None] = plib.RequestGroup(
+        expected._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 'VCPU': 2,
@@ -653,7 +624,7 @@ class TestUtils(test.NoDBTestCase):
 
         # Build up a ResourceRequest from the inside to compare against.
         expected = utils.ResourceRequest()
-        expected._rg_by_id[None] = plib.RequestGroup(
+        expected._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             required_traits={
                 'CUSTOM_TRUSTED',
@@ -667,7 +638,7 @@ class TestUtils(test.NoDBTestCase):
         image_meta_props = objects.ImageMetaProps.from_dict(props)
 
         existing_req = utils.ResourceRequest()
-        existing_req._rg_by_id[None] = plib.RequestGroup(
+        existing_req._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 'VCPU': 2,
@@ -679,7 +650,7 @@ class TestUtils(test.NoDBTestCase):
         )
         # Build up a ResourceRequest from the inside to compare against.
         expected = utils.ResourceRequest()
-        expected._rg_by_id[None] = plib.RequestGroup(
+        expected._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources={
                 'VCPU': 2,

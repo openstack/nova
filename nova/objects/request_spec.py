@@ -850,3 +850,29 @@ class SchedulerLimits(base.NovaObject):
             if getattr(self, field) is not None:
                 limits[field] = getattr(self, field)
         return limits
+
+
+@base.NovaObjectRegistry.register
+class RequestGroup(base.NovaObject):
+    """Versioned object based on the unversioned
+    nova.api.openstack.placement.lib.RequestGroup object.
+    """
+    VERSION = '1.0'
+
+    fields = {
+        'use_same_provider': fields.BooleanField(default=True),
+        'resources': fields.DictOfIntegersField(default={}),
+        'required_traits': fields.SetOfStringsField(default=set()),
+        'forbidden_traits': fields.SetOfStringsField(default=set()),
+        # The aggregates field has a form of
+        #     [[aggregate_UUID1],
+        #      [aggregate_UUID2, aggregate_UUID3]]
+        # meaning that the request should be fulfilled from an RP that is a
+        # member of the aggregate aggregate_UUID1 and member of the aggregate
+        # aggregate_UUID2 or aggregate_UUID3 .
+        'aggregates': fields.ListOfListsOfStringsField(default=[]),
+    }
+
+    def __init__(self, context=None, **kwargs):
+        super(RequestGroup, self).__init__(context=context, **kwargs)
+        self.obj_set_defaults()

@@ -45,7 +45,7 @@ class RequestGroup(object):
             for rc, amount in sorted(list(self.resources.items())))
         ret += ', traits=[%s]' % ', '.join(
             sorted(self.required_traits) +
-            ['!%s' % ft for ft in self.forbidden_traits])
+            ['!%s' % ft for ft in sorted(self.forbidden_traits)])
         ret += ', aggregates=[%s]' % ', '.join(
             sorted('[%s]' % ', '.join(agglist)
                    for agglist in sorted(self.member_of)))

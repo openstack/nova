@@ -24,6 +24,7 @@ from nova.network import model as network_model
 from nova import objects
 from nova.objects import base
 from nova.objects import request_spec
+from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
@@ -753,3 +754,19 @@ class TestRequestSpecObject(test_objects._LocalTest,
 class TestRemoteRequestSpecObject(test_objects._RemoteTest,
                                   _TestRequestSpecObject):
     pass
+
+
+class TestRequestGroupObject(test.TestCase):
+    def setUp(self):
+        super(TestRequestGroupObject, self).setUp()
+        self.user_id = uuids.user_id
+        self.project_id = uuids.project_id
+        self.context = context.RequestContext(uuids.user_id, uuids.project_id)
+
+    def test_fields_defaulted_at_create(self):
+        rg = request_spec.RequestGroup(self.context)
+        self.assertTrue(True, rg.use_same_provider)
+        self.assertEqual({}, rg.resources)
+        self.assertEqual(set(), rg.required_traits)
+        self.assertEqual(set(), rg.forbidden_traits)
+        self.assertEqual([], rg.aggregates)
