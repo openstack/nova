@@ -393,6 +393,24 @@ class _TestRequestSpecObject(object):
                 filter_properties, None, instance.availability_zone)
         self.assertNotIn('security_groups', spec)
 
+    def test_from_components_with_port_resource_request(self, ):
+        ctxt = context.RequestContext(fakes.FAKE_USER_ID,
+                                      fakes.FAKE_PROJECT_ID)
+        instance = fake_instance.fake_instance_obj(ctxt)
+        image = {'id': uuids.image_id, 'properties': {'mappings': []},
+                 'status': 'fake-status', 'location': 'far-away'}
+        flavor = fake_flavor.fake_flavor_obj(ctxt)
+        filter_properties = {'fake': 'property'}
+
+        rg = request_spec.RequestGroup()
+
+        spec = objects.RequestSpec.from_components(ctxt, instance.uuid, image,
+                flavor, instance.numa_topology, instance.pci_requests,
+                filter_properties, None, instance.availability_zone,
+                port_resource_requests=[rg])
+
+        self.assertListEqual([rg], spec.requested_resources)
+
     def test_get_scheduler_hint(self):
         spec_obj = objects.RequestSpec(scheduler_hints={'foo_single': ['1'],
                                                         'foo_mul': ['1', '2']})
@@ -616,6 +634,52 @@ class _TestRequestSpecObject(object):
 
         self.assertRaises(exception.ObjectActionError, req_obj.create)
 
+    def test_create_does_not_persist_requested_resources(self):
+        req_obj = fake_request_spec.fake_spec_obj(remove_id=True)
+        rg = request_spec.RequestGroup(resources={'fake-rc': 13})
+        req_obj.requested_resources = [rg]
+        orig_create_in_db = request_spec.RequestSpec._create_in_db
+        with mock.patch.object(request_spec.RequestSpec, '_create_in_db') \
+                as mock_create_in_db:
+            mock_create_in_db.side_effect = orig_create_in_db
+            req_obj.create()
+            mock_create_in_db.assert_called_once()
+            updates = mock_create_in_db.mock_calls[0][1][1]
+            # assert that the requested_resources field is not stored in the db
+            data = jsonutils.loads(updates['spec'])['nova_object.data']
+            self.assertIsNone(data['requested_resources'])
+            self.assertIsNotNone(data['instance_uuid'])
+
+        # also we expect that requested_resources field does not reset after
+        # create
+        self.assertEqual(
+            13, req_obj.requested_resources[0].resources['fake-rc'])
+
+    def test_save_does_not_persist_requested_resources(self):
+        req_obj = fake_request_spec.fake_spec_obj(remove_id=True)
+        rg = request_spec.RequestGroup(resources={'fake-rc': 13})
+        req_obj.requested_resources = [rg]
+        req_obj.create()
+        # change something to make sure _save_in_db is called
+        req_obj.num_instances = 2
+
+        orig_save_in_db = request_spec.RequestSpec._save_in_db
+        with mock.patch.object(request_spec.RequestSpec, '_save_in_db') \
+                as mock_save_in_db:
+            mock_save_in_db.side_effect = orig_save_in_db
+            req_obj.save()
+            mock_save_in_db.assert_called_once()
+            updates = mock_save_in_db.mock_calls[0][1][2]
+            # assert that the requested_resources field is not stored in the db
+            data = jsonutils.loads(updates['spec'])['nova_object.data']
+            self.assertIsNone(data['requested_resources'])
+            self.assertIsNotNone(data['instance_uuid'])
+
+        # also we expect that requested_resources field does not reset after
+        # save
+        self.assertEqual(13, req_obj.requested_resources[0].resources
+                             ['fake-rc'])
+
     def test_save(self):
         req_obj = fake_request_spec.fake_spec_obj()
         # Make sure the requested_destination is not persisted since it is
@@ -701,6 +765,16 @@ class _TestRequestSpecObject(object):
         primitive = primitive['nova_object.data']
         self.assertNotIn('network_metadata', primitive)
         self.assertIn('user_id', primitive)
+
+    def test_compat_requested_resources(self):
+        req_obj = objects.RequestSpec(requested_resources=[],
+                                      instance_uuid=uuids.instance)
+        versions = ovo_base.obj_tree_get_versions('RequestSpec')
+        primitive = req_obj.obj_to_primitive(target_version='1.11',
+                                             version_manifest=versions)
+        primitive = primitive['nova_object.data']
+        self.assertNotIn('requested_resources', primitive)
+        self.assertIn('instance_uuid', primitive)
 
     def test_default_requested_destination(self):
         req_obj = objects.RequestSpec()

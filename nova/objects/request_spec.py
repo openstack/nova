@@ -28,7 +28,8 @@ from nova.virt import hardware
 
 REQUEST_SPEC_OPTIONAL_ATTRS = ['requested_destination',
                                'security_groups',
-                               'network_metadata']
+                               'network_metadata',
+                               'requested_resources']
 
 
 @base.NovaObjectRegistry.register
@@ -45,7 +46,8 @@ class RequestSpec(base.NovaObject):
     # Version 1.9: Added user_id
     # Version 1.10: Added network_metadata
     # Version 1.11: Added is_bfv
-    VERSION = '1.11'
+    # Version 1.12: Added requested_resources
+    VERSION = '1.12'
 
     fields = {
         'id': fields.IntegerField(),
@@ -84,11 +86,17 @@ class RequestSpec(base.NovaObject):
         'security_groups': fields.ObjectField('SecurityGroupList'),
         'network_metadata': fields.ObjectField('NetworkMetadata'),
         'is_bfv': fields.BooleanField(),
+        'requested_resources': fields.ListOfObjectsField('RequestGroup',
+                                                         nullable=True,
+                                                         default=None)
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(RequestSpec, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 12):
+            if 'requested_resources' in primitive:
+                del primitive['requested_resources']
         if target_version < (1, 11) and 'is_bfv' in primitive:
             del primitive['is_bfv']
         if target_version < (1, 10):
@@ -410,7 +418,7 @@ class RequestSpec(base.NovaObject):
     def from_components(cls, context, instance_uuid, image, flavor,
             numa_topology, pci_requests, filter_properties, instance_group,
             availability_zone, security_groups=None, project_id=None,
-            user_id=None):
+            user_id=None, port_resource_requests=None):
         """Returns a new RequestSpec object hydrated by various components.
 
         This helper is useful in creating the RequestSpec from the various
@@ -433,6 +441,9 @@ class RequestSpec(base.NovaObject):
                            the instance project_id).
         :param user_id: The user_id for the requestspec (should match
                            the instance user_id).
+        :param port_resource_requests: a list of RequestGroup objects
+                                       representing the resource needs of the
+                                       neutron ports
         """
         spec_obj = cls(context)
         spec_obj.num_instances = 1
@@ -457,6 +468,13 @@ class RequestSpec(base.NovaObject):
             spec_obj.security_groups = security_groups
         spec_obj.requested_destination = filter_properties.get(
             'requested_destination')
+
+        # TODO(gibi): do the creation of the unnumbered group and any
+        # numbered group from the flavor by moving the logic from
+        # nova.scheduler.utils.resources_from_request_spec() here.
+        spec_obj.requested_resources = []
+        if port_resource_requests:
+            spec_obj.requested_resources.extend(port_resource_requests)
 
         # NOTE(sbauza): Default the other fields that are not part of the
         # original contract
@@ -497,6 +515,13 @@ class RequestSpec(base.NovaObject):
             # though they should match.
             if key in ['id', 'instance_uuid']:
                 setattr(spec, key, db_spec[key])
+            elif key == 'requested_resources':
+                # Do not override what we already have in the object as this
+                # field is not persisted. If save() is called after
+                # requested_resources is populated, it will reset the field to
+                # None and we'll lose what is set (but not persisted) on the
+                # object.
+                continue
             elif key in spec_obj:
                 setattr(spec, key, getattr(spec_obj, key))
         spec._context = context
@@ -560,7 +585,8 @@ class RequestSpec(base.NovaObject):
                 spec.instance_group.hosts = None
             # NOTE(mriedem): Don't persist retries or requested_destination
             # since those are per-request
-            for excluded in ('retry', 'requested_destination'):
+            for excluded in ('retry', 'requested_destination',
+                             'requested_resources'):
                 if excluded in spec and getattr(spec, excluded):
                     setattr(spec, excluded, None)
             # NOTE(stephenfin): Don't persist network metadata since we have
