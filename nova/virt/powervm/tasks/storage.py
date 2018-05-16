@@ -14,10 +14,13 @@
 
 from oslo_log import log as logging
 from pypowervm import exceptions as pvm_exc
+from pypowervm.tasks import scsi_mapper as pvm_smap
 from taskflow import task
 from taskflow.types import failure as task_fail
 
+from nova import exception
 from nova.virt.powervm import media
+from nova.virt.powervm import mgmt
 
 LOG = logging.getLogger(__name__)
 
@@ -205,3 +208,142 @@ class DeleteVOpt(task.Task):
     def execute(self):
         media_builder = media.ConfigDrivePowerVM(self.adapter)
         media_builder.dlt_vopt(self.instance, stg_ftsk=self.stg_ftsk)
+
+
+class InstanceDiskToMgmt(task.Task):
+
+    """The task to connect an instance's disk to the management partition."
+
+    This task will connect the instance's disk to the management partition and
+    discover it. We do these two pieces together because their reversion
+    happens in the same order.
+    """
+
+    def __init__(self, disk_dvr, instance):
+        """Create the Task for connecting boot disk to mgmt partition.
+
+        Provides:
+        stg_elem: The storage element wrapper (pypowervm LU, PV, etc.) that was
+                  connected.
+        vios_wrap: The Virtual I/O Server wrapper from which the storage
+                   element was mapped.
+        disk_path: The local path to the mapped-and-discovered device, e.g.
+                   '/dev/sde'.
+
+        :param disk_dvr: The disk driver.
+        :param instance: The nova instance whose boot disk is to be connected.
+        """
+        super(InstanceDiskToMgmt, self).__init__(
+            name='instance_disk_to_mgmt',
+            provides=['stg_elem', 'vios_wrap', 'disk_path'])
+        self.disk_dvr = disk_dvr
+        self.instance = instance
+        self.stg_elem = None
+        self.vios_wrap = None
+        self.disk_path = None
+
+    def execute(self):
+        """Map the instance's boot disk and discover it."""
+
+        # Search for boot disk on the NovaLink partition.
+        if self.disk_dvr.mp_uuid in self.disk_dvr._vios_uuids:
+            dev_name = self.disk_dvr.get_bootdisk_path(
+                self.instance, self.disk_dvr.mp_uuid)
+            if dev_name is not None:
+                return None, None, dev_name
+
+        self.stg_elem, self.vios_wrap = (
+            self.disk_dvr.connect_instance_disk_to_mgmt(self.instance))
+        new_maps = pvm_smap.find_maps(
+            self.vios_wrap.scsi_mappings, client_lpar_id=self.disk_dvr.mp_uuid,
+            stg_elem=self.stg_elem)
+        if not new_maps:
+            raise exception.NewMgmtMappingNotFoundException(
+                stg_name=self.stg_elem.name, vios_name=self.vios_wrap.name)
+
+        # new_maps should be length 1, but even if it's not - i.e. we somehow
+        # matched more than one mapping of the same dev to the management
+        # partition from the same VIOS - it is safe to use the first one.
+        mapping = new_maps[0]
+        # Scan the SCSI bus, discover the disk, find its canonical path.
+        LOG.info("Discovering device and path for mapping of %(dev_name)s "
+                 "on the management partition.",
+                 {'dev_name': self.stg_elem.name}, instance=self.instance)
+        self.disk_path = mgmt.discover_vscsi_disk(mapping)
+        return self.stg_elem, self.vios_wrap, self.disk_path
+
+    def revert(self, result, flow_failures):
+        """Unmap the disk and then remove it from the management partition.
+
+        We use this order to avoid rediscovering the device in case some other
+        thread scans the SCSI bus between when we remove and when we unmap.
+        """
+        if self.vios_wrap is None or self.stg_elem is None:
+            # We never even got connected - nothing to do.
+            return
+        LOG.warning("Unmapping boot disk %(disk_name)s from the management "
+                    "partition via Virtual I/O Server %(vioname)s.",
+                    {'disk_name': self.stg_elem.name,
+                     'vioname': self.vios_wrap.name}, instance=self.instance)
+        self.disk_dvr.disconnect_disk_from_mgmt(self.vios_wrap.uuid,
+                                                self.stg_elem.name)
+
+        if self.disk_path is None:
+            # We did not discover the disk - nothing else to do.
+            return
+        LOG.warning("Removing disk %(dpath)s from the management partition.",
+                    {'dpath': self.disk_path}, instance=self.instance)
+        try:
+            mgmt.remove_block_dev(self.disk_path)
+        except pvm_exc.Error:
+            # Don't allow revert exceptions to interrupt the revert flow.
+            LOG.exception("Remove disk failed during revert. Ignoring.",
+                          instance=self.instance)
+
+
+class RemoveInstanceDiskFromMgmt(task.Task):
+
+    """Unmap and remove an instance's boot disk from the mgmt partition."""
+
+    def __init__(self, disk_dvr, instance):
+        """Create task to unmap and remove an instance's boot disk from mgmt.
+
+        Requires (from InstanceDiskToMgmt):
+        stg_elem: The storage element wrapper (pypowervm LU, PV, etc.) that was
+                  connected.
+        vios_wrap: The Virtual I/O Server wrapper.
+                   (pypowervm.wrappers.virtual_io_server.VIOS) from which the
+                   storage element was mapped.
+        disk_path: The local path to the mapped-and-discovered device, e.g.
+                   '/dev/sde'.
+        :param disk_dvr: The disk driver.
+        :param instance: The nova instance whose boot disk is to be connected.
+        """
+        self.disk_dvr = disk_dvr
+        self.instance = instance
+        super(RemoveInstanceDiskFromMgmt, self).__init__(
+            name='remove_inst_disk_from_mgmt',
+            requires=['stg_elem', 'vios_wrap', 'disk_path'])
+
+    def execute(self, stg_elem, vios_wrap, disk_path):
+        """Unmap and remove an instance's boot disk from the mgmt partition.
+
+        Input parameters ('requires') provided by InstanceDiskToMgmt task.
+        :param stg_elem: The storage element wrapper (pypowervm LU, PV, etc.)
+                         to be disconnected.
+        :param vios_wrap: The Virtual I/O Server wrapper from which the
+                          mapping is to be removed.
+        :param disk_path: The local path to the disk device to be removed, e.g.
+                          '/dev/sde'
+        """
+        # stg_elem is None if boot disk was not mapped to management partition.
+        if stg_elem is None:
+            return
+        LOG.info("Unmapping boot disk %(disk_name)s from the management "
+                 "partition via Virtual I/O Server %(vios_name)s.",
+                 {'disk_name': stg_elem.name, 'vios_name': vios_wrap.name},
+                 instance=self.instance)
+        self.disk_dvr.disconnect_disk_from_mgmt(vios_wrap.uuid, stg_elem.name)
+        LOG.info("Removing disk %(disk_path)s from the management partition.",
+                 {'disk_path': disk_path}, instance=self.instance)
+        mgmt.remove_block_dev(disk_path)

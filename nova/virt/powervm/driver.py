@@ -27,6 +27,7 @@ from pypowervm.wrappers import managed_system as pvm_ms
 import six
 from taskflow.patterns import linear_flow as tf_lf
 
+from nova.compute import task_states
 from nova import conf as cfg
 from nova.console import type as console_type
 from nova import exception as exc
@@ -37,6 +38,7 @@ from nova.virt import driver
 from nova.virt.powervm.disk import ssp
 from nova.virt.powervm import host as pvm_host
 from nova.virt.powervm.tasks import base as tf_base
+from nova.virt.powervm.tasks import image as tf_img
 from nova.virt.powervm.tasks import network as tf_net
 from nova.virt.powervm.tasks import storage as tf_stg
 from nova.virt.powervm.tasks import vm as tf_vm
@@ -295,6 +297,51 @@ class PowerVMDriver(driver.ComputeDriver):
             LOG.exception("PowerVM error during destroy.", instance=instance)
             # Convert to a Nova exception
             raise exc.InstanceTerminationFailure(reason=six.text_type(e))
+
+    def snapshot(self, context, instance, image_id, update_task_state):
+        """Snapshots the specified instance.
+
+        :param context: security context
+        :param instance: nova.objects.instance.Instance
+        :param image_id: Reference to a pre-created image that will hold the
+                         snapshot.
+        :param update_task_state: Callback function to update the task_state
+            on the instance while the snapshot operation progresses. The
+            function takes a task_state argument and an optional
+            expected_task_state kwarg which defaults to
+            nova.compute.task_states.IMAGE_SNAPSHOT. See
+            nova.objects.instance.Instance.save for expected_task_state usage.
+        """
+        # TODO(esberglu) Add check for disk driver snapshot capability when
+        # additional disk drivers are implemented.
+        self._log_operation('snapshot', instance)
+
+        # Define the flow.
+        flow = tf_lf.Flow("snapshot")
+
+        # Notify that we're starting the process.
+        flow.add(tf_img.UpdateTaskState(update_task_state,
+                                        task_states.IMAGE_PENDING_UPLOAD))
+
+        # Connect the instance's boot disk to the management partition, and
+        # scan the scsi bus and bring the device into the management partition.
+        flow.add(tf_stg.InstanceDiskToMgmt(self.disk_dvr, instance))
+
+        # Notify that the upload is in progress.
+        flow.add(tf_img.UpdateTaskState(
+            update_task_state, task_states.IMAGE_UPLOADING,
+            expected_state=task_states.IMAGE_PENDING_UPLOAD))
+
+        # Stream the disk to glance.
+        flow.add(tf_img.StreamToGlance(context, self.image_api, image_id,
+                                       instance))
+
+        # Disconnect the boot disk from the management partition and delete the
+        # device.
+        flow.add(tf_stg.RemoveInstanceDiskFromMgmt(self.disk_dvr, instance))
+
+        # Run the flow.
+        tf_base.run(flow, instance=instance)
 
     def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance.

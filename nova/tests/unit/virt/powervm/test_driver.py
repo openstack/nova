@@ -290,6 +290,25 @@ class TestPowerVMDriver(test.NoDBTestCase):
                           self.drv.destroy, 'context', self.inst, [],
                           block_device_info={})
 
+    @mock.patch('nova.virt.powervm.tasks.image.UpdateTaskState.'
+                'execute', autospec=True)
+    @mock.patch('nova.virt.powervm.tasks.storage.InstanceDiskToMgmt.'
+                'execute', autospec=True)
+    @mock.patch('nova.virt.powervm.tasks.image.StreamToGlance.execute')
+    @mock.patch('nova.virt.powervm.tasks.storage.RemoveInstanceDiskFromMgmt.'
+                'execute')
+    def test_snapshot(self, mock_rm, mock_stream, mock_conn, mock_update):
+        self.drv.disk_dvr = mock.Mock()
+        self.drv.image_api = mock.Mock()
+        mock_conn.return_value = 'stg_elem', 'vios_wrap', 'disk_path'
+        self.drv.snapshot('context', self.inst, 'image_id',
+                          'update_task_state')
+        self.assertEqual(2, mock_update.call_count)
+        self.assertEqual(1, mock_conn.call_count)
+        mock_stream.assert_called_once_with(disk_path='disk_path')
+        mock_rm.assert_called_once_with(
+            stg_elem='stg_elem', vios_wrap='vios_wrap', disk_path='disk_path')
+
     def test_power_on(self):
         self.drv.power_on('context', self.inst, 'network_info')
         self.pwron.assert_called_once_with(self.adp, self.inst)

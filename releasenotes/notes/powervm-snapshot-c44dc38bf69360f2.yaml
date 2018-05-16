@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    The PowerVM virt driver now supports instance snapshot.
