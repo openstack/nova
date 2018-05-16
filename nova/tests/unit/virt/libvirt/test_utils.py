@@ -629,12 +629,9 @@ disk size: 4.4M
         mock_images.assert_called_once_with(
             _context, image_id, target)
 
-    @mock.patch('nova.utils.supports_direct_io', return_value=True)
-    def test_fetch_raw_image(self, mock_direct_io):
-
-        def fake_execute(*cmd, **kwargs):
-            self.executes.append(cmd)
-            return None, None
+    @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
+    @mock.patch('nova.privsep.qemu.unprivileged_convert_image')
+    def test_fetch_raw_image(self, mock_convert_image, mock_direct_io):
 
         def fake_rename(old, new):
             self.executes.append(('mv', old, new))
@@ -666,7 +663,6 @@ disk size: 4.4M
 
             return FakeImgInfo()
 
-        self.stub_out('nova.utils.execute', fake_execute)
         self.stub_out('os.rename', fake_rename)
         self.stub_out('os.unlink', fake_unlink)
         self.stub_out('nova.virt.images.fetch', lambda *_, **__: None)
@@ -686,19 +682,21 @@ disk size: 4.4M
 
         target = 't.qcow2'
         self.executes = []
-        expected_commands = [('qemu-img', 'convert', '-t', 'none',
-                              '-O', 'raw', '-f', 'qcow2',
-                              't.qcow2.part', 't.qcow2.converted'),
-                             ('rm', 't.qcow2.part'),
+        expected_commands = [('rm', 't.qcow2.part'),
                              ('mv', 't.qcow2.converted', 't.qcow2')]
         images.fetch_to_raw(context, image_id, target)
         self.assertEqual(self.executes, expected_commands)
+        mock_convert_image.assert_called_with(
+            't.qcow2.part', 't.qcow2.converted', 'qcow2', 'raw',
+            CONF.instances_path)
+        mock_convert_image.reset_mock()
 
         target = 't.raw'
         self.executes = []
         expected_commands = [('mv', 't.raw.part', 't.raw')]
         images.fetch_to_raw(context, image_id, target)
         self.assertEqual(self.executes, expected_commands)
+        mock_convert_image.assert_not_called()
 
         target = 'backing.qcow2'
         self.executes = []
@@ -706,6 +704,7 @@ disk size: 4.4M
         self.assertRaises(exception.ImageUnacceptable,
                           images.fetch_to_raw, context, image_id, target)
         self.assertEqual(self.executes, expected_commands)
+        mock_convert_image.assert_not_called()
 
         del self.executes
 

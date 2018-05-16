@@ -7988,7 +7988,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         def connection_supports_direct_io_stub(dirpath):
             return directio_supported
 
-        self.stub_out('nova.utils.supports_direct_io',
+        self.stub_out('nova.privsep.utils.supports_direct_io',
                       connection_supports_direct_io_stub)
 
         instance_ref = objects.Instance(**self.test_instance)
@@ -17851,7 +17851,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     #                get_guest_xml().
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_host_enabled')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
-    @mock.patch('nova.utils.supports_direct_io')
+    @mock.patch('nova.privsep.utils.supports_direct_io')
     @mock.patch('nova.api.metadata.base.InstanceMetadata')
     def _test_finish_migration(self, mock_instance_metadata,
                                mock_supports_direct_io,
@@ -18795,7 +18795,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     #                get_guest_xml().
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_host_enabled')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
-    @mock.patch('nova.utils.supports_direct_io')
+    @mock.patch('nova.privsep.utils.supports_direct_io')
     @mock.patch('nova.api.metadata.base.InstanceMetadata')
     def _test_rescue(self, instance,
                      mock_instance_metadata, mock_supports_direct_io,
