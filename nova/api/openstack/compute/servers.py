@@ -207,8 +207,16 @@ class ServersController(wsgi.Controller):
                 search_opts['task_state'] = task_state
 
         if 'changes-since' in search_opts:
-            search_opts['changes-since'] = timeutils.parse_isotime(
-                search_opts['changes-since'])
+            try:
+                search_opts['changes-since'] = timeutils.parse_isotime(
+                    search_opts['changes-since'])
+            except ValueError:
+                # NOTE: This error handling is for V2.0 API to pass the
+                # experimental jobs at the gate. V2.1 API covers this case
+                # with JSON-Schema and it is a hard burden to apply it to
+                # v2.0 API at this time.
+                msg = _("Invalid filter field: changes-since.")
+                raise exc.HTTPBadRequest(explanation=msg)
 
         # By default, compute's get_all() will return deleted instances.
         # If an admin hasn't specified a 'deleted' search option, we need

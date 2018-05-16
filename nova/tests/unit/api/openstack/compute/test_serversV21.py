@@ -1155,6 +1155,13 @@ class ServersControllerTest(ControllerTest):
         self.assertRaises(exception.ValidationError, self.controller.index,
                           req)
 
+    def test_get_servers_allows_changes_since_bad_value_on_compat_mode(self):
+        params = 'changes-since=asdf'
+        req = self.req('/fake/servers?%s' % params)
+        req.set_legacy_v2()
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index,
+                          req)
+
     def test_get_servers_admin_filters_as_user(self):
         """Test getting servers by admin-only or unknown options when
         context is not admin. Make sure the admin and unknown options
