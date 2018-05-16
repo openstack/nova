@@ -106,7 +106,7 @@ Upgrade
 
   **18.0.0 (Rocky)**
 
-  * Checks for the Placement API are modified to require version 1.21.
+  * Checks for the Placement API are modified to require version 1.24.
   * Checks that ironic instances have had their embedded flavors migrated to
     use custom resource classes.
   * Checks for ``nova-osapi_compute`` service versions that are less than 15
