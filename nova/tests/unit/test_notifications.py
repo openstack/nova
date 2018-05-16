@@ -20,7 +20,6 @@ import datetime
 
 import mock
 from oslo_config import cfg
-from oslo_context import context as o_context
 from oslo_context import fixture as o_fixture
 from oslo_utils import timeutils
 
@@ -518,26 +517,6 @@ class NotificationsTestCase(test.TestCase):
 
     def _decorated_function(self, arg1, arg2):
         self.decorated_function_called = True
-
-    def test_notify_decorator(self):
-        func_name = self._decorated_function.__name__
-
-        # Decorated with notify_decorator like monkey_patch
-        self._decorated_function = notifications.notify_decorator(
-            func_name,
-            self._decorated_function)
-
-        ctxt = o_context.RequestContext()
-
-        self._decorated_function(1, ctxt)
-
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        n = fake_notifier.NOTIFICATIONS[0]
-        self.assertEqual(n.priority, 'INFO')
-        self.assertEqual(n.event_type, func_name)
-        self.assertEqual(n.context, ctxt)
-        self.assertTrue(self.decorated_function_called)
-        self.assertEqual(CONF.host, n.publisher_id)
 
 
 class NotificationsFormatTestCase(test.NoDBTestCase):

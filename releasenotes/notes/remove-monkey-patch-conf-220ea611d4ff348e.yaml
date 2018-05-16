@@ -1,0 +1,14 @@
+---
+upgrade:
+  - |
+    The following configuration options were deprecated for removal in the
+    17.0.0 Queens release and have now been removed:
+
+    - ``[DEFAULT]/monkey_patch``
+    - ``[DEFAULT]/monkey_patch_modules``
+    - ``[notifications]/default_publisher_id``
+
+    Monkey patching nova is not tested, not supported, and is a barrier to
+    interoperability. If you have code which relies on monkey patching
+    decorators, for example, for notifications, please propose those changes
+    upstream.

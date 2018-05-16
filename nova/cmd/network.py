@@ -30,7 +30,6 @@ from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as objects_base
 from nova import service
-from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
@@ -46,7 +45,6 @@ def main():
                   'except as required for CellsV1 deployments.')
         return 1
 
-    utils.monkey_patch()
     objects.register_all()
     gmr_opts.set_defaults(CONF)
 

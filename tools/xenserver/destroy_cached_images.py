@@ -44,7 +44,6 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 
 import nova.conf
 from nova import config
-from nova import utils
 from nova.virt.xenapi import vm_utils
 
 destroy_opts = [
@@ -66,7 +65,6 @@ CONF.register_cli_opts(destroy_opts)
 
 def main():
     config.parse_args(sys.argv)
-    utils.monkey_patch()
 
     _session = session.XenAPISession(CONF.xenserver.connection_url,
                                      CONF.xenserver.connection_username,

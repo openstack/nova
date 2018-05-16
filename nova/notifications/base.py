@@ -21,7 +21,6 @@ the system.
 import datetime
 
 from keystoneauth1 import exceptions as ks_exc
-from oslo_context import context as common_context
 from oslo_log import log
 from oslo_utils import excutils
 from oslo_utils import timeutils
@@ -44,41 +43,6 @@ from nova import utils
 LOG = log.getLogger(__name__)
 
 CONF = nova.conf.CONF
-
-
-# TODO(mriedem): Remove this when CONF.monkey_patch, CONF.monkey_patch_modules
-# and CONF.default_publisher_id are removed in Rocky.
-def notify_decorator(name, fn):
-    """Decorator for notify which is used from utils.monkey_patch().
-
-        :param name: name of the function
-        :param fn: - object of the function
-        :returns: fn -- decorated function
-
-    """
-    def wrapped_func(*args, **kwarg):
-        body = {}
-        body['args'] = []
-        body['kwarg'] = {}
-        for arg in args:
-            body['args'].append(arg)
-        for key in kwarg:
-            body['kwarg'][key] = kwarg[key]
-
-        ctxt = (common_context.get_context_from_function_and_args(
-                    fn, args, kwarg) or
-                common_context.get_current() or
-                nova.context.RequestContext())
-
-        notifier = rpc.get_notifier('api', publisher_id=(
-            CONF.notifications.default_publisher_id or CONF.host))
-        method = getattr(notifier,
-                         CONF.notifications.default_level.lower(),
-                         notifier.info)
-        method(ctxt, name, body)
-
-        return fn(*args, **kwarg)
-    return wrapped_func
 
 
 def send_update(context, old_instance, new_instance, service="compute",

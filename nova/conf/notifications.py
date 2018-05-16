@@ -57,32 +57,6 @@ Possible values:
         deprecated_group='DEFAULT',
         deprecated_name='default_notification_level',
         help="Default notification level for outgoing notifications."),
-
-    cfg.StrOpt(
-        'default_publisher_id',
-        default='$host',
-        deprecated_group='DEFAULT',
-        deprecated_for_removal=True,
-        deprecated_since='17.0.0',
-        deprecated_reason="""
-This option is only used when ``monkey_patch=True`` and
-``monkey_patch_modules`` is configured to specify the legacy notify_decorator.
-Since the monkey_patch and monkey_patch_modules options are deprecated, this
-option is also deprecated.
-""",
-        help="""
-Default publisher_id for outgoing notifications. If you consider routing
-notifications using different publisher, change this value accordingly.
-
-Possible values:
-
-* Defaults to the current hostname of this host, but it can be any valid
-  oslo.messaging publisher_id
-
-Related options:
-
-*  host - Hostname, FQDN or IP address of this host.
-"""),
     cfg.StrOpt(
         'notification_format',
         choices=['unversioned', 'versioned', 'both'],
