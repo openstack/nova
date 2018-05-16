@@ -21,6 +21,5 @@ from nova.notifications.base import audit_period_bounds  # noqa
 from nova.notifications.base import bandwidth_usage  # noqa
 from nova.notifications.base import image_meta  # noqa
 from nova.notifications.base import info_from_instance  # noqa
-from nova.notifications.base import notify_decorator  # noqa
 from nova.notifications.base import send_update  # noqa
 from nova.notifications.base import send_update_with_states  # noqa

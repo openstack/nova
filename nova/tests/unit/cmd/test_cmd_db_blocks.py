@@ -33,10 +33,9 @@ def restore_db():
 
 
 class ComputeMainTest(test.NoDBTestCase):
-    @mock.patch('nova.utils.monkey_patch')
     @mock.patch('nova.conductor.api.API.wait_until_ready')
     @mock.patch('oslo_reports.guru_meditation_report')
-    def _call_main(self, mod, gmr, cond, patch):
+    def _call_main(self, mod, gmr, cond):
         @mock.patch.object(mod, 'config')
         @mock.patch.object(mod, 'service')
         def run_main(serv, conf):

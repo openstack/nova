@@ -24,11 +24,9 @@ import functools
 import hashlib
 import inspect
 import os
-import pyclbr
 import random
 import re
 import shutil
-import sys
 import tempfile
 import time
 
@@ -467,55 +465,6 @@ def format_remote_path(host, path):
         return path
 
     return "%s:%s" % (safe_ip_format(host), path)
-
-
-# TODO(mriedem): Remove this in Rocky.
-def monkey_patch():
-    """DEPRECATED: If the CONF.monkey_patch set as True,
-    this function patches a decorator
-    for all functions in specified modules.
-    You can set decorators for each modules
-    using CONF.monkey_patch_modules.
-    The format is "Module path:Decorator function".
-    Example:
-    'nova.api.ec2.cloud:nova.notifications.notify_decorator'
-
-    Parameters of the decorator is as follows.
-    (See nova.notifications.notify_decorator)
-
-    name - name of the function
-    function - object of the function
-    """
-    # If CONF.monkey_patch is not True, this function do nothing.
-    if not CONF.monkey_patch:
-        return
-    LOG.warning('Monkey patching nova is deprecated for removal.')
-    if six.PY2:
-        is_method = inspect.ismethod
-    else:
-        def is_method(obj):
-            # Unbound methods became regular functions on Python 3
-            return inspect.ismethod(obj) or inspect.isfunction(obj)
-    # Get list of modules and decorators
-    for module_and_decorator in CONF.monkey_patch_modules:
-        module, decorator_name = module_and_decorator.split(':')
-        # import decorator function
-        decorator = importutils.import_class(decorator_name)
-        __import__(module)
-        # Retrieve module information using pyclbr
-        module_data = pyclbr.readmodule_ex(module)
-        for key, value in module_data.items():
-            # set the decorator for the class methods
-            if isinstance(value, pyclbr.Class):
-                clz = importutils.import_class("%s.%s" % (module, key))
-                for method, func in inspect.getmembers(clz, is_method):
-                    setattr(clz, method,
-                        decorator("%s.%s.%s" % (module, key, method), func))
-            # set the decorator for the function
-            if isinstance(value, pyclbr.Function):
-                func = importutils.import_class("%s.%s" % (module, key))
-                setattr(sys.modules[module], key,
-                    decorator("%s.%s" % (module, key), func))
 
 
 def make_dev_path(dev, partition=None, base='/dev'):
