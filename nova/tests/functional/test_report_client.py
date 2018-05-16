@@ -12,8 +12,10 @@
 #    under the License.
 
 import mock
+import pkg_resources
 
 from nova.api.openstack.placement import direct
+from nova.cmd import status
 from nova.compute import provider_tree
 from nova import conf
 from nova import context
@@ -25,10 +27,54 @@ from nova import exception
 from nova import objects
 from nova import rc_fields as fields
 from nova.scheduler.client import report
+from nova.scheduler import utils
 from nova import test
 from nova.tests import uuidsentinel as uuids
 
 CONF = conf.CONF
+
+CMD_STATUS_MIN_MICROVERSION = pkg_resources.parse_version(
+    status.MIN_PLACEMENT_MICROVERSION)
+
+
+class VersionCheckingReportClient(report.SchedulerReportClient):
+    """This wrapper around SchedulerReportClient checks microversions for
+    get/put/post/delete calls to validate that the minimum requirement enforced
+    in nova.cmd.status has been bumped appropriately when the report client
+    uses a new version. This of course relies on there being a test in this
+    module that hits the code path using that microversion. (This mechanism can
+    be copied into other func test suites where we hit the report client.)
+    """
+    @staticmethod
+    def _check_microversion(kwargs):
+        microversion = kwargs.get('version')
+        if not microversion:
+            return
+
+        seen_microversion = pkg_resources.parse_version(microversion)
+        if seen_microversion > CMD_STATUS_MIN_MICROVERSION:
+            raise ValueError(
+                "Report client is using microversion %s, but nova.cmd.status "
+                "is only requiring %s. See "
+                "I4369f7fb1453e896864222fa407437982be8f6b5 for an example of "
+                "how to bump the minimum requirement." %
+                (microversion, status.MIN_PLACEMENT_MICROVERSION))
+
+    def get(self, *args, **kwargs):
+        self._check_microversion(kwargs)
+        return super(VersionCheckingReportClient, self).get(*args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        self._check_microversion(kwargs)
+        return super(VersionCheckingReportClient, self).put(*args, **kwargs)
+
+    def post(self, *args, **kwargs):
+        self._check_microversion(kwargs)
+        return super(VersionCheckingReportClient, self).post(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        self._check_microversion(kwargs)
+        return super(VersionCheckingReportClient, self).delete(*args, **kwargs)
 
 
 class SchedulerReportClientTestBase(test.TestCase):
@@ -51,7 +97,7 @@ class SchedulerReportClientTestBase(test.TestCase):
             """
             def __enter__(inner_self):
                 adap = super(ReportClientInterceptor, inner_self).__enter__()
-                client = report.SchedulerReportClient(adapter=adap)
+                client = VersionCheckingReportClient(adapter=adap)
                 # NOTE(efried): This `self` is the TestCase!
                 self._set_client(client)
                 return client
@@ -945,3 +991,9 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             self.client.aggregate_remove_host(
                 self.context, agg_uuid, self.compute_name)
         upd_aggs_mock.assert_not_called()
+
+    def test_alloc_cands_smoke(self):
+        """Simple call to get_allocation_candidates for version checking."""
+        with self._interceptor():
+            self.client.get_allocation_candidates(
+                self.context, utils.ResourceRequest())
