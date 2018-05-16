@@ -8633,10 +8633,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_utime.assert_called_once_with(CONF.instances_path, None)
         mock_path_exists.assert_called_once_with(tmpfile_path)
 
-    def _mock_can_live_migrate_source(self, block_migration=False,
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_check_shared_storage_test_file')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_is_shared_block_storage')
+    def _test_can_live_migrate_source(self, mock_is_shared, mock_check_shared,
+                                      block_migration=False,
                                       is_shared_block_storage=False,
                                       is_shared_instance_path=False,
-                                      disk_available_mb=1024):
+                                      disk_available_mb=1024,
+                                      exception=None):
         instance = objects.Instance(**self.test_instance)
         dest_check_data = objects.LibvirtLiveMigrateData(
             filename='file',
@@ -8646,97 +8652,79 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             disk_available_mb=disk_available_mb)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        self.mox.StubOutWithMock(drvr, '_is_shared_block_storage')
-        drvr._is_shared_block_storage(instance, dest_check_data,
-                None).AndReturn(is_shared_block_storage)
-        self.mox.StubOutWithMock(drvr, '_check_shared_storage_test_file')
-        drvr._check_shared_storage_test_file('file', instance).AndReturn(
-                is_shared_instance_path)
+        mock_is_shared.return_value = is_shared_block_storage
+        mock_check_shared.return_value = is_shared_instance_path
 
-        return (instance, dest_check_data, drvr)
+        if exception:
+            self.assertRaises(exception, drvr.check_can_live_migrate_source,
+                              self.context, instance, dest_check_data)
+        else:
+            ret = drvr.check_can_live_migrate_source(self.context, instance,
+                                                     dest_check_data)
 
-    def test_check_can_live_migrate_source_block_migration(self):
-        instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
-                block_migration=True)
+        mock_is_shared.assert_called_once_with(instance, dest_check_data, None)
+        mock_check_shared.assert_called_once_with('file', instance)
 
-        self.mox.StubOutWithMock(drvr, "_assert_dest_node_has_enough_disk")
-        drvr._assert_dest_node_has_enough_disk(
+        if exception:
+            return (instance, dest_check_data)
+
+        if block_migration:
+            self.assertIsInstance(ret, objects.LibvirtLiveMigrateData)
+            self.assertIn('is_shared_block_storage', ret)
+            self.assertFalse(ret.is_shared_block_storage)
+            self.assertIn('is_shared_instance_path', ret)
+            self.assertFalse(ret.is_shared_instance_path)
+
+        if is_shared_block_storage:
+            self.assertTrue(ret.is_shared_block_storage)
+
+        if is_shared_instance_path:
+            self.assertTrue(ret.is_shared_instance_path)
+
+        return (instance, dest_check_data)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_assert_dest_node_has_enough_disk')
+    def test_check_can_live_migrate_source_block_migration(
+            self, mock_assert_dest):
+        instance, dest_check_data = self._test_can_live_migrate_source(
+            block_migration=True)
+        mock_assert_dest.assert_called_once_with(
             self.context, instance, dest_check_data.disk_available_mb,
             False, None)
 
-        self.mox.ReplayAll()
-        ret = drvr.check_can_live_migrate_source(self.context, instance,
-                                                 dest_check_data)
-        self.assertIsInstance(ret, objects.LibvirtLiveMigrateData)
-        self.assertIn('is_shared_block_storage', ret)
-        self.assertFalse(ret.is_shared_block_storage)
-        self.assertIn('is_shared_instance_path', ret)
-        self.assertFalse(ret.is_shared_instance_path)
-
     def test_check_can_live_migrate_source_shared_block_storage(self):
-        instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
-                is_shared_block_storage=True)
-        self.mox.ReplayAll()
-        ret = drvr.check_can_live_migrate_source(self.context, instance,
-                                                 dest_check_data)
-        self.assertTrue(ret.is_shared_block_storage)
+        self._test_can_live_migrate_source(is_shared_block_storage=True)
 
     def test_check_can_live_migrate_source_shared_instance_path(self):
-        instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
-                is_shared_instance_path=True)
-        self.mox.ReplayAll()
-        ret = drvr.check_can_live_migrate_source(self.context, instance,
-                                                 dest_check_data)
-        self.assertTrue(ret.is_shared_instance_path)
+        self._test_can_live_migrate_source(is_shared_instance_path=True)
 
     def test_check_can_live_migrate_source_non_shared_fails(self):
-        instance, dest_check_data, drvr = self._mock_can_live_migrate_source()
-        self.mox.ReplayAll()
-        self.assertRaises(exception.InvalidSharedStorage,
-                          drvr.check_can_live_migrate_source, self.context,
-                          instance, dest_check_data)
+        self._test_can_live_migrate_source(
+            exception=exception.InvalidSharedStorage)
 
     def test_check_can_live_migrate_source_shared_block_migration_fails(self):
-        instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
-                block_migration=True,
-                is_shared_block_storage=True)
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.InvalidLocalStorage,
-                          drvr.check_can_live_migrate_source,
-                          self.context, instance, dest_check_data)
+        self._test_can_live_migrate_source(
+            block_migration=True, is_shared_block_storage=True,
+            exception=exception.InvalidLocalStorage)
 
     def test_check_can_live_migrate_shared_path_block_migration_fails(self):
-        instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
-                block_migration=True,
-                is_shared_instance_path=True)
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.InvalidLocalStorage,
-                          drvr.check_can_live_migrate_source,
-                          self.context, instance, dest_check_data, None)
+        self._test_can_live_migrate_source(
+            block_migration=True, is_shared_instance_path=True,
+            exception=exception.InvalidLocalStorage)
 
     def test_check_can_live_migrate_non_shared_non_block_migration_fails(self):
-        instance, dest_check_data, drvr = self._mock_can_live_migrate_source()
-        self.mox.ReplayAll()
-        self.assertRaises(exception.InvalidSharedStorage,
-                          drvr.check_can_live_migrate_source,
-                          self.context, instance, dest_check_data)
+        self._test_can_live_migrate_source(
+            exception=exception.InvalidSharedStorage)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_get_instance_disk_info')
     def test_check_can_live_migrate_source_with_dest_not_enough_disk(
             self, mock_get_bdi):
         mock_get_bdi.return_value = [{"virt_disk_size": 2}]
-
-        instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
-                block_migration=True,
-                disk_available_mb=0)
-        self.mox.ReplayAll()
-
-        self.assertRaises(exception.MigrationError,
-                          drvr.check_can_live_migrate_source,
-                          self.context, instance, dest_check_data)
+        instance, _ = self._test_can_live_migrate_source(
+            block_migration=True, disk_available_mb=0,
+            exception=exception.MigrationError)
         mock_get_bdi.assert_called_once_with(instance, None)
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
@@ -10938,27 +10926,27 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             migrate_data, AnyEventletEvent(), disks_to_copy[0])
         guest.migrate_configure_max_speed.assert_not_called()
 
-    def _do_test_create_images_and_backing(self, disk_type):
+    @mock.patch('os.path.exists', return_value=False)
+    @mock.patch.object(fake_libvirt_utils, 'create_image')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_fetch_instance_kernel_ramdisk')
+    def _do_test_create_images_and_backing(self, disk_type, mock_fetch,
+                                           mock_create, mock_exists):
         instance = objects.Instance(**self.test_instance)
-
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.mox.StubOutWithMock(drvr, '_fetch_instance_kernel_ramdisk')
-        self.mox.StubOutWithMock(libvirt_driver.libvirt_utils, 'create_image')
-
         disk_info = {'path': 'foo', 'type': disk_type,
                      'disk_size': 1 * 1024 ** 3,
                      'virt_disk_size': 20 * 1024 ** 3,
                      'backing_file': None}
 
-        libvirt_driver.libvirt_utils.create_image(
-            disk_info['type'], mox.IgnoreArg(), disk_info['virt_disk_size'])
-        drvr._fetch_instance_kernel_ramdisk(self.context, instance,
-                                            fallback_from_host=None)
-        self.mox.ReplayAll()
-
-        self.stub_out('os.path.exists', lambda *args: False)
         drvr._create_images_and_backing(self.context, instance,
                                         "/fake/instance/dir", [disk_info])
+
+        mock_fetch.assert_called_once_with(self.context, instance,
+                                           fallback_from_host=None)
+        mock_create.assert_called_once_with(
+             disk_info['type'], mock.ANY, disk_info['virt_disk_size'])
+        mock_exists.assert_called_once_with('/fake/instance/dir/foo')
 
     def test_create_images_and_backing_qcow2(self):
         self._do_test_create_images_and_backing('qcow2')
