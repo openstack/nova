@@ -8,8 +8,10 @@ Lists virtual interfaces for a server.
 
 .. warning:: Since this API is only implemented for the nova-network, the API
             is deprecated from the Microversion 2.44. This API will fail with
-            a 404 starting from microversion 2.44. To query the server attached
-            neutron interface, please use the API
+            a 404 starting from microversion 2.44. It was removed in the
+            18.0.0 Rocky release.
+
+            To query the server attached neutron interface, please use the API
             ``GET /servers/{server_uuid}/os-interface``.
 
 .. note::
@@ -32,7 +34,8 @@ the server to perform this operation. Change these permissions through the
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), gone(410)
 
 Request
 -------
