@@ -539,10 +539,10 @@ class HostManagerTestCase(test.NoDBTestCase):
     @mock.patch('nova.scheduler.host_manager.LOG')
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
-    @mock.patch('nova.objects.InstanceList.get_by_host')
+    @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_get_all_host_states(self, mock_get_by_host, mock_get_all,
                                  mock_get_by_binary, mock_log):
-        mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_by_host.return_value = []
         mock_get_all.return_value = fakes.COMPUTE_NODES
         mock_get_by_binary.return_value = fakes.SERVICES
         context = 'fake_context'
@@ -600,7 +600,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.assertEqual(host_states_map[('host4', 'node4')].free_disk_mb,
                          8388608)
 
-    @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
+    @mock.patch.object(nova.objects.InstanceList, 'get_uuids_by_host')
     @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
@@ -610,7 +610,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         svc_get_by_binary.return_value = [objects.Service(host='fake')]
         cn_get_all.return_value = [
             objects.ComputeNode(host='fake', hypervisor_hostname='fake')]
-        mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_by_host.return_value = []
         self.host_manager.host_aggregates_map = collections.defaultdict(set)
 
         hosts = self.host_manager.get_all_host_states('fake-context')
@@ -620,7 +620,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         host_state = host_states_map[('fake', 'fake')]
         self.assertEqual([], host_state.aggregates)
 
-    @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
+    @mock.patch.object(nova.objects.InstanceList, 'get_uuids_by_host')
     @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
@@ -631,7 +631,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         svc_get_by_binary.return_value = [objects.Service(host='fake')]
         cn_get_all.return_value = [
             objects.ComputeNode(host='fake', hypervisor_hostname='fake')]
-        mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_by_host.return_value = []
         fake_agg = objects.Aggregate(id=1)
         self.host_manager.host_aggregates_map = collections.defaultdict(
             set, {'fake': set([1])})
@@ -644,7 +644,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         host_state = host_states_map[('fake', 'fake')]
         self.assertEqual([fake_agg], host_state.aggregates)
 
-    @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
+    @mock.patch.object(nova.objects.InstanceList, 'get_uuids_by_host')
     @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
@@ -658,7 +658,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         cn_get_all.return_value = [
             objects.ComputeNode(host='fake', hypervisor_hostname='fake'),
             objects.ComputeNode(host='other', hypervisor_hostname='other')]
-        mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_by_host.return_value = []
         fake_agg = objects.Aggregate(id=1)
         self.host_manager.host_aggregates_map = collections.defaultdict(
             set, {'other': set([1])})
@@ -671,8 +671,8 @@ class HostManagerTestCase(test.NoDBTestCase):
         host_state = host_states_map[('fake', 'fake')]
         self.assertEqual([], host_state.aggregates)
 
-    @mock.patch.object(nova.objects.InstanceList, 'get_by_host',
-                       return_value=objects.InstanceList())
+    @mock.patch.object(nova.objects.InstanceList, 'get_uuids_by_host',
+                       return_value=[])
     @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
@@ -733,7 +733,7 @@ class HostManagerTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
-    @mock.patch('nova.objects.InstanceList.get_by_host')
+    @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_get_all_host_states_not_updated(self, mock_get_by_host,
                                              mock_get_all_comp,
                                              mock_get_svc_by_binary):
@@ -747,26 +747,25 @@ class HostManagerTestCase(test.NoDBTestCase):
                                        'updated': False}}
         host_state = host_manager.HostState('host1', cn1, uuids.cell)
         self.assertFalse(host_state.instances)
-        mock_get_by_host.return_value = objects.InstanceList(objects=[inst1])
+        mock_get_by_host.return_value = [uuids.instance]
         host_state.update(
                 inst_dict=hm._get_instance_info(context, cn1))
-        mock_get_by_host.assert_called_once_with(
-            context, cn1.host, expected_attrs=[])
+        mock_get_by_host.assert_called_once_with(context, cn1.host)
         self.assertTrue(host_state.instances)
-        self.assertEqual(host_state.instances[uuids.instance], inst1)
+        self.assertIn(uuids.instance, host_state.instances)
+        inst = host_state.instances[uuids.instance]
+        self.assertEqual(uuids.instance, inst.uuid)
+        self.assertIsNotNone(inst._context, 'Instance is orphaned.')
 
-    @mock.patch('nova.objects.InstanceList.get_by_host')
+    @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_recreate_instance_info(self, mock_get_by_host):
         host_name = 'fake_host'
         inst1 = fake_instance.fake_instance_obj('fake_context',
-                                                uuid=uuids.instance_1,
-                                                host=host_name)
+                                                uuid=uuids.instance_1)
         inst2 = fake_instance.fake_instance_obj('fake_context',
-                                                uuid=uuids.instance_2,
-                                                host=host_name)
+                                                uuid=uuids.instance_2)
         orig_inst_dict = {inst1.uuid: inst1, inst2.uuid: inst2}
-        new_inst_list = objects.InstanceList(objects=[inst1, inst2])
-        mock_get_by_host.return_value = new_inst_list
+        mock_get_by_host.return_value = [uuids.instance_1, uuids.instance_2]
         self.host_manager._instance_info = {
                 host_name: {
                     'instances': orig_inst_dict,
@@ -774,7 +773,8 @@ class HostManagerTestCase(test.NoDBTestCase):
                 }}
         self.host_manager._recreate_instance_info('fake_context', host_name)
         new_info = self.host_manager._instance_info[host_name]
-        self.assertEqual(len(new_info['instances']), len(new_inst_list))
+        self.assertEqual(len(new_info['instances']),
+                         len(mock_get_by_host.return_value))
         self.assertFalse(new_info['updated'])
 
     def test_update_instance_info(self):
@@ -1072,10 +1072,10 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
-    @mock.patch('nova.objects.InstanceList.get_by_host')
+    @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_get_all_host_states(self, mock_get_by_host, mock_get_all,
                                  mock_get_by_binary):
-        mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_by_host.return_value = []
         mock_get_all.return_value = fakes.COMPUTE_NODES
         mock_get_by_binary.return_value = fakes.SERVICES
         context = 'fake_context'
@@ -1087,7 +1087,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
-    @mock.patch('nova.objects.InstanceList.get_by_host')
+    @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_get_all_host_states_after_delete_one(self, mock_get_by_host,
                                                   mock_get_all,
                                                   mock_get_by_binary):
@@ -1096,7 +1096,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         running_nodes = [n for n in fakes.COMPUTE_NODES
                          if getter(n) != 'node4']
 
-        mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_by_host.return_value = []
         mock_get_all.side_effect = [fakes.COMPUTE_NODES, running_nodes]
         mock_get_by_binary.side_effect = [fakes.SERVICES, fakes.SERVICES]
         context = 'fake_context'
@@ -1116,11 +1116,11 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
-    @mock.patch('nova.objects.InstanceList.get_by_host')
+    @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_get_all_host_states_after_delete_all(self, mock_get_by_host,
                                                   mock_get_all,
                                                   mock_get_by_binary):
-        mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_by_host.return_value = []
         mock_get_all.side_effect = [fakes.COMPUTE_NODES, []]
         mock_get_by_binary.side_effect = [fakes.SERVICES, fakes.SERVICES]
         context = 'fake_context'
@@ -1140,10 +1140,10 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids')
-    @mock.patch('nova.objects.InstanceList.get_by_host')
+    @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_get_host_states_by_uuids(self, mock_get_by_host, mock_get_all,
                                       mock_get_by_binary):
-        mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_by_host.return_value = []
         mock_get_all.side_effect = [fakes.COMPUTE_NODES, []]
         mock_get_by_binary.side_effect = [fakes.SERVICES, fakes.SERVICES]
 
