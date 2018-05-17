@@ -12226,7 +12226,7 @@ class ComputeAggrTestCase(BaseTestCase):
                        fake_driver_add_to_aggregate)
 
         self.compute.add_aggregate_host(self.context, host="host",
-                aggregate=jsonutils.to_primitive(self.aggr), slave_info=None)
+            aggregate=self.aggr, slave_info=None)
         self.assertTrue(fake_driver_add_to_aggregate.called)
 
     def test_remove_aggregate_host(self):
@@ -12239,8 +12239,7 @@ class ComputeAggrTestCase(BaseTestCase):
                        fake_driver_remove_from_aggregate)
 
         self.compute.remove_aggregate_host(self.context,
-                aggregate=jsonutils.to_primitive(self.aggr), host="host",
-                slave_info=None)
+            aggregate=self.aggr, host="host", slave_info=None)
         self.assertTrue(fake_driver_remove_from_aggregate.called)
 
     def test_add_aggregate_host_passes_slave_info_to_driver(self):
@@ -12254,8 +12253,7 @@ class ComputeAggrTestCase(BaseTestCase):
                        driver_add_to_aggregate)
 
         self.compute.add_aggregate_host(self.context, host="the_host",
-                slave_info="SLAVE_INFO",
-                aggregate=jsonutils.to_primitive(self.aggr))
+            slave_info="SLAVE_INFO", aggregate=self.aggr)
 
     def test_remove_from_aggregate_passes_slave_info_to_driver(self):
         def driver_remove_from_aggregate(cls, context, aggregate, host,
@@ -12269,8 +12267,7 @@ class ComputeAggrTestCase(BaseTestCase):
                        driver_remove_from_aggregate)
 
         self.compute.remove_aggregate_host(self.context,
-                aggregate=jsonutils.to_primitive(self.aggr), host="the_host",
-                slave_info="SLAVE_INFO")
+            aggregate=self.aggr, host="the_host", slave_info="SLAVE_INFO")
 
 
 class DisabledInstanceTypesTestCase(BaseTestCase):
