@@ -600,15 +600,10 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
                 return True
             return False
 
-        def fake_execute(*args, **kwargs):
-            pass
-
-        def fake_extend(image, size, use_cow=False):
-            pass
-
         self.stub_out('os.path.exists', fake_exists)
-        self.stubs.Set(utils, 'execute', fake_execute)
-        self.stubs.Set(imagebackend.disk, 'extend', fake_extend)
+        self.stub_out('nova.utils.execute', lambda *a, **kw: None)
+        self.stub_out('nova.virt.disk.api.extend',
+                      lambda image, size, use_cow=False: None)
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
@@ -799,13 +794,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
 
-        def fake_extend(image, size, use_cow=False):
-            pass
+        self.stub_out('nova.virt.disk.api.extend',
+                      lambda image, size, use_cow=False: None)
 
-        self.stubs.Set(libvirt_driver.disk_api, 'extend', fake_extend)
-
-        self.stubs.Set(imagebackend.Image, 'resolve_driver_format',
-                       imagebackend.Image._get_driver_format)
+        self.stub_out('nova.virt.libvirt.imagebackend.Image.'
+                      'resolve_driver_format',
+                      imagebackend.Image._get_driver_format)
 
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.test_instance = _create_test_instance()
@@ -872,8 +866,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         for key, val in kwargs.items():
             fake.__setattr__(key, val)
 
-        self.stubs.Set(libvirt_driver.LibvirtDriver, '_conn', fake)
-        self.stubs.Set(host.Host, 'get_connection', lambda x: fake)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver._conn', fake)
+        self.stub_out('nova.virt.libvirt.host.Host.get_connection',
+                      lambda x: fake)
 
     def fake_lookup(self, instance_name):
         return FakeVirtDomain()
@@ -4470,8 +4465,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             caps.host.cpu = cpu
             return caps
 
-        self.stubs.Set(host.Host, "get_capabilities",
-                       get_host_capabilities_stub)
+        self.stub_out('nova.virt.libvirt.host.Host.get_capabilities',
+                      get_host_capabilities_stub)
 
     def _get_guest_config_via_fake_api(self, instance):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -5855,8 +5850,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             instance_ref,
                                             image_meta)
 
-        self.stubs.Set(host.Host, "get_capabilities",
-                       get_host_capabilities_stub)
+        self.stub_out('nova.virt.libvirt.host.Host.get_capabilities',
+                      get_host_capabilities_stub)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         cfg = drvr._get_guest_config(instance_ref,
@@ -5893,8 +5888,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             instance_ref,
                                             image_meta)
 
-        self.stubs.Set(host.Host, "get_capabilities",
-                       get_host_capabilities_stub)
+        self.stub_out('nova.virt.libvirt.host.Host.get_capabilities',
+                      get_host_capabilities_stub)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         cfg = drvr._get_guest_config(instance_ref,
@@ -5931,8 +5926,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             caps.host.cpu = cpu
             return caps
 
-        self.stubs.Set(host.Host, "get_capabilities",
-                       get_host_capabilities_stub)
+        self.stub_out('nova.virt.libvirt.host.Host.get_capabilities',
+                      get_host_capabilities_stub)
         self.flags(enabled=True,
                    server_listen='10.0.0.1',
                    keymap='en-ie',
@@ -7252,7 +7247,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         libvirt_driver.LibvirtDriver._conn.lookupByUUIDString \
             = self.fake_lookup
         instance = objects.Instance(**self.test_instance)
-        self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.VolumeDriverNotFound,
                           drvr.attach_volume, None,
@@ -7266,7 +7260,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         libvirt_driver.LibvirtDriver._conn.lookupByUUIDString \
             = self.fake_lookup
         instance = objects.Instance(**self.test_instance)
-        self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.InvalidHypervisorType,
                           drvr.attach_volume, None,
@@ -8271,9 +8264,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_ensure_filtering_rules_for_instance_timeout(self):
         # ensure_filtering_fules_for_instance() finishes with timeout.
         # Preparing mocks
-        def fake_none(self, *args):
-            return
-
         class FakeTime(object):
             def __init__(self):
                 self.counter = 0
@@ -8283,9 +8273,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         fake_timer = FakeTime()
 
-        def fake_sleep(t):
-            fake_timer.sleep(t)
-
         # _fake_network_info must be called before create_fake_libvirt_mock(),
         # as _fake_network_info calls importutils.import_class() and
         # create_fake_libvirt_mock() mocks importutils.import_class().
@@ -8294,21 +8281,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance_ref = objects.Instance(**self.test_instance)
 
         # Start test
-        self.mox.ReplayAll()
         try:
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-            self.stubs.Set(drvr.firewall_driver,
-                           'setup_basic_filtering',
-                           fake_none)
-            self.stubs.Set(drvr.firewall_driver,
-                           'prepare_instance_filter',
-                           fake_none)
-            self.stubs.Set(drvr.firewall_driver,
-                           'instance_filter_exists',
-                           fake_none)
-            self.stubs.Set(greenthread,
-                           'sleep',
-                           fake_sleep)
+            self.stub_out('nova.virt.libvirt.firewall.IptablesFirewallDriver.'
+                          'setup_basic_filtering', lambda *a: None)
+            self.stub_out('nova.virt.libvirt.firewall.IptablesFirewallDriver.'
+                          'prepare_instance_filter', lambda *a: None)
+            self.stub_out('nova.virt.libvirt.firewall.IptablesFirewallDriver.'
+                          'instance_filter_exists', lambda *a: None)
+            self.stub_out('eventlet.greenthread.sleep',
+                          lambda t: fake_timer.sleep(t))
             drvr.ensure_filtering_rules_for_instance(instance_ref,
                                                      network_info)
         except exception.NovaException as e:
@@ -8613,7 +8595,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           jsonutils.dumps(_fake_cpu_info),
                           instance)
 
-    def test_check_can_live_migrate_dest_cleanup_works_correctly(self):
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_cleanup_shared_storage_test_file')
+    def test_check_can_live_migrate_dest_cleanup_works_correctly(
+            self, mock_clean):
         objects.Instance(**self.test_instance)
         dest_check_data = objects.LibvirtLiveMigrateData(
             filename="file",
@@ -8622,12 +8607,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             disk_available_mb=1024)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        self.mox.StubOutWithMock(drvr, '_cleanup_shared_storage_test_file')
-        drvr._cleanup_shared_storage_test_file("file")
-
-        self.mox.ReplayAll()
         drvr.cleanup_live_migration_destination_check(self.context,
                                                       dest_check_data)
+        mock_clean.assert_called_once_with('file')
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('os.utime')
