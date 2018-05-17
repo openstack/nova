@@ -43,9 +43,11 @@ def generate_snapshot_metadata(context, image_api, image_id, instance):
     :param image_api: Handle to the glance image API.
     :param image_id: UUID of the prepared glance image.
     :param instance: The Nova instance whose disk is to be snapshotted.
-    :return: A dict of metadata suitable for image_api.upload.
+    :return: A dict of metadata suitable for image_api.update.
     """
     image = image_api.get(context, image_id)
+
+    # TODO(esberglu): Update this to v2 metadata
     metadata = {
         'name': image['name'],
         'is_public': False,

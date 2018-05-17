@@ -212,7 +212,7 @@ class DeleteVOpt(task.Task):
 
 class InstanceDiskToMgmt(task.Task):
 
-    """The task to connect an instance's disk to the management partition."
+    """The task to connect an instance's disk to the management partition.
 
     This task will connect the instance's disk to the management partition and
     discover it. We do these two pieces together because their reversion
