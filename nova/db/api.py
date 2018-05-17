@@ -769,6 +769,11 @@ def instance_get_all(context, columns_to_join=None):
     return IMPL.instance_get_all(context, columns_to_join=columns_to_join)
 
 
+def instance_get_all_uuids_by_host(context, host):
+    """Get a list of instance uuids on host."""
+    return IMPL.instance_get_all_uuids_by_host(context, host)
+
+
 def instance_get_all_by_filters(context, filters, sort_key='created_at',
                                 sort_dir='desc', limit=None, marker=None,
                                 columns_to_join=None):

@@ -306,6 +306,15 @@ class UnsupportedDbRegexpTestCase(DbTestCase):
                           self.context, {'display_name': '%test%'},
                           marker=uuidsentinel.uuid1)
 
+    def test_instance_get_all_uuids_by_host(self, mock_get_regexp):
+        test1 = self.create_instance_with_args(display_name='test1')
+        test2 = self.create_instance_with_args(display_name='test2')
+        test3 = self.create_instance_with_args(display_name='test3')
+        uuids = [i.uuid for i in (test1, test2, test3)]
+        found_uuids = db.instance_get_all_uuids_by_host(self.context,
+                                                        test1.host)
+        self.assertEqual(sorted(uuids), sorted(found_uuids))
+
     def _assert_equals_inst_order(self, correct_order, filters,
                                   sort_keys=None, sort_dirs=None,
                                   limit=None, marker=None,

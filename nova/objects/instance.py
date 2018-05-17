@@ -1453,11 +1453,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
 
     @base.remotable_classmethod
     def get_uuids_by_host(cls, context, host):
-        # NOTE(danms): We could potentially do this a little more efficiently
-        # but for now just pull all the instances and scrape the uuids.
-        db_instances = db.instance_get_all_by_host(context, host,
-                                                   columns_to_join=[])
-        return [inst['uuid'] for inst in db_instances]
+        return db.instance_get_all_uuids_by_host(context, host)
 
     @staticmethod
     @db_api.pick_context_manager_reader

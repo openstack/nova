@@ -2608,6 +2608,11 @@ def _instance_get_all_uuids_by_host(context, host):
 
 
 @pick_context_manager_reader
+def instance_get_all_uuids_by_host(context, host):
+    return _instance_get_all_uuids_by_host(context, host)
+
+
+@pick_context_manager_reader
 def instance_get_all_by_host_and_node(context, host, node,
                                       columns_to_join=None):
     if columns_to_join is None:
