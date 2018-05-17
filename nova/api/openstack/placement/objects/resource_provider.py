@@ -1075,7 +1075,7 @@ class ResourceProvider(base.VersionedObject, base.TimestampedObject):
 
 
 @db_api.api_context_manager.reader
-def _get_providers_with_shared_capacity(ctx, rc_id, amount):
+def _get_providers_with_shared_capacity(ctx, rc_id, amount, member_of=None):
     """Returns a list of resource provider IDs (internal IDs, not UUIDs)
     that have capacity for a requested amount of a resource and indicate that
     they share resource via an aggregate association.
@@ -1111,6 +1111,13 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount):
     To follow the example above, if we were to call
     _get_providers_with_shared_capacity(ctx, "DISK_GB", 100), we would want to
     get back the ID for the NFS_SHARE resource provider.
+
+    :param rc_id: Internal ID of the requested resource class.
+    :param amount: Amount of the requested resource.
+    :param member_of: When present, contains a list of lists of aggregate
+                      uuids that are used to filter the returned list of
+                      resource providers that *directly* belong to the
+                      aggregates referenced.
     """
     # The SQL we need to generate here looks like this:
     #
@@ -1178,18 +1185,28 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount):
         inv_tbl.c.resource_provider_id == usage.c.resource_provider_id,
     )
 
+    where_conds = sa.and_(
+        func.coalesce(usage.c.used, 0) + amount <= (
+            inv_tbl.c.total - inv_tbl.c.reserved) * inv_tbl.c.allocation_ratio,
+        inv_tbl.c.min_unit <= amount,
+        inv_tbl.c.max_unit >= amount,
+        amount % inv_tbl.c.step_size == 0)
+
+    # If 'member_of' has values, do a separate lookup to identify the
+    # resource providers that meet the member_of constraints.
+    if member_of:
+        rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of)
+        if not rps_in_aggs:
+            # Short-circuit. The user either asked for a non-existing
+            # aggregate or there were no resource providers that matched
+            # the requirements...
+            return []
+        where_conds.append(rp_tbl.c.id.in_(rps_in_aggs))
+
     sel = sa.select([rp_tbl.c.id]).select_from(inv_to_usage_join)
-    sel = sel.where(
-        sa.and_(
-            func.coalesce(usage.c.used, 0) + amount <= (
-                inv_tbl.c.total - inv_tbl.c.reserved
-            ) * inv_tbl.c.allocation_ratio,
-            inv_tbl.c.min_unit <= amount,
-            inv_tbl.c.max_unit >= amount,
-            amount % inv_tbl.c.step_size == 0,
-        ),
-    )
+    sel = sel.where(where_conds)
     sel = sel.group_by(rp_tbl.c.id)
+
     return [r[0] for r in ctx.session.execute(sel)]
 
 
@@ -4176,7 +4193,7 @@ class AllocationCandidates(base.VersionedObject):
             # particular resource class.
             sharing_providers = {
                 rc_id: _get_providers_with_shared_capacity(context, rc_id,
-                                                           amount)
+                                                           amount, member_of)
                 for rc_id, amount in resources.items()
             }
             # We check this here as an optimization: if we have no sharing

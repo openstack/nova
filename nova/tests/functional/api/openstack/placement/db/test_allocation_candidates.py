@@ -1600,36 +1600,17 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             )}
         )
 
-        # Bug#1763907: We should get providers only in agg1, but the actual
-        # is that we get all the resource providers shared by rps in agg1.
-        # expected = [
-        #     [('cn1', fields.ResourceClass.VCPU, 2),
-        #      ('ss1', fields.ResourceClass.DISK_GB, 1500)],
-        # ]
         expected = [
             [('cn1', fields.ResourceClass.VCPU, 2),
              ('ss1', fields.ResourceClass.DISK_GB, 1500)],
-            [('cn1', fields.ResourceClass.VCPU, 2),
-             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
 
-        # expected = {
-        #     'cn1': set([
-        #         (fields.ResourceClass.VCPU, 24, 0),
-        #     ]),
-        #     'ss1': set([
-        #         (fields.ResourceClass.DISK_GB, 1600, 0),
-        #     ]),
-        # }
         expected = {
             'cn1': set([
                 (fields.ResourceClass.VCPU, 24, 0),
             ]),
             'ss1': set([
-                (fields.ResourceClass.DISK_GB, 1600, 0),
-            ]),
-            'ss2': set([
                 (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
         }
@@ -1647,35 +1628,14 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             )}
         )
 
-        # expected = [
-        #     [('cn1', fields.ResourceClass.VCPU, 2),
-        #      ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-        #     [('cn2', fields.ResourceClass.VCPU, 2),
-        #      ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-        # ]
         expected = [
             [('cn1', fields.ResourceClass.VCPU, 2),
-             ('ss1', fields.ResourceClass.DISK_GB, 1500)],
-            [('cn1', fields.ResourceClass.VCPU, 2),
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
             [('cn2', fields.ResourceClass.VCPU, 2),
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-            [('cn2', fields.ResourceClass.VCPU, 2),
-             ('ss3', fields.ResourceClass.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
 
-        # expected = {
-        #     'cn1': set([
-        #         (fields.ResourceClass.VCPU, 24, 0),
-        #     ]),
-        #     'cn2': set([
-        #         (fields.ResourceClass.VCPU, 24, 0),
-        #     ]),
-        #     'ss2': set([
-        #         (fields.ResourceClass.DISK_GB, 1600, 0),
-        #     ]),
-        # }
         expected = {
             'cn1': set([
                 (fields.ResourceClass.VCPU, 24, 0),
@@ -1683,13 +1643,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             'cn2': set([
                 (fields.ResourceClass.VCPU, 24, 0),
             ]),
-            'ss1': set([
-                (fields.ResourceClass.DISK_GB, 1600, 0),
-            ]),
             'ss2': set([
-                (fields.ResourceClass.DISK_GB, 1600, 0),
-            ]),
-            'ss3': set([
                 (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
         }
@@ -1708,27 +1662,10 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             )}
         )
 
-        # expected = []
-        expected = [
-            [('cn1', fields.ResourceClass.VCPU, 2),
-             ('ss1', fields.ResourceClass.DISK_GB, 1500)],
-            [('cn1', fields.ResourceClass.VCPU, 2),
-             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-        ]
+        expected = []
         self._validate_allocation_requests(expected, alloc_cands)
 
-        # expected = {}
-        expected = {
-            'cn1': set([
-                (fields.ResourceClass.VCPU, 24, 0),
-            ]),
-            'ss1': set([
-                (fields.ResourceClass.DISK_GB, 1600, 0),
-            ]),
-            'ss2': set([
-                (fields.ResourceClass.DISK_GB, 1600, 0),
-            ]),
-        }
+        expected = {}
         self._validate_provider_summary_resources(expected, alloc_cands)
 
         # The request from agg1 *OR* agg2 would provide three candidates
@@ -1743,14 +1680,6 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             )}
         )
 
-        # expected = [
-        #     [('cn1', fields.ResourceClass.VCPU, 2),
-        #      ('ss1', fields.ResourceClass.DISK_GB, 1500)],
-        #     [('cn1', fields.ResourceClass.VCPU, 2),
-        #      ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-        #     [('cn2', fields.ResourceClass.VCPU, 2),
-        #      ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-        # ]
         expected = [
             [('cn1', fields.ResourceClass.VCPU, 2),
              ('ss1', fields.ResourceClass.DISK_GB, 1500)],
@@ -1758,25 +1687,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
             [('cn2', fields.ResourceClass.VCPU, 2),
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-            [('cn2', fields.ResourceClass.VCPU, 2),
-             ('ss3', fields.ResourceClass.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
 
-        # expected = {
-        #     'cn1': set([
-        #         (fields.ResourceClass.VCPU, 24, 0),
-        #     ]),
-        #     'cn2': set([
-        #         (fields.ResourceClass.VCPU, 24, 0),
-        #     ]),
-        #     'ss1': set([
-        #         (fields.ResourceClass.DISK_GB, 1600, 0),
-        #     ]),
-        #     'ss2': set([
-        #         (fields.ResourceClass.DISK_GB, 1600, 0),
-        #     ]),
-        # }
         expected = {
             'cn1': set([
                 (fields.ResourceClass.VCPU, 24, 0),
@@ -1788,9 +1701,6 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
             'ss2': set([
-                (fields.ResourceClass.DISK_GB, 1600, 0),
-            ]),
-            'ss3': set([
                 (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
         }
