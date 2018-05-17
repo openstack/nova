@@ -169,4 +169,4 @@ warlock==1.3.0
 WebOb==1.7.1
 websockify==0.8.0
 wrapt==1.10.11
-wsgi-intercept==1.4.1
+wsgi-intercept==1.7.0
