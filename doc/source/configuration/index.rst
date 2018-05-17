@@ -14,10 +14,10 @@ Configuration
   configuration guides for various parts of you Nova system. Helpful reference
   for setting up specific hypervisor backends.
 
-* :doc:`Config Reference </configuration/config>`: A complete reference of all
+* :doc:`Config Reference <config>`: A complete reference of all
   configuration options available in the ``nova.conf`` file.
 
-* :doc:`Sample Config File </configuration/sample-config>`: A sample config
+* :doc:`Sample Config File <sample-config>`: A sample config
   file with inline documentation.
 
 Policy
@@ -26,8 +26,20 @@ Policy
 Nova, like most OpenStack projects, uses a policy language to restrict
 permissions on REST API actions.
 
-* :doc:`Policy Reference </configuration/policy>`: A complete reference of all
+* :doc:`Policy Reference <policy>`: A complete reference of all
   policy points in nova and what they impact.
 
-* :doc:`Sample Policy File </configuration/sample-policy>`: A sample policy
+* :doc:`Sample Policy File <sample-policy>`: A sample policy
   file with inline documentation.
+
+
+.. # NOTE(mriedem): This is the section where we hide things that we don't
+   # actually want in the table of contents but sphinx build would fail if
+   # they aren't in the toctree somewhere.
+.. toctree::
+   :hidden:
+
+   config
+   sample-config
+   policy
+   sample-policy
