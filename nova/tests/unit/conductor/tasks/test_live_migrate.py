@@ -322,27 +322,16 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                                self.task._check_requested_destination)
         self.assertIn('across cells', six.text_type(ex))
 
-    def test_find_destination_works(self):
-        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
-        self.mox.StubOutWithMock(objects.RequestSpec,
-                                 'reset_forced_destinations')
-        self.mox.StubOutWithMock(self.task.scheduler_client,
-                                 'select_destinations')
-        self.mox.StubOutWithMock(self.task,
-                '_check_compatible_with_source_hypervisor')
-        self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
-
-        scheduler_utils.setup_instance_group(
-            self.context, self.fake_spec)
-        self.fake_spec.reset_forced_destinations()
-        self.task.scheduler_client.select_destinations(
-                self.context, self.fake_spec, [self.instance.uuid],
-                return_objects=True, return_alternates=False).AndReturn(
-                [[fake_selection1]])
-        self.task._check_compatible_with_source_hypervisor("host1")
-        self.task._call_livem_checks_on_host("host1")
-
-        self.mox.ReplayAll()
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_call_livem_checks_on_host')
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_check_compatible_with_source_hypervisor')
+    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+                       return_value=[[fake_selection1]])
+    @mock.patch.object(objects.RequestSpec, 'reset_forced_destinations')
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    def test_find_destination_works(self, mock_setup, mock_reset, mock_select,
+                                    mock_check, mock_call):
         self.assertEqual(("host1", "node1"), self.task._find_destination())
 
         # Make sure the request_spec was updated to include the cell
@@ -350,6 +339,13 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.assertIsNotNone(self.fake_spec.requested_destination.cell)
         # Make sure the spec was updated to include the project_id.
         self.assertEqual(self.fake_spec.project_id, self.instance.project_id)
+
+        mock_setup.assert_called_once_with(self.context, self.fake_spec)
+        mock_reset.assert_called_once_with()
+        mock_select.assert_called_once_with(self.context, self.fake_spec,
+            [self.instance.uuid], return_objects=True, return_alternates=False)
+        mock_check.assert_called_once_with('host1')
+        mock_call.assert_called_once_with('host1')
 
     def test_find_destination_works_with_no_request_spec(self):
         task = live_migrate.LiveMigrationTask(
@@ -388,53 +384,51 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             call_livem_checks.assert_called_once_with("host1")
         do_test()
 
-    def test_find_destination_no_image_works(self):
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_call_livem_checks_on_host')
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_check_compatible_with_source_hypervisor')
+    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+                       return_value=[[fake_selection1]])
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    def test_find_destination_no_image_works(self, mock_setup, mock_select,
+                                             mock_check, mock_call):
         self.instance['image_ref'] = ''
 
-        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
-        self.mox.StubOutWithMock(self.task.scheduler_client,
-                                 'select_destinations')
-        self.mox.StubOutWithMock(self.task,
-                '_check_compatible_with_source_hypervisor')
-        self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
-
-        scheduler_utils.setup_instance_group(self.context, self.fake_spec)
-        self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid], return_objects=True,
-                return_alternates=False).AndReturn([[fake_selection1]])
-        self.task._check_compatible_with_source_hypervisor("host1")
-        self.task._call_livem_checks_on_host("host1")
-
-        self.mox.ReplayAll()
         self.assertEqual(("host1", "node1"), self.task._find_destination())
 
-    def _test_find_destination_retry_hypervisor_raises(self, error):
-        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
-        self.mox.StubOutWithMock(self.task.scheduler_client,
-                                 'select_destinations')
-        self.mox.StubOutWithMock(self.task,
-                '_check_compatible_with_source_hypervisor')
-        self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
+        mock_setup.assert_called_once_with(self.context, self.fake_spec)
+        mock_select.assert_called_once_with(
+            self.context, self.fake_spec, [self.instance.uuid],
+            return_objects=True, return_alternates=False)
+        mock_check.assert_called_once_with('host1')
+        mock_call.assert_called_once_with('host1')
 
-        scheduler_utils.setup_instance_group(self.context, self.fake_spec)
-        self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid], return_objects=True,
-                return_alternates=False).AndReturn([[fake_selection1]])
-        self.task._check_compatible_with_source_hypervisor("host1")\
-                .AndRaise(error)
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_remove_host_allocations')
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_call_livem_checks_on_host')
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_check_compatible_with_source_hypervisor')
+    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+                       side_effect=[[[fake_selection1]], [[fake_selection2]]])
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    def _test_find_destination_retry_hypervisor_raises(
+            self, error, mock_setup, mock_select, mock_check, mock_call,
+            mock_remove):
+        mock_check.side_effect = [error, None]
 
-        self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid], return_objects=True,
-                return_alternates=False).AndReturn([[fake_selection2]])
-        self.task._check_compatible_with_source_hypervisor("host2")
-        self.task._call_livem_checks_on_host("host2")
-
-        self.mox.ReplayAll()
-        with mock.patch.object(self.task,
-                               '_remove_host_allocations') as remove_allocs:
-            self.assertEqual(("host2", "node2"), self.task._find_destination())
+        self.assertEqual(("host2", "node2"), self.task._find_destination())
         # Should have removed allocations for the first host.
-        remove_allocs.assert_called_once_with('host1', 'node1')
+        mock_remove.assert_called_once_with('host1', 'node1')
+        mock_setup.assert_called_once_with(self.context, self.fake_spec)
+        mock_select.assert_has_calls([
+            mock.call(self.context, self.fake_spec, [self.instance.uuid],
+                      return_objects=True, return_alternates=False),
+            mock.call(self.context, self.fake_spec, [self.instance.uuid],
+                      return_objects=True, return_alternates=False)])
+        mock_check.assert_has_calls([mock.call('host1'), mock.call('host2')])
+        mock_call.assert_called_once_with('host2')
 
     def test_find_destination_retry_with_old_hypervisor(self):
         self._test_find_destination_retry_hypervisor_raises(
@@ -444,107 +438,94 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self._test_find_destination_retry_hypervisor_raises(
                 exception.InvalidHypervisorType)
 
-    def test_find_destination_retry_with_invalid_livem_checks(self):
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_remove_host_allocations')
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_call_livem_checks_on_host')
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_check_compatible_with_source_hypervisor')
+    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+                       side_effect=[[[fake_selection1]], [[fake_selection2]]])
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    def test_find_destination_retry_with_invalid_livem_checks(
+            self, mock_setup, mock_select, mock_check, mock_call, mock_remove):
         self.flags(migrate_max_retries=1)
-        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
-        self.mox.StubOutWithMock(self.task.scheduler_client,
-                                 'select_destinations')
-        self.mox.StubOutWithMock(self.task,
-                '_check_compatible_with_source_hypervisor')
-        self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
+        mock_call.side_effect = [exception.Invalid(), None]
 
-        scheduler_utils.setup_instance_group(self.context, self.fake_spec)
-        self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid], return_objects=True,
-                return_alternates=False).AndReturn([[fake_selection1]])
-        self.task._check_compatible_with_source_hypervisor("host1")
-        self.task._call_livem_checks_on_host("host1")\
-                .AndRaise(exception.Invalid)
-
-        self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid], return_objects=True,
-                return_alternates=False).AndReturn([[fake_selection2]])
-        self.task._check_compatible_with_source_hypervisor("host2")
-        self.task._call_livem_checks_on_host("host2")
-
-        self.mox.ReplayAll()
-        with mock.patch.object(self.task,
-                               '_remove_host_allocations') as remove_allocs:
-            self.assertEqual(("host2", "node2"), self.task._find_destination())
+        self.assertEqual(("host2", "node2"), self.task._find_destination())
         # Should have removed allocations for the first host.
-        remove_allocs.assert_called_once_with('host1', 'node1')
+        mock_remove.assert_called_once_with('host1', 'node1')
+        mock_setup.assert_called_once_with(self.context, self.fake_spec)
+        mock_select.assert_has_calls([
+            mock.call(self.context, self.fake_spec, [self.instance.uuid],
+                      return_objects=True, return_alternates=False),
+            mock.call(self.context, self.fake_spec, [self.instance.uuid],
+                      return_objects=True, return_alternates=False)])
+        mock_check.assert_has_calls([mock.call('host1'), mock.call('host2')])
+        mock_call.assert_has_calls([mock.call('host1'), mock.call('host2')])
 
-    def test_find_destination_retry_with_failed_migration_pre_checks(self):
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_remove_host_allocations')
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_call_livem_checks_on_host')
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_check_compatible_with_source_hypervisor')
+    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+                       side_effect=[[[fake_selection1]], [[fake_selection2]]])
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    def test_find_destination_retry_with_failed_migration_pre_checks(
+            self, mock_setup, mock_select, mock_check, mock_call, mock_remove):
         self.flags(migrate_max_retries=1)
-        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
-        self.mox.StubOutWithMock(self.task.scheduler_client,
-                                 'select_destinations')
-        self.mox.StubOutWithMock(self.task,
-                '_check_compatible_with_source_hypervisor')
-        self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
+        mock_call.side_effect = [exception.MigrationPreCheckError('reason'),
+                                 None]
 
-        scheduler_utils.setup_instance_group(self.context, self.fake_spec)
-        self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid], return_objects=True,
-                return_alternates=False).AndReturn([[fake_selection1]])
-        self.task._check_compatible_with_source_hypervisor("host1")
-        self.task._call_livem_checks_on_host("host1")\
-                .AndRaise(exception.MigrationPreCheckError("reason"))
-
-        self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid], return_objects=True,
-                return_alternates=False).AndReturn([[fake_selection2]])
-        self.task._check_compatible_with_source_hypervisor("host2")
-        self.task._call_livem_checks_on_host("host2")
-
-        self.mox.ReplayAll()
-        with mock.patch.object(self.task,
-                               '_remove_host_allocations') as remove_allocs:
-            self.assertEqual(("host2", "node2"), self.task._find_destination())
+        self.assertEqual(("host2", "node2"), self.task._find_destination())
         # Should have removed allocations for the first host.
-        remove_allocs.assert_called_once_with('host1', 'node1')
+        mock_remove.assert_called_once_with('host1', 'node1')
+        mock_setup.assert_called_once_with(self.context, self.fake_spec)
+        mock_select.assert_has_calls([
+            mock.call(self.context, self.fake_spec, [self.instance.uuid],
+                      return_objects=True, return_alternates=False),
+            mock.call(self.context, self.fake_spec, [self.instance.uuid],
+                      return_objects=True, return_alternates=False)])
+        mock_check.assert_has_calls([mock.call('host1'), mock.call('host2')])
+        mock_call.assert_has_calls([mock.call('host1'), mock.call('host2')])
 
-    def test_find_destination_retry_exceeds_max(self):
+    @mock.patch.object(objects.Migration, 'save')
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_remove_host_allocations')
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_check_compatible_with_source_hypervisor',
+                       side_effect=exception.DestinationHypervisorTooOld())
+    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+                       return_value=[[fake_selection1]])
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    def test_find_destination_retry_exceeds_max(
+            self, mock_setup, mock_select, mock_check, mock_remove, mock_save):
         self.flags(migrate_max_retries=0)
-        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
-        self.mox.StubOutWithMock(self.task.scheduler_client,
-                                 'select_destinations')
-        self.mox.StubOutWithMock(self.task,
-                '_check_compatible_with_source_hypervisor')
 
-        scheduler_utils.setup_instance_group(self.context, self.fake_spec)
-        self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid], return_objects=True,
-                return_alternates=False).AndReturn([[fake_selection1]])
-        self.task._check_compatible_with_source_hypervisor("host1")\
-                .AndRaise(exception.DestinationHypervisorTooOld)
+        self.assertRaises(exception.MaxRetriesExceeded,
+                          self.task._find_destination)
+        self.assertEqual('failed', self.task.migration.status)
+        mock_save.assert_called_once_with()
+        # Should have removed allocations for the first host.
+        mock_remove.assert_called_once_with('host1', 'node1')
+        mock_setup.assert_called_once_with(self.context, self.fake_spec)
+        mock_select.assert_called_once_with(
+            self.context, self.fake_spec, [self.instance.uuid],
+            return_objects=True, return_alternates=False)
+        mock_check.assert_called_once_with('host1')
 
-        self.mox.ReplayAll()
-        with test.nested(
-            mock.patch.object(self.task.migration, 'save'),
-            mock.patch.object(self.task, '_remove_host_allocations')
-        ) as (
-            save_mock, remove_allocs
-        ):
-            self.assertRaises(exception.MaxRetriesExceeded,
-                              self.task._find_destination)
-            self.assertEqual('failed', self.task.migration.status)
-            save_mock.assert_called_once_with()
-            # Should have removed allocations for the first host.
-            remove_allocs.assert_called_once_with('host1', 'node1')
-
-    def test_find_destination_when_runs_out_of_hosts(self):
-        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
-        self.mox.StubOutWithMock(self.task.scheduler_client,
-                                 'select_destinations')
-        scheduler_utils.setup_instance_group(self.context, self.fake_spec)
-        self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid], return_objects=True,
-                return_alternates=False).AndRaise(
-                exception.NoValidHost(reason=""))
-
-        self.mox.ReplayAll()
+    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+                       side_effect=exception.NoValidHost(reason=""))
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    def test_find_destination_when_runs_out_of_hosts(self, mock_setup,
+                                                     mock_select):
         self.assertRaises(exception.NoValidHost, self.task._find_destination)
+        mock_setup.assert_called_once_with(self.context, self.fake_spec)
+        mock_select.assert_called_once_with(
+            self.context, self.fake_spec, [self.instance.uuid],
+            return_objects=True, return_alternates=False)
 
     @mock.patch("nova.utils.get_image_from_system_metadata")
     @mock.patch("nova.scheduler.utils.build_request_spec")
