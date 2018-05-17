@@ -154,6 +154,46 @@ class ServersTest(ServersTestBase):
         self.assertEqual('ERROR', found_server['status'])
         self._delete_server(created_server_id)
 
+    def _test_create_server_with_error_with_retries(self):
+        # Create a server which will enter error state.
+
+        fake.set_nodes(['host2'])
+        self.addCleanup(fake.restore_nodes)
+        self.flags(host='host2')
+        self.compute2 = self.start_service('compute', host='host2')
+
+        fails = []
+
+        def throw_error(*args, **kwargs):
+            fails.append('one')
+            raise test.TestingException('Please retry me')
+
+        self.stub_out('nova.virt.fake.FakeDriver.spawn', throw_error)
+
+        server = self._build_minimal_create_server_request()
+        created_server = self.api.post_server({"server": server})
+        created_server_id = created_server['id']
+
+        found_server = self.api.get_server(created_server_id)
+        self.assertEqual(created_server_id, found_server['id'])
+
+        found_server = self._wait_for_state_change(found_server, 'BUILD')
+
+        self.assertEqual('ERROR', found_server['status'])
+        self._delete_server(created_server_id)
+
+        return len(fails)
+
+    def test_create_server_with_error_with_retries(self):
+        self.flags(max_attempts=2, group='scheduler')
+        fails = self._test_create_server_with_error_with_retries()
+        self.assertEqual(2, fails)
+
+    def test_create_server_with_error_with_no_retries(self):
+        self.flags(max_attempts=1, group='scheduler')
+        fails = self._test_create_server_with_error_with_retries()
+        self.assertEqual(1, fails)
+
     def test_create_and_delete_server(self):
         # Creates and deletes a server.
 

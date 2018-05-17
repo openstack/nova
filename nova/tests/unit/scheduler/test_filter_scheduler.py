@@ -845,8 +845,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 instance_uuids, alloc_reqs, None, return_alternates=True)
         self.assertEqual(num_instances, len(dests))
         # Filtering and weighing hosts should be called num_instances + 1 times
-        # unless num_instances == 1.
-        self.assertEqual(num_instances + 1 if num_instances > 1 else 1,
+        # unless we're not getting alternates, and then just num_instances
+        self.assertEqual(num_instances + 1
+                         if num_alternates > 0 and num_instances > 1
+                         else num_instances,
                          mock_sorted.call_count,
                          'Unexpected number of calls to filter hosts for %s '
                          'instances.' % num_instances)

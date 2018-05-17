@@ -158,7 +158,8 @@ class FilterScheduler(driver.Scheduler):
         # is based on CONF.scheduler.max_attempts; note that if there are not
         # enough filtered hosts to provide the full number of alternates, the
         # list of hosts may be shorter than this amount.
-        num_alts = CONF.scheduler.max_attempts if return_alternates else 0
+        num_alts = (CONF.scheduler.max_attempts - 1
+                    if return_alternates else 0)
 
         if (instance_uuids is None or
                 not self.USES_ALLOCATION_CANDIDATES or
@@ -332,9 +333,8 @@ class FilterScheduler(driver.Scheduler):
                              num_alts, alloc_reqs_by_rp_uuid=None,
                              allocation_request_version=None):
         # We only need to filter/weigh the hosts again if we're dealing with
-        # more than one instance since the single selected host will get
-        # filtered out of the list of alternates below.
-        if index > 0:
+        # more than one instance and are going to be picking alternates.
+        if index > 0 and num_alts > 0:
             # The selected_hosts have all had resources 'claimed' via
             # _consume_selected_host, so we need to filter/weigh and sort the
             # hosts again to get an accurate count for alternates.
@@ -364,7 +364,7 @@ class FilterScheduler(driver.Scheduler):
             # will have had its resources reduced and will have a much lower
             # chance of being able to fit another instance on it.
             for host in hosts:
-                if len(selected_plus_alts) >= num_alts:
+                if len(selected_plus_alts) >= num_alts + 1:
                     break
                 if host.cell_uuid == cell_uuid and host not in selected_hosts:
                     if alloc_reqs_by_rp_uuid is not None:
