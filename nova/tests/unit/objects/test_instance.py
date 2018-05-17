@@ -1502,6 +1502,18 @@ class _TestInstanceObject(object):
         inst = instance.Instance(context=self.context, uuid=uuids.instance)
         inst.metadata
 
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_load_something_unspecial(self, mock_get):
+        inst2 = objects.Instance(vm_state=vm_states.ACTIVE,
+                                 task_state=task_states.SCHEDULING)
+        mock_get.return_value = inst2
+        inst = instance.Instance(context=self.context, uuid=uuids.instance)
+        self.assertEqual(vm_states.ACTIVE, inst.vm_state)
+        self.assertEqual(task_states.SCHEDULING, inst.task_state)
+        mock_get.assert_called_once_with(self.context,
+                                         uuid=uuids.instance,
+                                         expected_attrs=['vm_state'])
+
     @mock.patch('nova.db.instance_fault_get_by_instance_uuids')
     def test_load_fault(self, mock_get):
         fake_fault = test_instance_fault.fake_faults['fake-uuid'][0]

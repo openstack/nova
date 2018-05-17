@@ -301,11 +301,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 base_name = CONF.instance_name_template % info
             except KeyError:
                 base_name = self.uuid
-        except exception.ObjectActionError:
-            # This indicates self.id was not set and could not be lazy loaded.
-            # What this means is the instance has not been persisted to a db
-            # yet, which should indicate it has not been scheduled yet. In this
-            # situation it will have a blank name.
+        except (exception.ObjectActionError,
+                exception.OrphanedObjectError):
+            # This indicates self.id was not set and/or could not be
+            # lazy loaded.  What this means is the instance has not
+            # been persisted to a db yet, which should indicate it has
+            # not been scheduled yet. In this situation it will have a
+            # blank name.
             if (self.vm_state == vm_states.BUILDING and
                     self.task_state == task_states.SCHEDULING):
                 base_name = ''
@@ -884,13 +886,18 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                                                   uuid=self.uuid,
                                                   expected_attrs=[attrname])
 
-        # NOTE(danms): Never allow us to recursively-load
-        if instance.obj_attr_is_set(attrname):
-            self[attrname] = instance[attrname]
-        else:
+        if attrname not in instance:
+            # NOTE(danms): Never allow us to recursively-load
             raise exception.ObjectActionError(
                 action='obj_load_attr',
                 reason=_('loading %s requires recursion') % attrname)
+
+        # NOTE(danms): load anything we don't already have from the
+        # instance we got from the database to make the most of the
+        # performance hit.
+        for field in self.fields:
+            if field in instance and field not in self:
+                setattr(self, field, getattr(instance, field))
 
     def _load_fault(self):
         self.fault = objects.InstanceFault.get_latest_for_instance(
@@ -1071,14 +1078,14 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self.numa_topology = numa_topology.clear_host_pinning()
 
     def obj_load_attr(self, attrname):
-        if attrname not in INSTANCE_OPTIONAL_ATTRS:
-            raise exception.ObjectActionError(
-                action='obj_load_attr',
-                reason=_('attribute %s not lazy-loadable') % attrname)
-
+        # NOTE(danms): We can't lazy-load anything without a context and a uuid
         if not self._context:
             raise exception.OrphanedObjectError(method='obj_load_attr',
                                                 objtype=self.obj_name())
+        if 'uuid' not in self:
+            raise exception.ObjectActionError(
+                action='obj_load_attr',
+                reason=_('attribute %s not lazy-loadable') % attrname)
 
         LOG.debug("Lazy-loading '%(attr)s' on %(name)s uuid %(uuid)s",
                   {'attr': attrname,
@@ -1127,9 +1134,19 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 self.tags = objects.TagList(self._context)
             else:
                 self._load_tags()
-        else:
-            # FIXME(comstud): This should be optimized to only load the attr.
+        elif attrname in self.fields and attrname != 'id':
+            # NOTE(danms): We've never let 'id' be lazy-loaded, and use its
+            # absence as a sentinel that it hasn't been created in the database
+            # yet, so refuse to do so here.
             self._load_generic(attrname)
+        else:
+            # NOTE(danms): This is historically what we did for
+            # something not in a field that was force-loaded. So, just
+            # do this for consistency.
+            raise exception.ObjectActionError(
+                action='obj_load_attr',
+                reason=_('attribute %s not lazy-loadable') % attrname)
+
         self.obj_reset_changes([attrname])
 
     def get_flavor(self, namespace=None):

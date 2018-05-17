@@ -7542,6 +7542,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock_pr.side_effect = test.TestingException
 
             instance = objects.Instance(uuid=uuids.instance,
+                                        id=1,
                                         host='host',
                                         node='node',
                                         vm_state='active',
