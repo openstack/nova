@@ -90,6 +90,9 @@ changes done to the API, as the impact can be very wide.
   you need to do when adding an API exposed feature that needs a new
   microversion.
 
+* :doc:`/contributor/api-ref-guideline`: The guideline to write the API
+  reference.
+
 Nova Major Subsystems
 =====================
 
