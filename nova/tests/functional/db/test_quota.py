@@ -98,6 +98,13 @@ class QuotaTestCase(test.NoDBTestCase):
                                         user_id='fake-user',
                                         vcpus=2, memory_mb=512)
             instance.create()
+            # create mapping for the instance since we query only those cells
+            # in which the project has instances based on the instance_mappings
+            im = objects.InstanceMapping(context=ctxt,
+                                         instance_uuid=instance.uuid,
+                                         cell_mapping=mapping1,
+                                         project_id='fake-project')
+            im.create()
 
         # Create an instance in cell2
         with context.target_cell(ctxt, mapping2) as cctxt:
@@ -106,6 +113,13 @@ class QuotaTestCase(test.NoDBTestCase):
                                         user_id='fake-user',
                                         vcpus=4, memory_mb=1024)
             instance.create()
+            # create mapping for the instance since we query only those cells
+            # in which the project has instances based on the instance_mappings
+            im = objects.InstanceMapping(context=ctxt,
+                                         instance_uuid=instance.uuid,
+                                         cell_mapping=mapping2,
+                                         project_id='fake-project')
+            im.create()
 
         # Create an instance in cell2 for a different user
         with context.target_cell(ctxt, mapping2) as cctxt:
@@ -114,6 +128,13 @@ class QuotaTestCase(test.NoDBTestCase):
                                         user_id='other-fake-user',
                                         vcpus=4, memory_mb=1024)
             instance.create()
+            # create mapping for the instance since we query only those cells
+            # in which the project has instances based on the instance_mappings
+            im = objects.InstanceMapping(context=ctxt,
+                                         instance_uuid=instance.uuid,
+                                         cell_mapping=mapping2,
+                                         project_id='fake-project')
+            im.create()
 
         # Count instances, cores, and ram across cells
         count = quota._instances_cores_ram_count(ctxt, 'fake-project',

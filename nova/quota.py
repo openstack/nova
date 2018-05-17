@@ -1168,8 +1168,17 @@ def _instances_cores_ram_count(context, project_id, user_id=None):
     # counting resources if a cell is down. In the future, we should query
     # placement for cores/ram and InstanceMappings for instances (once we are
     # deleting InstanceMappings when we delete instances).
-    results = nova_context.scatter_gather_all_cells(
-        context, objects.InstanceList.get_counts, project_id, user_id=user_id)
+    # NOTE(tssurya): We only go into those cells in which the tenant has
+    # instances. We could optimize this to avoid the CellMappingList query
+    # for single-cell deployments by checking the cell cache and only doing
+    # this filtering if there is more than one non-cell0 cell.
+    # TODO(tssurya): Consider adding a scatter_gather_cells_for_project
+    # variant that makes this native to nova.context.
+    cell_mappings = objects.CellMappingList.get_by_project_id(
+        context, project_id)
+    results = nova_context.scatter_gather_cells(
+        context, cell_mappings, nova_context.CELL_TIMEOUT,
+        objects.InstanceList.get_counts, project_id, user_id=user_id)
     total_counts = {'project': {'instances': 0, 'cores': 0, 'ram': 0}}
     if user_id:
         total_counts['user'] = {'instances': 0, 'cores': 0, 'ram': 0}
