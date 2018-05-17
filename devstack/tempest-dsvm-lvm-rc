@@ -33,6 +33,11 @@
 r="^(?!.*"
 r="$r(?:.*\[.*\bslow\b.*\])"
 
+# Only run compute API tests. The ! here looks confusing but it's to negate
+# the ! at the beginning of the regex since the rest of this is meant to be
+# a backlist.
+r="$r|(?!.*api.compute.*)"
+
 # NOTE(mriedem): resize of non-volume-backed lvm instances does not yet work
 # tempest.api.compute.admin.test_migrations.MigrationsAdminTest.test_list_migrations_in_flavor_resize_situation
 r="$r|(?:.*id\-1b512062\-8093\-438e\-b47a\-37d2f597cd64.*)"
