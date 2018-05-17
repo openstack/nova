@@ -13493,6 +13493,43 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(exception.DiskNotFound,
                           drvr._get_disk_over_committed_size_total)
 
+    @mock.patch('nova.virt.libvirt.storage.lvm.get_volume_size')
+    @mock.patch('nova.virt.disk.api.get_disk_size',
+                new_callable=mock.NonCallableMock)
+    def test_get_instance_disk_info_from_config_block_devices(self,
+            mock_disk_api, mock_get_volume_size):
+        """Test that for block devices the actual and virtual sizes are
+        reported as the same and that the disk_api is not used.
+        """
+        c = context.get_admin_context()
+        instance = objects.Instance(root_device_name='/dev/vda',
+                                    **self.test_instance)
+        bdms = objects.BlockDeviceMappingList(objects=[
+            fake_block_device.fake_bdm_object(c, {
+                'device_name': '/dev/mapper/vg-lv',
+                'source_type': 'image',
+                'destination_type': 'local'
+            }),
+
+        ])
+        block_device_info = driver.get_block_device_info(instance, bdms)
+
+        config = vconfig.LibvirtConfigGuest()
+        disk_config = vconfig.LibvirtConfigGuestDisk()
+        disk_config.source_type = "block"
+        disk_config.source_path = mock.sentinel.volume_path
+        config.devices.append(disk_config)
+
+        mock_get_volume_size.return_value = mock.sentinel.volume_size
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        disk_info = drvr._get_instance_disk_info_from_config(config,
+                                                             block_device_info)
+
+        mock_get_volume_size.assert_called_once_with(mock.sentinel.volume_path)
+        self.assertEqual(disk_info[0]['disk_size'],
+                         disk_info[0]['virt_disk_size'])
+
     def test_cpu_info(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
