@@ -1564,14 +1564,16 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
     def test_sharing_providers_member_of(self):
         # Covering the following setup:
         #
-        #       CN1 (VCPU)            CN2 (VCPU)
-        #      / agg1     \ agg2     / agg2     \ agg3
-        #  SS1 (DISK_GB)   SS2 (DISK_GB)     SS3 (DISK_GB)
+        #       CN1 (VCPU, DISK_GB)     CN2 (VCPU, DISK_GB)
+        #      / agg1     \ agg2       / agg2     \ agg3
+        #  SS1 (DISK_GB)   SS2 (DISK_GB)       SS3 (DISK_GB)
         cn1 = self._create_provider('cn1', uuids.agg1, uuids.agg2)
         tb.add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn1, fields.ResourceClass.DISK_GB, 1600)
 
         cn2 = self._create_provider('cn2', uuids.agg2, uuids.agg3)
         tb.add_inventory(cn2, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn2, fields.ResourceClass.DISK_GB, 1600)
 
         # ss1 is connected to cn1
         ss1 = self._create_provider('ss1', uuids.agg1)
@@ -1602,6 +1604,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         expected = [
             [('cn1', fields.ResourceClass.VCPU, 2),
+             ('cn1', fields.ResourceClass.DISK_GB, 1500)],
+            [('cn1', fields.ResourceClass.VCPU, 2),
              ('ss1', fields.ResourceClass.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
@@ -1609,6 +1613,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         expected = {
             'cn1': set([
                 (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
             'ss1': set([
                 (fields.ResourceClass.DISK_GB, 1600, 0),
@@ -1630,7 +1635,11 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         expected = [
             [('cn1', fields.ResourceClass.VCPU, 2),
+             ('cn1', fields.ResourceClass.DISK_GB, 1500)],
+            [('cn1', fields.ResourceClass.VCPU, 2),
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
+            [('cn2', fields.ResourceClass.VCPU, 2),
+             ('cn2', fields.ResourceClass.DISK_GB, 1500)],
             [('cn2', fields.ResourceClass.VCPU, 2),
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
         ]
@@ -1639,9 +1648,11 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         expected = {
             'cn1': set([
                 (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
             'cn2': set([
                 (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
             'ss2': set([
                 (fields.ResourceClass.DISK_GB, 1600, 0),
@@ -1650,7 +1661,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self._validate_provider_summary_resources(expected, alloc_cands)
 
         # Let's move to validate multiple member_of scenario
-        # The request from agg1 *AND* agg2 would provide no candidate
+        # The request from agg1 *AND* agg2 would provide only
+        # resources from cn1 with its local DISK
         alloc_cands = self._get_allocation_candidates(
             {'': placement_lib.RequestGroup(
                 use_same_provider=False,
@@ -1662,13 +1674,21 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             )}
         )
 
-        expected = []
+        expected = [
+            [('cn1', fields.ResourceClass.VCPU, 2),
+             ('cn1', fields.ResourceClass.DISK_GB, 1500)],
+        ]
         self._validate_allocation_requests(expected, alloc_cands)
 
-        expected = {}
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+        }
         self._validate_provider_summary_resources(expected, alloc_cands)
 
-        # The request from agg1 *OR* agg2 would provide three candidates
+        # The request from agg1 *OR* agg2 would provide five candidates
         alloc_cands = self._get_allocation_candidates(
             {'': placement_lib.RequestGroup(
                 use_same_provider=False,
@@ -1682,9 +1702,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         expected = [
             [('cn1', fields.ResourceClass.VCPU, 2),
+             ('cn1', fields.ResourceClass.DISK_GB, 1500)],
+            [('cn1', fields.ResourceClass.VCPU, 2),
              ('ss1', fields.ResourceClass.DISK_GB, 1500)],
             [('cn1', fields.ResourceClass.VCPU, 2),
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
+            [('cn2', fields.ResourceClass.VCPU, 2),
+             ('cn2', fields.ResourceClass.DISK_GB, 1500)],
             [('cn2', fields.ResourceClass.VCPU, 2),
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
         ]
@@ -1693,9 +1717,11 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         expected = {
             'cn1': set([
                 (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
             'cn2': set([
                 (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
             'ss1': set([
                 (fields.ResourceClass.DISK_GB, 1600, 0),
