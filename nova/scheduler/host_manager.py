@@ -750,7 +750,13 @@ class HostManager(object):
                      'instance info for this host.', host_name)
             return {}
         with context_module.target_cell(context, hm.cell_mapping) as cctxt:
-            inst_list = objects.InstanceList.get_by_host(cctxt, host_name)
+            # NOTE(mriedem): We pass expected_attrs=[] to avoid a default
+            # join on info_cache and security_groups, which at present none
+            # of the in-tree filters/weighers rely on that information. Any
+            # out of tree filters which rely on it will end up lazy-loading
+            # the field but we don't have a contract on out of tree filters.
+            inst_list = objects.InstanceList.get_by_host(
+                cctxt, host_name, expected_attrs=[])
             return {inst.uuid: inst for inst in inst_list}
 
     def _get_instance_info(self, context, compute):
