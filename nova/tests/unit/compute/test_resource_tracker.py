@@ -21,6 +21,7 @@ from oslo_utils import units
 from nova.compute import claims
 from nova.compute.monitors import base as monitor_base
 from nova.compute import power_state
+from nova.compute import provider_tree
 from nova.compute import resource_tracker
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -1326,11 +1327,8 @@ class TestUpdateComputeNode(BaseTestCase):
         )
         self.driver_mock.get_traits.assert_called_once_with(_NODENAME)
 
-    @mock.patch('nova.compute.resource_tracker.'
-                '_normalize_inventory_from_cn_obj')
     @mock.patch('nova.objects.ComputeNode.save')
-    def test_existing_node_update_provider_tree_implemented(self, save_mock,
-            norm_mock):
+    def test_existing_node_update_provider_tree_implemented(self, save_mock):
         """The update_provider_tree() virt driver method is only implemented
         for some virt drivers. This method returns inventory, trait, and
         aggregate information for resource providers in a tree associated with
@@ -1339,22 +1337,60 @@ class TestUpdateComputeNode(BaseTestCase):
         the reporting client instead of set_inventory_for_provider() (old) or
         update_compute_node() (older).
         """
+        fake_inv = {
+            rc_fields.ResourceClass.VCPU: {
+                'total': 2,
+                'min_unit': 1,
+                'max_unit': 2,
+                'step_size': 1,
+            },
+            rc_fields.ResourceClass.MEMORY_MB: {
+                'total': 4096,
+                'min_unit': 1,
+                'max_unit': 4096,
+                'step_size': 1,
+            },
+            rc_fields.ResourceClass.DISK_GB: {
+                'total': 500,
+                'min_unit': 1,
+                'max_unit': 500,
+                'step_size': 1,
+            },
+        }
+
+        def fake_upt(ptree, nodename):
+            ptree.update_inventory(nodename, fake_inv)
+
+        # These will get set on ptree by _normalize_inventory_from_cn_obj
+        self.flags(reserved_host_disk_mb=1024,
+                   reserved_host_memory_mb=512,
+                   reserved_host_cpus=1)
+
         self._setup_rt()
-        rc_mock = self.rt.reportclient
-        gptaer_mock = rc_mock.get_provider_tree_and_ensure_root
-        gptaer_mock.return_value = mock.sentinel.pt1
 
         # Emulate a driver that has implemented the update_from_provider_tree()
         # virt driver method
-        self.driver_mock.update_provider_tree.side_effect = None
+        self.driver_mock.update_provider_tree.side_effect = fake_upt
 
         orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        # TODO(efried): These are being overwritten to 0.0 on the global
+        # somewhere else in this module. Find and fix that, and remove these:
+        orig_compute.cpu_allocation_ratio = 16.0
+        orig_compute.ram_allocation_ratio = 1.5
+        orig_compute.disk_allocation_ratio = 1.0
+
         self.rt.compute_nodes[_NODENAME] = orig_compute
         self.rt.old_resources[_NODENAME] = orig_compute
 
         # Deliberately changing local_gb to trigger updating inventory
         new_compute = orig_compute.obj_clone()
         new_compute.local_gb = 210000
+
+        rc_mock = self.rt.reportclient
+        gptaer_mock = rc_mock.get_provider_tree_and_ensure_root
+        ptree = provider_tree.ProviderTree()
+        ptree.new_root(orig_compute.hypervisor_hostname, orig_compute.uuid)
+        gptaer_mock.return_value = ptree
 
         self.rt._update(mock.sentinel.ctx, new_compute)
 
@@ -1363,12 +1399,24 @@ class TestUpdateComputeNode(BaseTestCase):
             mock.sentinel.ctx, new_compute.uuid,
             name=new_compute.hypervisor_hostname)
         self.driver_mock.update_provider_tree.assert_called_once_with(
-            mock.sentinel.pt1, new_compute.hypervisor_hostname)
+            ptree, new_compute.hypervisor_hostname)
         rc_mock.update_from_provider_tree.assert_called_once_with(
-            mock.sentinel.ctx, mock.sentinel.pt1)
-        norm_mock.assert_not_called()
+            mock.sentinel.ctx, ptree)
         self.sched_client_mock.update_compute_node.assert_not_called()
         self.sched_client_mock.set_inventory_for_provider.assert_not_called()
+        # _normalize_inventory_from_cn_obj should have set allocation ratios
+        # and reserved values
+        exp_inv = copy.deepcopy(fake_inv)
+        # These ratios come from the compute node fixture
+        exp_inv[rc_fields.ResourceClass.VCPU]['allocation_ratio'] = 16.0
+        exp_inv[rc_fields.ResourceClass.MEMORY_MB]['allocation_ratio'] = 1.5
+        exp_inv[rc_fields.ResourceClass.DISK_GB]['allocation_ratio'] = 1.0
+        # and these come from the conf values set above
+        exp_inv[rc_fields.ResourceClass.VCPU]['reserved'] = 1
+        exp_inv[rc_fields.ResourceClass.MEMORY_MB]['reserved'] = 512
+        # 1024MB in GB
+        exp_inv[rc_fields.ResourceClass.DISK_GB]['reserved'] = 1
+        self.assertEqual(exp_inv, ptree.data(new_compute.uuid).inventory)
 
     def test_get_node_uuid(self):
         self._setup_rt()

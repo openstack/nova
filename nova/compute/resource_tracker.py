@@ -879,11 +879,15 @@ class ResourceTracker(object):
         # the inventory, traits, and aggregates throughout.
         try:
             self.driver.update_provider_tree(prov_tree, nodename)
+            # We need to normalize inventory data for the compute node provider
+            # (inject allocation ratio and reserved amounts from the
+            # compute_node record if not set by the virt driver) because the
+            # virt driver does not and will not have access to the compute_node
+            inv_data = prov_tree.data(nodename).inventory
+            _normalize_inventory_from_cn_obj(inv_data, compute_node)
+            prov_tree.update_inventory(nodename, inv_data)
             # Flush any changes.
             reportclient.update_from_provider_tree(context, prov_tree)
-            # NOTE(efried): We do not _normalize_inventory_from_cn_obj if
-            # the virt driver is advanced enough to have implemented
-            # update_provider_tree.
         except NotImplementedError:
             # update_provider_tree isn't implemented yet - try get_inventory
             try:
