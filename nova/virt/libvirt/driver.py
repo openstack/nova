@@ -7841,16 +7841,24 @@ class LibvirtDriver(driver.ComputeDriver):
                             dk_size += os.path.getsize(fp)
                 else:
                     dk_size = disk_api.get_allocated_disk_size(path)
+
+                # NOTE(lyarwood): Fetch the virtual size for all file disks.
+                virt_size = disk_api.get_disk_size(path)
+
             elif disk_type == 'block' and block_device_info:
+                # FIXME(lyarwood): There's no reason to use a separate call
+                # here, once disk_api uses privsep this should be removed along
+                # with the surrounding conditionals to simplify this mess.
                 dk_size = lvm.get_volume_size(path)
+                # NOTE(lyarwood): As above, we should be using disk_api to
+                # fetch the virt-size but can't as it currently runs qemu-img
+                # as an unprivileged user, causing a failure for block devices.
+                virt_size = dk_size
             else:
                 LOG.debug('skipping disk %(path)s (%(target)s) - unable to '
                           'determine if volume',
                           {'path': path, 'target': target})
                 continue
-
-            # NOTE(lyarwood): Always fetch the virtual size for all disk types.
-            virt_size = disk_api.get_disk_size(path)
 
             if driver_type in ("qcow2", "ploop"):
                 backing_file = libvirt_utils.get_disk_backing_file(path)
