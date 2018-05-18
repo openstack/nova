@@ -359,7 +359,7 @@ Install and configure components
 
         [DEFAULT]
         # ...
-        use_neutron = True
+        use_neutron = true
         firewall_driver = nova.virt.firewall.NoopFirewallDriver
 
      .. note::
