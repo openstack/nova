@@ -94,7 +94,7 @@ Install and configure components
 
         [DEFAULT]
         # ...
-        use_neutron = True
+        use_neutron = true
         firewall_driver = nova.virt.firewall.NoopFirewallDriver
 
      .. note::
@@ -116,7 +116,7 @@ Install and configure components
 
         [vnc]
         # ...
-        enabled = True
+        enabled = true
         server_listen = 0.0.0.0
         server_proxyclient_address = $my_ip
         novncproxy_base_url = http://controller:6080/vnc_auto.html
