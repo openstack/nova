@@ -1411,13 +1411,6 @@ class API(base.Base):
             instance.display_name = display_name
 
         if hostname is None and num_instances == 1:
-            # NOTE(russellb) In the multi-instance case, we're going to
-            # overwrite the display_name using the
-            # multi_instance_display_name_template.  We need the default
-            # display_name set so that it can be used in the template, though.
-            # Only set the hostname here if we're only creating one instance.
-            # Otherwise, it will be built after the template based
-            # display_name.
             hostname = display_name
             default_hostname = self._default_host_name(instance.uuid)
             instance.hostname = utils.sanitize_hostname(hostname,
