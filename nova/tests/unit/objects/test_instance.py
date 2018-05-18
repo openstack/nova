@@ -386,7 +386,7 @@ class _TestInstanceObject(object):
 
         mock_get.return_value = inst_copy
 
-        self.assertRaises(exception.OrphanedObjectError, inst.refresh)
+        inst.refresh()
         mock_get.assert_called_once_with(self.context, uuid=inst.uuid,
             expected_attrs=['metadata'], use_slave=False)
 

@@ -862,11 +862,20 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         current._context = None
 
         for field in self.fields:
-            if self.obj_attr_is_set(field):
-                if field == 'info_cache':
-                    self.info_cache.refresh()
-                elif self[field] != current[field]:
-                    self[field] = current[field]
+            if field not in self:
+                continue
+            if field not in current:
+                # If the field isn't in current we should not
+                # touch it, triggering a likely-recursive lazy load.
+                # Log it so we can see it happening though, as it
+                # probably isn't expected in most cases.
+                LOG.debug('Field %s is set but not in refreshed '
+                          'instance, skipping', field)
+                continue
+            if field == 'info_cache':
+                self.info_cache.refresh()
+            elif self[field] != current[field]:
+                self[field] = current[field]
         self.obj_reset_changes()
 
     def _load_generic(self, attrname):
