@@ -30,6 +30,8 @@ class TestUtils(test.NoDBTestCase):
         self.context = nova_context.get_admin_context()
 
     def assertResourceRequestsEqual(self, expected, observed):
+        self.assertEqual(expected._limit, observed._limit)
+        self.assertEqual(expected._group_policy, observed._group_policy)
         ex_by_id = expected._rg_by_id
         ob_by_id = observed._rg_by_id
         self.assertEqual(set(ex_by_id), set(ob_by_id))
@@ -53,6 +55,7 @@ class TestUtils(test.NoDBTestCase):
         fake_spec = objects.RequestSpec(flavor=flavor, image=image)
         resources = utils.resources_from_request_spec(fake_spec)
         self.assertResourceRequestsEqual(expected, resources)
+        return resources
 
     def test_resources_from_request_spec_flavor_only(self):
         flavor = objects.Flavor(vcpus=1,
@@ -236,8 +239,10 @@ class TestUtils(test.NoDBTestCase):
                          'resources:IPV4_ADDRESS': '0',
                          'resources:CUSTOM_FOO': '0',
                          # Bogus values don't make it through
-                         'resources1:MEMORY_MB': 'bogus'})
+                         'resources1:MEMORY_MB': 'bogus',
+                         'group_policy': 'none'})
         expected_resources = utils.ResourceRequest()
+        expected_resources._group_policy = 'none'
         expected_resources._rg_by_id[None] = plib.RequestGroup(
             use_same_provider=False,
             resources={
@@ -270,7 +275,19 @@ class TestUtils(test.NoDBTestCase):
                 'SRIOV_NET_VF': 1,
             }
         )
-        self._test_resources_from_request_spec(expected_resources, flavor)
+
+        rr = self._test_resources_from_request_spec(expected_resources, flavor)
+        expected_querystring = (
+            'group_policy=none&'
+            'limit=1000&'
+            'required3=CUSTOM_GOLD%2CCUSTOM_SILVER&'
+            'resources=CUSTOM_THING%3A123%2CDISK_GB%3A10&'
+            'resources1=VGPU%3A1%2CVGPU_DISPLAY_HEAD%3A2&'
+            'resources24=SRIOV_NET_VF%3A2&'
+            'resources3=VCPU%3A2&'
+            'resources42=SRIOV_NET_VF%3A1'
+        )
+        self.assertEqual(expected_querystring, rr.to_querystring())
 
     def test_resources_from_request_spec_aggregates(self):
         destination = objects.Destination()
@@ -384,8 +401,8 @@ class TestUtils(test.NoDBTestCase):
         self.assertEqual(expected, actual)
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
-                return_value=False)
-    def test_resources_from_flavor_with_override(self, mock_is_bfv):
+                new=mock.Mock(return_value=False))
+    def test_resources_from_flavor_with_override(self):
         flavor = objects.Flavor(
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=1024,
             extra_specs={
@@ -404,7 +421,8 @@ class TestUtils(test.NoDBTestCase):
                 'resources86:MEMORY_MB': 0,
                 # Standard and custom zeroes don't make it through
                 'resources:IPV4_ADDRESS': 0,
-                'resources:CUSTOM_FOO': 0})
+                'resources:CUSTOM_FOO': 0,
+                'group_policy': 'none'})
         instance = objects.Instance()
         expected = {
             'VCPU': 2,
@@ -445,9 +463,11 @@ class TestUtils(test.NoDBTestCase):
             'traitFoo:HW_NIC_ACCEL_SSL': 'required',
             # Solo resource, no corresponding traits
             'resources3:DISK_GB': '5',
+            'group_policy': 'isolate',
         }
         # Build up a ResourceRequest from the inside to compare against.
         expected = utils.ResourceRequest()
+        expected._group_policy = 'isolate'
         expected._rg_by_id[None] = plib.RequestGroup(
             use_same_provider=False,
             resources={
@@ -489,8 +509,21 @@ class TestUtils(test.NoDBTestCase):
                 'DISK_GB': 5,
             }
         )
+
         rr = utils.ResourceRequest.from_extra_specs(extra_specs)
         self.assertResourceRequestsEqual(expected, rr)
+        expected_querystring = (
+            'group_policy=isolate&'
+            'limit=1000&'
+            'required=CUSTOM_MAGIC%2CHW_CPU_X86_AVX%2C%21CUSTOM_BRONZE&'
+            'required1=CUSTOM_PHYSNET_NET1%2C%21CUSTOM_PHYSNET_NET2&'
+            'required2=CUSTOM_PHYSNET_NET2%2CHW_NIC_ACCEL_SSL&'
+            'resources=MEMORY_MB%3A2048%2CVCPU%3A2&'
+            'resources1=IPV4_ADDRESS%3A1%2CSRIOV_NET_VF%3A1&'
+            'resources2=IPV4_ADDRESS%3A2%2CSRIOV_NET_VF%3A1&'
+            'resources3=DISK_GB%3A5'
+        )
+        self.assertEqual(expected_querystring, rr.to_querystring())
 
         # Test stringification
         self.assertEqual(

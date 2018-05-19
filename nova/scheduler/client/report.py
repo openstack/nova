@@ -25,7 +25,6 @@ import os_traits
 from oslo_log import log as logging
 from oslo_middleware import request_id
 from oslo_utils import versionutils
-from six.moves.urllib import parse
 
 from nova.compute import provider_tree
 from nova.compute import utils as compute_utils
@@ -46,6 +45,7 @@ _RE_INV_IN_USE = re.compile("Inventory for (.+) on resource provider "
                             "(.+) in use")
 WARN_EVERY = 10
 PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
+GRANULAR_AC_VERSION = '1.25'
 POST_RPS_RETURNS_PAYLOAD_API_VERSION = '1.20'
 NESTED_PROVIDER_API_VERSION = '1.14'
 POST_ALLOCATIONS_API_VERSION = '1.13'
@@ -333,39 +333,9 @@ class SchedulerReportClient(object):
             "Candidates are in either 'foo' or 'bar', but definitely in 'baz'"
 
         """
-        # TODO(efried): For now, just use the unnumbered group to retain
-        # existing behavior.  Once the GET /allocation_candidates API is
-        # prepped to accept the whole shebang, we'll join up all the resources
-        # and traits in the query string (via a new method on ResourceRequest).
-        res = resources.get_request_group(None).resources
-        required_traits = resources.get_request_group(None).required_traits
-        forbidden_traits = resources.get_request_group(None).forbidden_traits
-        aggregates = resources.get_request_group(None).member_of
-
-        resource_query = ",".join(
-            sorted("%s:%s" % (rc, amount)
-            for (rc, amount) in res.items()))
-        qs_params = [
-            ('resources', resource_query),
-            ('limit', CONF.scheduler.max_placement_results),
-        ]
-        required_traits_params = []
-        if required_traits:
-            required_traits_params.extend(required_traits)
-        if forbidden_traits:
-            # Sorted to make testing easier to manage and for
-            # predictability.
-            required_traits_params.extend(
-                ['!%s' % trait for trait in sorted(forbidden_traits)])
-        if required_traits_params:
-            qs_params.append(('required', ','.join(required_traits_params)))
-
-        if aggregates:
-            for agg_list in aggregates:
-                qs_params.append(('member_of', 'in:%s' % ','.join(agg_list)))
-
-        version = '1.24'
-        url = "/allocation_candidates?%s" % parse.urlencode(qs_params)
+        version = GRANULAR_AC_VERSION
+        qparams = resources.to_querystring()
+        url = "/allocation_candidates?%s" % qparams
         resp = self.get(url, version=version,
                         global_request_id=context.global_id)
         if resp.status_code == 200:

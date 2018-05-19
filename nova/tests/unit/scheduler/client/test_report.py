@@ -1451,40 +1451,63 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         resources = scheduler_utils.ResourceRequest.from_extra_specs({
             'resources:VCPU': '1',
             'resources:MEMORY_MB': '1024',
-            'resources1:DISK_GB': '30',
+            'trait:HW_CPU_X86_AVX': 'required',
             'trait:CUSTOM_TRAIT1': 'required',
             'trait:CUSTOM_TRAIT2': 'preferred',
             'trait:CUSTOM_TRAIT3': 'forbidden',
             'trait:CUSTOM_TRAIT4': 'forbidden',
+            'resources1:DISK_GB': '30',
+            'trait1:STORAGE_DISK_SSD': 'required',
+            'resources2:VGPU': '2',
+            'trait2:HW_GPU_RESOLUTION_W2560H1600': 'required',
+            'trait2:HW_GPU_API_VULKAN': 'required',
+            'resources3:SRIOV_NET_VF': '1',
+            'resources3:CUSTOM_NET_EGRESS_BYTES_SEC': '125000',
+            'group_policy': 'isolate',
+            # These are ignored because misspelled, bad value, etc.
+            'resources02:CUSTOM_WIDGET': '123',
+            'trait:HW_NIC_OFFLOAD_LRO': 'preferred',
+            'group_policy3': 'none',
         })
         resources.get_request_group(None).member_of = [
             ('agg1', 'agg2', 'agg3'), ('agg1', 'agg2')]
         expected_path = '/allocation_candidates'
-        expected_query = {
-            'resources': ['MEMORY_MB:1024,VCPU:1'],
-            'required': ['CUSTOM_TRAIT1,!CUSTOM_TRAIT3,!CUSTOM_TRAIT4'],
-            'member_of': ['in:agg1,agg2,agg3', 'in:agg1,agg2'],
-            'limit': ['1000']
-        }
+        expected_query = [
+            ('group_policy', 'isolate'),
+            ('limit', '1000'),
+            ('member_of', 'in:agg1,agg2'),
+            ('member_of', 'in:agg1,agg2,agg3'),
+            ('required', 'CUSTOM_TRAIT1,HW_CPU_X86_AVX,!CUSTOM_TRAIT3,'
+                         '!CUSTOM_TRAIT4'),
+            ('required1', 'STORAGE_DISK_SSD'),
+            ('required2', 'HW_GPU_API_VULKAN,HW_GPU_RESOLUTION_W2560H1600'),
+            ('resources', 'MEMORY_MB:1024,VCPU:1'),
+            ('resources1', 'DISK_GB:30'),
+            ('resources2', 'VGPU:2'),
+            ('resources3', 'CUSTOM_NET_EGRESS_BYTES_SEC:125000,SRIOV_NET_VF:1')
+        ]
 
         resp_mock.json.return_value = json_data
         self.ks_adap_mock.get.return_value = resp_mock
 
-        alloc_reqs, p_sums, allocation_request_version = \
-                self.client.get_allocation_candidates(self.context, resources)
+        alloc_reqs, p_sums, allocation_request_version = (
+            self.client.get_allocation_candidates(self.context, resources))
 
-        self.ks_adap_mock.get.assert_called_once_with(
-            mock.ANY, raise_exc=False, microversion='1.24',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
         url = self.ks_adap_mock.get.call_args[0][0]
         split_url = parse.urlsplit(url)
-        query = parse.parse_qs(split_url.query)
+        query = parse.parse_qsl(split_url.query)
         self.assertEqual(expected_path, split_url.path)
         self.assertEqual(expected_query, query)
+        expected_url = '/allocation_candidates?%s' % parse.urlencode(
+            expected_query)
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion='1.25',
+            headers={'X-Openstack-Request-Id': self.context.global_id})
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
         self.assertEqual(mock.sentinel.p_sums, p_sums)
 
-    def test_get_allocation_candidates_with_no_trait(self):
+    def test_get_ac_no_trait_bogus_group_policy_custom_limit(self):
+        self.flags(max_placement_results=42, group='scheduler')
         resp_mock = mock.Mock(status_code=200)
         json_data = {
             'allocation_requests': mock.sentinel.alloc_reqs,
@@ -1494,26 +1517,33 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'resources:VCPU': '1',
             'resources:MEMORY_MB': '1024',
             'resources1:DISK_GB': '30',
+            'group_policy': 'bogus',
         })
         expected_path = '/allocation_candidates'
-        expected_query = {'resources': ['MEMORY_MB:1024,VCPU:1'],
-                          'limit': ['1000']}
+        expected_query = [
+            ('limit', '42'),
+            ('resources', 'MEMORY_MB:1024,VCPU:1'),
+            ('resources1', 'DISK_GB:30'),
+        ]
 
         resp_mock.json.return_value = json_data
         self.ks_adap_mock.get.return_value = resp_mock
 
-        alloc_reqs, p_sums, allocation_request_version = \
-                self.client.get_allocation_candidates(self.context, resources)
+        alloc_reqs, p_sums, allocation_request_version = (
+            self.client.get_allocation_candidates(self.context, resources))
 
-        self.ks_adap_mock.get.assert_called_once_with(
-            mock.ANY, raise_exc=False, microversion='1.24',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
         url = self.ks_adap_mock.get.call_args[0][0]
         split_url = parse.urlsplit(url)
-        query = parse.parse_qs(split_url.query)
+        query = parse.parse_qsl(split_url.query)
         self.assertEqual(expected_path, split_url.path)
         self.assertEqual(expected_query, query)
+        expected_url = '/allocation_candidates?%s' % parse.urlencode(
+            expected_query)
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion='1.25',
+            headers={'X-Openstack-Request-Id': self.context.global_id})
+        self.assertEqual(mock.sentinel.p_sums, p_sums)
 
     def test_get_allocation_candidates_not_found(self):
         # Ensure _get_resource_provider() just returns None when the placement
@@ -1533,7 +1563,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         res = self.client.get_allocation_candidates(self.context, resources)
 
         self.ks_adap_mock.get.assert_called_once_with(
-            mock.ANY, raise_exc=False, microversion='1.24',
+            mock.ANY, raise_exc=False, microversion='1.25',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         url = self.ks_adap_mock.get.call_args[0][0]
         split_url = parse.urlsplit(url)
