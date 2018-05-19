@@ -1,34 +1,57 @@
 PowerVM
 =======
 
-Usage
------
-To make use of the PowerVM compute driver, a PowerVM system set up with
-`NovaLink`_ is required.
+Introduction
+------------
+OpenStack Compute supports the PowerVM hypervisor through `NovaLink`_. In the
+NovaLink architecture, a thin NovaLink virtual machine running on the Power
+system manages virtualization for that system. The ``nova-compute`` service
+can be installed on the NovaLink virtual machine and configured to use the
+PowerVM compute driver. No external management element (e.g. Hardware
+Management Console) is needed.
 
 .. _NovaLink: https://www.ibm.com/support/knowledgecenter/en/POWER8/p8eig/p8eig_kickoff.htm
 
-Installing the NovaLink software creates the ``pvm_admin`` group. In
-order to function properly, the user executing the Nova compute service must
-be a member of this group. Use the ``usermod`` command to add the user. For
-example, to add the user ``stacker`` to the ``pvm_admin`` group, execute::
+Configuration
+-------------
+In order to function properly, the ``nova-compute`` service must be executed
+by a member of the ``pvm_admin`` group. Use the ``usermod`` command to add the
+user. For example, to add the ``stacker`` user to the ``pvm_admin`` group, execute::
 
   sudo usermod -a -G pvm_admin stacker
 
 The user must re-login for the change to take effect.
 
-The NovaLink architecture is such that the compute driver runs directly on the
-PowerVM system. No external management element (e.g. Hardware Management
-Console or PowerVC) is needed. Management of the virtualization is driven
-through a thin virtual machine running on the PowerVM system.
+To enable the PowerVM compute driver, set the following configuration option
+in the ``/etc/nova/nova.conf`` file:
 
-Configuration of the PowerVM system and NovaLink is required ahead of time. If
-the operator is using volumes or Shared Storage Pools, they are required to be
-configured ahead of time.
+.. code-block:: ini
 
+   [Default]
+   compute_driver = powervm.PowerVMDriver
 
-Configuration File Options
---------------------------
-After nova has been installed the user must enable PowerVM as the compute
-driver. To do so, set the ``compute_driver`` value in the ``nova.conf`` file
-to ``compute_driver = powervm.driver.PowerVMDriver``.
+The PowerVM driver supports two types of storage for ephemeral disks:
+``localdisk`` or ``ssp``. If ``localdisk`` is selected, you must specify which
+volume group should be used.  E.g.:
+
+.. code-block:: ini
+
+   [powervm]
+   disk_driver = localdisk
+   volume_group_name = openstackvg
+
+.. note::
+
+   Using the ``rootvg`` volume group is strongly discouraged since ``rootvg``
+   is used by the management partition and filling this will cause failures.
+
+The PowerVM driver also supports configuring the default amount of physical
+processor compute power (known as "proc units") which will be given to each
+vCPU. This value will be used if the requested flavor does not specify the
+``powervm:proc_units`` extra-spec. A factor value of 1.0 means a whole physical
+processor, whereas 0.05 means 1/20th of a physical processor. E.g.:
+
+.. code-block:: ini
+
+   [powervm]
+   proc_units_factor = 0.1
