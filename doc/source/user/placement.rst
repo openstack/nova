@@ -288,6 +288,15 @@ Rocky (18.0.0)
   `filter allocation candidates by aggregate membership`_.
   This means you must upgrade the placement service before upgrading any
   *nova-scheduler* services to Rocky.
+* The ``nova-api`` service now requires the ``[placement]`` section to be
+  configured in nova.conf if you are using a separate config file just for
+  that service. This is because the ``nova-api`` service now needs to talk
+  to the placement service in order to (1) delete resource provider allocations
+  when deleting an instance and the ``nova-compute`` service on which that
+  instance is running is down and (2) delete a ``nova-compute`` service record
+  via the ``DELETE /os-services/{service_id}`` API. This change is idempotent
+  if ``[placement]`` is not configured in ``nova-api`` but it will result in
+  new warnings in the logs until configured.
 
 REST API
 ========
