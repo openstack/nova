@@ -128,12 +128,17 @@ class _Provider(object):
             return True
         for key, cur_rec in cur.items():
             new_rec = new[key]
+            # If the new record contains new fields (e.g. we're adding on
+            # `reserved` or `allocation_ratio`) we want to make sure to pick
+            # them up
+            if set(new_rec) - set(cur_rec):
+                return True
             for rec_key, cur_val in cur_rec.items():
                 if rec_key not in new_rec:
                     # Deliberately don't want to compare missing keys in the
-                    # inventory record. For instance, we will be passing in
-                    # fields like allocation_ratio in the current dict but the
-                    # resource tracker may only pass in the total field. We
+                    # *new* inventory record. For instance, we will be passing
+                    # in fields like allocation_ratio in the current dict but
+                    # the resource tracker may only pass in the total field. We
                     # want to return that inventory didn't change when the
                     # total field values are the same even if the
                     # allocation_ratio field is missing from the new record.

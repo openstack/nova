@@ -440,7 +440,6 @@ class TestProviderTree(test.NoDBTestCase):
         cn_inv = {
             'VCPU': {
                 'total': 8,
-                'reserved': 0,
                 'min_unit': 1,
                 'max_unit': 8,
                 'step_size': 1,
@@ -496,6 +495,13 @@ class TestProviderTree(test.NoDBTestCase):
                                              generation=rp_gen))
 
         del cn_inv['MEMORY_MB']
+        self.assertTrue(pt.has_inventory_changed(cn.uuid, cn_inv))
+        self.assertTrue(pt.update_inventory(cn.uuid, cn_inv,
+                                            generation=rp_gen))
+
+        # ...but *adding* a key in the new record *should* result in changes
+        # being recorded
+        cn_inv['VCPU']['reserved'] = 0
         self.assertTrue(pt.has_inventory_changed(cn.uuid, cn_inv))
         self.assertTrue(pt.update_inventory(cn.uuid, cn_inv,
                                             generation=rp_gen))
