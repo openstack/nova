@@ -15,6 +15,7 @@
 
 from oslo_log import log as logging
 from oslo_utils import excutils
+from oslo_utils import importutils
 from pypowervm import adapter as pvm_apt
 from pypowervm import const as pvm_const
 from pypowervm import exceptions as pvm_exc
@@ -35,7 +36,6 @@ from nova.i18n import _
 from nova import image
 from nova.virt import configdrive
 from nova.virt import driver
-from nova.virt.powervm.disk import ssp
 from nova.virt.powervm import host as pvm_host
 from nova.virt.powervm.tasks import base as tf_base
 from nova.virt.powervm.tasks import image as tf_img
@@ -46,6 +46,12 @@ from nova.virt.powervm import vm
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+
+DISK_ADPT_NS = 'nova.virt.powervm.disk'
+DISK_ADPT_MAPPINGS = {
+    'localdisk': 'localdisk.LocalStorage',
+    'ssp': 'ssp.SSPDiskAdapter'
+}
 
 
 class PowerVMDriver(driver.ComputeDriver):
@@ -91,9 +97,9 @@ class PowerVMDriver(driver.ComputeDriver):
         pvm_stor.ComprehensiveScrub(self.adapter).execute()
 
         # Initialize the disk adapter
-        # TODO(efried): Other disk adapters (localdisk), by conf selection.
-        self.disk_dvr = ssp.SSPDiskAdapter(self.adapter,
-                                           self.host_wrapper.uuid)
+        self.disk_dvr = importutils.import_object_ns(
+            DISK_ADPT_NS, DISK_ADPT_MAPPINGS[CONF.powervm.disk_driver.lower()],
+            self.adapter, self.host_wrapper.uuid)
         self.image_api = image.API()
 
         LOG.info("The PowerVM compute driver has been initialized.")
@@ -312,8 +318,13 @@ class PowerVMDriver(driver.ComputeDriver):
             nova.compute.task_states.IMAGE_SNAPSHOT. See
             nova.objects.instance.Instance.save for expected_task_state usage.
         """
-        # TODO(esberglu) Add check for disk driver snapshot capability when
-        # additional disk drivers are implemented.
+
+        if not self.disk_dvr.capabilities.get('snapshot'):
+            raise exc.NotSupportedWithOption(
+                message=_("The snapshot operation is not supported in "
+                          "conjunction with a [powervm]/disk_driver setting "
+                          "of %s.") % CONF.powervm.disk_driver)
+
         self._log_operation('snapshot', instance)
 
         # Define the flow.

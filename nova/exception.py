@@ -2269,3 +2269,8 @@ class DeviceDeletionException(NovaException):
     msg_fmt = _("Device %(devpath)s is still present on the management "
                 "partition after attempting to delete it. Polled %(polls)d "
                 "times over %(timeout)d seconds.")
+
+
+class OptRequiredIfOtherOptValue(NovaException):
+    msg_fmt = _("The %(then_opt)s option is required if %(if_opt)s is "
+                "specified as '%(if_value)s'.")
