@@ -99,6 +99,12 @@ class InvalidInventoryCapacity(InvalidInventory):
                 "The reserved value is greater than or equal to total.")
 
 
+class InvalidInventoryCapacityReservedCanBeTotal(InvalidInventoryCapacity):
+    msg_fmt = _("Invalid inventory for '%(resource_class)s' on "
+                "resource provider '%(resource_provider)s'. "
+                "The reserved value is greater than total.")
+
+
 # An exception with this name is used on both sides of the placement/
 # nova interaction.
 class InventoryInUse(InvalidInventory):

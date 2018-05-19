@@ -68,6 +68,8 @@ VERSIONS = [
              # GET /resource_providers
     '1.25',  # Adds support for granular resource requests via numbered
              # querystring groups in GET /allocation_candidates
+    '1.26',  # Add ability to specify inventory with reserved value equal to
+             # total.
 ]
 
 

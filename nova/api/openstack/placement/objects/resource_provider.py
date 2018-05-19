@@ -201,10 +201,6 @@ def _add_inventory_to_provider(ctx, rp, inv_list, to_add):
     for rc_id in to_add:
         rc_str = _RC_CACHE.string_from_id(rc_id)
         inv_record = inv_list.find(rc_str)
-        if inv_record.capacity <= 0:
-            raise exception.InvalidInventoryCapacity(
-                resource_class=rc_str,
-                resource_provider=rp.uuid)
         ins_stmt = _INV_TBL.insert().values(
                 resource_provider_id=rp.id,
                 resource_class_id=rc_id,
@@ -232,10 +228,6 @@ def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
     for rc_id in to_update:
         rc_str = _RC_CACHE.string_from_id(rc_id)
         inv_record = inv_list.find(rc_str)
-        if inv_record.capacity <= 0:
-            raise exception.InvalidInventoryCapacity(
-                resource_class=rc_str,
-                resource_provider=rp.uuid)
         allocation_query = sa.select(
             [func.sum(_ALLOC_TBL.c.used).label('usage')]).\
             where(sa.and_(

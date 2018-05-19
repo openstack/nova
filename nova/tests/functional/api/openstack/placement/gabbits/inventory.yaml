@@ -649,8 +649,83 @@ tests:
   status: 400
   response_strings:
       - Unable to update inventory
+      - greater than or equal to total
   response_json_paths:
       $.errors[0].title: Bad Request
+
+- name: put all inventory zero capacity old microversion
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 6
+      inventories:
+        IPV4_ADDRESS:
+          total: 253
+          reserved: 253
+  status: 400
+  response_strings:
+      - Unable to update inventory
+      - greater than or equal to total
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
+- name: put inventory with reserved equal to total
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+      openstack-api-version: placement 1.26
+  data:
+      resource_provider_generation: 6
+      inventories:
+        IPV4_ADDRESS:
+          total: 253
+          reserved: 253
+  status: 200
+
+- name: put all inventory bad capacity in new microversion
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+      openstack-api-version: placement 1.26
+  data:
+      resource_provider_generation: 7
+      inventories:
+        IPV4_ADDRESS:
+          total: 253
+          reserved: 512
+  status: 400
+  response_strings:
+      - Unable to update inventory
+      - greater than total
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
+- name: put one inventory zero capacity old microversion
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories/IPV4_ADDRESS
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 7
+      total: 253
+      reserved: 253
+  status: 400
+  response_strings:
+      - Unable to update inventory
+      - greater than or equal to total
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
+- name: put one inventory with reserved equal to total new microversion
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+      openstack-api-version: placement 1.26
+  data:
+      resource_provider_generation: 7
+      total: 512
+      reserved: 512
+  status: 200
 
 - name: delete all inventory bad generation
   PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
@@ -680,7 +755,7 @@ tests:
 - name: get inventories after deletions
   GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
   response_json_paths:
-      $.resource_provider_generation: 8
+      $.resource_provider_generation: 10
       $.inventories: {}
 
 - name: post an inventory again
@@ -699,7 +774,7 @@ tests:
   response_headers:
       location: $SCHEME://$NETLOC/resource_providers/$ENVIRON['RP_UUID']/inventories/DISK_GB
   response_json_paths:
-      $.resource_provider_generation: 9
+      $.resource_provider_generation: 11
       $.total: 2048
       $.reserved: 512
 
@@ -709,17 +784,17 @@ tests:
       content-type: application/json
       openstack-api-version: placement 1.4
   data:
-      resource_provider_generation: 9
+      resource_provider_generation: 11
       inventories: {}
   response_json_paths:
-      $.resource_provider_generation: 10
+      $.resource_provider_generation: 12
       $.inventories: {}
   status: 200
 
 - name: get generation after deletion
   GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
   response_json_paths:
-      $.resource_provider_generation: 10
+      $.resource_provider_generation: 12
       $.inventories: {}
 
 - name: delete inventories earlier version
