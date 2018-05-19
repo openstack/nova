@@ -1920,6 +1920,17 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             cn_root_ids = set([r[0] for r in conn.execute(sel)])
         return cn_root_ids
 
+    def _get_rp_ids_matching_names(self, names):
+        """Utility function to look up resource provider IDs from a set of
+        supplied provider names directly from the API DB.
+        """
+        names = map(six.text_type, names)
+        sel = sa.select([rp_obj._RP_TBL.c.id])
+        sel = sel.where(rp_obj._RP_TBL.c.name.in_(names))
+        with self.api_db.get_engine().connect() as conn:
+            rp_ids = set([r[0] for r in conn.execute(sel)])
+        return rp_ids
+
     def test_trees_matching_all(self):
         """Creates a few provider trees having different inventories and
         allocations and tests the _get_trees_matching_all_resources() utility
@@ -1993,6 +2004,14 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         expect_root_ids = self._get_root_ids_matching_names(cn_names)
         self.assertEqual(expect_root_ids, tree_root_ids)
 
+        # let's validate providers in tree as well
+        provider_ids = set(p[0] for p in trees)
+        provider_names = cn_names + ['cn1_numa0_pf0', 'cn1_numa1_pf1',
+                                     'cn2_numa0_pf0', 'cn2_numa1_pf1',
+                                     'cn3_numa0_pf0', 'cn3_numa1_pf1']
+        expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
+        self.assertEqual(expect_provider_ids, provider_ids)
+
         # OK, now consume all the VFs in the second compute node and verify
         # only the first and third computes are returned as root providers from
         # _get_trees_matching_all()
@@ -2017,6 +2036,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         expect_root_ids = self._get_root_ids_matching_names(cn_names)
         self.assertEqual(expect_root_ids, set(tree_root_ids))
 
+        # let's validate providers in tree as well
+        provider_ids = set(p[0] for p in trees)
+        provider_names = cn_names + ['cn1_numa0_pf0', 'cn1_numa1_pf1',
+                                     'cn3_numa0_pf0', 'cn3_numa1_pf1']
+        expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
+        self.assertEqual(expect_provider_ids, provider_ids)
+
         # OK, now we're going to add a required trait to the mix. The only
         # provider that is decorated with the HW_NIC_OFFLOAD_GENEVE trait is
         # the second physical function on the third compute host. So we should
@@ -2036,6 +2062,18 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         cn_names = ['cn3']
         expect_root_ids = self._get_root_ids_matching_names(cn_names)
         self.assertEqual(expect_root_ids, set(tree_root_ids))
+
+        # let's validate providers in tree as well
+        provider_ids = set(p[0] for p in trees)
+        # NOTE(tetsuro): Ideally, we want to have only pf1 from cn3,
+        # provider_names = cn_names + ['cn3_numa1_pf1']
+        # At least we should have only compute node and pf providers,
+        # provider_names = cn_names + ['cn3_numa0_pf0', 'cn3_numa1_pf1']
+        # but actually we have all the rps in the tree of 'cn3'
+        provider_names = cn_names + ['cn3_numa0', 'cn3_numa0_pf0',
+                                     'cn3_numa1', 'cn3_numa1_pf1']
+        expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
+        self.assertEqual(expect_provider_ids, provider_ids)
 
         # Add in a required trait that no provider has associated with it and
         # verify that there are no returned allocation candidates
@@ -2067,6 +2105,18 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         cn_names = ['cn3']
         expect_root_ids = self._get_root_ids_matching_names(cn_names)
         self.assertEqual(expect_root_ids, set(tree_root_ids))
+
+        # let's validate providers in tree as well
+        provider_ids = set(p[0] for p in trees)
+        # NOTE(tetsuro): Ideally, we want to have only pf1 from cn3,
+        # provider_names = cn_names + ['cn3_numa1_pf1']
+        # At least we should have only compute node and pf providers,
+        # provider_names = cn_names + ['cn3_numa0_pf0', 'cn3_numa1_pf1']
+        # but actually we have all the rps in the tree of 'cn3'
+        provider_names = cn_names + ['cn3_numa0', 'cn3_numa0_pf0',
+                                     'cn3_numa1', 'cn3_numa1_pf1']
+        expect_provider_ids = self._get_rp_ids_matching_names(provider_names)
+        self.assertEqual(expect_provider_ids, provider_ids)
 
         # Consume all the VFs in first and third compute nodes and verify
         # no more providers are returned
