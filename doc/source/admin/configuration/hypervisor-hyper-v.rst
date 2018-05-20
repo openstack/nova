@@ -375,7 +375,7 @@ on Hyper-V. Below is a sample ``nova.conf`` for Windows:
    project_name = service
    username = neutron
    password = Passw0rd
-   auth_url = http://IP_ADDRESS:5000/v3.0
+   auth_url = http://IP_ADDRESS:5000/v3
    auth_type = password
    [hyperv]
    vswitch_name = newVSwitch0
