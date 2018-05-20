@@ -3216,7 +3216,7 @@ def _check_traits_for_alloc_request(res_requests, summaries, prov_traits,
                              internal IDs that a resource provider must
                              not have.
     """
-    all_prov_ids = set()
+    all_prov_ids = []
     all_traits = set()
     for res_req in res_requests:
         rp_uuid = res_req.resource_provider.uuid
@@ -3233,7 +3233,7 @@ def _check_traits_for_alloc_request(res_requests, summaries, prov_traits,
                       rp_id, ', '.join(conflict_traits))
             return []
 
-        all_prov_ids.add(rp_id)
+        all_prov_ids.append(rp_id)
         all_traits |= rp_traits
 
     # Check if there are missing traits
@@ -3369,7 +3369,7 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
     # resource class names and amounts to consume from that resource provider
     alloc_requests = []
 
-    # Build a list of the sets of provider internal IDs that end up in
+    # Build a list of lists of provider internal IDs that end up in
     # allocation request objects. This is used to ensure we don't end up
     # having allocation requests with duplicate sets of resource providers.
     alloc_prov_ids = []
