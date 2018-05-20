@@ -75,6 +75,7 @@ from nova import block_device
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
+from nova.compute import vm_states
 import nova.conf
 from nova.console import serial as serial_console
 from nova.console import type as ctype
@@ -8151,14 +8152,19 @@ class LibvirtDriver(driver.ComputeDriver):
                     # should ignore this instance and move on.
                     if guest.uuid in local_instances:
                         inst = local_instances[guest.uuid]
-                        if inst.task_state is not None:
+                        # bug 1774249 indicated when instance is in RESIZED
+                        # state it might also can't find back disk
+                        if (inst.task_state is not None or
+                            inst.vm_state == vm_states.RESIZED):
                             LOG.info('Periodic task is updating the host '
                                      'stats; it is trying to get disk info '
                                      'for %(i_name)s, but the backing disk '
                                      'was removed by a concurrent operation '
-                                     '(task_state=%(task_state)s)',
+                                     '(task_state=%(task_state)s) and '
+                                     '(vm_state=%(vm_state)s)',
                                      {'i_name': guest.name,
-                                      'task_state': inst.task_state},
+                                      'task_state': inst.task_state,
+                                      'vm_state': inst.vm_state},
                                      instance=inst)
                             err_ctxt.reraise = False
 
