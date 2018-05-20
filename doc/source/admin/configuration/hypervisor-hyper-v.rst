@@ -372,10 +372,11 @@ on Hyper-V. Below is a sample ``nova.conf`` for Windows:
    [neutron]
    url = http://IP_ADDRESS:9696
    auth_strategy = keystone
-   admin_tenant_name = service
-   admin_username = neutron
-   admin_password = Passw0rd
-   admin_auth_url = http://IP_ADDRESS:35357/v2.0
+   project_name = service
+   username = neutron
+   password = Passw0rd
+   auth_url = http://IP_ADDRESS:5000/v3.0
+   auth_type = password
    [hyperv]
    vswitch_name = newVSwitch0
    limit_cpu_features = false
