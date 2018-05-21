@@ -19,7 +19,6 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests import uuidsentinel as uuids
-from nova import utils
 from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 
@@ -173,7 +172,7 @@ class RbdTestCase(test.NoDBTestCase):
             self.driver.is_cloneable(location, image_meta))
         self.assertTrue(mock_get_fsid.called)
 
-    @mock.patch.object(utils, 'execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_get_mon_addrs(self, mock_execute):
         mock_execute.return_value = (CEPH_MON_DUMP, '')
         hosts = ['::1', '::1', '::1', '127.0.0.1', 'example.com']

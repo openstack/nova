@@ -24,6 +24,7 @@ except ImportError:
     rados = None
     rbd = None
 
+from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_service import loopingcall
@@ -32,7 +33,6 @@ from oslo_utils import units
 
 from nova import exception
 from nova.i18n import _
-from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
 
 LOG = logging.getLogger(__name__)
@@ -162,7 +162,7 @@ class RBDDriver(object):
 
     def get_mon_addrs(self):
         args = ['ceph', 'mon', 'dump', '--format=json'] + self.ceph_args()
-        out, _ = utils.execute(*args)
+        out, _ = processutils.execute(*args)
         lines = out.split('\n')
         if lines[0].startswith('dumped monmap epoch'):
             lines = lines[1:]
@@ -326,7 +326,7 @@ class RBDDriver(object):
         # we need to use it explicitly.
         args += ['--image-format=2']
         args += self.ceph_args()
-        utils.execute('rbd', 'import', *args)
+        processutils.execute('rbd', 'import', *args)
 
     def _destroy_volume(self, client, volume, pool=None):
         """Destroy an RBD volume, retrying as needed.
