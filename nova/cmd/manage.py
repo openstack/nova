@@ -1022,6 +1022,14 @@ class CellV2Commands(object):
         if not transport_url:
             print('Must specify --transport-url if [DEFAULT]/transport_url '
                   'is not set in the configuration file.')
+            return None
+
+        try:
+            messaging.TransportURL.parse(conf=CONF, url=transport_url)
+        except (messaging.InvalidTransportURL, ValueError) as e:
+            print(_('Invalid transport URL: %s') % six.text_type(e))
+            return None
+
         return transport_url
 
     def _non_unique_transport_url_database_connection_checker(self, ctxt,
@@ -1436,11 +1444,10 @@ class CellV2Commands(object):
     def create_cell(self, name=None, database_connection=None,
                     transport_url=None, verbose=False, disabled=False):
         ctxt = context.get_context()
-        transport_url = transport_url or CONF.transport_url
+        transport_url = self._validate_transport_url(transport_url)
         if not transport_url:
-            print(_('Must specify --transport-url if [DEFAULT]/transport_url '
-                    'is not set in the configuration file.'))
             return 1
+
         database_connection = database_connection or CONF.database.connection
         if not database_connection:
             print(_('Must specify --database_connection '
