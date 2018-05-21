@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    The ``DELETE /os-services/{service_id}`` compute API will now return a
+    ``409 HTTPConflict`` response when trying to delete a ``nova-compute``
+    service which is still hosting instances. This is because doing so would
+    orphan the compute node resource provider in the placement service on
+    which those instances have resource allocations, which affects scheduling.
+    See https://bugs.launchpad.net/nova/+bug/1763183 for more details.
