@@ -337,9 +337,21 @@ tenant_id:
   in: path
   required: true
   type: string
+volume_id_attached_path:
+  description: |
+    The UUID of the attached volume.
+  in: path
+  required: true
+  type: string
 volume_id_path:
   description: |
     The unique ID for a volume.
+  in: path
+  required: true
+  type: string
+volume_id_to_detach_path:
+  description: |
+    The UUID of the volume to detach.
   in: path
   required: true
   type: string

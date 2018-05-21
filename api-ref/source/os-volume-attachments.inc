@@ -117,7 +117,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - server_id: server_id_path
-  - volume_id: volume_id
+  - volume_id: volume_id_attached_path
 
 Response
 --------
@@ -189,7 +189,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - server_id: server_id_path
-  - volume_id: volume_id
+  - volume_id: volume_id_to_detach_path
 
 Response
 --------
