@@ -149,8 +149,8 @@ Nova Cells v2
     specified, it will use the one defined by ``[DEFAULT]/transport_url``
     in the configuration file. Returns 0 if setup is completed
     (or has already been done), 1 if no hosts are reporting (and cannot be
-    mapped), 1 if the transport url is missing, and 2 if run in a cells v1
-    environment.
+    mapped), 1 if the transport url is missing or invalid, and 2 if run in a
+    cells v1 environment.
 
 ``nova-manage cell_v2 map_cell0 [--database_connection <database_connection>]``
     Create a cell mapping to the database connection for the cell0 database.
@@ -184,7 +184,7 @@ Nova Cells v2
     use the one defined by ``[DEFAULT]/transport_url`` in the configuration
     file. This command is idempotent (can be run multiple times), and the
     verbose option will print out the resulting cell mapping uuid. Returns 0
-    on successful completion, and 1 if the transport url is missing.
+    on successful completion, and 1 if the transport url is missing or invalid.
 
 ``nova-manage cell_v2 verify_instance --uuid <instance_uuid> [--quiet]``
     Verify instance mapping to a cell. This command is useful to determine if
@@ -211,7 +211,8 @@ Nova Cells v2
     explained below:
 
     * Returns 0 if the cell mapping was successfully created.
-    * Returns 1 if the transport url or database connection was missing.
+    * Returns 1 if the transport url or database connection was missing
+      or invalid.
     * Returns 2 if another cell is already using that transport url and/or
       database connection combination.
 
