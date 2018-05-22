@@ -227,10 +227,12 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         place_res = ([], {}, None)
         self._test_select_destination(place_res)
 
+    @mock.patch('nova.scheduler.request_filter.process_reqspec')
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_allocation_candidates')
-    def test_select_destination_is_rebuild(self, mock_get_ac, mock_rfrs):
+    def test_select_destination_is_rebuild(self, mock_get_ac, mock_rfrs,
+                                           mock_process):
         fake_spec = objects.RequestSpec(
             scheduler_hints={'_nova_check_type': ['rebuild']})
         fake_spec.instance_uuid = uuids.instance
@@ -242,6 +244,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                 self.context, fake_spec,
                 [fake_spec.instance_uuid], None, None, None, False)
             mock_get_ac.assert_not_called()
+            mock_process.assert_not_called()
 
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
