@@ -5769,10 +5769,9 @@ servers_multiple_create_name:
   description: |
     A base name for creating unique names during multiple create. A
     unique string will be appended to the end of this base name for
-    every server created. The templete is defined in
-    ``multi_instance_display_name_template`` option in the configuration file.
-    The server names become ``{name}-1``, ``{name}-2``, ``{name}-3``, ...
-    by default.
+    every server created.
+    The server names become ``{name}-1``, ``{name}-2``, ``{name}-3``,
+    etc.
 service:
   description: |
     Object representing a compute service.
