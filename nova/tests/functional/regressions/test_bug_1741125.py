@@ -50,7 +50,7 @@ class TestServerResizeReschedule(integrated_helpers.ProviderUsageBaseTestCase):
         server_req = self._build_minimal_create_server_request(
                 self.api, 'some-server', flavor_id=self.flavor1['id'],
                 image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                networks=[])
+                networks='none')
 
         self.first_attempt = True
         created_server = self.api.post_server({'server': server_req})

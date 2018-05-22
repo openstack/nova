@@ -31,7 +31,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.unit import cast_as_call
-from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
@@ -384,7 +383,6 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         self.scheduler_service = self.start_service('scheduler')
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
-        fake_network.set_stub_network_methods(self)
 
         self.computes = {}
 
@@ -533,7 +531,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         server_req = self._build_minimal_create_server_request(
             self.api, 'some-server', flavor_id=flavor['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            networks=[])
+            networks='none')
         server_req['availability_zone'] = 'nova:%s' % source_hostname
         LOG.info('booting on %s', source_hostname)
         created_server = self.api.post_server({'server': server_req})
