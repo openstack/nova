@@ -5351,3 +5351,47 @@ class ServerMovingTestsFromFlatToNested(
                                            source_rp_uuid)
 
         self._delete_and_check_allocations(server)
+
+
+class PortResourceRequestBasedSchedulingTestBase(
+        integrated_helpers.ProviderUsageBaseTestCase):
+
+    compute_driver = 'fake.SmallFakeDriver'
+
+    def setUp(self):
+        super(PortResourceRequestBasedSchedulingTestBase, self).setUp()
+        self.compute1 = self._start_compute('host1')
+        self.compute1_rp_uuid = self._get_provider_uuid_by_host('host1')
+        self.flavor = self.api.get_flavors()[0]
+
+    def _create_server(self, flavor, networks):
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'bandwidth-aware-server',
+            image_uuid='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+            flavor_id=flavor['id'], networks=networks)
+        return self.api.post_server({'server': server_req})
+
+
+class PortResourceRequestBasedSchedulingTest(
+        PortResourceRequestBasedSchedulingTestBase):
+    """Tests for handling servers with ports having resource requests """
+
+    def test_interface_attach_with_port_resource_request(self):
+        # create a server
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_1['id']}])
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # try to add a port with resource request
+        post = {
+            'interfaceAttachment': {
+                'port_id': self.neutron.port_with_resource_request['id']
+        }}
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.attach_interface,
+                               server['id'], post)
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('Attaching interfaces with QoS policy is '
+                      'not supported for instance',
+                      six.text_type(ex))
