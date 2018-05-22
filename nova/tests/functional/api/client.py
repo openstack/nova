@@ -56,7 +56,17 @@ class APIResponse(object):
         self.status = response.status_code
         self.content = response.content
         if self.content:
-            self.body = jsonutils.loads(self.content)
+            # The Compute API and Placement API handle error responses a bit
+            # differently so we need to check the content-type header to
+            # figure out what to do.
+            content_type = response.headers.get('content-type')
+            if 'application/json' in content_type:
+                self.body = response.json()
+            elif 'text/html' in content_type:
+                self.body = response.text
+            else:
+                raise ValueError('Unexpected response content-type: %s' %
+                                 content_type)
         self.headers = response.headers
 
     def __str__(self):
