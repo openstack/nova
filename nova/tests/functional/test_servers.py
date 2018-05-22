@@ -14,6 +14,7 @@
 #    under the License.
 
 import collections
+import copy
 import datetime
 import time
 import zlib
@@ -5395,3 +5396,49 @@ class PortResourceRequestBasedSchedulingTest(
         self.assertIn('Attaching interfaces with QoS policy is '
                       'not supported for instance',
                       six.text_type(ex))
+
+    @mock.patch('nova.tests.fixtures.NeutronFixture.create_port')
+    def test_interface_attach_with_network_create_port_has_resource_request(
+            self, mock_neutron_create_port):
+        # create a server
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_1['id']}])
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # the interfaceAttach operation below will result in a new port being
+        # created in the network that is attached. Make sure that neutron
+        # returns a port that has resource request.
+        mock_neutron_create_port.return_value = (
+            {'port': copy.deepcopy(self.neutron.port_with_resource_request)})
+
+        # try to attach a network
+        post = {
+            'interfaceAttachment': {
+                'net_id': self.neutron.network_1['id']
+        }}
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.attach_interface,
+                               server['id'], post)
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('Using networks with QoS policy is not supported for '
+                      'instance',
+                      six.text_type(ex))
+
+    @mock.patch('nova.tests.fixtures.NeutronFixture.create_port')
+    def test_create_server_with_network_create_port_has_resource_request(
+            self, mock_neutron_create_port):
+        # the server create operation below will result in a new port being
+        # created in the network. Make sure that neutron returns a port that
+        # has resource request.
+        mock_neutron_create_port.return_value = (
+            {'port': copy.deepcopy(self.neutron.port_with_resource_request)})
+
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'uuid': self.neutron.network_1['id']}])
+        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+
+        self.assertEqual(500, server['fault']['code'])
+        self.assertIn('Failed to allocate the network',
+                      server['fault']['message'])

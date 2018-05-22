@@ -3846,6 +3846,49 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         self.assertEqual(expected_exception_msg, str(exc))
         self.assertTrue(create_port_mock.called)
 
+    def test_create_port_minimal_raise_qos_not_supported(self):
+        instance = fake_instance.fake_instance_obj(self.context)
+        mock_client = mock.MagicMock()
+        mock_client.create_port.return_value = {'port': {
+            'id': uuids.port_id,
+            'resource_request': {'resources': {'CUSTOM_RESOURCE_CLASS': 42}}
+        }}
+
+        exc = self.assertRaises(exception.NetworksWithQoSPolicyNotSupported,
+                                self.api._create_port_minimal,
+                                mock_client, instance, uuids.my_netid1)
+        expected_exception_msg = ('Using networks with QoS policy is not '
+                                  'supported for instance %(instance)s. '
+                                  '(Network ID is %(net_id)s)' %
+                                  {'instance': instance.uuid,
+                                   'net_id': uuids.my_netid1})
+        self.assertEqual(expected_exception_msg, six.text_type(exc))
+        mock_client.delete_port.assert_called_once_with(uuids.port_id)
+
+    @mock.patch('nova.network.neutronv2.api.LOG')
+    def test_create_port_minimal_raise_qos_not_supported_cleanup_fails(
+            self, mock_log):
+        instance = fake_instance.fake_instance_obj(self.context)
+        mock_client = mock.MagicMock()
+        mock_client.create_port.return_value = {'port': {
+            'id': uuids.port_id,
+            'resource_request': {'resources': {'CUSTOM_RESOURCE_CLASS': 42}}
+        }}
+        mock_client.delete_port.side_effect = \
+            exceptions.NeutronClientException()
+
+        exc = self.assertRaises(exception.NetworksWithQoSPolicyNotSupported,
+                                self.api._create_port_minimal,
+                                mock_client, instance, uuids.my_netid1)
+        expected_exception_msg = ('Using networks with QoS policy is not '
+                                  'supported for instance %(instance)s. '
+                                  '(Network ID is %(net_id)s)' %
+                                  {'instance': instance.uuid,
+                                   'net_id': uuids.my_netid1})
+        self.assertEqual(expected_exception_msg, six.text_type(exc))
+        mock_client.delete_port.assert_called_once_with(uuids.port_id)
+        self.assertTrue(mock_log.exception.called)
+
     def test_get_network_detail_not_found(self):
         api = neutronapi.API()
         expected_exc = exceptions.NetworkNotFoundClient()

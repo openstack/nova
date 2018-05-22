@@ -2148,6 +2148,11 @@ class AttachInterfaceWithQoSPolicyNotSupported(AttachInterfaceNotSupported):
                 "instance %(instance_uuid)s.")
 
 
+class NetworksWithQoSPolicyNotSupported(Invalid):
+    msg_fmt = _("Using networks with QoS policy is not supported for "
+                "instance %(instance_uuid)s. (Network ID is %(network_id)s)")
+
+
 class InvalidReservedMemoryPagesOption(Invalid):
     msg_fmt = _("The format of the option 'reserved_huge_pages' is invalid. "
                 "(found '%(conf)s') Please refer to the nova "
