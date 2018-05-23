@@ -1,0 +1,11 @@
+---
+security:
+  - |
+    The 'SSBD' and 'VIRT-SSBD' cpu flags have been added to the list
+    of available choices for the ``[libvirt]/cpu_model_extra_flags``
+    config option. These are important for proper mitigation of the
+    Spectre 3a and 4 CVEs. Note that the use of either of these flags
+    require updated packages below nova, including libvirt, qemu
+    (specifically >=2.9.0 for virt-ssbd), linux, and system
+    firmware. For more information see
+    https://www.us-cert.gov/ncas/alerts/TA18-141A
