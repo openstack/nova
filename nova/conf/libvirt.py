@@ -520,7 +520,7 @@ Related options:
     cfg.ListOpt(
         'cpu_model_extra_flags',
         item_type=types.String(
-            choices=['pcid'],
+            choices=['pcid', 'ssbd', 'virt-ssbd'],
             ignore_case=True,
         ),
         default=[],
@@ -535,13 +535,16 @@ virtual CPU model::
     cpu_model = IvyBridge
     cpu_model_extra_flags = pcid
 
-Currently, the choice is restricted to only one option: ``pcid`` (the
-option is case-insensitive, so ``PCID`` is also valid).  This flag is
-now required to address the guest performance degradation as a result of
-applying the "Meltdown" CVE fixes on certain Intel CPU models.
+Currently, the choice is restricted to a few options: ``pcid``,
+``ssbd``, and ``virt-ssbd`` (the options are case-insensitive, so
+``PCID`` is also valid, for example).  These flags are now required to
+address the guest performance degradation as a result of applying the
+"Meltdown" CVE fixes (``pcid``) and exposure mitigation (``ssbd`` and
+``virt-ssbd``) on affected CPU models.
 
-Note that when using this config attribute to set the 'PCID' CPU flag,
-not all virtual (i.e. libvirt / QEMU) CPU models need it:
+Note that when using this config attribute to set the 'PCID' and
+related CPU flags, not all virtual (i.e. libvirt / QEMU) CPU models
+need it:
 
 * The only virtual CPU models that include the 'PCID' capability are
   Intel "Haswell", "Broadwell", and "Skylake" variants.
@@ -550,6 +553,13 @@ not all virtual (i.e. libvirt / QEMU) CPU models need it:
   and "IvyBridge" will _not_ expose the 'PCID' capability by default,
   even if the host CPUs by the same name include it.  I.e.  'PCID' needs
   to be explicitly specified when using the said virtual CPU models.
+
+For more information about ``ssbd`` and ``virt-ssbd`` applicability,
+please refer to the following security updates:
+
+https://www.us-cert.gov/ncas/alerts/TA18-141A
+
+https://www.redhat.com/archives/libvir-list/2018-May/msg01562.html
 
 For now, the ``cpu_model_extra_flags`` config attribute is valid only in
 combination with ``cpu_mode`` + ``cpu_model`` options.
