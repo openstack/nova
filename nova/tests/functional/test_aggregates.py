@@ -14,13 +14,17 @@ import time
 
 from nova.scheduler.client import report
 
+import nova.conf
 from nova import context as nova_context
+from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 from nova.virt import fake
+
+CONF = nova.conf.CONF
 
 
 class AggregatesTest(integrated_helpers._IntegratedTestBase):
@@ -101,12 +105,6 @@ class AggregateRequestFiltersTest(test.TestCase,
         # Aggregate with neither host
         self._create_aggregate('no-hosts')
 
-        # Default to enabling the filter and making it mandatory
-        self.flags(limit_tenants_to_placement_aggregate=True,
-                   group='scheduler')
-        self.flags(placement_aggregate_required_for_tenants=True,
-                   group='scheduler')
-
     def _start_compute(self, host):
         """Start a nova compute service on the given host
 
@@ -158,6 +156,46 @@ class AggregateRequestFiltersTest(test.TestCase,
         self.report_client.set_aggregates_for_provider(self.context, host_uuid,
                                                        placement_aggs)
 
+    def _wait_for_state_change(self, server, from_status):
+        for i in range(0, 50):
+            server = self.api.get_server(server['id'])
+            if server['status'] != from_status:
+                break
+            time.sleep(.1)
+
+        return server
+
+    def _boot_server(self, az=None):
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'test-instance', flavor_id=self.flavors[0]['id'],
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none', az=az)
+
+        created_server = self.api.post_server({'server': server_req})
+        server = self._wait_for_state_change(created_server, 'BUILD')
+
+        return server
+
+    def _get_instance_host(self, server):
+        srv = self.admin_api.get_server(server['id'])
+        return srv['OS-EXT-SRV-ATTR:host']
+
+    def _set_az_aggregate(self, agg, az):
+        """Set the availability_zone of an aggregate
+
+        :param agg: Name of the nova aggregate
+        :param az: Availability zone name
+        """
+        agg = self.aggregates[agg]
+        action = {
+            'set_metadata': {
+                'metadata': {
+                    'availability_zone': az,
+                }
+            },
+        }
+        self.admin_api.post_aggregate_action(agg['id'], action)
+
     def _grant_tenant_aggregate(self, agg, tenants):
         """Grant a set of tenants access to use an aggregate.
 
@@ -175,25 +213,16 @@ class AggregateRequestFiltersTest(test.TestCase,
         }
         self.admin_api.post_aggregate_action(agg['id'], action)
 
-    def _wait_for_state_change(self, server, from_status):
-        for i in range(0, 50):
-            server = self.api.get_server(server['id'])
-            if server['status'] != from_status:
-                break
-            time.sleep(.1)
 
-        return server
+class TenantAggregateFilterTest(AggregateRequestFiltersTest):
+    def setUp(self):
+        super(TenantAggregateFilterTest, self).setUp()
 
-    def _boot_server(self):
-        server_req = self._build_minimal_create_server_request(
-            self.api, 'test-instance', flavor_id=self.flavors[0]['id'],
-            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            networks='none')
-
-        created_server = self.api.post_server({'server': server_req})
-        server = self._wait_for_state_change(created_server, 'BUILD')
-
-        return server
+        # Default to enabling the filter and making it mandatory
+        self.flags(limit_tenants_to_placement_aggregate=True,
+                   group='scheduler')
+        self.flags(placement_aggregate_required_for_tenants=True,
+                   group='scheduler')
 
     def test_tenant_id_required_fails_if_no_aggregate(self):
         server = self._boot_server()
@@ -208,10 +237,6 @@ class AggregateRequestFiltersTest(test.TestCase,
         # Without granting our tenant permission to an aggregate, instance
         # creates should still succeed since aggregates are not required
         self.assertEqual('ACTIVE', server['status'])
-
-    def _get_instance_host(self, server):
-        srv = self.admin_api.get_server(server['id'])
-        return srv['OS-EXT-SRV-ATTR:host']
 
     def test_filter_honors_tenant_id(self):
         tenant = self.api.project_id
@@ -268,3 +293,82 @@ class AggregateRequestFiltersTest(test.TestCase,
             server = self._boot_server()
             self.assertEqual('ACTIVE', server['status'])
             self.assertEqual('host2', self._get_instance_host(server))
+
+
+class HostNameWeigher(weights.BaseHostWeigher):
+    def _weigh_object(self, host_state, weight_properties):
+        """Arbitrary preferring host1 over host2 over host3."""
+        weights = {'host1': 100, 'host2': 50, 'host3': 1}
+        return weights.get(host_state.host, 0)
+
+
+class AvailabilityZoneFilterTest(AggregateRequestFiltersTest):
+    def setUp(self):
+        # Default to enabling the filter
+        self.flags(query_placement_for_availability_zone=True,
+                   group='scheduler')
+
+        # Use our custom weigher defined above to make sure that we have
+        # a predictable scheduling sort order.
+        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
+                   group='filter_scheduler')
+
+        # NOTE(danms): Do this before calling setUp() so that
+        # the scheduler service that is started sees the new value
+        filters = CONF.filter_scheduler.enabled_filters
+        filters.remove('AvailabilityZoneFilter')
+        self.flags(enabled_filters=filters, group='filter_scheduler')
+
+        super(AvailabilityZoneFilterTest, self).setUp()
+
+    def test_filter_with_az(self):
+        self._set_az_aggregate('only-host2', 'myaz')
+        server1 = self._boot_server(az='myaz')
+        server2 = self._boot_server(az='myaz')
+        hosts = [self._get_instance_host(s) for s in (server1, server2)]
+        self.assertEqual(['host2', 'host2'], hosts)
+
+
+class TestAggregateFiltersTogether(AggregateRequestFiltersTest):
+    def setUp(self):
+        # NOTE(danms): Do this before calling setUp() so that
+        # the scheduler service that is started sees the new value
+        filters = CONF.filter_scheduler.enabled_filters
+        filters.remove('AvailabilityZoneFilter')
+        self.flags(enabled_filters=filters, group='filter_scheduler')
+
+        super(TestAggregateFiltersTogether, self).setUp()
+
+        # Default to enabling both filters
+        self.flags(limit_tenants_to_placement_aggregate=True,
+                   group='scheduler')
+        self.flags(placement_aggregate_required_for_tenants=True,
+                   group='scheduler')
+        self.flags(query_placement_for_availability_zone=True,
+                   group='scheduler')
+
+    def test_tenant_with_az_match(self):
+        # Grant our tenant access to the aggregate with
+        # host1
+        self._grant_tenant_aggregate('only-host1',
+                                     [self.api.project_id])
+        # Set an az on only-host1
+        self._set_az_aggregate('only-host1', 'myaz')
+
+        # Boot the server into that az and make sure we land
+        server = self._boot_server(az='myaz')
+        self.assertEqual('host1', self._get_instance_host(server))
+
+    def test_tenant_with_az_mismatch(self):
+        # Grant our tenant access to the aggregate with
+        # host1
+        self._grant_tenant_aggregate('only-host1',
+                                     [self.api.project_id])
+        # Set an az on only-host2
+        self._set_az_aggregate('only-host2', 'myaz')
+
+        # Boot the server into that az and make sure we fail
+        server = self._boot_server(az='myaz')
+        self.assertIsNone(self._get_instance_host(server))
+        server = self.api.get_server(server['id'])
+        self.assertEqual('ERROR', server['status'])

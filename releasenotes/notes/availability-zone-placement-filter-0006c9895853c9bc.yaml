@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    The scheduler can now use placement to more efficiently query for hosts within
+    an availability zone. This requires that a host aggregate is created in nova
+    with the ``availability_zone`` key set, and the same aggregate is created in
+    placement with an identical UUID. The
+    ``[scheduler]/query_placement_for_availability_zone`` config option enables
+    this behavior and, if enabled, eliminates the need for the
+    ``AvailabilityZoneFilter`` to be enabled.
