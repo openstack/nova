@@ -696,17 +696,29 @@ Possible cache modes:
     cfg.ListOpt('enabled_perf_events',
                default=[],
                help= """
-This is a performance event list which could be used as monitor. These events
-will be passed to libvirt domain xml while creating a new instances.
-Then event statistics data can be collected from libvirt.  The minimum
-libvirt version is 2.0.0. For more information about `Performance monitoring
-events`, refer https://libvirt.org/formatdomain.html#elementsPerf .
+This will allow you to specify a list of events to monitor low-level
+performance of guests, and collect related statsitics via the libvirt
+driver, which in turn uses the Linux kernel's `perf` infrastructure.
+With this config attribute set, Nova will generate libvirt guest XML to
+monitor the specified events.  For more information, refer to the
+"Performance monitoring events" section here:
+https://libvirt.org/formatdomain.html#elementsPerf.  And here:
+https://libvirt.org/html/libvirt-libvirt-domain.html -- look for
+``VIR_PERF_PARAM_*``
 
-Possible values:
-* A string list. For example: ``enabled_perf_events = cmt, mbml, mbmt``
-  The supported events list can be found in
-  https://libvirt.org/html/libvirt-libvirt-domain.html ,
-  which you may need to search key words ``VIR_PERF_PARAM_*``
+For example, to monitor the count of CPU cycles (total/elapsed) and the
+count of cache misses, enable them as follows::
+
+    [libvirt]
+    enabled_perf_events = cpu_clock, cache_misses
+
+Possible values: A string list.  The list of supported events can be
+found here: https://libvirt.org/formatdomain.html#elementsPerf.
+
+Note that support for Intel CMT events (`cmt`, `mbmbt`, `mbml`) is
+deprecated, and will be removed in the "Stein" release.  That's because
+the upstream Linux kernel (from 4.14 onwards) has deleted support for
+Intel CMT, because it is broken by design.
 """),
     cfg.IntOpt('num_pcie_ports',
                default=0,
