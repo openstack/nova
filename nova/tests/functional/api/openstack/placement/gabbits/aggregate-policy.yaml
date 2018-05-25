@@ -1,0 +1,39 @@
+# This tests the individual CRUD operations on
+# /resource_providers/{uuid}/aggregates* using a non-admin user with an
+# open policy configuration. The response validation is intentionally minimal.
+fixtures:
+    - OpenPolicyFixture
+
+defaults:
+    request_headers:
+        x-auth-token: user
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement latest
+
+vars:
+    - &agg_1 f918801a-5e54-4bee-9095-09a9d0c786b8
+    - &agg_2 a893eb5c-e2a0-4251-ab26-f71d3b0cfc0b
+
+tests:
+
+- name: post new resource provider
+  POST: /resource_providers
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: put some aggregates
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  data:
+      resource_provider_generation: 0
+      aggregates:
+        - *agg_1
+        - *agg_2
+  status: 200
+
+- name: get those aggregates
+  GET: $LAST_URL
+  response_json_paths:
+      $.aggregates.`len`: 2

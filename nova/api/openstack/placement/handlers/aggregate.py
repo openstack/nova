@@ -20,6 +20,7 @@ import webob
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.api.openstack.placement.policies import aggregate as policies
 from nova.api.openstack.placement.schemas import aggregate as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
@@ -86,6 +87,7 @@ def get_aggregates(req):
     list of aggregate uuids.
     """
     context = req.environ['placement.context']
+    context.can(policies.LIST)
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
@@ -99,6 +101,7 @@ def get_aggregates(req):
 @microversion.version_handler('1.1')
 def set_aggregates(req):
     context = req.environ['placement.context']
+    context.can(policies.UPDATE)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     consider_generation = want_version.matches(
         min_version=_INCLUDE_GENERATION_VERSION)
