@@ -337,20 +337,10 @@ class TestResourceClass(TestString):
     def setUp(self):
         super(TestResourceClass, self).setUp()
         self.field = rc_fields.ResourceClassField()
-        self.coerce_good_values = [
-            ('VCPU', 'VCPU'),
-            ('MEMORY_MB', 'MEMORY_MB'),
-            ('DISK_GB', 'DISK_GB'),
-            ('PCI_DEVICE', 'PCI_DEVICE'),
-            ('SRIOV_NET_VF', 'SRIOV_NET_VF'),
-            ('NUMA_SOCKET', 'NUMA_SOCKET'),
-            ('NUMA_CORE', 'NUMA_CORE'),
-            ('NUMA_THREAD', 'NUMA_THREAD'),
-            ('NUMA_MEMORY_MB', 'NUMA_MEMORY_MB'),
-            ('IPV4_ADDRESS', 'IPV4_ADDRESS'),
-            ('VGPU', 'VGPU'),
-            ('VGPU_DISPLAY_HEAD', 'VGPU_DISPLAY_HEAD'),
-        ]
+        # NOTE(gibi): We assume that the input value of a STANDARD RC is always
+        # the same as the coerced value
+        self.coerce_good_values = [(v, v) for v in
+                                   rc_fields.ResourceClass.STANDARD]
         self.coerce_bad_values = [object(), dict()]
         self.to_primitive_values = self.coerce_good_values[0:1]
         self.from_primitive_values = self.coerce_good_values[0:1]

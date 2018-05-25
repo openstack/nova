@@ -16,7 +16,7 @@ tests:
 - name: list resource classes
   GET: /resource_classes
   response_json_paths:
-      $.resource_classes.`len`: 12  #  Number of standard resource classes
+      $.resource_classes.`len`: 14  #  Number of standard resource classes
 
 - name: create resource class
   POST: /resource_classes
