@@ -52,6 +52,8 @@ def get_enforcer():
     # This method is used by oslopolicy CLI scripts in order to generate policy
     # files from overrides on disk and defaults in code. We can just pass an
     # empty list and let oslo do the config lifting for us.
+    # TODO(mriedem): Change the project kwarg value to "placement" once
+    # this code is extracted from nova.
     cfg.CONF([], project='nova')
     init()
     return _ENFORCER_PLACEMENT
