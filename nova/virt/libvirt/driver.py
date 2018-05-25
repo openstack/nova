@@ -6299,9 +6299,22 @@ class LibvirtDriver(driver.ComputeDriver):
     def refresh_instance_security_rules(self, instance):
         self.firewall_driver.refresh_instance_security_rules(instance)
 
-    def get_inventory(self, nodename):
-        """Return a dict, keyed by resource class, of inventory information for
-        the supplied node.
+    def update_provider_tree(self, provider_tree, nodename):
+        """Update a ProviderTree object with current resource provider and
+        inventory information.
+
+        :param nova.compute.provider_tree.ProviderTree provider_tree:
+            A nova.compute.provider_tree.ProviderTree object representing all
+            the providers in the tree associated with the compute node, and any
+            sharing providers (those with the ``MISC_SHARES_VIA_AGGREGATE``
+            trait) associated via aggregate with any of those providers (but
+            not *their* tree- or aggregate-associated providers), as currently
+            known by placement.
+
+        :param nodename:
+            String name of the compute node (i.e.
+            ComputeNode.hypervisor_hostname) for which the caller is requesting
+            updated provider information.
         """
         disk_gb = int(self._get_local_gb_info()['total'])
         memory_mb = int(self._host.get_memory_mb_total())
@@ -6353,7 +6366,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 'step_size': 1,
                 }
 
-        return result
+        provider_tree.update_inventory(nodename, result)
 
     def get_available_resource(self, nodename):
         """Retrieve resource information.
