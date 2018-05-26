@@ -433,7 +433,7 @@ class VolumeAttachmentController(wsgi.Controller):
 
         if bdm.is_root:
             msg = _("Cannot detach a root device volume")
-            raise exc.HTTPForbidden(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         try:
             self.compute_api.detach_volume(context, instance, volume)

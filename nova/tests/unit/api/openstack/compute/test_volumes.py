@@ -541,7 +541,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                  new_callable=mock.PropertyMock)
     def test_detach_vol_root(self, mock_isroot):
         mock_isroot.return_value = True
-        self.assertRaises(exc.HTTPForbidden,
+        self.assertRaises(exc.HTTPBadRequest,
                           self.attachments.delete,
                           self.req,
                           FAKE_UUID,
