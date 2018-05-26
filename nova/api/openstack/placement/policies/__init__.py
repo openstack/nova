@@ -17,6 +17,7 @@ from nova.api.openstack.placement.policies import base
 from nova.api.openstack.placement.policies import inventory
 from nova.api.openstack.placement.policies import resource_class
 from nova.api.openstack.placement.policies import resource_provider
+from nova.api.openstack.placement.policies import trait
 from nova.api.openstack.placement.policies import usage
 
 
@@ -28,4 +29,5 @@ def list_rules():
         inventory.list_rules(),
         aggregate.list_rules(),
         usage.list_rules(),
+        trait.list_rules(),
     )

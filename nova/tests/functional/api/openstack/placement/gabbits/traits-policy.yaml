@@ -1,0 +1,55 @@
+# This tests the individual CRUD operations on
+# /traits* and /resource_providers/{uuid}/traits using a non-admin user with an
+# open policy configuration. The response validation is intentionally minimal.
+fixtures:
+    - OpenPolicyFixture
+
+defaults:
+    request_headers:
+        x-auth-token: user
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement latest
+
+tests:
+
+- name: list traits
+  GET: /traits
+  status: 200
+
+- name: create a trait
+  PUT: /traits/CUSTOM_TRAIT_X
+  status: 201
+
+- name: show trait
+  GET: /traits/CUSTOM_TRAIT_X
+  status: 204
+
+- name: create resource provider
+  POST: /resource_providers
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: list resource provider traits
+  GET: /resource_providers/$ENVIRON['RP_UUID']/traits
+  status: 200
+
+- name: update resource provider traits
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    content-type: application/json
+  status: 200
+  data:
+    traits:
+        - CUSTOM_TRAIT_X
+    resource_provider_generation: 0
+
+- name: delete resource provider traits
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/traits
+  status: 204
+
+- name: delete trait
+  DELETE: /traits/CUSTOM_TRAIT_X
+  status: 204

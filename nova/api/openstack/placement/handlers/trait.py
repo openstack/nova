@@ -20,6 +20,7 @@ import webob
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.api.openstack.placement.policies import trait as policies
 from nova.api.openstack.placement.schemas import trait as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
@@ -64,6 +65,7 @@ def _serialize_traits(traits, want_version):
 @microversion.version_handler('1.6')
 def put_trait(req):
     context = req.environ['placement.context']
+    context.can(policies.TRAITS_UPDATE)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     name = util.wsgi_path_item(req.environ, 'name')
 
@@ -99,6 +101,7 @@ def put_trait(req):
 @microversion.version_handler('1.6')
 def get_trait(req):
     context = req.environ['placement.context']
+    context.can(policies.TRAITS_SHOW)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     name = util.wsgi_path_item(req.environ, 'name')
 
@@ -119,6 +122,7 @@ def get_trait(req):
 @microversion.version_handler('1.6')
 def delete_trait(req):
     context = req.environ['placement.context']
+    context.can(policies.TRAITS_DELETE)
     name = util.wsgi_path_item(req.environ, 'name')
 
     try:
@@ -141,6 +145,7 @@ def delete_trait(req):
 @util.check_accept('application/json')
 def list_traits(req):
     context = req.environ['placement.context']
+    context.can(policies.TRAITS_LIST)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     filters = {}
 
@@ -172,6 +177,7 @@ def list_traits(req):
 @util.check_accept('application/json')
 def list_traits_for_resource_provider(req):
     context = req.environ['placement.context']
+    context.can(policies.RP_TRAIT_LIST)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     uuid = util.wsgi_path_item(req.environ, 'uuid')
 
@@ -206,6 +212,7 @@ def list_traits_for_resource_provider(req):
 @util.require_content('application/json')
 def update_traits_for_resource_provider(req):
     context = req.environ['placement.context']
+    context.can(policies.RP_TRAIT_UPDATE)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     data = util.extract_json(req.body, schema.SET_TRAITS_FOR_RP_SCHEMA)
@@ -246,6 +253,7 @@ def update_traits_for_resource_provider(req):
 @microversion.version_handler('1.6')
 def delete_traits_for_resource_provider(req):
     context = req.environ['placement.context']
+    context.can(policies.RP_TRAIT_DELETE)
     uuid = util.wsgi_path_item(req.environ, 'uuid')
 
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
