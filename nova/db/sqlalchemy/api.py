@@ -1794,11 +1794,15 @@ def instance_create(context, values):
 
 
 def _instance_data_get_for_user(context, project_id, user_id):
+    not_soft_deleted = or_(
+        models.Instance.vm_state != vm_states.SOFT_DELETED,
+        models.Instance.vm_state == null()
+    )
     result = model_query(context, models.Instance, (
         func.count(models.Instance.id),
         func.sum(models.Instance.vcpus),
         func.sum(models.Instance.memory_mb))).\
-        filter_by(project_id=project_id)
+        filter_by(project_id=project_id).filter(not_soft_deleted)
     if user_id:
         result = result.filter_by(user_id=user_id).first()
     else:

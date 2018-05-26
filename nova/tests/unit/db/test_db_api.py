@@ -1322,6 +1322,24 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
                               filters={},
                               sort_keys=keys)
 
+    def test_instance_data_get_for_user(self):
+        ctxt = context.get_admin_context()
+        instance_1 = self.create_instance_with_args(project_id='project-HHD')
+        self.create_instance_with_args(project_id='project-HHD')
+
+        @sqlalchemy_api.pick_context_manager_reader
+        def test(context):
+            return sqlalchemy_api._instance_data_get_for_user(
+                context, 'project-HHD', None)
+
+        inst_num, _, _ = test(ctxt)
+        self.assertEqual(2, inst_num)
+
+        db.instance_update(ctxt, instance_1['uuid'],
+                           {"vm_state": vm_states.SOFT_DELETED})
+        inst_num_2, _, _ = test(ctxt)
+        self.assertEqual(1, inst_num_2)
+
 
 class ProcessSortParamTestCase(test.TestCase):
 
