@@ -22,6 +22,7 @@ import webob
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.api.openstack.placement.policies import allocation as policies
 from nova.api.openstack.placement.schemas import allocation as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
@@ -130,7 +131,7 @@ def _serialize_allocations_for_resource_provider(allocations,
 def list_for_consumer(req):
     """List allocations associated with a consumer."""
     context = req.environ['placement.context']
-    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    context.can(policies.ALLOC_LIST)
     consumer_id = util.wsgi_path_item(req.environ, 'consumer_uuid')
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
@@ -164,6 +165,7 @@ def list_for_resource_provider(req):
     # using a dict of dicts for the output we are potentially limiting
     # ourselves in terms of sorting and filtering.
     context = req.environ['placement.context']
+    context.can(policies.RP_ALLOC_LIST)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     uuid = util.wsgi_path_item(req.environ, 'uuid')
 
@@ -229,6 +231,7 @@ def _new_allocations(context, resource_provider_uuid, consumer_uuid,
 
 def _set_allocations_for_consumer(req, schema):
     context = req.environ['placement.context']
+    context.can(policies.ALLOC_UPDATE)
     consumer_uuid = util.wsgi_path_item(req.environ, 'consumer_uuid')
     data = util.extract_json(req.body, schema)
     allocation_data = data['allocations']
@@ -310,6 +313,7 @@ def set_allocations_for_consumer(req):
 @util.require_content('application/json')
 def set_allocations(req):
     context = req.environ['placement.context']
+    context.can(policies.ALLOC_MANAGE)
     data = util.extract_json(req.body, schema.POST_ALLOCATIONS_V1_13)
 
     # Create a sequence of allocation objects to be used in an
@@ -370,6 +374,7 @@ def set_allocations(req):
 @wsgi_wrapper.PlacementWsgify
 def delete_allocations(req):
     context = req.environ['placement.context']
+    context.can(policies.ALLOC_DELETE)
     consumer_uuid = util.wsgi_path_item(req.environ, 'consumer_uuid')
 
     allocations = rp_obj.AllocationList.get_all_by_consumer_id(

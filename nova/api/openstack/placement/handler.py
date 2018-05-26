@@ -151,6 +151,11 @@ PER_ROUTE_POLICY = [
     '/resource_classes',
     # /resource_providers/{uuid}/usages
     '/resource_providers/[A-Za-z0-9-]+/usages$',
+    # /resource_providers/{uuid}/allocations
+    '/resource_providers/[A-Za-z0-9-]+/allocations',
+    # /allocations
+    # /allocations/{consumer_uuid}
+    '/allocations',
     # /traits
     # /traits/{name}
     '/traits',

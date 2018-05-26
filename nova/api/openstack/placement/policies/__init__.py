@@ -13,6 +13,7 @@
 import itertools
 
 from nova.api.openstack.placement.policies import aggregate
+from nova.api.openstack.placement.policies import allocation
 from nova.api.openstack.placement.policies import base
 from nova.api.openstack.placement.policies import inventory
 from nova.api.openstack.placement.policies import resource_class
@@ -30,4 +31,5 @@ def list_rules():
         aggregate.list_rules(),
         usage.list_rules(),
         trait.list_rules(),
+        allocation.list_rules(),
     )
