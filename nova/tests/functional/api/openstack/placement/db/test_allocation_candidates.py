@@ -2324,3 +2324,187 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             ]),
         }
         self._validate_provider_summary_resources(expected, alloc_cands)
+
+    def test_get_trees_with_traits(self):
+        """Creates a few provider trees having different traits and tests the
+        _get_trees_with_traits() utility function to ensure that only the
+        root provider IDs of matching traits are returned.
+        """
+        # We are setting up 6 trees of providers with following traits:
+        #
+        #                  compute node (cn)
+        #                 /                 \
+        #               pf 0               pf 1
+        #
+        # +-----+----------------+---------------------+---------------------+
+        # |     |       cn       |         pf0         |         pf1         |
+        # +-----+----------------+---------------------+---------------------+
+        # |tree1|HW_CPU_X86_AVX2 |                     |HW_NIC_OFFLOAD_GENEVE|
+        # +-----+----------------+---------------------+---------------------+
+        # |tree2|STORAGE_DISK_SSD|                     |                     |
+        # +-----+----------------+---------------------+---------------------+
+        # |tree3|HW_CPU_X86_AVX2 |                     |                     |
+        # |     |STORAGE_DISK_SSD|                     |                     |
+        # +-----+----------------+---------------------+---------------------+
+        # |tree4|                |HW_NIC_ACCEL_SSL     |                     |
+        # |     |                |HW_NIC_OFFLOAD_GENEVE|                     |
+        # +-----+----------------+---------------------+---------------------+
+        # |tree5|                |HW_NIC_ACCEL_SSL     |HW_NIC_OFFLOAD_GENEVE|
+        # +-----+----------------+---------------------+---------------------+
+        # |tree6|                |HW_NIC_ACCEL_SSL     |HW_NIC_ACCEL_SSL     |
+        # +-----+----------------+---------------------+---------------------+
+        # |tree7|                |                     |                     |
+        # +-----+----------------+---------------------+---------------------+
+        #
+
+        rp_ids = set()
+        for x in ('1', '2', '3', '4', '5', '6', '7'):
+            name = 'cn' + x
+            cn = self._create_provider(name)
+            name = 'cn' + x + '_pf0'
+            pf0 = self._create_provider(name, parent=cn.uuid)
+            name = 'cn' + x + '_pf1'
+            pf1 = self._create_provider(name, parent=cn.uuid)
+
+            rp_ids |= set([cn.id, pf0.id, pf1.id])
+
+            if x == '1':
+                tb.set_traits(cn, os_traits.HW_CPU_X86_AVX2)
+                tb.set_traits(pf1, os_traits.HW_NIC_OFFLOAD_GENEVE)
+            if x == '2':
+                tb.set_traits(cn, os_traits.STORAGE_DISK_SSD)
+            if x == '3':
+                tb.set_traits(cn, os_traits.HW_CPU_X86_AVX2,
+                              os_traits.STORAGE_DISK_SSD)
+            if x == '4':
+                tb.set_traits(pf0, os_traits.HW_NIC_ACCEL_SSL,
+                              os_traits.HW_NIC_OFFLOAD_GENEVE)
+            if x == '5':
+                tb.set_traits(pf0, os_traits.HW_NIC_ACCEL_SSL)
+                tb.set_traits(pf1, os_traits.HW_NIC_OFFLOAD_GENEVE)
+            if x == '6':
+                tb.set_traits(pf0, os_traits.HW_NIC_ACCEL_SSL)
+                tb.set_traits(pf1, os_traits.HW_NIC_ACCEL_SSL)
+
+        avx2_t = rp_obj.Trait.get_by_name(
+            self.ctx, os_traits.HW_CPU_X86_AVX2)
+        ssd_t = rp_obj.Trait.get_by_name(
+            self.ctx, os_traits.STORAGE_DISK_SSD)
+        geneve_t = rp_obj.Trait.get_by_name(
+            self.ctx, os_traits.HW_NIC_OFFLOAD_GENEVE)
+        ssl_t = rp_obj.Trait.get_by_name(
+            self.ctx, os_traits.HW_NIC_ACCEL_SSL)
+
+        # Case1: required on root
+        required_traits = {
+            avx2_t.name: avx2_t.id,
+        }
+        forbidden_traits = {}
+
+        rp_tuples_with_trait = rp_obj._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+
+        tree_root_ids = set([p[1] for p in rp_tuples_with_trait])
+
+        provider_names = ['cn1', 'cn3']
+        expect_root_ids = self._get_rp_ids_matching_names(provider_names)
+        self.assertEqual(expect_root_ids, tree_root_ids)
+
+        # Case1': required on root with forbidden traits
+        # Let's validate that cn3 dissapears
+        required_traits = {
+            avx2_t.name: avx2_t.id,
+        }
+        forbidden_traits = {
+            ssd_t.name: ssd_t.id,
+        }
+
+        rp_tuples_with_trait = rp_obj._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+
+        tree_root_ids = set([p[1] for p in rp_tuples_with_trait])
+
+        provider_names = ['cn1']
+        expect_root_ids = self._get_rp_ids_matching_names(provider_names)
+        self.assertEqual(expect_root_ids, tree_root_ids)
+
+        # Case2: multiple required on root
+        required_traits = {
+            avx2_t.name: avx2_t.id,
+            ssd_t.name: ssd_t.id
+        }
+        forbidden_traits = {}
+
+        rp_tuples_with_trait = rp_obj._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+
+        tree_root_ids = set([p[1] for p in rp_tuples_with_trait])
+
+        provider_names = ['cn3']
+        expect_root_ids = self._get_rp_ids_matching_names(provider_names)
+        self.assertEqual(expect_root_ids, tree_root_ids)
+
+        # Case3: required on child
+        required_traits = {
+            geneve_t.name: geneve_t.id
+        }
+        forbidden_traits = {}
+
+        rp_tuples_with_trait = rp_obj._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+
+        tree_root_ids = set([p[1] for p in rp_tuples_with_trait])
+
+        provider_names = ['cn1', 'cn4', 'cn5']
+        expect_root_ids = self._get_rp_ids_matching_names(provider_names)
+        self.assertEqual(expect_root_ids, tree_root_ids)
+
+        # Case3': required on child with forbidden traits
+        # Let's validate that cn4 dissapears
+        required_traits = {
+            geneve_t.name: geneve_t.id
+        }
+        forbidden_traits = {
+            ssl_t.name: ssl_t.id
+        }
+
+        rp_tuples_with_trait = rp_obj._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+
+        tree_root_ids = set([p[1] for p in rp_tuples_with_trait])
+
+        provider_names = ['cn1', 'cn5']
+        expect_root_ids = self._get_rp_ids_matching_names(provider_names)
+        self.assertEqual(expect_root_ids, tree_root_ids)
+
+        # Case4: multiple required on child
+        required_traits = {
+            geneve_t.name: geneve_t.id,
+            ssl_t.name: ssl_t.id
+        }
+        forbidden_traits = {}
+
+        rp_tuples_with_trait = rp_obj._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+
+        tree_root_ids = set([p[1] for p in rp_tuples_with_trait])
+
+        provider_names = ['cn4', 'cn5']
+        expect_root_ids = self._get_rp_ids_matching_names(provider_names)
+        self.assertEqual(expect_root_ids, tree_root_ids)
+
+        # Case5: required on root and child
+        required_traits = {
+            avx2_t.name: avx2_t.id,
+            geneve_t.name: geneve_t.id
+        }
+        forbidden_traits = {}
+
+        rp_tuples_with_trait = rp_obj._get_trees_with_traits(
+            self.ctx, rp_ids, required_traits, forbidden_traits)
+
+        tree_root_ids = set([p[1] for p in rp_tuples_with_trait])
+
+        provider_names = ['cn1']
+        expect_root_ids = self._get_rp_ids_matching_names(provider_names)
+        self.assertEqual(expect_root_ids, tree_root_ids)
