@@ -1779,20 +1779,6 @@ def instance_create(context, values):
     return instance_ref
 
 
-def _instance_data_get_for_user(context, project_id, user_id):
-    result = model_query(context, models.Instance, (
-        func.count(models.Instance.id),
-        func.sum(models.Instance.vcpus),
-        func.sum(models.Instance.memory_mb))).\
-        filter_by(project_id=project_id)
-    if user_id:
-        result = result.filter_by(user_id=user_id).first()
-    else:
-        result = result.first()
-    # NOTE(vish): convert None to 0
-    return (result[0] or 0, result[1] or 0, result[2] or 0)
-
-
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
