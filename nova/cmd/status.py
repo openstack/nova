@@ -33,6 +33,7 @@ import pkg_resources
 import prettytable
 from sqlalchemy import func as sqlfunc
 from sqlalchemy import MetaData, Table, and_, select
+from sqlalchemy.sql import false
 
 from nova.cmd import common as cmd_common
 import nova.conf
@@ -440,6 +441,74 @@ class UpgradeCommands(object):
         # those nodes are already migrated, so there is nothing to do.
         return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
 
+    def _get_min_service_version(self, context, binary):
+        meta = MetaData(bind=db_session.get_engine(context=context))
+        services = Table('services', meta, autoload=True)
+        return select([sqlfunc.min(services.c.version)]).select_from(
+            services).where(and_(
+                services.c.binary == binary,
+                services.c.deleted == 0,
+                services.c.forced_down == false())).scalar()
+
+    def _check_api_service_version(self):
+        """Checks nova-osapi_compute service versions across cells.
+
+        For non-cellsv1 deployments, based on how the [database]/connection
+        is configured for the nova-api service, the nova-osapi_compute service
+        versions before 15 will only attempt to lookup instances from the
+        local database configured for the nova-api service directly.
+
+        This can cause issues if there are newer API service versions in cell1
+        after the upgrade to Ocata, but lingering older API service versions
+        in an older database.
+
+        This check will scan all cells looking for a minimum nova-osapi_compute
+        service version less than 15 and if found, emit a warning that those
+        service entries likely need to be cleaned up.
+        """
+        # If we're using cells v1 then we don't care about this.
+        if CONF.cells.enable:
+            return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
+
+        meta = MetaData(bind=db_session.get_api_engine())
+        cell_mappings = Table('cell_mappings', meta, autoload=True)
+        mappings = cell_mappings.select().execute().fetchall()
+
+        if not mappings:
+            # There are no cell mappings so we can't determine this, just
+            # return a warning. The cellsv2 check would have already failed
+            # on this.
+            msg = (_('Unable to determine API service versions without '
+                     'cell mappings.'))
+            return UpgradeCheckResult(UpgradeCheckCode.WARNING, msg)
+
+        ctxt = nova_context.get_admin_context()
+        cells_with_old_api_services = []
+        for mapping in mappings:
+            with nova_context.target_cell(ctxt, mapping) as cctxt:
+                # Get the minimum nova-osapi_compute service version in this
+                # cell.
+                min_version = self._get_min_service_version(
+                    cctxt, 'nova-osapi_compute')
+                if min_version is not None and min_version < 15:
+                    cells_with_old_api_services.append(mapping['uuid'])
+
+        # If there are any cells with older API versions, we report it as a
+        # warning since we don't know how the actual nova-api service is
+        # configured, but we need to give the operator some indication that
+        # they have something to investigate/cleanup.
+        if cells_with_old_api_services:
+            msg = (_("The following cells have 'nova-osapi_compute' services "
+                     "with version < 15 which may cause issues when querying "
+                     "instances from the API: %s. Depending on how nova-api "
+                     "is configured, this may not be a problem, but is worth "
+                     "investigating and potentially cleaning up those older "
+                     "records. See "
+                     "https://bugs.launchpad.net/nova/+bug/1759316 for "
+                     "details.") % ', '.join(cells_with_old_api_services))
+            return UpgradeCheckResult(UpgradeCheckCode.WARNING, msg)
+        return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
+
     # The format of the check functions is to return an UpgradeCheckResult
     # object with the appropriate UpgradeCheckCode and details set. If the
     # check hits warnings or failures then those should be stored in the
@@ -455,7 +524,9 @@ class UpgradeCommands(object):
         # Added in Ocata
         (_('Resource Providers'), _check_resource_providers),
         # Added in Rocky (but also useful going back to Pike)
-        (_('Ironic Flavor Migration'), _check_ironic_flavor_migration)
+        (_('Ironic Flavor Migration'), _check_ironic_flavor_migration),
+        # Added in Rocky (but is backportable to Ocata)
+        (_('API Service Version'), _check_api_service_version)
     )
 
     def _get_details(self, upgrade_check_result):
