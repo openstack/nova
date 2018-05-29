@@ -430,18 +430,18 @@ Install and configure components
      access to the Placement API by adding the following configuration to
      ``/etc/httpd/conf.d/00-nova-placement-api.conf``:
 
-      .. path /etc/httpd/conf.d/00-nova-placement-api.conf
-      .. code-block:: ini
+     .. path /etc/httpd/conf.d/00-nova-placement-api.conf
+     .. code-block:: ini
 
-         <Directory /usr/bin>
-            <IfVersion >= 2.4>
-               Require all granted
-            </IfVersion>
-            <IfVersion < 2.4>
-               Order allow,deny
-               Allow from all
-            </IfVersion>
-         </Directory>
+        <Directory /usr/bin>
+           <IfVersion >= 2.4>
+              Require all granted
+           </IfVersion>
+           <IfVersion < 2.4>
+              Order allow,deny
+              Allow from all
+           </IfVersion>
+        </Directory>
 
    * Restart the httpd service:
 
