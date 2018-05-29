@@ -4763,7 +4763,11 @@ class ComputeManager(manager.Manager):
             expected_state = shelving_state_map[expected_state]
             instance.task_state = task_state
             instance.save(expected_task_state=expected_state)
-
+        # Do not attempt a clean shutdown of a paused guest since some
+        # hypervisors will fail the clean shutdown if the guest is not
+        # running.
+        if instance.power_state == power_state.PAUSED:
+            clean_shutdown = False
         self._power_off_instance(context, instance, clean_shutdown)
         self.driver.snapshot(context, instance, image_id, update_task_state)
 
