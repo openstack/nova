@@ -57,6 +57,7 @@ from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import build_request as build_request_obj
 from nova.objects import host_mapping as host_mapping_obj
+from nova.objects import instance as instance_obj
 from nova.objects import instance_group as instance_group_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
@@ -392,6 +393,11 @@ class DbCommands(object):
         sa_db.migration_migrate_to_uuid,
         # Added in Queens
         block_device_obj.BlockDeviceMapping.populate_uuids,
+        # Added in Rocky
+        # NOTE(tssurya): This online migration is going to be backported to
+        # Queens and Pike since instance.avz of instances before Pike
+        # need to be populated if it was not specified during boot time.
+        instance_obj.populate_missing_availability_zones,
     )
 
     def __init__(self):

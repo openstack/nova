@@ -24,6 +24,7 @@ from sqlalchemy import or_
 from sqlalchemy.sql import func
 from sqlalchemy.sql import null
 
+from nova import availability_zones as avail_zone
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
@@ -1258,6 +1259,20 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
         inst_list.objects.append(inst_obj)
     inst_list.obj_reset_changes()
     return inst_list
+
+
+@db_api.pick_context_manager_writer
+def populate_missing_availability_zones(context, count):
+    instances = (context.session.query(models.Instance).
+        filter_by(availability_zone=None).limit(count).all())
+    count_all = len(instances)
+    count_hit = 0
+    for instance in instances:
+        az = avail_zone.get_instance_availability_zone(context, instance)
+        instance.availability_zone = az
+        instance.save(context.session)
+        count_hit += 1
+    return count_all, count_hit
 
 
 @base.NovaObjectRegistry.register
