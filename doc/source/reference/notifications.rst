@@ -29,6 +29,14 @@ following::
         "payload": <json serialized dict, defined by the sender>
     }
 
+Notifications can be completely disabled by setting the following in
+your nova configuration file:
+
+.. code-block:: ini
+
+  [oslo_messaging_notifications]
+  driver = noop
+
 There are two types of notifications in Nova: legacy notifications which have
 an unversioned payload and newer notifications which have a versioned payload.
 
