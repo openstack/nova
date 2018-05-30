@@ -698,7 +698,8 @@ class HostManagerTestCase(test.NoDBTestCase):
         mock_get_by_host.return_value = objects.InstanceList(objects=[inst1])
         host_state.update(
                 inst_dict=hm._get_instance_info(context, cn1))
-        mock_get_by_host.assert_called_once_with(context, cn1.host)
+        mock_get_by_host.assert_called_once_with(
+            context, cn1.host, expected_attrs=[])
         self.assertTrue(host_state.instances)
         self.assertEqual(host_state.instances[uuids.instance], inst1)
 
