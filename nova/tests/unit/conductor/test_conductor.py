@@ -2334,6 +2334,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             instance_type_id=flavor['id'],
             system_metadata={},
             uuid=uuids.instance,
+            project_id=fakes.FAKE_PROJECT_ID,
             user_id=fakes.FAKE_USER_ID,
             flavor=flavor,
             numa_topology=None,
@@ -2355,6 +2356,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         set_vm_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                             'migrate_server', updates,
                                             exception, fake_spec)
+        spec_fc_mock.assert_called_once_with(
+            self.context, inst_obj.uuid, image, flavor, inst_obj.numa_topology,
+            inst_obj.pci_requests, {}, None, inst_obj.availability_zone,
+            project_id=inst_obj.project_id, user_id=inst_obj.user_id)
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
