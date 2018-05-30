@@ -328,7 +328,7 @@ How to do great nova-spec reviews?
 
 https://specs.openstack.org/openstack/nova-specs/specs/rocky/template.html
 
-https://docs.openstack.org/nova/latest/contributor/blueprints.html#specs
+:doc:`/contributor/blueprints`.
 
 Spec reviews are always a step ahead of the normal code reviews. Follow
 the above links for some great information on specs/reviews.

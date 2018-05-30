@@ -758,6 +758,8 @@ Added pagination support for migrations, there are four changes:
 * The query parameter schema of the ``GET /os-migrations`` API no longer
   allows additional properties.
 
+.. _api-microversion-queens:
+
 2.60 (Maximum in Queens)
 ------------------------
 

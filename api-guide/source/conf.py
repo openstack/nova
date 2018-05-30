@@ -277,3 +277,9 @@ pdf_documents = [
     ('index', u'ComputeAPIGuide', u'Compute API Guide', u'OpenStack '
     'contributors')
 ]
+
+# -- Options for openstackdocstheme -------------------------------------------
+
+openstack_projects = [
+    'nova',
+]

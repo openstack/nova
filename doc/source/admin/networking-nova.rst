@@ -13,8 +13,8 @@ configuration for your Compute instances.
 
 You can choose to either install and configure ``nova-network`` or use the
 OpenStack Networking service (neutron). This section contains a brief overview
-of ``nova-network``. For more information about OpenStack Networking, see
-`Networking <https://docs.openstack.org/admin-guide/networking.html>`_.
+of ``nova-network``. For more information about OpenStack Networking, refer to
+:neutron-doc:`the documentation <>`.
 
 Networking concepts
 ~~~~~~~~~~~~~~~~~~~
@@ -417,9 +417,8 @@ Configure public (floating) IP addresses
 
 This section describes how to configure floating IP addresses with
 ``nova-network``. For information about doing this with OpenStack Networking,
-see `L3-routing-and-NAT
-<https://docs.openstack.org/neutron/latest/admin/archives/adv-features.html
-#l3-routing-and-nat>`_.
+refer to :neutron-doc:`L3-routing-and-NAT
+<admin/archives/adv-features.html#l3-routing-and-nat>`.
 
 Private and public IP addresses
 -------------------------------
@@ -561,9 +560,9 @@ perform floating IP operations:
      # openstack floating ip delete CIDR
 
 For more information about how administrators can associate floating IPs with
-instances, see `ip floating
-<https://docs.openstack.org/python-openstackclient/latest/cli/command-objects/
-ip-floating.html>`__ in the python-openstackclient User Documentation.
+instances, see :python-openstackclient-doc:`ip floating
+<cli/command-objects/ip-floating.html>` in the *python-openstackclient* User
+Documentation.
 
 Automatically add floating IPs
 ------------------------------

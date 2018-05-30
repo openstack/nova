@@ -47,8 +47,7 @@ To use the memcache driver, you must install memcached. You might already have
 it installed, as the same driver is also used for the OpenStack Object Storage
 and OpenStack dashboard. To install memcached, see the *Environment ->
 Memcached* section in the `Installation Tutorials and Guides
-<https://docs.openstack.org/project-install-guide/ocata>`_ depending on your
-distribution.
+<https://docs.openstack.org/install-guide>`_ depending on your distribution.
 
 These values in the ``/etc/nova/nova.conf`` file are required on every node for
 the memcache driver:

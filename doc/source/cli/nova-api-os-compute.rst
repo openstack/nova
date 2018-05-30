@@ -41,8 +41,8 @@ Files
 See Also
 ========
 
-* `OpenStack Nova <https://docs.openstack.org/nova/latest/>`__
-* `Using WSGI with Nova <https://docs.openstack.org/nova/latest/user/wsgi.html>`__
+* :nova-doc:`OpenStack Nova <>`
+* :nova-doc:`Using WSGI with Nova <user/wsgi.html>`
 
 Bugs
 ====

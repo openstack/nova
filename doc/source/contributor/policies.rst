@@ -108,7 +108,8 @@ Metrics Gathering
 Nova currently has a monitor plugin to gather CPU metrics on compute nodes.
 This feeds into the MetricsFilter and MetricsWeigher in the scheduler. The
 CPU metrics monitor is only implemented for the libvirt compute driver.
-External projects like `Ceilometer`_ and `Watcher`_ consume these metrics.
+External projects like :ceilometer-doc:`Ceilometer <>` and
+:watcher-doc:`Watcher <>` consume these metrics.
 
 Over time people have tried to add new monitor plugins for things like memory
 bandwidth. There have also been attempts to expose these monitors over CLI,
@@ -127,6 +128,4 @@ replacement, the deprecation is open-ended, but serves as a signal that new
 deployments should not rely on the metrics that Nova gathers and should instead
 focus their efforts on alternative solutions for placement.
 
-.. _Ceilometer: https://docs.openstack.org/ceilometer/latest/
-.. _Watcher: https://docs.openstack.org/watcher/latest/
 .. _Newton midcycle: http://lists.openstack.org/pipermail/openstack-dev/2016-August/100600.html

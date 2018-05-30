@@ -114,10 +114,10 @@ Install and configure components
         service by using the ``nova.virt.firewall.NoopFirewallDriver`` firewall
         driver.
 
-   * Configure the ``[neutron]`` section of **/etc/nova/nova.conf**. See the
-     `Networking service install guide`__ for more details.
-
-     .. __: https://docs.openstack.org/neutron/latest/install/compute-install-rdo.html#configure-the-compute-service-to-use-the-networking-service
+   * Configure the ``[neutron]`` section of **/etc/nova/nova.conf**. Refer to
+     the :neutron-doc:`Networking service install guide
+     <install/compute-install-rdo.html#configure-the-compute-service-to-use-the-networking-service>`
+     for more details.
 
    * In the ``[vnc]`` section, enable and configure remote console access:
 

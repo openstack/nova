@@ -171,6 +171,27 @@ latex_documents = [
      u'OpenStack Foundation', 'manual'),
 ]
 
+# -- Options for openstackdocstheme -------------------------------------------
+
+# keep this ordered to keep mriedem happy
+openstack_projects = [
+    'ceilometer',
+    'cinder',
+    'glance',
+    'horizon',
+    'ironic',
+    'keystone',
+    'neutron',
+    'nova',
+    'oslo.log',
+    'oslo.messaging',
+    'oslo.i18n',
+    'oslo.versionedobjects',
+    'python-novaclient',
+    'python-openstackclient',
+    'reno',
+    'watcher',
+]
 # -- Custom extensions --------------------------------------------------------
 
 

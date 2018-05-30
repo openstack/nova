@@ -376,11 +376,10 @@ Networking configuration
 ------------------------
 
 The Networking service in the Compute node is running
-``neutron-openvswitch-agent``, this manages dom0's OVS. You can refer
-Networking `openvswitch_agent.ini sample`__ for details,
-however there are several specific items to look out for.
-
-__ https://docs.openstack.org/neutron/latest/configuration/samples/openvswitch-agent.html
+``neutron-openvswitch-agent``. This manages ``dom0``\'s OVS. You should refer
+to the :neutron-doc:`openvswitch_agent.ini sample
+<configuration/samples/openvswitch-agent.html>` for details, however there are
+several specific items to look out for.
 
 .. code-block:: ini
 

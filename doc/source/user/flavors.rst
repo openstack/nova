@@ -63,12 +63,10 @@ RXTX Factor
 
   .. note::
 
-     This property only applies if using the `xen` compute driver with the
-     `nova-network` network driver. It will likely be deprecated in a future
-     release. `neutron` users should refer to the `neutron QoS
-     documentation`__.
-
-     __ https://docs.openstack.org/neutron/latest/admin/config-qos.html
+     This property only applies if using the ``xen`` compute driver with the
+     ``nova-network`` network driver. It will likely be deprecated in a future
+     release. ``neutron`` users should refer to the :neutron-doc:`neutron QoS
+     documentation <admin/config-qos.html>`
 
 Is Public
   Boolean value that defines whether the flavor is available to all users or
