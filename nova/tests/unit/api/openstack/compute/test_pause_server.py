@@ -33,24 +33,16 @@ class PauseServerTestsV21(admin_only_action_common.CommonTests):
         super(PauseServerTestsV21, self).setUp()
         self.controller = getattr(self.pause_server, self.controller_name)()
         self.compute_api = self.controller.compute_api
-
-        def _fake_controller(*args, **kwargs):
-            return self.controller
-
-        self.stubs.Set(self.pause_server, self.controller_name,
-                       _fake_controller)
-        self.mox.StubOutWithMock(self.compute_api, 'get')
+        self.stub_out('nova.api.openstack.compute.pause_server.'
+                      'PauseServerController',
+                      lambda *a, **kw: self.controller)
 
     def test_pause_unpause(self):
         self._test_actions(['_pause', '_unpause'])
 
     def test_actions_raise_on_not_implemented(self):
         for action in ['_pause', '_unpause']:
-            self.mox.StubOutWithMock(self.compute_api,
-                                     action.replace('_', ''))
             self._test_not_implemented_state(action)
-            # Re-mock this.
-            self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def test_pause_unpause_with_non_existed_instance(self):
         self._test_actions_with_non_existed_instance(['_pause', '_unpause'])
