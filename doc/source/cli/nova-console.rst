@@ -21,8 +21,9 @@ Synopsis
 Description
 ===========
 
-`nova-console` is a server daemon that serves the Nova Console service, which
-is a console proxy to set up multi-tenant VM console access, e.g. with `XVP`.
+:program:`nova-console` is a server daemon that serves the Nova Console
+service, which is a console proxy to set up multi-tenant VM console access,
+e.g. with *XVP*.
 
 Options
 =======

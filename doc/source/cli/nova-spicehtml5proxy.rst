@@ -21,9 +21,9 @@ Synopsis
 Description
 ===========
 
-`nova-spicehtml5proxy` is a server daemon that serves the Nova SPICE HTML5
-Websocket Proxy service, which provides a websocket proxy that is compatible
-with OpenStack Nova SPICE HTML5 consoles.
+:program:`nova-spicehtml5proxy` is a server daemon that serves the Nova SPICE
+HTML5 Websocket Proxy service, which provides a websocket proxy that is
+compatible with OpenStack Nova SPICE HTML5 consoles.
 
 Options
 =======

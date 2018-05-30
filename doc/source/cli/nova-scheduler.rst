@@ -21,8 +21,9 @@ Synopsis
 Description
 ===========
 
-`nova-scheduler` is a server daemon that serves the Nova Scheduler service,
-which is responsible for picking a compute node to run a given instance on.
+:program:`nova-scheduler` is a server daemon that serves the Nova Scheduler
+service, which is responsible for picking a compute node to run a given
+instance on.
 
 Options
 =======

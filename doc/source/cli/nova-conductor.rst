@@ -21,8 +21,8 @@ Synopsis
 Description
 ===========
 
-`nova-conductor` is a server daemon that serves the Nova Conductor service,
-which provides coordination and database query support for Nova.
+:program:`nova-conductor` is a server daemon that serves the Nova Conductor
+service, which provides coordination and database query support for nova.
 
 Options
 =======

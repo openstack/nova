@@ -21,9 +21,9 @@ Synopsis
 Description
 ===========
 
-`nova-xvpvncproxy` is a server daemon that serves the Nova XVP VNC Console
-Proxy service, which provides an XVP-based VNC Console Proxy for use with the
-Xen hypervisor.
+:program:`nova-xvpvncproxy` is a server daemon that serves the Nova XVP VNC
+Console Proxy service, which provides an XVP-based VNC Console Proxy for use
+with the Xen hypervisor.
 
 Options
 =======

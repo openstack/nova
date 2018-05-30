@@ -21,9 +21,9 @@ Synopsis
 Description
 ===========
 
-`nova-novncproxy` is a server daemon that serves the Nova noVNC Websocket Proxy
-service, which provides a websocket proxy that is compatible with OpenStack
-Nova noVNC consoles.
+:program:`nova-novncproxy` is a server daemon that serves the Nova noVNC
+Websocket Proxy service, which provides a websocket proxy that is compatible
+with OpenStack Nova noVNC consoles.
 
 Options
 =======

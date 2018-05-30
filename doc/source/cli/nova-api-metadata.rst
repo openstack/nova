@@ -16,12 +16,13 @@ Synopsis
 
 ::
 
-  nova-api-metadata  [options]
+  nova-api-metadata [options]
 
 Description
 ===========
 
-`nova-api-metadata` is a server daemon that serves the Nova Metadata API
+:program:`nova-api-metadata` is a server daemon that serves the Nova Metadata
+API.
 
 Options
 =======

@@ -21,8 +21,8 @@ Synopsis
 Description
 ===========
 
-`nova-api-os-compute` is a server daemon that serves the Nova OpenStack Compute
-API
+:program:`nova-api-os-compute` is a server daemon that serves the Nova
+OpenStack Compute API.
 
 Options
 =======
