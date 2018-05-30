@@ -88,26 +88,44 @@ class _GroupAntiAffinityFilter(filters.BaseHostFilter):
 
     def host_passes(self, host_state, spec_obj):
         # Only invoke the filter if 'anti-affinity' is configured
-        policies = (spec_obj.instance_group.policies
-                    if spec_obj.instance_group else [])
-        if self.policy_name not in policies:
+        instance_group = spec_obj.instance_group
+        policy = instance_group.policy if instance_group else None
+        if self.policy_name != policy:
             return True
         # NOTE(hanrong): Move operations like resize can check the same source
         # compute node where the instance is. That case, AntiAffinityFilter
         # must not return the source as a non-possible destination.
         if spec_obj.instance_uuid in host_state.instances.keys():
             return True
+        # The list of instances UUIDs on the given host
+        instances = set(host_state.instances.keys())
+        # The list of instances UUIDs which are members of this group
+        members = set(spec_obj.instance_group.members)
+        # The set of instances on the host that are also members of this group
+        servers_on_host = instances.intersection(members)
 
-        group_hosts = (spec_obj.instance_group.hosts
-                       if spec_obj.instance_group else [])
-        LOG.debug("Group anti affinity: check if %(host)s not "
-                  "in %(configured)s", {'host': host_state.host,
-                                        'configured': group_hosts})
-        if group_hosts:
-            return host_state.host not in group_hosts
+        rules = instance_group.rules
+        if rules and 'max_server_per_host' in rules:
+            max_server_per_host = rules['max_server_per_host']
+        else:
+            max_server_per_host = 1
 
-        # No groups configured
-        return True
+        # Very old request specs don't have a full InstanceGroup with the UUID
+        group_uuid = (instance_group.uuid
+                      if instance_group and 'uuid' in instance_group
+                      else 'n/a')
+        LOG.debug("Group anti-affinity: check if the number of servers from "
+                  "group %(group_uuid)s on host %(host)s is less than "
+                  "%(max_server)s.",
+                  {'group_uuid': group_uuid,
+                   'host': host_state.host,
+                   'max_server': max_server_per_host})
+        # Note(yikun): If the number of servers from same group on this host
+        # is less than the max_server_per_host, this filter will accept the
+        # given host. In the default case(max_server_per_host=1), this filter
+        # will accept the given host if there are 0 servers from the group
+        # already on this host.
+        return len(servers_on_host) < max_server_per_host
 
 
 class ServerGroupAntiAffinityFilter(_GroupAntiAffinityFilter):

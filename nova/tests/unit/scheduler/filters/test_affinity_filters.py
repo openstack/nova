@@ -146,10 +146,10 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
         spec_obj = objects.RequestSpec(instance_group=None)
         self.assertTrue(filt_cls.host_passes(host, spec_obj))
         spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
-            policies=['affinity']))
+            policy='affinity'))
         self.assertTrue(filt_cls.host_passes(host, spec_obj))
         spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
-            policies=[policy]), instance_uuid=uuids.fake)
+            policy=policy, members=[], rules={}), instance_uuid=uuids.fake)
         spec_obj.instance_group.hosts = []
         self.assertTrue(filt_cls.host_passes(host, spec_obj))
         spec_obj.instance_group.hosts = ['host2']
@@ -161,10 +161,14 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
                 'anti-affinity')
 
     def _test_group_anti_affinity_filter_fails(self, filt_cls, policy):
-        host = fakes.FakeHostState('host1', 'node1', {})
+        inst1 = objects.Instance(uuid=uuids.inst1)
+        # We already have an inst1 on host1
+        host = fakes.FakeHostState('host1', 'node1', {}, instances=[inst1])
         spec_obj = objects.RequestSpec(
-            instance_group=objects.InstanceGroup(policies=[policy],
-                                                 hosts=['host1']),
+            instance_group=objects.InstanceGroup(policy=policy,
+                                                 hosts=['host1'],
+                                                 members=[uuids.inst1],
+                                                 rules={}),
             instance_uuid=uuids.fake)
         self.assertFalse(filt_cls.host_passes(host, spec_obj))
 
@@ -173,13 +177,48 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
                 affinity_filter.ServerGroupAntiAffinityFilter(),
                 'anti-affinity')
 
+    def _test_group_anti_affinity_filter_with_rules(self, rules, members):
+        filt_cls = affinity_filter.ServerGroupAntiAffinityFilter()
+        inst1 = objects.Instance(uuid=uuids.inst1)
+        inst2 = objects.Instance(uuid=uuids.inst2)
+        spec_obj = objects.RequestSpec(
+            instance_group=objects.InstanceGroup(policy='anti-affinity',
+                                                 hosts=['host1'],
+                                                 members=members,
+                                                 rules=rules),
+            instance_uuid=uuids.fake)
+        # 2 instances on same host
+        host_wit_2_inst = fakes.FakeHostState(
+            'host1', 'node1', {}, instances=[inst1, inst2])
+        return filt_cls.host_passes(host_wit_2_inst, spec_obj)
+
+    def test_group_anti_affinity_filter_with_rules_fail(self):
+        # the members of this group on the host already reach to max,
+        # create one more servers would be failed.
+        result = self._test_group_anti_affinity_filter_with_rules(
+            {"max_server_per_host": 1}, [uuids.inst1])
+        self.assertFalse(result)
+        result = self._test_group_anti_affinity_filter_with_rules(
+            {"max_server_per_host": 2}, [uuids.inst1, uuids.inst2])
+        self.assertFalse(result)
+
+    def test_group_anti_affinity_filter_with_rules_pass(self):
+        result = self._test_group_anti_affinity_filter_with_rules(
+            {"max_server_per_host": 1}, [])
+        self.assertTrue(result)
+
+        # we can have at most 2 members from the same group on the same host.
+        result = self._test_group_anti_affinity_filter_with_rules(
+            {"max_server_per_host": 2}, [uuids.inst1])
+        self.assertTrue(result)
+
     def test_group_anti_affinity_filter_allows_instance_to_same_host(self):
         fake_uuid = uuids.fake
         mock_instance = objects.Instance(uuid=fake_uuid)
         host_state = fakes.FakeHostState('host1', 'node1',
                                          {}, instances=[mock_instance])
         spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
-            policies=['anti-affinity'], hosts=['host1', 'host2']),
+            policy='anti-affinity', hosts=['host1', 'host2'], members=[]),
             instance_uuid=mock_instance.uuid)
         self.assertTrue(affinity_filter.ServerGroupAntiAffinityFilter().
                         host_passes(host_state, spec_obj))
