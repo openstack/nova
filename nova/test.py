@@ -589,7 +589,7 @@ class APICoverage(object):
 
 @six.add_metaclass(abc.ABCMeta)
 class SubclassSignatureTestCase(testtools.TestCase):
-    """Ensure all overriden methods of all subclasses of the class
+    """Ensure all overridden methods of all subclasses of the class
     under test exactly match the signature of the base class.
 
     A subclass of SubclassSignatureTestCase should define a method
