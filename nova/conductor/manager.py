@@ -266,7 +266,8 @@ class ComputeTaskManager(base.Base):
             request_spec = objects.RequestSpec.from_components(
                 context, instance.uuid, image,
                 flavor, instance.numa_topology, instance.pci_requests,
-                filter_properties, None, instance.availability_zone)
+                filter_properties, None, instance.availability_zone,
+                project_id=instance.project_id)
         else:
             # NOTE(sbauza): Resizes means new flavor, so we need to update the
             # original RequestSpec object for make sure the scheduler verifies

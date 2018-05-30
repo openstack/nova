@@ -1952,7 +1952,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             flavor=flavor,
             availability_zone=None,
             pci_requests=None,
-            numa_topology=None)
+            numa_topology=None,
+            project_id=self.context.project_id)
         resvs = 'fake-resvs'
         image = 'fake-image'
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
@@ -2005,7 +2006,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             flavor=flavor,
             numa_topology=None,
             pci_requests=None,
-            availability_zone=None)
+            availability_zone=None,
+            project_id=self.context.project_id)
         image = 'fake-image'
         resvs = 'fake-resvs'
 
@@ -2085,6 +2087,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             instance_type_id=flavor['id'],
             system_metadata={},
             uuid=uuids.instance,
+            project_id=fakes.FAKE_PROJECT_ID,
             user_id=fakes.FAKE_USER_ID,
             flavor=flavor,
             numa_topology=None,
@@ -2108,6 +2111,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         set_vm_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                             'migrate_server', updates,
                                             exception, legacy_request_spec)
+        spec_fc_mock.assert_called_once_with(
+            self.context, inst_obj.uuid, image, flavor, inst_obj.numa_topology,
+            inst_obj.pci_requests, {}, None, inst_obj.availability_zone,
+            project_id=inst_obj.project_id)
 
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(objects.RequestSpec, 'from_components')
@@ -2133,7 +2140,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             flavor=flavor,
             availability_zone=None,
             pci_requests=None,
-            numa_topology=None)
+            numa_topology=None,
+            project_id=self.context.project_id)
         image = 'fake-image'
         resvs = 'fake-resvs'
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
