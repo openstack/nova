@@ -33,7 +33,8 @@ rules = [
     policy.RuleDefault(
         "admin_api",
         "role:admin",
-        description="Default rule for most placement APIs."),
+        description="Default rule for most placement APIs.",
+        scope_types=['system']),
 ]
 
 
