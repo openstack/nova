@@ -12,3 +12,6 @@ reno>=2.5.0 # Apache-2.0
 
 # redirect tests in docs
 whereto>=0.3.0 # Apache-2.0
+
+# needed to generate osprofiler config options
+osprofiler>=1.4.0 # Apache-2.0
