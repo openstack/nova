@@ -65,6 +65,15 @@ Starting from microversion 2.56, the ``host`` parameter is available
 to specify the destination host. If you specify ``null`` or don't specify
 this parameter, the scheduler chooses a host.
 
+**Asynchronous Postconditions**
+
+The server goes to a ``VERIFY_RESIZE`` status, ``RESIZED`` VM status,
+and ``finished`` migration status after a successful cold migration
+and then must be confirmed or reverted. If you set the
+``resize_confirm_window`` option of the Compute service to a positive integer
+value, the Compute service automatically confirms the migrate operation
+after the set interval in seconds.
+
 Policy defaults enable only users with the administrative role to
 perform this operation. Cloud providers can change these permissions
 through the ``policy.json`` file.
