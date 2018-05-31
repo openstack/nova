@@ -11170,7 +11170,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(live_migration_inbound_addr='127.0.0.2',
                    group='libvirt')
         target_ret = self._generate_target_ret('127.0.0.2')
-        self._test_pre_live_migration_works_correctly_mocked(target_ret)
+        self._test_pre_live_migration_works_correctly_mocked(
+            target_ret=target_ret)
 
     def test_pre_live_migration_only_dest_supports_native_luks(self):
         # Assert that allow_native_luks is False when src_supports_native_luks
@@ -11186,7 +11187,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 src_supports_native_luks=True, dest_supports_native_luks=False,
                 allow_native_luks=False)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'plug_vifs')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_connect_volume')
     def _test_pre_live_migration_works_correctly_mocked(self,
+            mock_connect, mock_plug,
             target_ret=None, src_supports_native_luks=True,
             dest_supports_native_luks=True, allow_native_luks=True):
         # Creating testdata
@@ -11233,24 +11237,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             def fixed_ips(self):
                 return ["test_ip_addr"]
 
-        def fake_none(*args, **kwargs):
-            return
-
-        self.stubs.Set(drvr, '_create_images_and_backing', fake_none)
-        self.stubs.Set(drvr, '_is_native_luks_available',
-                        lambda: dest_supports_native_luks)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                      '_create_images_and_backing',
+                      lambda *args, **kwargs: None)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                      '_is_native_luks_available',
+                      lambda self: dest_supports_native_luks)
 
         nw_info = FakeNetworkInfo()
 
-        # Creating mocks
-        self.mox.StubOutWithMock(drvr, "_connect_volume")
+        expected_connect_calls = []
         for v in block_device_info['block_device_mapping']:
-            drvr._connect_volume(c, v['connection_info'], instance,
-                                 allow_native_luks=allow_native_luks)
-        self.mox.StubOutWithMock(drvr, 'plug_vifs')
-        drvr.plug_vifs(mox.IsA(instance), nw_info)
+            expected_connect_calls.append(
+                mock.call(c, v['connection_info'], instance,
+                          allow_native_luks=allow_native_luks))
 
-        self.mox.ReplayAll()
         migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
             block_migration=False,
             instance_relative_path='foo',
@@ -11273,6 +11274,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             target_ret,
             result.to_legacy_dict(
                 pre_migration_result=True)['pre_live_migration_result'])
+        mock_connect.assert_has_calls(expected_connect_calls)
+        self.assertEqual(len(expected_connect_calls), mock_connect.call_count)
+        mock_plug.assert_called_once_with(test.MatchType(objects.Instance),
+                                          nw_info)
 
     @mock.patch.object(os, 'mkdir')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path_at_destination')
@@ -11352,7 +11357,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'serial_listen_addr': None,
                           'volume': {}}, res_data['pre_live_migration_result'])
 
-    def test_pre_live_migration_vol_backed_works_correctly_mocked(self):
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'plug_vifs')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_connect_volume')
+    def test_pre_live_migration_vol_backed_works_correctly_mocked(
+            self, mock_connect, mock_plug):
         # Creating testdata, using temp dir.
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
@@ -11395,24 +11403,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-            def fake_none(*args, **kwargs):
-                return
-
-            self.stubs.Set(drvr, '_create_images_and_backing', fake_none)
-            self.stubs.Set(drvr, '_is_native_luks_available', lambda: True)
+            self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                          '_create_images_and_backing',
+                          lambda *args, **kwargs: None)
+            self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                          '_is_native_luks_available', lambda self: True)
 
             class FakeNetworkInfo(object):
                 def fixed_ips(self):
                     return ["test_ip_addr"]
             nw_info = FakeNetworkInfo()
-            # Creating mocks
-            self.mox.StubOutWithMock(drvr, "_connect_volume")
+            expected_connect_calls = []
             for v in block_device_info['block_device_mapping']:
-                drvr._connect_volume(c, v['connection_info'], inst_ref,
-                                     allow_native_luks=True)
-            self.mox.StubOutWithMock(drvr, 'plug_vifs')
-            drvr.plug_vifs(mox.IsA(inst_ref), nw_info)
-            self.mox.ReplayAll()
+                expected_connect_calls.append(
+                    mock.call(c, v['connection_info'], inst_ref,
+                              allow_native_luks=True))
             migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
                 is_shared_instance_path=False,
                 is_shared_block_storage=False,
@@ -11450,18 +11455,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 ret.to_legacy_dict(True)['pre_live_migration_result'])
             self.assertTrue(os.path.exists('%s/%s/' % (tmpdir,
                                                        inst_ref['name'])))
+            mock_connect.assert_has_calls(expected_connect_calls)
+            self.assertEqual(len(expected_connect_calls),
+                             mock_connect.call_count)
+            mock_plug.assert_called_once_with(test.MatchType(objects.Instance),
+                                              nw_info)
 
-    def test_pre_live_migration_plug_vifs_retry_fails(self):
+    @mock.patch.object(eventlet.greenthread, 'sleep',
+                       side_effect=eventlet.sleep(0))
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'plug_vifs',
+                       side_effect=processutils.ProcessExecutionError)
+    def test_pre_live_migration_plug_vifs_retry_fails(self, mock_plug,
+                                                      mock_sleep):
         self.flags(live_migration_retry_count=3)
         instance = objects.Instance(**self.test_instance)
 
-        def fake_plug_vifs(instance, network_info):
-            raise processutils.ProcessExecutionError()
-
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(drvr, 'plug_vifs', fake_plug_vifs)
-        self.stubs.Set(eventlet.greenthread, 'sleep',
-                       lambda x: eventlet.sleep(0))
         disk_info_json = jsonutils.dumps({})
         migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
             is_shared_block_storage=True,
@@ -11473,23 +11482,25 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           self.context, instance, block_device_info=None,
                           network_info=[], disk_info=disk_info_json,
                           migrate_data=migrate_data)
+        # Called 3 times because of live_migration_retry_count is 3
+        mock_plug.assert_has_calls([mock.call(instance, [])] * 3)
+        self.assertEqual(3, mock_plug.call_count)
+        # Called 'live_migration_retry_count - 1' times
+        mock_sleep.assert_has_calls([mock.call(1)] * 2)
+        self.assertEqual(2, mock_sleep.call_count)
 
-    def test_pre_live_migration_plug_vifs_retry_works(self):
+    @mock.patch.object(eventlet.greenthread, 'sleep',
+                       side_effect=eventlet.sleep(0))
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'plug_vifs')
+    def test_pre_live_migration_plug_vifs_retry_works(self, mock_plug,
+                                                      mock_sleep):
         self.flags(live_migration_retry_count=3)
-        called = {'count': 0}
         instance = objects.Instance(**self.test_instance)
 
-        def fake_plug_vifs(instance, network_info):
-            called['count'] += 1
-            if called['count'] < CONF.live_migration_retry_count:
-                raise processutils.ProcessExecutionError()
-            else:
-                return
+        mock_plug.side_effect = [processutils.ProcessExecutionError(),
+                                 processutils.ProcessExecutionError(), None]
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(drvr, 'plug_vifs', fake_plug_vifs)
-        self.stubs.Set(eventlet.greenthread, 'sleep',
-                       lambda x: eventlet.sleep(0))
         disk_info_json = jsonutils.dumps({})
         migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
             is_shared_block_storage=True,
@@ -11499,6 +11510,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr.pre_live_migration(self.context, instance, block_device_info=None,
                                 network_info=[], disk_info=disk_info_json,
                                 migrate_data=migrate_data)
+        # Called 3 times
+        mock_plug.assert_has_calls([mock.call(instance, [])] * 3)
+        self.assertEqual(3, mock_plug.call_count)
+        # Called 2 times because the third 'plug_vifs' call is successful.
+        mock_sleep.assert_has_calls([mock.call(1)] * 2)
+        self.assertEqual(2, mock_sleep.call_count)
 
     def test_pre_live_migration_image_not_created_with_shared_storage(self):
         migrate_data_set = [{'is_shared_block_storage': False,
@@ -11657,7 +11674,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                       migrate_data=migrate_data)
         self.assertEqual(['cmt'], res.supported_perf_events)
 
-    def test_get_instance_disk_info_works_correctly(self):
+    @mock.patch('nova.virt.disk.api.get_disk_size',
+                side_effect=[10737418240, 21474836480])
+    @mock.patch('nova.virt.disk.api.get_allocated_disk_size',
+                side_effect=[10737418240, 3328599655])
+    def test_get_instance_disk_info_works_correctly(self, mock_get_alloc,
+                                                    mock_get_disk_size):
         # Test data
         instance = objects.Instance(**self.test_instance)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
@@ -11671,9 +11693,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     "</devices></domain>")
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
-        self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(0).AndReturn(dummyxml)
+        vdmock = mock.Mock(autospec=fakelibvirt.virDomain)
+        vdmock.XMLDesc.return_value = dummyxml
 
         def fake_lookup(_uuid):
             if _uuid == instance.uuid:
@@ -11684,21 +11705,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * units.Gi
         fake_libvirt_utils.disk_backing_files['/test/disk.local'] = 'file'
 
-        self.mox.StubOutWithMock(libvirt_driver.disk_api,
-                                 'get_allocated_disk_size')
-        self.mox.StubOutWithMock(libvirt_driver.disk_api, 'get_disk_size')
-
-        path = '/test/disk'
-        size = 10737418240
-        libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
-        libvirt_driver.disk_api.get_disk_size(path).AndReturn((size))
-        path = '/test/disk.local'
-        size = 3328599655
-        vsize = 21474836480
-        libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
-        libvirt_driver.disk_api.get_disk_size(path).AndReturn((vsize))
-
-        self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         info = drvr.get_instance_disk_info(instance)
         info = jsonutils.loads(info)
@@ -11712,6 +11718,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(info[1]['virt_disk_size'], 21474836480)
         self.assertEqual(info[1]['backing_file'], "file")
         self.assertEqual(info[1]['over_committed_disk_size'], 18146236825)
+
+        vdmock.XMLDesc.assert_called_once_with(0)
+        mock_get_alloc.assert_has_calls([mock.call('/test/disk'),
+                                         mock.call('/test/disk.local')])
+        self.assertEqual(2, mock_get_alloc.call_count)
+        mock_get_disk_size.assert_has_calls([mock.call('/test/disk'),
+                                             mock.call('/test/disk.local')])
+        self.assertEqual(2, mock_get_disk_size.call_count)
 
     def test_post_live_migration(self):
         vol = {'block_device_mapping': [
@@ -11798,7 +11812,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                     instance)
         _test()
 
-    def test_get_instance_disk_info_excludes_volumes(self):
+    @mock.patch('nova.virt.disk.api.get_disk_size',
+                side_effect=[10737418240, 21474836480])
+    @mock.patch('nova.virt.disk.api.get_allocated_disk_size',
+                side_effect=[10737418240, 3328599655])
+    def test_get_instance_disk_info_excludes_volumes(
+            self, mock_get_alloc, mock_get_disk_size):
         # Test data
         instance = objects.Instance(**self.test_instance)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
@@ -11818,9 +11837,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     "</devices></domain>")
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
-        self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(0).AndReturn(dummyxml)
+        vdmock = mock.Mock(autospec=fakelibvirt.virDomain)
+        vdmock.XMLDesc.return_value = dummyxml
 
         def fake_lookup(_uuid):
             if _uuid == instance.uuid:
@@ -11831,21 +11849,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * units.Gi
         fake_libvirt_utils.disk_backing_files['/test/disk.local'] = 'file'
 
-        self.mox.StubOutWithMock(libvirt_driver.disk_api,
-                                 'get_allocated_disk_size')
-        self.mox.StubOutWithMock(libvirt_driver.disk_api, 'get_disk_size')
-
-        path = '/test/disk'
-        size = 10737418240
-        libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
-        libvirt_driver.disk_api.get_disk_size(path).AndReturn((size))
-        path = '/test/disk.local'
-        size = 3328599655
-        vsize = 21474836480
-        libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
-        libvirt_driver.disk_api.get_disk_size(path).AndReturn((vsize))
-
-        self.mox.ReplayAll()
         conn_info = {'driver_volume_type': 'fake'}
         info = {'block_device_mapping': [
                   {'connection_info': conn_info, 'mount_device': '/dev/vdc'},
@@ -11865,7 +11868,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(info[1]['backing_file'], "file")
         self.assertEqual(info[1]['over_committed_disk_size'], 18146236825)
 
-    def test_get_instance_disk_info_no_bdinfo_passed(self):
+        vdmock.XMLDesc.assert_called_once_with(0)
+        mock_get_alloc.assert_has_calls([mock.call('/test/disk'),
+                                         mock.call('/test/disk.local')])
+        self.assertEqual(2, mock_get_alloc.call_count)
+        mock_get_disk_size.assert_has_calls([mock.call('/test/disk'),
+                                             mock.call('/test/disk.local')])
+        self.assertEqual(2, mock_get_disk_size.call_count)
+
+    @mock.patch('nova.virt.disk.api.get_disk_size',
+                return_value=10737418240)
+    @mock.patch('nova.virt.disk.api.get_allocated_disk_size',
+                return_value=10737418240)
+    def test_get_instance_disk_info_no_bdinfo_passed(
+            self, mock_get_alloc, mock_get_disk_size):
         # NOTE(ndipanov): _get_disk_overcomitted_size_total calls this method
         # without access to Nova's block device information. We want to make
         # sure that we guess volumes mostly correctly in that case as well
@@ -11879,30 +11895,19 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     "<source file='/fake/path/to/volume1'/>"
                     "<target dev='vdb' bus='virtio'/></disk>"
                     "</devices></domain>")
+        path = '/test/disk'
+        size = 10737418240
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
-        self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(0).AndReturn(dummyxml)
+        vdmock = mock.Mock(autospec=fakelibvirt.virDomain)
+        vdmock.XMLDesc.return_value = dummyxml
 
         def fake_lookup(_uuid):
             if _uuid == instance.uuid:
                 return vdmock
         self.create_fake_libvirt_mock(lookupByUUIDString=fake_lookup)
+        fake_libvirt_utils.disk_sizes[path] = 10 * units.Gi
 
-        fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * units.Gi
-
-        self.mox.StubOutWithMock(libvirt_driver.disk_api,
-                                 "get_allocated_disk_size")
-        self.mox.StubOutWithMock(libvirt_driver.disk_api,
-                                 "get_disk_size")
-
-        path = '/test/disk'
-        size = 10737418240
-        libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
-        libvirt_driver.disk_api.get_disk_size(path).AndReturn((size))
-
-        self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         info = drvr.get_instance_disk_info(instance)
 
@@ -11913,6 +11918,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(info[0]['disk_size'], size)
         self.assertEqual(info[0]['backing_file'], "")
         self.assertEqual(info[0]['over_committed_disk_size'], 0)
+
+        vdmock.XMLDesc.assert_called_once_with(0)
+        mock_get_alloc.assert_called_once_with(path)
+        mock_get_disk_size.assert_called_once_with(path)
 
     def test_spawn_with_network_info(self):
         def fake_getLibVersion():
