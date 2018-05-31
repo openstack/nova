@@ -159,6 +159,10 @@ Timeout for Neutron VIF plugging event message arrival.
 Number of seconds to wait for Neutron vif plugging events to
 arrive before continuing or failing (see 'vif_plugging_is_fatal').
 
+If you are hitting timeout failures at scale, consider running rootwrap
+in "daemon mode" in the neutron agent via the ``[agent]/root_helper_daemon``
+neutron configuration option.
+
 Related options:
 
 * vif_plugging_is_fatal - If ``vif_plugging_timeout`` is set to zero and
