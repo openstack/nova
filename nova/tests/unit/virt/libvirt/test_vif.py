@@ -97,6 +97,13 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         bridge_interface=None,
         vlan=99, mtu=1000)
 
+    network_ivs = network_model.Network(id=uuids.network,
+        bridge='br0',
+        label=None,
+        subnets=[subnet_bridge_4, subnet_bridge_6],
+        bridge_interface=None,
+        vlan=99)
+
     vif_agilio_ovs = network_model.VIF(id=uuids.vif,
         address='ca:fe:de:ad:be:ef',
         network=network_ovs,
@@ -157,6 +164,13 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         type=None,
         devname=None,
         ovs_interfaceid=None)
+
+    vif_ivs = network_model.VIF(id=uuids.vif,
+        address='ca:fe:de:ad:be:ef',
+        network=network_ivs,
+        type=network_model.VIF_TYPE_IVS,
+        devname='tap-xxx-yyy-zzz',
+        ovs_interfaceid=uuids.ovs)
 
     vif_none = network_model.VIF(id=uuids.vif,
         address='ca:fe:de:ad:be:ef',
@@ -1041,6 +1055,14 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self._assertTypeAndMacEquals(node, "bridge", "source", "bridge",
                                      vif, br_want, 1)
 
+    def test_ivs_hybrid_driver(self):
+        d = vif.LibvirtGenericVIFDriver()
+        br_want = "qbr" + self.vif_ivs['id']
+        br_want = br_want[:network_model.NIC_NAME_LEN]
+        self._check_neutron_hybrid_driver(d,
+                                          self.vif_ivs,
+                                          br_want)
+
     def test_generic_hybrid_driver(self):
         d = vif.LibvirtGenericVIFDriver()
         br_want = "qbr" + self.vif_ovs['id']
@@ -1366,6 +1388,17 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                "source", "type", "unix")
         self._assertMacEquals(node, self.vif_agilio_ovs_forwarder)
         self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
+
+    def test_ivs_ethernet_driver(self):
+        self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_ivs)
+        node = self._get_node(xml)
+        dev_want = self.vif_ivs['devname']
+        self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
+                                     self.vif_ivs, dev_want)
+        script = node.find("script")
+        self.assertIsNone(script)
 
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
