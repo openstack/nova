@@ -269,7 +269,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         result = self.driver._node_resource(node)
 
-        wantkeys = ["hypervisor_hostname", "hypervisor_type",
+        wantkeys = ["uuid", "hypervisor_hostname", "hypervisor_type",
                     "hypervisor_version", "cpu_info",
                     "vcpus", "vcpus_used",
                     "memory_mb", "memory_mb_used",
@@ -288,7 +288,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertEqual(result['memory_mb'], result['memory_mb_used'])
         self.assertEqual(props['local_gb'], result['local_gb'])
         self.assertEqual(result['local_gb'], result['local_gb_used'])
-
+        self.assertEqual(node_uuid, result['uuid'])
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
         self.assertEqual(stats, result['stats'])
         self.assertEqual('foo', result['resource_class'])

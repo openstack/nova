@@ -487,9 +487,12 @@ class _TestComputeNodeObject(object):
     def test_update_from_virt_driver(self):
         # copy in case the update has a side effect
         resources = copy.deepcopy(fake_resources)
+        # Emulate the ironic driver which adds a uuid field.
+        resources['uuid'] = uuidsentinel.node_uuid
         compute = compute_node.ComputeNode()
         compute.update_from_virt_driver(resources)
-        expected = fake_compute_with_resources
+        expected = fake_compute_with_resources.obj_clone()
+        expected.uuid = uuidsentinel.node_uuid
         self.assertTrue(base.obj_equal_prims(expected, compute))
 
     def test_update_from_virt_driver_missing_field(self):
