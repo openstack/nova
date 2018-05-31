@@ -605,6 +605,8 @@ class Guest(object):
 
         :param destination: URI of host destination where guest will be migrate
         :param migrate_uri: URI for invoking the migration
+        :param params: optional dict containing migration parameters such as
+           "destination_xml" and "migrate_disks"
         :param flags: May be one of more of the following:
            VIR_MIGRATE_LIVE Do not pause the VM during migration
            VIR_MIGRATE_PEER2PEER Direct connection between source &
