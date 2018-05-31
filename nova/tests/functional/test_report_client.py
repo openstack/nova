@@ -898,3 +898,55 @@ class SchedulerReportClientTests(test.TestCase):
                          uuids.ssp):
                 resp = self.client.get('/resource_providers/%s' % uuid)
                 self.assertEqual(404, resp.status_code)
+
+    @mock.patch('nova.compute.provider_tree.ProviderTree.update_aggregates')
+    def test_non_tree_aggregate_membership(self, upd_aggs_mock):
+        """There are some methods of the reportclient that do NOT interact with
+        the reportclient's provider_tree cache of information. These methods
+        are called to add and remove members from a nova host aggregate and
+        ensure that the placement API has a mirrored record of the resource
+        provider's aggregate associations.
+        """
+        agg_uuid = uuids.agg
+        with self._interceptor():
+            # get_provider_tree_and_ensure_root creates a resource provider
+            # record for us
+            ptree = self.client.get_provider_tree_and_ensure_root(
+                self.context, self.compute_uuid, name=self.compute_name)
+            self.assertEqual([self.compute_uuid], ptree.get_provider_uuids())
+
+            # Use the reportclient's _get_provider_aggregates() private method
+            # to verify no aggregates are yet associated with this provider
+            aggs = self.client._get_provider_aggregates(
+                self.context, self.compute_uuid)
+            self.assertEqual(set(), aggs)
+
+            # Now associate the compute **host name** with an aggregate and
+            # ensure the aggregate association is saved properly
+            self.client.aggregate_add_host(
+                self.context, agg_uuid, self.compute_name)
+
+            # Check that the ProviderTree cache that was populated above during
+            # get_provider_tree_and_ensure_root() hasn't been modified (since
+            # the aggregate_add_host() method is only called from nova-api and
+            # we don't want to have a ProviderTree cache at that layer.
+            cache_data = self.client._provider_tree.data(self.compute_uuid)
+            self.assertNotIn(agg_uuid, cache_data.aggregates)
+            aggs = self.client._get_provider_aggregates(
+                self.context, self.compute_uuid)
+            self.assertEqual(set([agg_uuid]), aggs)
+
+            # Finally, remove the association and verify it's removed in
+            # placement
+            self.client.aggregate_remove_host(
+                self.context, agg_uuid, self.compute_name)
+            cache_data = self.client._provider_tree.data(self.compute_uuid)
+            self.assertNotIn(agg_uuid, cache_data.aggregates)
+            aggs = self.client._get_provider_aggregates(
+                self.context, self.compute_uuid)
+            self.assertEqual(set(), aggs)
+
+            #  Try removing the same host and verify no error
+            self.client.aggregate_remove_host(
+                self.context, agg_uuid, self.compute_name)
+        upd_aggs_mock.assert_not_called()

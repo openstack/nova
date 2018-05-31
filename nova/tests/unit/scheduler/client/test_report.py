@@ -12,6 +12,7 @@
 
 import time
 
+import fixtures
 from keystoneauth1 import exceptions as ks_exc
 import mock
 from six.moves.urllib import parse
@@ -3378,3 +3379,199 @@ class TestResourceClass(SchedulerReportClientTestCase):
         self.mock_put.assert_called_once_with(
             '/resource_classes/CUSTOM_BAD', None, version='1.7',
             global_request_id=self.context.global_id)
+
+
+class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
+    """Unit tests for the methods of the report client which look up providers
+    by name and add/remove host aggregates to providers. These methods do not
+    access the SchedulerReportClient provider_tree attribute and are called
+    from the nova API, not the nova compute manager/resource tracker.
+    """
+    def setUp(self):
+        super(TestAggregateAddRemoveHost, self).setUp()
+        self.mock_get = self.useFixture(
+            fixtures.MockPatch('nova.scheduler.client.report.'
+                               'SchedulerReportClient.get')).mock
+        self.mock_put = self.useFixture(
+            fixtures.MockPatch('nova.scheduler.client.report.'
+                               'SchedulerReportClient.put')).mock
+
+    def test_get_provider_by_name_success(self):
+        get_resp = mock.Mock()
+        get_resp.status_code = 200
+        get_resp.json.return_value = {
+            "resource_providers": [
+                mock.sentinel.expected,
+            ]
+        }
+        self.mock_get.return_value = get_resp
+        name = 'cn1'
+        res = self.client._get_provider_by_name(self.context, name)
+
+        exp_url = "/resource_providers?name=%s" % name
+        self.mock_get.assert_called_once_with(
+            exp_url, global_request_id=self.context.global_id)
+        self.assertEqual(mock.sentinel.expected, res)
+
+    @mock.patch.object(report.LOG, 'warning')
+    def test_get_provider_by_name_multiple_results(self, mock_log):
+        """Test that if we find multiple resource providers with the same name,
+        that a ResourceProviderNotFound is raised (the reason being that >1
+        resource provider with a name should never happen...)
+        """
+        get_resp = mock.Mock()
+        get_resp.status_code = 200
+        get_resp.json.return_value = {
+            "resource_providers": [
+                {'uuid': uuids.cn1a},
+                {'uuid': uuids.cn1b},
+            ]
+        }
+        self.mock_get.return_value = get_resp
+        name = 'cn1'
+        self.assertRaises(
+            exception.ResourceProviderNotFound,
+            self.client._get_provider_by_name, self.context, name)
+        mock_log.assert_called_once()
+
+    @mock.patch.object(report.LOG, 'warning')
+    def test_get_provider_by_name_500(self, mock_log):
+        get_resp = mock.Mock()
+        get_resp.status_code = 500
+        self.mock_get.return_value = get_resp
+        name = 'cn1'
+        self.assertRaises(
+            exception.ResourceProviderNotFound,
+            self.client._get_provider_by_name, self.context, name)
+        mock_log.assert_called_once()
+
+    @mock.patch.object(report.LOG, 'warning')
+    def test_get_provider_by_name_404(self, mock_log):
+        get_resp = mock.Mock()
+        get_resp.status_code = 404
+        self.mock_get.return_value = get_resp
+        name = 'cn1'
+        self.assertRaises(
+            exception.ResourceProviderNotFound,
+            self.client._get_provider_by_name, self.context, name)
+        mock_log.assert_not_called()
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'set_aggregates_for_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_by_name')
+    def test_aggregate_add_host_success_no_existing(
+            self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
+        mock_get_by_name.return_value = {
+            'uuid': uuids.cn1,
+        }
+        agg_uuid = uuids.agg1
+        mock_get_aggs.return_value = set([])
+        name = 'cn1'
+        self.client.aggregate_add_host(self.context, agg_uuid, name)
+        mock_set_aggs.assert_called_once_with(
+            self.context, uuids.cn1, set([agg_uuid]), use_cache=False)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'set_aggregates_for_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_by_name')
+    def test_aggregate_add_host_success_already_existing(
+            self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
+        mock_get_by_name.return_value = {
+            'uuid': uuids.cn1,
+        }
+        agg1_uuid = uuids.agg1
+        agg2_uuid = uuids.agg2
+        agg3_uuid = uuids.agg3
+        mock_get_aggs.return_value = set([agg1_uuid])
+        name = 'cn1'
+        self.client.aggregate_add_host(self.context, agg1_uuid, name)
+        mock_set_aggs.assert_not_called()
+        mock_get_aggs.reset_mock()
+        mock_set_aggs.reset_mock()
+        mock_get_aggs.return_value = set([agg1_uuid, agg3_uuid])
+        self.client.aggregate_add_host(self.context, agg2_uuid, name)
+        mock_set_aggs.assert_called_once_with(
+            self.context, uuids.cn1, set([agg1_uuid, agg2_uuid, agg3_uuid]),
+            use_cache=False)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_by_name')
+    def test_aggregate_add_host_no_placement(self, mock_get_by_name):
+        """In Rocky, we allow nova-api to not be able to communicate with
+        placement, so the @safe_connect decorator will return None. Check that
+        an appropriate exception is raised back to the nova-api code in this
+        case.
+        """
+        mock_get_by_name.return_value = None  # emulate @safe_connect...
+        name = 'cn1'
+        agg_uuid = uuids.agg1
+        self.assertRaises(
+            exception.PlacementAPIConnectFailure,
+            self.client.aggregate_add_host, self.context, agg_uuid, name)
+        self.mock_get.assert_not_called()
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_by_name')
+    def test_aggregate_remove_host_no_placement(self, mock_get_by_name):
+        """In Rocky, we allow nova-api to not be able to communicate with
+        placement, so the @safe_connect decorator will return None. Check that
+        an appropriate exception is raised back to the nova-api code in this
+        case.
+        """
+        mock_get_by_name.return_value = None  # emulate @safe_connect...
+        name = 'cn1'
+        agg_uuid = uuids.agg1
+        self.assertRaises(
+            exception.PlacementAPIConnectFailure,
+            self.client.aggregate_remove_host, self.context, agg_uuid, name)
+        self.mock_get.assert_not_called()
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'set_aggregates_for_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_by_name')
+    def test_aggregate_remove_host_success_already_existing(
+            self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
+        mock_get_by_name.return_value = {
+            'uuid': uuids.cn1,
+        }
+        agg_uuid = uuids.agg1
+        mock_get_aggs.return_value = set([agg_uuid])
+        name = 'cn1'
+        self.client.aggregate_remove_host(self.context, agg_uuid, name)
+        mock_set_aggs.assert_called_once_with(
+            self.context, uuids.cn1, set([]), use_cache=False)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'set_aggregates_for_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_by_name')
+    def test_aggregate_remove_host_success_no_existing(
+            self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
+        mock_get_by_name.return_value = {
+            'uuid': uuids.cn1,
+        }
+        agg1_uuid = uuids.agg1
+        agg2_uuid = uuids.agg2
+        agg3_uuid = uuids.agg3
+        mock_get_aggs.return_value = set([])
+        name = 'cn1'
+        self.client.aggregate_remove_host(self.context, agg2_uuid, name)
+        mock_set_aggs.assert_not_called()
+        mock_get_aggs.reset_mock()
+        mock_set_aggs.reset_mock()
+        mock_get_aggs.return_value = set([agg1_uuid, agg2_uuid, agg3_uuid])
+        self.client.aggregate_remove_host(self.context, agg2_uuid, name)
+        mock_set_aggs.assert_called_once_with(
+            self.context, uuids.cn1, set([agg1_uuid, agg3_uuid]),
+            use_cache=False)

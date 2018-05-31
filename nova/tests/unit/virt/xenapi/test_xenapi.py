@@ -3179,7 +3179,12 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                                aggregate, 'fake_host')
         self.assertIn('aggregate in error', str(ex))
 
-    def test_remove_host_from_aggregate_error(self):
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'aggregate_remove_host')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'aggregate_add_host')
+    def test_remove_host_from_aggregate_error(
+            self, mock_add_host, mock_remove_host):
         # Ensure we can remove a host from an aggregate even if in error.
         values = _create_service_entries(self.context)
         fake_zone = list(values.keys())[0]

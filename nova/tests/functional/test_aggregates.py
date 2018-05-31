@@ -141,20 +141,11 @@ class AggregateRequestFiltersTest(test.TestCase,
 
         host_uuid = self._get_provider_uuid_by_host(host)
 
-        # Get the existing aggregates for this host in placement and add the
-        # new one to it
-        aggs = self.report_client.get(
-            '/resource_providers/%s/aggregates' % host_uuid,
-            version='1.1').json()
-        placement_aggs = aggs['aggregates']
-        placement_aggs.append(agg['uuid'])
-
         # Make sure we have a view of the provider we're about to mess with
         # FIXME(efried): This should be a thing we can do without internals
-        self.report_client._ensure_resource_provider(self.context, host_uuid)
-
-        self.report_client.set_aggregates_for_provider(self.context, host_uuid,
-                                                       placement_aggs)
+        self.report_client._ensure_resource_provider(
+            self.context, host_uuid, name=host)
+        self.report_client.aggregate_add_host(self.context, agg['uuid'], host)
 
     def _wait_for_state_change(self, server, from_status):
         for i in range(0, 50):

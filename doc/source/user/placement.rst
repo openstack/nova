@@ -293,10 +293,11 @@ Rocky (18.0.0)
   that service. This is because the ``nova-api`` service now needs to talk
   to the placement service in order to (1) delete resource provider allocations
   when deleting an instance and the ``nova-compute`` service on which that
-  instance is running is down and (2) delete a ``nova-compute`` service record
-  via the ``DELETE /os-services/{service_id}`` API. This change is idempotent
-  if ``[placement]`` is not configured in ``nova-api`` but it will result in
-  new warnings in the logs until configured.
+  instance is running is down (2) delete a ``nova-compute`` service record via
+  the ``DELETE /os-services/{service_id}`` API and (3) mirror aggregate host
+  associations to the placement service. This change is idempotent if
+  ``[placement]`` is not configured in ``nova-api`` but it will result in new
+  warnings in the logs until configured.
 
 REST API
 ========
