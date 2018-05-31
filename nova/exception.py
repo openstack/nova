@@ -255,6 +255,11 @@ class VolumeAttachFailed(Invalid):
                 "Reason: %(reason)s")
 
 
+class VolumeDetachFailed(Invalid):
+    msg_fmt = _("Volume %(volume_id)s could not be detached. "
+                "Reason: %(reason)s")
+
+
 class MultiattachNotSupportedByVirtDriver(NovaException):
     # This exception indicates the compute hosting the instance does not
     # support multiattach volumes. This should generally be considered a
