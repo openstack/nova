@@ -21,25 +21,20 @@ from nova import test
 
 from nova.virt.powervm import image
 
-if six.PY2:
-    _BUILTIN = '__builtin__'
-else:
-    _BUILTIN = 'builtins'
-
 
 class TestImage(test.TestCase):
 
     @mock.patch('nova.utils.temporary_chown', autospec=True)
-    @mock.patch(_BUILTIN + '.open', autospec=True)
     @mock.patch('nova.image.api.API', autospec=True)
-    def test_stream_blockdev_to_glance(self, mock_api, mock_open, mock_chown):
-        mock_open.return_value.__enter__.return_value = 'mock_stream'
-        image.stream_blockdev_to_glance('context', mock_api, 'image_id',
-                                        'metadata', '/dev/disk')
+    def test_stream_blockdev_to_glance(self, mock_api, mock_chown):
+        mock_open = mock.mock_open()
+        with mock.patch.object(six.moves.builtins, 'open', new=mock_open):
+            image.stream_blockdev_to_glance('context', mock_api, 'image_id',
+                                            'metadata', '/dev/disk')
         mock_chown.assert_called_with('/dev/disk')
         mock_open.assert_called_with('/dev/disk', 'rb')
         mock_api.update.assert_called_with('context', 'image_id', 'metadata',
-                                           'mock_stream')
+                                           mock_open.return_value)
 
     @mock.patch('nova.image.api.API', autospec=True)
     def test_generate_snapshot_metadata(self, mock_api):
