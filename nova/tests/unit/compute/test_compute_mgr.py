@@ -5719,7 +5719,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_validate_policy_honors_workaround_disabled(self, mock_get):
         instance = objects.Instance(uuid=uuids.instance)
         hints = {'group': 'foo'}
-        mock_get.return_value = objects.InstanceGroup(policies=[])
+        mock_get.return_value = objects.InstanceGroup(policy=None)
         self.compute._validate_instance_group_policy(self.context,
                                                      instance, hints)
         mock_get.assert_called_once_with(self.context, 'foo')
@@ -5744,6 +5744,32 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._validate_instance_group_policy(self.context,
                                                      instance, hints)
         mock_get.assert_called_once_with(self.context, uuids.group_hint)
+
+    @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
+    @mock.patch('nova.objects.InstanceGroup.get_by_hint')
+    def test_validate_instance_group_policy_with_rules(self, mock_get_by_hint,
+                                                       mock_get_by_host):
+        # Create 2 instance in same host, inst2 created before inst1
+        instance = objects.Instance(uuid=uuids.inst1)
+        hints = {'group': [uuids.group_hint]}
+        existing_insts = [uuids.inst1, uuids.inst2]
+        members_uuids = [uuids.inst1, uuids.inst2]
+        mock_get_by_host.return_value = existing_insts
+
+        # if group policy rules limit to 1, raise RescheduledException
+        mock_get_by_hint.return_value = objects.InstanceGroup(
+            policy='anti-affinity', rules={'max_server_per_host': '1'},
+            hosts=['host1'], members=members_uuids)
+        self.assertRaises(exception.RescheduledException,
+                          self.compute._validate_instance_group_policy,
+                          self.context, instance, hints)
+
+        # if group policy rules limit change to 2, validate OK
+        mock_get_by_hint.return_value = objects.InstanceGroup(
+            policy='anti-affinity', rules={'max_server_per_host': 2},
+            hosts=['host1'], members=members_uuids)
+        self.compute._validate_instance_group_policy(self.context,
+                                                     instance, hints)
 
     @mock.patch.object(virt_driver.ComputeDriver,
                        'prepare_networks_before_block_device_mapping')
