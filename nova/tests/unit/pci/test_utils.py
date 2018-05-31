@@ -36,6 +36,8 @@ class PciDeviceMatchTestCase(test.NoDBTestCase):
     def test_single_spec_match(self):
         self.assertTrue(utils.pci_device_prop_match(
             self.fake_pci_1, [{'vendor_id': 'v1', 'device_id': 'd1'}]))
+        self.assertTrue(utils.pci_device_prop_match(
+            self.fake_pci_1, [{'vendor_id': 'V1', 'device_id': 'D1'}]))
 
     def test_multiple_spec_match(self):
         self.assertTrue(utils.pci_device_prop_match(
