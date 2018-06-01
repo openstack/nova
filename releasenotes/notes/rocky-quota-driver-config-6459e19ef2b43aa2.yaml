@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    The ``[quota]/driver`` configuration option is no longer deprecated
+    but now only allows one of two possible values:
+
+    * ``nova.quota.DbQuotaDriver``
+    * ``nova.quota.NoopQuotaDriver``
+
+    This means it is no longer possible to class-load custom out-of-tree
+    quota drivers.
