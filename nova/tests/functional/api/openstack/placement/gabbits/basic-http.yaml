@@ -184,3 +184,13 @@ tests:
   response_forbidden_headers:
       - last-modified
       - cache-control
+
+- name: test starred accept and errors
+  GET: /resource_providers/foo
+  request_headers:
+      accept: "*/*"
+  status: 404
+  response_headers:
+      content-type: application/json
+  response_json_paths:
+      $.errors[0].title: Not Found
