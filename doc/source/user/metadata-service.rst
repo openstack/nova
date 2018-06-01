@@ -25,6 +25,7 @@ GET request to ``http://169.254.169.254/openstack``:
    2016-06-30
    2016-10-06
    2017-02-22
+   2018-08-27
    latest
 
 To list supported versions for the EC2-compatible metadata API, make a GET

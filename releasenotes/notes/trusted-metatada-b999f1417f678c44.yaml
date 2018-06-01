@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    As of the ``2018-08-27`` metadata API version, a boolean ``vf_trusted`` key
+    appears for all network interface ``devices`` in ``meta_data.json``,
+    indicating whether the device is a trusted virtual function or not.

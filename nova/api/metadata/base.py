@@ -72,6 +72,7 @@ LIBERTY = '2015-10-15'
 NEWTON_ONE = '2016-06-30'
 NEWTON_TWO = '2016-10-06'
 OCATA = '2017-02-22'
+ROCKY = '2018-08-27'
 
 OPENSTACK_VERSIONS = [
     FOLSOM,
@@ -81,6 +82,7 @@ OPENSTACK_VERSIONS = [
     NEWTON_ONE,
     NEWTON_TWO,
     OCATA,
+    ROCKY,
 ]
 
 VERSION = "version"
@@ -391,6 +393,7 @@ class InstanceMetadata(object):
         """
         device_metadata_list = []
         vif_vlans_supported = self._check_os_version(OCATA, version)
+        vif_vfs_trusted_supported = self._check_os_version(ROCKY, version)
         if self.instance.device_metadata is not None:
             for device in self.instance.device_metadata.devices:
                 device_metadata = {}
@@ -421,19 +424,20 @@ class InstanceMetadata(object):
                         address = device.bus.address
 
                 if isinstance(device, metadata_obj.NetworkInterfaceMetadata):
-                    vlan = None
-                    if vif_vlans_supported and 'vlan' in device:
-                        vlan = device.vlan
-
-                    # Skip devices without tags on versions that
-                    # don't support vlans
-                    if not (vlan or 'tags' in device):
-                        continue
-
+                    vlan = device.vlan if 'vlan' in device else None
+                    if vif_vlans_supported and vlan is not None:
+                        device_metadata['vlan'] = vlan
+                    if vif_vfs_trusted_supported:
+                        vf_trusted = (device.vf_trusted if
+                                      'vf_trusted' in device else False)
+                        device_metadata['vf_trusted'] = vf_trusted
                     device_metadata['type'] = 'nic'
                     device_metadata['mac'] = device.mac
-                    if vlan:
-                        device_metadata['vlan'] = vlan
+                    # NOTE(artom) If a device has neither tags, vlan or
+                    # vf_trusted, don't expose it
+                    if not ('tags' in device or 'vlan' in device_metadata
+                            or 'vf_trusted' in device_metadata):
+                        continue
                 elif isinstance(device, metadata_obj.DiskMetadata):
                     device_metadata['type'] = 'disk'
                     # serial and path are optional parameters
