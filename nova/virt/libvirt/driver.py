@@ -4291,20 +4291,37 @@ class LibvirtDriver(driver.ComputeDriver):
 
             a) If emulator threads policy is isolated, we pin emulator threads
                to one cpu we have reserved for it.
-            b) Otherwise;
-                b1) If realtime IS NOT enabled, the emulator threads are
+            b) If emulator threads policy is shared and CONF.cpu_shared_set is
+               defined, we pin emulator threads on the set of pCPUs defined by
+               CONF.cpu_shared_set
+            c) Otherwise;
+                c1) If realtime IS NOT enabled, the emulator threads are
                     allowed to float cross all the pCPUs associated with
                     the guest vCPUs.
-                b2) If realtime IS enabled, at least 1 vCPU is required
+                c2) If realtime IS enabled, at least 1 vCPU is required
                     to be set aside for non-realtime usage. The emulator
                     threads are allowed to float across the pCPUs that
                     are associated with the non-realtime VCPUs.
         """
         emulatorpin_cpuset = set([])
+        shared_ids = hardware.get_cpu_shared_set()
 
         if emulator_threads_policy == fields.CPUEmulatorThreadsPolicy.ISOLATE:
             if object_numa_cell.cpuset_reserved:
                 emulatorpin_cpuset = object_numa_cell.cpuset_reserved
+        elif ((emulator_threads_policy ==
+              fields.CPUEmulatorThreadsPolicy.SHARE) and
+              shared_ids):
+            online_pcpus = self._host.get_online_cpus()
+            cpuset = shared_ids & online_pcpus
+            if not cpuset:
+                msg = (_("Invalid cpu_shared_set config, one or more of the "
+                         "specified cpuset is not online. Online cpuset(s): "
+                         "%(online)s, requested cpuset(s): %(req)s"),
+                       {'online': sorted(online_pcpus),
+                        'req': sorted(shared_ids)})
+                raise exception.Invalid(msg)
+            emulatorpin_cpuset = cpuset
         elif not wants_realtime or vcpu not in vcpus_rt:
             emulatorpin_cpuset = pin_cpuset.cpuset
 
