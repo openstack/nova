@@ -1,6 +1,6 @@
-==================
-Sample Policy File
-==================
+=======================
+Sample Nova Policy File
+=======================
 
 The following is a sample nova policy file for adaptation and use.
 

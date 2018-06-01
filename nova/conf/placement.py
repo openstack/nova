@@ -35,6 +35,15 @@ being equal, two requests for allocation candidates will return the same
 results in the same order; but no guarantees are made as to how that order
 is determined.
 """),
+    # TODO(mriedem): When placement is split out of nova, this should be
+    # deprecated since then [oslo_policy]/policy_file can be used.
+    cfg.StrOpt(
+        'policy_file',
+        # This default matches what is in
+        # etc/nova/placement-policy-generator.conf
+        default='placement-policy.yaml',
+        help='The file that defines placement policies. This can be an '
+             'absolute path or relative to the configuration file.'),
 ]
 
 

@@ -23,10 +23,13 @@ Routes.Mapper, including automatic handlers to respond with a
 method.
 """
 
+import re
+
 import routes
 import webob
 
 from oslo_log import log as logging
+from oslo_utils import excutils
 
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.handlers import aggregate
@@ -38,7 +41,6 @@ from nova.api.openstack.placement.handlers import resource_provider
 from nova.api.openstack.placement.handlers import root
 from nova.api.openstack.placement.handlers import trait
 from nova.api.openstack.placement.handlers import usage
-from nova.api.openstack.placement import policy
 from nova.api.openstack.placement import util
 from nova.i18n import _
 
@@ -129,6 +131,19 @@ ROUTE_DECLARATIONS = {
     },
 }
 
+# This is a temporary list (of regexes) of the route handlers that will do
+# their own granular policy check. Once all handlers are doing their own
+# policy checks we can remove this along with the generic policy check in
+# PlacementHandler. All entries are checked against re.match() so must
+# match the start of the path.
+PER_ROUTE_POLICY = [
+    # The root is special in that it does not require auth.
+    '/$',
+    # /resource_providers
+    # /resource_providers/{uuid}
+    '/resource_providers(/[A-Za-z0-9-]+)?$'
+]
+
 
 def dispatch(environ, start_response, mapper):
     """Find a matching route for the current request.
@@ -192,17 +207,29 @@ class PlacementHandler(object):
         # NOTE(cdent): Local config currently unused.
         self._map = make_map(ROUTE_DECLARATIONS)
 
+    @staticmethod
+    def _is_granular_policy_check(path):
+        for policy in PER_ROUTE_POLICY:
+            if re.match(policy, path):
+                return True
+        return False
+
     def __call__(self, environ, start_response):
-        # All requests but '/' require admin.
-        if environ['PATH_INFO'] != '/':
+        # Any routes that do not yet have a granular policy check default
+        # to admin-only.
+        if not self._is_granular_policy_check(environ['PATH_INFO']):
             context = environ['placement.context']
-            # TODO(cdent): Using is_admin everywhere (except /) is
-            # insufficiently flexible for future use case but is
-            # convenient for initial exploration.
-            if not policy.placement_authorize(context, 'placement'):
-                raise webob.exc.HTTPForbidden(
-                    _('admin required'),
-                    json_formatter=util.json_error_formatter)
+            try:
+                if not context.can('placement', fatal=False):
+                    raise webob.exc.HTTPForbidden(
+                        _('admin required'),
+                        json_formatter=util.json_error_formatter)
+            except Exception:
+                # This is here mostly for help in debugging problems with
+                # busted test setup.
+                with excutils.save_and_reraise_exception():
+                    LOG.exception('policy check failed for path: %s',
+                                  environ['PATH_INFO'])
         # Check that an incoming request with a content-length header
         # that is an integer > 0 and not empty, also has a content-type
         # header that is not empty. If not raise a 400.
@@ -223,6 +250,10 @@ class PlacementHandler(object):
         except exception.NotFound as exc:
             raise webob.exc.HTTPNotFound(
                 exc, json_formatter=util.json_error_formatter)
+        except exception.PolicyNotAuthorized as exc:
+            raise webob.exc.HTTPForbidden(
+                exc.format_message(),
+                json_formatter=util.json_error_formatter)
         # Remaining uncaught exceptions will rise first to the Microversion
         # middleware, where any WebOb generated exceptions will be caught and
         # transformed into legit HTTP error responses (with microversion

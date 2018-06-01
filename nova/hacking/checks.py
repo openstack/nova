@@ -621,13 +621,16 @@ def check_config_option_in_central_place(logical_line, filename):
 
 
 def check_policy_registration_in_central_place(logical_line, filename):
-    msg = ('N350: Policy registration should be in the central location '
-           '"/nova/policies/*".')
+    msg = ('N350: Policy registration should be in the central location(s) '
+           '"/nova/policies/*" or "nova/api/openstack/placement/policies/*".')
     # This is where registration should happen
-    if "nova/policies/" in filename:
+    if ("nova/policies/" in filename or
+            "nova/api/openstack/placement/policies/" in filename):
         return
     # A couple of policy tests register rules
-    if "nova/tests/unit/test_policy.py" in filename:
+    if ("nova/tests/unit/test_policy.py" in filename or
+            "nova/tests/unit/api/openstack/placement/test_policy.py" in
+            filename):
         return
 
     if rule_default_re.match(logical_line):

@@ -1,0 +1,48 @@
+# This tests the individual CRUD operations on /resource_providers
+# using a non-admin user with an open policy configuration. The
+# response validation is intentionally minimal.
+fixtures:
+    - OpenPolicyFixture
+
+defaults:
+    request_headers:
+        x-auth-token: user
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement latest
+
+tests:
+
+- name: list resource providers
+  GET: /resource_providers
+  response_json_paths:
+      $.resource_providers: []
+
+- name: create resource provider
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 200
+  response_json_paths:
+      $.uuid: $ENVIRON['RP_UUID']
+
+- name: show resource provider
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  response_json_paths:
+      $.uuid: $ENVIRON['RP_UUID']
+
+- name: update resource provider
+  PUT: /resource_providers/$ENVIRON['RP_UUID']
+  data:
+      name: new name
+  status: 200
+  response_json_paths:
+      $.name: new name
+      $.uuid: $ENVIRON['RP_UUID']
+
+- name: delete resource provider
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']
+  status: 204

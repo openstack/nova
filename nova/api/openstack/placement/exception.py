@@ -127,6 +127,10 @@ class ObjectActionError(_BaseException):
     msg_fmt = _('Object action %(action)s failed because: %(reason)s')
 
 
+class PolicyNotAuthorized(_BaseException):
+    msg_fmt = _("Policy does not allow %(action)s to be performed.")
+
+
 class ResourceClassCannotDeleteStandard(_BaseException):
     msg_fmt = _("Cannot delete standard resource class %(resource_class)s.")
 

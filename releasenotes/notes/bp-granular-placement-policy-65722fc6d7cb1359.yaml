@@ -1,0 +1,31 @@
+---
+features:
+  - |
+    It is now possible to configure granular policy rules for placement
+    REST API operations.
+
+    By default, all operations continue to use the ``role:admin`` check string
+    so there is no upgrade impact.
+
+    A new configuration option is introduced, ``[placement]/policy_file``,
+    which is used to configure the location of the placement policy file.
+    By default, the ``placement-policy.yaml`` file may live alongside the
+    nova policy file, e.g.:
+
+    * /etc/nova/policy.yaml
+    * /etc/nova/placement-policy.yaml
+
+    However, if desired, ``[placement]/policy_file`` makes it possible to
+    package and deploy the placement policy file separately to make the future
+    split of placement and nova packages easier, e.g.:
+
+    * /etc/placement/policy.yaml
+
+    All placement policy rules are defined in code so by default no extra
+    configuration is required and the default rules will be used on start of
+    the placement service.
+
+    For more information about placement policy including a sample file, see
+    the configuration reference documentation:
+
+    https://docs.openstack.org/nova/latest/configuration/index.html#placement-policy

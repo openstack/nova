@@ -21,6 +21,7 @@ import webob
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.api.openstack.placement.policies import resource_provider as policies
 from nova.api.openstack.placement.schemas import resource_provider as rp_schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
@@ -78,6 +79,7 @@ def create_resource_provider(req):
     header pointing to the newly created resource provider.
     """
     context = req.environ['placement.context']
+    context.can(policies.CREATE)
     schema = rp_schema.POST_RESOURCE_PROVIDER_SCHEMA
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     if want_version.matches((1, 14)):
@@ -126,6 +128,7 @@ def delete_resource_provider(req):
     """
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     context = req.environ['placement.context']
+    context.can(policies.DELETE)
     # The containing application will catch a not found here.
     try:
         resource_provider = rp_obj.ResourceProvider.get_by_uuid(
@@ -153,9 +156,10 @@ def get_resource_provider(req):
     """
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     uuid = util.wsgi_path_item(req.environ, 'uuid')
-    # The containing application will catch a not found here.
     context = req.environ['placement.context']
+    context.can(policies.SHOW)
 
+    # The containing application will catch a not found here.
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
@@ -179,6 +183,7 @@ def list_resource_providers(req):
     a collection of resource providers.
     """
     context = req.environ['placement.context']
+    context.can(policies.LIST)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
     schema = rp_schema.GET_RPS_SCHEMA_1_0
@@ -244,6 +249,7 @@ def update_resource_provider(req):
     """
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     context = req.environ['placement.context']
+    context.can(policies.UPDATE)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
     # The containing application will catch a not found here.
