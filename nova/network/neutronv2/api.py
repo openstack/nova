@@ -23,6 +23,7 @@ from neutronclient.common import exceptions as neutron_client_exc
 from neutronclient.v2_0 import client as clientv20
 from oslo_log import log as logging
 from oslo_utils import excutils
+from oslo_utils import strutils
 from oslo_utils import uuidutils
 import six
 
@@ -1552,21 +1553,44 @@ class API(base_api.NetworkAPI):
         phynet_name = net.get('provider:physical_network')
         return phynet_name
 
+    @staticmethod
+    def _get_trusted_mode_from_port(port):
+        """Returns whether trusted mode is requested
+
+        If port binding does not provide any information about trusted
+        status this function is returning None
+        """
+        value = _get_binding_profile(port).get('trusted')
+        if value is not None:
+            # This allows the user to specify things like '1' and 'yes' in
+            # the port binding profile and we can handle it as a boolean.
+            return strutils.bool_from_string(value)
+
     def _get_port_vnic_info(self, context, neutron, port_id):
         """Retrieve port vnic info
 
-        Invoked with a valid port_id.
-        Return vnic type and the attached physical network name.
+        :param context: The request context
+        :param neutron: The Neutron client
+        :param port_id: The id of port to be queried
+
+        :return: A triplet composed of the VNIC type (see:
+                 network_model.VNIC_TYPES_*), the attached physical
+                 network name, for SR-IOV whether the port should be
+                 considered as trusted or None for other VNIC types.
         """
+        trusted = None
         phynet_name = None
         port = self._show_port(context, port_id, neutron_client=neutron,
-                               fields=['binding:vnic_type', 'network_id'])
+                               fields=['binding:vnic_type', 'network_id',
+                                       BINDING_PROFILE])
         vnic_type = port.get('binding:vnic_type',
                              network_model.VNIC_TYPE_NORMAL)
         if vnic_type in network_model.VNIC_TYPES_SRIOV:
             net_id = port['network_id']
             phynet_name = self._get_phynet_info(context, neutron, net_id)
-        return vnic_type, phynet_name
+            trusted = self._get_trusted_mode_from_port(port)
+
+        return vnic_type, phynet_name, trusted
 
     def create_pci_requests_for_sriov_ports(self, context, pci_requests,
                                             requested_networks):
@@ -1581,11 +1605,16 @@ class API(base_api.NetworkAPI):
         neutron = get_client(context, admin=True)
         for request_net in requested_networks:
             phynet_name = None
+            trusted = None
             vnic_type = network_model.VNIC_TYPE_NORMAL
 
             if request_net.port_id:
-                vnic_type, phynet_name = self._get_port_vnic_info(
+                vnic_type, phynet_name, trusted = self._get_port_vnic_info(
                     context, neutron, request_net.port_id)
+                LOG.debug("Creating PCI device request for port_id=%s, "
+                          "vnic_type=%s, phynet_name=%s, trusted=%s",
+                          request_net.port_id, vnic_type, phynet_name,
+                          trusted)
             pci_request_id = None
             if vnic_type in network_model.VNIC_TYPES_SRIOV:
                 # TODO(moshele): To differentiate between the SR-IOV legacy
@@ -1598,6 +1627,12 @@ class API(base_api.NetworkAPI):
                 dev_type = pci_request.DEVICE_TYPE_FOR_VNIC_TYPE.get(vnic_type)
                 if dev_type:
                     spec[pci_request.PCI_DEVICE_TYPE_TAG] = dev_type
+                if trusted is not None:
+                    # We specifically have requested device on a pool
+                    # with a tag trusted set to true or false. We
+                    # convert the value to string since tags are
+                    # compared in that way.
+                    spec[pci_request.PCI_TRUSTED_TAG] = str(trusted)
                 request = objects.InstancePCIRequest(
                     count=1,
                     spec=[spec],

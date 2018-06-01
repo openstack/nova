@@ -92,7 +92,7 @@ Possible values:
   * "devname": Device name of the device (for e.g. interface name). Not all
     PCI devices have a name.
   * "<tag>": Additional <tag> and <tag_value> used for matching PCI devices.
-    Supported <tag>: "physical_network".
+    Supported <tag>: "physical_network", "trusted".
 
   The address key supports traditional glob style and regular expression
   syntax. Valid examples are:
@@ -116,6 +116,8 @@ Possible values:
                                         "bus": "02", "slot": "0[1-2]",
                                         "function": ".*"},
                              "physical_network":"physnet1"}
+    passthrough_whitelist = {"devname": "eth0", "physical_network":"physnet1",
+                             "trusted": "true"}
 
   The following are invalid, as they specify mutually exclusive options:
 
