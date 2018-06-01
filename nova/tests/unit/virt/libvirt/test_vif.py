@@ -273,6 +273,15 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         type=network_model.VIF_TYPE_VROUTER,
         devname='tap-xxx-yyy-zzz')
 
+    vif_contrail_vrouter = network_model.VIF(id=uuids.vif,
+        address='ca:fe:de:ad:be:ef',
+        network=network_vrouter,
+        type=network_model.VIF_TYPE_VHOSTUSER,
+        details={
+            network_model.VIF_DETAILS_VHOSTUSER_MODE: 'server',
+            network_model.VIF_DETAILS_VHOSTUSER_SOCKET: '/tmp/usv-xxx-yyy-zzz',
+            network_model.VIF_DETAILS_VHOSTUSER_VROUTER_PLUG: True})
+
     vif_ib_hostdev = network_model.VIF(id=uuids.vif,
         address='ca:fe:de:ad:be:ef',
         network=network_8021,
@@ -1012,57 +1021,6 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                        self.vif_iovisor['network']['id'],
                        self.instance.project_id)])
 
-    @mock.patch('nova.privsep.libvirt.unplug_contrail_vif')
-    def test_unplug_vrouter_with_details(self, mock_unplug_contrail):
-        d = vif.LibvirtGenericVIFDriver()
-        d.unplug(self.instance, self.vif_vrouter)
-        mock_unplug_contrail.assert_called_once_with(self.vif_vrouter['id'])
-
-    @mock.patch('nova.privsep.libvirt.plug_contrail_vif')
-    @mock.patch('nova.privsep.linux_net.set_device_enabled')
-    def test_plug_vrouter_with_details(self, mock_enabled, mock_plug_contrail):
-        d = vif.LibvirtGenericVIFDriver()
-        instance = mock.Mock()
-        instance.name = 'instance-name'
-        instance.uuid = '46a4308b-e75a-4f90-a34a-650c86ca18b2'
-        instance.project_id = 'b168ea26fa0c49c1a84e1566d9565fa5'
-        instance.display_name = 'instance1'
-        instance.image_meta = objects.ImageMeta.from_dict({'properties': {}})
-        with mock.patch.object(utils, 'execute') as execute:
-            d.plug(instance, self.vif_vrouter)
-            execute.assert_has_calls([
-                mock.call('ip', 'tuntap', 'add', 'tap-xxx-yyy-zzz', 'mode',
-                    'tap', run_as_root=True, check_exit_code=[0, 2, 254])])
-            mock_plug_contrail.called_once_with(
-                instance.project_id, instance.uuid, instance.display_name,
-                self.vif_vrouter['id'], self.vif_vrouter['network']['id'],
-                'NovaVMPort', self.vif_vrouter['devname'],
-                self.vif_vrouter['address'], '0.0.0.0', None)
-            mock_enabled.assert_called_once_with('tap-xxx-yyy-zzz')
-
-    @mock.patch('nova.network.linux_utils.create_tap_dev')
-    @mock.patch('nova.privsep.libvirt.plug_contrail_vif')
-    def test_plug_vrouter_with_details_multiqueue(
-            self, mock_plug_contrail, mock_create_tap_dev):
-        d = vif.LibvirtGenericVIFDriver()
-        instance = mock.Mock()
-        instance.name = 'instance-name'
-        instance.uuid = '46a4308b-e75a-4f90-a34a-650c86ca18b2'
-        instance.project_id = 'b168ea26fa0c49c1a84e1566d9565fa5'
-        instance.display_name = 'instance1'
-        instance.image_meta = objects.ImageMeta.from_dict({
-            'properties': {'hw_vif_multiqueue_enabled': True}})
-        instance.flavor.vcpus = 2
-        d.plug(instance, self.vif_vrouter)
-        mock_create_tap_dev.assert_called_once_with('tap-xxx-yyy-zzz',
-                                                    multiqueue=True)
-
-        mock_plug_contrail.called_once_with(
-                instance.project_id, instance.uuid, instance.display_name,
-                self.vif_vrouter['id'], self.vif_vrouter['network']['id'],
-                'NovaVMPort', self.vif_vrouter['devname'],
-                self.vif_vrouter['address'], '0.0.0.0', None)
-
     def _check_ovs_virtualport_driver(self, d, vif, want_iface_id):
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
         xml = self._get_instance_xml(d, vif)
@@ -1432,6 +1390,33 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                      self.vif_ivs, dev_want)
         script = node.find("script")
         self.assertIsNone(script)
+
+    def test_vrouter(self):
+        """Test for the Contrail / Tungsten Fabric kernel datapath."""
+        d = vif.LibvirtGenericVIFDriver()
+        dev_want = self.vif_vrouter['devname']
+        xml = self._get_instance_xml(d, self.vif_vrouter)
+        node = self._get_node(xml)
+        self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
+                                     self.vif_vrouter, dev_want)
+
+    def test_contrail_vrouter(self):
+        """Test for the Contrail / Tungsten Fabric DPDK datapath."""
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d,
+                                     self.vif_contrail_vrouter)
+        node = self._get_node(xml)
+        self.assertEqual(node.get("type"),
+                         network_model.VIF_TYPE_VHOSTUSER)
+
+        self._assertTypeEquals(node, network_model.VIF_TYPE_VHOSTUSER,
+                               "source", "mode", "server")
+        self._assertTypeEquals(node, network_model.VIF_TYPE_VHOSTUSER,
+                               "source", "path", "/tmp/usv-xxx-yyy-zzz")
+        self._assertTypeEquals(node, network_model.VIF_TYPE_VHOSTUSER,
+                               "source", "type", "unix")
+        self._assertMacEquals(node, self.vif_contrail_vrouter)
+        self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
 
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")

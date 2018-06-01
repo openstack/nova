@@ -192,10 +192,6 @@ class LibvirtGenericVIFDriver(object):
         designer.set_vif_host_backend_hostdev_pci_config(conf, pci_slot)
         return conf
 
-    def _is_multiqueue_enabled(self, image_meta, flavor):
-        _, vhost_queues = self._get_virtio_mq_settings(image_meta, flavor)
-        return vhost_queues > 1 if vhost_queues is not None else False
-
     def _get_virtio_mq_settings(self, image_meta, flavor):
         """A methods to set the number of virtio queues,
            if it has been requested in extra specs.
@@ -485,17 +481,6 @@ class LibvirtGenericVIFDriver(object):
                               inst_type, virt_type, host):
         return self.get_base_hostdev_pci_config(vif)
 
-    def get_config_vrouter(self, instance, vif, image_meta,
-                           inst_type, virt_type, host):
-        conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'],
-                                    host)
-        dev = self.get_vif_devname(vif)
-        designer.set_vif_host_backend_ethernet_config(conf, dev, host)
-
-        designer.set_vif_bandwidth_config(conf, inst_type)
-        return conf
-
     def _set_config_VIFGeneric(self, instance, vif, conf, host):
         dev = vif.vif_name
         designer.set_vif_host_backend_ethernet_config(conf, dev, host)
@@ -721,51 +706,6 @@ class LibvirtGenericVIFDriver(object):
     def plug_vhostuser(self, instance, vif):
         pass
 
-    def plug_vrouter(self, instance, vif):
-        """Plug into Contrail's network port
-
-        Bind the vif to a Contrail virtual port.
-        """
-        dev = self.get_vif_devname(vif)
-        ip_addr = '0.0.0.0'
-        ip6_addr = None
-        subnets = vif['network']['subnets']
-        for subnet in subnets:
-            if not subnet['ips']:
-                continue
-            ips = subnet['ips'][0]
-            if not ips['address']:
-                continue
-            if (ips['version'] == 4):
-                if ips['address'] is not None:
-                    ip_addr = ips['address']
-            if (ips['version'] == 6):
-                if ips['address'] is not None:
-                    ip6_addr = ips['address']
-
-        ptype = 'NovaVMPort'
-        if (CONF.libvirt.virt_type == 'lxc'):
-            ptype = 'NameSpacePort'
-
-        try:
-            multiqueue = self._is_multiqueue_enabled(instance.image_meta,
-                                                     instance.flavor)
-            linux_net_utils.create_tap_dev(dev, multiqueue=multiqueue)
-            nova.privsep.libvirt.plug_contrail_vif(
-                instance.project_id,
-                instance.uuid,
-                instance.display_name,
-                vif['id'],
-                vif['network']['id'],
-                ptype,
-                dev,
-                vif['address'],
-                ip_addr,
-                ip6_addr,
-            )
-        except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while plugging vif"), instance=instance)
-
     def _plug_os_vif(self, instance, vif):
         instance_info = os_vif_util.nova_to_osvif_instance(instance)
 
@@ -879,19 +819,6 @@ class LibvirtGenericVIFDriver(object):
 
     def unplug_vhostuser(self, instance, vif):
         pass
-
-    def unplug_vrouter(self, instance, vif):
-        """Unplug Contrail's network port
-
-        Unbind the vif from a Contrail virtual port.
-        """
-        dev = self.get_vif_devname(vif)
-        port_id = vif['id']
-        try:
-            nova.privsep.libvirt.unplug_contrail_vif(port_id)
-            nova.privsep.linux_net.delete_net_dev(dev)
-        except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def _unplug_os_vif(self, instance, vif):
         instance_info = os_vif_util.nova_to_osvif_instance(instance)
