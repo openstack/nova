@@ -84,17 +84,21 @@ class DeviceMetadata(base.NovaObject):
 class NetworkInterfaceMetadata(DeviceMetadata):
     # Version 1.0: Initial version
     # Version 1.1: Add vlans field
-    VERSION = '1.1'
+    # Version 1.2: Add vf_trusted field
+    VERSION = '1.2'
 
     fields = {
         'mac': fields.MACAddressField(),
         'vlan': fields.IntegerField(),
+        'vf_trusted': fields.BooleanField(default=False),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 1) and 'vlan' in primitive:
             del primitive['vlan']
+        if target_version < (1, 2) and 'vf_trusted' in primitive:
+            del primitive['vf_trusted']
 
 
 @base.NovaObjectRegistry.register

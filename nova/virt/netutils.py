@@ -23,6 +23,7 @@ import os
 
 import jinja2
 import netaddr
+from oslo_utils import strutils
 
 import nova.conf
 from nova.network import model
@@ -348,3 +349,12 @@ def get_cached_vifs_with_vlan(network_info):
         return {}
     return {vif['address']: vif['details']['vlan'] for vif in network_info
                             if vif.get('details', {}).get('vlan')}
+
+
+def get_cached_vifs_with_trusted(network_info):
+    """Generates a dict from a list of VIFs that trusted, MAC as key"""
+    if network_info is None:
+        return {}
+    return {vif['address']: strutils.bool_from_string(
+        vif['profile'].get('trusted', 'False')) for vif in network_info
+            if vif.get('profile')}

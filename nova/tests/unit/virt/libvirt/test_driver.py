@@ -1696,6 +1696,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         network_info[0]['vnic_type'] = network_model.VNIC_TYPE_DIRECT_PHYSICAL
         network_info[0]['address'] = "51:5a:2c:a4:5e:1b"
         network_info[0]['details'] = dict(vlan='2145')
+        network_info[0]['profile'] = dict(trusted='true')
         instance_ref.info_cache = objects.InstanceInfoCache(
             network_info=network_info)
 
@@ -1757,18 +1758,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   objects.PCIDeviceBus)
             self.assertEqual(['mytag1'], metadata[6].tags)
             self.assertEqual('0000:00:03.0', metadata[6].bus.address)
+            self.assertFalse(metadata[6].vf_trusted)
 
             # Make sure that interface with vlan is exposed to the metadata
             self.assertIsInstance(metadata[7],
                                   objects.NetworkInterfaceMetadata)
             self.assertEqual('51:5a:2c:a4:5e:1b', metadata[7].mac)
             self.assertEqual(2145, metadata[7].vlan)
+            self.assertTrue(metadata[7].vf_trusted)
             self.assertIsInstance(metadata[8],
                                   objects.NetworkInterfaceMetadata)
             self.assertEqual(['mytag2'], metadata[8].tags)
+            self.assertFalse(metadata[8].vf_trusted)
             self.assertIsInstance(metadata[9],
                                   objects.NetworkInterfaceMetadata)
             self.assertEqual(['mytag3'], metadata[9].tags)
+            self.assertFalse(metadata[9].vf_trusted)
 
     @mock.patch.object(host.Host, 'get_connection')
     @mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc')
