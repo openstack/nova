@@ -25,6 +25,7 @@ from os_vif import exception as osv_exception
 from os_vif.objects import fields as osv_fields
 from oslo_concurrency import processutils
 from oslo_log import log as logging
+from oslo_utils import strutils
 
 import nova.conf
 from nova import exception
@@ -623,6 +624,12 @@ class LibvirtGenericVIFDriver(object):
                 mac_addr=vif['address'],
                 vlan=vif['details'][network_model.VIF_DETAILS_VLAN])
 
+        elif vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
+            trusted = strutils.bool_from_string(
+                vif['profile'].get('trusted', "False"))
+            if trusted:
+                linux_net.set_vf_trusted(vif['profile']['pci_slot'], True)
+
     def plug_hostdev_physical(self, instance, vif):
         pass
 
@@ -789,7 +796,10 @@ class LibvirtGenericVIFDriver(object):
             # Therefore, keep the MAC unchanged.  Later operations on
             # the same VF will not be affected by the existing MAC.
             linux_net_utils.set_vf_interface_vlan(vif['profile']['pci_slot'],
-                                                  mac_addr=vif['address'])
+                                            mac_addr=vif['address'])
+        elif vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
+            if "trusted" in vif['profile']:
+                linux_net.set_vf_trusted(vif['profile']['pci_slot'], False)
 
     def unplug_hostdev_physical(self, instance, vif):
         pass

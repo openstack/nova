@@ -198,6 +198,19 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                  'pci_slot': '0000:0a:00.1',
                  'physical_network': 'phynet1'})
 
+    vif_hw_veb_trusted = network_model.VIF(id=uuids.vif,
+        address='ca:fe:de:ad:be:ef',
+        network=network_8021,
+        type=network_model.VIF_TYPE_HW_VEB,
+        vnic_type=network_model.VNIC_TYPE_DIRECT,
+        ovs_interfaceid=None,
+        details={
+            network_model.VIF_DETAILS_VLAN: 100},
+        profile={'pci_vendor_info': '1137:0043',
+                 'pci_slot': '0000:0a:00.1',
+                 'physical_network': 'phynet1',
+                 'trusted': 'True'})
+
     vif_hostdev_physical = network_model.VIF(id=uuids.vif,
         address='ca:fe:de:ad:be:ef',
         network=network_8021,
@@ -931,6 +944,18 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def test_unplug_hw_veb(self):
         d = vif.LibvirtGenericVIFDriver()
         self._test_hw_veb_op(d.unplug, 0)
+
+    @mock.patch('nova.network.linux_net.set_vf_trusted')
+    def test_plug_hw_veb_trusted(self, mset_vf_trusted):
+        d = vif.LibvirtGenericVIFDriver()
+        d.plug(self.instance, self.vif_hw_veb_trusted)
+        mset_vf_trusted.assert_called_once_with('0000:0a:00.1', True)
+
+    @mock.patch('nova.network.linux_net.set_vf_trusted')
+    def test_unplug_hw_veb_trusted(self, mset_vf_trusted):
+        d = vif.LibvirtGenericVIFDriver()
+        d.unplug(self.instance, self.vif_hw_veb_trusted)
+        mset_vf_trusted.assert_called_once_with('0000:0a:00.1', False)
 
     @mock.patch('nova.privsep.libvirt.unplug_plumgrid_vif',
                 side_effect=processutils.ProcessExecutionError)
