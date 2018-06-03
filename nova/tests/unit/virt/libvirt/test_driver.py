@@ -37,7 +37,6 @@ from eventlet import greenthread
 import fixtures
 from lxml import etree
 import mock
-from mox3 import mox
 from os_brick import encryptors
 from os_brick import exception as brick_exception
 from os_brick.initiator import connector
@@ -21004,12 +21003,11 @@ class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
                       'device_name': 'vda'}]
 
     def test_get_all_volume_usage(self):
-        def fake_block_stats(instance_name, disk):
-            return (169, 688640, 0, 0, -1)
-
-        self.stubs.Set(self.drvr, 'block_stats', fake_block_stats)
-        vol_usage = self.drvr.get_all_volume_usage(self.c,
-              [dict(instance=self.ins_ref, instance_bdms=self.bdms)])
+        with mock.patch.object(
+                self.drvr, 'block_stats',
+                return_value=(169, 688640, 0, 0, -1)) as mock_block_stats:
+            vol_usage = self.drvr.get_all_volume_usage(
+                self.c, [dict(instance=self.ins_ref, instance_bdms=self.bdms)])
 
         expected_usage = [{'volume': 1,
                            'instance': self.ins_ref,
@@ -21020,15 +21018,19 @@ class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
                             'rd_bytes': 688640, 'wr_req': 0,
                             'rd_req': 169, 'wr_bytes': 0}]
         self.assertEqual(vol_usage, expected_usage)
+        self.assertEqual(2, mock_block_stats.call_count)
+        mock_block_stats.assert_has_calls([
+            mock.call(self.ins_ref, 'vde'), mock.call(self.ins_ref, 'vda')])
 
-    def test_get_all_volume_usage_device_not_found(self):
-        def fake_get_domain(self, instance):
-            raise exception.InstanceNotFound(instance_id="fakedom")
-
-        self.stubs.Set(host.Host, '_get_domain', fake_get_domain)
+    @mock.patch.object(host.Host, '_get_domain',
+                       side_effect=exception.InstanceNotFound(
+                           instance_id='fakedom'))
+    def test_get_all_volume_usage_device_not_found(self, mock_get_domain):
         vol_usage = self.drvr.get_all_volume_usage(self.c,
               [dict(instance=self.ins_ref, instance_bdms=self.bdms)])
         self.assertEqual(vol_usage, [])
+        self.assertEqual(2, mock_get_domain.call_count)
+        mock_get_domain.assert_has_calls([mock.call(self.ins_ref)] * 2)
 
 
 class LibvirtNonblockingTestCase(test.NoDBTestCase):
@@ -21047,33 +21049,30 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
         drvr.set_host_enabled = mock.Mock()
         jsonutils.to_primitive(drvr._conn, convert_instances=True)
 
+    @mock.patch.object(eventlet.tpool, 'execute')
     @mock.patch.object(objects.Service, 'get_by_compute_host')
-    def test_tpool_execute_calls_libvirt(self, mock_svc):
+    def test_tpool_execute_calls_libvirt(self, mock_svc, mock_execute):
         conn = fakelibvirt.virConnect()
         conn.is_expected = True
 
-        self.mox.StubOutWithMock(eventlet.tpool, 'execute')
-        eventlet.tpool.execute(
-            fakelibvirt.openAuth,
-            'test:///default',
-            mox.IgnoreArg(),
-            mox.IgnoreArg()).AndReturn(conn)
-        eventlet.tpool.execute(
-            conn.domainEventRegisterAny,
-            None,
-            fakelibvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
-            mox.IgnoreArg(),
-            mox.IgnoreArg())
+        side_effect = [conn, None]
+        expected_calls = [
+            mock.call(fakelibvirt.openAuth, 'test:///default',
+                      mock.ANY, mock.ANY),
+            mock.call(conn.domainEventRegisterAny, None,
+                      fakelibvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
+                      mock.ANY, mock.ANY)]
         if hasattr(fakelibvirt.virConnect, 'registerCloseCallback'):
-            eventlet.tpool.execute(
-                conn.registerCloseCallback,
-                mox.IgnoreArg(),
-                mox.IgnoreArg())
-        self.mox.ReplayAll()
+            side_effect.append(None)
+            expected_calls.append(mock.call(
+                conn.registerCloseCallback, mock.ANY, mock.ANY))
+        mock_execute.side_effect = side_effect
 
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         c = driver._get_connection()
         self.assertTrue(c.is_expected)
+        self.assertEqual(len(expected_calls), mock_execute.call_count)
+        mock_execute.assert_has_calls(expected_calls)
 
 
 class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
@@ -21228,13 +21227,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         mock_refresh_connection_info.assert_called_once_with(self.c, instance,
             self.drvr._volume_api, self.drvr)
 
-    def _test_volume_snapshot_create(self, quiesce=True, can_quiesce=True,
+    @mock.patch.object(FakeVirtDomain, 'snapshotCreateXML')
+    @mock.patch.object(FakeVirtDomain, 'XMLDesc')
+    @mock.patch.object(host.Host, '_get_domain')
+    def _test_volume_snapshot_create(self, mock_get, mock_xml, mock_snapshot,
+                                     quiesce=True, can_quiesce=True,
                                      quiesce_required=False):
         """Test snapshot creation with file-based disk."""
         self.flags(instance_name_template='instance-%s')
-        self.mox.StubOutWithMock(self.drvr._host, '_get_domain')
-        self.mox.StubOutWithMock(self.drvr, '_volume_api')
-
         if quiesce_required:
             self.inst['system_metadata']['image_os_require_quiesce'] = True
         instance = objects.Instance(**self.inst)
@@ -21242,9 +21242,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         new_file = 'new-file'
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
-        self.mox.StubOutWithMock(domain, 'XMLDesc')
-        self.mox.StubOutWithMock(domain, 'snapshotCreateXML')
-        domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
+        mock_xml.return_value = self.dom_xml
 
         snap_xml_src = (
            '<domainsnapshot>\n'
@@ -21270,25 +21268,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         can_quiesce_mock = mock.Mock()
         if can_quiesce:
             can_quiesce_mock.return_value = None
-            if quiesce:
-                domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q)
-            else:
+            if not quiesce:
                 # we can quiesce but snapshot with quiesce fails
-                domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q).\
-                    AndRaise(fakelibvirt.libvirtError(
-                                'quiescing failed, no qemu-ga'))
-                if not quiesce_required:
-                    # quiesce is not required so try snapshot again without it
-                    domain.snapshotCreateXML(snap_xml_src, flags=snap_flags)
+                mock_snapshot.side_effect = [fakelibvirt.libvirtError(
+                    'quiescing failed, no qemu-ga'), None]
         else:
             can_quiesce_mock.side_effect = exception.QemuGuestAgentNotEnabled
-            if not quiesce_required:
-                # quiesce is not required so try snapshot again without it
-                domain.snapshotCreateXML(snap_xml_src, flags=snap_flags)
 
         self.drvr._can_quiesce = can_quiesce_mock
-
-        self.mox.ReplayAll()
 
         guest = libvirt_guest.Guest(domain)
         if quiesce_required and (not quiesce or not can_quiesce):
@@ -21312,13 +21299,30 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         # time it's called so just use a mock.ANY for the image_meta arg.
         can_quiesce_mock.assert_called_once_with(instance, mock.ANY)
 
-        self.mox.VerifyAll()
+        mock_xml.assert_called_once_with(flags=0)
+        mock_get.assert_not_called()
+        if can_quiesce:
+            if quiesce or quiesce_required:
+                mock_snapshot.assert_called_once_with(snap_xml_src,
+                                                      flags=snap_flags_q)
+            else:
+                # quiesce is not required so try snapshot again without it
+                self.assertEqual(2, mock_snapshot.call_count)
+                mock_snapshot.assert_has_calls([
+                    mock.call(snap_xml_src, flags=snap_flags_q),
+                    mock.call(snap_xml_src, flags=snap_flags)])
+        elif not quiesce_required:
+            # quiesce is not required so try snapshot again without it
+            mock_snapshot.assert_called_once_with(snap_xml_src,
+                                                  flags=snap_flags)
 
-    def test_volume_snapshot_create_libgfapi(self):
+    @mock.patch.object(FakeVirtDomain, 'snapshotCreateXML')
+    @mock.patch.object(FakeVirtDomain, 'XMLDesc')
+    @mock.patch.object(host.Host, '_get_domain')
+    def test_volume_snapshot_create_libgfapi(self, mock_get, mock_xml,
+                                             mock_snapshot):
         """Test snapshot creation with libgfapi network disk."""
         self.flags(instance_name_template = 'instance-%s')
-        self.mox.StubOutWithMock(self.drvr._host, '_get_domain')
-        self.mox.StubOutWithMock(self.drvr, '_volume_api')
 
         self.dom_xml = """
               <domain type='kvm'>
@@ -21342,9 +21346,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         new_file = 'new-file'
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
-        self.mox.StubOutWithMock(domain, 'XMLDesc')
-        self.mox.StubOutWithMock(domain, 'snapshotCreateXML')
-        domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
+        mock_xml.return_value = self.dom_xml
 
         snap_xml_src = (
            '<domainsnapshot>\n'
@@ -21367,16 +21369,13 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         snap_flags_q = (snap_flags |
                         fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE)
 
-        domain.snapshotCreateXML(snap_xml_src, flags=snap_flags_q)
-
-        self.mox.ReplayAll()
-
         guest = libvirt_guest.Guest(domain)
         with mock.patch.object(self.drvr, '_can_quiesce', return_value=None):
             self.drvr._volume_snapshot_create(self.c, instance, guest,
                                               self.volume_uuid, new_file)
-
-        self.mox.VerifyAll()
+        mock_xml.assert_called_once_with(flags=0)
+        mock_snapshot.assert_called_once_with(snap_xml_src, flags=snap_flags_q)
+        mock_get.assert_not_called()
 
     def test_volume_snapshot_create_cannot_quiesce(self):
         # We can't quiesce so we don't try.
@@ -21479,29 +21478,18 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         _test()
 
-    def test_volume_snapshot_create_outer_failure(self):
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_volume_snapshot_create')
+    @mock.patch('nova.volume.cinder.API.update_snapshot_status')
+    @mock.patch.object(host.Host, 'get_guest')
+    def test_volume_snapshot_create_outer_failure(self, mock_get, mock_update,
+                                                  mock_snapshot):
         instance = objects.Instance(**self.inst)
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml, id=1)
         guest = libvirt_guest.Guest(domain)
 
-        self.mox.StubOutWithMock(self.drvr._host, 'get_guest')
-        self.mox.StubOutWithMock(self.drvr, '_volume_api')
-        self.mox.StubOutWithMock(self.drvr, '_volume_snapshot_create')
-
-        self.drvr._host.get_guest(instance).AndReturn(guest)
-
-        self.drvr._volume_snapshot_create(self.c,
-                                          instance,
-                                          guest,
-                                          self.volume_uuid,
-                                          self.create_info['new_file']).\
-            AndRaise(exception.NovaException('oops'))
-
-        self.drvr._volume_api.update_snapshot_status(
-            self.c, self.create_info['snapshot_id'], 'error')
-
-        self.mox.ReplayAll()
+        mock_get.return_value = guest
+        mock_snapshot.side_effect = exception.NovaException('oops')
 
         self.assertRaises(exception.NovaException,
                           self.drvr.volume_snapshot_create,
@@ -21509,31 +21497,32 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                           instance,
                           self.volume_uuid,
                           self.create_info)
+        mock_get.assert_called_once_with(instance)
+        mock_update.assert_called_once_with(
+            self.c, self.create_info['snapshot_id'], 'error')
+        mock_snapshot.assert_called_once_with(
+            self.c, instance, guest, self.volume_uuid,
+            self.create_info['new_file'])
 
+    @mock.patch.object(FakeVirtDomain, 'blockCommit')
+    @mock.patch.object(FakeVirtDomain, 'blockRebase')
+    @mock.patch.object(FakeVirtDomain, 'XMLDesc')
+    @mock.patch.object(host.Host, '_get_domain')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
-    def test_volume_snapshot_delete_1(self, mock_is_job_complete):
+    def test_volume_snapshot_delete_1(self, mock_is_job_complete, mock_get,
+                                      mock_xml, mock_rebase, mock_commit):
         """Deleting newest snapshot -- blockRebase."""
 
         # libvirt lib doesn't have VIR_DOMAIN_BLOCK_REBASE_RELATIVE flag
         fakelibvirt.__dict__.pop('VIR_DOMAIN_BLOCK_REBASE_RELATIVE')
-        self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
+        self.stub_out('nova.virt.libvirt.driver.libvirt', fakelibvirt)
 
         instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
-        self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
-
-        self.mox.StubOutWithMock(self.drvr._host, '_get_domain')
-        self.mox.StubOutWithMock(domain, 'blockRebase')
-        self.mox.StubOutWithMock(domain, 'blockCommit')
-
-        self.drvr._host._get_domain(instance).AndReturn(domain)
-
-        domain.blockRebase('vda', 'snap.img', 0, flags=0)
-
-        self.mox.ReplayAll()
+        mock_xml.return_value = self.dom_xml
+        mock_get.return_value = domain
 
         # is_job_complete returns False when initially called, then True
         mock_is_job_complete.side_effect = (False, True)
@@ -21541,34 +21530,32 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.drvr._volume_snapshot_delete(self.c, instance, self.volume_uuid,
                                           snapshot_id, self.delete_info_1)
 
-        self.mox.VerifyAll()
         self.assertEqual(2, mock_is_job_complete.call_count)
+        mock_xml.assert_called_once_with(flags=0)
+        mock_get.assert_called_once_with(instance)
+        mock_rebase.assert_called_once_with('vda', 'snap.img', 0, flags=0)
+        mock_commit.assert_not_called()
         fakelibvirt.__dict__.update({'VIR_DOMAIN_BLOCK_REBASE_RELATIVE': 8})
 
+    @mock.patch.object(FakeVirtDomain, 'blockCommit')
+    @mock.patch.object(FakeVirtDomain, 'blockRebase')
+    @mock.patch.object(FakeVirtDomain, 'XMLDesc')
+    @mock.patch.object(host.Host, 'get_guest')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
-    def test_volume_snapshot_delete_relative_1(self, mock_is_job_complete):
+    def test_volume_snapshot_delete_relative_1(self, mock_is_job_complete,
+                                               mock_get, mock_xml, mock_rebase,
+                                               mock_commit):
         """Deleting newest snapshot -- blockRebase using relative flag"""
 
-        self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
+        self.stub_out('nova.virt.libvirt.driver.libvirt', fakelibvirt)
 
         instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
         guest = libvirt_guest.Guest(domain)
-        self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
-
-        self.mox.StubOutWithMock(self.drvr._host, 'get_guest')
-        self.mox.StubOutWithMock(domain, 'blockRebase')
-        self.mox.StubOutWithMock(domain, 'blockCommit')
-
-        self.drvr._host.get_guest(instance).AndReturn(guest)
-
-        domain.blockRebase('vda', 'snap.img', 0,
-                           flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
-
-        self.mox.ReplayAll()
+        mock_xml.return_value = self.dom_xml
+        mock_get.return_value = guest
 
         # is_job_complete returns False when initially called, then True
         mock_is_job_complete.side_effect = (False, True)
@@ -21576,8 +21563,13 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.drvr._volume_snapshot_delete(self.c, instance, self.volume_uuid,
                                           snapshot_id, self.delete_info_1)
 
-        self.mox.VerifyAll()
         self.assertEqual(2, mock_is_job_complete.call_count)
+        mock_xml.assert_called_once_with(flags=0)
+        mock_get.assert_called_once_with(instance)
+        mock_rebase.assert_called_once_with(
+            'vda', 'snap.img', 0,
+            flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
+        mock_commit.assert_not_called()
 
     def _setup_block_rebase_domain_and_guest_mocks(self, dom_xml):
         mock_domain = mock.Mock(spec=fakelibvirt.virDomain)
