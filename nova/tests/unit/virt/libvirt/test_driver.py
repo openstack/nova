@@ -21667,29 +21667,24 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                    snapshot_id, self.delete_info_1)
             self.assertIn('has not been fully tested', six.text_type(ex))
 
+    @mock.patch.object(host.Host, '_get_domain')
+    @mock.patch.object(FakeVirtDomain, 'blockCommit')
+    @mock.patch.object(FakeVirtDomain, 'blockRebase')
+    @mock.patch.object(FakeVirtDomain, 'XMLDesc')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
-    def test_volume_snapshot_delete_relative_2(self, mock_is_job_complete):
+    def test_volume_snapshot_delete_relative_2(self, mock_is_job_complete,
+                                               mock_xml, mock_rebase,
+                                               mock_commit, mock_get):
         """Deleting older snapshot -- blockCommit using relative flag"""
 
-        self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
+        self.stub_out('nova.virt.libvirt.driver.libvirt', fakelibvirt)
 
         instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
-        self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
-
-        self.mox.StubOutWithMock(self.drvr._host, '_get_domain')
-        self.mox.StubOutWithMock(domain, 'blockRebase')
-        self.mox.StubOutWithMock(domain, 'blockCommit')
-
-        self.drvr._host._get_domain(instance).AndReturn(domain)
-
-        domain.blockCommit('vda', 'other-snap.img', 'snap.img', 0,
-                           flags=fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
-
-        self.mox.ReplayAll()
+        mock_xml.return_value = self.dom_xml
+        mock_get.return_value = domain
 
         # is_job_complete returns False when initially called, then True
         mock_is_job_complete.side_effect = (False, True)
@@ -21697,8 +21692,13 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.drvr._volume_snapshot_delete(self.c, instance, self.volume_uuid,
                                           snapshot_id, self.delete_info_2)
 
-        self.mox.VerifyAll()
         self.assertEqual(2, mock_is_job_complete.call_count)
+        mock_xml.assert_called_once_with(flags=0)
+        mock_get.assert_called_once_with(instance)
+        mock_commit.assert_called_once_with(
+            'vda', 'other-snap.img', 'snap.img', 0,
+            flags=fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
+        mock_rebase.assert_not_called()
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     def test_volume_snapshot_delete_nonrelative_null_base(
@@ -21760,58 +21760,38 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             mock_rebase.assert_called_once_with('vdb', None, 0, flags=0)
             mock_is_job_complete.assert_called()
 
-    def test_volume_snapshot_delete_outer_success(self):
+    @mock.patch('nova.volume.cinder.API.update_snapshot_status')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_volume_refresh_connection_info')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_volume_snapshot_delete')
+    @mock.patch.object(host.Host, '_get_domain')
+    def test_volume_snapshot_delete_outer_success(
+            self, mock_get, mock_snapshot, mock_refresh, mock_update):
         instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
-
-        FakeVirtDomain(fake_xml=self.dom_xml)
-
-        self.mox.StubOutWithMock(self.drvr._host, '_get_domain')
-        self.mox.StubOutWithMock(self.drvr, '_volume_api')
-        self.mox.StubOutWithMock(self.drvr, '_volume_snapshot_delete')
-
-        self.drvr._volume_snapshot_delete(self.c,
-                                          instance,
-                                          self.volume_uuid,
-                                          snapshot_id,
-                                          delete_info=self.delete_info_1)
-
-        self.drvr._volume_api.update_snapshot_status(
-            self.c, snapshot_id, 'deleting')
-
-        self.mox.StubOutWithMock(self.drvr, '_volume_refresh_connection_info')
-        self.drvr._volume_refresh_connection_info(self.c, instance,
-                                                  self.volume_uuid)
-
-        self.mox.ReplayAll()
 
         self.drvr.volume_snapshot_delete(self.c, instance, self.volume_uuid,
                                          snapshot_id,
                                          self.delete_info_1)
 
-        self.mox.VerifyAll()
+        mock_snapshot.assert_called_once_with(
+            self.c, instance, self.volume_uuid, snapshot_id,
+            delete_info=self.delete_info_1)
+        mock_update.assert_called_once_with(self.c, snapshot_id, 'deleting')
+        mock_refresh.assert_called_once_with(self.c, instance,
+                                             self.volume_uuid)
+        mock_get.assert_not_called()
 
-    def test_volume_snapshot_delete_outer_failure(self):
+    @mock.patch('nova.volume.cinder.API.update_snapshot_status')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_volume_snapshot_delete')
+    @mock.patch.object(host.Host, '_get_domain')
+    def test_volume_snapshot_delete_outer_failure(
+            self, mock_get, mock_snapshot, mock_update):
         instance = objects.Instance(**self.inst)
         snapshot_id = '1234-9876'
-
-        FakeVirtDomain(fake_xml=self.dom_xml)
-
-        self.mox.StubOutWithMock(self.drvr._host, '_get_domain')
-        self.mox.StubOutWithMock(self.drvr, '_volume_api')
-        self.mox.StubOutWithMock(self.drvr, '_volume_snapshot_delete')
-
-        self.drvr._volume_snapshot_delete(self.c,
-                                          instance,
-                                          self.volume_uuid,
-                                          snapshot_id,
-                                          delete_info=self.delete_info_1).\
-            AndRaise(exception.NovaException('oops'))
-
-        self.drvr._volume_api.update_snapshot_status(
-            self.c, snapshot_id, 'error_deleting')
-
-        self.mox.ReplayAll()
+        mock_snapshot.side_effect = exception.NovaException('oops')
 
         self.assertRaises(exception.NovaException,
                           self.drvr.volume_snapshot_delete,
@@ -21820,22 +21800,18 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                           self.volume_uuid,
                           snapshot_id,
                           self.delete_info_1)
+        mock_snapshot.assert_called_once_with(
+            self.c, instance, self.volume_uuid, snapshot_id,
+            delete_info=self.delete_info_1)
+        mock_update.assert_called_once_with(self.c, snapshot_id,
+                                            'error_deleting')
+        mock_get.assert_not_called()
 
-        self.mox.VerifyAll()
-
-    def test_volume_snapshot_delete_invalid_type(self):
+    @mock.patch('nova.volume.cinder.API.update_snapshot_status')
+    @mock.patch.object(host.Host, '_get_domain')
+    def test_volume_snapshot_delete_invalid_type(self, mock_get,
+                                                 mock_update):
         instance = objects.Instance(**self.inst)
-
-        FakeVirtDomain(fake_xml=self.dom_xml)
-
-        self.mox.StubOutWithMock(self.drvr._host, '_get_domain')
-        self.mox.StubOutWithMock(self.drvr, '_volume_api')
-
-        self.drvr._volume_api.update_snapshot_status(
-            self.c, self.snapshot_id, 'error_deleting')
-
-        self.mox.ReplayAll()
-
         self.assertRaises(exception.NovaException,
                           self.drvr.volume_snapshot_delete,
                           self.c,
@@ -21843,9 +21819,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                           self.volume_uuid,
                           self.snapshot_id,
                           self.delete_info_invalid_type)
+        mock_update.assert_called_once_with(self.c, self.snapshot_id,
+                                            'error_deleting')
+        mock_get.assert_not_called()
 
+    @mock.patch.object(host.Host, '_get_domain')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
-    def test_volume_snapshot_delete_netdisk_1(self, mock_is_job_complete):
+    def test_volume_snapshot_delete_netdisk_1(
+            self, mock_is_job_complete, mock_get):
         """Delete newest snapshot -- blockRebase for libgfapi/network disk."""
 
         class FakeNetdiskDomain(FakeVirtDomain):
@@ -21857,38 +21838,39 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         # libvirt lib doesn't have VIR_DOMAIN_BLOCK_REBASE_RELATIVE
         fakelibvirt.__dict__.pop('VIR_DOMAIN_BLOCK_REBASE_RELATIVE')
-        self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
+        self.stub_out('nova.virt.libvirt.driver.libvirt', fakelibvirt)
 
         instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
 
         domain = FakeNetdiskDomain(fake_xml=self.dom_netdisk_xml)
-        self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(flags=0).AndReturn(self.dom_netdisk_xml)
-
-        self.mox.StubOutWithMock(self.drvr._host, '_get_domain')
-        self.mox.StubOutWithMock(domain, 'blockRebase')
-        self.mox.StubOutWithMock(domain, 'blockCommit')
-
-        self.drvr._host._get_domain(instance).AndReturn(domain)
-
-        domain.blockRebase('vdb', 'vdb[1]', 0, flags=0)
-
-        self.mox.ReplayAll()
+        mock_get.return_value = domain
 
         # is_job_complete returns False when initially called, then True
         mock_is_job_complete.side_effect = (False, True)
 
-        self.drvr._volume_snapshot_delete(self.c, instance, self.volume_uuid,
-                                          snapshot_id, self.delete_info_1)
+        with test.nested(
+            mock.patch.object(FakeNetdiskDomain, 'XMLDesc',
+                              return_value=self.dom_netdisk_xml),
+            mock.patch.object(FakeNetdiskDomain, 'blockRebase'),
+            mock.patch.object(FakeNetdiskDomain, 'blockCommit')) as (mock_xml,
+                mock_rebase, mock_commit):
+            self.drvr._volume_snapshot_delete(self.c, instance,
+                                              self.volume_uuid,
+                                              snapshot_id, self.delete_info_1)
 
-        self.mox.VerifyAll()
-        self.assertEqual(2, mock_is_job_complete.call_count)
+            self.assertEqual(2, mock_is_job_complete.call_count)
+            mock_xml.assert_called_once_with(flags=0)
+            mock_get.assert_called_once_with(instance)
+            mock_rebase.assert_called_once_with('vdb', 'vdb[1]', 0, flags=0)
+            mock_commit.assert_not_called()
+
         fakelibvirt.__dict__.update({'VIR_DOMAIN_BLOCK_REBASE_RELATIVE': 8})
 
+    @mock.patch.object(host.Host, '_get_domain')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     def test_volume_snapshot_delete_netdisk_relative_1(
-            self, mock_is_job_complete):
+            self, mock_is_job_complete, mock_get):
         """Delete newest snapshot -- blockRebase for libgfapi/network disk."""
 
         class FakeNetdiskDomain(FakeVirtDomain):
@@ -21898,38 +21880,39 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             def XMLDesc(self, flags):
                 return self.dom_netdisk_xml
 
-        self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
+        self.stub_out('nova.virt.libvirt.driver.libvirt', fakelibvirt)
 
         instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
 
         domain = FakeNetdiskDomain(fake_xml=self.dom_netdisk_xml)
-        self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(flags=0).AndReturn(self.dom_netdisk_xml)
-
-        self.mox.StubOutWithMock(self.drvr._host, '_get_domain')
-        self.mox.StubOutWithMock(domain, 'blockRebase')
-        self.mox.StubOutWithMock(domain, 'blockCommit')
-
-        self.drvr._host._get_domain(instance).AndReturn(domain)
-
-        domain.blockRebase('vdb', 'vdb[1]', 0,
-                           flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
-
-        self.mox.ReplayAll()
+        mock_get.return_value = domain
 
         # is_job_complete returns False when initially called, then True
         mock_is_job_complete.side_effect = (False, True)
 
-        self.drvr._volume_snapshot_delete(self.c, instance, self.volume_uuid,
-                                          snapshot_id, self.delete_info_1)
+        with test.nested(
+            mock.patch.object(FakeNetdiskDomain, 'XMLDesc',
+                              return_value=self.dom_netdisk_xml),
+            mock.patch.object(FakeNetdiskDomain, 'blockRebase'),
+            mock.patch.object(FakeNetdiskDomain, 'blockCommit')) as (mock_xml,
+                mock_rebase, mock_commit):
+            self.drvr._volume_snapshot_delete(self.c, instance,
+                                              self.volume_uuid,
+                                              snapshot_id, self.delete_info_1)
 
-        self.mox.VerifyAll()
-        self.assertEqual(2, mock_is_job_complete.call_count)
+            self.assertEqual(2, mock_is_job_complete.call_count)
+            mock_xml.assert_called_once_with(flags=0)
+            mock_get.assert_called_once_with(instance)
+            mock_rebase.assert_called_once_with(
+                'vdb', 'vdb[1]', 0,
+                flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
+            mock_commit.assert_not_called()
 
+    @mock.patch.object(host.Host, '_get_domain')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     def test_volume_snapshot_delete_netdisk_relative_2(
-            self, mock_is_job_complete):
+            self, mock_is_job_complete, mock_get):
         """Delete older snapshot -- blockCommit for libgfapi/network disk."""
 
         class FakeNetdiskDomain(FakeVirtDomain):
@@ -21939,35 +21922,35 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             def XMLDesc(self, flags):
                 return self.dom_netdisk_xml
 
-        self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
+        self.stub_out('nova.virt.libvirt.driver.libvirt', fakelibvirt)
 
         instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
 
         domain = FakeNetdiskDomain(fake_xml=self.dom_netdisk_xml)
-        self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(flags=0).AndReturn(self.dom_netdisk_xml)
-
-        self.mox.StubOutWithMock(self.drvr._host, '_get_domain')
-        self.mox.StubOutWithMock(domain, 'blockRebase')
-        self.mox.StubOutWithMock(domain, 'blockCommit')
-
-        self.drvr._host._get_domain(instance).AndReturn(domain)
-
-        domain.blockCommit('vdb', 'vdb[0]', 'vdb[1]', 0,
-                           flags=fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
-
-        self.mox.ReplayAll()
+        mock_get.return_value = domain
 
         # is_job_complete returns False when initially called, then True
         mock_is_job_complete.side_effect = (False, True)
 
-        self.drvr._volume_snapshot_delete(self.c, instance, self.volume_uuid,
-                                          snapshot_id,
-                                          self.delete_info_netdisk)
+        with test.nested(
+            mock.patch.object(FakeNetdiskDomain, 'XMLDesc',
+                              return_value=self.dom_netdisk_xml),
+            mock.patch.object(FakeNetdiskDomain, 'blockRebase'),
+            mock.patch.object(FakeNetdiskDomain, 'blockCommit')) as (mock_xml,
+                mock_rebase, mock_commit):
+            self.drvr._volume_snapshot_delete(self.c, instance,
+                                              self.volume_uuid,
+                                              snapshot_id,
+                                              self.delete_info_netdisk)
 
-        self.mox.VerifyAll()
-        self.assertEqual(2, mock_is_job_complete.call_count)
+            self.assertEqual(2, mock_is_job_complete.call_count)
+            mock_xml.assert_called_once_with(flags=0)
+            mock_get.assert_called_once_with(instance)
+            mock_commit.assert_called_once_with(
+                'vdb', 'vdb[0]', 'vdb[1]', 0,
+                flags=fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
+            mock_rebase.assert_not_called()
 
 
 def _fake_convert_image(source, dest, in_format, out_format,
