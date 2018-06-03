@@ -2220,7 +2220,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(FAKE_CLIENT.portgroup, 'list')
     def _test_get_volume_connector_no_ip(
             self, mac_specified, mock_pgroup, mock_port, mock_node,
-            mock_nw_info, portgroup_exist=False):
+            mock_nw_info, portgroup_exist=False, no_fixed_ip=False):
         node_uuid = uuids.node_uuid
         node_props = {'cpu_arch': 'x86_64'}
         node = ironic_utils.get_test_node(uuid=node_uuid,
@@ -2247,12 +2247,17 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         mock_node.get.return_value = node
         mock_node.list_volume_connectors.return_value = connectors
-        mock_nw_info.return_value = [vif]
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
         port = ironic_utils.get_test_port(
             node_uuid=node_uuid, address='11:22:33:44:55:66',
             internal_info={'tenant_vif_port_id': vif['id']})
         mock_port.return_value = [port]
+        if no_fixed_ip:
+            mock_nw_info.return_value = []
+            expected_props.pop('ip')
+            expected_props['host'] = instance.hostname
+        else:
+            mock_nw_info.return_value = [vif]
         if portgroup_exist:
             portgroup = ironic_utils.get_test_portgroup(
                 node_uuid=node_uuid, address='11:22:33:44:55:66',
@@ -2286,6 +2291,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
     def test_get_volume_connector_no_ip_without_mac(self):
         self._test_get_volume_connector_no_ip(False)
+
+    def test_get_volume_connector_no_ip_no_fixed_ip(self):
+        self._test_get_volume_connector_no_ip(False, no_fixed_ip=True)
 
     @mock.patch.object(ironic_driver.IronicDriver, 'plug_vifs')
     def test_prepare_networks_before_block_device_mapping(self, mock_pvifs):

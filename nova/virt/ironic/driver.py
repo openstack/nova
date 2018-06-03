@@ -1859,6 +1859,11 @@ class IronicDriver(virt_driver.ComputeDriver):
         props['platform'] = properties.get('cpu_arch')
         props['os_type'] = 'baremetal'
 
+        # NOTE(TheJulia): The host field is important to cinder connectors
+        # as it is used in some drivers for logging purposes, and we presently
+        # only otherwise set it when an IP address is used.
+        if 'host' not in props:
+            props['host'] = instance.hostname
         # Eventually it would be nice to be able to do multipath, but for now
         # we should at least set the value to False.
         props['multipath'] = False
