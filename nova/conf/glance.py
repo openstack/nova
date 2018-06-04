@@ -109,7 +109,7 @@ Enable certificate validation for image signature verification.
 During image signature verification nova will first verify the validity of the
 image's signing certificate using the set of trusted certificates associated
 with the instance. If certificate validation fails, signature verification
-will not be performed and the image will be placed into an error state. This
+will not be performed and the instance will be placed into an error state. This
 provides end users with stronger assurances that the image data is unmodified
 and trustworthy. If left disabled, image signature verification can still
 occur but the end user will not have any assurance that the signing
