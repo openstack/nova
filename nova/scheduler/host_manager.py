@@ -256,6 +256,9 @@ class HostState(object):
         self.ram_allocation_ratio = compute.ram_allocation_ratio
         self.disk_allocation_ratio = compute.disk_allocation_ratio
 
+        # update failed_builds counter reported by the compute
+        self.failed_builds = int(self.stats.get('failed_builds', 0))
+
     def consume_from_request(self, spec_obj):
         """Incrementally update host state from a RequestSpec object."""
 

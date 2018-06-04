@@ -609,20 +609,20 @@ compute_group_opts = [
     cfg.IntOpt('consecutive_build_service_disable_threshold',
         default=10,
         help="""
-Number of consecutive failed builds that result in disabling a compute service.
+Enables reporting of build failures to the scheduler.
 
-This option will cause nova-compute to set itself to a disabled state
-if a certain number of consecutive build failures occur. This will
-prevent the scheduler from continuing to send builds to a compute node that is
-consistently failing. Note that all failures qualify and count towards this
-score, including reschedules that may have been due to racy scheduler behavior.
-Since the failures must be consecutive, it is unlikely that occasional expected
-reschedules will actually disable a compute node.
+Any nonzero value will enable sending build failure statistics to the
+scheduler for use by the BuildFailureWeigher.
 
 Possible values:
 
-* Any positive integer representing a build failure count.
-* Zero to never auto-disable.
+* Any positive integer enables reporting build failures.
+* Zero to disable reporting build failures.
+
+Related options:
+
+* [filter_scheduler]/build_failure_weight_multiplier
+
 """),
     cfg.IntOpt("shutdown_retry_interval",
         default=10,
