@@ -240,13 +240,14 @@ Possible values:
 Maximum number of instances that be active on a host.
 
 If you need to limit the number of instances on any given host, set this option
-to the maximum number of instances you want to allow. The num_instances_filter
-will reject any host that has at least as many instances as this option's
-value.
+to the maximum number of instances you want to allow. The NumInstancesFilter
+and AggregateNumInstancesFilter will reject any host that has at least as many
+instances as this option's value.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'num_instances_filter' filter is enabled.
+only affects scheduling if the 'NumInstancesFilter' or
+'AggregateNumInstancesFilter' filter is enabled.
 
 Possible values:
 
