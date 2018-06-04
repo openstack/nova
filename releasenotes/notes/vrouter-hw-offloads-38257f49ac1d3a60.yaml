@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    This release adds support for ``direct`` and ``virtio-forwarder`` VNIC
+    types to the ``vrouter`` VIF type. In order to use these VNIC types,
+    support is required from the version of OpenContrail, Contrail or Tungsten
+    Fabric that is installed, as well the required hardware. At this time, the
+    reference os-vif plugin is hosted on OpenContrail at
+    https://github.com/Juniper/contrail-nova-vif-driver but is expected to
+    transition to Tungsten Fabric in the future. Version 5.1 or later of the
+    plugin is required to use these new VNIC types. Consult the `Tungsten
+    Fabric documentation <https://tungstenfabric.github.io/website/>`_ for
+    release notes, when available, about hardware support. For commercial
+    support, consult the release notes from a downstream vendor.

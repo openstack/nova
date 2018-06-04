@@ -273,6 +273,25 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         type=network_model.VIF_TYPE_VROUTER,
         devname='tap-xxx-yyy-zzz')
 
+    vif_vrouter_direct = network_model.VIF(id=uuids.vif,
+        address='ca:fe:de:ad:be:ef',
+        network=network_vrouter,
+        type=network_model.VIF_TYPE_VROUTER,
+        vnic_type=network_model.VNIC_TYPE_DIRECT,
+        profile={'pci_slot': '0000:0a:00.1'},
+        devname='tap-xxx-yyy-zzz')
+
+    vif_vrouter_forwarder = network_model.VIF(id=uuids.vif,
+        address='ca:fe:de:ad:be:ef',
+        network=network_vrouter,
+        type=network_model.VIF_TYPE_VROUTER,
+        vnic_type=network_model.VNIC_TYPE_VIRTIO_FORWARDER,
+        profile={'pci_slot': '0000:0a:00.1'},
+        details={
+            network_model.VIF_DETAILS_VHOSTUSER_MODE: 'server',
+            network_model.VIF_DETAILS_VHOSTUSER_SOCKET: '/tmp/usv-xxx-yyy-zzz',
+            network_model.VIF_DETAILS_VHOSTUSER_VROUTER_PLUG: True})
+
     vif_contrail_vrouter = network_model.VIF(id=uuids.vif,
         address='ca:fe:de:ad:be:ef',
         network=network_vrouter,
@@ -1399,6 +1418,34 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
                                      self.vif_vrouter, dev_want)
+
+    def test_vrouter_direct(self):
+        """Test for Contrail / Tungsten Fabric direct offloaded datapath."""
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_vrouter_direct)
+        node = self._get_node(xml)
+        self._assertTypeAndPciEquals(node,
+                                     "hostdev",
+                                     self.vif_vrouter_direct)
+        self._assertMacEquals(node, self.vif_vrouter_direct)
+
+    def test_vrouter_forwarder(self):
+        """Test for Contrail / Tungsten Fabric indirect offloaded datapath."""
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d,
+                                     self.vif_vrouter_forwarder)
+        node = self._get_node(xml)
+        self.assertEqual(node.get("type"),
+                         network_model.VIF_TYPE_VHOSTUSER)
+
+        self._assertTypeEquals(node, network_model.VIF_TYPE_VHOSTUSER,
+                               "source", "mode", "server")
+        self._assertTypeEquals(node, network_model.VIF_TYPE_VHOSTUSER,
+                               "source", "path", "/tmp/usv-xxx-yyy-zzz")
+        self._assertTypeEquals(node, network_model.VIF_TYPE_VHOSTUSER,
+                               "source", "type", "unix")
+        self._assertMacEquals(node, self.vif_vrouter_forwarder)
+        self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
 
     def test_contrail_vrouter(self):
         """Test for the Contrail / Tungsten Fabric DPDK datapath."""
