@@ -163,6 +163,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         host_state.ram_allocation_ratio = 1.5
         host_state.disk_allocation_ratio = 1.0
         host_state.metrics = objects.MonitorMetricList(objects=[])
+        host_state.failed_builds = 0
         return host_state
 
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',

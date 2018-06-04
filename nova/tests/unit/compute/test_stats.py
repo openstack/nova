@@ -238,3 +238,19 @@ class StatsTestCase(test.NoDBTestCase):
 
         self.assertEqual(0, len(self.stats))
         self.assertEqual(0, len(self.stats.states))
+
+    def test_build_failed_succeded(self):
+        self.assertEqual('not-set', self.stats.get('failed_builds', 'not-set'))
+        self.stats.build_failed()
+        self.assertEqual(1, self.stats['failed_builds'])
+        self.stats.build_failed()
+        self.assertEqual(2, self.stats['failed_builds'])
+        self.stats.build_succeeded()
+        self.assertEqual(0, self.stats['failed_builds'])
+        self.stats.build_succeeded()
+        self.assertEqual(0, self.stats['failed_builds'])
+
+    def test_build_succeeded_first(self):
+        self.assertEqual('not-set', self.stats.get('failed_builds', 'not-set'))
+        self.stats.build_succeeded()
+        self.assertEqual(0, self.stats['failed_builds'])

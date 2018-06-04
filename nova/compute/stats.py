@@ -138,3 +138,11 @@ class Stats(dict):
                                  os_type=os_type, project_id=project_id)
 
         return (vm_state, task_state, os_type, project_id)
+
+    def build_failed(self):
+        self['failed_builds'] = self.get('failed_builds', 0) + 1
+
+    def build_succeeded(self):
+        # FIXME(danms): Make this more graceful, either by time-based aging or
+        # a fixed decline upon success
+        self['failed_builds'] = 0
