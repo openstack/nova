@@ -117,9 +117,14 @@ class RequestContext(context.RequestContext):
 
         if service_catalog:
             # Only include required parts of service_catalog
+            # NOTE(lyarwood): While volumev2 is no longer supported with Queens
+            # we still provide it as part of the service catalog as the request
+            # context may end up being sent over the wire to a Pike compute
+            # that is specifically looking for a cinderv2 type via catalog_info
             self.service_catalog = [s for s in service_catalog
-                if s.get('type') in ('image', 'block-storage', 'volumev3',
-                                     'key-manager', 'placement', 'network')]
+                if s.get('type') in ('image', 'block-storage', 'volumev2',
+                                     'volumev3', 'key-manager', 'placement',
+                                     'network')]
         else:
             # if list is empty or none
             self.service_catalog = []
