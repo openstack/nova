@@ -330,6 +330,11 @@ class TestCase(testtools.TestCase):
         # NOTE(mikal): make sure we don't load a privsep helper accidentally
         self.useFixture(nova_fixtures.PrivsepNoHelperFixture())
 
+        # FIXME(danms): Disable this for all tests by default to avoid breaking
+        # any that depend on default/previous ordering
+        self.flags(build_failure_weight_multiplier=0.0,
+                   group='filter_scheduler')
+
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.
 

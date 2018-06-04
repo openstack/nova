@@ -73,6 +73,7 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
     _min_count_parameter = 'min_count'
 
     def setUp(self):
+        self.computes = {}
         super(ServersTestBase, self).setUp()
         # The network service is called as part of server creates but no
         # networks have been populated in the db, so stub the methods.
@@ -133,6 +134,30 @@ class ServersTest(ServersTestBase):
         for server in servers:
             LOG.debug("server: %s", server)
 
+    def _get_node_build_failures(self):
+        ctxt = context.get_admin_context()
+        computes = objects.ComputeNodeList.get_all(ctxt)
+        return {
+            node.hypervisor_hostname: int(node.stats.get('failed_builds', 0))
+            for node in computes}
+
+    def _run_periodics(self):
+        """Run the update_available_resource task on every compute manager
+
+        This runs periodics on the computes in an undefined order; some child
+        class redefined this function to force a specific order.
+        """
+
+        if self.compute.host not in self.computes:
+            self.computes[self.compute.host] = self.compute
+
+        ctx = context.get_admin_context()
+        for compute in self.computes.values():
+            LOG.info('Running periodic for compute (%s)',
+                compute.manager.host)
+            compute.manager.update_available_resource(ctx)
+        LOG.info('Finished with periodics')
+
     def test_create_server_with_error(self):
         # Create a server which will enter error state.
 
@@ -154,6 +179,12 @@ class ServersTest(ServersTestBase):
         self.assertEqual('ERROR', found_server['status'])
         self._delete_server(created_server_id)
 
+        # We should have no (persisted) build failures until we update
+        # resources, after which we should have one
+        self.assertEqual([0], list(self._get_node_build_failures().values()))
+        self._run_periodics()
+        self.assertEqual([1], list(self._get_node_build_failures().values()))
+
     def _test_create_server_with_error_with_retries(self):
         # Create a server which will enter error state.
 
@@ -161,6 +192,7 @@ class ServersTest(ServersTestBase):
         self.addCleanup(fake.restore_nodes)
         self.flags(host='host2')
         self.compute2 = self.start_service('compute', host='host2')
+        self.computes['compute2'] = self.compute2
 
         fails = []
 
@@ -188,11 +220,17 @@ class ServersTest(ServersTestBase):
         self.flags(max_attempts=2, group='scheduler')
         fails = self._test_create_server_with_error_with_retries()
         self.assertEqual(2, fails)
+        self._run_periodics()
+        self.assertEqual(
+            [1, 1], list(self._get_node_build_failures().values()))
 
     def test_create_server_with_error_with_no_retries(self):
         self.flags(max_attempts=1, group='scheduler')
         fails = self._test_create_server_with_error_with_retries()
         self.assertEqual(1, fails)
+        self._run_periodics()
+        self.assertEqual(
+            [0, 1], list(sorted(self._get_node_build_failures().values())))
 
     def test_create_and_delete_server(self):
         # Creates and deletes a server.

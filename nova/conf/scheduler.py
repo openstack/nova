@@ -503,6 +503,34 @@ Possible values:
   meaningful, as negative values would make this behave as a soft affinity
   weigher.
 """),
+    cfg.FloatOpt(
+        "build_failure_weight_multiplier",
+        default=1000000.0,
+        help="""
+Multiplier used for weighing hosts that have had recent build failures.
+
+This option determines how much weight is placed on a compute node with
+recent build failures. Build failures may indicate a failing, misconfigured,
+or otherwise ailing compute node, and avoiding it during scheduling may be
+beneficial. The weight is inversely proportional to the number of recent
+build failures the compute node has experienced. This value should be
+set to some high value to offset weight given by other enabled weighers
+due to available resources. To disable weighing compute hosts by the
+number of recent failures, set this to zero.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+Possible values:
+
+* An integer or float value, where the value corresponds to the multiplier
+  ratio for this weigher.
+
+Related options:
+
+* [compute]/consecutive_build_service_disable_threshold - Must be nonzero
+  for a compute to report data considered by this weigher.
+"""),
     cfg.BoolOpt(
         "shuffle_best_same_weighed_hosts",
         default=False,
