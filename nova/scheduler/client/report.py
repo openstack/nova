@@ -244,7 +244,14 @@ def get_placement_request_id(response):
 class SchedulerReportClient(object):
     """Client class for updating the scheduler."""
 
-    def __init__(self):
+    def __init__(self, adapter=None):
+        """Initialize the report client.
+
+        :param adapter: A prepared keystoneauth1 Adapter for API communication.
+                If unspecified, one is created based on config options in the
+                [placement] section.
+        """
+        self._adapter = adapter
         # An object that contains a nova-compute-side cache of resource
         # provider and inventory information
         self._provider_tree = provider_tree.ProviderTree()
@@ -260,7 +267,7 @@ class SchedulerReportClient(object):
         # Flush provider tree and associations so we start from a clean slate.
         self._provider_tree = provider_tree.ProviderTree()
         self._association_refresh_time = {}
-        client = utils.get_ksa_adapter('placement')
+        client = self._adapter or utils.get_ksa_adapter('placement')
         # Set accept header on every request to ensure we notify placement
         # service of our response body media type preferences.
         client.additional_headers = {'accept': 'application/json'}
