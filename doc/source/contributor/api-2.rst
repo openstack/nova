@@ -26,11 +26,11 @@ The interface is a mostly RESTful API. REST stands for Representational State Tr
 Routing
 -------
 
-To map URLs to controllers+actions, OpenStack uses the Routes package, a clone of Rails routes for Python implementations. See http://routes.groovie.org/ for more information.
+To map URLs to controllers+actions, OpenStack uses the Routes package, a clone of Rails routes for Python implementations. See http://routes.readthedocs.io/en/latest/ for more information.
 
 URLs are mapped to "action" methods on "controller" classes in ``nova/api/openstack/__init__/ApiRouter.__init__`` .
 
-See http://routes.groovie.org/manual.html for all syntax, but you'll probably just need these two:
+See http://routes.readthedocs.io/en/latest/modules/mapper.html for all syntax, but you'll probably just need these two:
    - mapper.connect() lets you map a single URL to a single action on a controller.
    - mapper.resource() connects many standard URLs to actions on a controller.
 
