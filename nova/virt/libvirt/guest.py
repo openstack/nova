@@ -168,7 +168,7 @@ class Guest(object):
             if code == libvirt.VIR_ERR_AGENT_UNRESPONSIVE:
                 LOG.debug('Failed to set time: QEMU agent unresponsive',
                           instance_uuid=self.uuid)
-            elif code == libvirt.VIR_ERR_NO_SUPPORT:
+            elif code == libvirt.VIR_ERR_OPERATION_UNSUPPORTED:
                 LOG.debug('Failed to set time: not supported',
                           instance_uuid=self.uuid)
             elif code == libvirt.VIR_ERR_ARGUMENT_UNSUPPORTED:
