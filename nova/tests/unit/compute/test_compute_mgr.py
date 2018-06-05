@@ -187,7 +187,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         rt = mock.Mock(spec_set=['update_available_resource'])
         get_rt.return_value = rt
 
-        self.compute.update_available_resource_for_node(
+        self.compute._update_available_resource_for_node(
             self.context,
             mock.sentinel.node,
         )
@@ -208,7 +208,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # nulled out after the ComputeHostNotFound exception is raised.
         self.compute._resource_tracker = rt
 
-        self.compute.update_available_resource_for_node(
+        self.compute._update_available_resource_for_node(
             self.context,
             mock.sentinel.node,
         )
@@ -222,7 +222,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'delete_resource_provider')
     @mock.patch.object(manager.ComputeManager,
-                       'update_available_resource_for_node')
+                       '_update_available_resource_for_node')
     @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
     @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
     def test_update_available_resource(self, get_db_nodes, get_avail_nodes,
@@ -253,7 +253,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'delete_resource_provider')
     @mock.patch.object(manager.ComputeManager,
-                       'update_available_resource_for_node')
+                       '_update_available_resource_for_node')
     @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
     @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
     def test_update_available_resource_not_ready(self, get_db_nodes,
