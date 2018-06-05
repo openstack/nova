@@ -19,6 +19,7 @@ import sqlalchemy as sa
 import nova
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.db.sqlalchemy import api_models as models
 from nova import rc_fields as fields
 from nova.tests.functional.api.openstack.placement.db import test_base as tb
 from nova.tests import uuidsentinel
@@ -101,6 +102,15 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
                          created_resource_provider.name)
         self.assertEqual(0, created_resource_provider.generation)
         self.assertEqual(0, retrieved_resource_provider.generation)
+        self.assertIsNone(retrieved_resource_provider.parent_provider_uuid)
+
+    def test_create_with_parent_provider_uuid(self):
+        self._create_provider('p1', uuid=uuidsentinel.create_p)
+        child = self._create_provider('c1', uuid=uuidsentinel.create_c,
+                                      parent=uuidsentinel.create_p)
+        self.assertEqual(uuidsentinel.create_c, child.uuid)
+        self.assertEqual(uuidsentinel.create_p, child.parent_provider_uuid)
+        self.assertEqual(uuidsentinel.create_p, child.root_provider_uuid)
 
     def test_root_provider_population(self):
         """Simulate an old resource provider record in the database that has no
@@ -440,6 +450,26 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertRaises(exception.NotFound,
                           created_resource_provider.destroy)
 
+    def test_destroy_foreign_key(self):
+        """This tests bug #1739571."""
+
+        def emulate_rp_mysql_delete(func):
+            def wrapped(context, _id):
+                rp = context.session.query(
+                    models.ResourceProvider).\
+                    filter(
+                        models.ResourceProvider.id == _id).first()
+                self.assertIsNone(rp.root_provider_id)
+                return func(context, _id)
+            return wrapped
+
+        emulated = emulate_rp_mysql_delete(rp_obj._delete_rp_record)
+
+        rp = self._create_provider(uuidsentinel.fk)
+
+        with mock.patch.object(rp_obj, '_delete_rp_record', emulated):
+            rp.destroy()
+
     def test_destroy_allocated_resource_provider_fails(self):
         rp, allocation = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
         self.assertRaises(exception.ResourceProviderInUse,
@@ -459,6 +489,29 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         inventories = rp_obj.InventoryList.get_all_by_resource_provider(
             self.ctx, resource_provider)
         self.assertEqual(0, len(inventories))
+
+    def test_destroy_with_traits(self):
+        """Test deleting a resource provider that has a trait successfully.
+        """
+        rp = self._create_provider('fake_rp1', uuid=uuidsentinel.fake_rp1)
+        custom_trait = 'CUSTOM_TRAIT_1'
+        tb.set_traits(rp, custom_trait)
+
+        trl = rp_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
+        self.assertEqual(1, len(trl))
+
+        # Delete a resource provider that has a trait assosiation.
+        rp.destroy()
+
+        # Assert the record has been deleted
+        # in 'resource_provider_traits' table
+        # after Resource Provider object has been destroyed.
+        trl = rp_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
+        self.assertEqual(0, len(trl))
+        # Assert that NotFound exception is raised.
+        self.assertRaises(exception.NotFound,
+                          rp_obj.ResourceProvider.get_by_uuid,
+                          self.ctx, uuidsentinel.fake_rp1)
 
     def test_set_inventory_unknown_resource_class(self):
         """Test attempting to set inventory to an unknown resource class raises
