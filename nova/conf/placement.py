@@ -47,9 +47,22 @@ is determined.
 ]
 
 
+# Duplicate log_options from oslo_service so that we don't have to import
+# that package into placement.
+# NOTE(cdent): Doing so ends up requiring eventlet and other unnecessary
+# packages for just this one setting.
+service_opts = [
+    cfg.BoolOpt('log_options',
+                default=True,
+                help='Enables or disables logging values of all registered '
+                     'options when starting a service (at DEBUG level).'),
+]
+
+
 def register_opts(conf):
     conf.register_group(placement_group)
     conf.register_opts(placement_opts, group=placement_group)
+    conf.register_opts(service_opts)
     confutils.register_ksa_opts(conf, placement_group, DEFAULT_SERVICE_TYPE)
 
 
