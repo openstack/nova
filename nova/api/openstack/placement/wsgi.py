@@ -19,7 +19,6 @@ import os
 import os.path
 
 from oslo_log import log as logging
-from oslo_service import _options as service_opts
 
 from nova.api.openstack.placement import deploy
 from nova import conf
@@ -56,11 +55,7 @@ def init_application():
     # initialize the logging system
     setup_logging(conf.CONF)
 
-    # dump conf at debug (log_options option comes from oslo.service)
-    # FIXME(mriedem): This is gross but we don't have a public hook into
-    # oslo.service to register these options, so we are doing it manually for
-    # now; remove this when we have a hook method into oslo.service.
-    conf.CONF.register_opts(service_opts.service_opts)
+    # dump conf at debug if log_options
     if conf.CONF.log_options:
         conf.CONF.log_opt_values(
             logging.getLogger(__name__),
