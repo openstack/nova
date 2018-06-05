@@ -43,7 +43,7 @@ http://docs.openstack.org/infra/manual/developers.html#automated-testing
 Before merging any code, there is an integrate gate test queue, to ensure
 master is always passing all tests.
 For more details, please see:
-http://docs.openstack.org/infra/zuul/gating.html
+http://docs.openstack.org/infra/zuul/user/gating.html
 
 Infra vs Third-Party
 --------------------
