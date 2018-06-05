@@ -22,7 +22,6 @@ from nova import context
 from nova.db.sqlalchemy import api_models as models
 from nova import rc_fields as fields
 from nova import test
-from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel as uuids
 
 
@@ -92,8 +91,20 @@ def _fake_ensure_cache(ctxt):
     cache.id_from_string.return_value = _RESOURCE_CLASS_ID
 
 
-class TestResourceProviderNoDB(test_objects._LocalTest):
-    USES_DB = False
+class _TestCase(test.NoDBTestCase):
+    """Base class for other tests in this file.
+
+    It establishes the RequestContext used as self.context in the tests.
+    """
+
+    def setUp(self):
+        super(_TestCase, self).setUp()
+        self.user_id = 'fake-user'
+        self.project_id = 'fake-project'
+        self.context = context.RequestContext(self.user_id, self.project_id)
+
+
+class TestResourceProviderNoDB(_TestCase):
 
     def test_create_id_fail(self):
         obj = resource_provider.ResourceProvider(context=self.context,
@@ -119,8 +130,7 @@ class TestResourceProviderNoDB(test_objects._LocalTest):
         self.assertIn('root provider UUID cannot be manually set', str(exc))
 
 
-class TestProviderSummaryNoDB(test_objects._LocalTest):
-    USES_DB = False
+class TestProviderSummaryNoDB(_TestCase):
 
     def test_resource_class_names(self):
         psum = resource_provider.ProviderSummary(mock.sentinel.ctx)
@@ -135,7 +145,9 @@ class TestProviderSummaryNoDB(test_objects._LocalTest):
         self.assertEqual(expected, psum.resource_class_names)
 
 
-class TestResourceProvider(test_objects._LocalTest):
+# FIXME(cdent): Tests which use the database aren't unit tests.
+class TestResourceProvider(_TestCase):
+    USES_DB = True
 
     def test_create_no_parent(self):
         rp = resource_provider.ResourceProvider(
@@ -244,8 +256,7 @@ class TestResourceProvider(test_objects._LocalTest):
             rp.destroy()
 
 
-class TestInventoryNoDB(test_objects._LocalTest):
-    USES_DB = False
+class TestInventoryNoDB(_TestCase):
 
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
                 '_ensure_rc_cache', side_effect=_fake_ensure_cache)
@@ -315,7 +326,7 @@ class TestInventoryNoDB(test_objects._LocalTest):
         self.assertEqual(2, inv.capacity)
 
 
-class TestInventoryList(test_objects._LocalTest):
+class TestInventoryList(_TestCase):
 
     def test_find(self):
         rp = resource_provider.ResourceProvider(uuid=uuids.rp_uuid)
@@ -348,7 +359,8 @@ class TestInventoryList(test_objects._LocalTest):
         self.assertIsNone(inv_list.find('HOUSE'))
 
 
-class TestAllocation(test_objects._LocalTest):
+# FIXME(cdent): Tests which use the database aren't unit tests.
+class TestAllocation(_TestCase):
     USES_DB = True
 
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
@@ -440,8 +452,7 @@ class TestAllocation(test_objects._LocalTest):
                           alloc_list.create_all)
 
 
-class TestAllocationListNoDB(test_objects._LocalTest):
-    USES_DB = False
+class TestAllocationListNoDB(_TestCase):
 
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
                 '_ensure_rc_cache',
@@ -463,13 +474,7 @@ class TestAllocationListNoDB(test_objects._LocalTest):
         self.assertEqual(_ALLOCATION_DB['used'], allocations[0].used)
 
 
-class TestResourceClass(test.NoDBTestCase):
-
-    def setUp(self):
-        super(TestResourceClass, self).setUp()
-        self.user_id = 'fake-user'
-        self.project_id = 'fake-project'
-        self.context = context.RequestContext(self.user_id, self.project_id)
+class TestResourceClass(_TestCase):
 
     def test_cannot_create_with_id(self):
         rc = resource_provider.ResourceClass(self.context, id=1,
@@ -483,13 +488,7 @@ class TestResourceClass(test.NoDBTestCase):
         self.assertIn('name is required', str(exc))
 
 
-class TestTraits(test.NoDBTestCase):
-
-    def setUp(self):
-        super(TestTraits, self).setUp()
-        self.user_id = 'fake-user'
-        self.project_id = 'fake-project'
-        self.context = context.RequestContext(self.user_id, self.project_id)
+class TestTraits(_TestCase):
 
     @mock.patch("nova.api.openstack.placement.objects.resource_provider."
                 "_trait_sync")
