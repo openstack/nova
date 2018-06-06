@@ -227,9 +227,6 @@ class LibvirtGenericVIFDriver(object):
     def get_bridge_name(self, vif):
         return vif['network']['bridge']
 
-    def get_ovs_interfaceid(self, vif):
-        return vif.get('ovs_interfaceid') or vif['id']
-
     def get_veth_pair_names(self, iface_id):
         return (("qvb%s" % iface_id)[:network_model.NIC_NAME_LEN],
                 ("qvo%s" % iface_id)[:network_model.NIC_NAME_LEN])
