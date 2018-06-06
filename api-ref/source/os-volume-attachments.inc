@@ -145,6 +145,9 @@ Update a volume attachment.
 .. note:: This action only valid when the server is in ACTIVE, PAUSED and RESIZED state,
           or a conflict(409) error will be returned.
 
+Updating, or what is commonly referred to as "swapping", volume attachments
+with volumes that have more than one read/write attachment, is not supported.
+
 Normal response codes: 202
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
