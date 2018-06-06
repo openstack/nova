@@ -262,6 +262,29 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertEqual(2, mock_get_image.call_count)
             self.assertEqual(2, mock_limit_check_pu.call_count)
 
+    @mock.patch('nova.objects.Quotas.limit_check')
+    def test_create_volume_backed_instance_with_trusted_certs(self,
+                                                              check_limit):
+        # Creating an instance with no image_ref specified will result in
+        # creating a volume-backed instance
+        self.assertRaises(exception.CertificateValidationFailed,
+                          self.compute_api.create, self.context,
+                          instance_type=self._create_flavor(), image_href=None,
+                          trusted_certs=['test-cert-1', 'test-cert-2'])
+
+    @mock.patch('nova.objects.Quotas.limit_check')
+    def test_create_volume_backed_instance_with_conf_trusted_certs(
+            self, check_limit):
+        self.flags(verify_glance_signatures=True, group='glance')
+        self.flags(enable_certificate_validation=True, group='glance')
+        self.flags(default_trusted_certificate_ids=['certs'], group='glance')
+        # Creating an instance with no image_ref specified will result in
+        # creating a volume-backed instance
+        self.assertRaises(exception.CertificateValidationFailed,
+                          self.compute_api.create, self.context,
+                          instance_type=self._create_flavor(),
+                          image_href=None)
+
     def _test_create_max_net_count(self, max_net_count, min_count, max_count):
         with test.nested(
             mock.patch.object(self.compute_api, '_get_image',
@@ -3790,6 +3813,171 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertNotEqual(orig_key_name, instance.key_name)
         self.assertNotEqual(orig_key_data, instance.key_data)
 
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.Instance, 'get_flavor')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(compute_api.API, '_get_image')
+    @mock.patch.object(compute_api.API, '_check_auto_disk_config')
+    @mock.patch.object(compute_api.API, '_checks_for_create_and_rebuild')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    def test_rebuild_change_trusted_certs(self, _record_action_start,
+            _checks_for_create_and_rebuild, _check_auto_disk_config,
+            _get_image, bdm_get_by_instance_uuid, get_flavor, instance_save,
+            req_spec_get_by_inst_uuid, get_min_version):
+        orig_system_metadata = {}
+        orig_trusted_certs = ['orig-trusted-cert-1', 'orig-trusted-cert-2']
+        new_trusted_certs = ['new-trusted-cert-1', 'new-trusted-cert-2']
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE, cell_name='fake-cell',
+            launched_at=timeutils.utcnow(),
+            system_metadata=orig_system_metadata, image_ref='foo',
+            expected_attrs=['system_metadata'],
+            trusted_certs=orig_trusted_certs)
+        get_flavor.return_value = test_flavor.fake_flavor
+        flavor = instance.get_flavor()
+        image_href = 'foo'
+        image = {
+            "min_ram": 10, "min_disk": 1,
+            "properties": {'architecture': fields_obj.Architecture.X86_64,
+                           'vm_mode': 'hvm'}}
+        admin_pass = ''
+        files_to_inject = []
+        bdms = objects.BlockDeviceMappingList()
+
+        _get_image.return_value = (None, image)
+        bdm_get_by_instance_uuid.return_value = bdms
+
+        fake_spec = objects.RequestSpec()
+        req_spec_get_by_inst_uuid.return_value = fake_spec
+
+        with mock.patch.object(self.compute_api.compute_task_api,
+                'rebuild_instance') as rebuild_instance:
+            self.compute_api.rebuild(self.context, instance, image_href,
+                                     admin_pass, files_to_inject,
+                                     trusted_certs=new_trusted_certs)
+
+            rebuild_instance.assert_called_once_with(
+                self.context, instance=instance, new_pass=admin_pass,
+                injected_files=files_to_inject, image_ref=image_href,
+                orig_image_ref=image_href,
+                orig_sys_metadata=orig_system_metadata, bdms=bdms,
+                preserve_ephemeral=False, host=instance.host,
+                request_spec=fake_spec, kwargs={})
+
+        _check_auto_disk_config.assert_called_once_with(image=image)
+        _checks_for_create_and_rebuild.assert_called_once_with(
+            self.context, None, image, flavor, {}, [], None)
+        self.assertEqual(new_trusted_certs, instance.trusted_certs.ids)
+
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.Instance, 'get_flavor')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(compute_api.API, '_get_image')
+    @mock.patch.object(compute_api.API, '_check_auto_disk_config')
+    @mock.patch.object(compute_api.API, '_checks_for_create_and_rebuild')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    def test_rebuild_unset_trusted_certs(self, _record_action_start,
+                                          _checks_for_create_and_rebuild,
+                                          _check_auto_disk_config,
+                                          _get_image, bdm_get_by_instance_uuid,
+                                          get_flavor, instance_save,
+                                          req_spec_get_by_inst_uuid,
+                                          get_min_version):
+        """Tests the scenario that the server was created with some trusted
+        certs and then rebuilt without trusted_image_certificates=None
+        explicitly to unset the trusted certs on the server.
+        """
+        orig_system_metadata = {}
+        orig_trusted_certs = ['orig-trusted-cert-1', 'orig-trusted-cert-2']
+        new_trusted_certs = None
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE, cell_name='fake-cell',
+            launched_at=timeutils.utcnow(),
+            system_metadata=orig_system_metadata, image_ref='foo',
+            expected_attrs=['system_metadata'],
+            trusted_certs=orig_trusted_certs)
+        get_flavor.return_value = test_flavor.fake_flavor
+        flavor = instance.get_flavor()
+        image_href = 'foo'
+        image = {
+            "min_ram": 10, "min_disk": 1,
+            "properties": {'architecture': fields_obj.Architecture.X86_64,
+                           'vm_mode': 'hvm'}}
+        admin_pass = ''
+        files_to_inject = []
+        bdms = objects.BlockDeviceMappingList()
+
+        _get_image.return_value = (None, image)
+        bdm_get_by_instance_uuid.return_value = bdms
+
+        fake_spec = objects.RequestSpec()
+        req_spec_get_by_inst_uuid.return_value = fake_spec
+
+        with mock.patch.object(self.compute_api.compute_task_api,
+                               'rebuild_instance') as rebuild_instance:
+            self.compute_api.rebuild(self.context, instance, image_href,
+                                     admin_pass, files_to_inject,
+                                     trusted_certs=new_trusted_certs)
+
+            rebuild_instance.assert_called_once_with(
+                self.context, instance=instance, new_pass=admin_pass,
+                injected_files=files_to_inject, image_ref=image_href,
+                orig_image_ref=image_href,
+                orig_sys_metadata=orig_system_metadata, bdms=bdms,
+                preserve_ephemeral=False, host=instance.host,
+                request_spec=fake_spec, kwargs={})
+
+        _check_auto_disk_config.assert_called_once_with(image=image)
+        _checks_for_create_and_rebuild.assert_called_once_with(
+            self.context, None, image, flavor, {}, [], None)
+        self.assertIsNone(instance.trusted_certs)
+
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
+    @mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                       return_value=True)
+    @mock.patch.object(objects.Instance, 'get_flavor')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(compute_api.API, '_get_image')
+    @mock.patch.object(compute_api.API, '_check_auto_disk_config')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    def test_rebuild_volume_backed_instance_with_trusted_certs(
+            self, _record_action_start, _check_auto_disk_config, _get_image,
+            bdm_get_by_instance_uuid, get_flavor, instance_is_volume_backed,
+            get_min_version):
+        orig_system_metadata = {}
+        new_trusted_certs = ['new-trusted-cert-1', 'new-trusted-cert-2']
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE, cell_name='fake-cell',
+            launched_at=timeutils.utcnow(),
+            system_metadata=orig_system_metadata, image_ref=None,
+            expected_attrs=['system_metadata'], trusted_certs=None)
+        get_flavor.return_value = test_flavor.fake_flavor
+        image_href = 'foo'
+        image = {
+            "min_ram": 10, "min_disk": 1,
+            "properties": {'architecture': fields_obj.Architecture.X86_64,
+                           'vm_mode': 'hvm'}}
+        admin_pass = ''
+        files_to_inject = []
+        bdms = objects.BlockDeviceMappingList()
+
+        _get_image.return_value = (None, image)
+        bdm_get_by_instance_uuid.return_value = bdms
+
+        self.assertRaises(exception.CertificateValidationFailed,
+                          self.compute_api.rebuild, self.context, instance,
+                          image_href, admin_pass, files_to_inject,
+                          trusted_certs=new_trusted_certs)
+
+        _check_auto_disk_config.assert_called_once_with(image=image)
+
     def _test_check_injected_file_quota_onset_file_limit_exceeded(self,
                                                                   side_effect):
         injected_files = [
@@ -4272,6 +4460,7 @@ class _ComputeAPIUnitTestMixIn(object):
             check_server_group_quota = False
             filter_properties = {'scheduler_hints': None,
                     'instance_type': flavor}
+            trusted_certs = None
 
             self.assertRaises(expected_exception,
                               self.compute_api._provision_instances, ctxt,
@@ -4279,7 +4468,7 @@ class _ComputeAPIUnitTestMixIn(object):
                               boot_meta, security_groups, block_device_mapping,
                               shutdown_terminate, instance_group,
                               check_server_group_quota, filter_properties,
-                              None, objects.TagList())
+                              None, objects.TagList(), trusted_certs)
 
         do_test()
 
@@ -4348,7 +4537,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                   {}, None,
                                                   None, None, None, {}, None,
                                                   fake_keypair,
-                                                  objects.TagList())
+                                                  objects.TagList(), None)
             self.assertEqual(
                 'test',
                 mock_instance.return_value.keypairs.objects[0].name)
@@ -4357,7 +4546,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                                   1, 1, mock.MagicMock(),
                                                   {}, None,
                                                   None, None, None, {}, None,
-                                                  None, objects.TagList())
+                                                  None, objects.TagList(),
+                                                  None)
             self.assertEqual(
                 0,
                 len(mock_instance.return_value.keypairs.objects))
@@ -4424,6 +4614,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_volume.get.return_value = {'id': '1', 'multiattach': False}
             instance_tags = objects.TagList(objects=[objects.Tag(tag='tag')])
             shutdown_terminate = True
+            trusted_certs = None
             instance_group = None
             check_server_group_quota = False
             filter_properties = {'scheduler_hints': None,
@@ -4434,7 +4625,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     min_count, max_count, base_options, boot_meta,
                     security_groups, block_device_mappings, shutdown_terminate,
                     instance_group, check_server_group_quota,
-                    filter_properties, None, instance_tags)
+                    filter_properties, None, instance_tags, trusted_certs)
 
             for rs, br, im in instances_to_build:
                 self.assertIsInstance(br.instance, objects.Instance)
@@ -4508,13 +4699,14 @@ class _ComputeAPIUnitTestMixIn(object):
             check_server_group_quota = False
             filter_properties = {'scheduler_hints': None,
                     'instance_type': flavor}
+            trusted_certs = None
 
             instances_to_build = (
                 self.compute_api._provision_instances(ctxt, flavor,
                     min_count, max_count, base_options, boot_meta,
                     security_groups, block_device_mapping, shutdown_terminate,
                     instance_group, check_server_group_quota,
-                    filter_properties, None, objects.TagList()))
+                    filter_properties, None, objects.TagList(), trusted_certs))
             rs, br, im = instances_to_build[0]
             self.assertTrue(uuidutils.is_uuid_like(br.instance.uuid))
             self.assertEqual(br.instance_uuid, im.instance_uuid)
@@ -4605,13 +4797,14 @@ class _ComputeAPIUnitTestMixIn(object):
             filter_properties = {'scheduler_hints': None,
                     'instance_type': flavor}
             tags = objects.TagList()
+            trusted_certs = None
             self.assertRaises(exception.InvalidVolume,
                               self.compute_api._provision_instances, ctxt,
                               flavor, min_count, max_count, base_options,
                               boot_meta, security_groups, block_device_mapping,
                               shutdown_terminate, instance_group,
                               check_server_group_quota, filter_properties,
-                              None, tags)
+                              None, tags, trusted_certs)
             # First instance, build_req, mapping is created and destroyed
             self.assertTrue(build_req_mocks[0].create.called)
             self.assertTrue(build_req_mocks[0].destroy.called)
@@ -4707,13 +4900,14 @@ class _ComputeAPIUnitTestMixIn(object):
             filter_properties = {'scheduler_hints': None,
                     'instance_type': flavor}
             tags = objects.TagList()
+            trusted_certs = None
             self.assertRaises(exception.InvalidVolume,
                               self.compute_api._provision_instances, ctxt,
                               flavor, min_count, max_count, base_options,
                               boot_meta, security_groups, block_device_mapping,
                               shutdown_terminate, instance_group,
                               check_server_group_quota, filter_properties,
-                              None, tags)
+                              None, tags, trusted_certs)
             # First instance, build_req, mapping is created and destroyed
             self.assertTrue(build_req_mocks[0].create.called)
             self.assertTrue(build_req_mocks[0].destroy.called)
@@ -4745,7 +4939,8 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api._provision_instances(ctxt, None, None, None,
                                                   mock.MagicMock(), None, None,
                                                   [], None, None, None, None,
-                                                  None, objects.TagList())
+                                                  None, objects.TagList(),
+                                                  None)
             secgroups = mock_secgroup.populate_security_groups.return_value
             mock_objects.RequestSpec.from_components.assert_called_once_with(
                 mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY,
@@ -5696,6 +5891,60 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, instance, {}, 0, security_groups, flavor, 1,
             False)
         self.assertEqual(0, len(instance.security_groups))
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
+    def test_retrieve_trusted_certs_object(self, get_min_version):
+        ids = ['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8',
+               '674736e3-f25c-405c-8362-bbf991e0ce0a']
+
+        retrieved_certs = self.compute_api._retrieve_trusted_certs_object(
+            self.context, ids)
+        self.assertEqual(ids, retrieved_certs.ids)
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS - 1)
+    def test_retrieve_trusted_certs_object_old_compute(self, get_min_version):
+        ids = ['trusted-cert-id']
+
+        self.assertRaises(exception.CertificateValidationNotYetAvailable,
+            self.compute_api._retrieve_trusted_certs_object,
+            self.context, ids)
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
+    def test_retrieve_trusted_certs_object_conf(self, get_min_version):
+        ids = ['conf-trusted-cert-1', 'conf-trusted-cert-2']
+
+        self.flags(verify_glance_signatures=True, group='glance')
+        self.flags(enable_certificate_validation=True, group='glance')
+        self.flags(default_trusted_certificate_ids='conf-trusted-cert-1, '
+                                                   'conf-trusted-cert-2',
+                   group='glance')
+        retrieved_certs = self.compute_api._retrieve_trusted_certs_object(
+            self.context, None)
+        self.assertEqual(ids, retrieved_certs.ids)
+
+    def test_retrieve_trusted_certs_object_none(self):
+        self.flags(enable_certificate_validation=False, group='glance')
+        self.assertIsNone(
+            self.compute_api._retrieve_trusted_certs_object(self.context,
+                None))
+
+    def test_retrieve_trusted_certs_object_empty(self):
+        self.flags(enable_certificate_validation=False, group='glance')
+        self.assertIsNone(self.compute_api._retrieve_trusted_certs_object(
+            self.context, []))
+
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS - 1)
+    def test_retrieve_trusted_certs_object_old_compute_rebuild(
+            self, get_min_version):
+        ids = ['trusted-cert-id']
+        self.assertRaises(exception.CertificateValidationNotYetAvailable,
+            self.compute_api._retrieve_trusted_certs_object,
+            self.context, ids, rebuild=True)
+        get_min_version.assert_called_once_with(self.context, 'nova-compute')
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):

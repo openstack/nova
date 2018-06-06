@@ -148,6 +148,13 @@ base_create_v257 = copy.deepcopy(base_create_v252)
 base_create_v257['properties']['server']['properties'].pop('personality')
 
 
+# 2.63 builds on 2.57 and makes the following changes:
+# Allowing adding trusted certificates to instances when booting
+base_create_v263 = copy.deepcopy(base_create_v257)
+base_create_v263['properties']['server']['properties'][
+    'trusted_image_certificates'] = parameter_types.trusted_certs
+
+
 base_update = {
     'type': 'object',
     'properties': {
@@ -223,6 +230,12 @@ base_rebuild_v257['properties']['rebuild']['properties']['user_data'] = ({
         {'type': 'null'}
     ]
 })
+
+# 2.63 builds on 2.57 and makes the following changes:
+# Allowing adding trusted certificates to instances when rebuilding
+base_rebuild_v263 = copy.deepcopy(base_rebuild_v257)
+base_rebuild_v263['properties']['rebuild']['properties'][
+    'trusted_image_certificates'] = parameter_types.trusted_certs
 
 resize = {
     'type': 'object',

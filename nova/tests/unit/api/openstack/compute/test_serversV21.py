@@ -2406,6 +2406,200 @@ class ServersControllerRebuildTestV219(ServersControllerRebuildInstanceTest):
                           self.req, FAKE_UUID, body=self.body)
 
 
+# NOTE(jaypipes): Not based from ServersControllerRebuildInstanceTest because
+# that test case's setUp is completely b0rked
+class ServersControllerRebuildTestV263(ControllerTest):
+
+    image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+
+    def setUp(self):
+        super(ServersControllerRebuildTestV263, self).setUp()
+        self.req = fakes.HTTPRequest.blank('/fake/servers/a/action')
+        self.req.method = 'POST'
+        self.req.headers["content-type"] = "application/json"
+        self.req_user_id = self.req.environ['nova.context'].user_id
+        self.req_project_id = self.req.environ['nova.context'].project_id
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.63')
+        self.body = {
+            'rebuild': {
+                'name': 'new_name',
+                'imageRef': self.image_uuid,
+                'metadata': {
+                    'open': 'stack',
+                },
+            },
+        }
+
+    @mock.patch('nova.compute.api.API.get')
+    def _rebuild_server(self, mock_get, certs=None,
+                        conf_enabled=True, conf_certs=None):
+        fakes.stub_out_trusted_certs(self, certs=certs)
+        ctx = self.req.environ['nova.context']
+        mock_get.return_value = fakes.stub_instance_obj(ctx,
+            vm_state=vm_states.ACTIVE, trusted_certs=certs,
+            project_id=self.req_project_id, user_id=self.req_user_id)
+
+        self.flags(default_trusted_certificate_ids=conf_certs, group='glance')
+
+        if conf_enabled:
+            self.flags(verify_glance_signatures=True, group='glance')
+            self.flags(enable_certificate_validation=True, group='glance')
+
+        self.body['rebuild']['trusted_image_certificates'] = certs
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        server = self.controller._action_rebuild(
+            self.req, FAKE_UUID, body=self.body).obj['server']
+
+        if certs:
+            self.assertEqual(certs, server['trusted_image_certificates'])
+        else:
+            if conf_enabled:
+                # configuration file default is used
+                self.assertEqual(
+                    conf_certs, server['trusted_image_certificates'])
+            else:
+                # either not set or empty
+                self.assertIsNone(server['trusted_image_certificates'])
+
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
+    def test_rebuild_server_with_trusted_certs(self, get_min_ver):
+        """Test rebuild with valid trusted_image_certificates argument"""
+        self._rebuild_server(
+            certs=['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8',
+                   '674736e3-f25c-405c-8362-bbf991e0ce0a'])
+
+    def test_rebuild_server_without_trusted_certs(self):
+        """Test rebuild without trusted image certificates"""
+        self._rebuild_server()
+
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
+    def test_rebuild_server_conf_options_turned_off_set(self, get_min_ver):
+        """Test rebuild with feature disabled and certs specified"""
+        self._rebuild_server(
+            certs=['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8'], conf_enabled=False)
+
+    def test_rebuild_server_conf_options_turned_off_empty(self):
+        """Test rebuild with feature disabled"""
+        self._rebuild_server(conf_enabled=False)
+
+    def test_rebuild_server_default_trusted_certificates_empty(self):
+        """Test rebuild with feature enabled and no certs specified"""
+        self._rebuild_server(conf_enabled=True)
+
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
+    def test_rebuild_server_default_trusted_certificates(self, get_min_ver):
+        """Test rebuild with certificate specified in configurations"""
+        self._rebuild_server(conf_enabled=True, conf_certs=['conf-id'])
+
+    def test_rebuild_server_with_empty_trusted_cert_id(self):
+        """Make sure that we can't rebuild with an empty certificate ID"""
+        self.body['rebuild']['trusted_image_certificates'] = ['']
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller._action_rebuild,
+                               self.req, FAKE_UUID, body=self.body)
+        self.assertIn('is too short', six.text_type(ex))
+
+    def test_rebuild_server_with_empty_trusted_certs(self):
+        """Make sure that we can't rebuild with an empty array of IDs"""
+        self.body['rebuild']['trusted_image_certificates'] = []
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller._action_rebuild,
+                               self.req, FAKE_UUID, body=self.body)
+        self.assertIn('is too short', six.text_type(ex))
+
+    def test_rebuild_server_with_too_many_trusted_certs(self):
+        """Make sure that we can't rebuild with an array of >50 unique IDs"""
+        self.body['rebuild']['trusted_image_certificates'] = [
+            'cert{}'.format(i) for i in range(51)]
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller._action_rebuild,
+                               self.req, FAKE_UUID, body=self.body)
+        self.assertIn('is too long', six.text_type(ex))
+
+    def test_rebuild_server_with_nonunique_trusted_certs(self):
+        """Make sure that we can't rebuild with a non-unique array of IDs"""
+        self.body['rebuild']['trusted_image_certificates'] = ['cert', 'cert']
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller._action_rebuild,
+                               self.req, FAKE_UUID, body=self.body)
+        self.assertIn('has non-unique elements', six.text_type(ex))
+
+    def test_rebuild_server_with_invalid_trusted_cert_id(self):
+        """Make sure that we can't rebuild with non-string certificate IDs"""
+        self.body['rebuild']['trusted_image_certificates'] = [1, 2]
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller._action_rebuild,
+                               self.req, FAKE_UUID, body=self.body)
+        self.assertIn('is not of type', six.text_type(ex))
+
+    def test_rebuild_server_with_invalid_trusted_certs(self):
+        """Make sure that we can't rebuild with certificates in a non-array"""
+        self.body['rebuild']['trusted_image_certificates'] = "not-an-array"
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller._action_rebuild,
+                               self.req, FAKE_UUID, body=self.body)
+        self.assertIn('is not of type', six.text_type(ex))
+
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
+    def test_rebuild_server_with_trusted_certs_pre_2_63_fails(self,
+            get_min_ver):
+        """Make sure we can't use trusted_certs before 2.63"""
+        self._rebuild_server(certs=['trusted-cert-id'])
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.62')
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller._action_rebuild,
+                               self.req, FAKE_UUID, body=self.body)
+        self.assertIn('Additional properties are not allowed',
+                      six.text_type(ex))
+
+    def test_rebuild_server_with_trusted_certs_policy_failed(self):
+        rule_name = "os_compute_api:servers:rebuild:trusted_certs"
+        rules = {"os_compute_api:servers:rebuild": "@",
+                 rule_name: "project:fake"}
+        self.policy.set_rules(rules)
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self._rebuild_server,
+                                certs=['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8'])
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    @mock.patch.object(compute_api.API, 'rebuild')
+    def test_rebuild_server_with_cert_validation_error(
+            self, mock_rebuild):
+        mock_rebuild.side_effect = exception.CertificateValidationFailed(
+            cert_uuid="cert id", reason="test cert validation error")
+
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self._rebuild_server,
+                               certs=['trusted-cert-id'])
+        self.assertIn('test cert validation error',
+                      six.text_type(ex))
+
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS - 1)
+    def test_rebuild_server_with_cert_validation_not_available(
+            self, get_min_ver):
+        ex = self.assertRaises(webob.exc.HTTPConflict,
+                               self._rebuild_server,
+                               certs=['trusted-cert-id'])
+        self.assertIn('Image signature certificate validation support '
+                      'is not yet available',
+                      six.text_type(ex))
+
+
 class ServersControllerUpdateTest(ControllerTest):
 
     def _get_request(self, body=None):
@@ -4212,6 +4406,137 @@ class ServersControllerCreateTestV260(test.NoDBTestCase):
         """
         ex = self.assertRaises(webob.exc.HTTPConflict, self._post_server)
         self.assertIn('Multiattach volume support is not yet available',
+                      six.text_type(ex))
+
+
+class ServersControllerCreateTestV263(ServersControllerCreateTest):
+    def _create_instance_req(self, certs=None):
+        self.body['server']['trusted_image_certificates'] = certs
+
+        self.flags(verify_glance_signatures=True, group='glance')
+        self.flags(enable_certificate_validation=True, group='glance')
+
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.63')
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
+    def test_create_instance_with_trusted_certs(self, get_min_ver):
+        """Test create with valid trusted_image_certificates argument"""
+        self._create_instance_req(
+            ['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8',
+             '674736e3-f25c-405c-8362-bbf991e0ce0a'])
+        # The fact that the action doesn't raise is enough validation
+        self.controller.create(self.req, body=self.body).obj
+
+    def test_create_instance_without_trusted_certs(self):
+        """Test create without trusted image certificates"""
+        self._create_instance_req()
+        # The fact that the action doesn't raise is enough validation
+        self.controller.create(self.req, body=self.body).obj
+
+    def test_create_instance_with_empty_trusted_cert_id(self):
+        """Make sure we can't create with an empty certificate ID"""
+        self._create_instance_req([''])
+        ex = self.assertRaises(
+            exception.ValidationError, self.controller.create, self.req,
+            body=self.body)
+        self.assertIn('is too short', six.text_type(ex))
+
+    def test_create_instance_with_empty_trusted_certs(self):
+        """Make sure we can't create with an empty array of IDs"""
+        self.body['server']['trusted_image_certificates'] = []
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.63')
+        ex = self.assertRaises(
+            exception.ValidationError, self.controller.create, self.req,
+            body=self.body)
+        self.assertIn('is too short', six.text_type(ex))
+
+    def test_create_instance_with_too_many_trusted_certs(self):
+        """Make sure we can't create with an array of >50 unique IDs"""
+        self._create_instance_req(['cert{}'.format(i) for i in range(51)])
+        ex = self.assertRaises(
+            exception.ValidationError, self.controller.create, self.req,
+            body=self.body)
+        self.assertIn('is too long', six.text_type(ex))
+
+    def test_create_instance_with_nonunique_trusted_certs(self):
+        """Make sure we can't create with a non-unique array of IDs"""
+        self._create_instance_req(['cert', 'cert'])
+        ex = self.assertRaises(
+            exception.ValidationError, self.controller.create, self.req,
+            body=self.body)
+        self.assertIn('has non-unique elements', six.text_type(ex))
+
+    def test_create_instance_with_invalid_trusted_cert_id(self):
+        """Make sure we can't create with non-string certificate IDs"""
+        self._create_instance_req([1, 2])
+        ex = self.assertRaises(
+            exception.ValidationError, self.controller.create, self.req,
+            body=self.body)
+        self.assertIn('is not of type', six.text_type(ex))
+
+    def test_create_instance_with_invalid_trusted_certs(self):
+        """Make sure we can't create with certificates in a non-array"""
+        self._create_instance_req("not-an-array")
+        ex = self.assertRaises(
+            exception.ValidationError, self.controller.create, self.req,
+            body=self.body)
+        self.assertIn('is not of type', six.text_type(ex))
+
+    def test_create_server_with_trusted_certs_pre_2_63_fails(self):
+        """Make sure we can't use trusted_certs before 2.63"""
+        self._create_instance_req(['trusted-cert-id'])
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.62')
+        ex = self.assertRaises(
+            exception.ValidationError, self.controller.create, self.req,
+            body=self.body)
+        self.assertIn('Additional properties are not allowed',
+                      six.text_type(ex))
+
+    def test_create_server_with_trusted_certs_policy_failed(self):
+        rule_name = "os_compute_api:servers:create:trusted_certs"
+        rules = {"os_compute_api:servers:create": "@",
+                 "os_compute_api:servers:create:forced_host": "@",
+                 "os_compute_api:servers:create:attach_volume": "@",
+                 "os_compute_api:servers:create:attach_network": "@",
+                 rule_name: "project:fake"}
+        self._create_instance_req(['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8'])
+        self.policy.set_rules(rules)
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller.create, self.req,
+                                body=self.body)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    @mock.patch.object(compute_api.API, 'create')
+    def test_create_server_with_cert_validation_error(
+            self, mock_create):
+        mock_create.side_effect = exception.CertificateValidationFailed(
+            cert_uuid="cert id", reason="test cert validation error")
+
+        self._create_instance_req(['trusted-cert-id'])
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self.controller.create, self.req,
+                               body=self.body)
+        self.assertIn('test cert validation error',
+                      six.text_type(ex))
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS - 1)
+    def test_create_server_with_cert_validation_not_available(
+            self, mock_get_min_version_all_cells):
+        self._create_instance_req(['trusted-cert-id'])
+        ex = self.assertRaises(webob.exc.HTTPConflict,
+                               self.controller.create, self.req,
+                               body=self.body)
+        self.assertIn('Image signature certificate validation support '
+                      'is not yet available',
                       six.text_type(ex))
 
 

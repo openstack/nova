@@ -488,10 +488,11 @@ Request
   - description: server_description
   - key_name: key_name_rebuild_req
   - user_data: user_data_rebuild_req
+  - trusted_image_certificates: server_trusted_image_certificates_rebuild_req
 
-**Example Rebuild Server (rebuild Action) (v2.54)**
+**Example Rebuild Server (rebuild Action) (v2.63)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.54/server-action-rebuild.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.63/server-action-rebuild.json
    :language: javascript
 
 Response
@@ -537,10 +538,11 @@ Response
   - tags: tags
   - key_name: key_name_rebuild_resp
   - user_data: user_data_rebuild_resp
+  - trusted_image_certificates: server_trusted_image_certificates_resp
 
-**Example Rebuild Server (rebuild Action) (v2.54)**
+**Example Rebuild Server (rebuild Action) (v2.63)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.54/server-action-rebuild-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.63/server-action-rebuild-resp.json
    :language: javascript
 
 Remove (Disassociate) Floating Ip (removeFloatingIp Action) (DEPRECATED)

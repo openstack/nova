@@ -171,6 +171,12 @@ class ViewBuilder(common.ViewBuilder):
         if api_version_request.is_supported(request, min_version="2.26"):
             server["server"]["tags"] = [t.tag for t in instance.tags]
 
+        if api_version_request.is_supported(request, min_version="2.63"):
+            trusted_certs = None
+            if instance.trusted_certs:
+                trusted_certs = instance.trusted_certs.ids
+            server["server"]["trusted_image_certificates"] = trusted_certs
+
         return server
 
     def index(self, request, instances):

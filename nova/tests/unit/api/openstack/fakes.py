@@ -105,6 +105,30 @@ def stub_out_key_pair_funcs(testcase, have_key_pair=True, **kwargs):
         testcase.stub_out('nova.db.key_pair_get_all_by_user', no_key_pair)
 
 
+def stub_out_trusted_certs(test, certs=None):
+    def fake_trusted_certs(cls, context, instance_uuid):
+        return objects.TrustedCerts(ids=trusted_certs)
+
+    def fake_instance_extra(context, instance_uuid, columns):
+        if columns is ['trusted_certs']:
+            return {'trusted_certs': trusted_certs}
+        else:
+            return {'numa_topology': None,
+                    'pci_requests': None,
+                    'flavor': None,
+                    'vcpu_model': None,
+                    'trusted_certs': trusted_certs,
+                    'migration_context': None}
+
+    trusted_certs = []
+    if certs:
+        trusted_certs = certs
+    test.stub_out('nova.objects.TrustedCerts.get_by_instance_uuid',
+                  fake_trusted_certs)
+    test.stub_out('nova.db.instance_extra_get_by_instance_uuid',
+                  fake_instance_extra)
+
+
 def stub_out_instance_quota(test, allowed, quota, resource='instances'):
     def fake_reserve(context, **deltas):
         requested = deltas.pop(resource, 0)
@@ -424,7 +448,7 @@ def stub_instance(id=1, user_id=None, project_id=None, host=None,
                   memory_mb=0, vcpus=0, root_gb=0, ephemeral_gb=0,
                   instance_type=None, launch_index=0, kernel_id="",
                   ramdisk_id="", user_data=None, system_metadata=None,
-                  services=None):
+                  services=None, trusted_certs=None):
     if user_id is None:
         user_id = 'fake_user'
     if project_id is None:
@@ -531,10 +555,12 @@ def stub_instance(id=1, user_id=None, project_id=None, host=None,
         "extra": {"numa_topology": None,
                   "pci_requests": None,
                   "flavor": flavorinfo,
-              },
+                  "trusted_certs": trusted_certs,
+                  },
         "cleaned": cleaned,
         "services": services,
-        "tags": []}
+        "tags": [],
+    }
 
     instance.update(info_cache)
     instance['info_cache']['instance_uuid'] = instance['uuid']

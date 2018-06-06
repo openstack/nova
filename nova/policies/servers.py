@@ -128,6 +128,16 @@ rules = [
             }
         ]),
     policy.DocumentedRuleDefault(
+        SERVERS % 'create:trusted_certs',
+        RULE_AOO,
+        "Create a server with trusted image certificate IDs",
+        [
+            {
+                'method': 'POST',
+                'path': '/servers'
+            }
+        ]),
+    policy.DocumentedRuleDefault(
         NETWORK_ATTACH_EXTERNAL,
         'is_admin:True',
         "Attach an unshared external network to a server",
@@ -207,6 +217,16 @@ rules = [
         SERVERS % 'rebuild',
         RULE_AOO,
         "Rebuild a server",
+        [
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/action (rebuild)'
+            }
+        ]),
+    policy.DocumentedRuleDefault(
+        SERVERS % 'rebuild:trusted_certs',
+        RULE_AOO,
+        "Rebuild a server with trusted image certificate IDs",
         [
             {
                 'method': 'POST',
