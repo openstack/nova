@@ -7336,7 +7336,7 @@ class ComputeManager(manager.Manager):
                   instance=instance)
         return node
 
-    def update_available_resource_for_node(self, context, nodename):
+    def _update_available_resource_for_node(self, context, nodename):
 
         rt = self._get_resource_tracker()
         try:
@@ -7383,7 +7383,7 @@ class ComputeManager(manager.Manager):
             return
 
         for nodename in nodenames:
-            self.update_available_resource_for_node(context, nodename)
+            self._update_available_resource_for_node(context, nodename)
 
         # Delete orphan compute node not reported by driver but still in db
         for cn in compute_nodes_in_db:
