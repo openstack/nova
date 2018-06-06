@@ -10,10 +10,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
+from six.moves import StringIO
+
 from nova.cmd import manage
 from nova import context
 from nova import objects
 from nova import test
+from nova.tests.functional import test_servers
 
 
 class NovaManageDBIronicTest(test.TestCase):
@@ -348,3 +352,222 @@ class NovaManageCellV2Test(test.TestCase):
         cns = objects.ComputeNodeList.get_all(self.context)
         self.assertEqual(1, len(cns))
         self.assertEqual(0, cns[0].mapped)
+
+
+class TestNovaManagePlacementHealAllocations(
+        test_servers.ProviderUsageBaseTestCase):
+    """Functional tests for nova-manage placement heal_allocations"""
+
+    # This is required by the parent class.
+    compute_driver = 'fake.SmallFakeDriver'
+    # We want to test iterating across multiple cells.
+    NUMBER_OF_CELLS = 2
+
+    def setUp(self):
+        # Since the CachingScheduler does not use Placement, we want to use
+        # the CachingScheduler to create instances and then we can heal their
+        # allocations via the CLI.
+        self.flags(driver='caching_scheduler', group='scheduler')
+        super(TestNovaManagePlacementHealAllocations, self).setUp()
+        self.cli = manage.PlacementCommands()
+        # We need to start a compute in each non-cell0 cell.
+        for cell_name, cell_mapping in self.cell_mappings.items():
+            if cell_mapping.uuid == objects.CellMapping.CELL0_UUID:
+                continue
+            self._start_compute(cell_name, cell_name=cell_name)
+        # Make sure we have two hypervisors reported in the API.
+        hypervisors = self.admin_api.api_get(
+            '/os-hypervisors').body['hypervisors']
+        self.assertEqual(2, len(hypervisors))
+        self.flavor = self.api.get_flavors()[0]
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+
+    def _boot_and_assert_no_allocations(self, flavor, hostname):
+        """Creates a server on the given host and asserts neither have usage
+
+        :param flavor: the flavor used to create the server
+        :param hostname: the host on which to create the server
+        :returns: two-item tuple of the server and the compute node resource
+                  provider uuid
+        """
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'some-server', flavor_id=flavor['id'],
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks=[])
+        server_req['availability_zone'] = 'nova:%s' % hostname
+        created_server = self.api.post_server({'server': server_req})
+        server = self._wait_for_state_change(
+            self.admin_api, created_server, 'ACTIVE')
+
+        # Verify that our source host is what the server ended up on
+        self.assertEqual(hostname, server['OS-EXT-SRV-ATTR:host'])
+
+        # Check that the compute node resource provider has no allocations.
+        rp_uuid = self._get_provider_uuid_by_host(hostname)
+        provider_usages = self._get_provider_usages(rp_uuid)
+        for resource_class, usage in provider_usages.items():
+            self.assertEqual(
+                0, usage,
+                'Compute node resource provider %s should not have %s '
+                'usage when using the CachingScheduler.' %
+                (hostname, resource_class))
+
+        # Check that the server has no allocations.
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual({}, allocations,
+                         'Server should not have allocations when using '
+                         'the CachingScheduler.')
+        return server, rp_uuid
+
+    def _assert_healed(self, server, rp_uuid):
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertIn(rp_uuid, allocations,
+                      'Allocations not found for server %s and compute node '
+                      'resource provider. %s\nOutput:%s' %
+                      (server['id'], rp_uuid, self.output.getvalue()))
+        self.assertFlavorMatchesAllocation(
+            self.flavor, allocations[rp_uuid]['resources'])
+
+    def test_heal_allocations_paging(self):
+        """This test runs the following scenario:
+
+        * Schedule server1 to cell1 and assert it doesn't have allocations.
+        * Schedule server2 to cell2 and assert it doesn't have allocations.
+        * Run "nova-manage placement heal_allocations --max-count 1" to make
+          sure we stop with just one instance and the return code is 1.
+        * Run "nova-manage placement heal_allocations" and assert both
+          both instances now have allocations against their respective compute
+          node resource providers.
+        """
+        server1, rp_uuid1 = self._boot_and_assert_no_allocations(
+            self.flavor, 'cell1')
+        server2, rp_uuid2 = self._boot_and_assert_no_allocations(
+            self.flavor, 'cell2')
+
+        # heal server1 and server2 in separate calls
+        for x in range(2):
+            result = self.cli.heal_allocations(max_count=1, verbose=True)
+            self.assertEqual(1, result, self.output.getvalue())
+            output = self.output.getvalue()
+            self.assertIn('Max count reached. Processed 1 instances.', output)
+            # If this is the 2nd call, we'll have skipped the first instance.
+            if x == 0:
+                self.assertNotIn('already has allocations', output)
+            else:
+                self.assertIn('already has allocations', output)
+
+        self._assert_healed(server1, rp_uuid1)
+        self._assert_healed(server2, rp_uuid2)
+
+        # run it again to make sure nothing was processed
+        result = self.cli.heal_allocations(verbose=True)
+        self.assertEqual(4, result, self.output.getvalue())
+        self.assertIn('already has allocations', self.output.getvalue())
+
+    def test_heal_allocations_paging_max_count_more_than_num_instances(self):
+        """Sets up 2 instances in cell1 and 1 instance in cell2. Then specify
+        --max-count=10, processes 3 instances, rc is 0
+        """
+        servers = []  # This is really a list of 2-item tuples.
+        for x in range(2):
+            servers.append(
+                self._boot_and_assert_no_allocations(self.flavor, 'cell1'))
+        servers.append(
+            self._boot_and_assert_no_allocations(self.flavor, 'cell2'))
+        result = self.cli.heal_allocations(max_count=10, verbose=True)
+        self.assertEqual(0, result, self.output.getvalue())
+        self.assertIn('Processed 3 instances.', self.output.getvalue())
+        for server, rp_uuid in servers:
+            self._assert_healed(server, rp_uuid)
+
+    def test_heal_allocations_paging_more_instances_remain(self):
+        """Tests that there is one instance in cell1 and two instances in
+        cell2, with a --max-count=2. This tests that we stop in cell2 once
+        max_count is reached.
+        """
+        servers = []  # This is really a list of 2-item tuples.
+        servers.append(
+            self._boot_and_assert_no_allocations(self.flavor, 'cell1'))
+        for x in range(2):
+            servers.append(
+                self._boot_and_assert_no_allocations(self.flavor, 'cell2'))
+        result = self.cli.heal_allocations(max_count=2, verbose=True)
+        self.assertEqual(1, result, self.output.getvalue())
+        self.assertIn('Max count reached. Processed 2 instances.',
+                      self.output.getvalue())
+        # Assert that allocations were healed on the instances we expect. Order
+        # works here because cell mappings are retrieved by id in ascending
+        # order so oldest to newest, and instances are also retrieved from each
+        # cell by created_at in ascending order, which matches the order we put
+        # created servers in our list.
+        for x in range(2):
+            self._assert_healed(*servers[x])
+        # And assert the remaining instance does not have allocations.
+        allocations = self._get_allocations_by_server_uuid(
+            servers[2][0]['id'])
+        self.assertEqual({}, allocations)
+
+    def test_heal_allocations_unlimited(self):
+        """Sets up 2 instances in cell1 and 1 instance in cell2. Then
+        don't specify --max-count, processes 3 instances, rc is 0.
+        """
+        servers = []  # This is really a list of 2-item tuples.
+        for x in range(2):
+            servers.append(
+                self._boot_and_assert_no_allocations(self.flavor, 'cell1'))
+        servers.append(
+            self._boot_and_assert_no_allocations(self.flavor, 'cell2'))
+        result = self.cli.heal_allocations(verbose=True)
+        self.assertEqual(0, result, self.output.getvalue())
+        self.assertIn('Processed 3 instances.', self.output.getvalue())
+        for server, rp_uuid in servers:
+            self._assert_healed(server, rp_uuid)
+
+    def test_heal_allocations_shelved(self):
+        """Tests the scenario that an instance with no allocations is shelved
+        so heal_allocations skips it (since the instance is not on a host).
+        """
+        server, rp_uuid = self._boot_and_assert_no_allocations(
+            self.flavor, 'cell1')
+        self.api.post_server_action(server['id'], {'shelve': None})
+        # The server status goes to SHELVED_OFFLOADED before the host/node
+        # is nulled out in the compute service, so we also have to wait for
+        # that so we don't race when we run heal_allocations.
+        server = self._wait_for_server_parameter(
+            self.admin_api, server,
+            {'OS-EXT-SRV-ATTR:host': None, 'status': 'SHELVED_OFFLOADED'})
+        result = self.cli.heal_allocations(verbose=True)
+        self.assertEqual(4, result, self.output.getvalue())
+        self.assertIn('Instance %s is not on a host.' % server['id'],
+                      self.output.getvalue())
+        # Check that the server has no allocations.
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual({}, allocations,
+                         'Shelved-offloaded server should not have '
+                         'allocations.')
+
+    def test_heal_allocations_task_in_progress(self):
+        """Tests the case that heal_allocations skips over an instance which
+        is undergoing a task state transition (in this case pausing).
+        """
+        server, rp_uuid = self._boot_and_assert_no_allocations(
+            self.flavor, 'cell1')
+
+        def fake_pause_instance(_self, ctxt, instance, *a, **kw):
+            self.assertEqual('pausing', instance.task_state)
+        # We have to stub out pause_instance so that the instance is stuck with
+        # task_state != None.
+        self.stub_out('nova.compute.manager.ComputeManager.pause_instance',
+                      fake_pause_instance)
+        self.api.post_server_action(server['id'], {'pause': None})
+        result = self.cli.heal_allocations(verbose=True)
+        self.assertEqual(4, result, self.output.getvalue())
+        # Check that the server has no allocations.
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual({}, allocations,
+                         'Server undergoing task state transition should '
+                         'not have allocations.')
+        # Assert something was logged for this instance when it was skipped.
+        self.assertIn('Instance %s is undergoing a task state transition: '
+                      'pausing' % server['id'], self.output.getvalue())

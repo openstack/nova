@@ -64,6 +64,8 @@ from nova.objects import quotas as quotas_obj
 from nova.objects import request_spec
 from nova import quota
 from nova import rpc
+from nova.scheduler.client import report
+from nova.scheduler import utils as scheduler_utils
 from nova import utils
 from nova import version
 from nova.virt import ironic
@@ -1713,6 +1715,246 @@ class CellV2Commands(object):
         return 0
 
 
+class PlacementCommands(object):
+    """Commands for managing placement resources."""
+
+    @staticmethod
+    def _get_compute_node_uuid(ctxt, instance, node_cache):
+        """Find the ComputeNode.uuid for the given Instance
+
+        :param ctxt: cell-targeted nova.context.RequestContext
+        :param instance: the instance to lookup a compute node
+        :param node_cache: dict of Instance.node keys to ComputeNode.uuid
+            values; this cache is updated if a new node is processed.
+        :returns: ComputeNode.uuid for the given instance
+        :raises: nova.exception.ComputeHostNotFound
+        """
+        if instance.node in node_cache:
+            return node_cache[instance.node]
+
+        compute_node = objects.ComputeNode.get_by_host_and_nodename(
+            ctxt, instance.host, instance.node)
+        node_uuid = compute_node.uuid
+        node_cache[instance.node] = node_uuid
+        return node_uuid
+
+    def _heal_instances_in_cell(self, ctxt, max_count, unlimited, output,
+                                placement):
+        """Checks for instances to heal in a given cell.
+
+        :param ctxt: cell-targeted nova.context.RequestContext
+        :param max_count: batch size (limit per instance query)
+        :param unlimited: True if all instances in the cell should be
+            processed, else False to just process $max_count instances
+        :param outout: function that takes a single message for verbose output
+        :param placement: nova.scheduler.client.report.SchedulerReportClient
+            to communicate with the Placement service API.
+        :return: Number of instances that had allocations created.
+        :raises: nova.exception.ComputeHostNotFound if a compute node for a
+            given instance cannot be found
+        :raises: AllocationCreateFailed if unable to create allocations for
+            a given instance against a given compute node resource provider
+        """
+        # Keep a cache of instance.node to compute node resource provider UUID.
+        # This will save some queries for non-ironic instances to the
+        # compute_nodes table.
+        node_cache = {}
+        # Track the total number of instances that have allocations created
+        # for them in this cell. We return when num_processed equals max_count
+        # and unlimited=True or we exhaust the number of instances to process
+        # in this cell.
+        num_processed = 0
+        # Get all instances from this cell which have a host and are not
+        # undergoing a task state transition. Go from oldest to newest.
+        # NOTE(mriedem): Unfortunately we don't have a marker to use
+        # between runs where the user is specifying --max-count.
+        # TODO(mriedem): Store a marker in system_metadata so we can
+        # automatically pick up where we left off without the user having
+        # to pass it in (if unlimited is False).
+        instances = objects.InstanceList.get_by_filters(
+            ctxt, filters={}, sort_key='created_at', sort_dir='asc',
+            limit=max_count, expected_attrs=['flavor'])
+        while instances:
+            output(_('Found %s candidate instances.') % len(instances))
+            # For each instance in this list, we need to see if it has
+            # allocations in placement and if so, assume it's correct and
+            # continue.
+            for instance in instances:
+                if instance.task_state is not None:
+                    output(_('Instance %(instance)s is undergoing a task '
+                             'state transition: %(task_state)s') %
+                           {'instance': instance.uuid,
+                            'task_state': instance.task_state})
+                    continue
+
+                if instance.node is None:
+                    output(_('Instance %s is not on a host.') % instance.uuid)
+                    continue
+
+                allocations = placement.get_allocations_for_consumer(
+                    ctxt, instance.uuid)
+                if allocations:
+                    output(_('Instance %s already has allocations.') %
+                           instance.uuid)
+                    # TODO(mriedem): Check to see if the allocation project_id
+                    # and user_id matches the instance project and user and
+                    # fix the allocation project/user if they don't match; see
+                    # blueprint add-consumer-generation for details.
+                    continue
+
+                # This instance doesn't have allocations so we need to find
+                # its compute node resource provider.
+                node_uuid = self._get_compute_node_uuid(
+                    ctxt, instance, node_cache)
+
+                # Now get the resource allocations for the instance based
+                # on its embedded flavor.
+                resources = scheduler_utils.resources_from_flavor(
+                    instance, instance.flavor)
+                if placement.put_allocations(
+                        ctxt, node_uuid, instance.uuid, resources,
+                        instance.project_id, instance.user_id):
+                    num_processed += 1
+                    output(_('Successfully created allocations for '
+                             'instance %(instance)s against resource '
+                             'provider %(provider)s.') %
+                           {'instance': instance.uuid, 'provider': node_uuid})
+                else:
+                    raise exception.AllocationCreateFailed(
+                        instance=instance.uuid, provider=node_uuid)
+
+            # Make sure we don't go over the max count. Note that we
+            # don't include instances that already have allocations in the
+            # max_count number, only the number of instances that have
+            # successfully created allocations.
+            if not unlimited and num_processed == max_count:
+                return num_processed
+
+            # Use a marker to get the next page of instances in this cell.
+            # Note that InstanceList doesn't support slice notation.
+            marker = instances[len(instances) - 1].uuid
+            instances = objects.InstanceList.get_by_filters(
+                ctxt, filters={}, sort_key='created_at', sort_dir='asc',
+                limit=max_count, marker=marker, expected_attrs=['flavor'])
+
+        return num_processed
+
+    @action_description(
+        _("Iterates over non-cell0 cells looking for instances which do "
+          "not have allocations in the Placement service and which are not "
+          "undergoing a task state transition. For each instance found, "
+          "allocations are created against the compute node resource provider "
+          "for that instance based on the flavor associated with the "
+          "instance. This command requires that the [api_database]/connection "
+          "and [placement] configuration options are set."))
+    @args('--max-count', metavar='<max_count>', dest='max_count',
+          help='Maximum number of instances to process. If not specified, all '
+               'instances in each cell will be mapped in batches of 50. '
+               'If you have a large number of instances, consider specifying '
+               'a custom value and run the command until it exits with '
+               '0 or 4.')
+    @args('--verbose', action='store_true', dest='verbose', default=False,
+          help='Provide verbose output during execution.')
+    def heal_allocations(self, max_count=None, verbose=False):
+        """Heals instance allocations in the Placement service
+
+        Return codes:
+
+        * 0: Command completed successfully and allocations were created.
+        * 1: --max-count was reached and there are more instances to process.
+        * 2: Unable to find a compute node record for a given instance.
+        * 3: Unable to create allocations for an instance against its
+             compute node resource provider.
+        * 4: Command completed successfully but no allocations were created.
+        * 127: Invalid input.
+        """
+        # NOTE(mriedem): Thoughts on ways to expand this:
+        # - add a --dry-run option to just print which instances would have
+        #   allocations created for them
+        # - allow passing a specific cell to heal
+        # - allow filtering on enabled/disabled cells
+        # - allow passing a specific instance to heal
+        # - add a force option to force allocations for instances which have
+        #   task_state is not None (would get complicated during a migration);
+        #   for example, this could cleanup ironic instances that have
+        #   allocations on VCPU/MEMORY_MB/DISK_GB but are now using a custom
+        #   resource class
+        # - add an option to overwrite allocations for instances which already
+        #   have allocations (but the operator thinks might be wrong?); this
+        #   would probably only be safe with a specific instance.
+        # - deal with nested resource providers?
+
+        output = lambda msg: None
+        if verbose:
+            output = lambda msg: print(msg)
+
+        # TODO(mriedem): Rather than --max-count being both a total and batch
+        # count, should we have separate options to be specific, i.e. --total
+        # and --batch-size? Then --batch-size defaults to 50 and --total
+        # defaults to None to mean unlimited.
+        if max_count is not None:
+            try:
+                max_count = int(max_count)
+            except ValueError:
+                max_count = -1
+            unlimited = False
+            if max_count < 1:
+                print(_('Must supply a positive integer for --max-count.'))
+                return 127
+        else:
+            max_count = 50
+            unlimited = True
+            output(_('Running batches of %i until complete') % max_count)
+
+        ctxt = context.get_admin_context()
+        cells = objects.CellMappingList.get_all(ctxt)
+        if not cells:
+            output(_('No cells to process.'))
+            return 4
+
+        placement = report.SchedulerReportClient()
+        num_processed = 0
+        # TODO(mriedem): Use context.scatter_gather_skip_cell0.
+        for cell in cells:
+            # Skip cell0 since that is where instances go that do not get
+            # scheduled and hence would not have allocations against a host.
+            if cell.uuid == objects.CellMapping.CELL0_UUID:
+                continue
+            output(_('Looking for instances in cell: %s') % cell.identity)
+
+            limit_per_cell = max_count
+            if not unlimited:
+                # Adjust the limit for the next cell. For example, if the user
+                # only wants to process a total of 100 instances and we did
+                # 75 in cell1, then we only need 25 more from cell2 and so on.
+                limit_per_cell = max_count - num_processed
+
+            with context.target_cell(ctxt, cell) as cctxt:
+                try:
+                    num_processed += self._heal_instances_in_cell(
+                        cctxt, limit_per_cell, unlimited, output, placement)
+                except exception.ComputeHostNotFound as e:
+                    print(e.format_message())
+                    return 2
+                except exception.AllocationCreateFailed as e:
+                    print(e.format_message())
+                    return 3
+
+                # Make sure we don't go over the max count. Note that we
+                # don't include instances that already have allocations in the
+                # max_count number, only the number of instances that have
+                # successfully created allocations.
+                if num_processed == max_count:
+                    output(_('Max count reached. Processed %s instances.')
+                           % num_processed)
+                    return 1
+
+        output(_('Processed %s instances.') % num_processed)
+        if not num_processed:
+            return 4
+        return 0
+
+
 CATEGORIES = {
     'api_db': ApiDbCommands,
     'cell': CellCommands,
@@ -1720,6 +1962,7 @@ CATEGORIES = {
     'db': DbCommands,
     'floating': FloatingIpCommands,
     'network': NetworkCommands,
+    'placement': PlacementCommands
 }
 
 

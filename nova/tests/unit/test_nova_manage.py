@@ -2395,6 +2395,97 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             node.save.assert_called_once_with()
 
 
+@ddt.ddt
+class TestNovaManagePlacement(test.NoDBTestCase):
+    """Unit tests for the nova-manage placement commands.
+
+    Tests in this class should be simple and can rely on mock, so they
+    are usually restricted to negative or side-effect type tests.
+
+    For more involved functional scenarios, use
+    nova.tests.functional.test_nova_manage.
+    """
+    def setUp(self):
+        super(TestNovaManagePlacement, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+        self.cli = manage.PlacementCommands()
+
+    @ddt.data(-1, 0, "one")
+    def test_heal_allocations_invalid_max_count(self, max_count):
+        self.assertEqual(127, self.cli.heal_allocations(max_count=max_count))
+
+    @mock.patch('nova.objects.CellMappingList.get_all',
+                return_value=objects.CellMappingList())
+    def test_heal_allocations_no_cells(self, mock_get_all_cells):
+        self.assertEqual(4, self.cli.heal_allocations(verbose=True))
+        self.assertIn('No cells to process', self.output.getvalue())
+
+    @mock.patch('nova.objects.CellMappingList.get_all',
+                return_value=objects.CellMappingList(objects=[
+                    objects.CellMapping(name='cell1',
+                                        uuid=uuidsentinel.cell1)]))
+    @mock.patch('nova.objects.InstanceList.get_by_filters',
+                return_value=objects.InstanceList())
+    def test_heal_allocations_no_instances(
+            self, mock_get_instances, mock_get_all_cells):
+        self.assertEqual(4, self.cli.heal_allocations(verbose=True))
+        self.assertIn('Processed 0 instances.', self.output.getvalue())
+
+    @mock.patch('nova.objects.CellMappingList.get_all',
+                return_value=objects.CellMappingList(objects=[
+                    objects.CellMapping(name='cell1',
+                                        uuid=uuidsentinel.cell1)]))
+    @mock.patch('nova.objects.InstanceList.get_by_filters',
+                return_value=objects.InstanceList(objects=[
+                    objects.Instance(
+                        uuid=uuidsentinel.instance, host='fake', node='fake',
+                        task_state=None)]))
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer', return_value={})
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
+                side_effect=exception.ComputeHostNotFound(host='fake'))
+    def test_heal_allocations_compute_host_not_found(
+            self, mock_get_compute_node, mock_get_allocs, mock_get_instances,
+            mock_get_all_cells):
+        self.assertEqual(2, self.cli.heal_allocations())
+        self.assertIn('Compute host fake could not be found.',
+                      self.output.getvalue())
+
+    @mock.patch('nova.objects.CellMappingList.get_all',
+                return_value=objects.CellMappingList(objects=[
+                    objects.CellMapping(name='cell1',
+                                        uuid=uuidsentinel.cell1)]))
+    @mock.patch('nova.objects.InstanceList.get_by_filters',
+                return_value=objects.InstanceList(objects=[
+                    objects.Instance(
+                        uuid=uuidsentinel.instance, host='fake', node='fake',
+                        task_state=None, flavor=objects.Flavor(),
+                        project_id='fake-project', user_id='fake-user')]))
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer', return_value={})
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
+                return_value=objects.ComputeNode(uuid=uuidsentinel.node))
+    @mock.patch('nova.scheduler.utils.resources_from_flavor',
+                return_value=mock.sentinel.resources)
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put_allocations', return_value=False)
+    def test_heal_allocations_put_allocations_fails(
+            self, mock_put_allocations, mock_res_from_flavor,
+            mock_get_compute_node, mock_get_allocs, mock_get_instances,
+            mock_get_all_cells):
+        self.assertEqual(3, self.cli.heal_allocations())
+        self.assertIn('Failed to create allocations for instance',
+                      self.output.getvalue())
+        instance = mock_get_instances.return_value[0]
+        mock_res_from_flavor.assert_called_once_with(
+            instance, instance.flavor)
+        mock_put_allocations.assert_called_once_with(
+            test.MatchType(context.RequestContext), uuidsentinel.node,
+            uuidsentinel.instance, mock.sentinel.resources, 'fake-project',
+            'fake-user')
+
+
 class TestNovaManageMain(test.NoDBTestCase):
     """Tests the nova-manage:main() setup code."""
 

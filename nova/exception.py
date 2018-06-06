@@ -2287,3 +2287,8 @@ class DeviceDeletionException(NovaException):
 class OptRequiredIfOtherOptValue(NovaException):
     msg_fmt = _("The %(then_opt)s option is required if %(if_opt)s is "
                 "specified as '%(if_value)s'.")
+
+
+class AllocationCreateFailed(NovaException):
+    msg_fmt = _('Failed to create allocations for instance %(instance)s '
+                'against resource provider %(provider)s.')
