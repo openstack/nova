@@ -2427,11 +2427,13 @@ class UsageList(base.ObjectListBase, base.VersionedObject):
 
     @classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
+        _ensure_rc_cache(context)
         usage_list = cls._get_all_by_resource_provider_uuid(context, rp_uuid)
         return base.obj_make_list(context, cls(context), Usage, usage_list)
 
     @classmethod
     def get_all_by_project_user(cls, context, project_id, user_id=None):
+        _ensure_rc_cache(context)
         usage_list = cls._get_all_by_project_user(context, project_id,
                                                   user_id=user_id)
         return base.obj_make_list(context, cls(context), Usage, usage_list)
