@@ -19,6 +19,7 @@ import webob
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.api.openstack.placement.policies import usage as policies
 from nova.api.openstack.placement.schemas import usage as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
@@ -43,6 +44,7 @@ def list_usages(req):
     the usage dictionary.
     """
     context = req.environ['placement.context']
+    context.can(policies.PROVIDER_USAGES)
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
@@ -88,6 +90,10 @@ def get_total_usages(req):
     Return 404 Not Found if the wanted microversion does not match.
     """
     context = req.environ['placement.context']
+    # TODO(mriedem): When we support non-admins to use GET /usages we
+    # should pass the project_id (and user_id?) from the query parameters
+    # into context.can() for the target.
+    context.can(policies.TOTAL_USAGES)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
     util.validate_query_params(req, schema.GET_USAGES_SCHEMA_1_9)

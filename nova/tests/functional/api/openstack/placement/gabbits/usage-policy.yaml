@@ -1,0 +1,33 @@
+# This tests the individual CRUD operations on
+# /resource_providers/{uuid}/usages and /usages
+# using a non-admin user with an open policy configuration. The
+# response validation is intentionally minimal.
+fixtures:
+    - OpenPolicyFixture
+
+defaults:
+    request_headers:
+        x-auth-token: user
+        accept: application/json
+        openstack-api-version: placement latest
+
+tests:
+
+- name: create provider
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: list provider usages
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  response_json_paths:
+      usages: {}
+
+- name: get total usages for project
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID]
+  response_json_paths:
+      usages: {}
