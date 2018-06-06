@@ -1,0 +1,74 @@
+# This tests the individual CRUD operations on
+# /allocations* and /resource_providers/{uuid}/allocations using a non-admin
+# user with an open policy configuration. The response validation is
+# intentionally minimal.
+fixtures:
+    - OpenPolicyFixture
+
+defaults:
+    request_headers:
+        x-auth-token: user
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement latest
+
+tests:
+
+- name: create resource provider
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: set some inventory
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 0
+      inventories:
+          DISK_GB:
+            total: 2048
+            min_unit: 10
+            max_unit: 1024
+          VCPU:
+            total: 96
+  status: 200
+
+- name: update allocation for consumer
+  PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                VCPU: 1
+                DISK_GB: 20
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 204
+
+- name: list allocations for consumer
+  GET: $LAST_URL
+
+- name: list allocations for resource provider
+  GET: /resource_providers/$ENVIRON['RP_UUID']/allocations
+
+- name: manage allocations
+  POST: /allocations
+  data:
+      a0b15655-273a-4b3d-9792-2e579b7d5ad9:
+          project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+          user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+          allocations:
+              $ENVIRON['RP_UUID']:
+                  resources:
+                      VCPU: 8
+                      DISK_GB: 40
+  status: 204
+
+- name: delete allocation for consumer
+  DELETE: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  status: 204
