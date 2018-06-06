@@ -2292,3 +2292,8 @@ class OptRequiredIfOtherOptValue(NovaException):
 class AllocationCreateFailed(NovaException):
     msg_fmt = _('Failed to create allocations for instance %(instance)s '
                 'against resource provider %(provider)s.')
+
+
+class CertificateValidationFailed(NovaException):
+    msg_fmt = _("Image signature certificate validation failed for "
+                "certificate: %(cert_uuid)s. %(reason)s")

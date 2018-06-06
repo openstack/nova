@@ -152,7 +152,8 @@ class API(object):
         session, image_id = self._get_session_and_image_id(context, id_or_uri)
         return session.delete(context, image_id)
 
-    def download(self, context, id_or_uri, data=None, dest_path=None):
+    def download(self, context, id_or_uri, data=None, dest_path=None,
+                 trusted_certs=None):
         """Transfer image bits from Glance or a known source location to the
         supplied destination filepath.
 
@@ -162,6 +163,9 @@ class API(object):
                           information for.
         :param data: A file object to use in downloading image data.
         :param dest_path: Filepath to transfer image bits to.
+        :param trusted_certs: A 'nova.objects.trusted_certs.TrustedCerts'
+                              object with a list of trusted image certificate
+                              IDs.
 
         Note that because of the poor design of the
         `glance.ImageService.download` method, the function returns different
@@ -191,4 +195,5 @@ class API(object):
         #                 handle streaming/copying/zero-copy as they see fit.
         session, image_id = self._get_session_and_image_id(context, id_or_uri)
         return session.download(context, image_id, data=data,
-                                dst_path=dest_path)
+                                dst_path=dest_path,
+                                trusted_certs=trusted_certs)
