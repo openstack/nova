@@ -22,12 +22,12 @@ Host Aggregates
 Host aggregates can be regarded as a mechanism to further partition an
 availability zone; while availability zones are visible to users, host
 aggregates are only visible to administrators.  Host aggregates started out as
-a way to use Xen hypervisor resource pools, but has been generalized to provide
+a way to use Xen hypervisor resource pools, but have been generalized to provide
 a mechanism to allow administrators to assign key-value pairs to groups of
 machines.  Each node can have multiple aggregates, each aggregate can have
 multiple key-value pairs, and the same key-value pair can be assigned to
 multiple aggregates.  This information can be used in the scheduler to enable
-advanced scheduling, to set up Xen hypervisor resources pools or to define
+advanced scheduling, to set up Xen hypervisor resource pools or to define
 logical groups for migration.  For more information, including an example of
 associating a group of hosts to a flavor, see :ref:`host-aggregates`.
 
@@ -56,7 +56,7 @@ between aggregates and availability zones:
   list of availability zones, they have no way to know whether the default
   availability zone name (currently *nova*) is provided because an host
   belongs to an aggregate whose AZ metadata key is set to *nova*, or because
-  there are at least one host belonging to no aggregate. Consequently, it is
+  there is at least one host not belonging to any aggregate. Consequently, it is
   highly recommended for users to never ever ask for booting an instance by
   specifying an explicit AZ named *nova* and for operators to never set the
   AZ metadata for an aggregate to *nova*. That leads to some problems
@@ -65,7 +65,7 @@ between aggregates and availability zones:
   moved to another aggregate or when the user would like to migrate the
   instance.
 
-.. note:: Availablity zone name must NOT contain ':' since it is used by admin
+.. note:: Availability zone name must NOT contain ':' since it is used by admin
   users to specify hosts where instances are launched in server creation.
   See :doc:`Select hosts where instances are launched </admin/availability-zones>` for more detail.
 
@@ -92,7 +92,7 @@ The OSAPI Admin API is extended to support the following operations:
   * start host maintenance (or evacuate-host): disallow a host to serve API requests and migrate instances to other hosts of the aggregate
 
     * It has been deprecated since microversion 2.43. Use `disable service` instead.
-  * stop host maintenance: (or rebalance-host): put the host back into operational mode, migrating instances back onto that host
+  * stop host maintenance (or rebalance-host): put the host back into operational mode, migrating instances back onto that host
 
     * It has been deprecated since microversion 2.43. Use `enable service` instead.
 
