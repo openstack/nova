@@ -13,30 +13,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.tests.functional.api_sample_tests import test_servers
-from nova.tests.unit.api.openstack.compute import test_fping
+from oslo_utils import uuidutils
+
+from nova.tests.functional.api import client as api_client
+from nova.tests.functional import api_samples_test_base
 
 
-class FpingSampleJsonTests(test_servers.ServersSampleBase):
-    sample_dir = "os-fping"
-
-    def setUp(self):
-        super(FpingSampleJsonTests, self).setUp()
-
-        def fake_check_fping(self):
-            pass
-        self.stub_out("oslo_concurrency.processutils.execute",
-                      test_fping.execute)
-        self.stub_out("nova.api.openstack.compute.fping."
-                      "FpingController.check_fping",
-                      fake_check_fping)
+class FpingSampleJsonTests(api_samples_test_base.ApiSampleTestBase):
+    api_major_version = 'v2'
 
     def test_get_fping(self):
-        self._post_server()
-        response = self._do_get('os-fping')
-        self._verify_response('fping-get-resp', {}, response, 200)
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_get, '/os-fping')
+        self.assertEqual(410, ex.response.status_code)
 
     def test_get_fping_details(self):
-        uuid = self._post_server()
-        response = self._do_get('os-fping/%s' % (uuid))
-        self._verify_response('fping-get-details-resp', {}, response, 200)
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_get, '/os-fping/%s' %
+                               uuidutils.generate_uuid())
+        self.assertEqual(410, ex.response.status_code)

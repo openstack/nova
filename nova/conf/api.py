@@ -309,20 +309,6 @@ Possible values:
 """)
 ]
 
-fping_path_opts = [
-    cfg.StrOpt("fping_path",
-        default="/usr/sbin/fping",
-        deprecated_group="DEFAULT",
-        deprecated_for_removal=True,
-        deprecated_since="18.0.0",
-        deprecated_reason="""
-This option only used in /os-fping API and the API itself was deprecated
-at version 2.36 (Newton release), also, the API itself is based on nova-network
-and nova-network is deprecated as well.
-""",
-        help="The full path to the fping binary.")
-]
-
 os_network_opts = [
     cfg.BoolOpt("use_neutron_default_nets",
         default=False,
@@ -365,7 +351,6 @@ API_OPTS = (auth_opts +
             file_opts +
             osapi_opts +
             osapi_hide_opts +
-            fping_path_opts +
             os_network_opts +
             enable_inst_pw_opts)
 

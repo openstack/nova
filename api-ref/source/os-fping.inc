@@ -9,6 +9,7 @@
    This API only works with ``nova-network`` which is
    deprecated. It should be avoided in any new applications.
    These will fail with a 404 starting from microversion 2.36.
+   It was removed in the 18.0.0 Rocky release.
 
 Pings instances and reports which instances are alive.
 
@@ -37,7 +38,8 @@ change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: serviceUnavailable(503), unauthorized(401), forbidden(403)
+Error response codes: serviceUnavailable(503), unauthorized(401), forbidden(403),
+itemNotFound(404), gone(410)
 
 Request
 -------
@@ -80,7 +82,7 @@ change these permissions through the ``policy.json`` file.
 Normal response codes: 200
 
 Error response codes: serviceUnavailable(503), unauthorized(401), forbidden(403),
-itemNotFound(404)
+itemNotFound(404), gone(410)
 
 Request
 -------
