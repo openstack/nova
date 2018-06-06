@@ -63,14 +63,16 @@ tests:
   response_json_paths:
       $.errors[0].title: Forbidden
 
-- name: non admin forbidden non json
-  GET: /resource_classes
+- name: post invalid non json
+  POST: /resource_classes
   request_headers:
-      x-auth-token: user
-      accept: text/plain
-  status: 403
+    accept: text/plain
+    content-type: application/json
+  data:
+      name: FOO
+  status: 400
   response_strings:
-      - admin required
+      - JSON does not validate
 
 - name: post illegal characters in name
   POST: /resource_classes

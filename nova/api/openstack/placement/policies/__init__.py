@@ -13,6 +13,7 @@
 import itertools
 
 from nova.api.openstack.placement.policies import base
+from nova.api.openstack.placement.policies import resource_class
 from nova.api.openstack.placement.policies import resource_provider
 
 
@@ -20,4 +21,5 @@ def list_rules():
     return itertools.chain(
         base.list_rules(),
         resource_provider.list_rules(),
+        resource_class.list_rules(),
     )
