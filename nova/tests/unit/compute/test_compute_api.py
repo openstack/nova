@@ -2858,6 +2858,58 @@ class _ComputeAPIUnitTestMixIn(object):
 
         _do_test()
 
+    def test_count_attachments_for_swap_not_found_and_readonly(self):
+        """Tests that attachment records that aren't found are considered
+        read/write by default. Also tests that read-only attachments are
+        not counted.
+        """
+        ctxt = context.get_admin_context()
+        volume = {
+            'attachments': {
+                uuids.server1: {
+                    'attachment_id': uuids.attachment1
+                },
+                uuids.server2: {
+                    'attachment_id': uuids.attachment2
+                }
+            }
+        }
+
+        def fake_attachment_get(_context, attachment_id):
+            if attachment_id == uuids.attachment1:
+                raise exception.VolumeAttachmentNotFound(
+                    attachment_id=attachment_id)
+            return {'connection_info': {'attach_mode': 'ro'}}
+
+        with mock.patch.object(self.compute_api.volume_api, 'attachment_get',
+                               side_effect=fake_attachment_get) as mock_get:
+            self.assertEqual(
+                1, self.compute_api._count_attachments_for_swap(ctxt, volume))
+        mock_get.assert_has_calls([
+            mock.call(ctxt, uuids.attachment1),
+            mock.call(ctxt, uuids.attachment2)], any_order=True)
+
+    @mock.patch('nova.volume.cinder.API.attachment_get',
+                new_callable=mock.NonCallableMock)  # asserts not called
+    def test_count_attachments_for_swap_no_query(self, mock_attachment_get):
+        """Tests that if the volume has <2 attachments, we don't query
+        the attachments for their attach_mode value.
+        """
+        volume = {}
+        self.assertEqual(
+            0, self.compute_api._count_attachments_for_swap(
+                mock.sentinel.context, volume))
+        volume = {
+            'attachments': {
+                uuids.server: {
+                    'attachment_id': uuids.attach1
+                }
+            }
+        }
+        self.assertEqual(
+            1, self.compute_api._count_attachments_for_swap(
+                mock.sentinel.context, volume))
+
     @mock.patch.object(compute_utils, 'is_volume_backed_instance')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(image_api.API, 'create')

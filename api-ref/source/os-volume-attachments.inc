@@ -177,6 +177,9 @@ Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through the
 ``policy.json`` file.
 
+Updating, or what is commonly referred to as "swapping", volume attachments
+with volumes that have more than one read/write attachment, is not supported.
+
 Normal response codes: 202
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
