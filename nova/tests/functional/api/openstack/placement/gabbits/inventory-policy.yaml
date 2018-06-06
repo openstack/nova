@@ -1,0 +1,85 @@
+# This tests the individual CRUD operations on
+# /resource_providers/{uuid}/inventories* using a non-admin user with an
+# open policy configuration. The response validation is intentionally minimal.
+fixtures:
+    - OpenPolicyFixture
+
+defaults:
+    request_headers:
+        x-auth-token: user
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement latest
+
+tests:
+
+- name: post new resource provider
+  POST: /resource_providers
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 200
+
+- name: list inventories
+  GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  response_json_paths:
+      $.resource_provider_generation: 0
+      $.inventories: {}
+
+- name: post an inventory
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  data:
+      resource_class: DISK_GB
+      total: 2048
+      reserved: 512
+      min_unit: 10
+      max_unit: 1024
+      step_size: 10
+      allocation_ratio: 1.0
+  status: 201
+  response_headers:
+      location: $SCHEME://$NETLOC/resource_providers/$ENVIRON['RP_UUID']/inventories/DISK_GB
+
+- name: show inventory
+  GET: $LOCATION
+  status: 200
+
+- name: update one inventory
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 1
+      total: 2048
+      reserved: 1024
+      min_unit: 10
+      max_unit: 1024
+      step_size: 10
+      allocation_ratio: 1.0
+  status: 200
+
+- name: update all inventory
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 2
+      inventories:
+        DISK_GB:
+          total: 2048
+          reserved: 1024
+          min_unit: 10
+          max_unit: 1024
+          step_size: 10
+          allocation_ratio: 1.0
+        VCPU:
+          total: 8
+  status: 200
+
+- name: delete specific inventory
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories/DISK_GB
+  status: 204
+
+- name: delete all inventory
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  status: 204
