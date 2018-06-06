@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    The `os-volume_attachments`_ update API, commonly referred to as the swap
+    volume API will now return a ``400`` (BadRequest) error when attempting to
+    swap from a multi attached volume with more than one active read/write
+    attachment resolving `bug #1775418`_.
+
+    .. _os-volume_attachments: https://developer.openstack.org/api-ref/compute/?expanded=update-a-volume-attachment-detail
+    .. _bug #1775418: https://launchpad.net/bugs/1775418
