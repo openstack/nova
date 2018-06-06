@@ -3502,6 +3502,63 @@ def _allocation_request_for_provider(ctx, requested_resources, provider):
             anchor_root_provider_uuid=provider.root_provider_uuid)
 
 
+def _check_traits_for_alloc_request(res_requests, summaries, prov_traits,
+                                    required_traits, forbidden_traits):
+    """Given a list of AllocationRequestResource objects, check if that
+    combination can provide trait constraints. If it can, returns all
+    resource provider internal IDs in play, else return an empty list.
+
+    TODO(tetsuro): For optimization, we should move this logic to SQL in
+                   _get_trees_matching_all().
+
+    :param res_requests: a list of AllocationRequestResource objects that have
+                         resource providers to be checked if they collectively
+                         satisfy trait constraints in the required_traits and
+                         forbidden_traits parameters.
+    :param summaries: dict, keyed by resource provider ID, of ProviderSummary
+                      objects containing usage and trait information for
+                      resource providers involved in the overall request
+    :param prov_traits: A dict, keyed by internal resource provider ID, of
+                        string trait names associated with that provider
+    :param required_traits: A map, keyed by trait string name, of required
+                            trait internal IDs that each *allocation request's
+                            set of providers* must *collectively* have
+                            associated with them
+    :param forbidden_traits: A map, keyed by trait string name, of trait
+                             internal IDs that a resource provider must
+                             not have.
+    """
+    all_prov_ids = set()
+    all_traits = set()
+    for res_req in res_requests:
+        rp_uuid = res_req.resource_provider.uuid
+        for rp_id, summary in summaries.items():
+            if summary.resource_provider.uuid == rp_uuid:
+                break
+        rp_traits = set(prov_traits.get(rp_id, []))
+
+        # Check if there are forbidden_traits
+        conflict_traits = set(forbidden_traits) & set(rp_traits)
+        if conflict_traits:
+            LOG.debug('Excluding resource provider %s, it has '
+                      'forbidden traits: (%s).',
+                      rp_id, ', '.join(conflict_traits))
+            return []
+
+        all_prov_ids.add(rp_id)
+        all_traits |= rp_traits
+
+    # Check if there are missing traits
+    missing_traits = set(required_traits) - all_traits
+    if missing_traits:
+        LOG.debug('Excluding a set of allocation candidate %s : '
+                  'missing traits %s are not satisfied.',
+                  all_prov_ids, ','.join(missing_traits))
+        return []
+
+    return all_prov_ids
+
+
 def _alloc_candidates_single_provider(ctx, requested_resources, rps):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and resource providers. The
@@ -3561,7 +3618,8 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rps):
     return alloc_requests, list(summaries.values())
 
 
-def _alloc_candidates_nested_no_shared(ctx, requested_resources, rp_tuples):
+def _alloc_candidates_nested_no_shared(ctx, requested_resources,
+        required_traits, forbidden_traits, rp_tuples):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and tuples of
     (rp_id, root_id, rc_id). The supplied resource provider trees have
@@ -3580,6 +3638,13 @@ def _alloc_candidates_nested_no_shared(ctx, requested_resources, rp_tuples):
     :param ctx: nova.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
+    :param required_traits: A map, keyed by trait string name, of required
+                            trait internal IDs that each *allocation request's
+                            set of providers* must *collectively* have
+                            associated with them
+    :param forbidden_traits: A map, keyed by trait string name, of trait
+                             internal IDs that a resource provider must
+                             not have.
     :param rp_tuples: List of tuples of (provider ID, root provider ID,
                       resource class ID)s for providers that matched the
                       requested resources
@@ -3631,6 +3696,9 @@ def _alloc_candidates_nested_no_shared(ctx, requested_resources, rp_tuples):
         # Using itertools.product, we get all the combinations of resource
         # providers in a tree.
         for res_requests in itertools.product(*request_groups):
+            if not _check_traits_for_alloc_request(res_requests, summaries,
+                            prov_traits, required_traits, forbidden_traits):
+                continue
             alloc_requests.append(
                 AllocationRequest(ctx, resource_requests=list(res_requests),
                                   anchor_root_provider_uuid=root_uuid)
@@ -3784,38 +3852,12 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
         for res_requests in itertools.product(*request_groups):
             # Before we add the allocation request to our list, we first need
             # to ensure that the resource providers involved in this allocation
-            # request have all of the traits
-            all_prov_ids = set()
-            all_traits = set()
-            for res_req in res_requests:
-                rp_uuid = res_req.resource_provider.uuid
-                rp_id = None
-                for id, summary in summaries.items():
-                    if summary.resource_provider.uuid == rp_uuid:
-                        rp_id = id
-                        break
+            # request have all of the traits and that we don't have this
+            # combination in alloc_requests yet
+            all_prov_ids = _check_traits_for_alloc_request(res_requests,
+                summaries, prov_traits, required_traits, forbidden_traits)
 
-                rp_traits = set(prov_traits.get(rp_id, []))
-                conflict_traits = set(forbidden_traits) & set(rp_traits)
-                if conflict_traits:
-                    LOG.debug('Excluding sharing provider %s, it has '
-                              'forbidden traits: (%s).',
-                              rp_id, ', '.join(conflict_traits))
-                    continue
-
-                all_prov_ids.add(rp_id)
-                all_traits |= rp_traits
-
-            # Check if there are missing traits
-            missing_traits = set(required_traits) - all_traits
-            if missing_traits:
-                LOG.debug('Excluding a set of allocation candidate %s : '
-                          'missing traits %s are not satisfied.',
-                          all_prov_ids, ','.join(missing_traits))
-                continue
-
-            # Check if we already have this combination in alloc_requests
-            if all_prov_ids in alloc_prov_ids:
+            if not all_prov_ids or all_prov_ids in alloc_prov_ids:
                 continue
 
             alloc_prov_ids.append(all_prov_ids)
@@ -4312,7 +4354,7 @@ class AllocationCandidates(base.VersionedObject):
                 rp_tuples = _get_trees_matching_all(context, resources,
                     required_trait_map, forbidden_trait_map, member_of)
                 return _alloc_candidates_nested_no_shared(context, resources,
-                                                          rp_tuples)
+                    required_trait_map, forbidden_trait_map, rp_tuples)
 
         # Either we are processing a single-RP request group, or there are no
         # sharing providers that (help) satisfy the request.  Get a list of
