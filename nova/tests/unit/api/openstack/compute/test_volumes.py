@@ -971,6 +971,81 @@ class VolumeAttachTestsV260(test.NoDBTestCase):
                       'shelved-offloaded instances.', six.text_type(ex))
 
 
+class SwapVolumeMultiattachTestCase(test.NoDBTestCase):
+
+    @mock.patch('nova.api.openstack.common.get_instance')
+    @mock.patch('nova.volume.cinder.API.begin_detaching')
+    @mock.patch('nova.volume.cinder.API.roll_detaching')
+    def test_swap_multiattach_multiple_readonly_attachments_fails(
+            self, mock_roll_detaching, mock_begin_detaching,
+            mock_get_instance):
+        """Tests that trying to swap from a multiattach volume with
+        multiple read/write attachments will return an error.
+        """
+
+        def fake_volume_get(_context, volume_id):
+            if volume_id == uuids.old_vol_id:
+                return {
+                    'id': volume_id,
+                    'size': 1,
+                    'multiattach': True,
+                    'attachments': {
+                        uuids.server1: {
+                            'attachment_id': uuids.attachment_id1,
+                            'mountpoint': '/dev/vdb'
+                        },
+                        uuids.server2: {
+                            'attachment_id': uuids.attachment_id2,
+                            'mountpoint': '/dev/vdb'
+                        }
+                    }
+                }
+            if volume_id == uuids.new_vol_id:
+                return {
+                    'id': volume_id,
+                    'size': 1,
+                    'attach_status': 'detached'
+                }
+            raise exception.VolumeNotFound(volume_id=volume_id)
+
+        def fake_attachment_get(_context, attachment_id):
+            return {'connection_info': {'attach_mode': 'rw'}}
+
+        ctxt = context.get_admin_context()
+        instance = fake_instance.fake_instance_obj(
+            ctxt, uuid=uuids.server1, vm_state=vm_states.ACTIVE,
+            task_state=None, launched_at=datetime.datetime(2018, 6, 6))
+        mock_get_instance.return_value = instance
+        controller = volumes_v21.VolumeAttachmentController()
+        with test.nested(
+                mock.patch.object(controller.volume_api, 'get',
+                                  side_effect=fake_volume_get),
+                mock.patch.object(controller.compute_api.volume_api,
+                                  'attachment_get',
+                                  side_effect=fake_attachment_get)) as (
+            mock_volume_get, mock_attachment_get
+        ):
+            req = fakes.HTTPRequest.blank(
+                '/servers/%s/os-volume_attachments/%s' %
+                (uuids.server1, uuids.old_vol_id))
+            req.headers['content-type'] = 'application/json'
+            req.environ['nova.context'] = ctxt
+            body = {
+                'volumeAttachment': {
+                    'volumeId': uuids.new_vol_id
+                }
+            }
+            ex = self.assertRaises(
+                webob.exc.HTTPBadRequest, controller.update, req,
+                uuids.server1, uuids.old_vol_id, body=body)
+        self.assertIn('Swapping multi-attach volumes with more than one ',
+                      six.text_type(ex))
+        mock_attachment_get.assert_has_calls([
+            mock.call(ctxt, uuids.attachment_id1),
+            mock.call(ctxt, uuids.attachment_id2)], any_order=True)
+        mock_roll_detaching.assert_called_once_with(ctxt, uuids.old_vol_id)
+
+
 class CommonBadRequestTestCase(object):
 
     resource = None

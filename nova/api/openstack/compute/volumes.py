@@ -394,7 +394,8 @@ class VolumeAttachmentController(wsgi.Controller):
                                          new_volume)
         except exception.VolumeBDMNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InvalidVolume as e:
+        except (exception.InvalidVolume,
+                exception.MultiattachSwapVolumeNotSupported) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())

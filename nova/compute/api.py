@@ -4268,6 +4268,52 @@ class API(base.Base):
         else:
             self._detach_volume(context, instance, volume)
 
+    def _count_attachments_for_swap(self, ctxt, volume):
+        """Counts the number of attachments for a swap-related volume.
+
+        Attempts to only count read/write attachments if the volume attachment
+        records exist, otherwise simply just counts the number of attachments
+        regardless of attach mode.
+
+        :param ctxt: nova.context.RequestContext - user request context
+        :param volume: nova-translated volume dict from nova.volume.cinder.
+        :returns: count of attachments for the volume
+        """
+        # This is a dict, keyed by server ID, to a dict of attachment_id and
+        # mountpoint.
+        attachments = volume.get('attachments', {})
+        # Multiattach volumes can have more than one attachment, so if there
+        # is more than one attachment, attempt to count the read/write
+        # attachments.
+        if len(attachments) > 1:
+            count = 0
+            for attachment in attachments.values():
+                attachment_id = attachment['attachment_id']
+                # Get the attachment record for this attachment so we can
+                # get the attach_mode.
+                # TODO(mriedem): This could be optimized if we had
+                # GET /attachments/detail?volume_id=volume['id'] in Cinder.
+                try:
+                    attachment_record = self.volume_api.attachment_get(
+                        ctxt, attachment_id)
+                    # Note that the attachment record from Cinder has
+                    # attach_mode in the top-level of the resource but the
+                    # nova.volume.cinder code translates it and puts the
+                    # attach_mode in the connection_info for some legacy
+                    # reason...
+                    if attachment_record.get(
+                            'connection_info', {}).get(
+                                # attachments are read/write by default
+                                'attach_mode', 'rw') == 'rw':
+                        count += 1
+                except exception.VolumeAttachmentNotFound:
+                    # attachments are read/write by default so count it
+                    count += 1
+        else:
+            count = len(attachments)
+
+        return count
+
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
                                     vm_states.RESIZED])
@@ -4290,6 +4336,20 @@ class API(base.Base):
             self.volume_api.begin_detaching(context, old_volume['id'])
         except exception.InvalidInput as exc:
             raise exception.InvalidVolume(reason=exc.format_message())
+
+        # Disallow swapping from multiattach volumes that have more than one
+        # read/write attachment. We know the old_volume has at least one
+        # attachment since it's attached to this server. The new_volume
+        # can't have any attachments because of the attach_status check above.
+        # We do this count after calling "begin_detaching" to lock against
+        # concurrent attachments being made while we're counting.
+        try:
+            if self._count_attachments_for_swap(context, old_volume) > 1:
+                raise exception.MultiattachSwapVolumeNotSupported()
+        except Exception:  # This is generic to handle failures while counting
+            # We need to reset the detaching status before raising.
+            with excutils.save_and_reraise_exception():
+                self.volume_api.roll_detaching(context, old_volume['id'])
 
         # Get the BDM for the attached (old) volume so we can tell if it was
         # attached with the new-style Cinder 3.44 API.
