@@ -299,7 +299,7 @@ class _TestRequestSpecObject(object):
         spec = objects.RequestSpec.from_primitives(ctxt, spec_dict, filt_props)
         mock_limits.assert_called_once_with({})
         # Make sure that all fields are set using that helper method
-        skip = ['id', 'security_groups']
+        skip = ['id', 'security_groups', 'network_metadata']
         for field in [f for f in spec.obj_fields if f not in skip]:
             self.assertTrue(spec.obj_attr_is_set(field),
                              'Field: %s is not set' % field)
@@ -329,7 +329,8 @@ class _TestRequestSpecObject(object):
                 filter_properties, instance_group, instance.availability_zone,
                 objects.SecurityGroupList())
         # Make sure that all fields are set using that helper method
-        for field in [f for f in spec.obj_fields if f != 'id']:
+        skip = ['id', 'network_metadata']
+        for field in [f for f in spec.obj_fields if f not in skip]:
             self.assertTrue(spec.obj_attr_is_set(field),
                             'Field: %s is not set' % field)
         # just making sure that the context is set by the method
@@ -542,7 +543,7 @@ class _TestRequestSpecObject(object):
 
         # object fields
         for field in ['image', 'numa_topology', 'pci_requests', 'flavor',
-                      'limits']:
+                      'limits', 'network_metadata']:
             self.assertEqual(
                     getattr(req_obj, field).obj_to_primitive(),
                     getattr(serialized_obj, field).obj_to_primitive())
@@ -641,6 +642,18 @@ class _TestRequestSpecObject(object):
         self.assertNotIn('user_id', primitive)
         self.assertIn('project_id', primitive)
 
+    def test_compat_network_metadata(self):
+        network_metadata = objects.NetworkMetadata(physnets=set(),
+                                                   tunneled=False)
+        req_obj = objects.RequestSpec(network_metadata=network_metadata,
+                                      user_id=fakes.FAKE_USER_ID)
+        versions = ovo_base.obj_tree_get_versions('RequestSpec')
+        primitive = req_obj.obj_to_primitive(target_version='1.9',
+                                             version_manifest=versions)
+        primitive = primitive['nova_object.data']
+        self.assertNotIn('network_metadata', primitive)
+        self.assertIn('user_id', primitive)
+
     def test_default_requested_destination(self):
         req_obj = objects.RequestSpec()
         self.assertIsNone(req_obj.requested_destination)
@@ -651,6 +664,13 @@ class _TestRequestSpecObject(object):
         self.assertIsInstance(req_obj.security_groups,
                               objects.SecurityGroupList)
         self.assertIn('security_groups', req_obj)
+
+    def test_network_requests_load(self):
+        req_obj = objects.RequestSpec()
+        self.assertNotIn('network_metadata', req_obj)
+        self.assertIsInstance(req_obj.network_metadata,
+                              objects.NetworkMetadata)
+        self.assertIn('network_metadata', req_obj)
 
     def test_destination_aggregates_default(self):
         destination = objects.Destination()
