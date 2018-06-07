@@ -11,4 +11,4 @@ API guide docs are built to:
 https://developer.openstack.org/api-guide/compute/
 
 For more details, see the "Building the Documentation" section of
-doc/source/contributor/development.environment.rst.
+doc/source/contributor/development-environment.rst.
