@@ -149,6 +149,20 @@ class BlockDeviceTestCase(test.NoDBTestCase):
         self.assertEqual('c', block_device.get_device_letter('hdc'))
         self.assertIsNone(block_device.get_device_letter(None))
 
+    def test_generate_device_name(self):
+        expected = (
+                ('vda', ("vd", 0)),
+                ('vdaa', ("vd", 26)),
+                ('vdabc', ("vd", 730)),
+                ('vdidpok', ("vd", 4194304)),
+                ('sdc', ("sd", 2)),
+                ('sdaa', ("sd", 26)),
+                ('sdiw', ("sd", 256)),
+                ('hdzz', ("hd", 701))
+                )
+        for res, args in expected:
+            self.assertEqual(res, block_device.generate_device_name(*args))
+
     def test_volume_in_mapping(self):
         swap = {'device_name': '/dev/sdb',
                 'swap_size': 1}

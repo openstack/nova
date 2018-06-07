@@ -509,6 +509,32 @@ def get_device_letter(device_name):
     return _nums.sub('', letter) if device_name else device_name
 
 
+def generate_device_letter(index):
+    """Returns device letter by index (starts by zero)
+       i.e.
+       index   = 0, 1,..., 18277
+       results = a, b,..., zzz
+    """
+    base = ord('z') - ord('a') + 1
+    unit_dev_name = ""
+    while index >= 0:
+        letter = chr(ord('a') + (index % base))
+        unit_dev_name = letter + unit_dev_name
+        index = int(index / base) - 1
+
+    return unit_dev_name
+
+
+def generate_device_name(prefix, index):
+    """Returns device unit name by index (starts by zero)
+       i.e.
+       prefix  = vd
+       index   = 0, 1,..., 18277
+       results = vda, vdb,..., vdzzz
+    """
+    return prefix + generate_device_letter(index)
+
+
 def instance_block_mapping(instance, bdms):
     root_device_name = instance['root_device_name']
     # NOTE(clayg): remove this when xenapi is setting default_root_device
