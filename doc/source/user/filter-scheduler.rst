@@ -451,6 +451,10 @@ The Filter Scheduler weighs hosts based on the config option
   a negative value would mean that the anti-affinity weigher would prefer
   collocating placement.
 
+* |BuildFailureWeigher| Weigh hosts by the number of recent failed boot attempts.
+  It considers the build failure counter and can negatively weigh hosts with
+  recent failures. This avoids taking computes fully out of rotation.
+
 Filter Scheduler makes a local list of acceptable hosts by repeated filtering and
 weighing. Each time it chooses a host, it virtually consumes resources on it,
 so subsequent selections can adjust accordingly. It is useful if the customer
@@ -504,3 +508,4 @@ in :mod:`nova.tests.scheduler`.
 .. |ServerGroupSoftAffinityWeigher| replace:: :class:`ServerGroupSoftAffinityWeigher <nova.scheduler.weights.affinity.ServerGroupSoftAffinityWeigher>`
 .. |ServerGroupSoftAntiAffinityWeigher| replace:: :class:`ServerGroupSoftAntiAffinityWeigher <nova.scheduler.weights.affinity.ServerGroupSoftAntiAffinityWeigher>`
 .. |DiskWeigher| replace:: :class:`DiskWeigher <nova.scheduler.weights.disk.DiskWeigher>`
+.. |BuildFailureWeigher| replace:: :class:`BuildFailureWeigher <nova.scheduler.weights.compute.BuildFailureWeigher>`

@@ -825,7 +825,7 @@ Hosts and cells are weighted based on the following options in the
    * - [filter_scheduler]
      - ``build_failure_weight_multiplier``
      - Multiplier used for weighing hosts which have recent build failures. A
-       positive value increases the significance of build falures reported by
+       positive value increases the significance of build failures reported by
        the host recently, making them less likely to be chosen.
    * - [metrics]
      - ``weight_multiplier``
