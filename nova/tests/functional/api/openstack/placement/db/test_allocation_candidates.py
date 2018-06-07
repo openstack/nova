@@ -1999,11 +1999,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         req_traits = {}
         forbidden_traits = {}
         member_of = []
+        sharing = {}
 
         # Before we even set up any providers, verify that the short-circuits
         # work to return empty lists
-        trees = rp_obj._get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, member_of)
+        trees = rp_obj._get_trees_matching_all(self.ctx,
+            resources, req_traits, forbidden_traits, sharing, member_of)
         self.assertEqual([], trees)
 
         # We are setting up 3 trees of providers that look like this:
@@ -2046,8 +2047,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 # has inventory we will use...
                 tb.set_traits(cn, os_traits.HW_NIC_OFFLOAD_GENEVE)
 
-        trees = rp_obj._get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, member_of)
+        trees = rp_obj._get_trees_matching_all(self.ctx,
+            resources, req_traits, forbidden_traits, sharing, member_of)
         # trees is a list of two-tuples of (provider ID, root provider ID)
         tree_root_ids = set(p[1] for p in trees)
         expect_root_ids = self._get_root_ids_matching_names(cn_names)
@@ -2074,8 +2075,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.allocate_from_provider(cn2_pf1, fields.ResourceClass.SRIOV_NET_VF,
                                   8)
 
-        trees = rp_obj._get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, member_of)
+        trees = rp_obj._get_trees_matching_all(self.ctx,
+            resources, req_traits, forbidden_traits, sharing, member_of)
         tree_root_ids = set(p[1] for p in trees)
         self.assertEqual(2, len(tree_root_ids))
 
@@ -2103,8 +2104,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         req_traits = {
             geneve_t.name: geneve_t.id,
         }
-        trees = rp_obj._get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, member_of)
+        trees = rp_obj._get_trees_matching_all(self.ctx,
+            resources, req_traits, forbidden_traits, sharing, member_of)
         tree_root_ids = set(p[1] for p in trees)
         self.assertEqual(1, len(tree_root_ids))
 
@@ -2134,8 +2135,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             geneve_t.name: geneve_t.id,
             avx2_t.name: avx2_t.id,
         }
-        trees = rp_obj._get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, member_of)
+        trees = rp_obj._get_trees_matching_all(self.ctx,
+            resources, req_traits, forbidden_traits, sharing, member_of)
         tree_root_ids = set(p[1] for p in trees)
         self.assertEqual(0, len(tree_root_ids))
 
@@ -2147,8 +2148,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         forbidden_traits = {
             avx2_t.name: avx2_t.id,
         }
-        trees = rp_obj._get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, member_of)
+        trees = rp_obj._get_trees_matching_all(self.ctx,
+            resources, req_traits, forbidden_traits, sharing, member_of)
         tree_root_ids = set(p[1] for p in trees)
         self.assertEqual(1, len(tree_root_ids))
 
@@ -2190,6 +2191,156 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.allocate_from_provider(
             cn3_pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
 
-        trees = rp_obj._get_trees_matching_all(
-            self.ctx, resources, req_traits, forbidden_traits, member_of)
+        trees = rp_obj._get_trees_matching_all(self.ctx,
+            resources, req_traits, forbidden_traits, sharing, member_of)
         self.assertEqual([], trees)
+
+    def test_simple_tree_with_shared_provider(self):
+        """Tests that we properly winnow allocation requests when including
+        shared and nested providers
+        """
+        # We are setting up 2 cn trees with 2 shared storages
+        # that look like this:
+        #
+        #              compute node (cn1)      ----- shared storage (ss1)
+        #             /                 \       agg1       with 2000 DISK_GB
+        #            /                   \
+        #       numa cell 1_0        numa cell 1_1
+        #           |                    |
+        #           |                    |
+        #         pf 1_0               pf 1_1(HW_NIC_OFFLOAD_GENEVE)
+        #
+        #              compute node (cn2)      ----- shared storage (ss2)
+        #             /                 \       agg2       with 1000 DISK_GB
+        #            /                   \
+        #       numa cell 2_0        numa cell 2_1
+        #           |                    |
+        #           |                    |
+        #         pf 2_0               pf 2_1(HW_NIC_OFFLOAD_GENEVE)
+        #
+        # The second physical function in both trees (pf1_1, pf 2_1) will be
+        # associated with the HW_NIC_OFFLOAD_GENEVE trait, but not the first
+        # physical function.
+        #
+        # We will issue a request to _get_allocation_candidates() for VCPU,
+        # SRIOV_NET_VF and DISK_GB **without** required traits, then include
+        # a request that includes HW_NIC_OFFLOAD_GENEVE. In the latter case,
+        # the compute node tree should be returned but the allocation requests
+        # should only include the second physical function since the required
+        # trait is only associated with that PF.
+
+        cn1 = self._create_provider('cn1', uuids.agg1)
+        cn2 = self._create_provider('cn2', uuids.agg2)
+        tb.add_inventory(cn1, fields.ResourceClass.VCPU, 16)
+        tb.add_inventory(cn2, fields.ResourceClass.VCPU, 16)
+
+        numa1_0 = self._create_provider('cn1_numa0', parent=cn1.uuid)
+        numa1_1 = self._create_provider('cn1_numa1', parent=cn1.uuid)
+        numa2_0 = self._create_provider('cn2_numa0', parent=cn2.uuid)
+        numa2_1 = self._create_provider('cn2_numa1', parent=cn2.uuid)
+
+        pf1_0 = self._create_provider('cn1_numa0_pf0', parent=numa1_0.uuid)
+        pf1_1 = self._create_provider('cn1_numa1_pf1', parent=numa1_1.uuid)
+        pf2_0 = self._create_provider('cn2_numa0_pf0', parent=numa2_0.uuid)
+        pf2_1 = self._create_provider('cn2_numa1_pf1', parent=numa2_1.uuid)
+
+        tb.add_inventory(pf1_0, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.add_inventory(pf1_1, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.add_inventory(pf2_0, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.add_inventory(pf2_1, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.set_traits(pf2_1, os_traits.HW_NIC_OFFLOAD_GENEVE)
+        tb.set_traits(pf1_1, os_traits.HW_NIC_OFFLOAD_GENEVE)
+
+        ss1 = self._create_provider('ss1', uuids.agg1)
+        ss2 = self._create_provider('ss2', uuids.agg2)
+        tb.add_inventory(ss1, fields.ResourceClass.DISK_GB, 2000)
+        tb.add_inventory(ss2, fields.ResourceClass.DISK_GB, 1000)
+        tb.set_traits(ss1, 'MISC_SHARES_VIA_AGGREGATE')
+        tb.set_traits(ss2, 'MISC_SHARES_VIA_AGGREGATE')
+
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    fields.ResourceClass.VCPU: 2,
+                    fields.ResourceClass.SRIOV_NET_VF: 1,
+                    fields.ResourceClass.DISK_GB: 1500,
+                })
+            }
+        )
+
+        # cn2 is not in the allocation candidates because it doesn't have
+        # enough DISK_GB resource with shared providers.
+        expected = [
+            [('cn1', fields.ResourceClass.VCPU, 2),
+             ('cn1_numa0_pf0', fields.ResourceClass.SRIOV_NET_VF, 1),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500)],
+            [('cn1', fields.ResourceClass.VCPU, 2),
+             ('cn1_numa1_pf1', fields.ResourceClass.SRIOV_NET_VF, 1),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500)]
+        ]
+
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 16, 0)
+            ]),
+        # NOTE(tetsuro): In summary, we'd like to expose all nested providers
+        # in the tree.
+        #     'cn1_numa0': set([])
+        #     'cn1_numa1': set([])
+            'cn1_numa0_pf0': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0)
+            ]),
+            'cn1_numa1_pf1': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0)
+            ]),
+            'ss1': set([
+                (fields.ResourceClass.DISK_GB, 2000, 0)
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
+        # Now add required traits to the mix and verify we still get the
+        # inventory of SRIOV_NET_VF.
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    fields.ResourceClass.VCPU: 2,
+                    fields.ResourceClass.SRIOV_NET_VF: 1,
+                    fields.ResourceClass.DISK_GB: 1500,
+                },
+                required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE])
+            }
+        )
+
+        # cn1_numa0_pf0 is not in the allocation candidates because it
+        # doesn't have the required trait.
+        expected = [
+            [('cn1', fields.ResourceClass.VCPU, 2),
+             ('cn1_numa1_pf1', fields.ResourceClass.SRIOV_NET_VF, 1),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500)]
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 16, 0)
+            ]),
+        # NOTE(tetsuro): In summary, we'd like to expose all nested providers
+        # in the tree.
+        #     'cn1_numa0': set([])
+        #     'cn1_numa1': set([])
+        #     'cn1_numa0_pf0': set([
+        #         (fields.ResourceClass.SRIOV_NET_VF, 8, 0)
+        #     ]),
+            'cn1_numa1_pf1': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0)
+            ]),
+            'ss1': set([
+                (fields.ResourceClass.DISK_GB, 2000, 0)
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
