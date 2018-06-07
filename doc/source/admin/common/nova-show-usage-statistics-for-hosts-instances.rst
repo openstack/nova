@@ -7,7 +7,7 @@ You can show basic statistics on resource usage for hosts and instances.
 .. note::
 
    For more sophisticated monitoring, see the
-   `ceilometer <https://launchpad.net/ceilometer>`__ project. You can
+   `Ceilometer <https://docs.openstack.org/ceilometer/latest/>`__ project. You can
    also use tools, such as `Ganglia <http://ganglia.info/>`__ or
    `Graphite <http://graphite.wikidot.com/>`__, to gather more detailed
    data.
@@ -28,7 +28,6 @@ The following examples show the host usage statistics for a host called
      +-----------+-------------+----------+
      | devstack  | conductor   | internal |
      | devstack  | compute     | nova     |
-     | devstack  | cert        | internal |
      | devstack  | network     | internal |
      | devstack  | scheduler   | internal |
      | devstack  | consoleauth | internal |
@@ -60,7 +59,7 @@ The following examples show the host usage statistics for a host called
 
   The row that has the value ``used_now`` in the ``PROJECT`` column shows the
   sum of the resources allocated to the instances that run on the host, plus
-  the resources allocated to the virtual machine of the host itself.
+  the resources allocated to the host itself.
 
   The row that has the value ``used_max`` in the ``PROJECT`` column shows the
   sum of the resources allocated to the instances that run on the host.
@@ -81,20 +80,21 @@ Show instance usage statistics
      .. code-block:: console
 
         $ openstack server list
-        +----------+----------------------+--------+------------+-------------+------------------+------------+
-        | ID       | Name                 | Status | Task State | Power State | Networks         | Image Name |
-        +----------+----------------------+--------+------------+-------------+------------------+------------+
-        | 84c6e... | myCirrosServer       | ACTIVE | None       | Running     | private=10.0.0.3 | cirros     |
-        | 8a995... | myInstanceFromVolume | ACTIVE | None       | Running     | private=10.0.0.4 | ubuntu     |
-        +----------+----------------------+--------+------------+-------------+------------------+------------+
+        +----------+----------------------+--------+------------------+--------+----------+
+        | ID       | Name                 | Status | Networks         | Image  | Flavor   |
+        +----------+----------------------+--------+------------------+--------+----------+
+        | 84c6e... | myCirrosServer       | ACTIVE | private=10.0.0.3 | cirros | m1.tiny  |
+        | 8a995... | myInstanceFromVolume | ACTIVE | private=10.0.0.4 | ubuntu | m1.small |
+        +----------+----------------------+--------+------------------+--------+----------+
 
   #. Get diagnostic statistics:
 
      .. note::
 
         As of microversion v2.48, diagnostics information for all virt drivers will
-        have a standard format as below. For more details on diagnostics
-        response message see `server diagnostics api
+        have a standard format as below. Before microversion 2.48, each hypervisor
+        had its own format. For more details on diagnostics response message see
+        `server diagnostics api
         <https://developer.openstack.org/api-ref/compute/#servers-diagnostics-servers-diagnostics>`__
         documentation.
 
