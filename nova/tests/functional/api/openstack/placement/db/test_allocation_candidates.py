@@ -1949,17 +1949,6 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self._validate_provider_summary_resources({}, alloc_cands)
         self._validate_provider_summary_traits({}, alloc_cands)
 
-    def _get_root_ids_matching_names(self, names):
-        """Utility function to look up root provider IDs from a set of supplied
-        provider names directly from the API DB.
-        """
-        names = map(six.text_type, names)
-        sel = sa.select([rp_obj._RP_TBL.c.root_provider_id])
-        sel = sel.where(rp_obj._RP_TBL.c.name.in_(names))
-        with self.api_db.get_engine().connect() as conn:
-            cn_root_ids = set([r[0] for r in conn.execute(sel)])
-        return cn_root_ids
-
     def _get_rp_ids_matching_names(self, names):
         """Utility function to look up resource provider IDs from a set of
         supplied provider names directly from the API DB.
@@ -2042,7 +2031,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             resources, req_traits, forbidden_traits, sharing, member_of)
         # trees is a list of two-tuples of (provider ID, root provider ID)
         tree_root_ids = set(p[1] for p in trees)
-        expect_root_ids = self._get_root_ids_matching_names(cn_names)
+        expect_root_ids = self._get_rp_ids_matching_names(cn_names)
         self.assertEqual(expect_root_ids, tree_root_ids)
 
         # let's validate providers in tree as well
@@ -2074,7 +2063,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # cn2 had all its VFs consumed, so we should only get cn1 and cn3's IDs
         # as the root provider IDs.
         cn_names = ['cn1', 'cn3']
-        expect_root_ids = self._get_root_ids_matching_names(cn_names)
+        expect_root_ids = self._get_rp_ids_matching_names(cn_names)
         self.assertEqual(expect_root_ids, set(tree_root_ids))
 
         # let's validate providers in tree as well
@@ -2101,7 +2090,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(1, len(tree_root_ids))
 
         cn_names = ['cn3']
-        expect_root_ids = self._get_root_ids_matching_names(cn_names)
+        expect_root_ids = self._get_rp_ids_matching_names(cn_names)
         self.assertEqual(expect_root_ids, set(tree_root_ids))
 
         # let's validate providers in tree as well
@@ -2145,7 +2134,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(1, len(tree_root_ids))
 
         cn_names = ['cn3']
-        expect_root_ids = self._get_root_ids_matching_names(cn_names)
+        expect_root_ids = self._get_rp_ids_matching_names(cn_names)
         self.assertEqual(expect_root_ids, set(tree_root_ids))
 
         # let's validate providers in tree as well
