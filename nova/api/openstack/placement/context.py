@@ -36,8 +36,8 @@ class RequestContext(context.RequestContext):
                 {'project_id': self.project_id, 'user_id': self.user_id}
         :param fatal: if False, will return False when an
             exception.PolicyNotAuthorized occurs.
-        :raises nova.exception.PolicyNotAuthorized: if verification fails and
-            fatal is True.
+        :raises nova.api.openstack.placement.exception.PolicyNotAuthorized:
+            if verification fails and fatal is True.
         :return: returns a non-False value (not necessarily "True") if
             authorized and False if not authorized and fatal is False.
         """
