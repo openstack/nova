@@ -23,13 +23,10 @@ Routes.Mapper, including automatic handlers to respond with a
 method.
 """
 
-import re
-
 import routes
 import webob
 
 from oslo_log import log as logging
-from oslo_utils import excutils
 
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.handlers import aggregate
@@ -131,40 +128,6 @@ ROUTE_DECLARATIONS = {
     },
 }
 
-# This is a temporary list (of regexes) of the route handlers that will do
-# their own granular policy check. Once all handlers are doing their own
-# policy checks we can remove this along with the generic policy check in
-# PlacementHandler. All entries are checked against re.match() so must
-# match the start of the path.
-PER_ROUTE_POLICY = [
-    # The root is special in that it does not require auth.
-    '/$',
-    # /resource_providers
-    # /resource_providers/{uuid}
-    # /resource_providers/{uuid}/inventories
-    # /resource_providers/{uuid}/inventories/{resource_class}
-    '/resource_providers(/[A-Za-z0-9-]+)?(/inventories)?(/[A-Z0-9_]+)?$',
-    # /resource_providers/{uuid}/aggregates
-    '/resource_providers/[A-Za-z0-9-]+/aggregates$',
-    # /resource_classes
-    # /resource_classes/{name}
-    '/resource_classes',
-    # /resource_providers/{uuid}/usages
-    '/resource_providers/[A-Za-z0-9-]+/usages$',
-    # /resource_providers/{uuid}/allocations
-    '/resource_providers/[A-Za-z0-9-]+/allocations',
-    # /allocations
-    # /allocations/{consumer_uuid}
-    '/allocations',
-    # /traits
-    # /traits/{name}
-    '/traits',
-    # /resource_providers/{uuid}/traits
-    '/resource_providers/[A-Za-z0-9-]+/traits',
-    # /usages
-    '/usages'
-]
-
 
 def dispatch(environ, start_response, mapper):
     """Find a matching route for the current request.
@@ -228,29 +191,7 @@ class PlacementHandler(object):
         # NOTE(cdent): Local config currently unused.
         self._map = make_map(ROUTE_DECLARATIONS)
 
-    @staticmethod
-    def _is_granular_policy_check(path):
-        for policy in PER_ROUTE_POLICY:
-            if re.match(policy, path):
-                return True
-        return False
-
     def __call__(self, environ, start_response):
-        # Any routes that do not yet have a granular policy check default
-        # to admin-only.
-        if not self._is_granular_policy_check(environ['PATH_INFO']):
-            context = environ['placement.context']
-            try:
-                if not context.can('placement', fatal=False):
-                    raise webob.exc.HTTPForbidden(
-                        _('admin required'),
-                        json_formatter=util.json_error_formatter)
-            except Exception:
-                # This is here mostly for help in debugging problems with
-                # busted test setup.
-                with excutils.save_and_reraise_exception():
-                    LOG.exception('policy check failed for path: %s',
-                                  environ['PATH_INFO'])
         # Check that an incoming request with a content-length header
         # that is an integer > 0 and not empty, also has a content-type
         # header that is not empty. If not raise a 400.

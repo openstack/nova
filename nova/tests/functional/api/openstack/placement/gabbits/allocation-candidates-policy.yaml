@@ -1,0 +1,18 @@
+# This tests GET /allocation_candidates using a non-admin
+# user with an open policy configuration. The response validation is
+# intentionally minimal.
+fixtures:
+    - OpenPolicyFixture
+
+defaults:
+    request_headers:
+        x-auth-token: user
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement latest
+
+tests:
+
+- name: get allocation candidates
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
+  status: 200

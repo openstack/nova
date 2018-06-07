@@ -23,6 +23,8 @@ import webob
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.api.openstack.placement.policies import allocation_candidate as \
+    policies
 from nova.api.openstack.placement.schemas import allocation_candidate as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
@@ -210,6 +212,7 @@ def list_allocation_candidates(req):
     a collection of allocation requests and provider summaries
     """
     context = req.environ['placement.context']
+    context.can(policies.LIST)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     get_schema = schema.GET_SCHEMA_1_10
     if want_version.matches((1, 25)):
