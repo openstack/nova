@@ -3240,9 +3240,10 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     # followup query to winnow the set of resource providers to only those
     # provider *trees* that have all of the required traits.
     provs_with_inv = set()
-    # provs_with_inv is a list of two-tuples with the second element being the
-    # root provider ID. Get the list of root provider IDs and get all trees
-    # that collectively have all required traits
+    # provs_with_inv is a list of three-tuples with the second element being
+    # the root provider ID and the third being resource class ID. Get the list
+    # of root provider IDs and get all trees that collectively have all
+    # required traits.
     trees_with_inv = set()
 
     for rc_id, amount in resources.items():
@@ -3251,9 +3252,8 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
             # If there's no providers that have one of the resource classes,
             # then we can short-circuit
             return []
-        rc_provs_with_inv = set((p[0], p[1], rc_id) for p in rc_provs_with_inv)
         rc_trees = set(p[1] for p in rc_provs_with_inv)
-        provs_with_inv |= rc_provs_with_inv
+        provs_with_inv |= set((p[0], p[1], rc_id) for p in rc_provs_with_inv)
         if trees_with_inv:
             trees_with_inv &= rc_trees
             if not trees_with_inv:
@@ -3627,8 +3627,9 @@ def _alloc_candidates_nested_no_shared(ctx, requested_resources,
     well as ALL required traits that were requested by the user.
 
     This is a code path to get results for a RequestGroup with
-    use_same_provider=False. In this scenario, we determine requests across
-    multiple providers being aware of nested resource provider trees.
+    use_same_provider=False. In this scenario, we are able to use multiple
+    providers within the same provider tree to satisfy different resources
+    involved in a single request group.
 
     Currently this function should be used only for cases where no sharing
     providers exist in the system for any requested resource. If sharing
