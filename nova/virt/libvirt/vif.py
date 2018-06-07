@@ -51,6 +51,8 @@ CONF = nova.conf.CONF
 MIN_LIBVIRT_VHOSTUSER_MQ = (1, 2, 17)
 #  vlan tag for macvtap passthrough mode on SRIOV VFs
 MIN_LIBVIRT_MACVTAP_PASSTHROUGH_VLAN = (1, 3, 5)
+# setting interface mtu was intoduced in libvirt 3.3
+MIN_LIBVIRT_INTERFACE_MTU = (3, 3, 0)
 
 # virtio-net.rx_queue_size support
 MIN_LIBVIRT_RX_QUEUE_SIZE = (2, 3, 0)
@@ -245,6 +247,40 @@ class LibvirtGenericVIFDriver(object):
             return False
         return True
 
+    def get_config_bridge(self, instance, vif, image_meta,
+                          inst_type, virt_type, host):
+        """Get VIF configurations for bridge type."""
+        conf = self.get_base_config(instance, vif['address'], image_meta,
+                                    inst_type, virt_type, vif['vnic_type'],
+                                    host)
+
+        designer.set_vif_host_backend_bridge_config(
+            conf, self.get_bridge_name(vif),
+            self.get_vif_devname(vif))
+
+        mac_id = vif['address'].replace(':', '')
+        name = "nova-instance-" + instance.name + "-" + mac_id
+        if self.get_firewall_required(vif):
+            conf.filtername = name
+        designer.set_vif_bandwidth_config(conf, inst_type)
+
+        self._set_mtu_config(vif, host, conf)
+
+        return conf
+
+    def _set_mtu_config(self, vif, host, conf):
+        """:param vif: nova.network.modle.vif
+           :param host: nova.virt.libvirt.host.Host
+           :param conf: nova.virt.libvirt.config.LibvirtConfigGuestInterface
+        """
+        network = vif.get('network')
+        if (network and network.get_meta("mtu") and
+                self._has_min_version_for_mtu(host)):
+            designer.set_vif_mtu_config(conf, network.get_meta("mtu"))
+
+    def _has_min_version_for_mtu(self, host):
+        return host.has_min_version(MIN_LIBVIRT_INTERFACE_MTU)
+
     def get_config_802qbg(self, instance, vif, image_meta,
                           inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif['address'], image_meta,
@@ -376,6 +412,8 @@ class LibvirtGenericVIFDriver(object):
 
         dev = self.get_vif_devname(vif)
         designer.set_vif_host_backend_ethernet_config(conf, dev, host)
+
+        self._set_mtu_config(vif, host, conf)
 
         return conf
 
@@ -556,6 +594,9 @@ class LibvirtGenericVIFDriver(object):
         func(instance, vif, conf, host)
 
         designer.set_vif_bandwidth_config(conf, inst_type)
+        if ('network' in vif and 'mtu' in vif.network and
+                self._has_min_version_for_mtu(host)):
+            designer.set_vif_mtu_config(conf, vif.network.mtu)
 
         return conf
 
