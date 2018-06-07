@@ -1301,43 +1301,34 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         #   - gets the SRIOV_NET_VF from ss2 and the rest from ss1,
         #   - gets the DISK_GB from ss2 and the rest from ss1,
         #   - gets SRIOV_NET_VF and DISK_GB from ss2 and rest from ss1
-        # expected = [
-        #     [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
-        #      ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
-        #      ('ss1', fields.ResourceClass.DISK_GB, 1500)],
-        #     [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
-        #      ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
-        #      ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-        #     [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
-        #      ('ss2', fields.ResourceClass.SRIOV_NET_VF, 1),
-        #      ('ss1', fields.ResourceClass.DISK_GB, 1500)],
-        #     [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
-        #      ('ss2', fields.ResourceClass.SRIOV_NET_VF, 1),
-        #      ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-        # ]
-        # self._validate_allocation_requests(expected, alloc_cands)
-        #
-        # expected = {
-        #     'ss1': set([
-        #         (fields.ResourceClass.IPV4_ADDRESS, 24, 0),
-        #         (fields.ResourceClass.SRIOV_NET_VF, 16, 0),
-        #         (fields.ResourceClass.DISK_GB, 1600, 0)
-        #     ]),
-        #     'ss2': set([
-        #         (fields.ResourceClass.SRIOV_NET_VF, 16, 0),
-        #         (fields.ResourceClass.DISK_GB, 1600, 0),
-        #     ]),
-        # }
-        # self._validate_provider_summary_resources(expected, alloc_cands)
+        expected = [
+            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500)],
+            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
+             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
+            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss2', fields.ResourceClass.SRIOV_NET_VF, 1),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500)],
+            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss2', fields.ResourceClass.SRIOV_NET_VF, 1),
+             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
 
-        # Bug#1772243: But actually for allocation requests we get
-        # only two candidates randomly from the expected candidates.
-        self.assertEqual(2, len(alloc_cands.allocation_requests))
-
-        # Since now the inventories that appear in provider summaries
-        # depend on wnat's in allocation requests, we can't predict
-        # what's in provider summaries either.
-        self.assertEqual(2, len(alloc_cands.provider_summaries))
+        expected = {
+            'ss1': set([
+                (fields.ResourceClass.IPV4_ADDRESS, 24, 0),
+                (fields.ResourceClass.SRIOV_NET_VF, 16, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0)
+            ]),
+            'ss2': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 16, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
     def test_two_non_sharing_connect_to_one_sharing_different_aggregate(self):
         # Covering the following setup:
