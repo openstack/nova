@@ -146,9 +146,13 @@ class ServerMigrationsController(wsgi.Controller):
         context = req.environ['nova.context']
         context.can(sm_policies.POLICY_ROOT % 'delete')
 
+        support_abort_in_queue = api_version_request.is_supported(req, '2.65')
+
         instance = common.get_instance(self.compute_api, context, server_id)
         try:
-            self.compute_api.live_migrate_abort(context, instance, id)
+            self.compute_api.live_migrate_abort(
+                context, instance, id,
+                support_abort_in_queue=support_abort_in_queue)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(
                     state_error, "abort live migration", server_id)
@@ -156,3 +160,5 @@ class ServerMigrationsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InvalidMigrationState as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.AbortQueuedLiveMigrationNotYetSupported as e:
+            raise exc.HTTPConflict(explanation=e.format_message())

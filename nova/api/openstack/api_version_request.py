@@ -156,6 +156,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              and ``rules`` (optional) fields are added in response body of
              GET, POST /os-server-groups APIs and GET
              /os-server-groups/{group_id} API.
+    * 2.65 - Add support for abort live migrations in ``queued`` and
+             ``preparing`` status.
 """
 
 # The minimum and maximum versions of the API supported
@@ -164,7 +166,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.64"
+_MAX_API_VERSION = "2.65"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

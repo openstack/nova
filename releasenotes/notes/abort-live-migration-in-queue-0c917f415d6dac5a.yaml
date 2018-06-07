@@ -1,0 +1,5 @@
+---
+features:
+  - The support to abort live migrations with ``queued`` and ``preparing``
+    status using ``DELETE /servers/{server_id}/migrations/{migration_id}``
+    API has been added in microversion 2.65.

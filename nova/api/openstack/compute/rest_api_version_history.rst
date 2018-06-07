@@ -836,3 +836,9 @@ in server group APIs:
 * The ``policies`` and ``metadata`` fields have been removed from the response
   body of POST, GET ``/os-server-groups`` API and GET
   ``/os-server-groups/{server_group_id}`` API.
+
+2.65
+----
+
+Add support for abort live migrations in ``queued`` and ``preparing`` status
+for API ``DELETE /servers/{server_id}/migrations/{migration_id}``.
