@@ -604,7 +604,13 @@ class ResourceTracker(object):
     def _copy_resources(self, compute_node, resources):
         """Copy resource values to supplied compute_node."""
         # purge old stats and init with anything passed in by the driver
+        # NOTE(danms): Preserve 'failed_builds' across the stats clearing,
+        # as that is not part of resources
+        # TODO(danms): Stop doing this when we get a column to store this
+        # directly
+        prev_failed_builds = self.stats.get('failed_builds', 0)
         self.stats.clear()
+        self.stats['failed_builds'] = prev_failed_builds
         self.stats.digest_stats(resources.get('stats'))
         compute_node.stats = copy.deepcopy(self.stats)
 
