@@ -1275,8 +1275,63 @@ class NeutronFixture(fixtures.Fixture):
             "resources": {
                     orc.NET_BW_IGR_KILOBIT_PER_SEC: 1000,
                     orc.NET_BW_EGR_KILOBIT_PER_SEC: 1000},
-            "required": ["CUSTOM_PHYSNET_2", "CUSTOM_VNIC_TYPE_NORMAL"]
+            "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_NORMAL"]
         }
+    }
+
+    network_2 = {
+        'status': 'ACTIVE',
+        'subnets': [],
+        'name': 'private-network',
+        'admin_state_up': True,
+        'tenant_id': tenant_id,
+        'id': '1b70879f-fd00-411e-8ea9-143e7820e61d',
+        'shared': False,
+        'provider:physical_network': 'physnet2',
+        "provider:network_type": "vlan",
+    }
+
+    subnet_2 = {
+        'name': 'private-subnet',
+        'enable_dhcp': True,
+        'network_id': network_2['id'],
+        'tenant_id': tenant_id,
+        'dns_nameservers': [],
+        'allocation_pools': [
+            {
+                'start': '192.168.13.1',
+                'end': '192.168.1.254'
+            }
+        ],
+        'host_routes': [],
+        'ip_version': 4,
+        'gateway_ip': '192.168.1.1',
+        'cidr': '192.168.1.1/24',
+        'id': 'c7ca1baf-f536-4849-89fe-9671318375ff'
+    }
+    network_2['subnets'] = [subnet_2['id']]
+
+    port_with_sriov_resource_request = {
+        'id': '7059503b-a648-40fd-a561-5ca769304bee',
+        'network_id': network_2['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c4',
+        # Do neutron really adds fixed_ips to an direct vnic_type port?
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.13.2',
+                'subnet_id': subnet_2['id']
+            }
+        ],
+        'tenant_id': tenant_id,
+        'resource_request': {
+            "resources": {
+                orc.NET_BW_IGR_KILOBIT_PER_SEC: 10000,
+                orc.NET_BW_EGR_KILOBIT_PER_SEC: 10000},
+            "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_DIRECT"]
+        },
+        'binding:vnic_type': 'direct',
     }
 
     nw_info = [{
