@@ -457,6 +457,10 @@ Rebuilds a server.
 
 Specify the ``rebuild`` action in the request body.
 
+**Preconditions**
+
+The server status must be ``ACTIVE``, ``SHUTOFF`` or ``ERROR``.
+
 .. note:: There is a `known limitation`_ where the root disk is not
    replaced for volume-backed instances during a rebuild.
 
