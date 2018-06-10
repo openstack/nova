@@ -732,7 +732,7 @@ def _create_test_instance():
                             extra_specs={})
     return {
         'id': 1,
-        'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
+        'uuid': uuids.instance,
         'memory_kb': '1024000',
         'basepath': '/some/path',
         'bridge_name': 'br100',
@@ -12158,24 +12158,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                         'disk.config')
 
     def test_spawn_without_image_meta(self):
-        def fake_none(*args, **kwargs):
-            return
-
-        def fake_get_info(instance):
-            return hardware.InstanceInfo(state=power_state.RUNNING)
-
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 1
         instance = objects.Instance(**instance_ref)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(drvr, '_get_guest_xml', fake_none)
-        self.stubs.Set(drvr, '_create_domain_and_network', fake_none)
-        self.stubs.Set(drvr, 'get_info', fake_get_info)
-
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-
         fake_backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver._get_guest_xml',
+                      lambda *a, **kw: None)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                      '_create_domain_and_network',
+                      lambda *a, **kw: None)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.get_info',
+                      lambda self, instance: hardware.InstanceInfo(
+                          state=power_state.RUNNING))
 
         drvr.spawn(self.context, instance, image_meta, [], None, {})
 
@@ -12337,12 +12335,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                              'rootfs_device_name'))
 
     def test_spawn_with_pci_devices(self):
-        def fake_none(*args, **kwargs):
-            return None
-
-        def fake_get_info(instance):
-            return hardware.InstanceInfo(state=power_state.RUNNING)
-
         class FakeLibvirtPciDevice(object):
             def dettach(self):
                 return None
@@ -12359,9 +12351,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             return FakeLibvirtPciDevice()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(drvr, '_get_guest_xml', fake_none)
-        self.stubs.Set(drvr, '_create_domain_and_network', fake_none)
-        self.stubs.Set(drvr, 'get_info', fake_get_info)
+
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver._get_guest_xml',
+                      lambda *args, **kwargs: None)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                      '_create_domain_and_network',
+                      lambda *args, **kwargs: None)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.get_info',
+                      lambda self, instance: hardware.InstanceInfo(
+                          state=power_state.RUNNING))
 
         mock_connection = mock.MagicMock(
             nodeDeviceLookupByName=fake_node_device_lookup_by_name)
@@ -12383,24 +12381,24 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def _test_create_image_plain(self, os_type='', filename='', mkfs=False):
         gotFiles = []
 
-        def fake_none(*args, **kwargs):
-            return
-
-        def fake_get_info(instance):
-            return hardware.InstanceInfo(state=power_state.RUNNING)
-
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 1
         instance = objects.Instance(**instance_ref)
         instance['os_type'] = os_type
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(drvr, '_get_guest_xml', fake_none)
-        self.stubs.Set(drvr, '_create_domain_and_network', fake_none)
-        self.stubs.Set(drvr, 'get_info', fake_get_info)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver._get_guest_xml',
+                      lambda *args, **kwargs: None)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                      '_create_domain_and_network',
+                      lambda *args, **kwargs: None)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.get_info',
+                      lambda self, instance: hardware.InstanceInfo(
+                          state=power_state.RUNNING))
         if mkfs:
-            self.stubs.Set(nova.privsep.fs, '_MKFS_COMMAND',
-                       {os_type: 'mkfs.ext4 --label %(fs_label)s %(target)s'})
+            self.stub_out(
+                'nova.privsep.fs._MKFS_COMMAND',
+                {os_type: 'mkfs.ext4 --label %(fs_label)s %(target)s'})
 
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -12751,8 +12749,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.privsep.fs.configurable_mkfs')
     def test_create_ephemeral_with_arbitrary(self, fake_mkfs):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(nova.privsep.fs, '_MKFS_COMMAND',
-                       {'linux': 'mkfs.ext4 --label %(fs_label)s %(target)s'})
+        self.stub_out('nova.privsep.fs._MKFS_COMMAND',
+                      {'linux': 'mkfs.ext4 --label %(fs_label)s %(target)s'})
         drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
                                is_block_dev=True)
         fake_mkfs.assert_has_calls([mock.call('linux', 'myVol',
@@ -12762,8 +12760,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.privsep.fs.configurable_mkfs')
     def test_create_ephemeral_with_ext3(self, fake_mkfs):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(nova.privsep.fs, '_MKFS_COMMAND',
-                       {'linux': 'mkfs.ext3 --label %(fs_label)s %(target)s'})
+        self.stub_out('nova.privsep.fs._MKFS_COMMAND',
+                      {'linux': 'mkfs.ext3 --label %(fs_label)s %(target)s'})
         drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
                                is_block_dev=True)
         fake_mkfs.assert_has_calls([mock.call('linux', 'myVol',
@@ -13085,7 +13083,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                           'my_ip': mock.ANY})
 
     def test_conn_event_handler(self):
-        self.mox.UnsetStubs()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         service_mock = mock.MagicMock()
         service_mock.disabled.return_value = False
@@ -13109,7 +13106,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertTrue(service_mock.disabled)
 
     def test_command_with_broken_connection(self):
-        self.mox.UnsetStubs()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         service_mock = mock.MagicMock()
         service_mock.disabled.return_value = False
@@ -13135,7 +13131,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertTrue(service_mock.disabled)
 
     def test_service_resume_after_broken_connection(self):
-        self.mox.UnsetStubs()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         service_mock = mock.MagicMock()
         service_mock.disabled.return_value = True
@@ -13158,22 +13153,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertFalse(service_mock.disabled)
             self.assertIsNone(service_mock.disabled_reason)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files')
+    @mock.patch.object(host.Host, '_get_domain',
+                       side_effect=exception.InstanceNotFound(
+                           instance_id=uuids.instance))
     @mock.patch.object(objects.Instance, 'save')
-    def test_immediate_delete(self, mock_save):
-        def fake_get_domain(instance):
-            raise exception.InstanceNotFound(instance_id=instance.uuid)
-
-        def fake_delete_instance_files(instance):
-            pass
-
+    def test_immediate_delete(self, mock_save, mock_get, mock_delete):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(drvr._host, '_get_domain', fake_get_domain)
-        self.stubs.Set(drvr, 'delete_instance_files',
-                       fake_delete_instance_files)
 
         instance = objects.Instance(self.context, **self.test_instance)
         drvr.destroy(self.context, instance, {})
         mock_save.assert_called_once_with()
+        mock_get.assert_has_calls([mock.call(instance)] * 3)
+        self.assertEqual(3, mock_get.call_count)
+        mock_delete.assert_called_once_with(instance)
 
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     @mock.patch.object(objects.Instance, 'obj_load_attr', autospec=True)
@@ -13268,7 +13261,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_cleanup.assert_called_once_with(self.context, instance,
                                              network_info, None, False)
 
-    def test_reboot_different_ids(self):
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_create_domain')
+    @mock.patch.object(host.Host, '_get_domain')
+    def test_reboot_different_ids(self, mock_get, mock_create):
         class FakeLoopingCall(object):
             def start(self, *a, **k):
                 return self
@@ -13278,37 +13273,34 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.flags(wait_soft_reboot_seconds=1, group='libvirt')
         info_tuple = ('fake', 'fake', 'fake', 'also_fake')
-        self.reboot_create_called = False
 
         # Mock domain
-        mock_domain = self.mox.CreateMock(fakelibvirt.virDomain)
-        mock_domain.info().AndReturn(
-            (libvirt_guest.VIR_DOMAIN_RUNNING,) + info_tuple)
-        mock_domain.ID().AndReturn('some_fake_id')
-        mock_domain.ID().AndReturn('some_fake_id')
-        mock_domain.shutdown()
-        mock_domain.info().AndReturn(
-            (libvirt_guest.VIR_DOMAIN_CRASHED,) + info_tuple)
-        mock_domain.ID().AndReturn('some_other_fake_id')
-        mock_domain.ID().AndReturn('some_other_fake_id')
-
-        self.mox.ReplayAll()
-
-        def fake_get_domain(instance):
-            return mock_domain
-
-        def fake_create_domain(**kwargs):
-            self.reboot_create_called = True
+        mock_domain = mock.create_autospec(fakelibvirt.virDomain)
+        mock_domain.info.side_effect = [
+            (libvirt_guest.VIR_DOMAIN_RUNNING,) + info_tuple,
+            (libvirt_guest.VIR_DOMAIN_CRASHED,) + info_tuple]
+        mock_domain.ID.side_effect = ['some_fake_id', 'some_fake_id',
+                                      'some_other_fake_id',
+                                      'some_other_fake_id']
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
-        self.stubs.Set(drvr._host, '_get_domain', fake_get_domain)
-        self.stubs.Set(drvr, '_create_domain', fake_create_domain)
-        self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
-                       lambda *a, **k: FakeLoopingCall())
-        self.stubs.Set(pci_manager, 'get_instance_pci_devs', lambda *a: [])
+
+        mock_get.return_value = mock_domain
+        self.stub_out('oslo_service.loopingcall.FixedIntervalLoopingCall',
+                      lambda *a, **k: FakeLoopingCall())
+        self.stub_out('nova.pci.manager.get_instance_pci_devs', lambda *a: [])
+
         drvr.reboot(None, instance, [], 'SOFT')
-        self.assertTrue(self.reboot_create_called)
+
+        mock_domain.info.assert_has_calls([mock.call()] * 2)
+        self.assertEqual(2, mock_domain.info.call_count)
+        mock_domain.ID.assert_has_calls([mock.call()] * 4)
+        self.assertEqual(4, mock_domain.ID.call_count)
+        mock_domain.shutdown.assert_called_once_with()
+        mock_get.assert_has_calls([mock.call(instance)] * 2, any_order=True)
+        self.assertEqual(2, mock_get.call_count)
+        mock_create.assert_called_once_with(domain=mock_domain)
 
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
@@ -14022,45 +14014,43 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_save.assert_called_once_with()
 
     def test_destroy_timed_out(self):
-        mock = self.mox.CreateMock(fakelibvirt.virDomain)
-        mock.ID()
-        mock.destroy().AndRaise(fakelibvirt.libvirtError("timed out"))
-        self.mox.ReplayAll()
-
-        def fake_get_domain(self, instance):
-            return mock
-
-        def fake_get_error_code(self):
-            return fakelibvirt.VIR_ERR_OPERATION_TIMEOUT
+        mock_virdomain = mock.Mock(autospec=fakelibvirt.virDomain)
+        mock_virdomain.destroy.side_effect = fakelibvirt.libvirtError(
+            'timed out')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(host.Host, '_get_domain', fake_get_domain)
-        self.stubs.Set(fakelibvirt.libvirtError, 'get_error_code',
-                fake_get_error_code)
+        self.stub_out('nova.virt.libvirt.host.Host._get_domain',
+                      lambda self, instance: mock_virdomain)
+        self.stub_out('nova.tests.unit.virt.libvirt.fakelibvirt.libvirtError.'
+                      'get_error_code',
+                      lambda self: fakelibvirt.VIR_ERR_OPERATION_TIMEOUT)
         instance = objects.Instance(**self.test_instance)
         self.assertRaises(exception.InstancePowerOffFailure,
                 drvr.destroy, self.context, instance, [])
+
+        mock_virdomain.ID.assert_called_once_with()
+        mock_virdomain.destroy.assert_called_once_with()
 
     def test_private_destroy_not_found(self):
         ex = fakelibvirt.make_libvirtError(
                 fakelibvirt.libvirtError,
                 "No such domain",
                 error_code=fakelibvirt.VIR_ERR_NO_DOMAIN)
-        mock = self.mox.CreateMock(fakelibvirt.virDomain)
-        mock.ID()
-        mock.destroy().AndRaise(ex)
-        mock.info().AndRaise(ex)
-        mock.UUIDString()
-        self.mox.ReplayAll()
-
-        def fake_get_domain(instance):
-            return mock
+        mock_virdomain = mock.Mock(autospec=fakelibvirt.virDomain)
+        mock_virdomain.destroy.side_effect = ex
+        mock_virdomain.info.side_effect = ex
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(drvr._host, '_get_domain', fake_get_domain)
+        self.stub_out('nova.virt.libvirt.host.Host._get_domain',
+                      lambda self, instance: mock_virdomain)
         instance = objects.Instance(**self.test_instance)
         # NOTE(vish): verifies destroy doesn't raise if the instance disappears
         drvr._destroy(instance)
+
+        mock_virdomain.ID.assert_called_once_with()
+        mock_virdomain.destroy.assert_called_once_with()
+        mock_virdomain.info.assert_called_once_with()
+        mock_virdomain.UUIDString.assert_called_once_with()
 
     def test_private_destroy_lxc_processes_refused_to_die(self):
         self.flags(virt_type='lxc', group='libvirt')
@@ -14151,20 +14141,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(2, mock_guest.poweroff.call_count)
 
-    def test_undefine_domain_with_not_found_instance(self):
-        def fake_get_domain(self, instance):
-            raise exception.InstanceNotFound(instance_id=instance.uuid)
-
-        self.stubs.Set(host.Host, '_get_domain', fake_get_domain)
-        self.mox.StubOutWithMock(fakelibvirt.libvirtError, "get_error_code")
-
-        self.mox.ReplayAll()
+    @mock.patch.object(fakelibvirt.libvirtError, 'get_error_code')
+    @mock.patch.object(host.Host, '_get_domain',
+                       side_effect=exception.InstanceNotFound(
+                           instance_id=uuids.instance))
+    def test_undefine_domain_with_not_found_instance(self, mock_get_domain,
+                                                     mock_get_error):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
 
         # NOTE(wenjianhn): verifies undefine doesn't raise if the
         # instance disappears
         drvr._undefine_domain(instance)
+
+        mock_get_domain.assert_called_once_with(instance)
+        mock_get_error.assert_not_called()
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_uefi_support")
     @mock.patch.object(host.Host, "get_guest")
@@ -14503,8 +14494,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
             return caps
 
-        self.stubs.Set(host.Host, "get_capabilities",
-                       get_host_capabilities_stub)
+        self.stub_out('nova.virt.libvirt.host.Host.get_capabilities',
+                      get_host_capabilities_stub)
 
         want = {"vendor": "AMD",
                 "features": set(["extapic", "3dnow"]),
@@ -14536,12 +14527,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_dev_lookup.called_once_with(dev_name)
 
     def test_get_pcidev_info(self):
-
-        def fake_nodeDeviceLookupByName(self, name):
-            return FakeNodeDevice(_fake_NodeDevXml[name])
-
-        self.mox.StubOutWithMock(host.Host, 'device_lookup_by_name')
-        host.Host.device_lookup_by_name = fake_nodeDeviceLookupByName
+        self.stub_out('nova.virt.libvirt.host.Host.device_lookup_by_name',
+                      lambda self, name: FakeNodeDevice(
+                          _fake_NodeDevXml[name]))
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         with mock.patch.object(
