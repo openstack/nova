@@ -17982,19 +17982,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         mock_rename.assert_has_calls([
             mock.call(_path_qcow, path)])
 
-    @mock.patch('nova.utils.execute')
-    @mock.patch('os.rename')
-    def test_disk_qcow2_to_raw(self, mock_rename, mock_execute):
-        path = '/test/disk'
-        _path_raw = path + '_raw'
-
-        self.drvr._disk_qcow2_to_raw(path)
-        mock_execute.assert_has_calls([
-            mock.call('qemu-img', 'convert', '-f', 'qcow2',
-                      '-O', 'raw', path, _path_raw)])
-        mock_rename.assert_has_calls([
-            mock.call(_path_raw, path)])
-
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_inject_data')
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info')
     @mock.patch.object(libvirt_driver.LibvirtDriver,

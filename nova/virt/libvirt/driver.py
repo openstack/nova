@@ -8223,14 +8223,6 @@ class LibvirtDriver(driver.ComputeDriver):
                       '-O', 'qcow2', path, path_qcow)
         os.rename(path_qcow, path)
 
-    @staticmethod
-    def _disk_qcow2_to_raw(path):
-        """Converts a qcow2 disk to raw."""
-        path_raw = path + '_raw'
-        utils.execute('qemu-img', 'convert', '-f', 'qcow2',
-                      '-O', 'raw', path, path_raw)
-        os.rename(path_raw, path)
-
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
