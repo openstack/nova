@@ -6163,9 +6163,13 @@ class ComputeManager(manager.Manager):
             with self.virtapi.wait_for_instance_event(
                     instance, events, deadline=deadline,
                     error_callback=error_cb):
-                migrate_data = self.compute_rpcapi.pre_live_migration(
-                    context, instance,
-                    block_migration, disk, dest, migrate_data)
+                with timeutils.StopWatch() as timer:
+                    migrate_data = self.compute_rpcapi.pre_live_migration(
+                        context, instance,
+                        block_migration, disk, dest, migrate_data)
+                LOG.info('Took %0.2f seconds for pre_live_migration on '
+                         'destination host %s.',
+                         timer.elapsed(), dest, instance=instance)
                 wait_for_vif_plugged = (
                     'wait_for_vif_plugged' in migrate_data and
                     migrate_data.wait_for_vif_plugged)
