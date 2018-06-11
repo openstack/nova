@@ -51,17 +51,17 @@ is determined.
         help="""
 Early API microversions (<1.8) allowed creating allocations and not specifying
 a project or user identifier for the consumer. In cleaning up the data
-modeling, we no longer allow missing project and user information. if an older
+modeling, we no longer allow missing project and user information. If an older
 client makes an allocation, we'll use this in place of the information it
 doesn't provide.
 """),
-cfg.StrOpt(
+    cfg.StrOpt(
         'incomplete_consumer_user_id',
         default=DEFAULT_CONSUMER_MISSING_ID,
         help="""
 Early API microversions (<1.8) allowed creating allocations and not specifying
 a project or user identifier for the consumer. In cleaning up the data
-modeling, we no longer allow missing project and user information. if an older
+modeling, we no longer allow missing project and user information. If an older
 client makes an allocation, we'll use this in place of the information it
 doesn't provide.
 """),

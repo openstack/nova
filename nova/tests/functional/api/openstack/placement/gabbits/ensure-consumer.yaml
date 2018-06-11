@@ -1,5 +1,6 @@
-# Tests of the ensure consumer behaviour for versions of the API from <1.7 to
-# 1.8-1.26 and finally 1.27+
+# Tests of the ensure consumer behaviour for versions of the API before 1.8;
+# starting with 1.8, project_id and user_id are required by the
+# PUT: /allocations/{consumer_uuid} API.
 fixtures:
     - AllocationFixture
 
