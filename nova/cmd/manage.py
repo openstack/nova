@@ -374,6 +374,19 @@ class NetworkCommands(object):
 class DbCommands(object):
     """Class for managing the main database."""
 
+    # NOTE(danms): These functions are called with a DB context and a
+    # count, which is the maximum batch size requested by the
+    # user. They must be idempotent. At most $count records should be
+    # migrated. The function must return a tuple of (found, done). The
+    # found value indicates how many unmigrated records existed in the
+    # database prior to the migration (either total, or up to the
+    # $count limit provided), and a nonzero found value tells the user
+    # that there is still work to do. The done value indicates whether
+    # or not any records were actually migrated by the function. Thus
+    # if both (found, done) are nonzero, work was done and some work
+    # remains. If found is nonzero and done is zero, some records are
+    # not migratable, but all migrations that can complete have
+    # finished.
     online_migrations = (
         # Added in Newton
         request_spec.migrate_instances_add_request_spec,
@@ -708,6 +721,8 @@ Error: %s""") % six.text_type(e))
             t.add_row([name, info[0], info[1]])
         print(t)
 
+        # TODO(mriedem): Potentially add another return code for
+        # "there are more migrations, but not completable right now"
         return ran and 1 or 0
 
     @args('--resource_class', metavar='<class>', required=True,
