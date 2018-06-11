@@ -616,8 +616,6 @@ class API(object):
 
         kwargs = dict(snapshot_id=snapshot_id,
                       volume_type=volume_type,
-                      user_id=context.user_id,
-                      project_id=context.project_id,
                       availability_zone=availability_zone,
                       metadata=metadata,
                       imageRef=image_id,
