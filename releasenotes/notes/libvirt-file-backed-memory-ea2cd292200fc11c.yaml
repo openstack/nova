@@ -1,0 +1,25 @@
+---
+features:
+  - |
+    The libvirt driver now allows utilizing file backed memory for qemu/KVM
+    virtual machines, via a new configuration attribute
+    ``[libvirt]/file_backed_memory``, defaulting to 0 (disabled).
+
+    ``[libvirt]/file_backed_memory`` specifies the available capacity in MiB
+    for file backed memory, at the directory configured for
+    ``memory_backing_dir`` in libvirt's ``qemu.conf``. When enabled, the
+    libvirt driver will report the configured value for the total memory
+    capacity of the node, and will report used memory as the sum of all
+    configured guest memory.
+
+    Live migrations from nodes not compatible with file backed memory to nodes
+    with file backed memory is not allowed, and will result in an error. It's
+    recommended to upgrade all nodes before enabling file backed memory.
+
+    Note that file backed memory is not compatible with hugepages, and is not
+    compatible with memory overcommit. If file backed memory is enabled,
+    ``ram_allocation_ratio`` must be configured to ``1.0``
+
+    For more details, see the admin guide documentation:
+
+    https://docs.openstack.org/nova/latest/admin/file-backed-memory.html

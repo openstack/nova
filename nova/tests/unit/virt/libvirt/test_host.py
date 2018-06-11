@@ -675,6 +675,12 @@ class HostTestCase(test.NoDBTestCase):
             mock_conn().getInfo.return_value = ['zero', 'one', 'two']
             self.assertEqual('one', self.host.get_memory_mb_total())
 
+    def test_get_memory_total_file_backed(self):
+        self.flags(file_backed_memory=1048576,
+                   group="libvirt")
+
+        self.assertEqual(1048576, self.host.get_memory_mb_total())
+
     def test_get_memory_used(self):
         m = mock.mock_open(read_data="""
 MemTotal:       16194180 kB
@@ -750,7 +756,51 @@ Active:          8381604 kB
                 ) as (mock_sumDomainMemory, mock_platform):
             mock_sumDomainMemory.return_value = 8192
             self.assertEqual(8192, self.host.get_memory_mb_used())
-            mock_sumDomainMemory.assert_called_once_with()
+            mock_sumDomainMemory.assert_called_once_with(include_host=True)
+
+    def test_sum_domain_memory_mb_file_backed(self):
+        class DiagFakeDomain(object):
+            def __init__(self, id, memmb):
+                self.id = id
+                self.memmb = memmb
+
+            def info(self):
+                return [0, 0, self.memmb * 1024]
+
+            def ID(self):
+                return self.id
+
+            def name(self):
+                return "instance000001"
+
+            def UUIDString(self):
+                return uuids.fake
+
+        with test.nested(
+                mock.patch.object(host.Host,
+                                  "list_guests"),
+                mock.patch('sys.platform', 'linux2'),
+        ) as (mock_list, mock_platform):
+            mock_list.return_value = [
+                libvirt_guest.Guest(DiagFakeDomain(0, 4096)),
+                libvirt_guest.Guest(DiagFakeDomain(1, 2048)),
+                libvirt_guest.Guest(DiagFakeDomain(2, 1024)),
+                libvirt_guest.Guest(DiagFakeDomain(3, 1024))]
+
+            self.assertEqual(8192,
+                    self.host._sum_domain_memory_mb(include_host=False))
+
+    def test_get_memory_used_file_backed(self):
+        self.flags(file_backed_memory=1048576,
+                   group='libvirt')
+
+        with test.nested(
+                mock.patch.object(self.host, "_sum_domain_memory_mb"),
+                mock.patch('sys.platform', 'linux2')
+                ) as (mock_sumDomainMemory, mock_platform):
+            mock_sumDomainMemory.return_value = 8192
+            self.assertEqual(8192, self.host.get_memory_mb_used())
+            mock_sumDomainMemory.assert_called_once_with(include_host=False)
 
     def test_get_cpu_stats(self):
         stats = self.host.get_cpu_stats()

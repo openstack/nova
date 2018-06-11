@@ -3405,6 +3405,19 @@ class LibvirtConfigGuestMemoryBackingTest(LibvirtConfigBaseTest):
             <locked/>
           </memoryBacking>""")
 
+    def test_config_memory_backing_source_all(self):
+        obj = config.LibvirtConfigGuestMemoryBacking()
+        obj.sharedaccess = True
+        obj.allocateimmediate = True
+        obj.filesource = True
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <memoryBacking>
+              <source type="file"/>
+              <access mode="shared"/>
+              <allocation mode="immediate"/>
+            </memoryBacking>""")
+
 
 class LibvirtConfigGuestMemoryTuneTest(LibvirtConfigBaseTest):
     def test_config_memory_backing_none(self):

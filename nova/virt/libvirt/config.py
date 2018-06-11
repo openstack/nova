@@ -2051,6 +2051,9 @@ class LibvirtConfigGuestMemoryBacking(LibvirtConfigObject):
         self.hugepages = []
         self.sharedpages = True
         self.locked = False
+        self.filesource = False
+        self.sharedaccess = False
+        self.allocateimmediate = False
 
     def format_dom(self):
         root = super(LibvirtConfigGuestMemoryBacking, self).format_dom()
@@ -2064,6 +2067,12 @@ class LibvirtConfigGuestMemoryBacking(LibvirtConfigObject):
             root.append(etree.Element("nosharepages"))
         if self.locked:
             root.append(etree.Element("locked"))
+        if self.filesource:
+            root.append(etree.Element("source", type="file"))
+        if self.sharedaccess:
+            root.append(etree.Element("access", mode="shared"))
+        if self.allocateimmediate:
+            root.append(etree.Element("allocation", mode="immediate"))
 
         return root
 

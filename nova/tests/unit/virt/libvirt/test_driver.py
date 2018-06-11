@@ -1069,6 +1069,65 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, "_check_file_backed_memory_support",)
+    def test_file_backed_memory_support_called(self, mock_file_backed_support):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host("dummyhost")
+        self.assertTrue(mock_file_backed_support.called)
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_FILE_BACKED_VERSION))
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_QEMU_FILE_BACKED_VERSION))
+    def test_min_version_file_backed_ok(self, mock_libv, mock_qemu):
+        self.flags(file_backed_memory=1024, group='libvirt')
+        self.flags(ram_allocation_ratio=1.0)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._check_file_backed_memory_support()
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_FILE_BACKED_VERSION) - 1)
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_QEMU_FILE_BACKED_VERSION))
+    def test_min_version_file_backed_old_libvirt(self, mock_libv, mock_qemu):
+        self.flags(file_backed_memory=1024, group="libvirt")
+        self.flags(ram_allocation_ratio=1.0)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.InternalError,
+                          drvr._check_file_backed_memory_support)
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_FILE_BACKED_VERSION))
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_QEMU_FILE_BACKED_VERSION) - 1)
+    def test_min_version_file_backed_old_qemu(self, mock_libv, mock_qemu):
+        self.flags(file_backed_memory=1024, group="libvirt")
+        self.flags(ram_allocation_ratio=1.0)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.InternalError,
+                          drvr._check_file_backed_memory_support)
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_FILE_BACKED_VERSION))
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_QEMU_FILE_BACKED_VERSION))
+    def test_min_version_file_backed_bad_ram_allocation_ratio(self, mock_libv,
+                                                     mock_qemu):
+        self.flags(file_backed_memory=1024, group="libvirt")
+        self.flags(ram_allocation_ratio=1.5)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.InternalError,
+                          drvr._check_file_backed_memory_support)
+
     def _do_test_parse_migration_flags(self, lm_expected=None,
                                        bm_expected=None):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2376,6 +2435,43 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             None, None, flavor)
         self.assertTrue(membacking.locked)
         self.assertFalse(membacking.sharedpages)
+
+    def test_get_guest_memory_backing_config_file_backed(self):
+        self.flags(file_backed_memory=1024, group="libvirt")
+
+        result = self._test_get_guest_memory_backing_config(
+            None, None, None
+        )
+        self.assertTrue(result.sharedaccess)
+        self.assertTrue(result.filesource)
+        self.assertTrue(result.allocateimmediate)
+
+    def test_get_guest_memory_backing_config_file_backed_hugepages(self):
+        self.flags(file_backed_memory=1024, group="libvirt")
+        host_topology = objects.NUMATopology(
+            cells=[
+                objects.NUMACell(
+                    id=3, cpuset=set([1]), siblings=[set([1])], memory=1024,
+                    mempages=[
+                        objects.NUMAPagesTopology(size_kb=4, total=2000,
+                                                  used=0),
+                        objects.NUMAPagesTopology(size_kb=2048, total=512,
+                                                  used=0),
+                        objects.NUMAPagesTopology(size_kb=1048576, total=0,
+                                                  used=0),
+                    ])])
+        inst_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=3, cpuset=set([0, 1]), memory=1024, pagesize=2048)])
+
+        numa_tune = vconfig.LibvirtConfigGuestNUMATune()
+        numa_tune.memnodes = [vconfig.LibvirtConfigGuestNUMATuneMemNode()]
+        numa_tune.memnodes[0].cellid = 0
+        numa_tune.memnodes[0].nodeset = [3]
+
+        self.assertRaises(exception.MemoryPagesUnsupported,
+                          self._test_get_guest_memory_backing_config,
+                          host_topology, inst_topology, numa_tune)
 
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
@@ -8464,7 +8560,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          'disk_available_mb': 409600,
                          "disk_over_commit": False,
                          "block_migration": True,
-                         "is_volume_backed": False},
+                         "is_volume_backed": False,
+                         "dst_wants_file_backed_memory": False},
                         matchers.DictMatches(return_value.to_legacy_dict()))
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
@@ -8497,7 +8594,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          'disk_available_mb': 102400,
                          "disk_over_commit": True,
                          "block_migration": True,
-                         "is_volume_backed": False},
+                         "is_volume_backed": False,
+                         "dst_wants_file_backed_memory": False},
                         matchers.DictMatches(return_value.to_legacy_dict()))
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
@@ -8527,7 +8625,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          "block_migration": False,
                          "disk_over_commit": False,
                          "disk_available_mb": 409600,
-                         "is_volume_backed": False},
+                         "is_volume_backed": False,
+                         "dst_wants_file_backed_memory": False},
                         matchers.DictMatches(return_value.to_legacy_dict()))
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
@@ -8599,7 +8698,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                            "block_migration": False,
                            "disk_over_commit": False,
                            "disk_available_mb": 1024,
-                           "is_volume_backed": False}
+                           "is_volume_backed": False,
+                           "dst_wants_file_backed_memory": False}
         self.assertEqual(expected_result, result.to_legacy_dict())
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
@@ -8633,8 +8733,42 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          "block_migration": False,
                          "disk_over_commit": False,
                          "disk_available_mb": 1024,
-                         "is_volume_backed": False},
+                         "is_volume_backed": False,
+                         "dst_wants_file_backed_memory": False},
                         matchers.DictMatches(return_value.to_legacy_dict()))
+
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+        '_create_shared_storage_test_file')
+    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    def test_check_can_live_migrate_dest_file_backed(
+            self, mock_cpu, mock_test_file, mock_svc):
+
+        self.flags(file_backed_memory=1024, group='libvirt')
+
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        compute_info = {'disk_available_least': 400,
+                        'cpu_info': 'asdf',
+                        }
+
+        filename = "file"
+
+        svc = objects.Service()
+        svc.version = 32
+        mock_svc.return_value = svc
+
+        # _check_cpu_match
+        mock_cpu.return_value = 1
+        # mounted_on_same_shared_storage
+        mock_test_file.return_value = filename
+        # No need for the src_compute_info
+        return_value = drvr.check_can_live_migrate_destination(self.context,
+                instance_ref, None, compute_info, False)
+
+        self.assertTrue(return_value.dst_wants_file_backed_memory)
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
@@ -8645,8 +8779,36 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
 
+        svc = objects.Service(host="old")
+        svc.version = 32
+        mock_svc.return_value = svc
+
         mock_cpu.side_effect = exception.InvalidCPUInfo(reason='foo')
         self.assertRaises(exception.InvalidCPUInfo,
+                          drvr.check_can_live_migrate_destination,
+                          self.context, instance_ref,
+                          compute_info, compute_info, False)
+
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    @mock.patch('nova.objects.Service.version', 30)
+    def test_check_can_live_migrate_dest_incompatible_file_backed(
+            self, mock_cpu, mock_svc):
+
+        self.flags(file_backed_memory=1024, group='libvirt')
+
+        instance_ref = objects.Instance(**self.test_instance)
+
+        # _check_cpu_match
+        mock_cpu.return_value = 1
+
+        svc = objects.Service(host="old")
+        svc.version = 31
+        mock_svc.return_value = svc
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
+
+        self.assertRaises(exception.MigrationPreCheckError,
                           drvr.check_can_live_migrate_destination,
                           self.context, instance_ref,
                           compute_info, compute_info, False)
@@ -17515,6 +17677,13 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                          (self.pt.data(self.cn_rp.uuid)).inventory)
         self.assertEqual(shared_rp_inv,
                          (self.pt.data(self.shared_rp.uuid)).inventory)
+
+    def test_update_provider_tree_with_file_backed_memory(self):
+        self.flags(file_backed_memory=1024,
+                   group="libvirt")
+        self._test_update_provider_tree()
+        self.assertEqual(self._get_inventory(),
+                         (self.pt.data(self.cn_rp.uuid)).inventory)
 
 
 class LibvirtDriverTestCase(test.NoDBTestCase):

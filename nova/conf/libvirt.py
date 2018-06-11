@@ -743,6 +743,33 @@ Due to QEMU limitations for aarch64/virt maximum value is set to '28'.
 
 Default value '0' moves calculating amount of ports to libvirt.
 """),
+    cfg.IntOpt('file_backed_memory',
+               default=0,
+               min=0,
+               help="""
+Available capacity in MiB for file backed memory.
+
+Set to 0 to disable file backed memory.
+
+When enabled, instances will create memory files in the directory specified
+in ``/etc/libvirt/qemu.conf``'s ``memory_backing_dir`` option. The default
+location is ``/var/lib/libvirt/qemu/ram``.
+
+When enabled, the value defined for this option is reported as the node memory
+capacity. Compute node system memory will be used as a cache for file-backed
+memory, via the kernel's pagecache mechanism.
+
+.. note::
+   This feature is not compatible with hugepages.
+
+.. note::
+   This feature is not compatible with memory overcommit.
+
+Related options:
+
+* ``virt_type`` must be set to ``kvm`` or ``qemu``.
+* ``ram_allocation_ratio`` must be set to 1.0.
+"""),
 ]
 
 libvirt_imagebackend_opts = [

@@ -233,7 +233,8 @@ class _TestLibvirtLiveMigrateData(object):
             old_vol_attachment_ids={uuids.volume: uuids.attachment},
             supported_perf_events=[],
             serial_listen_addr='127.0.0.1',
-            target_connect_addr='127.0.0.1')
+            target_connect_addr='127.0.0.1',
+            dst_wants_file_backed_memory=False)
 
         data = lambda x: x['nova_object.data']
 
@@ -244,6 +245,7 @@ class _TestLibvirtLiveMigrateData(object):
         self.assertNotIn('supported_perf_events', primitive)
         self.assertNotIn('old_vol_attachment_ids', primitive)
         self.assertNotIn('src_supports_native_luks', primitive)
+        self.assertNotIn('dst_wants_file_backed_memory', primitive)
         primitive = data(obj.obj_to_primitive(target_version='1.1'))
         self.assertNotIn('serial_listen_ports', primitive)
         primitive = data(obj.obj_to_primitive(target_version='1.2'))
@@ -252,6 +254,8 @@ class _TestLibvirtLiveMigrateData(object):
         self.assertNotIn('old_vol_attachment_ids', primitive)
         primitive = data(obj.obj_to_primitive(target_version='1.4'))
         self.assertNotIn('src_supports_native_luks', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.6'))
+        self.assertNotIn('dst_wants_file_backed_memory', primitive)
 
     def test_bdm_obj_make_compatible(self):
         obj = migrate_data.LibvirtLiveMigrateBDMInfo(

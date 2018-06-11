@@ -27,3 +27,4 @@ instance for these kind of workloads.
    cpu-topologies
    huge-pages
    virtual-gpu
+   file-backed-memory
