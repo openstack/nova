@@ -97,7 +97,6 @@ policy_data = """
     "os_compute_api:os-shelve:unshelve": "",
     "os_compute_api:os-suspend-server:suspend": "",
     "os_compute_api:os-suspend-server:resume": "",
-    "os_compute_api:os-virtual-interfaces": "",
     "os_compute_api:os-volumes": "",
     "os_compute_api:os-volumes-attachments:index": "",
     "os_compute_api:os-volumes-attachments:show": "",

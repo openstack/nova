@@ -8,6 +8,7 @@ upgrade:
 
     * ``GET /os-fping``
     * ``GET /os-fping/{server_id}``
+    * ``GET /servers/{server_id}/os-virtual-interfaces``
 
     In addition, the following configuration options have been removed.
 

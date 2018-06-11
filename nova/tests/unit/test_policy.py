@@ -433,7 +433,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-server-groups:delete",
 "os_compute_api:os-shelve:shelve",
 "os_compute_api:os-shelve:unshelve",
-"os_compute_api:os-virtual-interfaces",
 "os_compute_api:os-volumes",
 "os_compute_api:os-volumes-attachments:index",
 "os_compute_api:os-volumes-attachments:show",

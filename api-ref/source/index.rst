@@ -69,7 +69,6 @@ the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-security-group-default-rules.inc
 .. include:: os-security-group-rules.inc
 .. include:: os-hosts.inc
-.. include:: os-virtual-interfaces.inc
 
 =============
 Obsolete APIs
@@ -81,3 +80,4 @@ Compute API in the past, but no longer exist.
 .. include:: os-certificates.inc
 .. include:: os-cloudpipe.inc
 .. include:: os-fping.inc
+.. include:: os-virtual-interfaces.inc
