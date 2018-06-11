@@ -109,9 +109,11 @@ class RbdTestCase(test.NoDBTestCase):
 
         self.rbd_pool = 'rbd'
         self.rbd_connect_timeout = 5
-        self.flags(images_rbd_pool=self.rbd_pool, group='libvirt')
-        self.flags(rbd_connect_timeout=self.rbd_connect_timeout,
-                    group='libvirt')
+        self.flags(
+            images_rbd_pool=self.images_rbd_pool,
+            images_rbd_ceph_conf='/foo/bar.conf',
+            rbd_connect_timeout=self.rbd_connect_timeout,
+            rbd_user='foo', group='libvirt')
 
         rados_patcher = mock.patch.object(rbd_utils, 'rados')
         self.mock_rados = rados_patcher.start()
@@ -657,3 +659,35 @@ class RbdTestCase(test.NoDBTestCase):
         ceph_df_not_found = CEPH_DF.replace('rbd', 'vms')
         mock_execute.return_value = (ceph_df_not_found, '')
         self.assertRaises(exception.NotFound, self.driver.get_pool_info)
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_export_image(self, mock_execute):
+        self.driver.rbd_user = 'foo'
+        self.driver.export_image(mock.sentinel.dst_path,
+                                 mock.sentinel.name,
+                                 mock.sentinel.snap,
+                                 mock.sentinel.pool)
+
+        mock_execute.assert_called_once_with(
+            'rbd', 'export',
+            '--pool', mock.sentinel.pool,
+            '--image', mock.sentinel.name,
+            '--path', mock.sentinel.dst_path,
+            '--snap', mock.sentinel.snap,
+            '--id', 'foo',
+            '--conf', '/foo/bar.conf')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_export_image_default_pool(self, mock_execute):
+        self.driver.export_image(mock.sentinel.dst_path,
+                                 mock.sentinel.name,
+                                 mock.sentinel.snap)
+
+        mock_execute.assert_called_once_with(
+            'rbd', 'export',
+            '--pool', self.rbd_pool,
+            '--image', mock.sentinel.name,
+            '--path', mock.sentinel.dst_path,
+            '--snap', mock.sentinel.snap,
+            '--id', 'foo',
+            '--conf', '/foo/bar.conf')

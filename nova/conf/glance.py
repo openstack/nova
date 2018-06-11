@@ -148,9 +148,64 @@ Related options:
 * The value of this option may be used if both verify_glance_signatures and
   enable_certificate_validation are enabled.
 """),
+    cfg.BoolOpt('enable_rbd_download',
+        default=False,
+        help="""
+Enable download of Glance images directly via RBD.
+
+Allow compute hosts to quickly download and cache images localy directly
+from Ceph rather than slow dowloads from the Glance API. This can
+reduce download time for images in the ten to hundreds of GBs from tens of
+minutes to tens of seconds, but requires a Ceph-based deployment and access
+from the compute nodes to Ceph.
+
+Related options:
+
+* ``[glance] rbd_user``
+* ``[glance] rbd_connect_timeout``
+* ``[glance] rbd_pool``
+* ``[glance] rbd_ceph_conf``
+"""),
+    cfg.StrOpt('rbd_user',
+        default='',
+        help="""
+The RADOS client name for accessing Glance images stored as rbd volumes.
+
+Related options:
+
+* This option is only used if ``[glance] enable_rbd_download`` is set to True.
+"""),
+    cfg.IntOpt('rbd_connect_timeout',
+        default=5,
+        help="""
+The RADOS client timeout in seconds when initially connecting to the cluster.
+
+Related options:
+
+* This option is only used if ``[glance] enable_rbd_download`` is set to True.
+"""),
+    cfg.StrOpt('rbd_pool',
+        default='',
+        help="""
+The RADOS pool in which the Glance images are stored as rbd volumes.
+
+Related options:
+
+* This option is only used if ``[glance] enable_rbd_download`` is set to True.
+"""),
+    cfg.StrOpt('rbd_ceph_conf',
+        default='',
+        help="""
+Path to the ceph configuration file to use.
+
+Related options:
+
+* This option is only used if ``[glance] enable_rbd_download`` is set to True.
+"""),
+
     cfg.BoolOpt('debug',
-         default=False,
-         help='Enable or disable debug logging with glanceclient.')
+        default=False,
+        help='Enable or disable debug logging with glanceclient.')
 ]
 
 deprecated_ksa_opts = {

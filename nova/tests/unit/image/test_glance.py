@@ -16,6 +16,7 @@
 
 import copy
 import datetime
+import urllib.parse as urlparse
 
 import cryptography
 from cursive import exception as cursive_exception
@@ -36,6 +37,7 @@ from nova import exception
 from nova.image import glance
 from nova import objects
 from nova import service_auth
+from nova.storage import rbd_utils
 from nova import test
 
 
@@ -686,9 +688,14 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         with testtools.ExpectedException(exception.ImageUnacceptable):
             service.download(ctx, mock.sentinel.image_id)
 
+    # TODO(stephenfin): Drop this test since it's not possible to run in
+    # production
+    @mock.patch('os.path.getsize', return_value=1)
+    @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_method')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    def test_download_direct_file_uri_v2(self, show_mock, get_tran_mock):
+    def test_download_direct_file_uri_v2(
+            self, show_mock, get_tran_mock, open_mock, getsize_mock):
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
         show_mock.return_value = {
             'locations': [
@@ -702,6 +709,8 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         get_tran_mock.return_value = tran_mod
         client = mock.MagicMock()
         ctx = mock.sentinel.ctx
+        writer = mock.MagicMock()
+        open_mock.return_value = writer
         service = glance.GlanceImageServiceV2(client)
         res = service.download(ctx, mock.sentinel.image_id,
                                dst_path=mock.sentinel.dst_path)
@@ -715,6 +724,76 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         tran_mod.assert_called_once_with(ctx, mock.ANY,
                                          mock.sentinel.dst_path,
                                          mock.sentinel.loc_meta)
+
+    @mock.patch('glanceclient.common.utils.IterableWithLength')
+    @mock.patch('os.path.getsize', return_value=1)
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._get_verifier')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_method')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_direct_rbd_uri_v2(
+            self, show_mock, get_tran_mock, get_verifier_mock, log_mock,
+            open_mock, getsize_mock, iterable_with_length_mock):
+        self.flags(enable_rbd_download=True, group='glance')
+        show_mock.return_value = {
+            'locations': [
+                {
+                    'url': 'rbd://cluster_uuid/pool_name/image_uuid/snapshot',
+                    'metadata': mock.sentinel.loc_meta
+                }
+            ]
+        }
+        tran_mod = mock.MagicMock()
+        get_tran_mock.return_value = tran_mod
+        client = mock.MagicMock()
+        ctx = mock.sentinel.ctx
+        writer = mock.MagicMock()
+        open_mock.return_value = writer
+        iterable_with_length_mock.return_value = ["rbd1", "rbd2"]
+        service = glance.GlanceImageServiceV2(client)
+
+        verifier = mock.MagicMock()
+        get_verifier_mock.return_value = verifier
+
+        res = service.download(ctx, mock.sentinel.image_id,
+                               dst_path=mock.sentinel.dst_path,
+                               trusted_certs=mock.sentinel.trusted_certs)
+
+        self.assertIsNone(res)
+        show_mock.assert_called_once_with(ctx,
+                                          mock.sentinel.image_id,
+                                          include_locations=True)
+        tran_mod.assert_called_once_with(ctx, mock.ANY,
+                                         mock.sentinel.dst_path,
+                                         mock.sentinel.loc_meta)
+        open_mock.assert_called_once_with(mock.sentinel.dst_path, 'rb')
+        get_tran_mock.assert_called_once_with('rbd')
+
+        # no client call, chunks were read right after xfer_mod.download:
+        client.call.assert_not_called()
+
+        # verifier called with the value we got from rbd download
+        verifier.update.assert_has_calls(
+                [
+                    mock.call("rbd1"),
+                    mock.call("rbd2")
+                ]
+        )
+        verifier.verify.assert_called()
+        log_mock.info.assert_has_calls(
+            [
+                mock.call('Successfully transferred using %s', 'rbd'),
+                mock.call(
+                    'Image signature verification succeeded for image %s',
+                    mock.sentinel.image_id)
+            ]
+        )
+
+        # not opened for writing (already written)
+        self.assertFalse(open_mock(mock.sentinel.dst_path, 'rw').called)
+        # write not called (written by rbd download)
+        writer.write.assert_not_called()
 
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_method')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
@@ -1247,6 +1326,60 @@ class TestIsImageAvailable(test.NoDBTestCase):
 
         res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
+
+
+class TestRBDDownload(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestRBDDownload, self).setUp()
+        loc_url = "rbd://ce2d1ace/images/b86d6d06-faac/snap"
+        self.url_parts = urlparse.urlparse(loc_url)
+        self.image_uuid = "b86d6d06-faac"
+        self.pool_name = "images"
+        self.snapshot_name = "snap"
+
+    @mock.patch.object(rbd_utils.RBDDriver, 'export_image')
+    @mock.patch.object(rbd_utils, 'rbd')
+    def test_rbd_download_success(self, mock_rbd, mock_export_image):
+        client = mock.MagicMock()
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+
+        service.rbd_download(ctx, self.url_parts, mock.sentinel.dst_path)
+
+        # Assert that we attempt to export using the correct rbd pool, volume
+        # and snapshot given the provided URL
+        mock_export_image.assert_called_once_with(mock.sentinel.dst_path,
+            self.image_uuid,
+            self.snapshot_name,
+            self.pool_name)
+
+    def test_rbd_download_broken_url(self):
+        client = mock.MagicMock()
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+
+        wrong_url = "http://www.example.com"
+        wrong_url_parts = urlparse.urlparse(wrong_url)
+
+        # Assert InvalidParameterValue is raised when we can't parse the URL
+        self.assertRaises(
+            exception.InvalidParameterValue, service.rbd_download, ctx,
+            wrong_url_parts, mock.sentinel.dst_path)
+
+    @mock.patch('nova.storage.rbd_utils.RBDDriver.export_image')
+    @mock.patch.object(rbd_utils, 'rbd')
+    def test_rbd_download_export_failure(self, mock_rbd, mock_export_image):
+        client = mock.MagicMock()
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+
+        mock_export_image.side_effect = Exception
+
+        # Assert CouldNotFetchImage is raised when the export fails
+        self.assertRaisesRegex(
+            exception.CouldNotFetchImage, self.image_uuid,
+            service.rbd_download, ctx, self.url_parts, mock.sentinel.dst_path)
 
 
 class TestShow(test.NoDBTestCase):

@@ -122,14 +122,16 @@ class RADOSClient(object):
 
 class RBDDriver(object):
 
-    def __init__(self):
+    def __init__(self, pool=None, user=None, ceph_conf=None,
+                 connect_timeout=None):
         if rbd is None:
             raise RuntimeError(_('rbd python libraries not found'))
 
-        self.pool = CONF.libvirt.images_rbd_pool
-        self.rbd_user = CONF.libvirt.rbd_user
-        self.rbd_connect_timeout = CONF.libvirt.rbd_connect_timeout
-        self.ceph_conf = CONF.libvirt.images_rbd_ceph_conf
+        self.pool = pool or CONF.libvirt.images_rbd_pool
+        self.rbd_user = user or CONF.libvirt.rbd_user
+        self.rbd_connect_timeout = (
+            connect_timeout or CONF.libvirt.rbd_connect_timeout)
+        self.ceph_conf = ceph_conf or CONF.libvirt.images_rbd_ceph_conf
 
     def _connect_to_rados(self, pool=None):
         client = rados.Rados(rados_id=self.rbd_user,
@@ -334,6 +336,25 @@ class RBDDriver(object):
         args += ['--image-format=2']
         args += self.ceph_args()
         processutils.execute('rbd', 'import', *args)
+
+    def export_image(self, base, name, snap, pool=None):
+        """Export RBD volume to image file.
+
+        Uses the command line export to export rbd volume snapshot to
+        local image file.
+
+        :base: Path to image file
+        :name: Name of RBD volume
+        :snap: Name of RBD snapshot
+        :pool: Name of RBD pool
+        """
+        if pool is None:
+            pool = self.pool
+
+        args = ['--pool', pool, '--image', name, '--path', base,
+                '--snap', snap]
+        args += self.ceph_args()
+        processutils.execute('rbd', 'export', *args)
 
     def _destroy_volume(self, client, volume, pool=None):
         """Destroy an RBD volume, retrying as needed.

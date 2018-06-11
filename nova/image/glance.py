@@ -24,12 +24,14 @@ import re
 import stat
 import sys
 import time
+import urllib.parse as urlparse
 
 import cryptography
 from cursive import certificate_utils
 from cursive import exception as cursive_exception
 from cursive import signature_utils
 import glanceclient
+from glanceclient.common import utils as glance_utils
 import glanceclient.exc
 from glanceclient.v2 import schemas
 from keystoneauth1 import loading as ks_loading
@@ -39,7 +41,6 @@ from oslo_utils import excutils
 from oslo_utils import timeutils
 import six
 from six.moves import range
-import six.moves.urllib.parse as urlparse
 
 import nova.conf
 from nova import exception
@@ -221,6 +222,51 @@ class GlanceImageServiceV2(object):
         # to be added here.
         self._download_handlers = {}
 
+        if CONF.glance.enable_rbd_download:
+            self._download_handlers['rbd'] = self.rbd_download
+
+    def rbd_download(self, context, url_parts, dst_path, metadata=None):
+        """Use an explicit rbd call to download an image.
+
+        :param context: The `nova.context.RequestContext` object for the
+                        request
+        :param url_parts: Parts of URL pointing to the image location
+        :param dst_path: Filepath to transfer the image file to.
+        :param metadata: Image location metadata (currently unused)
+        """
+
+        # avoid circular import
+        from nova.storage import rbd_utils
+        try:
+            # Parse the RBD URL from url_parts, it should consist of 4
+            # sections and be in the format of:
+            # <cluster_uuid>/<pool_name>/<image_uuid>/<snapshot_name>
+            url_path = str(urlparse.unquote(url_parts.path))
+            cluster_uuid, pool_name, image_uuid, snapshot_name = (
+                url_path.split('/'))
+        except ValueError as e:
+            msg = f"Invalid RBD URL format: {e}"
+            LOG.error(msg)
+            raise nova.exception.InvalidParameterValue(msg)
+
+        rbd_driver = rbd_utils.RBDDriver(
+            user=CONF.glance.rbd_user,
+            pool=CONF.glance.rbd_pool,
+            ceph_conf=CONF.glance.rbd_ceph_conf,
+            connect_timeout=CONF.glance.rbd_connect_timeout)
+
+        try:
+            LOG.debug("Attempting to export RBD image: "
+                      "[pool_name: %s] [image_uuid: %s] "
+                      "[snapshot_name: %s] [dst_path: %s]",
+                      pool_name, image_uuid, snapshot_name, dst_path)
+
+            rbd_driver.export_image(dst_path, image_uuid,
+                                    snapshot_name, pool_name)
+        except Exception as e:
+            LOG.error("Error during RBD image export: %s", e)
+            raise nova.exception.CouldNotFetchImage(image_id=image_uuid)
+
     def show(self, context, image_id, include_locations=False,
              show_deleted=True):
         """Returns a dict with image data for the given opaque image id.
@@ -299,7 +345,13 @@ class GlanceImageServiceV2(object):
     def download(self, context, image_id, data=None, dst_path=None,
                  trusted_certs=None):
         """Calls out to Glance for data and writes data."""
-        if CONF.glance.allowed_direct_url_schemes and dst_path is not None:
+
+        # First, check if image could be directly downloaded by special handler
+        # TODO(stephenfin): Remove check for 'allowed_direct_url_schemes' when
+        # we clean up tests since it's not used elsewhere
+        if ((CONF.glance.allowed_direct_url_schemes or
+             self._download_handlers) and dst_path is not None
+        ):
             image = self.show(context, image_id, include_locations=True)
             for entry in image.get('locations', []):
                 loc_url = entry['url']
@@ -310,10 +362,21 @@ class GlanceImageServiceV2(object):
                     try:
                         xfer_method(context, o, dst_path, loc_meta)
                         LOG.info("Successfully transferred using %s", o.scheme)
+
+                        # Load chunks from the downloaded image file
+                        # for verification (if required)
+                        with open(dst_path, 'rb') as fh:
+                            downloaded_length = os.path.getsize(dst_path)
+                            image_chunks = glance_utils.IterableWithLength(fh,
+                                downloaded_length)
+                            self._verify_and_write(context, image_id,
+                                trusted_certs, image_chunks, None, None)
                         return
                     except Exception:
                         LOG.exception("Download image error")
 
+        # By default (or if direct download has failed), use glance client call
+        # to fetch the image and fill image_chunks
         try:
             image_chunks = self._client.call(
                 context, 2, 'data', args=(image_id,))
