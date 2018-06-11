@@ -361,8 +361,11 @@ class TestFlavor(test_objects._LocalTest, _TestFlavor):
 
         # Test compatibility.
         flavor.description = 'flavor descriptions are not backward compatible'
-        flavor_primitive = flavor.obj_to_primitive()
+        data = lambda x: x['nova_object.data']
+        flavor_primitive = data(flavor.obj_to_primitive())
+        self.assertIn('description', flavor_primitive)
         flavor.obj_make_compatible(flavor_primitive, '1.1')
+        self.assertIn('name', flavor_primitive)
         self.assertNotIn('description', flavor_primitive)
 
 

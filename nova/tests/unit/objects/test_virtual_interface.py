@@ -145,9 +145,10 @@ class _TestVirtualInterface(object):
         vif.instance_uuid = uuids.instance
         vif.uuid = uuids.uuid
         vif.tag = 'fake-tag'
-
-        primitive = vif.obj_to_primitive(target_version='1.0')
+        data = lambda x: x['nova_object.data']
+        primitive = data(vif.obj_to_primitive(target_version='1.0'))
         self.assertNotIn('tag', primitive)
+        self.assertIn('uuid', primitive)
 
 
 class TestVirtualInterfaceObject(test_objects._LocalTest,

@@ -133,7 +133,10 @@ class _TestNetworkRequestObject(object):
     def test_obj_make_compatible_pre_1_2(self):
         net_req = objects.NetworkRequest()
         net_req.tag = 'foo'
-        primitive = net_req.obj_to_primitive(target_version='1.1')
+        data = lambda x: x['nova_object.data']
+        primitive = data(net_req.obj_to_primitive(target_version='1.2'))
+        self.assertIn('tag', primitive)
+        primitive = data(net_req.obj_to_primitive(target_version='1.1'))
         self.assertNotIn('tag', primitive)
 
 

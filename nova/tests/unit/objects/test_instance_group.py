@@ -297,7 +297,8 @@ class _TestInstanceGroupObject(object):
 
     def test_obj_make_compatible(self):
         obj = objects.InstanceGroup(self.context, **_INST_GROUP_OBJ_VALS)
-        obj_primitive = obj.obj_to_primitive()
+        data = lambda x: x['nova_object.data']
+        obj_primitive = data(obj.obj_to_primitive())
         self.assertNotIn('metadetails', obj_primitive)
         obj.obj_make_compatible(obj_primitive, '1.6')
         self.assertEqual({}, obj_primitive['metadetails'])
