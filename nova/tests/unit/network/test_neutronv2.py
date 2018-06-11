@@ -293,10 +293,10 @@ class TestNeutronClient(test.NoDBTestCase):
             client.list_networks)
 
 
-class _TestNeutronv2Common(test.TestCase):
+class TestNeutronv2Base(test.TestCase):
 
     def setUp(self):
-        super(_TestNeutronv2Common, self).setUp()
+        super(TestNeutronv2Base, self).setUp()
         self.api = neutronapi.API()
         self.context = context.RequestContext(
             'userid', uuids.my_tenant,
@@ -825,279 +825,16 @@ class _TestNeutronv2Common(test.TestCase):
         return expected_create_port_calls
 
 
-class TestNeutronv2Base(_TestNeutronv2Common):
+class TestNeutronv2(TestNeutronv2Base):
 
     def setUp(self):
-        super(TestNeutronv2Base, self).setUp()
+        super(TestNeutronv2, self).setUp()
         self.mox.StubOutWithMock(neutronapi, 'get_client')
         self.moxed_client = self.mox.CreateMock(client.Client)
         self.addCleanup(CONF.reset)
         self.addCleanup(self.mox.VerifyAll)
         self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
-
-    def _stub_allocate_for_instance(self, net_idx=1, **kwargs):
-        self.instance = self._fake_instance_object(self.instance)
-        self.instance2 = self._fake_instance_object(self.instance2)
-
-        api = neutronapi.API()
-        self.mox.StubOutWithMock(api, 'get_instance_nw_info')
-        self.mox.StubOutWithMock(api, '_refresh_neutron_extensions_cache')
-        self.mox.StubOutWithMock(api, '_populate_neutron_extension_values')
-
-        bind_host_id = kwargs.get('bind_host_id') or None
-
-        has_dns_extension = False
-        if kwargs.get('dns_extension'):
-            has_dns_extension = True
-            api.extensions[constants.DNS_INTEGRATION] = 1
-
-        # Net idx is 1-based for compatibility with existing unit tests
-        nets = self.nets[net_idx - 1]
-        ports = {}
-        fixed_ips = {}
-
-        macs = kwargs.pop('macs', None)
-        if macs:
-            macs = set(macs)
-
-        req_net_ids = []
-        ordered_networks = []
-        self._stub_allocate_for_instance_show_port(nets, ports, fixed_ips,
-            macs, req_net_ids, ordered_networks, **kwargs)
-
-        if kwargs.get('_break') == 'pre_list_networks':
-            self.mox.ReplayAll()
-            return api
-
-        self._stub_allocate_for_instance_list_networks(req_net_ids, nets)
-
-        if kwargs.get('_break') == 'post_list_networks':
-            self.mox.ReplayAll()
-            return api
-
-        if (('requested_networks' not in kwargs or
-             kwargs['requested_networks'].as_tuples() == [(None, None, None)])
-            and len(nets) > 1):
-                self.mox.ReplayAll()
-                return api
-
-        if kwargs.get('_break') == 'post_list_extensions':
-            self.mox.ReplayAll()
-            return api
-
-        self._stub_allocate_for_instance_create_port(
-            ordered_networks, fixed_ips, nets)
-
-        neutronapi.get_client(
-            mox.IgnoreArg(), admin=True).AndReturn(
-            self.moxed_client)
-
-        preexisting_port_ids = []
-        ports_in_requested_net_order = []
-        nets_in_requested_net_order = []
-        index = 0
-        for request in ordered_networks:
-            index += 1
-            port_req_body = {
-                'port': {
-                    'device_id': self.instance.uuid,
-                    'device_owner': 'compute:nova',
-                },
-            }
-            # Network lookup for available network_id
-            network = None
-            for net in nets:
-                if net['id'] == request.network_id:
-                    network = net
-                    break
-            # if net_id did not pass validate_networks() and not available
-            # here then skip it safely not continuing with a None Network
-            else:
-                continue
-
-            api._populate_neutron_extension_values(mox.IgnoreArg(),
-                                                   self.instance,
-                                                   mox.IgnoreArg(),
-                                                   mox.IgnoreArg(),
-                                                   network=network,
-                                                   neutron=self.moxed_client,
-                                                   bind_host_id=bind_host_id).\
-                                                   AndReturn(None)
-
-            if macs:
-                port_req_body['port']['mac_address'] = macs.pop()
-
-            if not request.port_id:
-                port_id = uuids.fake
-                update_port_res = {'port': {
-                    'id': port_id,
-                    'mac_address': 'fakemac%i' % index}}
-                ports_in_requested_net_order.append(port_id)
-                if kwargs.get('_break') == 'mac' + request.network_id:
-                    self.mox.ReplayAll()
-                    return api
-            else:
-                ports_in_requested_net_order.append(request.port_id)
-                preexisting_port_ids.append(request.port_id)
-                port_id = request.port_id
-                update_port_res = {'port': ports[port_id]}
-
-            new_mac = port_req_body['port'].get('mac_address')
-            if new_mac:
-                update_port_res['port']['mac_address'] = new_mac
-
-            self.moxed_client.update_port(port_id,
-                                          MyComparator(port_req_body)
-                                          ).AndReturn(update_port_res)
-
-            if has_dns_extension:
-                if net_idx == 11:
-                    port_req_body_dns = {
-                        'port': {
-                            'dns_name': self.instance.hostname
-                        }
-                    }
-                    res_port_dns = {
-                        'port': {
-                            'id': ports_in_requested_net_order[-1]
-                        }
-                    }
-                    self.moxed_client.update_port(
-                        ports_in_requested_net_order[-1],
-                        MyComparator(port_req_body_dns)
-                        ).AndReturn(res_port_dns)
-            nets_in_requested_net_order.append(network)
-
-        api.get_instance_nw_info(mox.IgnoreArg(),
-                                 self.instance,
-                                 networks=nets_in_requested_net_order,
-                                 port_ids=ports_in_requested_net_order,
-                                 admin_client=self.moxed_client,
-                                 preexisting_port_ids=preexisting_port_ids,
-                                 update_cells=True
-                                ).AndReturn(self._returned_nw_info)
-        self.mox.ReplayAll()
-        return api
-
-    def _stub_allocate_for_instance_show_port(self, nets, ports, fixed_ips,
-            macs, req_net_ids, ordered_networks, **kwargs):
-        if 'requested_networks' in kwargs:
-            for request in kwargs['requested_networks']:
-                if request.port_id:
-                    if request.port_id == uuids.portid_3:
-                        self.moxed_client.show_port(request.port_id
-                        ).AndReturn(
-                            {'port': {'id': uuids.portid_3,
-                                      'network_id': uuids.my_netid1,
-                                      'tenant_id': self.tenant_id,
-                                      'mac_address': 'my_mac1',
-                                      'device_id': kwargs.get('_device') and
-                                                   self.instance2.uuid or
-                                                   ''}})
-                        ports[uuids.my_netid1] = [self.port_data1[0],
-                                            self.port_data3[0]]
-                        ports[request.port_id] = self.port_data3[0]
-                        request.network_id = uuids.my_netid1
-                        if macs is not None:
-                            macs.discard('my_mac1')
-                    elif request.port_id == uuids.non_existent_uuid:
-                        PortNotFound = exceptions.PortNotFoundClient(
-                            status_code=404)
-                        self.moxed_client.show_port(request.port_id
-                        ).AndRaise(PortNotFound)
-                    else:
-                        self.moxed_client.show_port(request.port_id).AndReturn(
-                            {'port': {'id': uuids.portid_1,
-                                      'network_id': uuids.my_netid1,
-                                      'tenant_id': self.tenant_id,
-                                      'mac_address': 'my_mac1',
-                                      'device_id': kwargs.get('_device') and
-                                                   self.instance2.uuid or
-                                                   '',
-                                      'dns_name': kwargs.get('_dns_name') or
-                                                  ''}})
-                        ports[request.port_id] = self.port_data1[0]
-                        request.network_id = uuids.my_netid1
-                        if macs is not None:
-                            macs.discard('my_mac1')
-                else:
-                    fixed_ips[request.network_id] = request.address
-                req_net_ids.append(request.network_id)
-                ordered_networks.append(request)
-        else:
-            for n in nets:
-                ordered_networks.append(
-                    objects.NetworkRequest(network_id=n['id']))
-
-    def _stub_allocate_for_instance_list_networks(self, req_net_ids, nets):
-        # search all req_net_ids as in api.py
-        search_ids = req_net_ids
-        if search_ids:
-            mox_list_params = {'id': mox.SameElementsAs(search_ids)}
-            self.moxed_client.list_networks(
-                **mox_list_params).AndReturn({'networks': nets})
-        else:
-            mox_list_params = {'tenant_id': self.instance.project_id,
-                               'shared': False}
-            self.moxed_client.list_networks(
-                **mox_list_params).AndReturn({'networks': nets})
-            mox_list_params = {'shared': True}
-            self.moxed_client.list_networks(
-                **mox_list_params).AndReturn({'networks': []})
-
-    def _stub_allocate_for_instance_create_port(self, ordered_networks,
-            fixed_ips, nets):
-        for request in ordered_networks:
-            if not request.port_id:
-                # Check network is available, skip if not
-                network = None
-                for net in nets:
-                    if net['id'] == request.network_id:
-                        network = net
-                        break
-                if network is None:
-                    continue
-
-                port_req_body_create = {'port': {'device_id':
-                                                 self.instance.uuid}}
-                request.address = fixed_ips.get(request.network_id)
-                if request.address:
-                    port_req_body_create['port']['fixed_ips'] = [
-                        {'ip_address': str(request.address)}]
-                port_req_body_create['port']['network_id'] = \
-                    request.network_id
-                port_req_body_create['port']['admin_state_up'] = True
-                port_req_body_create['port']['tenant_id'] = \
-                    self.instance.project_id
-                res_port = {'port': {'id': uuids.fake}}
-                self.moxed_client.create_port(
-                    MyComparator(port_req_body_create)).AndReturn(res_port)
-
-    def _allocate_for_instance(self, net_idx=1, **kwargs):
-        api = self._stub_allocate_for_instance(net_idx, **kwargs)
-        self._vifs_created = []
-
-        def _new_vif(*args):
-            m = mock.MagicMock()
-            self._vifs_created.append(m)
-            return m
-
-        with mock.patch('nova.objects.VirtualInterface') as mock_vif:
-            mock_vif.side_effect = _new_vif
-
-            requested_networks = kwargs.get("requested_networks", None)
-            allowed_keys = ["macs", "security_groups", "bind_host_id"]
-            afi_kwargs = {}
-            for key in kwargs.keys():
-                if key in allowed_keys:
-                    afi_kwargs[key] = kwargs[key]
-
-            return api.allocate_for_instance(self.context, self.instance,
-                    False, requested_networks, **afi_kwargs)
-
-
-class TestNeutronv2(TestNeutronv2Base):
 
     def test_get_instance_nw_info_without_subnet(self):
         # Test get instance_nw_info for a port without subnet.
@@ -3140,7 +2877,7 @@ class TestNeutronv2(TestNeutronv2Base):
         )
 
 
-class TestNeutronv2WithMock(_TestNeutronv2Common):
+class TestNeutronv2WithMock(TestNeutronv2Base):
     """Used to test Neutron V2 API with mock."""
 
     @mock.patch.object(db_api, 'instance_info_cache_get')
@@ -6025,7 +5762,7 @@ class TestNeutronv2ModuleMethods(test.NoDBTestCase):
         self.assertEqual(l, [{'id': 1}, {'id': 2}, {'id': 3}])
 
 
-class TestNeutronv2Portbinding(_TestNeutronv2Common):
+class TestNeutronv2Portbinding(TestNeutronv2Base):
 
     def test_allocate_for_instance_portbinding(self):
         self._test_allocate_for_instance_with_virtual_interface(
@@ -6932,23 +6669,21 @@ class TestAllocateForInstance(test.NoDBTestCase):
 
 
 class TestNeutronv2NeutronHostnameDNS(TestNeutronv2Base):
-    def setUp(self):
-        super(TestNeutronv2NeutronHostnameDNS, self).setUp()
-        neutronapi.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
-            self.moxed_client)
 
     def test_allocate_for_instance_create_port(self):
         # The port's dns_name attribute should be set by the port create
         # request in allocate_for_instance
-        self._allocate_for_instance(1, dns_extension=True)
+        self._test_allocate_for_instance_with_virtual_interface(
+            1, dns_extension=True)
 
     def test_allocate_for_instance_with_requested_port(self):
         # The port's dns_name attribute should be set by the port update
         # request in allocate_for_instance
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
-        self._allocate_for_instance(net_idx=1, dns_extension=True,
-                                    requested_networks=requested_networks)
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=1, dns_extension=True,
+            requested_networks=requested_networks)
 
     def test_allocate_for_instance_port_dns_name_preset_equal_hostname(self):
         # The port's dns_name attribute should be set by the port update
@@ -6956,53 +6691,50 @@ class TestNeutronv2NeutronHostnameDNS(TestNeutronv2Base):
         # the user with a value equal to the instance's hostname
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
-        self._allocate_for_instance(net_idx=1, dns_extension=True,
-                                    requested_networks=requested_networks,
-                                    _dns_name='test-instance')
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=1, dns_extension=True,
+            requested_networks=requested_networks,
+            _dns_name='test-instance')
 
     def test_allocate_for_instance_port_dns_name_preset_noteq_hostname(self):
         # If a pre-existing port has dns_name set, an exception should be
         # raised if dns_name is not equal to the instance's hostname
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
-        api = self._stub_allocate_for_instance(
+        self._test_allocate_for_instance(
             requested_networks=requested_networks,
+            exception=exception.PortNotUsableDNS,
+            get_client_admin_call=False,
             dns_extension=True,
             _break='pre_list_networks',
             _dns_name='my-instance')
-        self.assertRaises(exception.PortNotUsableDNS,
-                          api.allocate_for_instance, self.context,
-                          self.instance, False, requested_networks)
 
 
 class TestNeutronv2NeutronHostnameDNSPortbinding(TestNeutronv2Base):
-    def setUp(self):
-        super(TestNeutronv2NeutronHostnameDNSPortbinding, self).setUp()
-        neutronapi.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
-            self.moxed_client)
 
     def test_allocate_for_instance_create_port(self):
         # The port's dns_name attribute should be set by the port create
         # request in allocate_for_instance
-        self._allocate_for_instance(1, dns_extension=True,
-                                    bind_host_id=self.instance.get('host'))
+        self._test_allocate_for_instance_with_virtual_interface(
+            1, dns_extension=True, bind_host_id=self.instance.get('host'))
 
     def test_allocate_for_instance_with_requested_port(self):
         # The port's dns_name attribute should be set by the port update
         # request in allocate_for_instance
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
-        self._allocate_for_instance(net_idx=1, dns_extension=True,
-                                    bind_host_id=self.instance.get('host'),
-                                    requested_networks=requested_networks)
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=1, dns_extension=True,
+            bind_host_id=self.instance.get('host'),
+            requested_networks=requested_networks)
 
     def test_allocate_for_instance_create_port_with_dns_domain(self):
         # The port's dns_name attribute should be set by the port update
         # request in _update_port_dns_name. This should happen only when the
         # port binding extension is enabled and the port's network has a
         # non-blank dns_domain attribute
-        self._allocate_for_instance(11, dns_extension=True,
-                                    bind_host_id=self.instance.get('host'))
+        self._test_allocate_for_instance_with_virtual_interface(
+            11, dns_extension=True, bind_host_id=self.instance.get('host'))
 
     def test_allocate_for_instance_with_requested_port_with_dns_domain(self):
         # The port's dns_name attribute should be set by the port update
@@ -7011,9 +6743,10 @@ class TestNeutronv2NeutronHostnameDNSPortbinding(TestNeutronv2Base):
         # non-blank dns_domain attribute
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
-        self._allocate_for_instance(net_idx=11, dns_extension=True,
-                                    bind_host_id=self.instance.get('host'),
-                                    requested_networks=requested_networks)
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=11, dns_extension=True,
+            bind_host_id=self.instance.get('host'),
+            requested_networks=requested_networks)
 
 
 class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
