@@ -217,6 +217,7 @@ def _new_allocations(context, resource_provider_uuid, consumer_uuid,
             _("Allocation for resource provider '%(rp_uuid)s' "
               "that does not exist.") %
             {'rp_uuid': resource_provider_uuid})
+    util.ensure_consumer(context, consumer_uuid, project_id, user_id)
     for resource_class in resources:
         allocation = rp_obj.Allocation(
             resource_provider=resource_provider,

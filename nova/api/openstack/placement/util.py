@@ -15,6 +15,7 @@ import functools
 import re
 
 import jsonschema
+from oslo_config import cfg
 from oslo_middleware import request_id
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
@@ -22,11 +23,17 @@ from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack.placement import errors
+from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import lib as placement_lib
 # NOTE(cdent): avoid cyclical import conflict between util and
 # microversion
 import nova.api.openstack.placement.microversion
+from nova.api.openstack.placement.objects import consumer as consumer_obj
+from nova.api.openstack.placement.objects import project as project_obj
+from nova.api.openstack.placement.objects import user as user_obj
 from nova.i18n import _
+
+CONF = cfg.CONF
 
 # Error code handling constants
 ENV_ERROR_CODE = 'placement.error_code'
@@ -568,3 +575,53 @@ def parse_qs_request_groups(req):
             raise webob.exc.HTTPBadRequest(msg % ', '.join(conflicting_traits))
 
     return by_suffix
+
+
+def ensure_consumer(ctx, consumer_uuid, project_id, user_id):
+    """Ensures there are records in the consumers, projects and users table for
+    the supplied external identifiers.
+
+    Returns a populated Consumer object containing Project and User sub-objects
+
+    :param ctx: The request context.
+    :param consumer_uuid: The uuid of the consumer of the resources.
+    :param project_id: The external ID of the project consuming the resources.
+    :param user_id: The external ID of the user consuming the resources.
+    """
+    if project_id is None:
+        project_id = CONF.placement.incomplete_consumer_project_id
+        user_id = CONF.placement.incomplete_consumer_user_id
+    try:
+        proj = project_obj.Project.get_by_external_id(ctx, project_id)
+    except exception.NotFound:
+        # Auto-create the project if we found no record of it...
+        try:
+            proj = project_obj.Project(ctx, external_id=project_id)
+            proj.create()
+        except exception.ProjectExists:
+            # No worries, another thread created this project already
+            proj = project_obj.Project.get_by_external_id(ctx, project_id)
+    try:
+        user = user_obj.User.get_by_external_id(ctx, user_id)
+    except exception.NotFound:
+        # Auto-create the user if we found no record of it...
+        try:
+            user = user_obj.User(ctx, external_id=user_id)
+            user.create()
+        except exception.UserExists:
+            # No worries, another thread created this user already
+            user = user_obj.User.get_by_external_id(ctx, user_id)
+
+    try:
+        consumer = consumer_obj.Consumer.get_by_uuid(ctx, consumer_uuid)
+    except exception.NotFound:
+        # No such consumer. This is common for new allocations. Create the
+        # consumer record
+        try:
+            consumer = consumer_obj.Consumer(
+                ctx, uuid=consumer_uuid, project=proj, user=user)
+            consumer.create()
+        except exception.ConsumerExists:
+            # No worries, another thread created this user already
+            consumer = consumer_obj.Consumer.get_by_uuid(ctx, consumer_uuid)
+    return consumer

@@ -17,6 +17,7 @@ from nova.conf import utils as confutils
 
 
 DEFAULT_SERVICE_TYPE = 'placement'
+DEFAULT_CONSUMER_MISSING_ID = '00000000-0000-0000-0000-0000000000000'
 
 placement_group = cfg.OptGroup(
     'placement',
@@ -44,6 +45,26 @@ is determined.
         default='placement-policy.yaml',
         help='The file that defines placement policies. This can be an '
              'absolute path or relative to the configuration file.'),
+    cfg.StrOpt(
+        'incomplete_consumer_project_id',
+        default=DEFAULT_CONSUMER_MISSING_ID,
+        help="""
+Early API microversions (<1.8) allowed creating allocations and not specifying
+a project or user identifier for the consumer. In cleaning up the data
+modeling, we no longer allow missing project and user information. if an older
+client makes an allocation, we'll use this in place of the information it
+doesn't provide.
+"""),
+cfg.StrOpt(
+        'incomplete_consumer_user_id',
+        default=DEFAULT_CONSUMER_MISSING_ID,
+        help="""
+Early API microversions (<1.8) allowed creating allocations and not specifying
+a project or user identifier for the consumer. In cleaning up the data
+modeling, we no longer allow missing project and user information. if an older
+client makes an allocation, we'll use this in place of the information it
+doesn't provide.
+"""),
 ]
 
 
