@@ -4411,10 +4411,7 @@ class API(base.Base):
                     # nova.volume.cinder code translates it and puts the
                     # attach_mode in the connection_info for some legacy
                     # reason...
-                    if attachment_record.get(
-                            'connection_info', {}).get(
-                                # attachments are read/write by default
-                                'attach_mode', 'rw') == 'rw':
+                    if attachment_record['attach_mode'] == 'rw':
                         count += 1
                 except exception.VolumeAttachmentNotFound:
                     # attachments are read/write by default so count it

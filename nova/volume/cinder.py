@@ -373,8 +373,6 @@ def _translate_attachment_ref(attachment_ref):
         translated_con_info['data'] = connection_info_data
         translated_con_info['status'] = attachment_ref.pop('status', None)
         translated_con_info['instance'] = attachment_ref.pop('instance', None)
-        translated_con_info['attach_mode'] = attachment_ref.pop('attach_mode',
-                                                                None)
         translated_con_info['attached_at'] = attachment_ref.pop('attached_at',
                                                                 None)
         translated_con_info['detached_at'] = attachment_ref.pop('detached_at',
@@ -382,7 +380,8 @@ def _translate_attachment_ref(attachment_ref):
 
         # Now the catch all...
         for k, v in attachment_ref.items():
-            if k != "id":
+            # Keep these as top-level fields on the attachment record.
+            if k not in ("id", "attach_mode"):
                 translated_con_info[k] = v
 
     attachment_ref['connection_info'] = translated_con_info

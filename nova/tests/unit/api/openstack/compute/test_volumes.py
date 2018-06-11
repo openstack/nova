@@ -1010,7 +1010,7 @@ class SwapVolumeMultiattachTestCase(test.NoDBTestCase):
             raise exception.VolumeNotFound(volume_id=volume_id)
 
         def fake_attachment_get(_context, attachment_id):
-            return {'connection_info': {'attach_mode': 'rw'}}
+            return {'attach_mode': 'rw'}
 
         ctxt = context.get_admin_context()
         instance = fake_instance.fake_instance_obj(

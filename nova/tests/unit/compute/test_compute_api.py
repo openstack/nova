@@ -2879,7 +2879,7 @@ class _ComputeAPIUnitTestMixIn(object):
             if attachment_id == uuids.attachment1:
                 raise exception.VolumeAttachmentNotFound(
                     attachment_id=attachment_id)
-            return {'connection_info': {'attach_mode': 'ro'}}
+            return {'attach_mode': 'ro'}
 
         with mock.patch.object(self.compute_api.volume_api, 'attachment_get',
                                side_effect=fake_attachment_get) as mock_get:
