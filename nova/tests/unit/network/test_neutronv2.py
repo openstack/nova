@@ -488,6 +488,24 @@ class _TestNeutronv2Common(test.TestCase):
                expected_attrs=expected_attrs)
         return instance
 
+    def _test_allocate_for_instance_with_virtual_interface(
+            self, net_idx=1, **kwargs):
+        self._vifs_created = []
+
+        def _new_vif(*args):
+            m = mock.MagicMock()
+            self._vifs_created.append(m)
+            return m
+
+        with mock.patch('nova.objects.VirtualInterface') as mock_vif:
+            mock_vif.side_effect = _new_vif
+            requested_networks = kwargs.pop('requested_networks', None)
+            macs = kwargs.pop('macs', None)
+
+            return self._test_allocate_for_instance(
+                net_idx=net_idx, requested_networks=requested_networks,
+                macs=macs, **kwargs)
+
     @mock.patch.object(neutronapi.API, '_populate_neutron_extension_values')
     @mock.patch.object(neutronapi.API, '_refresh_neutron_extensions_cache')
     @mock.patch.object(neutronapi.API, 'get_instance_nw_info',
@@ -1163,122 +1181,6 @@ class TestNeutronv2(TestNeutronv2Base):
                                                None, port_req_body)
         self.assertEqual(1, port_req_body['port']['rxtx_factor'])
 
-    def test_allocate_for_instance_1(self):
-        # Allocate one port in one network env.
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self._allocate_for_instance(1)
-
-    def test_allocate_for_instance_accepts_macs_kwargs_None(self):
-        # The macs kwarg should be accepted as None.
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self._allocate_for_instance(1, macs=None)
-
-    def test_allocate_for_instance_accepts_macs_kwargs_set(self):
-        # The macs kwarg should be accepted, as a set, the
-        # _allocate_for_instance helper checks that the mac is used to create a
-        # port.
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self._allocate_for_instance(1, macs=set(['ab:cd:ef:01:23:45']))
-
-    def test_allocate_for_instance_with_mac_added_to_port(self):
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        # NOTE(johngarbutt) we override the provided mac with a new one
-        self._allocate_for_instance(net_idx=1,
-                                    requested_networks=requested_networks,
-                                    macs=set(['ab:cd:ef:01:23:45']))
-        self.assertEqual('ab:cd:ef:01:23:45/%s' % uuids.portid_1,
-                         self._vifs_created[0].address)
-
-    def test_allocate_for_instance_accepts_only_portid(self):
-        # Make sure allocate_for_instance works when only a portid is provided
-        self._returned_nw_info = self.port_data1
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        result = self._allocate_for_instance(
-            requested_networks=objects.NetworkRequestList(
-                objects=[objects.NetworkRequest(port_id=uuids.portid_1,
-                                                tag='test')]))
-        self.assertEqual(self.port_data1, result)
-        self.assertEqual(1, len(self._vifs_created))
-        self.assertEqual('test', self._vifs_created[0].tag)
-        self.assertEqual(self.instance.uuid,
-                         self._vifs_created[0].instance_uuid)
-        self.assertEqual(uuids.portid_1, self._vifs_created[0].uuid)
-        self.assertEqual('%s/%s' % (self.port_data1[0]['mac_address'],
-                                    self.port_data1[0]['id']),
-                         self._vifs_created[0].address)
-
-    def test_allocate_for_instance_two_macs_two_networks(self):
-        # If two MACs are available and two networks requested, two new ports
-        # get made and no exceptions raised.
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=self.nets2[1]['id']),
-                     objects.NetworkRequest(network_id=self.nets2[0]['id'])])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self._allocate_for_instance(
-            net_idx=2, requested_networks=requested_networks,
-            macs=set(['my_mac2', 'my_mac1']))
-
-    def test_allocate_for_instance_with_requested_non_available_network(self):
-        """verify that a non available network is ignored.
-        self.nets2 (net_idx=2) is composed of self.nets3[0] and self.nets3[1]
-        Do not create a port on a non available network self.nets3[2].
-       """
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=net['id'])
-                     for net in (self.nets3[0], self.nets3[2], self.nets3[1])])
-        requested_networks[0].tag = 'foo'
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self._allocate_for_instance(net_idx=2,
-                                    requested_networks=requested_networks)
-        self.assertEqual(2, len(self._vifs_created))
-        # NOTE(danms) nets3[2] is chosen above as one that won't validate,
-        # so we never actually run create() on the VIF.
-        vifs_really_created = [vif for vif in self._vifs_created
-                               if vif.create.called]
-        self.assertEqual(2, len(vifs_really_created))
-        self.assertEqual([('foo', 'fakemac1/%s' % uuids.fake),
-                          (None, 'fakemac3/%s' % uuids.fake)],
-                         [(vif.tag, vif.address)
-                          for vif in vifs_really_created])
-
-    def test_allocate_for_instance_with_requested_networks(self):
-        # specify only first and last network
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=net['id'])
-                     for net in (self.nets3[1], self.nets3[0], self.nets3[2])])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self._allocate_for_instance(net_idx=3,
-                                    requested_networks=requested_networks)
-
-    def test_allocate_for_instance_with_no_subnet_defined(self):
-        # net_id=4 does not specify subnet and does not set the option
-        # port_security_disabled to True, so Neutron will not been
-        # able to associate the default security group to the port
-        # requested to be created. We expect an exception to be
-        # raised.
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.assertRaises(exception.SecurityGroupCannotBeApplied,
-                          self._allocate_for_instance, net_idx=4,
-                          _break='post_list_extensions')
-
-    def test_allocate_for_instance_with_requested_networks_with_fixedip(self):
-        # specify only first and last network
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=self.nets1[0]['id'],
-                                            address='10.0.1.0')])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self._allocate_for_instance(net_idx=1,
-                                    requested_networks=requested_networks)
-
-    def test_allocate_for_instance_with_requested_networks_with_port(self):
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self._allocate_for_instance(net_idx=1,
-                                    requested_networks=requested_networks)
-
     def test_allocate_for_instance_no_networks(self):
         """verify the exception thrown when there are no networks defined."""
         self.instance = fake_instance.fake_instance_obj(self.context,
@@ -1420,15 +1322,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertRaises(BailOutEarly,
                           api.allocate_for_instance, self.context,
                           self.instance, False, requested_networks)
-
-    def test_allocate_for_instance_second_time(self):
-        # Make sure that allocate_for_instance only returns ports that it
-        # allocated during _that_ run.
-        new_port = {'id': uuids.fake}
-        self._returned_nw_info = self.port_data1 + [new_port]
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        nw_info = self._allocate_for_instance()
-        self.assertEqual([new_port], nw_info)
 
     def test_allocate_for_instance_with_externalnet_forbidden(self):
         """Only one network is available, it's external, and the client
@@ -1752,38 +1645,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.ReplayAll()
         api = neutronapi.API()
         api.validate_networks(self.context, requested_networks, 1)
-
-    def test_allocate_for_instance_with_requested_networks_duplicates(self):
-        # specify a duplicate network to allocate to instance
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=net['id'])
-                     for net in (self.nets6[0], self.nets6[1])])
-        neutronapi.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
-            self.moxed_client)
-        self._allocate_for_instance(net_idx=6,
-                                    requested_networks=requested_networks)
-
-    def test_allocate_for_instance_requested_networks_duplicates_port(self):
-        # specify first port and last port that are in same network
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=port['id'])
-                     for port in (self.port_data1[0], self.port_data3[0])])
-        neutronapi.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
-            self.moxed_client)
-        self._allocate_for_instance(net_idx=6,
-                                    requested_networks=requested_networks)
-
-    def test_allocate_for_instance_requested_networks_duplicates_combo(self):
-        # specify a combo net_idx=7 : net2, port in net1, net2, port in net1
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=uuids.my_netid2),
-                     objects.NetworkRequest(port_id=self.port_data1[0]['id']),
-                     objects.NetworkRequest(network_id=uuids.my_netid2),
-                     objects.NetworkRequest(port_id=self.port_data3[0]['id'])])
-        neutronapi.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
-            self.moxed_client)
-        self._allocate_for_instance(net_idx=7,
-                                    requested_networks=requested_networks)
 
     def test_validate_networks_not_specified(self):
         requested_networks = objects.NetworkRequestList(objects=[])
@@ -3606,11 +3467,53 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         self.assertEqual(len(expected_list_ports_calls),
                          mocked_client.list_ports.call_count)
 
+    def test_allocate_for_instance_1(self):
+        # Allocate one port in one network env.
+        self._test_allocate_for_instance_with_virtual_interface(1)
+
     def test_allocate_for_instance_2(self):
         # Allocate one port in two networks env.
         self._test_allocate_for_instance(
             net_idx=2, exception=exception.NetworkAmbiguous,
             get_client_admin_call=False)
+
+    def test_allocate_for_instance_accepts_macs_kwargs_None(self):
+        # The macs kwarg should be accepted as None.
+        self._test_allocate_for_instance_with_virtual_interface(1, macs=None)
+
+    def test_allocate_for_instance_accepts_macs_kwargs_set(self):
+        # The macs kwarg should be accepted, as a set, the
+        # _allocate_for_instance helper checks that the mac is used to create a
+        # port.
+        self._test_allocate_for_instance_with_virtual_interface(
+            1, macs=set(['ab:cd:ef:01:23:45']))
+
+    def test_allocate_for_instance_with_mac_added_to_port(self):
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
+        # NOTE(johngarbutt) we override the provided mac with a new one
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=1, requested_networks=requested_networks,
+            macs=set(['ab:cd:ef:01:23:45']))
+        self.assertEqual('ab:cd:ef:01:23:45/%s' % uuids.portid_1,
+                         self._vifs_created[0].address)
+
+    def test_allocate_for_instance_accepts_only_portid(self):
+        # Make sure allocate_for_instance works when only a portid is provided
+        self._returned_nw_info = self.port_data1
+        result, _ = self._test_allocate_for_instance_with_virtual_interface(
+            requested_networks=objects.NetworkRequestList(
+                objects=[objects.NetworkRequest(port_id=uuids.portid_1,
+                                                tag='test')]))
+        self.assertEqual(self.port_data1, result)
+        self.assertEqual(1, len(self._vifs_created))
+        self.assertEqual('test', self._vifs_created[0].tag)
+        self.assertEqual(self.instance.uuid,
+                         self._vifs_created[0].instance_uuid)
+        self.assertEqual(uuids.portid_1, self._vifs_created[0].uuid)
+        self.assertEqual('%s/%s' % (self.port_data1[0]['mac_address'],
+                                    self.port_data1[0]['id']),
+                         self._vifs_created[0].address)
 
     @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
     def test_allocate_for_instance_not_enough_macs_via_ports(self,
@@ -3648,10 +3551,61 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         mock_unbind.assert_called_once_with(self.context, [],
                                             mocked_client, mock.ANY)
 
+    def test_allocate_for_instance_two_macs_two_networks(self):
+        # If two MACs are available and two networks requested, two new ports
+        # get made and no exceptions raised.
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=self.nets2[1]['id']),
+                     objects.NetworkRequest(network_id=self.nets2[0]['id'])])
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=2, requested_networks=requested_networks,
+            macs=set(['my_mac2', 'my_mac1']))
+
     def test_allocate_for_instance_without_requested_networks(self):
         self._test_allocate_for_instance(
             net_idx=3, exception=exception.NetworkAmbiguous,
             get_client_admin_call=False)
+
+    def test_allocate_for_instance_with_requested_non_available_network(self):
+        """verify that a non available network is ignored.
+        self.nets2 (net_idx=2) is composed of self.nets3[0] and self.nets3[1]
+        Do not create a port on a non available network self.nets3[2].
+       """
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=net['id'])
+                     for net in (self.nets3[0], self.nets3[2], self.nets3[1])])
+        requested_networks[0].tag = 'foo'
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=2, requested_networks=requested_networks)
+        self.assertEqual(2, len(self._vifs_created))
+        # NOTE(danms) nets3[2] is chosen above as one that won't validate,
+        # so we never actually run create() on the VIF.
+        vifs_really_created = [vif for vif in self._vifs_created
+                               if vif.create.called]
+        self.assertEqual(2, len(vifs_really_created))
+        self.assertEqual([('foo', 'fakemac1/%s' % uuids.fake),
+                          (None, 'fakemac3/%s' % uuids.fake)],
+                         [(vif.tag, vif.address)
+                          for vif in vifs_really_created])
+
+    def test_allocate_for_instance_with_requested_networks(self):
+        # specify only first and last network
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=net['id'])
+                     for net in (self.nets3[1], self.nets3[0], self.nets3[2])])
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=3, requested_networks=requested_networks)
+
+    def test_allocate_for_instance_with_no_subnet_defined(self):
+        # net_id=4 does not specify subnet and does not set the option
+        # port_security_disabled to True, so Neutron will not been
+        # able to associate the default security group to the port
+        # requested to be created. We expect an exception to be
+        # raised.
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=4, exception=exception.SecurityGroupCannotBeApplied,
+            get_client_admin_call=False,
+            _break='post_list_extensions')
 
     def test_allocate_for_instance_with_invalid_network_id(self):
         requested_networks = objects.NetworkRequestList(
@@ -3662,6 +3616,28 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
             exception=exception.NetworkNotFound,
             get_client_admin_call=False,
             _break='post_list_networks')
+
+    def test_allocate_for_instance_with_requested_networks_with_fixedip(self):
+        # specify only first and last network
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=self.nets1[0]['id'],
+                                            address='10.0.1.0')])
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=1, requested_networks=requested_networks)
+
+    def test_allocate_for_instance_with_requested_networks_with_port(self):
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=1, requested_networks=requested_networks)
+
+    def test_allocate_for_instance_second_time(self):
+        # Make sure that allocate_for_instance only returns ports that it
+        # allocated during _that_ run.
+        new_port = {'id': uuids.fake}
+        self._returned_nw_info = self.port_data1 + [new_port]
+        nw_info, _ = self._test_allocate_for_instance_with_virtual_interface()
+        self.assertEqual([new_port], nw_info)
 
     def test_allocate_for_instance_port_in_use(self):
         # If a port is already in use, an exception should be raised.
@@ -3705,6 +3681,32 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         """Only one network is available, it's external and shared."""
         ctx = context.RequestContext('userid', uuids.my_tenant)
         self._test_allocate_for_instance(net_idx=10, context=ctx)
+
+    def test_allocate_for_instance_with_requested_networks_duplicates(self):
+        # specify a duplicate network to allocate to instance
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=net['id'])
+                     for net in (self.nets6[0], self.nets6[1])])
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=6, requested_networks=requested_networks)
+
+    def test_allocate_for_instance_requested_networks_duplicates_port(self):
+        # specify first port and last port that are in same network
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=port['id'])
+                     for port in (self.port_data1[0], self.port_data3[0])])
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=6, requested_networks=requested_networks)
+
+    def test_allocate_for_instance_requested_networks_duplicates_combo(self):
+        # specify a combo net_idx=7 : net2, port in net1, net2, port in net1
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=uuids.my_netid2),
+                     objects.NetworkRequest(port_id=self.port_data1[0]['id']),
+                     objects.NetworkRequest(network_id=uuids.my_netid2),
+                     objects.NetworkRequest(port_id=self.port_data3[0]['id'])])
+        self._test_allocate_for_instance_with_virtual_interface(
+            net_idx=7, requested_networks=requested_networks)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_trusted(self, mock_get_client):
