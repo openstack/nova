@@ -49,6 +49,7 @@ GRANULAR_AC_VERSION = '1.25'
 POST_RPS_RETURNS_PAYLOAD_API_VERSION = '1.20'
 NESTED_PROVIDER_API_VERSION = '1.14'
 POST_ALLOCATIONS_API_VERSION = '1.13'
+ALLOCATION_PROJECT_USER = '1.12'
 
 
 def warn_limit(self, msg):
@@ -1460,12 +1461,27 @@ class SchedulerReportClient(object):
             raise exception.ResourceProviderSyncFailed()
 
     @safe_connect
-    def get_allocations_for_consumer(self, context, consumer):
+    def get_allocations_for_consumer(self, context, consumer,
+                                     include_project_user=False):
+        """Makes a GET /allocations/{consumer} call to Placement.
+
+        :param context: The nova.context.RequestContext auth context
+        :param consumer: UUID of the consumer resource
+        :param include_project_user: True if the response should be the
+            full allocations response including project_id and user_id (new
+            in microversion 1.12), False if only the "allocations" dict from
+            the response body should be returned.
+        :returns: dict, see ``include_project_user`` for details on format;
+            returns None if unable to connect to Placement (see safe_connect)
+        """
         url = '/allocations/%s' % consumer
-        resp = self.get(url, global_request_id=context.global_id)
+        resp = self.get(url, version=ALLOCATION_PROJECT_USER,
+                        global_request_id=context.global_id)
         if not resp:
             return {}
         else:
+            if include_project_user:
+                return resp.json()
             return resp.json()['allocations']
 
     def get_allocations_for_consumer_by_provider(self, context, rp_uuid,
