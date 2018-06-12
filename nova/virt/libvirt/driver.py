@@ -6347,7 +6347,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # each of them having 16 available instances, the total here will be
         # 32.
         # If one of the 2 pGPUs doesn't support 'nvidia-35', it won't be used.
-        # TODO(sbauza): Use ProviderTree and traits to make a better world.
+        # TODO(sbauza): Use traits to make a better world.
         vgpus = self._get_vgpu_total()
 
         # NOTE(jaypipes): We leave some fields like allocation_ratio and
@@ -6367,13 +6367,19 @@ class LibvirtDriver(driver.ComputeDriver):
                 'max_unit': memory_mb,
                 'step_size': 1,
             },
-            rc_fields.ResourceClass.DISK_GB: {
+        }
+
+        # If a sharing DISK_GB provider exists in the provider tree, then our
+        # storage is shared, and we should not report the DISK_GB inventory in
+        # the compute node provider.
+        if not provider_tree.has_sharing_provider(
+                rc_fields.ResourceClass.DISK_GB):
+            result[rc_fields.ResourceClass.DISK_GB] = {
                 'total': disk_gb,
                 'min_unit': 1,
                 'max_unit': disk_gb,
                 'step_size': 1,
-            },
-        }
+            }
 
         if vgpus > 0:
             # Only provide VGPU resource classes if the driver supports it.

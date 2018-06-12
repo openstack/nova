@@ -21,6 +21,7 @@ no remoteable methods nor is there any interaction with the nova.db modules.
 import collections
 import copy
 
+import os_traits
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
 from oslo_utils import uuidutils
@@ -483,6 +484,18 @@ class ProviderTree(object):
         with self.lock:
             provider = self._find_with_lock(name_or_uuid)
             return provider.update_inventory(inventory, generation)
+
+    def has_sharing_provider(self, resource_class):
+        """Returns whether the specified provider_tree contains any sharing
+        providers of inventory of the specified resource_class.
+        """
+        for rp_uuid in self.get_provider_uuids():
+            pdata = self.data(rp_uuid)
+            has_rc = resource_class in pdata.inventory
+            is_sharing = os_traits.MISC_SHARES_VIA_AGGREGATE in pdata.traits
+            if has_rc and is_sharing:
+                return True
+        return False
 
     def has_traits(self, name_or_uuid, traits):
         """Given a name or UUID of a provider, query whether that provider has

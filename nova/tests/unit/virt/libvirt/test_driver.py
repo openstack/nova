@@ -17389,17 +17389,27 @@ class TestUpdateProviderTree(test.NoDBTestCase):
             uuid=uuids.cn,
             name='compute-node',
         )
+        # create shared storage resource provider
+        self.shared_rp = rp_object.ResourceProvider(
+            uuid=uuids.shared_storage,
+            name='shared_storage_rp',
+        )
+        # create resource provider list
+        rp_list = rp_object.ResourceProviderList(
+            objects=[self.cn_rp, self.shared_rp]
+        )
 
-        def _pt_with_cn_rp():
-            """Create a provider tree instance having compute node resource
-            provider.
+        def _pt_with_cn_rp_and_shared_rp():
+            """Create a provider tree instance having both compute node
+            and shared storage resource provider.
             """
 
             pt = provider_tree.ProviderTree()
-            pt.new_root(self.cn_rp.name, self.cn_rp.uuid, generation=0)
+            for rp in rp_list:
+                pt.new_root(rp.name, rp.uuid, generation=0)
             return pt
 
-        self.pt = _pt_with_cn_rp()
+        self.pt = _pt_with_cn_rp_and_shared_rp()
 
     def _get_inventory(self):
         return {
@@ -17451,6 +17461,48 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                                                    'total': 8}
         self.assertEqual(inventory,
                          (self.pt.data(self.cn_rp.uuid)).inventory)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vgpu_total',
+                return_value=0)
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_local_gb_info',
+                return_value={'total': disk_gb})
+    @mock.patch('nova.virt.libvirt.host.Host.get_memory_mb_total',
+                return_value=memory_mb)
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_total',
+                return_value=vcpus)
+    def teste_update_provider_tree_for_shared_disk_gb_resource(
+        self, mock_vcpu, mock_mem, mock_disk, mock_vgpus):
+        """Test to check DISK_GB is reported from shared resource
+        provider.
+        """
+
+        shared_rp_inv = {
+            rc_fields.ResourceClass.DISK_GB: {
+                'total': self.disk_gb,
+                'min_unit': 1,
+                'max_unit': self.disk_gb,
+                'step_size': 1,
+            }
+        }
+        # report inventory for shared storage resource provider
+        self.pt.update_inventory(self.shared_rp.uuid, shared_rp_inv)
+
+        # add trait to shared storage resource provider
+        self.pt.update_traits(self.shared_rp.uuid,
+                              ['MISC_SHARES_VIA_AGGREGATE'])
+
+        self.driver.update_provider_tree(self.pt,
+                                         self.cn_rp.name)
+
+        inventory = self._get_inventory()
+        # Remove DISK_GB resource from inventory as you don't expect it to be
+        # reported by the compute node resource provider.
+        del inventory[rc_fields.ResourceClass.DISK_GB]
+
+        self.assertEqual(inventory,
+                         (self.pt.data(self.cn_rp.uuid)).inventory)
+        self.assertEqual(shared_rp_inv,
+                         (self.pt.data(self.shared_rp.uuid)).inventory)
 
 
 class LibvirtDriverTestCase(test.NoDBTestCase):

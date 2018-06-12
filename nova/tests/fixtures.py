@@ -1690,6 +1690,10 @@ class PlacementApiClient(object):
         return client.APIResponse(
             self.fixture._fake_put(None, url, body, **kwargs))
 
+    def post(self, url, body, **kwargs):
+        return client.APIResponse(
+            self.fixture._fake_post(None, url, body, **kwargs))
+
 
 class PlacementFixture(placement.PlacementFixture):
     """A fixture to placement operations.

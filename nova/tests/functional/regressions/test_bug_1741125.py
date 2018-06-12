@@ -11,10 +11,10 @@
 # limitations under the License.
 
 from nova.compute import manager as compute_manager
-from nova.tests.functional.test_servers import ProviderUsageBaseTestCase
+from nova.tests.functional import integrated_helpers
 
 
-class TestServerResizeReschedule(ProviderUsageBaseTestCase):
+class TestServerResizeReschedule(integrated_helpers.ProviderUsageBaseTestCase):
     """Regression test for bug #1741125
 
     During testing in the alternate host series, it was found that retries
