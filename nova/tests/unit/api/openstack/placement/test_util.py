@@ -21,6 +21,7 @@ import mock
 from oslo_config import cfg
 from oslo_middleware import request_id
 from oslo_utils import timeutils
+import testtools
 import webob
 
 import six
@@ -32,13 +33,12 @@ from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.objects import user as user_obj
 from nova.api.openstack.placement import util
-from nova import test
 from nova.tests import uuidsentinel
 
 CONF = cfg.CONF
 
 
-class TestCheckAccept(test.NoDBTestCase):
+class TestCheckAccept(testtools.TestCase):
     """Confirm behavior of util.check_accept."""
 
     @staticmethod
@@ -87,7 +87,7 @@ class TestCheckAccept(test.NoDBTestCase):
         self.assertTrue(self.handler(req))
 
 
-class TestExtractJSON(test.NoDBTestCase):
+class TestExtractJSON(testtools.TestCase):
 
     # Although the intent of this test class is not to test that
     # schemas work, we may as well use a real one to ensure that
@@ -153,7 +153,7 @@ class TestExtractJSON(test.NoDBTestCase):
         self.assertEqual(uuidsentinel.rp_uuid, data['uuid'])
 
 
-class QueryParamsSchemaTestCase(test.NoDBTestCase):
+class QueryParamsSchemaTestCase(testtools.TestCase):
 
     def test_validate_request(self):
         schema = {
@@ -169,7 +169,7 @@ class QueryParamsSchemaTestCase(test.NoDBTestCase):
         self.assertIn('Invalid query string parameters', six.text_type(error))
 
 
-class TestJSONErrorFormatter(test.NoDBTestCase):
+class TestJSONErrorFormatter(testtools.TestCase):
 
     def setUp(self):
         super(TestJSONErrorFormatter, self).setUp()
@@ -253,7 +253,7 @@ class TestJSONErrorFormatter(test.NoDBTestCase):
                          result['errors'][0]['min_version'])
 
 
-class TestRequireContent(test.NoDBTestCase):
+class TestRequireContent(testtools.TestCase):
     """Confirm behavior of util.require_accept."""
 
     @staticmethod
@@ -287,7 +287,7 @@ class TestRequireContent(test.NoDBTestCase):
         self.assertTrue(self.handler(req))
 
 
-class TestPlacementURLs(test.NoDBTestCase):
+class TestPlacementURLs(testtools.TestCase):
 
     def setUp(self):
         super(TestPlacementURLs, self).setUp()
@@ -343,7 +343,7 @@ class TestPlacementURLs(test.NoDBTestCase):
             environ, self.resource_class))
 
 
-class TestNormalizeResourceQsParam(test.NoDBTestCase):
+class TestNormalizeResourceQsParam(testtools.TestCase):
 
     def test_success(self):
         qs = "VCPU:1"
@@ -395,7 +395,7 @@ class TestNormalizeResourceQsParam(test.NoDBTestCase):
         )
 
 
-class TestNormalizeTraitsQsParam(test.NoDBTestCase):
+class TestNormalizeTraitsQsParam(testtools.TestCase):
 
     def test_one(self):
         trait = 'HW_CPU_X86_VMX'
@@ -432,7 +432,7 @@ class TestNormalizeTraitsQsParam(test.NoDBTestCase):
                               util.normalize_traits_qs_param, fmt % traits)
 
 
-class TestParseQsRequestGroups(test.NoDBTestCase):
+class TestParseQsRequestGroups(testtools.TestCase):
 
     @staticmethod
     def do_parse(qstring, version=(1, 18)):
@@ -822,7 +822,7 @@ class TestParseQsRequestGroups(test.NoDBTestCase):
             expected, self.do_parse(qs, version=(1, 22)))
 
 
-class TestPickLastModified(test.NoDBTestCase):
+class TestPickLastModified(testtools.TestCase):
 
     def setUp(self):
         super(TestPickLastModified, self).setUp()
@@ -902,7 +902,7 @@ class TestPickLastModified(test.NoDBTestCase):
             mock_utc.assert_called_once_with(with_timezone=True)
 
 
-class TestEnsureConsumer(test.NoDBTestCase):
+class TestEnsureConsumer(testtools.TestCase):
     def setUp(self):
         super(TestEnsureConsumer, self).setUp()
         self.mock_project_get = self.useFixture(fixtures.MockPatch(
