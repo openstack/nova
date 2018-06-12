@@ -11,16 +11,14 @@
 #    under the License.
 
 import mock
-import six
-
 from oslo_utils import timeutils
+import six
+import testtools
 
-import nova
+from nova.api.openstack.placement import context
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import resource_provider
-from nova import context
 from nova import rc_fields as fields
-from nova import test
 from nova.tests import uuidsentinel as uuids
 
 
@@ -90,7 +88,7 @@ def _fake_ensure_cache(ctxt):
     cache.id_from_string.return_value = _RESOURCE_CLASS_ID
 
 
-class _TestCase(test.NoDBTestCase):
+class _TestCase(testtools.TestCase):
     """Base class for other tests in this file.
 
     It establishes the RequestContext used as self.context in the tests.
@@ -261,13 +259,9 @@ class TestInventoryList(_TestCase):
 
 class TestAllocation(_TestCase):
 
-    # We need to mock both _ensure_rc_cache and the transaction factory
-    # otherwise we'll trigger the DatabasePoisonFixture.
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
                 '_ensure_rc_cache')
-    @mock.patch('oslo_db.sqlalchemy.enginefacade._TransactionFactory.'
-                '_create_session')
-    def test_create_with_id_fails(self, mock_transaction, mock_rc_cache):
+    def test_create_with_id_fails(self, mock_rc_cache):
         rp = resource_provider.ResourceProvider(context=self.context,
                                                 uuid=_RESOURCE_PROVIDER_UUID,
                                                 name=_RESOURCE_PROVIDER_NAME)
@@ -323,12 +317,11 @@ class TestTraits(_TestCase):
     @mock.patch("nova.api.openstack.placement.objects.resource_provider."
                 "_trait_sync")
     def test_sync_flag(self, mock_sync):
-        rp_obj = nova.api.openstack.placement.objects.resource_provider
-        synced = rp_obj._TRAITS_SYNCED
+        synced = resource_provider._TRAITS_SYNCED
         self.assertFalse(synced)
         # Sync the traits
-        rp_obj._ensure_trait_sync(self.context)
-        synced = rp_obj._TRAITS_SYNCED
+        resource_provider._ensure_trait_sync(self.context)
+        synced = resource_provider._TRAITS_SYNCED
         self.assertTrue(synced)
 
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
