@@ -19,7 +19,6 @@ import nova
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import resource_provider
 from nova import context
-from nova.db.sqlalchemy import api_models as models
 from nova import rc_fields as fields
 from nova import test
 from nova.tests import uuidsentinel as uuids
@@ -129,6 +128,18 @@ class TestResourceProviderNoDB(_TestCase):
         exc = self.assertRaises(exception.ObjectActionError, obj.create)
         self.assertIn('root provider UUID cannot be manually set', str(exc))
 
+    def test_save_immutable(self):
+        fields = {
+            'id': 1,
+            'uuid': _RESOURCE_PROVIDER_UUID,
+            'generation': 1,
+            'root_provider_uuid': _RESOURCE_PROVIDER_UUID,
+        }
+        for field in fields:
+            rp = resource_provider.ResourceProvider(context=self.context)
+            setattr(rp, field, fields[field])
+            self.assertRaises(exception.ObjectActionError, rp.save)
+
 
 class TestProviderSummaryNoDB(_TestCase):
 
@@ -143,117 +154,6 @@ class TestProviderSummaryNoDB(_TestCase):
         psum.resources = [disk_psr, ram_psr]
         expected = set(['DISK_GB', 'MEMORY_MB'])
         self.assertEqual(expected, psum.resource_class_names)
-
-
-# FIXME(cdent): Tests which use the database aren't unit tests.
-class TestResourceProvider(_TestCase):
-    USES_DB = True
-
-    def test_create_no_parent(self):
-        rp = resource_provider.ResourceProvider(
-            self.context, uuid=_RESOURCE_PROVIDER_UUID,
-            name=_RESOURCE_PROVIDER_NAME)
-        rp.create()
-        self.assertIsInstance(rp.id, int)
-        self.assertEqual(_RESOURCE_PROVIDER_UUID, rp.uuid)
-        self.assertEqual(_RESOURCE_PROVIDER_NAME, rp.name)
-        self.assertEqual(_RESOURCE_PROVIDER_UUID, rp.root_provider_uuid)
-        self.assertIsNone(rp.parent_provider_uuid)
-
-    def test_create_in_db_with_parent_provider_uuid(self):
-        parent = resource_provider.ResourceProvider(
-            self.context, uuid=uuids.parent, name="parent")
-        parent.create()
-        child = resource_provider.ResourceProvider(
-            self.context, uuid=uuids.child, name="child",
-            parent_provider_uuid=uuids.parent)
-        child.create()
-        self.assertEqual(uuids.child, child.uuid)
-        self.assertEqual(uuids.parent, child.parent_provider_uuid)
-        self.assertEqual(uuids.parent, child.root_provider_uuid)
-
-    def test_save_immutable(self):
-        fields = {
-            'id': 1,
-            'uuid': _RESOURCE_PROVIDER_UUID,
-            'generation': 1,
-            'root_provider_uuid': _RESOURCE_PROVIDER_UUID,
-        }
-        for field in fields:
-            rp = resource_provider.ResourceProvider(context=self.context)
-            setattr(rp, field, fields[field])
-            self.assertRaises(exception.ObjectActionError, rp.save)
-
-    def test_get_by_uuid_from_db(self):
-        rp = resource_provider.ResourceProvider(context=self.context,
-                                                uuid=_RESOURCE_PROVIDER_UUID,
-                                                name=_RESOURCE_PROVIDER_NAME)
-        rp.create()
-        retrieved_rp = resource_provider.ResourceProvider.get_by_uuid(
-            self.context, _RESOURCE_PROVIDER_UUID)
-        self.assertEqual(rp.uuid, retrieved_rp.uuid)
-        self.assertEqual(rp.name, retrieved_rp.name)
-        self.assertEqual(rp.root_provider_uuid,
-                         retrieved_rp.root_provider_uuid)
-
-    def test_get_by_uuid_from_db_missing(self):
-        self.assertRaises(exception.NotFound,
-                          resource_provider.ResourceProvider.get_by_uuid,
-                          self.context, uuids.missing)
-
-    def test_destroy_with_traits(self):
-        """Test deleting a resource provider that has a trait successfully.
-        """
-        rp = resource_provider.ResourceProvider(self.context,
-                                                uuid=uuids.rp,
-                                                name='fake_rp1')
-        rp.create()
-        custom_trait = resource_provider.Trait(self.context,
-                                               uuid=uuids.trait,
-                                               name='CUSTOM_TRAIT_1')
-        custom_trait.create()
-        rp.set_traits([custom_trait])
-
-        trl = resource_provider.TraitList.get_all_by_resource_provider(
-            self.context, rp)
-        self.assertEqual(1, len(trl))
-
-        # Delete a resource provider that has a trait assosiation.
-        rp.destroy()
-
-        # Assert the record has been deleted
-        # in 'resource_provider_traits' table
-        # after Resource Provider object has been destroyed.
-        trl = resource_provider.TraitList.get_all_by_resource_provider(
-            self.context, rp)
-        self.assertEqual(0, len(trl))
-        # Assert that NotFound exception is raised.
-        self.assertRaises(exception.NotFound,
-                          resource_provider.ResourceProvider.get_by_uuid,
-                          self.context, uuids.rp)
-
-    def test_destroy(self):
-
-        def emulate_rp_mysql_delete(func):
-            def wrapped(context, _id):
-                rp = context.session.query(
-                    models.ResourceProvider).\
-                    filter(
-                        models.ResourceProvider.id == _id).first()
-                self.assertIsNone(rp.root_provider_id)
-                return func(context, _id)
-            return wrapped
-
-        emulated = emulate_rp_mysql_delete(resource_provider._delete_rp_record)
-
-        rp = resource_provider.ResourceProvider(
-            self.context, uuid=_RESOURCE_PROVIDER_UUID,
-            name=_RESOURCE_PROVIDER_NAME)
-        rp.create()
-
-        with mock.patch.object(
-                resource_provider, '_delete_rp_record', emulated):
-            rp.destroy()
 
 
 class TestInventoryNoDB(_TestCase):
