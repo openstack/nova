@@ -2861,6 +2861,95 @@ def _get_providers_with_resource(ctx, rc_id, amount):
 
 
 @db_api.api_context_manager.reader
+def _get_trees_with_traits(ctx, rp_ids, required_traits, forbidden_traits):
+    """Given a list of provider IDs, filter them to return a set of tuples of
+    (provider ID, root provider ID) of providers which belong to a tree that
+    can satisfy trait requirements.
+
+    :param ctx: Session context to use
+    :param rp_ids: a set of resource provider IDs
+    :param required_traits: A map, keyed by trait string name, of required
+                            trait internal IDs that each provider TREE must
+                            COLLECTIVELY have associated with it
+    :param forbidden_traits: A map, keyed by trait string name, of trait
+                             internal IDs that a resource provider must
+                             not have.
+    """
+    # We now want to restrict the returned providers to only those provider
+    # trees that have all our required traits.
+    #
+    # The SQL we want looks like this:
+    #
+    # SELECT outer_rp.id, outer_rp.root_provider_id
+    # FROM resource_providers AS outer_rp
+    # JOIN (
+    #   SELECT rp.root_provider_id
+    #   FROM resource_providers AS rp
+    #   # Only if we have required traits...
+    #   INNER JOIN resource_provider_traits AS rptt
+    #   ON rp.id = rptt.resource_provider_id
+    #   AND rptt.trait_id IN ($REQUIRED_TRAIT_IDS)
+    #   # Only if we have forbidden_traits...
+    #   LEFT JOIN resource_provider_traits AS rptt_forbid
+    #   ON rp.id = rptt_forbid.resource_provider_id
+    #   AND rptt_forbid.trait_id IN ($FORBIDDEN_TRAIT_IDS)
+    #   WHERE rp.id IN ($RP_IDS)
+    #   # Only if we have forbidden traits...
+    #   AND rptt_forbid.resource_provider_id IS NULL
+    #   GROUP BY rp.root_provider_id
+    #   # Only if have required traits...
+    #   HAVING COUNT(DISTINCT rptt.trait_id) == $NUM_REQUIRED_TRAITS
+    # ) AS trees_with_traits
+    #  ON outer_rp.root_provider_id = trees_with_traits.root_provider_id
+    rpt = sa.alias(_RP_TBL, name="rp")
+    cond = [rpt.c.id.in_(rp_ids)]
+    subq = sa.select([rpt.c.root_provider_id])
+    subq_join = None
+    if required_traits:
+        rptt = sa.alias(_RP_TRAIT_TBL, name="rptt")
+        rpt_to_rptt = sa.join(
+            rpt, rptt, sa.and_(
+                rpt.c.id == rptt.c.resource_provider_id,
+                rptt.c.trait_id.in_(required_traits.values())))
+        subq_join = rpt_to_rptt
+        # Only get the resource providers that have ALL the required traits,
+        # so we need to GROUP BY the root provider and ensure that the
+        # COUNT(trait_id) is equal to the number of traits we are requiring
+        num_traits = len(required_traits)
+        having_cond = sa.func.count(sa.distinct(rptt.c.trait_id)) == num_traits
+        subq = subq.having(having_cond)
+
+    # Tack on an additional LEFT JOIN clause inside the derived table if we've
+    # got forbidden traits in the mix.
+    if forbidden_traits:
+        rptt_forbid = sa.alias(_RP_TRAIT_TBL, name="rptt_forbid")
+        join_to = rpt
+        if subq_join is not None:
+            join_to = subq_join
+        rpt_to_rptt_forbid = sa.outerjoin(
+            join_to, rptt_forbid, sa.and_(
+                rpt.c.id == rptt_forbid.c.resource_provider_id,
+                rptt_forbid.c.trait_id.in_(forbidden_traits.values())))
+        cond.append(rptt_forbid.c.resource_provider_id == sa.null())
+        subq_join = rpt_to_rptt_forbid
+
+    subq = subq.select_from(subq_join)
+    subq = subq.where(sa.and_(*cond))
+    subq = subq.group_by(rpt.c.root_provider_id)
+    trees_with_traits = sa.alias(subq, name="trees_with_traits")
+
+    outer_rps = sa.alias(_RP_TBL, name="outer_rps")
+    outer_to_subq = sa.join(
+        outer_rps, trees_with_traits,
+        outer_rps.c.root_provider_id == trees_with_traits.c.root_provider_id)
+    sel = sa.select([outer_rps.c.id, outer_rps.c.root_provider_id])
+    sel = sel.select_from(outer_to_subq)
+    res = ctx.session.execute(sel).fetchall()
+
+    return [(rp_id, root_id) for rp_id, root_id in res]
+
+
+@db_api.api_context_manager.reader
 def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
                             sharing, member_of):
     """Returns a list of two-tuples (provider internal ID, root provider
@@ -2982,71 +3071,9 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     # Return the providers where the providers have the available inventory
     # capacity and that set of providers (grouped by their tree) have all
     # of the required traits and none of the forbidden traits
-
-    # We now want to restrict the returned providers to only those provider
-    # trees that have all our required traits.
-    #
-    # The SQL we want looks like this:
-    #
-    # SELECT outer_rp.id, outer_rp.root_provider_id
-    # FROM resource_providers AS outer_rp
-    # JOIN (
-    #   SELECT rp.root_provider_id
-    #   FROM resource_providers AS rp
-    #   LEFT JOIN resource_provider_traits AS rptt
-    #   ON rp.id = rptt.resource_provider_id
-    #   WHERE rp.id IN ($RP_IDS_WITH_INV)
-    #   AND rptt.trait_id IN ($REQUIRED_TRAIT_IDS)
-    #   GROUP BY rp.root_provider_id
-    #   HAVING COUNT(DISTINCT rptt.trait_id) == $NUM_REQUIRED_TRAITS
-    # ) AS trees_with_traits
-    #  ON outer_rp.root_provider_id = trees_with_traits.root_provider_id
     rp_ids_with_inv = set(p[0] for p in provs_with_inv)
-
-    # Build our inner subquery
-    rpt = sa.alias(_RP_TBL, name="rp")
-    rptt = sa.alias(_RP_TRAIT_TBL, name="rptt")
-    rpt_to_rptt = sa.outerjoin(
-        rpt, rptt, rpt.c.id == rptt.c.resource_provider_id)
-    subq = sa.select([rpt.c.root_provider_id])
-    subq = subq.select_from(rpt_to_rptt)
-    cond = [rpt.c.id.in_(rp_ids_with_inv)]
-
-    # Tack on an additional WHERE clause for the derived table if we've got
-    # forbidden traits in the mix.
-    # TODO(jaypipes): This approach is not efficient. We could potentially
-    # change _get_provider_ids_having_any_trait() to accept an optional rp_ids
-    # parameter that would further winnow results to a set of resource provider
-    # IDs (which we have here as we've already looked up the providers that
-    # have appropriate inventory capacity)
-    if forbidden_traits:
-        forbidden_rp_ids = _get_provider_ids_having_any_trait(
-            ctx, forbidden_traits)
-        cond.append(~rpt.c.id.in_(forbidden_rp_ids))
-
-    if required_traits:
-        # Only get the resource providers that have ALL the required traits,
-        # so we need to GROUP BY the root provider and ensure that the
-        # COUNT(trait_id) is equal to the number of traits we are requiring
-        cond.append(rptt.c.trait_id.in_(required_traits.values()))
-        num_traits = len(required_traits)
-        having_cond = sa.func.count(sa.distinct(rptt.c.trait_id)) == num_traits
-        subq = subq.having(having_cond)
-
-    subq = subq.where(sa.and_(*cond))
-    subq = subq.group_by(rpt.c.root_provider_id)
-    trees_with_traits = sa.alias(subq, name="trees_with_traits")
-
-    outer_rps = sa.alias(_RP_TBL, name="outer_rps")
-    outer_to_subq = sa.join(
-        outer_rps, trees_with_traits,
-        outer_rps.c.root_provider_id == trees_with_traits.c.root_provider_id)
-    sel = sa.select([outer_rps.c.id, outer_rps.c.root_provider_id])
-    sel = sel.select_from(outer_to_subq)
-
-    res = ctx.session.execute(sel).fetchall()
-
-    rp_tuples_with_trait = [(rp_id, root_id) for rp_id, root_id in res]
+    rp_tuples_with_trait = _get_trees_with_traits(
+        ctx, rp_ids_with_inv, required_traits, forbidden_traits)
 
     ret = [rp_tuple for rp_tuple in provs_with_inv if (
         rp_tuple[0], rp_tuple[1]) in rp_tuples_with_trait]
