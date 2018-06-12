@@ -13,13 +13,13 @@
 """Tests for the placement request log middleware."""
 
 import mock
+import testtools
 import webob
 
 from nova.api.openstack.placement import requestlog
-from nova import test
 
 
-class TestRequestLog(test.NoDBTestCase):
+class TestRequestLog(testtools.TestCase):
 
     @staticmethod
     @webob.dec.wsgify
