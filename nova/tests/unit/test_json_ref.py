@@ -133,6 +133,32 @@ class TestJsonRef(test.NoDBTestCase):
                              actual)
         mock_open.assert_called_once_with('some/base/path/another.json', 'r+b')
 
+    @mock.patch('oslo_serialization.jsonutils.load')
+    @mock.patch('nova.tests.json_ref.open')
+    def test_resolve_ref_with_override_having_refs(self, mock_open,
+                                                   mock_json_load):
+        mock_json_load.side_effect = [
+            {'baz': 13,
+             'boo': 42},
+            {'something': 0}]
+
+        actual = json_ref.resolve_refs(
+            {'foo': 1,
+             'bar': {'$ref': 'another.json#',
+                     'boo': {'$ref': 'override_ref.json#'}}},
+            'some/base/path/')
+
+        self.assertDictEqual({'foo': 1,
+                              'bar': {'baz': 13,
+                                      'boo': {'something': 0}}},
+                             actual)
+        self.assertEqual(2, mock_open.call_count)
+        # any_order=True is needed as context manager calls also done on open
+        mock_open.assert_has_calls(
+            [mock.call('some/base/path/another.json', 'r+b'),
+             mock.call('some/base/path/override_ref.json', 'r+b')],
+            any_order=True)
+
     def test_ref_with_json_path_not_supported(self):
 
         self.assertRaises(

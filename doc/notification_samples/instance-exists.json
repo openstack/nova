@@ -1,0 +1,13 @@
+{
+    "event_type":"instance.exists",
+    "payload":{
+        "$ref":"common_payloads/InstanceExistsPayload.json#",
+        "nova_object.data":{
+            "architecture":null,
+            "image_uuid":"a2459075-d96c-40d5-893e-577ff92e721c",
+            "task_state":"rebuilding"
+        }
+    },
+    "priority":"INFO",
+    "publisher_id":"nova-compute:compute"
+}

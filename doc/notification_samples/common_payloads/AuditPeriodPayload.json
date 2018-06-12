@@ -1,0 +1,9 @@
+{
+    "nova_object.data": {
+        "audit_period_beginning": "2012-10-01T00:00:00Z",
+        "audit_period_ending": "2012-10-29T13:42:11Z"
+    },
+    "nova_object.name": "AuditPeriodPayload",
+    "nova_object.namespace": "nova",
+    "nova_object.version": "1.0"
+}

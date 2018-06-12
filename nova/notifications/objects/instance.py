@@ -627,3 +627,30 @@ class InstanceActionSnapshotPayload(InstanceActionPayload):
                 instance=instance,
                 fault=fault)
         self.snapshot_image_id = snapshot_image_id
+
+
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceExistsPayload(InstancePayload):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+    fields = {
+        'audit_period': fields.ObjectField('AuditPeriodPayload'),
+        'bandwidth': fields.ListOfObjectsField('BandwidthPayload'),
+    }
+
+    def __init__(self, context, instance, audit_period, bandwidth):
+        super(InstanceExistsPayload, self).__init__(context=context,
+                                                    instance=instance)
+        self.audit_period = audit_period
+        self.bandwidth = bandwidth
+
+
+@base.notification_sample('instance-exists.json')
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceExistsNotification(base.NotificationBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'payload': fields.ObjectField('InstanceExistsPayload')
+    }

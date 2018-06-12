@@ -392,6 +392,8 @@ notification_object_data = {
     'InstanceActionSnapshotNotification':
         '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionSnapshotPayload': '1.7-73f96d93ca47750bb6a45e4ab1d268fd',
+    'InstanceExistsNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
+    'InstanceExistsPayload': '1.0-9b0c1232136e6c850647dfabb63cff07',
     'InstanceStateUpdatePayload': '1.0-07e111c0fa0f6db0f79b0726d593e3da',
     'InstanceUpdateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceUpdatePayload': '1.7-d48dd2cf8310c8f250dfeb65fd9df97a',

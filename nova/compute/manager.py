@@ -2993,7 +2993,7 @@ class ComputeManager(manager.Manager):
                                                                context)
         extra_usage_info = {'image_ref_url': orig_image_ref_url}
         compute_utils.notify_usage_exists(
-                self.notifier, context, instance,
+                self.notifier, context, instance, self.host,
                 current_period=True, system_metadata=orig_sys_metadata,
                 extra_usage_info=extra_usage_info)
 
@@ -3586,7 +3586,7 @@ class ComputeManager(manager.Manager):
                 reason=_("Driver Error: %s") % e)
 
         compute_utils.notify_usage_exists(self.notifier, context, instance,
-                                          current_period=True)
+                                          self.host, current_period=True)
 
         instance.vm_state = vm_states.RESCUED
         instance.task_state = None
@@ -3849,7 +3849,7 @@ class ComputeManager(manager.Manager):
         # NOTE(comstud): A revert_resize is essentially a resize back to
         # the old size, so we need to send a usage event here.
         compute_utils.notify_usage_exists(self.notifier, context, instance,
-                                          current_period=True)
+                                          self.host, current_period=True)
 
         with self._error_out_instance_on_exception(context, instance):
             # NOTE(tr3buchet): tear down networks on destination host
@@ -4107,7 +4107,7 @@ class ComputeManager(manager.Manager):
         with self._error_out_instance_on_exception(context, instance), \
                  errors_out_migration_ctxt(migration):
             compute_utils.notify_usage_exists(self.notifier, context, instance,
-                                              current_period=True)
+                                              self.host, current_period=True)
             self._notify_about_instance_usage(
                     context, instance, "resize.prep.start")
             compute_utils.notify_about_resize_prep_instance(
@@ -4724,7 +4724,7 @@ class ComputeManager(manager.Manager):
         else:
             bdms = None
         compute_utils.notify_usage_exists(self.notifier, context, instance,
-                                          current_period=True)
+                                          self.host, current_period=True)
         self._notify_about_instance_usage(context, instance, 'shelve.start')
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.SHELVE,
@@ -6891,7 +6891,7 @@ class ComputeManager(manager.Manager):
         for instance in instances:
             try:
                 compute_utils.notify_usage_exists(
-                    self.notifier, context, instance,
+                    self.notifier, context, instance, self.host,
                     ignore_missing_network_data=False)
                 successes += 1
             except Exception:
