@@ -16,12 +16,12 @@
 import microversion_parse
 import mock
 import routes
+import testtools
 import webob
 
 from nova.api.openstack.placement import handler
 from nova.api.openstack.placement.handlers import root
 from nova.api.openstack.placement import microversion
-from nova import test
 from nova.tests import uuidsentinel
 
 
@@ -43,7 +43,7 @@ def _environ(path='/moo', method='GET'):
     }
 
 
-class DispatchTest(test.NoDBTestCase):
+class DispatchTest(testtools.TestCase):
 
     def setUp(self):
         super(DispatchTest, self).setUp()
@@ -80,7 +80,7 @@ class DispatchTest(test.NoDBTestCase):
                          environ['wsgiorg.routing_args'][1]['id'])
 
 
-class MapperTest(test.NoDBTestCase):
+class MapperTest(testtools.TestCase):
 
     def setUp(self):
         super(MapperTest, self).setUp()
@@ -123,7 +123,7 @@ class MapperTest(test.NoDBTestCase):
         self.assertEqual(str, type(allow_header))
 
 
-class PlacementLoggingTest(test.NoDBTestCase):
+class PlacementLoggingTest(testtools.TestCase):
 
     @mock.patch("nova.api.openstack.placement.handler.LOG")
     def test_404_no_error_log(self, mocked_log):
@@ -138,7 +138,7 @@ class PlacementLoggingTest(test.NoDBTestCase):
         mocked_log.exception.assert_not_called()
 
 
-class DeclarationsTest(test.NoDBTestCase):
+class DeclarationsTest(testtools.TestCase):
 
     def setUp(self):
         super(DeclarationsTest, self).setUp()
@@ -155,7 +155,7 @@ class DeclarationsTest(test.NoDBTestCase):
         self.assertEqual(root.home, result['action'])
 
 
-class ContentHeadersTest(test.NoDBTestCase):
+class ContentHeadersTest(testtools.TestCase):
 
     def setUp(self):
         super(ContentHeadersTest, self).setUp()
