@@ -829,6 +829,11 @@ Hosts and cells are weighted based on the following options in the
      - Multiplier used for weighing hosts for group soft-anti-affinity.  Only a
        positive value is meaningful. Negative means that the behavior will
        change to the opposite, which is soft-affinity.
+   * - [filter_scheduler]
+     - ``build_failure_weight_multiplier``
+     - Multiplier used for weighing hosts which have recent build failures. A
+       positive value increases the significance of build falures reported by
+       the host recently, making them less likely to be chosen.
    * - [metrics]
      - ``weight_multiplier``
      - Multiplier for weighting meters. Use a floating-point value.
