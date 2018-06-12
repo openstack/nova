@@ -15,10 +15,10 @@
 import mock
 
 from oslo_serialization import jsonutils
+import testtools
 import webob
 
 from nova.api.openstack.placement import fault_wrap
-from nova import test
 
 
 ERROR_MESSAGE = 'that was not supposed to happen'
@@ -28,7 +28,7 @@ class Fault(Exception):
     pass
 
 
-class TestFaultWrapper(test.NoDBTestCase):
+class TestFaultWrapper(testtools.TestCase):
 
     @staticmethod
     @webob.dec.wsgify
