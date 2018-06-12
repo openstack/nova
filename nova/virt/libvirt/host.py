@@ -767,6 +767,43 @@ class Host(object):
         """
         return self._get_hardware_info()[1]
 
+    def _sum_domain_memory_mb(self):
+        """Get the total memory consumed by guest domains
+
+        Subtract available host memory from dom0 to get real used memory
+        within dom0
+        """
+        used = 0
+        for guest in self.list_guests(only_guests=False):
+            try:
+                # TODO(sahid): Use get_info...
+                dom_mem = int(guest._get_domain_info(self)[2])
+            except libvirt.libvirtError as e:
+                LOG.warning("couldn't obtain the memory from domain:"
+                            " %(uuid)s, exception: %(ex)s",
+                            {"uuid": guest.uuid, "ex": e})
+                continue
+            if guest.id == 0:
+                # Memory usage for the host domain (dom0 in xen) is the
+                # reported memory minus available memory
+                used += (dom_mem - self._get_avail_memory_kb())
+            else:
+                used += dom_mem
+        # Convert it to MB
+        return used // units.Ki
+
+    @staticmethod
+    def _get_avail_memory_kb():
+        with open('/proc/meminfo') as fp:
+            m = fp.read().split()
+        idx1 = m.index('MemFree:')
+        idx2 = m.index('Buffers:')
+        idx3 = m.index('Cached:')
+
+        avail = int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1])
+
+        return avail
+
     def get_memory_mb_used(self):
         """Get the used memory size(MB) of physical computer.
 
@@ -775,38 +812,12 @@ class Host(object):
         if sys.platform.upper() not in ['LINUX2', 'LINUX3']:
             return 0
 
-        with open('/proc/meminfo') as fp:
-            m = fp.read().split()
-        idx1 = m.index('MemFree:')
-        idx2 = m.index('Buffers:')
-        idx3 = m.index('Cached:')
         if CONF.libvirt.virt_type == 'xen':
-            used = 0
-            for guest in self.list_guests(only_guests=False):
-                try:
-                    # TODO(sahid): Use get_info...
-                    dom_mem = int(guest._get_domain_info(self)[2])
-                except libvirt.libvirtError as e:
-                    LOG.warning("couldn't obtain the memory from domain:"
-                                " %(uuid)s, exception: %(ex)s",
-                                {"uuid": guest.uuid, "ex": e})
-                    continue
-                # skip dom0
-                if guest.id != 0:
-                    used += dom_mem
-                else:
-                    # the mem reported by dom0 is be greater of what
-                    # it is being used
-                    used += (dom_mem -
-                             (int(m[idx1 + 1]) +
-                              int(m[idx2 + 1]) +
-                              int(m[idx3 + 1])))
-            # Convert it to MB
-            return used // units.Ki
+            # For xen, report the sum of all domains, with
+            return self._sum_domain_memory_mb()
         else:
-            avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1]))
-            # Convert it to MB
-            return self.get_memory_mb_total() - avail // units.Ki
+            return (self.get_memory_mb_total() -
+                   (self._get_avail_memory_kb() // units.Ki))
 
     def get_cpu_stats(self):
         """Returns the current CPU state of the host with frequency."""

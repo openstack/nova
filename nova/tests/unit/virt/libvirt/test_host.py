@@ -696,9 +696,7 @@ Active:          8381604 kB
 
             self.assertEqual(6866, self.host.get_memory_mb_used())
 
-    def test_get_memory_used_xen(self):
-        self.flags(virt_type='xen', group='libvirt')
-
+    def test_sum_domain_memory_mb_xen(self):
         class DiagFakeDomain(object):
             def __init__(self, id, memmb):
                 self.id = id
@@ -741,8 +739,18 @@ Active:          8381604 kB
             mock_conn.getInfo.return_value = [
                 obj_fields.Architecture.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
 
-            self.assertEqual(8657, self.host.get_memory_mb_used())
+            self.assertEqual(8657, self.host._sum_domain_memory_mb())
             mock_list.assert_called_with(only_guests=False)
+
+    def test_get_memory_used_xen(self):
+        self.flags(virt_type='xen', group='libvirt')
+        with test.nested(
+                mock.patch.object(self.host, "_sum_domain_memory_mb"),
+                mock.patch('sys.platform', 'linux2')
+                ) as (mock_sumDomainMemory, mock_platform):
+            mock_sumDomainMemory.return_value = 8192
+            self.assertEqual(8192, self.host.get_memory_mb_used())
+            mock_sumDomainMemory.assert_called_once_with()
 
     def test_get_cpu_stats(self):
         stats = self.host.get_cpu_stats()
