@@ -259,61 +259,18 @@ class TestInventoryList(_TestCase):
         self.assertIsNone(inv_list.find('HOUSE'))
 
 
-# FIXME(cdent): Tests which use the database aren't unit tests.
 class TestAllocation(_TestCase):
-    USES_DB = True
 
+    # We need to mock both _ensure_rc_cache and the transaction factory
+    # otherwise we'll trigger the DatabasePoisonFixture.
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
-                '_ensure_rc_cache', side_effect=_fake_ensure_cache)
-    def test_create(self, mock_ensure_cache):
+                '_ensure_rc_cache')
+    @mock.patch('oslo_db.sqlalchemy.enginefacade._TransactionFactory.'
+                '_create_session')
+    def test_create_with_id_fails(self, mock_transaction, mock_rc_cache):
         rp = resource_provider.ResourceProvider(context=self.context,
                                                 uuid=_RESOURCE_PROVIDER_UUID,
                                                 name=_RESOURCE_PROVIDER_NAME)
-        rp.create()
-        inv = resource_provider.Inventory(context=self.context,
-                                          resource_provider=rp,
-                                          resource_class=_RESOURCE_CLASS_NAME,
-                                          total=16,
-                                          reserved=2,
-                                          min_unit=1,
-                                          max_unit=8,
-                                          step_size=1,
-                                          allocation_ratio=1.0)
-        inv_list = resource_provider.InventoryList(context=self.context,
-                                                   objects=[inv])
-        rp.set_inventory(inv_list)
-        obj = resource_provider.Allocation(context=self.context,
-                                           resource_provider=rp,
-                                           resource_class=_RESOURCE_CLASS_NAME,
-                                           consumer_id=uuids.fake_instance,
-                                           used=8)
-        alloc_list = resource_provider.AllocationList(self.context,
-                                                      objects=[obj])
-        alloc_list.create_all()
-
-        rp_al = resource_provider.AllocationList
-        saved_allocations = rp_al.get_all_by_resource_provider(
-            self.context, rp)
-        self.assertEqual(1, len(saved_allocations))
-        self.assertEqual(obj.used, saved_allocations[0].used)
-
-    def test_create_with_id_fails(self):
-        rp = resource_provider.ResourceProvider(context=self.context,
-                                                uuid=_RESOURCE_PROVIDER_UUID,
-                                                name=_RESOURCE_PROVIDER_NAME)
-        rp.create()
-        inv = resource_provider.Inventory(context=self.context,
-                                resource_provider=rp,
-                                resource_class=_RESOURCE_CLASS_NAME,
-                                total=16,
-                                reserved=2,
-                                min_unit=1,
-                                max_unit=8,
-                                step_size=1,
-                                allocation_ratio=1.0)
-        inv_list = resource_provider.InventoryList(context=self.context,
-                                                   objects=[inv])
-        rp.set_inventory(inv_list)
         obj = resource_provider.Allocation(context=self.context,
                                            id=99,
                                            resource_provider=rp,
@@ -323,33 +280,6 @@ class TestAllocation(_TestCase):
         alloc_list = resource_provider.AllocationList(self.context,
                                                       objects=[obj])
         self.assertRaises(exception.ObjectActionError, alloc_list.create_all)
-
-    def test_create_exceed_capacity_fails(self):
-        rp = resource_provider.ResourceProvider(context=self.context,
-                                                uuid=_RESOURCE_PROVIDER_UUID,
-                                                name=_RESOURCE_PROVIDER_NAME)
-        rp.create()
-        inv = resource_provider.Inventory(context=self.context,
-                                resource_provider=rp,
-                                resource_class=_RESOURCE_CLASS_NAME,
-                                total=16,
-                                reserved=2,
-                                min_unit=1,
-                                max_unit=16,
-                                step_size=1,
-                                allocation_ratio=1.0)
-        inv_list = resource_provider.InventoryList(context=self.context,
-                                                   objects=[inv])
-        rp.set_inventory(inv_list)
-        obj = resource_provider.Allocation(context=self.context,
-                                           resource_provider=rp,
-                                           resource_class=_RESOURCE_CLASS_NAME,
-                                           consumer_id=uuids.fake_instance,
-                                           used=16)
-        alloc_list = resource_provider.AllocationList(self.context,
-                                                      objects=[obj])
-        self.assertRaises(exception.InvalidAllocationCapacityExceeded,
-                          alloc_list.create_all)
 
 
 class TestAllocationListNoDB(_TestCase):
