@@ -14,25 +14,25 @@
 """Unit tests for the deply function used to build the Placement service."""
 
 from oslo_config import cfg
+import testtools
 import webob
 
 from nova.api.openstack.placement import deploy
-from nova import test
 
 
 CONF = cfg.CONF
 
 
-class DeployTest(test.NoDBTestCase):
+class DeployTest(testtools.TestCase):
 
     def test_auth_middleware_factory(self):
         """Make sure that configuration settings make their way to
         the keystone middleware correctly.
         """
         auth_uri = 'http://example.com/identity'
-        self.flags(auth_uri=auth_uri, group='keystone_authtoken')
+        CONF.set_override('auth_uri', auth_uri, group='keystone_authtoken')
         # ensure that the auth_token middleware is chosen
-        self.flags(auth_strategy='keystone', group='api')
+        CONF.set_override('auth_strategy', 'keystone', group='api')
         app = deploy.deploy(CONF)
         req = webob.Request.blank('/resource_providers', method="GET")
 
