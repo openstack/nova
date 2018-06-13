@@ -1791,10 +1791,13 @@ block_device_mapping_v2:
   type: array
 block_device_uuid:
   description: |
-    This is the uuid of source resource. The uuid is point to different resource
-    based on the source_type. For example, if source_type is ``image`` as the above
-    sample, the block device is created based on the specified image which is gotten
-    from the image service.
+    This is the uuid of source resource. The uuid points to different resources
+    based on the ``source_type``. For example, if ``source_type`` is ``image``,
+    the block device is created based on the specified image which is retrieved
+    from the image service. Similarly, if ``source_type`` is ``snapshot`` then
+    the uuid refers to a volume snapshot in the block storage service. If
+    ``source_type`` is ``volume`` then the uuid refers to a volume in the block
+    storage service.
   in: body
   required: false
   type: string
@@ -2120,7 +2123,11 @@ description:
   type: string
 destination_type:
   description: |
-    Defines where the volume comes from. A valid value is ``local`` or ``volume``.
+    Defines where the block device mapping will reside. Valid values are:
+
+    * ``local``: The ephemeral disk resides local to the compute host on
+      which the server runs
+    * ``volume``: The persistent volume is stored in the block storage service
   in: body
   required: false
   type: string
@@ -3124,8 +3131,15 @@ group_id:
 guest_format:
   description: |
     Specifies the guest server disk file system format, such as ``ext2``,
-    ``ext3``, ``ext4``, ``xfs`` or ``swap``. This parameter affects only
-    the libvirt virt driver.
+    ``ext3``, ``ext4``, ``xfs`` or ``swap``.
+
+    Swap block device mappings have the following restrictions:
+
+    * The ``source_type`` must be ``blank``
+    * The ``destination_type`` must be ``local``
+    * There can only be one swap disk per server
+    * The size of the swap disk must be less than or equal to the ``swap``
+      size of the flavor
   in: body
   required: false
   type: string
@@ -5930,9 +5944,26 @@ snapshots:
   type: array
 source_type:
   description: |
-    The source type of the volume. A valid value is ``blank``, ``snapshot``,
-    ``volume``, or ``image``. If ``no_device`` is not specified,
-    this parameter is required.
+    The source type of the block device. Valid values are:
+
+    * ``blank``: Depending on the ``destination_type`` and ``guest_format``,
+      this will either be a blank persistent volume or an ephemeral (or swap)
+      disk local to the compute host on which the server resides
+    * ``image``: This is only valid with ``destination_type=volume``; creates
+      an image-backed volume in the block storage service and attaches it to
+      the server
+    * ``snapshot``: This is only valid with ``destination_type=volume``;
+      creates a volume backed by the given volume snapshot referenced via the
+      ``block_device_mapping_v2.uuid`` parameter and attaches it to the server
+    * ``volume``: This is only valid with ``destination_type=volume``; uses
+      the existing persistent volume referenced via the
+      ``block_device_mapping_v2.uuid`` parameter and attaches it to the server
+
+    This parameter is required unless ``block_device_mapping_v2.no_device`` is
+    specified.
+
+    See `Block Device Mapping in Nova <https://docs.openstack.org/nova/latest/user/block-device-mapping.html>`_
+    for more details on valid source and destination types.
   in: body
   required: false
   type: string
