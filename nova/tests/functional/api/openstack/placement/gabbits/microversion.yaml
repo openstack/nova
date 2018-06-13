@@ -22,6 +22,8 @@ tests:
       $.versions[0].max_version: /^\d+\.\d+$/
       $.versions[0].min_version: /^\d+\.\d+$/
       $.versions[0].id: v1.0
+      $.versions[0].status: CURRENT
+      $.versions[0].links[?rel = 'self'].href: ''
 
 - name: unavailable microversion raises 406
   GET: /
