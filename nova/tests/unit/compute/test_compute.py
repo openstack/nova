@@ -8225,13 +8225,10 @@ class ComputeTestCase(BaseTestCase,
         about rescheduling. The fault message field is limited in size and a
         long message about rescheduling displaces the original error message.
         """
-        class TestException(Exception):
-            pass
-
         instance = self._create_fake_instance_obj()
 
         with mock.patch.object(self.compute.driver, 'spawn') as mock_spawn:
-            mock_spawn.side_effect = TestException('Preserve this')
+            mock_spawn.side_effect = test.TestingException('Preserve this')
             self.compute.build_and_run_instance(
                     self.context, instance, {}, {}, {},
                     block_device_mapping=[])

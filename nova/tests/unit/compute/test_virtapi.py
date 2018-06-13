@@ -172,17 +172,12 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
         do_test()
 
     def test_wait_for_instance_event_timeout(self):
-        class TestException(Exception):
-            pass
-
-        def _failer():
-            raise TestException()
-
-        @mock.patch.object(self.virtapi._compute, '_event_waiter', _failer)
+        @mock.patch.object(self.virtapi._compute, '_event_waiter',
+                           side_effect=test.TestingException())
         @mock.patch('eventlet.timeout.Timeout')
-        def do_test(timeout):
+        def do_test(mock_timeout, mock_waiter):
             with self.virtapi.wait_for_instance_event('instance',
                                                       [('foo', 'bar')]):
                 pass
 
-        self.assertRaises(TestException, do_test)
+        self.assertRaises(test.TestingException, do_test)

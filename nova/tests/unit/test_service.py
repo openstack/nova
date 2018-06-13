@@ -167,13 +167,11 @@ class ServiceTestCase(test.NoDBTestCase):
                                self.topic,
                                'nova.tests.unit.test_service.FakeManager')
 
-        class TestException(Exception):
-            pass
-
-        mock_get_by_host_and_binary.side_effect = [None, TestException()]
+        mock_get_by_host_and_binary.side_effect = [None,
+                                                   test.TestingException()]
         mock_create.side_effect = ex
         serv.manager = mock_manager
-        self.assertRaises(TestException, serv.start)
+        self.assertRaises(test.TestingException, serv.start)
         serv.manager.init_host.assert_called_with()
         mock_get_by_host_and_binary.assert_has_calls([
                 mock.call(mock.ANY, self.host, self.binary),
