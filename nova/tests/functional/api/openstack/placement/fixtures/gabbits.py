@@ -50,6 +50,9 @@ class APIFixture(fixture.GabbiFixture):
         self.standard_logging_fixture.setUp()
         self.output_stream_fixture = fixtures.OutputStreamCapture()
         self.output_stream_fixture.setUp()
+        # Filter ignorable warnings during test runs.
+        self.warnings_fixture = fixtures.WarningsFixture()
+        self.warnings_fixture.setUp()
 
         self.conf = CONF
         self.conf.set_override('auth_strategy', 'noauth2', group='api')
@@ -102,6 +105,7 @@ class APIFixture(fixture.GabbiFixture):
         # are flushed.
         self._reset_db_flags()
 
+        self.warnings_fixture.cleanUp()
         self.output_stream_fixture.cleanUp()
         self.standard_logging_fixture.cleanUp()
         if self.conf:
