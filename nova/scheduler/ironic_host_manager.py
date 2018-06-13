@@ -77,6 +77,9 @@ class IronicNodeState(host_manager.HostState):
         self.ram_allocation_ratio = compute.ram_allocation_ratio
         self.disk_allocation_ratio = compute.disk_allocation_ratio
 
+        # update failed_builds counter reported by the compute
+        self.failed_builds = int(self.stats.get('failed_builds', 0))
+
         self.updated = compute.updated_at
 
     def _locked_consume_from_request(self, spec_obj):
