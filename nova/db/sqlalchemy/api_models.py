@@ -642,3 +642,6 @@ class Consumer(API_BASE):
     uuid = Column(String(36), nullable=False)
     project_id = Column(Integer, nullable=False)
     user_id = Column(Integer, nullable=False)
+    # FIXME(mriedem): Change this to server_default=text("0") to match the
+    # 059_add_consumer_generation script once bug 1776527 is fixed.
+    generation = Column(Integer, nullable=False, server_default="0", default=0)

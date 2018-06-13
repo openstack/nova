@@ -689,6 +689,30 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def _check_058(self, engine, data):
         self.assertColumnExists(engine, 'cell_mappings', 'disabled')
 
+    def _pre_upgrade_059(self, engine):
+        # Add a fake consumers table record to verify that generation is
+        # added with a default value of 0.
+        projects = db_utils.get_table(engine, 'projects')
+        project_id = projects.insert().execute(
+            dict(external_id=uuids.project_external_id)
+        ).inserted_primary_key[0]
+        users = db_utils.get_table(engine, 'users')
+        user_id = users.insert().execute(
+            dict(external_id=uuids.user_external_id)
+        ).inserted_primary_key[0]
+        consumers = db_utils.get_table(engine, 'consumers')
+        fake_consumer = dict(
+            uuid=uuids.consumer_uuid, project_id=project_id, user_id=user_id)
+        consumers.insert().execute(fake_consumer)
+
+    def _check_059(self, engine, data):
+        self.assertColumnExists(engine, "consumers", "generation")
+        # Assert we have one existing entry and it's generation value is 0.
+        consumers = db_utils.get_table(engine, 'consumers')
+        result = consumers.select().execute().fetchall()
+        self.assertEqual(1, len(result))
+        self.assertEqual(0, result[0]['generation'])
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
