@@ -376,18 +376,29 @@ def get_fs_info(path):
             'used': used}
 
 
-def fetch_image(context, target, image_id):
-    """Grab image."""
-    images.fetch_to_raw(context, image_id, target)
+def fetch_image(context, target, image_id, trusted_certs=None):
+    """Grab image.
+
+    :param context: nova.context.RequestContext auth request context
+    :param target: target path to put the image
+    :param image_id: id of the image to fetch
+    :param trusted_certs: optional objects.TrustedCerts for image validation
+    """
+    images.fetch_to_raw(context, image_id, target, trusted_certs)
 
 
-def fetch_raw_image(context, target, image_id):
+def fetch_raw_image(context, target, image_id, trusted_certs=None):
     """Grab initrd or kernel image.
 
     This function does not attempt raw conversion, as these images will
     already be in raw format.
+
+    :param context: nova.context.RequestContext auth request context
+    :param target: target path to put the image
+    :param image_id: id of the image to fetch
+    :param trusted_certs: optional objects.TrustedCerts for image validation
     """
-    images.fetch(context, image_id, target)
+    images.fetch(context, image_id, target, trusted_certs)
 
 
 def get_instance_path(instance, relative=False):

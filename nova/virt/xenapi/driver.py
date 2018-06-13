@@ -73,7 +73,8 @@ class XenAPIDriver(driver.ComputeDriver):
         "supports_migrate_to_same_host": False,
         "supports_attach_interface": True,
         "supports_device_tagging": True,
-        "supports_multiattach": False
+        "supports_multiattach": False,
+        "supports_trusted_certs": False,
     }
 
     def __init__(self, virtapi, read_only=False):

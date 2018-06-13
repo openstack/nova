@@ -296,6 +296,36 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertTrue(mock_log.warning.called)
         self.assertFalse(mock_log.error.called)
 
+    def _trusted_certs_setup_instance(self, include_trusted_certs=True):
+        instance = fake_instance.fake_instance_obj(self.context)
+        if include_trusted_certs:
+            instance.trusted_certs = objects.trusted_certs.TrustedCerts(
+                ids=['fake-trusted-cert-1', 'fake-trusted-cert-2'])
+        else:
+            instance.trusted_certs = None
+        return instance
+
+    def test_check_trusted_certs_provided_no_support(self):
+        instance = self._trusted_certs_setup_instance()
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_trusted_certs=False):
+            self.assertRaises(exception.BuildAbortException,
+                              self.compute._check_trusted_certs,
+                              instance)
+
+    def test_check_trusted_certs_not_provided_no_support(self):
+        instance = self._trusted_certs_setup_instance(
+            include_trusted_certs=False)
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_trusted_certs=False):
+            self.compute._check_trusted_certs(instance)
+
+    def test_check_trusted_certs_provided_support(self):
+        instance = self._trusted_certs_setup_instance()
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_trusted_certs=True):
+            self.compute._check_trusted_certs(instance)
+
     def test_check_device_tagging_no_tagging(self):
         bdms = objects.BlockDeviceMappingList(objects=[
             objects.BlockDeviceMapping(source_type='volume',
@@ -4028,6 +4058,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_context_elevated):
         self.flags(api_servers=['http://localhost/image/v2'], group='glance')
         instance = fake_instance.fake_instance_obj(self.context)
+        instance.trusted_certs = None
         instance.info_cache = None
         elevated_context = mock.Mock()
         mock_context_elevated.return_value = elevated_context
@@ -4185,6 +4216,27 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 network_info=None, block_device_info=None)
             mock_power_off.assert_called_once_with(
                 self.context, instance, clean_shutdown=True)
+
+    def test_do_rebuild_instance_check_trusted_certs(self):
+        """Tests the scenario that we're rebuilding an instance with
+        trusted_certs on a host that does not support trusted certs so
+        a BuildAbortException is raised.
+        """
+        instance = self._trusted_certs_setup_instance()
+        instance.system_metadata = {}
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_trusted_certs=False):
+            ex = self.assertRaises(
+                exception.BuildAbortException,
+                self.compute._do_rebuild_instance,
+                self.context, instance, instance.image_ref,
+                image_ref=None, injected_files=[], new_pass=None,
+                orig_sys_metadata={}, bdms=objects.BlockDeviceMapping(),
+                evacuate=False, on_shared_storage=None,
+                preserve_ephemeral=False, migration=objects.Migration(),
+                request_spec=objects.RequestSpec())
+        self.assertIn('Trusted image certificates provided on host',
+                      six.text_type(ex))
 
     @mock.patch.object(utils, 'last_completed_audit_period',
             return_value=(0, 0))
@@ -4602,6 +4654,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE,
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
+        self.instance.trusted_certs = None  # avoid lazy-load failures
         self.admin_pass = 'pass'
         self.injected_files = []
         self.image = {}
@@ -5451,6 +5504,11 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_build_and_run_signature_verification_error(self):
         self._test_build_and_run_spawn_exceptions(
             cursive_exception.SignatureVerificationError(reason=""))
+
+    def test_build_and_run_certificate_validation_error(self):
+        self._test_build_and_run_spawn_exceptions(
+            exception.CertificateValidationFailed(cert_uuid='trusted-cert-id',
+                                                  reason=""))
 
     def test_build_and_run_volume_encryption_not_supported(self):
         self._test_build_and_run_spawn_exceptions(

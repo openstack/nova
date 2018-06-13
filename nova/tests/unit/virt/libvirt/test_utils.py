@@ -613,9 +613,12 @@ disk size: 4.4M
         context = 'opaque context'
         target = '/tmp/targetfile'
         image_id = '4'
-        libvirt_utils.fetch_image(context, target, image_id)
+        trusted_certs = objects.TrustedCerts(
+            ids=['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8',
+                 '674736e3-f25c-405c-8362-bbf991e0ce0a'])
+        libvirt_utils.fetch_image(context, target, image_id, trusted_certs)
         mock_images.assert_called_once_with(
-            context, image_id, target)
+            context, image_id, target, trusted_certs)
 
     @mock.patch('nova.virt.images.fetch')
     def test_fetch_initrd_image(self, mock_images):
@@ -625,9 +628,13 @@ disk size: 4.4M
                                           user_name="pie")
         target = '/tmp/targetfile'
         image_id = '4'
-        libvirt_utils.fetch_raw_image(_context, target, image_id)
+        trusted_certs = objects.TrustedCerts(
+            ids=['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8',
+                 '674736e3-f25c-405c-8362-bbf991e0ce0a'])
+        libvirt_utils.fetch_raw_image(_context, target, image_id,
+                                      trusted_certs)
         mock_images.assert_called_once_with(
-            _context, image_id, target)
+            _context, image_id, target, trusted_certs)
 
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch('nova.privsep.qemu.unprivileged_convert_image')

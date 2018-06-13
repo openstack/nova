@@ -15,6 +15,7 @@
 import io
 import os
 
+from nova import objects
 from nova.virt.libvirt import utils as libvirt_utils
 
 
@@ -134,12 +135,14 @@ def get_fs_info(path):
             'free': 84 * (1024 ** 3)}
 
 
-def fetch_image(context, target, image_id, max_size=0):
-    pass
+def fetch_image(context, target, image_id, max_size=0, trusted_certs=None):
+    if trusted_certs is not None:
+        assert isinstance(trusted_certs, objects.TrustedCerts)
 
 
-def fetch_raw_image(context, target, image_id, max_size=0):
-    pass
+def fetch_raw_image(context, target, image_id, max_size=0, trusted_certs=None):
+    if trusted_certs is not None:
+        assert isinstance(trusted_certs, objects.TrustedCerts)
 
 
 def get_instance_path(instance, relative=False):

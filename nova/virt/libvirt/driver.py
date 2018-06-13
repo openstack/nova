@@ -303,7 +303,8 @@ class LibvirtDriver(driver.ComputeDriver):
         "supports_extend_volume": True,
         # Multiattach support is conditional on qemu and libvirt versions
         # determined in init_host.
-        "supports_multiattach": False
+        "supports_multiattach": False,
+        "supports_trusted_certs": True,
     }
 
     def __init__(self, virtapi, read_only=False):
@@ -7413,7 +7414,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _try_fetch_image(self, context, path, image_id, instance,
                          fallback_from_host=None):
         try:
-            libvirt_utils.fetch_image(context, path, image_id)
+            libvirt_utils.fetch_image(context, path, image_id,
+                                      instance.trusted_certs)
         except exception.ImageNotFound:
             if not fallback_from_host:
                 raise
@@ -7645,7 +7647,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         context=context,
                         filename=filename,
                         image_id=image_id,
-                        size=size)
+                        size=size,
+                        trusted_certs=instance.trusted_certs)
         except exception.ImageNotFound:
             if not fallback_from_host:
                 raise

@@ -134,7 +134,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                     "supports_recreate": False,
                     "supports_migrate_to_same_host": False,
                     "supports_attach_interface": True,
-                    "supports_multiattach": False
+                    "supports_multiattach": False,
+                    "supports_trusted_certs": False,
                     }
 
     # Needed for exiting instances to have allocations for custom resource

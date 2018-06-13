@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 30
+SERVICE_VERSION = 31
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -130,6 +130,8 @@ SERVICE_VERSION_HISTORY = (
     # Version 29: Compute RPC version 4.22
     {'compute_rpc': '4.22'},
     # Version 30: Compute RPC version 5.0
+    {'compute_rpc': '5.0'},
+    # Version 31: The compute manager checks if 'trusted_certs' are supported
     {'compute_rpc': '5.0'},
 )
 

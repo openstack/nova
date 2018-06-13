@@ -1770,6 +1770,14 @@ class ComputeManager(manager.Manager):
                                                 'tagged devices on host that '
                                                 'does not support tagging.')
 
+    def _check_trusted_certs(self, instance):
+        if (instance.trusted_certs and
+                not self.driver.capabilities.get('supports_trusted_certs',
+                                                 False)):
+            raise exception.BuildAbortException(
+                'Trusted image certificates provided on host that does not '
+                'support certificate validation.')
+
     @hooks.add_hook('build_instance')
     @wrap_exception()
     @reverts_task_state
@@ -1968,6 +1976,7 @@ class ComputeManager(manager.Manager):
             {'boot_roles': ','.join(context.roles)})
 
         self._check_device_tagging(requested_networks, block_device_mapping)
+        self._check_trusted_certs(instance)
 
         try:
             scheduler_hints = self._get_scheduler_hints(filter_properties,
@@ -2067,6 +2076,7 @@ class ComputeManager(manager.Manager):
                 exception.InvalidDiskInfo,
                 exception.InvalidDiskFormat,
                 cursive_exception.SignatureVerificationError,
+                exception.CertificateValidationFailed,
                 exception.VolumeEncryptionNotSupported,
                 exception.InvalidInput,
                 # TODO(mriedem): We should be validating RequestedVRamTooHigh
@@ -2985,6 +2995,16 @@ class ComputeManager(manager.Manager):
                 context, self.image_api, image_ref)
         else:
             image_meta = instance.image_meta
+
+        # We check trusted certs capabilities for both evacuate (rebuild on
+        # another host) and rebuild (rebuild on the same host) because for
+        # evacuate we need to make sure an instance with trusted certs can
+        # have the image verified with those certs during rebuild, and for
+        # rebuild we could be rebuilding a server that started out with no
+        # trusted certs on this host, and then was rebuilt with trusted certs
+        # for a new image, in which case we need to validate that new image
+        # with the trusted certs during the rebuild.
+        self._check_trusted_certs(instance)
 
         # This instance.exists message should contain the original
         # image_ref, not the new one.  Since the DB has been updated
