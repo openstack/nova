@@ -899,10 +899,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes()
 
     def _load_generic(self, attrname):
-        with utils.temporary_mutation(self._context, read_deleted='yes'):
-            instance = self.__class__.get_by_uuid(self._context,
-                                                  uuid=self.uuid,
-                                                  expected_attrs=[attrname])
+        instance = self.__class__.get_by_uuid(self._context,
+                                              uuid=self.uuid,
+                                              expected_attrs=[attrname])
 
         if attrname not in instance:
             # NOTE(danms): Never allow us to recursively-load
@@ -1110,6 +1109,24 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                    'name': self.obj_name(),
                    'uuid': self.uuid,
                    })
+
+        with utils.temporary_mutation(self._context, read_deleted='yes'):
+            self._obj_load_attr(attrname)
+
+    def _obj_load_attr(self, attrname):
+        """Internal method for loading attributes from instances.
+
+        NOTE: Do not use this directly.
+
+        This method contains the implementation of lazy-loading attributes
+        from Instance object, minus some massaging of the context and
+        error-checking. This should always be called with the object-local
+        context set for reading deleted instances and with uuid set. All
+        of the code below depends on those two things. Thus, this should
+        only be called from obj_load_attr() itself.
+
+        :param attrname: The name of the attribute to be loaded
+        """
 
         # NOTE(danms): We handle some fields differently here so that we
         # can be more efficient
