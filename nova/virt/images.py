@@ -131,18 +131,19 @@ def _convert_image(source, dest, in_format, out_format, run_as_root):
         raise exception.ImageUnacceptable(image_id=source, reason=msg)
 
 
-def fetch(context, image_href, path):
+def fetch(context, image_href, path, trusted_certs=None):
     with fileutils.remove_path_on_error(path):
-        IMAGE_API.download(context, image_href, dest_path=path)
+        IMAGE_API.download(context, image_href, dest_path=path,
+                           trusted_certs=trusted_certs)
 
 
 def get_info(context, image_href):
     return IMAGE_API.get(context, image_href)
 
 
-def fetch_to_raw(context, image_href, path):
+def fetch_to_raw(context, image_href, path, trusted_certs=None):
     path_tmp = "%s.part" % path
-    fetch(context, image_href, path_tmp)
+    fetch(context, image_href, path_tmp, trusted_certs)
 
     with fileutils.remove_path_on_error(path_tmp):
         data = qemu_img_info(path_tmp)

@@ -28,6 +28,7 @@ import sys
 import time
 
 import cryptography
+from cursive import certificate_utils
 from cursive import exception as cursive_exception
 from cursive import signature_utils
 import glanceclient
@@ -300,7 +301,8 @@ class GlanceImageServiceV2(object):
         if not any(check(mode) for check in (stat.S_ISFIFO, stat.S_ISSOCK)):
             os.fsync(fileno)
 
-    def download(self, context, image_id, data=None, dst_path=None):
+    def download(self, context, image_id, data=None, dst_path=None,
+                 trusted_certs=None):
         """Calls out to Glance for data and writes data."""
         if CONF.glance.allowed_direct_url_schemes and dst_path is not None:
             image = self.show(context, image_id, include_locations=True)
@@ -329,33 +331,7 @@ class GlanceImageServiceV2(object):
                 reason='Image has no associated data')
 
         # Retrieve properties for verification of Glance image signature
-        verifier = None
-        if CONF.glance.verify_glance_signatures:
-            image_meta_dict = self.show(context, image_id,
-                                        include_locations=False)
-            image_meta = objects.ImageMeta.from_dict(image_meta_dict)
-            img_signature = image_meta.properties.get('img_signature')
-            img_sig_hash_method = image_meta.properties.get(
-                'img_signature_hash_method'
-            )
-            img_sig_cert_uuid = image_meta.properties.get(
-                'img_signature_certificate_uuid'
-            )
-            img_sig_key_type = image_meta.properties.get(
-                'img_signature_key_type'
-            )
-            try:
-                verifier = signature_utils.get_verifier(
-                    context=context,
-                    img_signature_certificate_uuid=img_sig_cert_uuid,
-                    img_signature_hash_method=img_sig_hash_method,
-                    img_signature=img_signature,
-                    img_signature_key_type=img_sig_key_type,
-                )
-            except cursive_exception.SignatureVerificationError:
-                with excutils.save_and_reraise_exception():
-                    LOG.error('Image signature verification failed '
-                              'for image: %s', image_id)
+        verifier = self._get_verifier(context, image_id, trusted_certs)
 
         close_file = False
         if data is None and dst_path:
@@ -407,6 +383,66 @@ class GlanceImageServiceV2(object):
                     data.flush()
                     self._safe_fsync(data)
                     data.close()
+
+    def _get_verifier(self, context, image_id, trusted_certs):
+        verifier = None
+
+        # Use the default certs if the user didn't provide any (and there are
+        # default certs configured).
+        if (not trusted_certs and CONF.glance.enable_certificate_validation and
+                CONF.glance.default_trusted_certificate_ids):
+            trusted_certs = objects.TrustedCerts(
+                ids=CONF.glance.default_trusted_certificate_ids)
+
+        # Verify image signature if feature is enabled or trusted
+        # certificates were provided
+        if trusted_certs or CONF.glance.verify_glance_signatures:
+            image_meta_dict = self.show(context, image_id,
+                                        include_locations=False)
+            image_meta = objects.ImageMeta.from_dict(image_meta_dict)
+            img_signature = image_meta.properties.get('img_signature')
+            img_sig_hash_method = image_meta.properties.get(
+                'img_signature_hash_method'
+            )
+            img_sig_cert_uuid = image_meta.properties.get(
+                'img_signature_certificate_uuid'
+            )
+            img_sig_key_type = image_meta.properties.get(
+                'img_signature_key_type'
+            )
+            try:
+                verifier = signature_utils.get_verifier(
+                    context=context,
+                    img_signature_certificate_uuid=img_sig_cert_uuid,
+                    img_signature_hash_method=img_sig_hash_method,
+                    img_signature=img_signature,
+                    img_signature_key_type=img_sig_key_type,
+                )
+            except cursive_exception.SignatureVerificationError:
+                with excutils.save_and_reraise_exception():
+                    LOG.error('Image signature verification failed '
+                              'for image: %s', image_id)
+            # Validate image signature certificate if trusted certificates
+            # were provided
+            # NOTE(jackie-truong): Certificate validation will occur if
+            # trusted_certs are provided, even if the certificate validation
+            # feature is disabled. This is to provide safety for the user.
+            # We may want to consider making this a "soft" check in the future.
+            if trusted_certs:
+                _verify_certs(context, img_sig_cert_uuid, trusted_certs)
+            elif CONF.glance.enable_certificate_validation:
+                msg = ('Image signature certificate validation enabled, '
+                       'but no trusted certificate IDs were provided. '
+                       'Unable to validate the certificate used to '
+                       'verify the image signature.')
+                LOG.warning(msg)
+                raise exception.CertificateValidationFailed(msg)
+            else:
+                LOG.debug('Certificate validation was not performed. A list '
+                          'of trusted image certificate IDs must be provided '
+                          'in order to validate an image certificate.')
+
+        return verifier
 
     def create(self, context, image_meta, data=None):
         """Store the image data and return the new image object."""
@@ -885,6 +921,23 @@ def _translate_plain_exception(exc_value):
     if isinstance(exc_value, glanceclient.exc.BadRequest):
         return exception.Invalid(six.text_type(exc_value))
     return exc_value
+
+
+def _verify_certs(context, img_sig_cert_uuid, trusted_certs):
+    try:
+        certificate_utils.verify_certificate(
+            context=context,
+            certificate_uuid=img_sig_cert_uuid,
+            trusted_certificate_uuids=trusted_certs.ids)
+        LOG.debug('Image signature certificate validation '
+                  'succeeded for certificate: %s',
+                  img_sig_cert_uuid)
+    except cursive_exception.SignatureVerificationError as e:
+        LOG.warning('Image signature certificate validation '
+                    'failed for certificate: %s',
+                    img_sig_cert_uuid)
+        raise exception.CertificateValidationFailed(
+            cert_uuid=img_sig_cert_uuid, reason=six.text_type(e))
 
 
 def get_remote_image_service(context, image_href):
