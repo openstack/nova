@@ -571,3 +571,17 @@ class TestNovaManagePlacementHealAllocations(
         # Assert something was logged for this instance when it was skipped.
         self.assertIn('Instance %s is undergoing a task state transition: '
                       'pausing' % server['id'], self.output.getvalue())
+
+    def test_heal_allocations_ignore_deleted_server(self):
+        """Creates two servers, deletes one, and then runs heal_allocations
+        to make sure deleted servers are filtered out.
+        """
+        # Create a server that we'll leave alive
+        self._boot_and_assert_no_allocations(self.flavor, 'cell1')
+        # and another that we'll delete
+        server, _ = self._boot_and_assert_no_allocations(self.flavor, 'cell1')
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+        result = self.cli.heal_allocations(verbose=True)
+        self.assertEqual(0, result, self.output.getvalue())
+        self.assertIn('Processed 1 instances.', self.output.getvalue())
