@@ -38,6 +38,9 @@ from sqlalchemy import sql
 from sqlalchemy.sql import null
 
 from nova.api.openstack.placement import exception
+from nova.api.openstack.placement.objects import consumer as consumer_obj
+from nova.api.openstack.placement.objects import project as project_obj
+from nova.api.openstack.placement.objects import user as user_obj
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
 from nova.db.sqlalchemy import resource_class_cache as rc_cache
@@ -1536,54 +1539,10 @@ class Allocation(base.VersionedObject, base.TimestampedObject):
     fields = {
         'id': fields.IntegerField(),
         'resource_provider': fields.ObjectField('ResourceProvider'),
-        'consumer_id': fields.UUIDField(),
+        'consumer': fields.ObjectField('Consumer', nullable=False),
         'resource_class': rc_fields.ResourceClassField(),
         'used': fields.IntegerField(),
-        # The following two fields are allowed to be set to None to
-        # support Allocations that were created before the fields were
-        # required.
-        'project_id': fields.StringField(nullable=True),
-        'user_id': fields.StringField(nullable=True),
     }
-
-    def ensure_consumer_project_user(self, ctx):
-        """Examines the project_id, user_id of the object along with the
-        supplied consumer_id and ensures that if project_id and user_id
-        are set that there are records in the consumers, projects, and
-        users table for these entities.
-
-        :param ctx: `nova.context.RequestContext` object that has the oslo.db
-                    Session object in it
-        """
-        # If project_id and user_id are not set then create a consumer record
-        # pointing to the incomplete consumer project and user ID.
-        # This allows microversion <1.8 to continue to work. Since then the
-        # fields are required and the enforcement is at the HTTP API layer.
-        if 'project_id' not in self or self.project_id is None:
-            self.project_id = CONF.placement.incomplete_consumer_project_id
-        if 'user_id' not in self or self.user_id is None:
-            self.user_id = CONF.placement.incomplete_consumer_user_id
-
-        # Grab the project internal ID if it exists in the projects table
-        pid = _ensure_project(ctx, self.project_id)
-        # Grab the user internal ID if it exists in the users table
-        uid = _ensure_user(ctx, self.user_id)
-
-        # Add the consumer if it doesn't already exist
-        sel_stmt = sa.select([_CONSUMER_TBL.c.uuid]).where(
-            _CONSUMER_TBL.c.uuid == self.consumer_id)
-        result = ctx.session.execute(sel_stmt).fetchall()
-        if not result:
-            try:
-                ctx.session.execute(_CONSUMER_TBL.insert().values(
-                    uuid=self.consumer_id,
-                    project_id=pid,
-                    user_id=uid))
-            except db_exc.DBDuplicateEntry:
-                # We assume at this time that a consumer project/user can't
-                # change, so if we get here, we raced and should just pass
-                # if the consumer already exists.
-                pass
 
 
 @db_api.api_context_manager.writer
@@ -1756,69 +1715,34 @@ def _check_capacity_exceeded(ctx, allocs):
     return res_providers
 
 
-def _ensure_lookup_table_entry(ctx, tbl, external_id):
-    """Ensures the supplied external ID exists in the specified lookup table
-    and if not, adds it. Returns the internal ID.
-
-    :param ctx: `nova.context.RequestContext` object that has the oslo.db
-                Session object in it
-    :param tbl: The lookup table
-    :param external_id: The external project or user identifier
-    :type external_id: string
-    """
-    # Grab the project internal ID if it exists in the projects table
-    sel = sa.select([tbl.c.id]).where(
-        tbl.c.external_id == external_id
-    )
-    res = ctx.session.execute(sel).fetchall()
-    if not res:
-        try:
-            ins_stmt = tbl.insert().values(external_id=external_id)
-            res = ctx.session.execute(ins_stmt)
-            return res.inserted_primary_key[0]
-        except db_exc.DBDuplicateEntry:
-            # Another thread added it just before us, so just read the
-            # internal ID that that thread created...
-            res = ctx.session.execute(sel).fetchall()
-
-    return res[0][0]
-
-
-def _ensure_project(ctx, external_id):
-    """Ensures the supplied external project ID exists in the projects lookup
-    table and if not, adds it. Returns the internal project ID.
-
-    :param ctx: `nova.context.RequestContext` object that has the oslo.db
-                Session object in it
-    :param external_id: The external project identifier
-    :type external_id: string
-    """
-    return _ensure_lookup_table_entry(ctx, _PROJECT_TBL, external_id)
-
-
-def _ensure_user(ctx, external_id):
-    """Ensures the supplied external user ID exists in the users lookup table
-    and if not, adds it. Returns the internal user ID.
-
-    :param ctx: `nova.context.RequestContext` object that has the oslo.db
-                Session object in it
-    :param external_id: The external user identifier
-    :type external_id: string
-    """
-    return _ensure_lookup_table_entry(ctx, _USER_TBL, external_id)
-
-
 @db_api.api_context_manager.reader
 def _get_allocations_by_provider_id(ctx, rp_id):
     allocs = sa.alias(_ALLOC_TBL, name="a")
+    consumers = sa.alias(_CONSUMER_TBL, name="c")
+    projects = sa.alias(_PROJECT_TBL, name="p")
+    users = sa.alias(_PROJECT_TBL, name="u")
     cols = [
         allocs.c.resource_class_id,
-        allocs.c.consumer_id,
         allocs.c.used,
         allocs.c.updated_at,
-        allocs.c.created_at
+        allocs.c.created_at,
+        consumers.c.id.label("consumer_id"),
+        consumers.c.generation.label("consumer_generation"),
+        sql.func.coalesce(
+            consumers.c.uuid, allocs.c.consumer_id).label("consumer_uuid"),
+        projects.c.id.label("project_id"),
+        projects.c.external_id.label("project_external_id"),
+        users.c.id.label("user_id"),
+        users.c.external_id.label("user_external_id"),
     ]
-    sel = sa.select(cols)
+    # TODO(jaypipes): change this join to be on ID not UUID
+    consumers_join = sa.join(
+        allocs, consumers, allocs.c.consumer_id == consumers.c.uuid)
+    projects_join = sa.join(
+        consumers_join, projects, consumers.c.project_id == projects.c.id)
+    users_join = sa.join(
+        projects_join, users, consumers.c.user_id == users.c.id)
+    sel = sa.select(cols).select_from(users_join)
     sel = sel.where(allocs.c.resource_provider_id == rp_id)
 
     return [dict(r) for r in ctx.session.execute(sel)]
@@ -1837,24 +1761,105 @@ def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
         rp.c.uuid.label("resource_provider_uuid"),
         rp.c.generation.label("resource_provider_generation"),
         allocs.c.resource_class_id,
-        allocs.c.consumer_id,
         allocs.c.used,
-        project.c.external_id.label("project_id"),
-        user.c.external_id.label("user_id"),
+        consumer.c.id.label("consumer_id"),
+        consumer.c.generation.label("consumer_generation"),
+        sql.func.coalesce(
+            consumer.c.uuid, allocs.c.consumer_id).label("consumer_uuid"),
+        project.c.id.label("project_id"),
+        project.c.external_id.label("project_external_id"),
+        user.c.id.label("user_id"),
+        user.c.external_id.label("user_external_id"),
     ]
     # Build up the joins of the five tables we need to interact with.
     rp_join = sa.join(allocs, rp, allocs.c.resource_provider_id == rp.c.id)
-    consumer_join = sa.outerjoin(rp_join, consumer,
-                                 allocs.c.consumer_id == consumer.c.uuid)
-    project_join = sa.outerjoin(consumer_join, project,
-                                consumer.c.project_id == project.c.id)
-    user_join = sa.outerjoin(project_join, user,
-                             consumer.c.user_id == user.c.id)
+    consumer_join = sa.join(rp_join, consumer,
+                            allocs.c.consumer_id == consumer.c.uuid)
+    project_join = sa.join(consumer_join, project,
+                           consumer.c.project_id == project.c.id)
+    user_join = sa.join(project_join, user,
+                        consumer.c.user_id == user.c.id)
 
     sel = sa.select(cols).select_from(user_join)
     sel = sel.where(allocs.c.consumer_id == consumer_uuid)
 
     return [dict(r) for r in ctx.session.execute(sel)]
+
+
+@db_api.api_context_manager.writer.independent
+def _create_incomplete_consumers_for_provider(ctx, rp_id):
+    # TODO(jaypipes): Remove in Stein after a blocker migration is added.
+    """Creates consumer record if consumer relationship between allocations ->
+    consumers table is missing for any allocation on the supplied provider
+    internal ID, using the "incomplete consumer" project and user CONF options.
+    """
+    alloc_to_consumer = sa.outerjoin(
+        _ALLOC_TBL, consumer_obj.CONSUMER_TBL,
+        _ALLOC_TBL.c.consumer_id == consumer_obj.CONSUMER_TBL.c.uuid)
+    sel = sa.select([_ALLOC_TBL.c.consumer_id])
+    sel = sel.select_from(alloc_to_consumer)
+    sel = sel.where(
+        sa.and_(
+            _ALLOC_TBL.c.resource_provider_id == rp_id,
+            consumer_obj.CONSUMER_TBL.c.id.is_(None)))
+    missing = ctx.session.execute(sel).fetchall()
+    if missing:
+        # Do a single INSERT for all missing consumer relationships for the
+        # provider
+        incomplete_proj_id = project_obj.ensure_incomplete_project(ctx)
+        incomplete_user_id = user_obj.ensure_incomplete_user(ctx)
+
+        cols = [
+            _ALLOC_TBL.c.consumer_id,
+            incomplete_proj_id,
+            incomplete_user_id,
+        ]
+        sel = sa.select(cols)
+        sel = sel.select_from(alloc_to_consumer)
+        sel = sel.where(
+            sa.and_(
+                _ALLOC_TBL.c.resource_provider_id == rp_id,
+                consumer_obj.CONSUMER_TBL.c.id.is_(None)))
+        target_cols = ['uuid', 'project_id', 'user_id']
+        ins_stmt = consumer_obj.CONSUMER_TBL.insert().from_select(
+            target_cols, sel)
+        res = ctx.session.execute(ins_stmt)
+        if res.rowcount > 0:
+            LOG.info("Online data migration to fix incomplete consumers "
+                     "for resource provider %s has been run. Migrated %d "
+                     "incomplete consumer records on the fly.", rp_id,
+                     res.rowcount)
+
+
+@db_api.api_context_manager.writer.independent
+def _create_incomplete_consumer(ctx, consumer_id):
+    # TODO(jaypipes): Remove in Stein after a blocker migration is added.
+    """Creates consumer record if consumer relationship between allocations ->
+    consumers table is missing for the supplied consumer UUID, using the
+    "incomplete consumer" project and user CONF options.
+    """
+    alloc_to_consumer = sa.outerjoin(
+        _ALLOC_TBL, consumer_obj.CONSUMER_TBL,
+        _ALLOC_TBL.c.consumer_id == consumer_obj.CONSUMER_TBL.c.uuid)
+    sel = sa.select([_ALLOC_TBL.c.consumer_id])
+    sel = sel.select_from(alloc_to_consumer)
+    sel = sel.where(
+        sa.and_(
+            _ALLOC_TBL.c.consumer_id == consumer_id,
+            consumer_obj.CONSUMER_TBL.c.id.is_(None)))
+    missing = ctx.session.execute(sel).fetchall()
+    if missing:
+        incomplete_proj_id = project_obj.ensure_incomplete_project(ctx)
+        incomplete_user_id = user_obj.ensure_incomplete_user(ctx)
+
+        ins_stmt = consumer_obj.CONSUMER_TBL.insert().values(
+            uuid=consumer_id, project_id=incomplete_proj_id,
+            user_id=incomplete_user_id)
+        res = ctx.session.execute(ins_stmt)
+        if res.rowcount > 0:
+            LOG.info("Online data migration to fix incomplete consumers "
+                     "for consumer %s has been run. Migrated %d incomplete "
+                     "consumer records on the fly.", consumer_id, res.rowcount)
 
 
 @base.VersionedObjectRegistry.register_if(False)
@@ -1891,7 +1896,7 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
         # First delete any existing allocations for any consumers. This
         # provides a clean slate for the consumers mentioned in the list of
         # allocations being manipulated.
-        consumer_ids = set(alloc.consumer_id for alloc in allocs)
+        consumer_ids = set(alloc.consumer.uuid for alloc in allocs)
         for consumer_id in consumer_ids:
             _delete_allocations_for_consumer(context, consumer_id)
 
@@ -1917,7 +1922,6 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
         visited_rps = _check_capacity_exceeded(context,
                                                [alloc for alloc in
                                                 allocs if alloc.used > 0])
-        seen_consumers = set()
         for alloc in allocs:
             # If alloc.used is set to zero that is a signal that we don't want
             # to (re-)create any allocations for this resource class.
@@ -1929,12 +1933,7 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
                 rp = alloc.resource_provider
                 visited_rps[rp.uuid] = rp
                 continue
-            consumer_id = alloc.consumer_id
-            # Only set consumer <-> project/user association if we haven't set
-            # it already.
-            if consumer_id not in seen_consumers:
-                alloc.ensure_consumer_project_user(context)
-                seen_consumers.add(consumer_id)
+            consumer_id = alloc.consumer.uuid
             rp = alloc.resource_provider
             rc_id = _RC_CACHE.id_from_string(alloc.resource_class)
             ins_stmt = _ALLOC_TBL.insert().values(
@@ -1955,27 +1954,56 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
     @classmethod
     def get_all_by_resource_provider(cls, context, rp):
         _ensure_rc_cache(context)
+        _create_incomplete_consumers_for_provider(context, rp.id)
         db_allocs = _get_allocations_by_provider_id(context, rp.id)
         # Build up a list of Allocation objects, setting the Allocation object
         # fields to the same-named database record field we got from
         # _get_allocations_by_provider_id(). We already have the
         # ResourceProvider object so we just pass that object to the Allocation
         # object constructor as-is
-        objs = [
-            Allocation(
-                context, resource_provider=rp,
-                resource_class=_RC_CACHE.string_from_id(
-                    rec['resource_class_id']),
-                **rec)
-            for rec in db_allocs
-        ]
+        objs = []
+        for rec in db_allocs:
+            consumer = consumer_obj.Consumer(
+                context, id=rec['consumer_id'],
+                uuid=rec['consumer_uuid'],
+                generation=rec['consumer_generation'],
+                project=project_obj.Project(
+                    context, id=rec['project_id'],
+                    external_id=rec['project_external_id']),
+                user=user_obj.User(
+                    context, id=rec['user_id'],
+                    external_id=rec['user_external_id']))
+            objs.append(
+                Allocation(
+                    context, resource_provider=rp,
+                    resource_class=_RC_CACHE.string_from_id(
+                        rec['resource_class_id']),
+                    consumer=consumer,
+                    used=rec['used']))
         alloc_list = cls(context, objects=objs)
         return alloc_list
 
     @classmethod
     def get_all_by_consumer_id(cls, context, consumer_id):
         _ensure_rc_cache(context)
+        _create_incomplete_consumer(context, consumer_id)
         db_allocs = _get_allocations_by_consumer_uuid(context, consumer_id)
+
+        if db_allocs:
+            # Build up the Consumer object (it's the same for all allocations
+            # since we looked up by consumer ID)
+            db_first = db_allocs[0]
+            consumer = consumer_obj.Consumer(
+                context, id=db_first['consumer_id'],
+                uuid=db_first['consumer_uuid'],
+                generation=db_first['consumer_generation'],
+                project=project_obj.Project(
+                    context, id=db_first['project_id'],
+                    external_id=db_first['project_external_id']),
+                user=user_obj.User(
+                    context, id=db_first['user_id'],
+                    external_id=db_first['user_external_id']))
+
         # Build up a list of Allocation objects, setting the Allocation object
         # fields to the same-named database record field we got from
         # _get_allocations_by_consumer_id().
@@ -1994,7 +2022,8 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
                     generation=rec['resource_provider_generation']),
                 resource_class=_RC_CACHE.string_from_id(
                     rec['resource_class_id']),
-                **rec)
+                consumer=consumer,
+                used=rec['used'])
             for rec in db_allocs
         ]
         alloc_list = cls(context, objects=objs)
@@ -2014,7 +2043,7 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
     def delete_all(self):
         # Allocations can only have a single consumer, so take advantage of
         # that fact and do an efficient batch delete
-        consumer_uuid = self.objects[0].consumer_id
+        consumer_uuid = self.objects[0].consumer.uuid
         _delete_allocations_for_consumer(self._context, consumer_uuid)
 
     def __repr__(self):

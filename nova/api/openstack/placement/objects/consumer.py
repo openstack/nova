@@ -17,12 +17,12 @@ import sqlalchemy as sa
 
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import project as project_obj
-from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.objects import user as user_obj
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
 
 CONSUMER_TBL = models.Consumer.__table__
+_ALLOC_TBL = models.Allocation.__table__
 
 
 @db_api.api_context_manager.writer
@@ -45,10 +45,10 @@ def create_incomplete_consumers(ctx, batch_size):
     # allocations.consumer_id doesn't exist in the consumers table. Use the
     # incomplete consumer project and user ID.
     alloc_to_consumer = sa.outerjoin(
-        rp_obj._ALLOC_TBL, CONSUMER_TBL,
-        rp_obj._ALLOC_TBL.c.consumer_id == CONSUMER_TBL.c.uuid)
+        _ALLOC_TBL, CONSUMER_TBL,
+        _ALLOC_TBL.c.consumer_id == CONSUMER_TBL.c.uuid)
     cols = [
-        rp_obj._ALLOC_TBL.c.consumer_id,
+        _ALLOC_TBL.c.consumer_id,
         incomplete_proj_id,
         incomplete_user_id,
     ]
