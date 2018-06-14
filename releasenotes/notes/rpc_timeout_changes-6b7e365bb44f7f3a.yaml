@@ -1,0 +1,21 @@
+---
+features:
+  - |
+    Utilizing recent changes in oslo.messaging, the
+    `rpc_response_timeout` value can now be increased significantly if
+    needed or desired to solve issues with long-running RPC calls
+    timing out before completing due to legitimate reasons (such as
+    live migration prep). If `rpc_response_timeout` is increased
+    beyond the default, nova will request active call monitoring from
+    oslo.messaging, which will effectively heartbeat running
+    activities to avoid a timeout, while still detecting failures
+    related to service outages or message bus congestion in a
+    reasonable amount of time. Further, the
+    `[DEFAULT]/long_rpc_timeout` option has been added which allows
+    setting an alternate timeout value for longer-running RPC calls
+    which are known to take a long time. The default for this is 1800
+    seconds, and the `rpc_response_timeout` value will be used for the
+    heartbeat frequency interval, providing a similar
+    failure-detection experience for these calls despite the longer
+    overall timeout. Currently, only the live migration RPC call uses
+    this longer timeout value.

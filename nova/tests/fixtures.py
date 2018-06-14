@@ -484,13 +484,15 @@ class CellDatabases(fixtures.Fixture):
                                         executor='eventlet',
                                         serializer=serializer)
 
-    def _wrap_get_client(self, target, version_cap=None, serializer=None):
+    def _wrap_get_client(self, target, version_cap=None, serializer=None,
+                         call_monitor_timeout=None):
         """Mirror rpc.get_client() but with our special sauce."""
         serializer = CheatingSerializer(serializer)
         return messaging.RPCClient(rpc.TRANSPORT,
                                    target,
                                    version_cap=version_cap,
-                                   serializer=serializer)
+                                   serializer=serializer,
+                                   call_monitor_timeout=call_monitor_timeout)
 
     def add_cell_database(self, connection_str, default=False):
         """Add a cell database to the fixture.

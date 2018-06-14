@@ -371,6 +371,11 @@ class ComputeAPI(object):
             version_cap = self.VERSION_ALIASES.get(upgrade_level,
                                                    upgrade_level)
         serializer = objects_base.NovaObjectSerializer()
+
+        # NOTE(danms): We need to poke this path to register CONF options
+        # that we use in self.get_client()
+        rpc.get_client(target, version_cap, serializer)
+
         default_client = self.get_client(target, version_cap, serializer)
         self.router = rpc.ClientRouter(default_client)
 
@@ -417,9 +422,20 @@ class ComputeAPI(object):
 
     # Cells overrides this
     def get_client(self, target, version_cap, serializer):
+        if CONF.rpc_response_timeout > rpc.HEARTBEAT_THRESHOLD:
+            # NOTE(danms): If the operator has overridden RPC timeout
+            # to be longer than rpc.HEARTBEAT_THRESHOLD then configure
+            # the call monitor timeout to be the threshold to keep the
+            # failure timing characteristics that our code likely
+            # expects (from history) while allowing healthy calls
+            # to run longer.
+            cmt = rpc.HEARTBEAT_THRESHOLD
+        else:
+            cmt = None
         return rpc.get_client(target,
                               version_cap=version_cap,
-                              serializer=serializer)
+                              serializer=serializer,
+                              call_monitor_timeout=cmt)
 
     def add_aggregate_host(self, ctxt, host, aggregate, host_param,
                            slave_info=None):
@@ -684,7 +700,9 @@ class ComputeAPI(object):
             host, migrate_data):
         version = '5.0'
         client = self.router.client(ctxt)
-        cctxt = client.prepare(server=host, version=version)
+        cctxt = client.prepare(server=host, version=version,
+                               timeout=CONF.long_rpc_timeout,
+                               call_monitor_timeout=CONF.rpc_response_timeout)
         return cctxt.call(ctxt, 'pre_live_migration',
                           instance=instance,
                           block_migration=block_migration,

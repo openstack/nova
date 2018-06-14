@@ -208,6 +208,7 @@ class TestRPC(test.NoDBTestCase):
         mock_ser.assert_called_once_with('foo')
         mock_client.assert_called_once_with(rpc.TRANSPORT,
                                             tgt, version_cap='1.0',
+                                            call_monitor_timeout=None,
                                             serializer=ser)
         self.assertEqual('client', client)
 
@@ -246,6 +247,7 @@ class TestRPC(test.NoDBTestCase):
         mock_ser.assert_called_once_with('foo')
         mock_client.assert_called_once_with(rpc.TRANSPORT,
                                             tgt, version_cap='1.0',
+                                            call_monitor_timeout=None,
                                             serializer=ser)
         self.assertEqual('client', client)
 
@@ -472,6 +474,7 @@ class TestClientRouter(test.NoDBTestCase):
         mock_rpcclient.assert_called_once_with(
                 mock.sentinel.transport, default_client.target,
                 version_cap=default_client.version_cap,
+                call_monitor_timeout=default_client.call_monitor_timeout,
                 serializer=default_client.serializer)
         # verify cell client was returned
         self.assertEqual(cell_client, client)
