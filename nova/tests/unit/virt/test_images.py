@@ -50,7 +50,7 @@ class QemuTestCase(test.NoDBTestCase):
         self.assertTrue(str(image_info))
 
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
-    @mock.patch.object(utils, 'execute',
+    @mock.patch.object(processutils, 'execute',
                        side_effect=processutils.ProcessExecutionError)
     def test_convert_image_with_errors(self, mocked_execute, mock_direct_io):
         self.assertRaises(exception.ImageUnacceptable,
