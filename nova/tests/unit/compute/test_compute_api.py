@@ -293,7 +293,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock.patch.object(self.compute_api,
                               '_validate_and_build_base_options',
                               return_value=({}, max_net_count, None,
-                                            ['default']))
+                                            ['default'], None))
         ) as (
             get_image,
             check_auto_disk_config,
@@ -6076,7 +6076,8 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         with mock.patch.object(
                 self.compute_api.security_group_api, 'get',
                 return_value={'id': uuids.secgroup_uuid}) as scget:
-            base_options, max_network_count, key_pair, security_groups = (
+            base_options, max_network_count, key_pair, security_groups, \
+                    network_metadata = (
                 self.compute_api._validate_and_build_base_options(
                     self.context, instance_type, boot_meta, uuids.image_href,
                     mock.sentinel.image_id, kernel_id, ramdisk_id,

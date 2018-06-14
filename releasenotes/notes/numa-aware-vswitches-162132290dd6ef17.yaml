@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    It is now possible to configure NUMA affinity for most neutron networks.
+    This is available for networks that use a ``provider:network_type`` of
+    ``flat`` or ``vlan`` and a ``provider:physical_network`` (L2 networks) or
+    networks that use a ``provider:network_type`` of ``vxlan``, ``gre`` or
+    ``geneve`` (L3 networks).
+
+    For more information, refer to the `spec`__ and `documentation`__.
+
+    __ https://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/numa-aware-vswitches.html
+    __ https://docs.openstack.org/nova/latest/admin/networking.html

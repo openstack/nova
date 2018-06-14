@@ -31,6 +31,14 @@ Simultaneous Multi-Threading (SMT)
   CPUs on the system and can execute workloads in parallel. However, as with
   NUMA, threads compete for shared resources.
 
+Non Uniform I/O Access (NUMA I/O)
+  In a NUMA system, I/O to a device mapped to a local memory region is more
+  efficient than I/O to a remote device. A device connected to the same socket
+  providing the CPU and memory offers lower latencies for I/O operations due to
+  its physical proximity. This generally manifests itself in devices connected
+  to the PCIe bus, such as NICs or vGPUs, but applies to any device support
+  memory mapped I/O.
+
 In OpenStack, SMP CPUs are known as *cores*, NUMA cells or nodes are known as
 *sockets*, and SMT CPUs are known as *threads*. For example, a quad-socket,
 eight core system with Hyper-Threading would have four sockets, eight cores per

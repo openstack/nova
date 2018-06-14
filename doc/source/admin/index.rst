@@ -31,6 +31,7 @@ operating system, and exposes functionality over a web-based API.
    manage-volumes.rst
    migration.rst
    networking-nova.rst
+   networking.rst
    node-down.rst
    pci-passthrough.rst
    quotas2.rst
