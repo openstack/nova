@@ -150,6 +150,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             host = kwargs['host']
         elif 'instances' in kwargs:
             host = kwargs['instances'][0]['host']
+        elif 'destination' in kwargs:
+            host = expected_kwargs.pop('destination')
         else:
             host = kwargs['instance']['host']
 
@@ -369,6 +371,16 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 block_migration='block_migration', disk='disk', host='host',
                 migrate_data=None, version='5.0',
                 call_monitor_timeout=60, timeout=1234)
+
+    def test_check_can_live_migrate_destination(self):
+        self.flags(long_rpc_timeout=1234)
+        self._test_compute_api('check_can_live_migrate_destination', 'call',
+                               instance=self.fake_instance_obj,
+                               destination='dest',
+                               block_migration=False,
+                               disk_over_commit=False,
+                               version='5.0', call_monitor_timeout=60,
+                               timeout=1234)
 
     def test_prep_resize(self):
         expected_args = {'migration': 'migration'}

@@ -489,7 +489,9 @@ class ComputeAPI(object):
                                            block_migration, disk_over_commit):
         version = '5.0'
         client = self.router.client(ctxt)
-        cctxt = client.prepare(server=destination, version=version)
+        cctxt = client.prepare(server=destination, version=version,
+                               call_monitor_timeout=CONF.rpc_response_timeout,
+                               timeout=CONF.long_rpc_timeout)
         return cctxt.call(ctxt, 'check_can_live_migrate_destination',
                           instance=instance,
                           block_migration=block_migration,
