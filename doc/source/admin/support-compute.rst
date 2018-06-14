@@ -423,3 +423,29 @@ Install the ``sg3-utils`` package on the compute node. For example:
 .. code-block:: console
 
    # apt-get install sg3-utils
+
+Requested microversions are ignored
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Problem
+-------
+
+When making a request with a microversion beyond 2.1, for example:
+
+.. code-block:: console
+
+  $ openstack --os-compute-api-version 2.15 server group create \
+    --policy soft-anti-affinity my-soft-anti-group
+
+It fails saying that "soft-anti-affinity" is not a valid policy, even
+thought it is allowed with the `2.15 microversion`_.
+
+.. _2.15 microversion: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#id13
+
+Solution
+--------
+
+Ensure the ``compute`` endpoint in the identity service catalog is pointing
+at ``/v2.1`` instead of ``/v2``. The former route supports microversions,
+while the latter route is considered the legacy v2.0 compatibility-mode
+route which renders all requests as if they were made on the legacy v2.0 API.
