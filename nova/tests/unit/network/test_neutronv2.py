@@ -822,104 +822,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
 
-    def test_allocate_for_instance_ex2(self):
-        """verify we have no port to delete
-        if we fail to allocate the first net resource.
-
-        Mox to raise exception when creating the first port.
-        In this case, the code should not delete any ports.
-        """
-        self.instance = fake_instance.fake_instance_obj(self.context,
-                                                        **self.instance)
-        api = neutronapi.API()
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=net['id'])
-                     for net in (self.nets2[0], self.nets2[1])])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_networks(
-            id=[uuids.my_netid1, uuids.my_netid2]).AndReturn(
-            {'networks': self.nets2})
-        port_req_body = {
-            'port': {
-                'network_id': self.nets2[0]['id'],
-                'admin_state_up': True,
-                'device_id': self.instance.uuid,
-                'tenant_id': self.instance.project_id,
-            },
-        }
-        self.moxed_client.create_port(
-            MyComparator(port_req_body)).AndRaise(
-                Exception("fail to create port"))
-        self.mox.ReplayAll()
-        self.assertRaises(NEUTRON_CLIENT_EXCEPTION, api.allocate_for_instance,
-                          self.context, self.instance, False,
-                          requested_networks=requested_networks)
-
-    def test_allocate_for_instance_no_port_or_network(self):
-        class BailOutEarly(Exception):
-            pass
-        self.instance = fake_instance.fake_instance_obj(self.context,
-                                                        **self.instance)
-        api = neutronapi.API()
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.mox.StubOutWithMock(api, '_get_available_networks')
-        # Make sure we get an empty list and then bail out of the rest
-        # of the function
-        api._get_available_networks(self.context, self.instance.project_id,
-                                    [],
-                                    neutron=self.moxed_client,
-                                    auto_allocate=False).\
-                                    AndRaise(BailOutEarly)
-        self.mox.ReplayAll()
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest()])
-        self.assertRaises(BailOutEarly,
-                          api.allocate_for_instance, self.context,
-                          self.instance, False, requested_networks)
-
-    def test_allocate_for_instance_with_externalnet_forbidden(self):
-        """Only one network is available, it's external, and the client
-           is unauthorized to use it.
-        """
-        self.instance = fake_instance.fake_instance_obj(self.context,
-                                                        **self.instance)
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        # no networks in the tenant
-        self.moxed_client.list_networks(
-            tenant_id=self.instance.project_id,
-            shared=False).AndReturn(
-                {'networks': model.NetworkInfo([])})
-        # external network is shared
-        self.moxed_client.list_networks(shared=True).AndReturn(
-            {'networks': self.nets8})
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        self.assertRaises(exception.ExternalNetworkAttachForbidden,
-                          api.allocate_for_instance, self.context,
-                          self.instance, False, None)
-
-    def test_allocate_for_instance_with_externalnet_multiple(self):
-        """Multiple networks are available, one the client is authorized
-           to use, and an external one the client is unauthorized to use.
-        """
-        self.instance = fake_instance.fake_instance_obj(self.context,
-                                                        **self.instance)
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        # network found in the tenant
-        self.moxed_client.list_networks(
-            tenant_id=self.instance.project_id,
-            shared=False).AndReturn(
-                {'networks': self.nets1})
-        # external network is shared
-        self.moxed_client.list_networks(shared=True).AndReturn(
-            {'networks': self.nets8})
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        self.assertRaises(
-            exception.NetworkAmbiguous,
-            api.allocate_for_instance,
-            self.context, self.instance, False, None)
-
     def _deallocate_for_instance(self, number, requested_networks=None):
         # TODO(mriedem): Remove this conversion when all neutronv2 APIs are
         # converted to handling instance objects.
@@ -3287,6 +3189,62 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
             mock.call(getattr(uuids, 'portid_%s' % self.nets2[1]['id']))])
         self.assertEqual(2, mocked_client.delete_port.call_count)
 
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_allocate_for_instance_ex2(self, mock_get_client):
+        """verify we have no port to delete
+        if we fail to allocate the first net resource.
+
+        Mock to raise exception when creating the first port.
+        In this case, the code should not delete any ports.
+        """
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=net['id'])
+                     for net in (self.nets2[0], self.nets2[1])])
+        mocked_client.list_networks.return_value = {'networks': self.nets2}
+        port_req_body = {
+            'port': {
+                'network_id': self.nets2[0]['id'],
+                'admin_state_up': True,
+                'device_id': self.instance.uuid,
+                'tenant_id': self.instance.project_id,
+            },
+        }
+        mocked_client.create_port.side_effect = Exception(
+            "fail to create port")
+        self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
+                          self.api.allocate_for_instance,
+                          self.context, self.instance, False,
+                          requested_networks=requested_networks)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_called_once_with(
+            id=[uuids.my_netid1, uuids.my_netid2])
+        mocked_client.create_port.assert_called_once_with(port_req_body)
+
+    @mock.patch.object(neutronapi.API, '_get_available_networks')
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_allocate_for_instance_no_port_or_network(
+            self, mock_get_client, mock_get_available):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
+        # Make sure we get an empty list and then bail out of the rest
+        # of the function
+        mock_get_available.side_effect = test.TestingException
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest()])
+        self.assertRaises(test.TestingException,
+                          self.api.allocate_for_instance, self.context,
+                          self.instance, False, requested_networks)
+        mock_get_client.assert_called_once_with(self.context)
+        mock_get_available.assert_called_once_with(
+            self.context, self.instance.project_id, [],
+            neutron=mocked_client, auto_allocate=False)
+
     def test_allocate_for_instance_second_time(self):
         # Make sure that allocate_for_instance only returns ports that it
         # allocated during _that_ run.
@@ -3324,6 +3282,55 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
             exception=exception.PortNotUsable,
             get_client_admin_call=False,
             _break='pre_list_networks')
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_allocate_for_instance_with_externalnet_forbidden(
+            self, mock_get_client):
+        """Only one network is available, it's external, and the client
+           is unauthorized to use it.
+        """
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
+        mocked_client.list_networks.side_effect = [
+            # no networks in the tenant
+            {'networks': model.NetworkInfo([])},
+            # external network is shared
+            {'networks': self.nets8}]
+        self.assertRaises(exception.ExternalNetworkAttachForbidden,
+                          self.api.allocate_for_instance, self.context,
+                          self.instance, False, None)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_has_calls([
+            mock.call(tenant_id=self.instance.project_id, shared=False),
+            mock.call(shared=True)])
+        self.assertEqual(2, mocked_client.list_networks.call_count)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_allocate_for_instance_with_externalnet_multiple(
+            self, mock_get_client):
+        """Multiple networks are available, one the client is authorized
+           to use, and an external one the client is unauthorized to use.
+        """
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
+        mocked_client.list_networks.side_effect = [
+            # network found in the tenant
+            {'networks': self.nets1},
+            # external network is shared
+            {'networks': self.nets8}]
+        self.assertRaises(
+            exception.NetworkAmbiguous,
+            self.api.allocate_for_instance,
+            self.context, self.instance, False, None)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_has_calls([
+            mock.call(tenant_id=self.instance.project_id, shared=False),
+            mock.call(shared=True)])
+        self.assertEqual(2, mocked_client.list_networks.call_count)
 
     def test_allocate_for_instance_with_externalnet_admin_ctx(self):
         """Only one network is available, it's external, and the client
