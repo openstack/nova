@@ -25,7 +25,8 @@ _VDI_FORMAT_RAW = 1
 
 IMAGE_API = image.API()
 IMAGE_HANDLERS = {'direct_vhd': 'glance.GlanceStore',
-                  'vdi_local_dev': 'vdi_through_dev.VdiThroughDevStore'}
+                  'vdi_local_dev': 'vdi_through_dev.VdiThroughDevStore',
+                  'vdi_remote_stream': 'vdi_stream.VdiStreamStore'}
 
 
 def get_image_handler(handler_name):

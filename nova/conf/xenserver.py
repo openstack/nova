@@ -472,7 +472,7 @@ GlanceStore.
 """),
     cfg.StrOpt('image_handler',
         default='direct_vhd',
-        choices=('direct_vhd', 'vdi_local_dev'),
+        choices=('direct_vhd', 'vdi_local_dev', 'vdi_remote_stream'),
         help="""
 The plugin used to handle image uploads and downloads.
 
@@ -488,6 +488,11 @@ the instance's VDI as a local disk to the VM where the OpenStack Compute
 service runs in. It uploads the raw disk to glance when creating image;
 When booting an instance from a glance image, it downloads the image and
 streams it into the disk which is attached to the compute VM.
+* ``vdi_remote_stream``: This plugin implements an image handler which works
+as a proxy between glance and XenServer. The VHD streams to XenServer via
+a remote import API supplied by XAPI for image download; and for image
+upload, the VHD streams from XenServer via a remote export API supplied
+by XAPI. This plugin works for all SR types supported by XenServer.
 """),
 ]
 
