@@ -214,11 +214,15 @@ class InstanceCreatePayload(InstanceActionPayload):
     #         1.6: Add tags field to InstanceCreatePayload
     #         1.7: Added updated_at field to InstancePayload
     #         1.8: Added request_id field to InstancePayload
-    VERSION = '1.8'
+    #         1.9: Add trusted_image_certificates field to
+    #              InstanceCreatePayload
+    VERSION = '1.9'
 
     fields = {
         'keypairs': fields.ListOfObjectsField('KeypairPayload'),
         'tags': fields.ListOfStringsField(),
+        'trusted_image_certificates': fields.ListOfStringsField(
+            nullable=True)
     }
 
     def __init__(self, context, instance, fault, bdms):
@@ -231,6 +235,9 @@ class InstanceCreatePayload(InstanceActionPayload):
                          for keypair in instance.keypairs]
         self.tags = [instance_tag.tag
                      for instance_tag in instance.tags]
+        self.trusted_image_certificates = None
+        if instance.get("trusted_certs", None):
+            self.trusted_image_certificates = instance.trusted_certs.ids
 
 
 @nova_base.NovaObjectRegistry.register_notification
@@ -298,6 +305,32 @@ class InstanceActionRescuePayload(InstanceActionPayload):
                 instance=instance,
                 fault=fault)
         self.rescue_image_ref = rescue_image_ref
+
+
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceActionRebuildPayload(InstanceActionPayload):
+    # No SCHEMA as all the additional fields are calculated
+
+    # Version 1.7: Initial version. It starts at 1.7 to equal one more than
+    #              the version of the InstanceActionPayload at the time
+    #              when this specific payload is created so that the
+    #              instance.rebuild.* notifications using this new payload
+    #              signal the change of nova_object.name.
+    VERSION = '1.7'
+    fields = {
+        'trusted_image_certificates': fields.ListOfStringsField(
+            nullable=True)
+    }
+
+    def __init__(self, context, instance, fault, bdms):
+        super(InstanceActionRebuildPayload, self).__init__(
+                context=context,
+                instance=instance,
+                fault=fault,
+                bdms=bdms)
+        self.trusted_image_certificates = None
+        if instance.get("trusted_certs", None):
+            self.trusted_image_certificates = instance.trusted_certs.ids
 
 
 @nova_base.NovaObjectRegistry.register_notification
@@ -491,9 +524,6 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 @base.notification_sample('instance-live_migration_rollback-end.json')
 # @base.notification_sample('instance-live_migration_rollback_dest-start.json')
 # @base.notification_sample('instance-live_migration_rollback_dest-end.json')
-@base.notification_sample('instance-rebuild-start.json')
-@base.notification_sample('instance-rebuild-end.json')
-@base.notification_sample('instance-rebuild-error.json')
 @base.notification_sample('instance-interface_detach-start.json')
 @base.notification_sample('instance-interface_detach-end.json')
 @base.notification_sample('instance-resize_confirm-start.json')
@@ -605,6 +635,19 @@ class InstanceActionRescueNotification(base.NotificationBase):
 
     fields = {
         'payload': fields.ObjectField('InstanceActionRescuePayload')
+    }
+
+
+@base.notification_sample('instance-rebuild-start.json')
+@base.notification_sample('instance-rebuild-end.json')
+@base.notification_sample('instance-rebuild-error.json')
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceActionRebuildNotification(base.NotificationBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'payload': fields.ObjectField('InstanceActionRebuildPayload')
     }
 
 

@@ -28,3 +28,19 @@ features:
     * ``GET /servers/{server_id}``
     * ``PUT /servers/{server_id}``
     * ``POST /servers/{server_id}/action (rebuild)``
+
+    The payload of the ``instance.create.start`` and ``instance.create.end``
+    and ``instance.create.error`` notifications have been extended with the
+    ``trusted_image_certificates`` field that contains the list of trusted
+    certificate IDs used when the instance is created.
+
+    The payload of the ``instance.rebuild.start`` and ``instance.rebuild.end``
+    and ``instance.rebuild.error`` notifications have been extended with the
+    ``trusted_image_certificates`` field that contains the list of trusted
+    certificate IDs used when the instance is rebuilt. This change also causes
+    the type of the payload object to change from ``InstanceActionPayload``
+    version 1.6 to ``InstanceActionRebuildPayload`` version 1.7. See the
+    `notification dev reference`_ for the sample file of
+    ``instance.rebuild.start`` as an example.
+
+    .. _notification dev reference: https://docs.openstack.org/developer/nova/notifications.html

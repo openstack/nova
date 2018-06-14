@@ -1,7 +1,7 @@
 {
     "priority": "ERROR",
     "payload": {
-        "$ref": "common_payloads/InstanceActionPayload.json#",
+        "$ref": "common_payloads/InstanceActionRebuildPayload.json#",
         "nova_object.data": {
             "fault": {
                 "nova_object.name": "ExceptionPayload",

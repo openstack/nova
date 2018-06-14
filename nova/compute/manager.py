@@ -2777,9 +2777,8 @@ class ComputeManager(manager.Manager):
     def _notify_instance_rebuild_error(self, context, instance, error, bdms):
         self._notify_about_instance_usage(context, instance,
                                           'rebuild.error', fault=error)
-        compute_utils.notify_about_instance_action(
+        compute_utils.notify_about_instance_rebuild(
             context, instance, self.host,
-            action=fields.NotificationAction.REBUILD,
             phase=fields.NotificationPhase.ERROR, exception=error, bdms=bdms)
 
     @messaging.expected_exceptions(exception.PreserveEphemeralNotSupported)
@@ -3024,9 +3023,8 @@ class ComputeManager(manager.Manager):
         # NOTE: image_name is not included in the versioned notification
         # because we already provide the image_uuid in the notification
         # payload and the image details can be looked up via the uuid.
-        compute_utils.notify_about_instance_action(
+        compute_utils.notify_about_instance_rebuild(
             context, instance, self.host,
-            action=fields.NotificationAction.REBUILD,
             phase=fields.NotificationPhase.START,
             bdms=bdms)
 
@@ -3121,9 +3119,8 @@ class ComputeManager(manager.Manager):
                 context, instance, "rebuild.end",
                 network_info=network_info,
                 extra_usage_info=extra_usage_info)
-        compute_utils.notify_about_instance_action(
+        compute_utils.notify_about_instance_rebuild(
             context, instance, self.host,
-            action=fields.NotificationAction.REBUILD,
             phase=fields.NotificationPhase.END,
             bdms=bdms)
 

@@ -3968,7 +3968,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_set_migration_status')
     @mock.patch.object(manager.ComputeManager,
                        '_do_rebuild_instance_with_claim')
-    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch('nova.compute.utils.notify_about_instance_rebuild')
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
     def _test_rebuild_ex(self, instance, exc,
                          mock_notify_about_instance_usage,
@@ -3986,8 +3986,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.ANY, instance, 'rebuild.error', fault=mock_rebuild.side_effect
         )
         mock_notify.assert_called_once_with(
-            mock.ANY, instance, 'fake-mini', action='rebuild', phase='error',
-            exception=exc, bdms=None)
+            mock.ANY, instance, 'fake-mini', phase='error', exception=exc,
+            bdms=None)
 
     def test_rebuild_deleting(self):
         instance = fake_instance.fake_instance_obj(self.context)
@@ -4040,7 +4040,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 'setup_instance_network_on_host')
     @mock.patch('nova.network.neutronv2.api.API.setup_networks_on_host')
     @mock.patch('nova.objects.instance.Instance.save')
-    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch('nova.compute.utils.notify_about_instance_rebuild')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.compute.utils.notify_usage_exists')
     @mock.patch('nova.objects.instance.Instance.image_meta',
@@ -4080,7 +4080,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 'delete_allocation_for_evacuated_instance')
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.objects.instance.Instance.save')
-    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch('nova.compute.utils.notify_about_instance_rebuild')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_validate_instance_group_policy')
@@ -4114,8 +4114,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_delete_allocation.assert_called_once_with(
             elevated_context, instance, 'fake-node', node_type='destination')
         mock_notify.assert_called_once_with(
-            elevated_context, instance, 'fake-mini', action='rebuild',
-            bdms=None, exception=exc, phase='error')
+            elevated_context, instance, 'fake-mini', bdms=None, exception=exc,
+            phase='error')
 
     def test_rebuild_node_not_updated_if_not_recreate(self):
         node = uuidutils.generate_uuid()  # ironic node uuid

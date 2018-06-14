@@ -376,6 +376,9 @@ notification_object_data = {
     'FlavorPayload': '1.4-2e7011b8b4e59167fe8b7a0a81f0d452',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionPayload': '1.6-e9e4cbb94e07d3bcaa22743f41e094c8',
+    'InstanceActionRebuildNotification':
+        '1.0-a73147b93b520ff0061865849d3dfa56',
+    'InstanceActionRebuildPayload': '1.7-db0d6d549a7932428cdc0c7ca78859b5',
     'InstanceActionRescueNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionRescuePayload': '1.1-99b9b25574b77abf6d3e5a0cea341b06',
     'InstanceActionResizePrepNotification':
@@ -387,7 +390,7 @@ notification_object_data = {
     '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionVolumeSwapPayload': '1.6-bb322fd649d3626c7a83d5f2d9a866d4',
     'InstanceCreateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceCreatePayload': '1.8-aab72bba998af21dc2e34b31e3c376ea',
+    'InstanceCreatePayload': '1.9-1c9f722bf51ddae910fb7e50fff8edd1',
     'InstancePayload': '1.6-b1e7818c7adf158e8a6e87e0944b0b21',
     'InstanceActionSnapshotNotification':
         '1.0-a73147b93b520ff0061865849d3dfa56',
