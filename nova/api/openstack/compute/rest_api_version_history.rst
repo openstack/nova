@@ -795,3 +795,26 @@ the newly added ``host`` field will be controlled via policy rule
 ``os_compute_api:os-instance-actions:events``, which is the same policy used
 for the ``events.traceback`` field. If the user is prevented by policy, only
 ``hostId`` will be displayed.
+
+2.63
+----
+
+Adds support for the ``trusted_image_certificates`` parameter, which is used to
+define a list of trusted certificate IDs that can be used during image
+signature verification and certificate validation. The list is restricted to
+a maximum of 50 IDs. Note that ``trusted_image_certificates`` is not supported
+with volume-backed servers.
+
+The ``trusted_image_certificates`` request parameter can be passed to
+the server create and rebuild APIs:
+
+* ``POST /servers``
+* ``POST /servers/{server_id}/action (rebuild)``
+
+The ``trusted_image_certificates`` parameter will be in the response body of
+the following APIs:
+
+* ``GET /servers/detail``
+* ``GET /servers/{server_id}``
+* ``PUT /servers/{server_id}``
+* ``POST /servers/{server_id}/action (rebuild)``

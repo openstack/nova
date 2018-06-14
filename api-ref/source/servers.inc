@@ -381,6 +381,7 @@ Request
   - os:scheduler_hints.query: os:scheduler_hints_query
   - os:scheduler_hints.same_host: os:scheduler_hints_same_host
   - os:scheduler_hints.target_cell: os:scheduler_hints_target_cell
+  - trusted_image_certificates: server_trusted_image_certificates_create_req
 
 **Example Create Server**
 
@@ -390,6 +391,11 @@ Request
 **Example Create Server With Automatic Networking (v2.37)**
 
 .. literalinclude:: ../../doc/api_samples/servers/v2.37/server-create-req.json
+   :language: javascript
+
+**Example Create Server With Trusted Image Certificates (v2.63)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.63/server-create-req.json
    :language: javascript
 
 Response
@@ -610,10 +616,11 @@ Response
   - host_status: host_status
   - description: server_description_resp
   - tags: tags
+  - trusted_image_certificates: server_trusted_image_certificates_resp
 
-**Example List Servers Detailed (2.47)**
+**Example List Servers Detailed (2.63)**
 
-.. literalinclude:: /../../doc/api_samples/servers/v2.47/servers-details-resp.json
+.. literalinclude:: /../../doc/api_samples/servers/v2.63/servers-details-resp.json
    :language: javascript
 
 
@@ -716,10 +723,11 @@ Response
   - host_status: host_status
   - description: server_description_resp
   - tags: tags
+  - trusted_image_certificates: server_trusted_image_certificates_resp
 
-**Example Show Server Details (2.47)**
+**Example Show Server Details (2.63)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.47/server-get-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.63/server-get-resp.json
    :language: javascript
 
 Update Server
@@ -808,10 +816,11 @@ Response
   - locked: locked
   - description: server_description_resp
   - tags: tags
+  - trusted_image_certificates: server_trusted_image_certificates_resp
 
-**Example Update server name (2.47)**
+**Example Update server name (2.63)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.47/server-update-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.63/server-update-resp.json
    :language: javascript
 
 Delete Server

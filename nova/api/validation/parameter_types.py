@@ -476,3 +476,16 @@ pagination_parameters = {
     'limit': multi_params(non_negative_integer),
     'marker': multi_params({'type': 'string'})
 }
+
+# The trusted_certs list is restricted to a maximum of 50 IDs.
+# "null" is allowed to unset/reset trusted certs during rebuild.
+trusted_certs = {
+    "type": ["array", "null"],
+    "minItems": 1,
+    "maxItems": 50,
+    "uniqueItems": True,
+    "items": {
+        "type": "string",
+        "minLength": 1,
+    }
+}

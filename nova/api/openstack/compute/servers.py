@@ -86,6 +86,9 @@ class ServersController(wsgi.Controller):
     schema_server_create_v252 = schema_servers.base_create_v252
     schema_server_create_v257 = schema_servers.base_create_v257
 
+    schema_server_create_v263 = schema_servers.base_create_v263
+    schema_server_rebuild_v263 = schema_servers.base_rebuild_v263
+
     # NOTE(alex_xu): Please do not add more items into this list. This list
     # should be removed in the future.
     schema_func_list = [
@@ -132,6 +135,7 @@ class ServersController(wsgi.Controller):
 
         # TODO(alex_xu): The final goal is that merging all of
         # extended json-schema into server main json-schema.
+        self._create_schema(self.schema_server_create_v263, '2.63')
         self._create_schema(self.schema_server_create_v257, '2.57')
         self._create_schema(self.schema_server_create_v252, '2.52')
         self._create_schema(self.schema_server_create_v242, '2.42')
@@ -304,6 +308,8 @@ class ServersController(wsgi.Controller):
                 expected_attrs.append('services')
             if api_version_request.is_supported(req, '2.26'):
                 expected_attrs.append("tags")
+            if api_version_request.is_supported(req, '2.63'):
+                expected_attrs.append("trusted_certs")
 
             # merge our expected attrs with what the view builder needs for
             # showing details
@@ -345,6 +351,8 @@ class ServersController(wsgi.Controller):
         if is_detail:
             if api_version_request.is_supported(req, '2.26'):
                 expected_attrs.append("tags")
+            if api_version_request.is_supported(req, '2.63'):
+                expected_attrs.append("trusted_certs")
             expected_attrs = self._view_builder.get_show_expected_attrs(
                                                             expected_attrs)
         instance = common.get_instance(self.compute_api, context,
@@ -456,7 +464,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_server_create_v237, '2.37', '2.41')
     @validation.schema(schema_server_create_v242, '2.42', '2.51')
     @validation.schema(schema_server_create_v252, '2.52', '2.56')
-    @validation.schema(schema_server_create_v257, '2.57')
+    @validation.schema(schema_server_create_v257, '2.57', '2.62')
+    @validation.schema(schema_server_create_v263, '2.63')
     def create(self, req, body):
         """Creates a new server for a given user."""
         context = req.environ['nova.context']
@@ -488,6 +497,14 @@ class ServersController(wsgi.Controller):
             'user_id': context.user_id,
             'availability_zone': availability_zone}
         context.can(server_policies.SERVERS % 'create', target)
+
+        # Skip policy check for 'create:trusted_certs' if no trusted
+        # certificate IDs were provided.
+        trusted_certs = server_dict.get('trusted_image_certificates', None)
+        if trusted_certs:
+            create_kwargs['trusted_certs'] = trusted_certs
+            context.can(server_policies.SERVERS % 'create:trusted_certs',
+                        target=target)
 
         # TODO(Shao He, Feng) move this policy check to os-availability-zone
         # extension after refactor it.
@@ -634,13 +651,15 @@ class ServersController(wsgi.Controller):
                 exception.RealtimeMaskNotFoundOrInvalid,
                 exception.SnapshotNotFound,
                 exception.UnableToAutoAllocateNetwork,
-                exception.MultiattachNotSupportedOldMicroversion) as error:
+                exception.MultiattachNotSupportedOldMicroversion,
+                exception.CertificateValidationFailed) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.InstanceExists,
                 exception.NetworkAmbiguous,
                 exception.NoUniqueMatch,
-                exception.MultiattachSupportNotYetAvailable) as error:
+                exception.MultiattachSupportNotYetAvailable,
+                exception.CertificateValidationNotYetAvailable) as error:
             raise exc.HTTPConflict(explanation=error.format_message())
 
         # If the caller wanted a reservation_id, return it
@@ -895,7 +914,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_server_rebuild, '2.1', '2.18')
     @validation.schema(schema_server_rebuild_v219, '2.19', '2.53')
     @validation.schema(schema_server_rebuild_v254, '2.54', '2.56')
-    @validation.schema(schema_server_rebuild_v257, '2.57')
+    @validation.schema(schema_server_rebuild_v257, '2.57', '2.62')
+    @validation.schema(schema_server_rebuild_v263, '2.63')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         rebuild_dict = body['rebuild']
@@ -906,9 +926,9 @@ class ServersController(wsgi.Controller):
 
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)
-        context.can(server_policies.SERVERS % 'rebuild',
-                    target={'user_id': instance.user_id,
-                            'project_id': instance.project_id})
+        target = {'user_id': instance.user_id,
+                  'project_id': instance.project_id}
+        context.can(server_policies.SERVERS % 'rebuild', target=target)
         attr_map = {
             'name': 'display_name',
             'description': 'display_description',
@@ -930,6 +950,19 @@ class ServersController(wsgi.Controller):
         if include_user_data and 'user_data' in rebuild_dict:
             kwargs['user_data'] = rebuild_dict['user_data']
 
+        # Skip policy check for 'rebuild:trusted_certs' if no trusted
+        # certificate IDs were provided.
+        if ((api_version_request.is_supported(req, min_version='2.63'))
+                # Note that this is different from server create since with
+                # rebuild a user can unset/reset the trusted certs by
+                # specifying trusted_image_certificates=None, similar to
+                # key_name.
+                and ('trusted_image_certificates' in rebuild_dict)):
+            kwargs['trusted_certs'] = rebuild_dict.get(
+                'trusted_image_certificates')
+            context.can(server_policies.SERVERS % 'rebuild:trusted_certs',
+                        target=target)
+
         for request_attribute, instance_attribute in attr_map.items():
             try:
                 if request_attribute == 'name':
@@ -947,7 +980,8 @@ class ServersController(wsgi.Controller):
                                      image_href,
                                      password,
                                      **kwargs)
-        except exception.InstanceIsLocked as e:
+        except (exception.InstanceIsLocked,
+                exception.CertificateValidationNotYetAvailable) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
@@ -970,7 +1004,8 @@ class ServersController(wsgi.Controller):
                 exception.FlavorDiskTooSmall,
                 exception.FlavorMemoryTooSmall,
                 exception.InvalidMetadata,
-                exception.AutoDiskConfigDisabledByImage) as error:
+                exception.AutoDiskConfigDisabledByImage,
+                exception.CertificateValidationFailed) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
         instance = self._get_server(context, req, id, is_detail=True)

@@ -2297,3 +2297,9 @@ class AllocationCreateFailed(NovaException):
 class CertificateValidationFailed(NovaException):
     msg_fmt = _("Image signature certificate validation failed for "
                 "certificate: %(cert_uuid)s. %(reason)s")
+
+
+class CertificateValidationNotYetAvailable(NovaException):
+    msg_fmt = _("Image signature certificate validation support is "
+                "not yet available.")
+    code = 409

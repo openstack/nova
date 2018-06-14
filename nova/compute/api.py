@@ -104,6 +104,7 @@ AGGREGATE_ACTION_ADD = 'Add'
 BFV_RESERVE_MIN_COMPUTE_VERSION = 17
 CINDER_V3_ATTACH_MIN_COMPUTE_VERSION = 24
 MIN_COMPUTE_MULTIATTACH = 27
+MIN_COMPUTE_TRUSTED_CERTS = 31
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -853,7 +854,7 @@ class API(base.Base):
             max_count, base_options, boot_meta, security_groups,
             block_device_mapping, shutdown_terminate,
             instance_group, check_server_group_quota, filter_properties,
-            key_pair, tags, supports_multiattach=False):
+            key_pair, tags, trusted_certs, supports_multiattach=False):
         # Check quotas
         num_instances = compute_utils.check_num_instances_quota(
                 context, instance_type, min_count, max_count)
@@ -887,6 +888,10 @@ class API(base.Base):
                 instance.keypairs = objects.KeyPairList(objects=[])
                 if key_pair:
                     instance.keypairs.objects.append(key_pair)
+
+                instance.trusted_certs = self._retrieve_trusted_certs_object(
+                    context, trusted_certs)
+
                 instance = self.create_db_entry_for_new_instance(context,
                         instance_type, boot_meta, instance, security_groups,
                         block_device_mapping, num_instances, i,
@@ -961,6 +966,65 @@ class API(base.Base):
 
         return instances_to_build
 
+    @staticmethod
+    def _retrieve_trusted_certs_object(context, trusted_certs, rebuild=False):
+        """Convert user-requested trusted cert IDs to TrustedCerts object
+
+        Also validates that the deployment is new enough to support trusted
+        image certification validation.
+
+        :param context: The user request auth context
+        :param trusted_certs: list of user-specified trusted cert string IDs,
+            may be None
+        :param rebuild: True if rebuilding the server, False if creating a
+            new server
+        :returns: nova.objects.TrustedCerts object or None if no user-specified
+            trusted cert IDs were given and nova is not configured with
+            default trusted cert IDs
+        :raises: nova.exception.CertificateValidationNotYetAvailable: If
+            rebuilding a server with trusted certs on a compute host that is
+            too old to supported trusted image cert validation, or if creating
+            a server with trusted certs and there are no compute hosts in the
+            deployment that are new enough to support trusted image cert
+            validation
+        """
+        # Retrieve trusted_certs parameter, or use CONF value if certificate
+        # validation is enabled
+        if trusted_certs:
+            certs_to_return = objects.TrustedCerts(ids=trusted_certs)
+        elif (CONF.glance.verify_glance_signatures and
+              CONF.glance.enable_certificate_validation and
+              CONF.glance.default_trusted_certificate_ids):
+            certs_to_return = objects.TrustedCerts(
+                ids=CONF.glance.default_trusted_certificate_ids)
+        else:
+            return None
+
+        # Confirm trusted_certs are supported by the minimum nova
+        # compute service version
+        # TODO(mriedem): This minimum version compat code can be dropped in the
+        # 19.0.0 Stein release when all computes must be at a minimum running
+        # Rocky code.
+        if rebuild:
+            # we only care about the current cell since this is
+            # a rebuild
+            min_compute_version = objects.Service.get_minimum_version(
+                context, 'nova-compute')
+        else:
+            # we don't know which cell it's going to get scheduled
+            # to, so check all cells
+            # NOTE(mriedem): For multi-create server requests, we're hitting
+            # this for each instance since it's not cached; we could likely
+            # optimize this.
+            min_compute_version = \
+                objects.service.get_minimum_version_all_cells(
+                    context, ['nova-compute'])
+
+        if min_compute_version < MIN_COMPUTE_TRUSTED_CERTS:
+            raise exception.CertificateValidationNotYetAvailable()
+
+        return certs_to_return
+
     def _get_bdm_image_metadata(self, context, block_device_mapping,
                                 legacy_bdm=True):
         """If we are booting from a volume, we need to get the
@@ -1031,7 +1095,7 @@ class API(base.Base):
                block_device_mapping, auto_disk_config, filter_properties,
                reservation_id=None, legacy_bdm=True, shutdown_terminate=False,
                check_server_group_quota=False, tags=None,
-               supports_multiattach=False):
+               supports_multiattach=False, trusted_certs=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
         creation.
@@ -1049,6 +1113,14 @@ class API(base.Base):
         if image_href:
             image_id, boot_meta = self._get_image(context, image_href)
         else:
+            # This is similar to the logic in _retrieve_trusted_certs_object.
+            if (trusted_certs or
+                (CONF.glance.verify_glance_signatures and
+                 CONF.glance.enable_certificate_validation and
+                 CONF.glance.default_trusted_certificate_ids)):
+                msg = _("Image certificate validation is not supported "
+                        "when booting from volume")
+                raise exception.CertificateValidationFailed(message=msg)
             image_id = None
             boot_meta = self._get_bdm_image_metadata(
                 context, block_device_mapping, legacy_bdm)
@@ -1096,7 +1168,8 @@ class API(base.Base):
             context, instance_type, min_count, max_count, base_options,
             boot_meta, security_groups, block_device_mapping,
             shutdown_terminate, instance_group, check_server_group_quota,
-            filter_properties, key_pair, tags, supports_multiattach)
+            filter_properties, key_pair, tags, trusted_certs,
+            supports_multiattach)
 
         instances = []
         request_specs = []
@@ -1577,7 +1650,7 @@ class API(base.Base):
                config_drive=None, auto_disk_config=None, scheduler_hints=None,
                legacy_bdm=True, shutdown_terminate=False,
                check_server_group_quota=False, tags=None,
-               supports_multiattach=False):
+               supports_multiattach=False, trusted_certs=None):
         """Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
         go and will handle creating the DB entries.
@@ -1617,7 +1690,8 @@ class API(base.Base):
                        legacy_bdm=legacy_bdm,
                        shutdown_terminate=shutdown_terminate,
                        check_server_group_quota=check_server_group_quota,
-                       tags=tags, supports_multiattach=supports_multiattach)
+                       tags=tags, supports_multiattach=supports_multiattach,
+                       trusted_certs=trusted_certs)
 
     def _check_auto_disk_config(self, instance=None, image=None,
                                 **extra_instance_updates):
@@ -2998,6 +3072,18 @@ class API(base.Base):
                 instance.key_data = None
                 instance.keypairs = objects.KeyPairList(objects=[])
 
+        # Use trusted_certs value from kwargs to create TrustedCerts object
+        trusted_certs = None
+        if 'trusted_certs' in kwargs:
+            # Note that the user can set, change, or unset / reset trusted
+            # certs. If they are explicitly specifying
+            # trusted_image_certificates=None, that means we'll either unset
+            # them on the instance *or* reset to use the defaults (if defaults
+            # are configured).
+            trusted_certs = kwargs.pop('trusted_certs')
+            instance.trusted_certs = self._retrieve_trusted_certs_object(
+                context, trusted_certs, rebuild=True)
+
         image_id, image = self._get_image(context, image_href)
         self._check_auto_disk_config(image=image, **kwargs)
 
@@ -3012,6 +3098,14 @@ class API(base.Base):
         is_volume_backed = compute_utils.is_volume_backed_instance(
             context, instance, bdms)
         if is_volume_backed:
+            if trusted_certs:
+                # The only way we can get here is if the user tried to set
+                # trusted certs or specified trusted_image_certificates=None
+                # and default_trusted_certificate_ids is configured.
+                msg = _("Image certificate validation is not supported "
+                        "for volume-backed servers.")
+                raise exception.CertificateValidationFailed(message=msg)
+
             # For boot from volume, instance.image_ref is empty, so we need to
             # query the image from the volume.
             if root_bdm is None:

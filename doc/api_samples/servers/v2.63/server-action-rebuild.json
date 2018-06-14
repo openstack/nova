@@ -1,0 +1,20 @@
+{
+    "rebuild" : {
+        "accessIPv4" : "1.2.3.4",
+        "accessIPv6" : "80fe::",
+        "OS-DCF:diskConfig": "AUTO",
+        "imageRef" : "70a599e0-31e7-49b7-b260-868f441e862b",
+        "name" : "foobar",
+        "key_name": "new-key",
+        "description" : "description of foobar",
+        "adminPass" : "seekr3t",
+        "metadata" : {
+            "meta_var" : "meta_val"
+        },
+        "user_data": "ZWNobyAiaGVsbG8gd29ybGQi",
+        "trusted_image_certificates": [
+            "0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8",
+            "674736e3-f25c-405c-8362-bbf991e0ce0a"
+        ]
+    }
+}

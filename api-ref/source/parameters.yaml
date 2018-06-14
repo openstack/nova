@@ -5720,6 +5720,40 @@ server_tags_create:
   required: false
   type: array
   min_version: 2.52
+server_trusted_image_certificates_create_req:
+  description: |
+    A list of trusted certificate IDs, which are used during image
+    signature verification to verify the signing certificate. The list is
+    restricted to a maximum of 50 IDs. This parameter is optional in server
+    create requests if allowed by policy, and is not supported for
+    volume-backed instances.
+  in: body
+  required: false
+  type: array
+  min_version: 2.63
+server_trusted_image_certificates_rebuild_req:
+  description: |
+    A list of trusted certificate IDs, which are used during image
+    signature verification to verify the signing certificate. The list is
+    restricted to a maximum of 50 IDs. This parameter is optional in server
+    rebuild requests if allowed by policy, and is not supported
+    for volume-backed instances.
+
+    If ``null`` is specified, the existing trusted certificate IDs are either
+    unset or reset to the configured defaults.
+  in: body
+  required: false
+  type: array
+  min_version: 2.63
+server_trusted_image_certificates_resp:
+  description: |
+    A list of trusted certificate IDs, that were used during image signature
+    verification to verify the signing certificate. The list is restricted
+    to a maximum of 50 IDs.
+  in: body
+  required: true
+  type: array
+  min_version: 2.63
 server_usages:
   description: |
     A list of the server usage objects.

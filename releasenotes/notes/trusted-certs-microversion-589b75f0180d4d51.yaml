@@ -1,0 +1,30 @@
+---
+features:
+  - |
+    The 2.63 compute REST API microversion adds support for the
+    ``trusted_image_certificates`` parameter, which is used to define a
+    list of trusted certificate IDs that can be used during image
+    signature verification and certificate validation. The list is
+    restricted to a maximum of 50 IDs. Note that there is not support
+    with volume-backed servers.
+
+    The ``trusted_image_certificates`` request parameter can be passed to
+    the server create and rebuild APIs (if allowed by policy):
+
+    * ``POST /servers``
+    * ``POST /servers/{server_id}/action (rebuild)``
+
+    The following policy rules were added to restrict the usage of the
+    ``trusted_image_certificates`` request parameter in the server create and
+    rebuild APIs:
+
+    * ``os_compute_api:servers:create:trusted_certs``
+    * ``os_compute_api:servers:rebuild:trusted_certs``
+
+    The ``trusted_image_certificates`` parameter will be in the response
+    body of the following APIs (not restricted by policy):
+
+    * ``GET /servers/detail``
+    * ``GET /servers/{server_id}``
+    * ``PUT /servers/{server_id}``
+    * ``POST /servers/{server_id}/action (rebuild)``
