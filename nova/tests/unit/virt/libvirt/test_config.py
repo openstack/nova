@@ -1016,12 +1016,22 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
         obj.source_path = "/tmp/hello"
         obj.target_dev = "/dev/hda"
         obj.target_bus = "ide"
+        # Note that read/write iops/bytes values cannot be used with
+        # total values. These are only here for illustrative purposes.
         obj.disk_read_bytes_sec = 1024000
         obj.disk_read_iops_sec = 1000
         obj.disk_total_bytes_sec = 2048000
         obj.disk_write_bytes_sec = 1024000
         obj.disk_write_iops_sec = 1000
         obj.disk_total_iops_sec = 2000
+        obj.disk_write_bytes_sec_max = 1536000
+        obj.disk_write_iops_sec_max = 1500
+        obj.disk_total_iops_sec_max = 3072000
+        obj.disk_read_bytes_sec_max = 1536000
+        obj.disk_read_iops_sec_max = 1500
+        obj.disk_total_iops_sec_max = 2000
+        obj.disk_total_bytes_sec_max = 3072000
+        obj.disk_size_iops_sec = 16
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
@@ -1035,6 +1045,13 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
                 <write_iops_sec>1000</write_iops_sec>
                 <total_bytes_sec>2048000</total_bytes_sec>
                 <total_iops_sec>2000</total_iops_sec>
+                <read_bytes_sec_max>1536000</read_bytes_sec_max>
+                <write_bytes_sec_max>1536000</write_bytes_sec_max>
+                <total_bytes_sec_max>3072000</total_bytes_sec_max>
+                <read_iops_sec_max>1500</read_iops_sec_max>
+                <write_iops_sec_max>1500</write_iops_sec_max>
+                <total_iops_sec_max>2000</total_iops_sec_max>
+                <size_iops_sec>16</size_iops_sec>
               </iotune>
             </disk>""")
 
