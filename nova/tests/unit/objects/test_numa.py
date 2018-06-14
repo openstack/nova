@@ -271,6 +271,23 @@ class _TestNUMA(object):
             size_kb=1024, total=64, used=32)
         self.assertEqual(32, p.free)
 
+    def test_numa_topology_limits_obj_make_compatible(self):
+        network_meta = objects.NetworkMetadata(
+            physnets=set(['foo', 'bar']), tunneled=True)
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=1.0,
+            ram_allocation_ratio=1.0,
+            network_metadata=network_meta)
+
+        versions = ovo_base.obj_tree_get_versions('NUMATopologyLimits')
+        primitive = limits.obj_to_primitive(target_version='1.1',
+                                            version_manifest=versions)
+        self.assertIn('network_metadata', primitive['nova_object.data'])
+
+        primitive = limits.obj_to_primitive(target_version='1.0',
+                                            version_manifest=versions)
+        self.assertNotIn('network_metadata', primitive['nova_object.data'])
+
 
 class TestNUMA(test_objects._LocalTest,
                _TestNUMA):

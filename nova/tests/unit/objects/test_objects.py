@@ -1127,7 +1127,7 @@ object_data = {
     'NUMACell': '1.3-64b5fec7c51c0a85760c56b42dd307a5',
     'NUMAPagesTopology': '1.1-edab9fa2dc43c117a38d600be54b4542',
     'NUMATopology': '1.2-c63fad38be73b6afd04715c9c1b29220',
-    'NUMATopologyLimits': '1.0-9463e0edd40f64765ae518a539b9dfd2',
+    'NUMATopologyLimits': '1.1-4235c5da7a76c7e36075f0cd2f5cf922',
     'Network': '1.2-a977ab383aa462a479b2fae8211a5dde',
     'NetworkInterfaceMetadata': '1.2-6f3d480b40fe339067b1c0dd4d656716',
     'NetworkList': '1.2-69eca910d8fa035dfecd8ba10877ee59',
