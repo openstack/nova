@@ -822,118 +822,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
 
-    def _deallocate_for_instance(self, number, requested_networks=None):
-        # TODO(mriedem): Remove this conversion when all neutronv2 APIs are
-        # converted to handling instance objects.
-        self.instance = fake_instance.fake_instance_obj(self.context,
-                                                        **self.instance)
-        api = neutronapi.API()
-        port_data = number == 1 and self.port_data1 or self.port_data2
-        ports = {port['id'] for port in port_data}
-        ret_data = copy.deepcopy(port_data)
-        if requested_networks:
-            if isinstance(requested_networks, objects.NetworkRequestList):
-                # NOTE(danms): Temporary and transitional
-                with mock.patch('nova.utils.is_neutron', return_value=True):
-                    requested_networks = requested_networks.as_tuples()
-            for net, fip, port, request_id in requested_networks:
-                ret_data.append({'network_id': net,
-                                 'device_id': self.instance.uuid,
-                                 'device_owner': 'compute:nova',
-                                 'id': port,
-                                 'status': 'DOWN',
-                                 'admin_state_up': True,
-                                 'fixed_ips': [],
-                                 'mac_address': 'fake_mac', })
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_ports(
-            device_id=self.instance.uuid).AndReturn(
-                {'ports': ret_data})
-
-        neutronapi.get_client(
-            mox.IgnoreArg(), admin=True).AndReturn(
-            self.moxed_client)
-        if requested_networks:
-            for net, fip, port, request_id in requested_networks:
-                self.moxed_client.show_port(port, fields=[
-                                            'binding:profile', 'network_id']
-                                            ).AndReturn({'port': ret_data[0]})
-                self.moxed_client.show_network(
-                    ret_data[0]['network_id'],
-                    fields=['dns_domain']).AndReturn(
-                        {'network': {'id': ret_data[0]['network_id']}})
-                self.moxed_client.update_port(port)
-        for port in ports:
-            self.moxed_client.delete_port(port).InAnyOrder("delete_port_group")
-
-        self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
-        api.db.instance_info_cache_update(self.context,
-                                          self.instance.uuid,
-                                          {'network_info': '[]'}).AndReturn(
-                                              fake_info_cache)
-        self.mox.ReplayAll()
-
-        api = neutronapi.API()
-        api.deallocate_for_instance(self.context, self.instance,
-                                    requested_networks=requested_networks)
-
-    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
-    def test_deallocate_for_instance_1_with_requested(self, mock_preexisting):
-        mock_preexisting.return_value = []
-        requested = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id='fake-net',
-                                            address='1.2.3.4',
-                                            port_id=uuids.portid_5)])
-        # Test to deallocate in one port env.
-        self._deallocate_for_instance(1, requested_networks=requested)
-
-    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
-    def test_deallocate_for_instance_2_with_requested(self, mock_preexisting):
-        mock_preexisting.return_value = []
-        requested = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id='fake-net',
-                                            address='1.2.3.4',
-                                            port_id=uuids.portid_6)])
-        # Test to deallocate in one port env.
-        self._deallocate_for_instance(2, requested_networks=requested)
-
-    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
-    def test_deallocate_for_instance_1(self, mock_preexisting):
-        mock_preexisting.return_value = []
-        # Test to deallocate in one port env.
-        self._deallocate_for_instance(1)
-
-    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
-    def test_deallocate_for_instance_2(self, mock_preexisting):
-        mock_preexisting.return_value = []
-        # Test to deallocate in two ports env.
-        self._deallocate_for_instance(2)
-
-    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
-    def test_deallocate_for_instance_port_not_found(self,
-                                                    mock_preexisting):
-        # TODO(mriedem): Remove this conversion when all neutronv2 APIs are
-        # converted to handling instance objects.
-        self.instance = fake_instance.fake_instance_obj(self.context,
-                                                        **self.instance)
-        mock_preexisting.return_value = []
-        port_data = self.port_data1
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
-            self.moxed_client)
-        self.moxed_client.list_ports(
-            device_id=self.instance.uuid).AndReturn(
-                {'ports': port_data})
-
-        NeutronNotFound = exceptions.NeutronClientException(status_code=404)
-        for port in reversed(port_data):
-            self.moxed_client.delete_port(port['id']).AndRaise(
-                                                        NeutronNotFound)
-        self.mox.ReplayAll()
-
-        api = neutronapi.API()
-        api.deallocate_for_instance(self.context, self.instance)
-
     def _test_deallocate_port_for_instance(self, number):
         port_data = number == 1 and self.port_data1 or self.port_data2
         nets = number == 1 and self.nets1 or self.nets2
@@ -3344,6 +3232,161 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         """Only one network is available, it's external and shared."""
         ctx = context.RequestContext('userid', uuids.my_tenant)
         self._test_allocate_for_instance(net_idx=10, context=ctx)
+
+    @mock.patch.object(db_api, 'instance_info_cache_update',
+                       return_value=fake_info_cache)
+    @mock.patch.object(neutronapi, 'get_client')
+    def _test_deallocate_for_instance(self, number, mock_get_client,
+                                      mock_cache_update,
+                                      requested_networks=None):
+        # TODO(mriedem): Remove this conversion when all neutronv2 APIs are
+        # converted to handling instance objects.
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        port_data = number == 1 and self.port_data1 or self.port_data2
+        ports = {port['id'] for port in port_data}
+        ret_data = copy.deepcopy(port_data)
+        if requested_networks:
+            if isinstance(requested_networks, objects.NetworkRequestList):
+                # NOTE(danms): Temporary and transitional
+                with mock.patch('nova.utils.is_neutron', return_value=True):
+                    requested_networks = requested_networks.as_tuples()
+            for net, fip, port, request_id in requested_networks:
+                ret_data.append({'network_id': net,
+                                 'device_id': self.instance.uuid,
+                                 'device_owner': 'compute:nova',
+                                 'id': port,
+                                 'status': 'DOWN',
+                                 'admin_state_up': True,
+                                 'fixed_ips': [],
+                                 'mac_address': 'fake_mac', })
+        mocked_client.list_ports.return_value = {'ports': ret_data}
+
+        show_port_values = []
+        expected_show_port_calls = []
+        show_network_values = []
+        expected_show_network_calls = []
+        expected_update_port_calls = []
+        if requested_networks:
+            for net, fip, port, request_id in requested_networks:
+                expected_show_port_calls.append(mock.call(
+                    port, fields=['binding:profile', 'network_id']))
+                show_port_values.append({'port': ret_data[0]})
+                expected_show_network_calls.append(mock.call(
+                    ret_data[0]['network_id'], fields=['dns_domain']))
+                show_network_values.append(
+                    {'network': {'id': ret_data[0]['network_id']}})
+                expected_update_port_calls.append(mock.call(
+                    port,
+                    {'port': {
+                        'device_owner': '',
+                        'device_id': '',
+                        'binding:host_id': None,
+                        'binding:profile': {}}}))
+        mocked_client.show_port.side_effect = show_port_values
+        mocked_client.show_network.side_effect = show_network_values
+
+        expected_delete_port_calls = []
+        for port in ports:
+            expected_delete_port_calls.append(mock.call(port))
+
+        self.api.deallocate_for_instance(self.context, self.instance,
+                                         requested_networks=requested_networks)
+
+        mock_get_client.assert_has_calls([
+            mock.call(self.context), mock.call(self.context, admin=True)],
+            any_order=True)
+        mocked_client.list_ports.assert_called_once_with(
+            device_id=self.instance.uuid)
+        mocked_client.show_port.assert_has_calls(expected_show_port_calls)
+        self.assertEqual(len(expected_show_port_calls),
+                         mocked_client.show_port.call_count)
+        mocked_client.show_network.assert_has_calls(
+            expected_show_network_calls)
+        self.assertEqual(len(expected_show_network_calls),
+                         mocked_client.show_network.call_count)
+        mocked_client.update_port.assert_has_calls(expected_update_port_calls)
+        self.assertEqual(len(expected_update_port_calls),
+                         mocked_client.update_port.call_count)
+        mocked_client.delete_port.assert_has_calls(expected_delete_port_calls,
+                                                   any_order=True)
+        self.assertEqual(len(expected_delete_port_calls),
+                         mocked_client.delete_port.call_count)
+        mock_cache_update.assert_called_once_with(
+            self.context, self.instance.uuid, {'network_info': '[]'})
+
+    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
+    def test_deallocate_for_instance_1_with_requested(self, mock_preexisting):
+        mock_preexisting.return_value = []
+        requested = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='fake-net',
+                                            address='1.2.3.4',
+                                            port_id=uuids.portid_5)])
+        # Test to deallocate in one port env.
+        self._test_deallocate_for_instance(1, requested_networks=requested)
+        mock_preexisting.assert_called_once_with(self.instance)
+
+    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
+    def test_deallocate_for_instance_2_with_requested(self, mock_preexisting):
+        mock_preexisting.return_value = []
+        requested = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='fake-net',
+                                            address='1.2.3.4',
+                                            port_id=uuids.portid_6)])
+        # Test to deallocate in one port env.
+        self._test_deallocate_for_instance(2, requested_networks=requested)
+        mock_preexisting.assert_called_once_with(self.instance)
+
+    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
+    def test_deallocate_for_instance_1(self, mock_preexisting):
+        mock_preexisting.return_value = []
+        # Test to deallocate in one port env.
+        self._test_deallocate_for_instance(1)
+        mock_preexisting.assert_called_once_with(self.instance)
+
+    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
+    def test_deallocate_for_instance_2(self, mock_preexisting):
+        mock_preexisting.return_value = []
+        # Test to deallocate in two ports env.
+        self._test_deallocate_for_instance(2)
+        mock_preexisting.assert_called_once_with(self.instance)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
+    def test_deallocate_for_instance_port_not_found(self,
+                                                    mock_preexisting,
+                                                    mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        # TODO(mriedem): Remove this conversion when all neutronv2 APIs are
+        # converted to handling instance objects.
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
+        mock_preexisting.return_value = []
+        port_data = self.port_data1
+        mocked_client.list_ports.return_value = {'ports': port_data}
+
+        NeutronNotFound = exceptions.NeutronClientException(status_code=404)
+        delete_port_values = []
+        expected_delete_port_calls = []
+        for port in reversed(port_data):
+            delete_port_values.append(NeutronNotFound)
+            expected_delete_port_calls.append(mock.call(port['id']))
+        mocked_client.delete_port.side_effect = expected_delete_port_calls
+
+        self.api.deallocate_for_instance(self.context, self.instance)
+
+        mock_preexisting.assert_called_once_with(self.instance)
+        mock_get_client.assert_has_calls([
+            mock.call(self.context), mock.call(self.context, admin=True)],
+            any_order=True)
+        mocked_client.list_ports.assert_called_once_with(
+            device_id=self.instance.uuid)
+        mocked_client.delete_port.assert_has_calls(expected_delete_port_calls)
+        self.assertEqual(len(expected_delete_port_calls),
+                         mocked_client.delete_port.call_count)
 
     def test_allocate_for_instance_with_requested_networks_duplicates(self):
         # specify a duplicate network to allocate to instance
