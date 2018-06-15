@@ -43,14 +43,14 @@ def raise_if_custom_resource_class_pre_v1_1(rc):
             raise ValueError
 
 
-@db_api.api_context_manager.reader
+@db_api.placement_context_manager.reader
 def _refresh_from_db(ctx, cache):
     """Grabs all custom resource classes from the DB table and populates the
     supplied cache object's internal integer and string identifier dicts.
 
     :param cache: ResourceClassCache object to refresh.
     """
-    with db_api.api_context_manager.reader.connection.using(ctx) as conn:
+    with db_api.placement_context_manager.reader.connection.using(ctx) as conn:
         sel = sa.select([_RC_TBL.c.id, _RC_TBL.c.name, _RC_TBL.c.updated_at,
                          _RC_TBL.c.created_at])
         res = conn.execute(sel).fetchall()

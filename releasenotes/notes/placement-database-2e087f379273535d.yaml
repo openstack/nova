@@ -1,0 +1,23 @@
+---
+features:
+  - |
+    An optional configuration group ``placement_database`` can be used in
+    nova.conf to configure a separate database for use with the placement
+    API.
+
+    If ``placement_database.connection`` has a value then the
+    ``placement_database`` configuration group will be used to configure a
+    separate placement database, including using ``connection`` to identify the
+    target database. That database will have a schema that is a replica of all
+    the tables used in the API database. The new database will be created and
+    synchronized when the ``nova-manage api_db sync`` command is run.
+
+    When the ``placement_database.connection`` setting is omitted the existing
+    settings for the ``api_database`` will be used for hosting placement data.
+
+    Setting ``placement_database.connection`` and calling
+    ``nova-manage api_db sync`` will only create tables. No data will be
+    migrated. In an existing OpenStack deployment, if there is existing
+    placement data in the ``nova_api`` database this will not be copied. It is
+    up to the deployment to manually replicate that data in a fashion that
+    works best for the environment.

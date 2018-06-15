@@ -25,7 +25,7 @@ CONSUMER_TBL = models.Consumer.__table__
 _ALLOC_TBL = models.Allocation.__table__
 
 
-@db_api.api_context_manager.writer
+@db_api.placement_context_manager.writer
 def create_incomplete_consumers(ctx, batch_size):
     """Finds all the consumer records that are missing for allocations and
     creates consumer records for them, using the "incomplete consumer" project
@@ -62,7 +62,7 @@ def create_incomplete_consumers(ctx, batch_size):
     return res.rowcount, res.rowcount
 
 
-@db_api.api_context_manager.reader
+@db_api.placement_context_manager.reader
 def _get_consumer_by_uuid(ctx, uuid):
     # The SQL for this looks like the following:
     # SELECT
@@ -136,7 +136,7 @@ class Consumer(base.VersionedObject, base.TimestampedObject):
         return cls._from_db_object(ctx, cls(ctx), res)
 
     def create(self):
-        @db_api.api_context_manager.writer
+        @db_api.placement_context_manager.writer
         def _create_in_db(ctx):
             db_obj = models.Consumer(
                 uuid=self.uuid, project_id=self.project.id,

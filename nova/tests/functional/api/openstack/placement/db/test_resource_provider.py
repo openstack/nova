@@ -120,7 +120,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         the provider's UUID.
         """
         rp_tbl = rp_obj._RP_TBL
-        conn = self.api_db.get_engine().connect()
+        conn = self.placement_db.get_engine().connect()
 
         # First, set up a record for an "old-style" resource provider with no
         # root provider UUID.
@@ -396,7 +396,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual([], rps.objects)
 
         rp_tbl = rp_obj._RP_TBL
-        conn = self.api_db.get_engine().connect()
+        conn = self.placement_db.get_engine().connect()
 
         # First, set up a record for an "old-style" resource provider with no
         # root provider UUID.
@@ -1736,7 +1736,7 @@ class ResourceClassListTestCase(tb.PlacementDbBaseTestCase):
             ('CUSTOM_IRON_NFV', 10001),
             ('CUSTOM_IRON_ENTERPRISE', 10002),
         ]
-        with self.api_db.get_engine().connect() as conn:
+        with self.placement_db.get_engine().connect() as conn:
             for custom in customs:
                 c_name, c_id = custom
                 ins = rp_obj._RC_TBL.insert().values(id=c_id, name=c_name)
@@ -2198,7 +2198,7 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
         list all traits, os_traits have been synchronized.
         """
         std_traits = os_traits.get_traits()
-        conn = self.api_db.get_engine().connect()
+        conn = self.placement_db.get_engine().connect()
 
         def _db_traits(conn):
             sel = sa.select([rp_obj._TRAIT_TBL.c.name])

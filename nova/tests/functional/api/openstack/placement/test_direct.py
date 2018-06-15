@@ -29,7 +29,7 @@ class TestDirect(test.NoDBTestCase):
 
     def setUp(self):
         super(TestDirect, self).setUp()
-        self.api_db = self.useFixture(fixtures.Database(database='api'))
+        self.api_db = self.useFixture(fixtures.Database(database='placement'))
         self._reset_traits_synced()
         self.context = context.get_admin_context()
         self.addCleanup(self._reset_traits_synced)

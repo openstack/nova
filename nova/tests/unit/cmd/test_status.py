@@ -483,6 +483,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         # We always need the API DB to be setup.
         self.useFixture(nova_fixtures.Database(database='api'))
+        self.useFixture(nova_fixtures.Database(database='placement'))
         self.cmd = status.UpgradeCommands()
 
     def test_check_resource_providers_fresh_install_no_mappings(self):

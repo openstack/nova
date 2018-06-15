@@ -26,7 +26,7 @@ class TestResourceClassCache(test.TestCase):
 
     def setUp(self):
         super(TestResourceClassCache, self).setUp()
-        self.db = self.useFixture(fixtures.Database(database='api'))
+        self.db = self.useFixture(fixtures.Database(database='placement'))
         self.context = mock.Mock()
         sess_mock = mock.Mock()
         sess_mock.connection.side_effect = self.db.get_engine().connect

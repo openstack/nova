@@ -53,7 +53,8 @@ class PlacementDbBaseTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PlacementDbBaseTestCase, self).setUp()
         self.useFixture(fixtures.Database())
-        self.api_db = self.useFixture(fixtures.Database(database='api'))
+        self.placement_db = self.useFixture(
+                fixtures.Database(database='placement'))
         # Reset the _TRAITS_SYNCED global before we start and after
         # we are done since other tests (notably the gabbi tests)
         # may have caused it to change.

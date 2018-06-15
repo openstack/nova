@@ -24,7 +24,7 @@ CONF = cfg.CONF
 PROJECT_TBL = models.Project.__table__
 
 
-@db_api.api_context_manager.writer
+@db_api.placement_context_manager.writer
 def ensure_incomplete_project(ctx):
     """Ensures that a project record is created for the "incomplete consumer
     project". Returns the internal ID of that record.
@@ -40,7 +40,7 @@ def ensure_incomplete_project(ctx):
     return res.inserted_primary_key[0]
 
 
-@db_api.api_context_manager.reader
+@db_api.placement_context_manager.reader
 def _get_project_by_external_id(ctx, external_id):
     projects = sa.alias(PROJECT_TBL, name="p")
     cols = [
@@ -81,7 +81,7 @@ class Project(base.VersionedObject):
         return cls._from_db_object(ctx, cls(ctx), res)
 
     def create(self):
-        @db_api.api_context_manager.writer
+        @db_api.placement_context_manager.writer
         def _create_in_db(ctx):
             db_obj = models.Project(external_id=self.external_id)
             try:
