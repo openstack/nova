@@ -11,9 +11,7 @@
 #    under the License.
 
 import mock
-from wsgi_intercept import interceptor
 
-from nova.api.openstack.placement import deploy
 from nova.compute import power_state
 from nova.compute import resource_tracker
 from nova.compute import task_states
@@ -22,8 +20,7 @@ from nova import conf
 from nova import context
 from nova import objects
 from nova import rc_fields as fields
-from nova import test
-from nova.tests.functional import test_report_client
+from nova.tests.functional import test_report_client as test_base
 from nova.tests import uuidsentinel as uuids
 from nova.virt import driver as virt_driver
 
@@ -34,7 +31,7 @@ DISK_GB = fields.ResourceClass.DISK_GB
 COMPUTE_HOST = 'compute-host'
 
 
-class IronicResourceTrackerTest(test.TestCase):
+class IronicResourceTrackerTest(test_base.SchedulerReportClientTestBase):
     """Tests the behaviour of the resource tracker with regards to the
     transitional period between adding support for custom resource classes in
     the placement API and integrating inventory and allocation records for
@@ -130,9 +127,16 @@ class IronicResourceTrackerTest(test.TestCase):
         ),
     }
 
+    def _set_client(self, client):
+        """Set up embedded report clients to use the direct one from the
+        interceptor.
+        """
+        self.report_client = client
+        self.rt.scheduler_client.reportclient = client
+        self.rt.reportclient = client
+
     def setUp(self):
         super(IronicResourceTrackerTest, self).setUp()
-        self.flags(auth_strategy='noauth2', group='api')
         self.flags(
             reserved_host_memory_mb=0,
             cpu_allocation_ratio=1.0,
@@ -141,17 +145,12 @@ class IronicResourceTrackerTest(test.TestCase):
         )
 
         self.ctx = context.RequestContext('user', 'project')
-        self.app = lambda: deploy.loadapp(CONF)
-        self.report_client = test_report_client.NoAuthReportClient()
 
         driver = mock.MagicMock(autospec=virt_driver.ComputeDriver)
         driver.node_is_available.return_value = True
         driver.update_provider_tree.side_effect = NotImplementedError
         self.driver_mock = driver
         self.rt = resource_tracker.ResourceTracker(COMPUTE_HOST, driver)
-        self.rt.scheduler_client.reportclient = self.report_client
-        self.rt.reportclient = self.report_client
-        self.url = 'http://localhost/placement'
         self.create_fixtures()
 
     def create_fixtures(self):
@@ -198,22 +197,16 @@ class IronicResourceTrackerTest(test.TestCase):
                     if rc['name'] not in fields.ResourceClass.STANDARD]
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
-                return_value=False)
-    @mock.patch('nova.objects.compute_node.ComputeNode.save')
-    @mock.patch('keystoneauth1.session.Session.get_auth_headers',
-                return_value={'x-auth-token': 'admin'})
-    @mock.patch('keystoneauth1.session.Session.get_endpoint',
-                return_value='http://localhost/placement')
-    def test_ironic_ocata_to_pike(self, mock_vbi, mock_endpoint, mock_auth,
-            mock_cn):
+                new=mock.Mock(return_value=False))
+    @mock.patch('nova.objects.compute_node.ComputeNode.save', new=mock.Mock())
+    def test_ironic_ocata_to_pike(self):
         """Check that when going from an Ocata installation with Ironic having
         node's resource class attributes set, that we properly "auto-heal" the
         inventory and allocation records in the placement API to account for
         both the old-style VCPU/MEMORY_MB/DISK_GB resources as well as the new
         custom resource class from Ironic's node.resource_class attribute.
         """
-        with interceptor.RequestsInterceptor(
-                app=self.app, url=self.url):
+        with self._interceptor():
             # Before the resource tracker is "initialized", we shouldn't have
             # any compute nodes in the RT's cache...
             self.assertEqual(0, len(self.rt.compute_nodes))

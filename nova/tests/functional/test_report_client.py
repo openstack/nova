@@ -11,17 +11,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from keystoneauth1 import adapter
-from keystoneauth1 import session
 import mock
-import requests
-from wsgi_intercept import interceptor
 
-# NOTE(cdent): When placement is extracted, placement will need to
-# expose a fixture of some kind which operates as deploy does here,
-# providing a WSGI application to be intercepted, but it will also
-# need to be responsible for having a reasonable persistence layer
-from nova.api.openstack.placement import deploy
+from nova.api.openstack.placement import direct
 from nova.compute import provider_tree
 from nova import conf
 from nova import context
@@ -39,45 +31,54 @@ from nova.tests import uuidsentinel as uuids
 CONF = conf.CONF
 
 
-class NoAuthReportClient(report.SchedulerReportClient):
-    """A SchedulerReportClient that avoids keystone."""
+class SchedulerReportClientTestBase(test.TestCase):
 
-    def __init__(self):
-        super(NoAuthReportClient, self).__init__()
-        # Supply our own session so the wsgi-intercept can intercept
-        # the right thing. Another option would be to use the direct
-        # urllib3 interceptor.
-        request_session = requests.Session()
-        headers = {
-            'x-auth-token': 'admin',
-            'OpenStack-API-Version': 'placement latest',
-        }
-        self._client = adapter.Adapter(
-            session.Session(auth=None, session=request_session,
-                            additional_headers=headers),
-            service_type='placement')
+    def _interceptor(self, app=None):
+        """Set up an intercepted placement API to test against.
+
+        Use as e.g.
+
+        with interceptor() as client:
+            ret = client.get_provider_tree_and_ensure_root(...)
+
+        :param app: An optional wsgi app loader.
+        :return: Context manager, which in turn returns a direct
+                SchedulerReportClient.
+        """
+        class ReportClientInterceptor(direct.PlacementDirect):
+            """A shim around PlacementDirect that wraps the Adapter in a
+            SchedulerReportClient.
+            """
+            def __enter__(inner_self):
+                adap = super(ReportClientInterceptor, inner_self).__enter__()
+                client = report.SchedulerReportClient(adapter=adap)
+                # NOTE(efried): This `self` is the TestCase!
+                self._set_client(client)
+                return client
+
+        interceptor = ReportClientInterceptor(CONF, latest_microversion=True)
+        if app:
+            interceptor.app = app
+        return interceptor
+
+    def _set_client(self, client):
+        """Set report client attributes on the TestCase instance.
+
+        Override this to do things like:
+        self.mocked_thingy.report_client = client
+
+        :param client: A direct SchedulerReportClient.
+        """
+        pass
 
 
 @mock.patch('nova.compute.utils.is_volume_backed_instance',
             new=mock.Mock(return_value=False))
 @mock.patch('nova.objects.compute_node.ComputeNode.save', new=mock.Mock())
-@mock.patch('keystoneauth1.session.Session.get_auth_headers',
-            new=mock.Mock(return_value={'x-auth-token': 'admin'}))
-@mock.patch('keystoneauth1.session.Session.get_endpoint',
-            new=mock.Mock(return_value='http://localhost:80/placement'))
-class SchedulerReportClientTests(test.TestCase):
-    """Set up an intercepted placement API to test against."""
+class SchedulerReportClientTests(SchedulerReportClientTestBase):
 
     def setUp(self):
         super(SchedulerReportClientTests, self).setUp()
-        self.flags(auth_strategy='noauth2', group='api')
-
-        self.app = lambda: deploy.loadapp(CONF)
-        self.client = NoAuthReportClient()
-        # TODO(cdent): Port required here to deal with a bug
-        # in wsgi-intercept:
-        # https://github.com/cdent/wsgi-intercept/issues/41
-        self.url = 'http://localhost:80/placement'
         self.compute_uuid = uuids.compute_node
         self.compute_name = 'computehost'
         self.compute_node = objects.ComputeNode(
@@ -103,9 +104,9 @@ class SchedulerReportClientTests(test.TestCase):
                                   extra_specs={}))
         self.context = context.get_admin_context()
 
-    def _interceptor(self):
-        # Isolate this initialization for maintainability.
-        return interceptor.RequestsInterceptor(app=self.app, url=self.url)
+    def _set_client(self, client):
+        # TODO(efried): Rip this out and just use `as client` throughout.
+        self.client = client
 
     def test_client_report_smoke(self):
         """Check things go as expected when doing the right things."""
@@ -233,10 +234,6 @@ class SchedulerReportClientTests(test.TestCase):
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 new=mock.Mock(return_value=False))
     @mock.patch('nova.objects.compute_node.ComputeNode.save', new=mock.Mock())
-    @mock.patch('keystoneauth1.session.Session.get_auth_headers',
-                new=mock.Mock(return_value={'x-auth-token': 'admin'}))
-    @mock.patch('keystoneauth1.session.Session.get_endpoint',
-                new=mock.Mock(return_value='http://localhost:80/placement'))
     def test_ensure_standard_resource_class(self):
         """Test case for bug #1746615: If placement is running a newer version
         of code than compute, it may have new standard resource classes we
@@ -286,14 +283,12 @@ class SchedulerReportClientTests(test.TestCase):
                 'allocation_ratio': 8.0,
             },
         }
-        with interceptor.RequestsInterceptor(app=self.app, url=self.url):
+        with self._interceptor():
             self.client.update_compute_node(self.context, self.compute_node)
             self.client.set_inventory_for_provider(
                 self.context, self.compute_uuid, self.compute_name, inv)
 
-    @mock.patch('keystoneauth1.session.Session.get_endpoint',
-                return_value='http://localhost:80/placement')
-    def test_global_request_id(self, mock_endpoint):
+    def test_global_request_id(self):
         global_request_id = 'req-%s' % uuids.global_request_id
 
         def assert_app(environ, start_response):
@@ -304,8 +299,7 @@ class SchedulerReportClientTests(test.TestCase):
             start_response('204 OK', [])
             return []
 
-        with interceptor.RequestsInterceptor(
-                app=lambda: assert_app, url=self.url):
+        with self._interceptor(app=lambda: assert_app):
             self.client._delete_provider(self.compute_uuid,
                                          global_request_id=global_request_id)
             payload = {
@@ -719,12 +713,13 @@ class SchedulerReportClientTests(test.TestCase):
                 self.assertFalse(
                     new_tree.have_aggregates_changed(uuid, cdata.aggregates))
 
-        # To begin with, the cache should be empty
-        self.assertEqual([], self.client._provider_tree.get_provider_uuids())
-        # When new_tree is empty, it's a no-op.
-        # Do this outside the interceptor to prove no API calls are made.
-        self.client.update_from_provider_tree(self.context, new_tree)
-        assert_ptrees_equal()
+        # Do these with a failing interceptor to prove no API calls are made.
+        with self._interceptor(app=lambda: 'nuke') as client:
+            # To begin with, the cache should be empty
+            self.assertEqual([], client._provider_tree.get_provider_uuids())
+            # When new_tree is empty, it's a no-op.
+            client.update_from_provider_tree(self.context, new_tree)
+            assert_ptrees_equal()
 
         with self._interceptor():
             # Populate with a provider with no inventories, aggregates, traits
