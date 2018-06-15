@@ -135,12 +135,12 @@ def get_fs_info(path):
             'free': 84 * (1024 ** 3)}
 
 
-def fetch_image(context, target, image_id, max_size=0, trusted_certs=None):
+def fetch_image(context, target, image_id, trusted_certs=None):
     if trusted_certs is not None:
         assert isinstance(trusted_certs, objects.TrustedCerts)
 
 
-def fetch_raw_image(context, target, image_id, max_size=0, trusted_certs=None):
+def fetch_raw_image(context, target, image_id, trusted_certs=None):
     if trusted_certs is not None:
         assert isinstance(trusted_certs, objects.TrustedCerts)
 
