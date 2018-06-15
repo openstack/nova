@@ -13,6 +13,8 @@
 import mock
 
 from nova.compute import instance_list
+from nova.compute import multi_cell_list
+from nova import context as nova_context
 from nova import objects
 from nova import test
 from nova.tests import fixtures
@@ -77,3 +79,27 @@ class TestInstanceList(test.NoDBTestCase):
         insts_two = [inst['hostname'] for inst in insts]
 
         self.assertEqual(insts_one, insts_two)
+
+    @mock.patch('nova.context.scatter_gather_cells')
+    def test_get_instances_with_down_cells(self, mock_sg):
+        inst_cell0 = self.insts[uuids.cell0]
+        # storing the uuids of the instances from the up cell
+        uuid_initial = [inst['uuid'] for inst in inst_cell0]
+
+        instances = (multi_cell_list.RecordWrapper(self.context, inst)
+                     for inst in inst_cell0)
+
+        # creating one up cell and two down cells
+        ret_val = {}
+        ret_val[uuids.cell0] = instances
+        ret_val[uuids.cell1] = nova_context.raised_exception_sentinel
+        ret_val[uuids.cell2] = nova_context.did_not_respond_sentinel
+        mock_sg.return_value = ret_val
+
+        res = instance_list.get_instances_sorted(self.context, {}, None, None,
+                                                 [], None, None)
+
+        uuid_final = [inst['uuid'] for inst in res]
+
+        # return the results from the up cell, ignoring the down cell.
+        self.assertEqual(uuid_initial, uuid_final)

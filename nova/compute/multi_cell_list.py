@@ -17,7 +17,11 @@ import itertools
 
 import six
 
+from oslo_log import log as logging
+
 from nova import context
+
+LOG = logging.getLogger(__name__)
 
 
 class RecordSortContext(object):
@@ -241,11 +245,19 @@ class CrossCellLister(object):
             return (RecordWrapper(self.sort_ctx, inst) for inst in
                     itertools.chain(local_marker_prefix, main_query_result))
 
-        # FIXME(danms): If we raise or timeout on a cell we need to handle
-        # that here gracefully. The below routine will provide sentinels
-        # to indicate that, which will crash the merge below, but we don't
-        # handle this anywhere yet anyway.
+        # NOTE(tssurya): When the below routine provides sentinels to indicate
+        # a timeout on a cell, we ignore that cell to avoid the crash when
+        # doing the merge below and continue merging the results from the 'up'
+        # cells.
+        # TODO(tssurya): Modify this to return the minimal available info from
+        # the down cells.
         results = context.scatter_gather_all_cells(ctx, do_query)
+        for cell_uuid in list(results):
+            if results[cell_uuid] in (context.did_not_respond_sentinel,
+                                      context.raised_exception_sentinel):
+                LOG.warning("Cell %s is not responding and hence skipped "
+                            "from the results.", cell_uuid)
+                results.pop(cell_uuid)
 
         # If a limit was provided, it was passed to the per-cell query
         # routines.  That means we have NUM_CELLS * limit items across
