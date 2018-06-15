@@ -56,10 +56,12 @@ changed or be partially complete at this time.
 * `The Traits API - Manage Traits with ResourceProvider <http://specs.openstack.org/openstack/nova-specs/specs/pike/approved/resource-provider-traits.html>`_
 * `Request Traits During Scheduling`_
 * `filter allocation candidates by aggregate membership`_
+* `perform granular allocation candidate requests`_
 
 .. _Nested Resource Providers: http://specs.openstack.org/openstack/nova-specs/specs/queens/approved/nested-resource-providers.html
 .. _Request Traits During Scheduling: https://specs.openstack.org/openstack/nova-specs/specs/queens/approved/request-traits-in-nova.html
 .. _filter allocation candidates by aggregate membership: https://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/alloc-candidates-member-of.html
+.. _perform granular allocation candidate requests: http://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/granular-resource-requests.html
 
 Deployment
 ==========
@@ -284,8 +286,8 @@ Rocky (18.0.0)
 ~~~~~~~~~~~~~~
 
 * The minimum Placement API microversion required by the *nova-scheduler*
-  service is ``1.24`` in order to
-  `filter allocation candidates by aggregate membership`_.
+  service is ``1.25`` in order to
+  `perform granular allocation candidate requests`_.
   This means you must upgrade the placement service before upgrading any
   *nova-scheduler* services to Rocky.
 * The ``nova-api`` service now requires the ``[placement]`` section to be

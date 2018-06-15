@@ -199,12 +199,11 @@ class UpgradeCommands(object):
             versions = self._placement_get("/")
             max_version = pkg_resources.parse_version(
                 versions["versions"][0]["max_version"])
-            # NOTE(mriedem): 1.24 is required by nova-scheduler to be able
-            # to request multiple member_of parameters to
-            # GET /allocation_candidates.
+            # NOTE(efried): 1.25 is required by nova-scheduler to make granular
+            # resource requests to GET /allocation_candidates.
             # NOTE: If you bump this version, remember to update the history
             # section in the nova-status man page (doc/source/cli/nova-status).
-            needs_version = pkg_resources.parse_version("1.24")
+            needs_version = pkg_resources.parse_version("1.25")
             if max_version < needs_version:
                 msg = (_('Placement API version %(needed)s needed, '
                          'you have %(current)s.') %
