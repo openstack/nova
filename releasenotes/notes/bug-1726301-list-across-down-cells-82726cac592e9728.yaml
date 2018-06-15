@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    Listing server and migration records used to give a 500 to users
+    when a cell database was unreachable. Now only records from available
+    cells are included to avoid the 500 error. The down cells are basically
+    skipped when forming the results and this solution is planned to be
+    further enhanced through the `blueprint handling-down-cell`_.
+
+    .. _blueprint handling-down-cell: https://blueprints.launchpad.net/nova/+spec/handling-down-cell
