@@ -762,6 +762,10 @@ class WarningsFixture(fixtures.Fixture):
         # about any deprecations coming from it
         warnings.filterwarnings('ignore',
             module='mox3.mox')
+        # NOTE(mriedem): Ignore scope check UserWarnings from oslo.policy.
+        warnings.filterwarnings('ignore',
+                                message="Policy .* failed scope check",
+                                category=UserWarning)
 
         self.addCleanup(warnings.resetwarnings)
 
