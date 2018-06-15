@@ -236,7 +236,7 @@ class InstanceCreatePayload(InstanceActionPayload):
         self.tags = [instance_tag.tag
                      for instance_tag in instance.tags]
         self.trusted_image_certificates = None
-        if instance.get("trusted_certs", None):
+        if instance.trusted_certs:
             self.trusted_image_certificates = instance.trusted_certs.ids
 
 
@@ -322,14 +322,14 @@ class InstanceActionRebuildPayload(InstanceActionPayload):
             nullable=True)
     }
 
-    def __init__(self, context, instance, fault, bdms):
+    def __init__(self, context, instance, fault, bdms=None):
         super(InstanceActionRebuildPayload, self).__init__(
                 context=context,
                 instance=instance,
                 fault=fault,
                 bdms=bdms)
         self.trusted_image_certificates = None
-        if instance.get("trusted_certs", None):
+        if instance.trusted_certs:
             self.trusted_image_certificates = instance.trusted_certs.ids
 
 
