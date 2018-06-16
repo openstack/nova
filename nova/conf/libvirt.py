@@ -649,6 +649,10 @@ Possible cache modes:
   is not protected in a power failure. As a result, this caching mode is
   recommended only for temporary data where potential data loss is not a
   concern.
+  NOTE: Certain backend disk mechanisms may provide safe writeback cache
+  semantics. Specifically those that bypass the host page cache, such as
+  QEMU's integrated RBD driver. Ceph documentation recommends setting this
+  to writeback for maximum performance while maintaining data safety.
 * directsync: Like "writethrough", but it bypasses the host page cache.
 * unsafe: Caching mode of unsafe ignores cache transfer operations
   completely. As its name implies, this caching mode should be used only for
