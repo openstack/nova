@@ -1,0 +1,20 @@
+---
+features:
+  - |
+    A ``nova-manage placement sync_aggregates`` command has been added which
+    can be used to mirror nova host aggregates to resource provider aggregates
+    in the placement service. This is a useful tool if you are using aggregates
+    in placement to optimize scheduling:
+
+    https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html#aggregates-in-placement
+
+    The ``os-aggregates`` compute API ``add_host`` and ``remove_host`` actions
+    will automatically add/remove compute node resource providers from resource
+    provider aggregates in the placement service if the ``nova-api`` service
+    is configured to communicate with the placement service, so this command
+    is mostly useful for existing deployments with host aggregates which are
+    not yet mirrored in the placement service.
+
+    For more details, see the command documentation:
+
+    https://docs.openstack.org/nova/latest/cli/nova-manage.html#placement

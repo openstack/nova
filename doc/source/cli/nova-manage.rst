@@ -321,6 +321,31 @@ Placement
     * 4: Command completed successfully but no allocations were created.
     * 127: Invalid input.
 
+``nova-manage placement sync_aggregates [--verbose]``
+    Mirrors compute host aggregates to resource provider aggregates
+    in the Placement service. Requires the ``[api_database]`` and
+    ``[placement]`` sections of the nova configuration file to be
+    populated.
+
+    Specify ``--verbose`` to get detailed progress output during execution.
+
+    .. note:: Depending on the size of your deployment and the number of
+        compute hosts in aggregates, this command could cause a non-negligible
+        amount of traffic to the placement service and therefore is
+        recommended to be run during maintenance windows.
+
+    .. versionadded:: Rocky
+
+    Return codes:
+
+    * 0: Successful run
+    * 1: A host was found with more than one matching compute node record
+    * 2: An unexpected error occurred while working with the placement API
+    * 3: Failed updating provider aggregates in placement
+    * 4: Host mappings not found for one or more host aggregate members
+    * 5: Compute node records not found for one or more hosts
+    * 6: Resource provider not found by uuid for a given host
+
 
 See Also
 ========

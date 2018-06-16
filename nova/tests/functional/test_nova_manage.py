@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 import fixtures
 from six.moves import StringIO
 
@@ -642,3 +644,89 @@ class TestNovaManagePlacementHealAllocations(
             '/allocations/%s' % server['id'], version='1.12').body
         self.assertEqual(server['tenant_id'], allocations['project_id'])
         self.assertEqual(server['user_id'], allocations['user_id'])
+
+
+class TestNovaManagePlacementSyncAggregates(
+        integrated_helpers.ProviderUsageBaseTestCase):
+    """Functional tests for nova-manage placement sync_aggregates"""
+
+    # This is required by the parent class.
+    compute_driver = 'fake.SmallFakeDriver'
+
+    def setUp(self):
+        super(TestNovaManagePlacementSyncAggregates, self).setUp()
+        self.cli = manage.PlacementCommands()
+        # Start two computes. At least two computes are useful for testing
+        # to make sure removing one from an aggregate doesn't remove the other.
+        self._start_compute('host1')
+        self._start_compute('host2')
+        # Make sure we have two hypervisors reported in the API.
+        hypervisors = self.admin_api.api_get(
+            '/os-hypervisors').body['hypervisors']
+        self.assertEqual(2, len(hypervisors))
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+
+    def _create_aggregate(self, name):
+        return self.admin_api.post_aggregate({'aggregate': {'name': name}})
+
+    def test_sync_aggregates(self):
+        """This is a simple test which does the following:
+
+        - add each host to a unique aggregate
+        - add both hosts to a shared aggregate
+        - run sync_aggregates and assert both providers are in two aggregates
+        - run sync_aggregates again and make sure nothing changed
+        """
+        # create three aggregates, one per host and one shared
+        host1_agg = self._create_aggregate('host1')
+        host2_agg = self._create_aggregate('host2')
+        shared_agg = self._create_aggregate('shared')
+
+        # Add the hosts to the aggregates. We have to temporarily mock out the
+        # scheduler report client to *not* mirror the add host changes so that
+        # sync_aggregates will do the job.
+        with mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                        'aggregate_add_host'):
+            self.admin_api.add_host_to_aggregate(host1_agg['id'], 'host1')
+            self.admin_api.add_host_to_aggregate(host2_agg['id'], 'host2')
+            self.admin_api.add_host_to_aggregate(shared_agg['id'], 'host1')
+            self.admin_api.add_host_to_aggregate(shared_agg['id'], 'host2')
+
+        # Run sync_aggregates and assert both providers are in two aggregates.
+        result = self.cli.sync_aggregates(verbose=True)
+        self.assertEqual(0, result, self.output.getvalue())
+
+        host_to_rp_uuid = {}
+        for host in ('host1', 'host2'):
+            rp_uuid = self._get_provider_uuid_by_host(host)
+            host_to_rp_uuid[host] = rp_uuid
+            rp_aggregates = self._get_provider_aggregates(rp_uuid)
+            self.assertEqual(2, len(rp_aggregates),
+                             '%s should be in two provider aggregates' % host)
+            self.assertIn(
+                'Successfully added host (%s) and provider (%s) to aggregate '
+                '(%s)' % (host, rp_uuid, shared_agg['uuid']),
+                self.output.getvalue())
+
+        # Remove host1 from the shared aggregate. Again, we have to temporarily
+        # mock out the call from the aggregates API to placement to mirror the
+        # change.
+        with mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                        'aggregate_remove_host'):
+            self.admin_api.remove_host_from_aggregate(
+                shared_agg['id'], 'host1')
+
+        # Run sync_aggregates and assert the provider for host1 is still in two
+        # aggregates and host2's provider is still in two aggregates.
+        # TODO(mriedem): When we add an option to remove providers from
+        # placement aggregates when the corresponding host isn't in a compute
+        # aggregate, we can test that the host1 provider is only left in one
+        # aggregate.
+        result = self.cli.sync_aggregates(verbose=True)
+        self.assertEqual(0, result, self.output.getvalue())
+        for host in ('host1', 'host2'):
+            rp_uuid = host_to_rp_uuid[host]
+            rp_aggregates = self._get_provider_aggregates(rp_uuid)
+            self.assertEqual(2, len(rp_aggregates),
+                             '%s should be in two provider aggregates' % host)

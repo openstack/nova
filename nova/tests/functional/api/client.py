@@ -434,6 +434,10 @@ class TestOpenStackClient(object):
         return self.api_post('/os-aggregates/%s/action' % aggregate_id,
                              {'add_host': {'host': host}})
 
+    def remove_host_from_aggregate(self, aggregate_id, host):
+        return self.api_post('/os-aggregates/%s/action' % aggregate_id,
+                             {'remove_host': {'host': host}})
+
     def get_limits(self):
         return self.api_get('/limits').body['limits']
 
