@@ -51,6 +51,12 @@ CONF = nova.conf.CONF
 PLACEMENT_DOCS_LINK = 'https://docs.openstack.org/nova/latest' \
                       '/user/placement.html'
 
+# NOTE(efried): 1.25 is required by nova-scheduler to make granular
+# resource requests to GET /allocation_candidates.
+# NOTE: If you bump this version, remember to update the history
+# section in the nova-status man page (doc/source/cli/nova-status).
+MIN_PLACEMENT_MICROVERSION = "1.25"
+
 
 class UpgradeCheckCode(enum.IntEnum):
     """These are the status codes for the nova-status upgrade check command
@@ -199,11 +205,8 @@ class UpgradeCommands(object):
             versions = self._placement_get("/")
             max_version = pkg_resources.parse_version(
                 versions["versions"][0]["max_version"])
-            # NOTE(efried): 1.25 is required by nova-scheduler to make granular
-            # resource requests to GET /allocation_candidates.
-            # NOTE: If you bump this version, remember to update the history
-            # section in the nova-status man page (doc/source/cli/nova-status).
-            needs_version = pkg_resources.parse_version("1.25")
+            needs_version = pkg_resources.parse_version(
+                MIN_PLACEMENT_MICROVERSION)
             if max_version < needs_version:
                 msg = (_('Placement API version %(needed)s needed, '
                          'you have %(current)s.') %
