@@ -3001,8 +3001,10 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
     only provider with enough inventory of SRIOV_NET_VF but it does not have
     the required HW_NIC_OFFLOAD_GENEVE trait).
 
-    :note: This function is used for scenarios that do NOT involve sharing
-    providers AND where there are nested providers present in the deployment.
+    :note: This function is used for scenarios to get results for a
+    RequestGroup with use_same_provider=False. In this scenario, we are able
+    to use multiple providers within the same provider tree including sharing
+    providers to satisfy different resources involved in a single RequestGroup.
 
     :param ctx: Session context to use
     :param resources: A dict, keyed by resource class ID, of the amount
@@ -3045,7 +3047,8 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
         if sharing_providers:
             # There are sharing providers for this resource class, so we
             # should also get combinations of (sharing provider, anchor root)
-            # in addition to (nested provider, anchor root) we already have.
+            # in addition to (non-sharing provider, anchor root) we already
+            # have.
             rc_provs_with_inv = _anchors_for_sharing_providers(
                                         ctx, sharing_providers, get_id=True)
             rc_provs_with_inv = set(
