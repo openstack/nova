@@ -70,8 +70,8 @@ def check_accept(*types):
         @functools.wraps(f)
         def decorated_function(req):
             if req.accept:
-                best_match = req.accept.best_match(types)
-                if not best_match:
+                best_matches = req.accept.acceptable_offers(types)
+                if not best_matches:
                     type_string = ', '.join(types)
                     raise webob.exc.HTTPNotAcceptable(
                         _('Only %(type)s is provided') % {'type': type_string},
