@@ -685,8 +685,7 @@ class ResourceTracker(object):
 
         self._update_available_resource(context, resources)
 
-    def _pair_instances_to_migrations(self, migrations, instances):
-        instance_by_uuid = {inst.uuid: inst for inst in instances}
+    def _pair_instances_to_migrations(self, migrations, instance_by_uuid):
         for migration in migrations:
             try:
                 migration.instance = instance_by_uuid[migration.instance_uuid]
@@ -724,17 +723,19 @@ class ResourceTracker(object):
                             'flavor', 'migration_context'])
 
         # Now calculate usage based on instance utilization:
-        self._update_usage_from_instances(context, instances, nodename)
+        instance_by_uuid = self._update_usage_from_instances(
+            context, instances, nodename)
 
         # Grab all in-progress migrations:
         migrations = objects.MigrationList.get_in_progress_by_host_and_node(
                 context, self.host, nodename)
 
-        self._pair_instances_to_migrations(migrations, instances)
+        self._pair_instances_to_migrations(migrations, instance_by_uuid)
         self._update_usage_from_migrations(context, migrations, nodename)
 
         self._remove_deleted_instances_allocations(
-            context, self.compute_nodes[nodename], migrations)
+            context, self.compute_nodes[nodename], migrations,
+            instance_by_uuid)
 
         # Detect and account for orphaned instances that may exist on the
         # hypervisor, but are not in the DB:
@@ -1241,7 +1242,7 @@ class ResourceTracker(object):
             msg_allocation_refresh += (
                 "Will auto-correct allocations to handle "
                 "Ocata-style assumptions.")
-
+        instance_by_uuid = {}
         for instance in instances:
             if instance.vm_state not in vm_states.ALLOW_RESOURCE_REMOVAL:
                 if msg_allocation_refresh:
@@ -1249,9 +1250,11 @@ class ResourceTracker(object):
                     msg_allocation_refresh = False
                 self._update_usage_from_instance(context, instance, nodename,
                     require_allocation_refresh=require_allocation_refresh)
+            instance_by_uuid[instance.uuid] = instance
+        return instance_by_uuid
 
     def _remove_deleted_instances_allocations(self, context, cn,
-                                              migrations):
+                                              migrations, instance_by_uuid):
         migration_uuids = [migration.uuid for migration in migrations
                            if 'uuid' in migration]
         # NOTE(jaypipes): All of this code sucks. It's basically dealing with
@@ -1277,22 +1280,25 @@ class ResourceTracker(object):
 
             # We know these are instances now, so proceed
             instance_uuid = consumer_uuid
-            try:
-                instance = objects.Instance.get_by_uuid(read_deleted_context,
-                                                        instance_uuid,
-                                                        expected_attrs=[])
-            except exception.InstanceNotFound:
-                # The instance isn't even in the database. Either the scheduler
-                # _just_ created an allocation for it and we're racing with the
-                # creation in the cell database, or the instance was deleted
-                # and fully archived before we got a chance to run this. The
-                # former is far more likely than the latter. Avoid deleting
-                # allocations for a building instance here.
-                LOG.info("Instance %(uuid)s has allocations against this "
-                         "compute host but is not found in the database.",
-                         {'uuid': instance_uuid},
-                         exc_info=False)
-                continue
+            instance = instance_by_uuid.get(instance_uuid)
+            if not instance:
+                try:
+                    instance = objects.Instance.get_by_uuid(
+                        read_deleted_context, consumer_uuid,
+                        expected_attrs=[])
+                except exception.InstanceNotFound:
+                    # The instance isn't even in the database. Either the
+                    # scheduler _just_ created an allocation for it and we're
+                    # racing with the creation in the cell database, or the
+                    #  instance was deleted and fully archived before we got a
+                    # chance to run this. The former is far more likely than
+                    # the latter. Avoid deleting allocations for a building
+                    # instance here.
+                    LOG.info("Instance %(uuid)s has allocations against this "
+                             "compute host but is not found in the database.",
+                             {'uuid': instance_uuid},
+                             exc_info=False)
+                    continue
 
             if instance.deleted:
                 # The instance is gone, so we definitely want to remove
