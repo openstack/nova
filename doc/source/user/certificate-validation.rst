@@ -70,7 +70,7 @@ Limitations
   ``os_compute_api:servers:create:trusted_certs`` and
   ``os_compute_api:servers:rebuild:trusted_certs`` policy rules.
 
-.. _feature support matrix: https://docs.openstack.org/nova/latest/user/support-matrix.html
+.. _feature support matrix: https://docs.openstack.org/nova/latest/user/support-matrix.html#operation_trusted_certs
 .. _policy configuration: https://docs.openstack.org/nova/latest/configuration/policy.html
 
 Configuration
@@ -152,15 +152,17 @@ Certificate validation is triggered by one of two ways:
 
    Command-Line Flag
      If booting or rebuilding an instance using the :command:`nova` commands,
-     use the ``--trusted-image-certificate-ids`` flag to define a comma-delimited
-     list of trusted certificate IDs. For example:
+     use the ``--trusted-image-certificate-id`` flag to define a single trusted
+     certificate ID. The flag may be used multiple times to specify multiple trusted
+     certificate IDs. For example:
 
      .. code-block:: console
 
        $ nova boot myInstanceName \
            --flavor 1 \
            --image myImageId \
-           --trusted-image-certificate-ids 79a6ad17-3298-4e55-8b3a-1672dd93c40f,b20f5600-3c9d-4af5-8f37-3110df3533a0
+           --trusted-image-certificate-id 79a6ad17-3298-4e55-8b3a-1672dd93c40f \
+           --trusted-image-certificate-id b20f5600-3c9d-4af5-8f37-3110df3533a0
 
      If booting or rebuilding an instance using the :command:`openstack server` commands,
      use the ``--trusted-image-certificate-id`` flag to define a single trusted
@@ -651,7 +653,8 @@ Boot the signed image with trusted certificate IDs:
   $ nova boot myInstance \
       --flavor m1.tiny \
       --image cirros_client_signedImage \
-      --trusted-image-certificate-ids "$cert_ca_uuid,$cert_intermediate_a_uuid,$cert_intermediate_b_uuid"
+      --trusted-image-certificate-id $cert_ca_uuid,$cert_intermediate_a_uuid \
+      --trusted-image-certificate-id $cert_intermediate_b_uuid
 
 .. note:: The instance should successfully boot and certificate validation
           should succeed. The Nova log output should indicate that "Image
