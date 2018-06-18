@@ -1527,6 +1527,8 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
     # This represents a bootable image-backed volume to test
     # boot-from-volume scenarios.
     IMAGE_BACKED_VOL = '6ca404f3-d844-4169-bb96-bc792f37de98'
+    # This represents a bootable image-backed volume with required traits
+    # as part of volume image metadata
     IMAGE_WITH_TRAITS_BACKED_VOL = '6194fc02-c60e-4a01-a8e5-600798208b5f'
 
     def __init__(self, test):
@@ -1606,8 +1608,8 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                 }
 
             # Check for our special image-backed volume.
-            if (volume_id == self.IMAGE_BACKED_VOL or
-                    volume_id == self.IMAGE_WITH_TRAITS_BACKED_VOL):
+            if volume_id in (self.IMAGE_BACKED_VOL,
+                             self.IMAGE_WITH_TRAITS_BACKED_VOL):
                 # Make it a bootable volume.
                 volume['bootable'] = True
                 if volume_id == self.IMAGE_BACKED_VOL:
@@ -1620,7 +1622,6 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                     # Add the image_id metadata with traits.
                     volume['volume_image_metadata'] = {
                         'image_id': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                        "container_format": "ami",
                         "trait:HW_CPU_X86_SGX": "required",
                     }
 

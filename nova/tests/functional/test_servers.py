@@ -3530,9 +3530,10 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
             flavor_id=flavor_id, networks='none')
         return self.api.post_server({'server': server_req})
 
-    def _create_server_with_volume(self, flavor_id, volume_id):
+    def _create_volume_backed_server_with_traits(self, flavor_id, volume_id):
         """Create a server with block device mapping(volume) with the given
-        flavor and volume id's
+        flavor and volume id's. Either the flavor or the image backing the
+        volume is expected to have the traits
         :param flavor_id: the flavor id
         :param volume_id: the volume id
         :return: create server response
@@ -3544,8 +3545,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
                 'flavorRef': flavor_id,
                 'name': 'test_image_trait_on_volume_backed',
                 # We don't care about networking for this test. This
-                # requires
-                # microversion >= 2.37.
+                # requires microversion >= 2.37.
                 'networks': 'none',
                 'block_device_mapping_v2': [{
                     'boot_index': 0,
@@ -3615,8 +3615,9 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
 
     def test_image_trait_on_volume_backed_instance(self):
         """Tests that when trying to launch a volume-backed instance with a
-        required trait on the image, the instance ends up on the single compute
-        node resource provider that also has that trait in Placement.
+        required trait on the image metadata contained within the volume,
+        the instance ends up on the single compute node resource provider
+        that also has that trait in Placement.
         """
         # Decorate compute2 resource provider with volume image metadata trait.
         rp_uuid = self._get_provider_uuid_by_host(self.compute2.host)
@@ -3625,7 +3626,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
         # Create our server with a volume containing the image meta data with a
         # required trait
-        server = self._create_server_with_volume(
+        server = self._create_volume_backed_server_with_traits(
             self.flavor_without_trait['id'],
             nova_fixtures.CinderFixtureNewAttachFlow.
             IMAGE_WITH_TRAITS_BACKED_VOL)
@@ -3637,11 +3638,11 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
 
     def test_flavor_image_trait_on_volume_backed_instance(self):
         """Tests that when trying to launch a volume-backed instance with a
-        required trait on flavor AND a required trait on the image,
-        the instance ends up on the single compute node resource provider that
-        also has those traits in Placement.
+        required trait on flavor AND a required trait on the image metadata
+        contained within the volume, the instance ends up on the single
+        compute node resource provider that also has those traits in Placement.
         """
-        # Decorate compute2 resource provider with volume image metadatz trait.
+        # Decorate compute2 resource provider with volume image metadata trait.
         rp_uuid = self._get_provider_uuid_by_host(self.compute2.host)
         self._set_provider_traits(rp_uuid, ['HW_CPU_X86_VMX',
                                             'HW_CPU_X86_SGX'])
@@ -3649,7 +3650,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
         # Create our server with a flavor trait and a volume containing the
         # image meta data with a required trait
-        server = self._create_server_with_volume(
+        server = self._create_volume_backed_server_with_traits(
             self.flavor_with_trait['id'],
             nova_fixtures.CinderFixtureNewAttachFlow.
             IMAGE_WITH_TRAITS_BACKED_VOL)
@@ -3714,12 +3715,13 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
 
     def test_image_trait_on_volume_backed_instance_no_valid_host(self):
         """Tests that when trying to launch a volume-backed instance with a
-        required trait on the image fails to find a valid host since no compute
-        node resource providers have the trait.
+        required trait on the image metadata contained within the volume
+        fails to find a valid host since no compute node resource providers
+        have the trait.
         """
         self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
         # Create our server with a volume
-        server = self._create_server_with_volume(
+        server = self._create_volume_backed_server_with_traits(
             self.flavor_without_trait['id'],
             nova_fixtures.CinderFixtureNewAttachFlow.
             IMAGE_WITH_TRAITS_BACKED_VOL)
