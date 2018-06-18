@@ -76,6 +76,11 @@ def lvinfo(path):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def lvremove(path):
+    processutils.execute('lvremove', '-f', path, attempts=3)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def blockdev_size(path):
     return processutils.execute('blockdev', '--getsize64', path)
 
