@@ -5751,7 +5751,8 @@ server_trusted_image_certificates_resp:
   description: |
     A list of trusted certificate IDs, that were used during image signature
     verification to verify the signing certificate. The list is restricted
-    to a maximum of 50 IDs.
+    to a maximum of 50 IDs. The value is ``null`` if trusted certificate IDs
+    are not set.
   in: body
   required: true
   type: array

@@ -372,6 +372,7 @@ Request
   - user_data: user_data
   - description: server_description
   - tags: server_tags_create
+  - trusted_image_certificates: server_trusted_image_certificates_create_req
   - os:scheduler_hints: os:scheduler_hints
   - os:scheduler_hints.build_near_host_ip: os:scheduler_hints_build_near_host_ip
   - os:scheduler_hints.cidr: os:scheduler_hints_cidr
@@ -381,7 +382,6 @@ Request
   - os:scheduler_hints.query: os:scheduler_hints_query
   - os:scheduler_hints.same_host: os:scheduler_hints_same_host
   - os:scheduler_hints.target_cell: os:scheduler_hints_target_cell
-  - trusted_image_certificates: server_trusted_image_certificates_create_req
 
 **Example Create Server**
 
