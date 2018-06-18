@@ -825,95 +825,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
 
-    def _mock_list_ports(self, port_data=None):
-        if port_data is None:
-            port_data = self.port_data2
-        address = self.port_address
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_ports(
-            fixed_ips=MyComparator('ip_address=%s' % address)).AndReturn(
-                {'ports': port_data})
-        self.mox.ReplayAll()
-        return address
-
-    def test_get_fixed_ip_by_address_fails_for_no_ports(self):
-        address = self._mock_list_ports(port_data=[])
-        api = neutronapi.API()
-        self.assertRaises(exception.FixedIpNotFoundForAddress,
-                          api.get_fixed_ip_by_address,
-                          self.context, address)
-
-    def test_get_fixed_ip_by_address_succeeds_for_1_port(self):
-        address = self._mock_list_ports(port_data=self.port_data1)
-        api = neutronapi.API()
-        result = api.get_fixed_ip_by_address(self.context, address)
-        self.assertEqual(self.instance2['uuid'], result['instance_uuid'])
-
-    def test_get_fixed_ip_by_address_fails_for_more_than_1_port(self):
-        address = self._mock_list_ports()
-        api = neutronapi.API()
-        self.assertRaises(exception.FixedIpAssociatedWithMultipleInstances,
-                          api.get_fixed_ip_by_address,
-                          self.context, address)
-
-    def _get_available_networks(self, prv_nets, pub_nets,
-                                req_ids=None, context=None):
-        api = neutronapi.API()
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        nets = prv_nets + pub_nets
-        if req_ids:
-            mox_list_params = {'id': req_ids}
-            self.moxed_client.list_networks(
-                **mox_list_params).AndReturn({'networks': nets})
-        else:
-            mox_list_params = {'tenant_id': self.instance['project_id'],
-                               'shared': False}
-            self.moxed_client.list_networks(
-                **mox_list_params).AndReturn({'networks': prv_nets})
-            mox_list_params = {'shared': True}
-            self.moxed_client.list_networks(
-                **mox_list_params).AndReturn({'networks': pub_nets})
-
-        self.mox.ReplayAll()
-        rets = api._get_available_networks(
-            context if context else self.context,
-            self.instance['project_id'],
-            req_ids)
-        self.assertEqual(nets, rets)
-
-    def test_get_available_networks_all_private(self):
-        self._get_available_networks(prv_nets=self.nets2, pub_nets=[])
-
-    def test_get_available_networks_all_public(self):
-        self._get_available_networks(prv_nets=[], pub_nets=self.nets2)
-
-    def test_get_available_networks_private_and_public(self):
-        self._get_available_networks(prv_nets=self.nets1, pub_nets=self.nets4)
-
-    def test_get_available_networks_with_network_ids(self):
-        prv_nets = [self.nets3[0]]
-        pub_nets = [self.nets3[-1]]
-        # specify only first and last network
-        req_ids = [net['id'] for net in (self.nets3[0], self.nets3[-1])]
-        self._get_available_networks(prv_nets, pub_nets, req_ids)
-
-    def test_get_available_networks_with_custom_policy(self):
-        rules = {'network:attach_external_network': ''}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        req_ids = [net['id'] for net in self.nets5]
-        self._get_available_networks(self.nets5, pub_nets=[], req_ids=req_ids)
-
-    def test_get_floating_ip_pools(self):
-        api = neutronapi.API()
-        search_opts = {'router:external': True}
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_networks(**search_opts).\
-            AndReturn({'networks': [self.fip_pool, self.fip_pool_nova]})
-        self.mox.ReplayAll()
-        pools = api.get_floating_ip_pools(self.context)
-        expected = [self.fip_pool['name'], self.fip_pool_nova['name']]
-        self.assertEqual(expected, pools)
-
     def _get_expected_fip_model(self, fip_data, idx=0):
         expected = {'id': fip_data['id'],
                     'address': fip_data['floating_ip_address'],
@@ -3519,6 +3430,108 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         mocked_client.show_port.assert_has_calls([mock.call(port_a['id']),
                                                   mock.call(port_b['id'])])
         self.assertEqual(2, mocked_client.show_port.call_count)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def _test_get_fixed_ip_by_address_with_exception(self, mock_get_client,
+                                                     port_data=None,
+                                                     exception=None):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        if port_data is None:
+            port_data = self.port_data2
+        mocked_client.list_ports.return_value = {'ports': port_data}
+
+        result = None
+        if exception:
+            self.assertRaises(exception, self.api.get_fixed_ip_by_address,
+                              self.context, self.port_address)
+        else:
+            result = self.api.get_fixed_ip_by_address(self.context,
+                                                      self.port_address)
+
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_ports.assert_called_once_with(
+            fixed_ips='ip_address=%s' % self.port_address)
+
+        return result
+
+    def test_get_fixed_ip_by_address_fails_for_no_ports(self):
+        self._test_get_fixed_ip_by_address_with_exception(
+            port_data=[], exception=exception.FixedIpNotFoundForAddress)
+
+    def test_get_fixed_ip_by_address_succeeds_for_1_port(self):
+        result = self._test_get_fixed_ip_by_address_with_exception(
+            port_data=self.port_data1)
+        self.assertEqual(self.instance2['uuid'], result['instance_uuid'])
+
+    def test_get_fixed_ip_by_address_fails_for_more_than_1_port(self):
+        self._test_get_fixed_ip_by_address_with_exception(
+            exception=exception.FixedIpAssociatedWithMultipleInstances)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def _test_get_available_networks(self, prv_nets, pub_nets, mock_get_client,
+                                     req_ids=None, context=None):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        nets = prv_nets + pub_nets
+        if req_ids:
+            mocked_client.list_networks.return_value = {'networks': nets}
+        else:
+            mocked_client.list_networks.side_effect = [{'networks': prv_nets},
+                                                       {'networks': pub_nets}]
+
+        rets = self.api._get_available_networks(
+            context if context else self.context,
+            self.instance['project_id'],
+            req_ids)
+
+        self.assertEqual(nets, rets)
+        mock_get_client.assert_called_once_with(self.context)
+        if req_ids:
+            mocked_client.list_networks.assert_called_once_with(id=req_ids)
+        else:
+            mocked_client.list_networks.assert_has_calls([
+                mock.call(tenant_id=self.instance['project_id'], shared=False),
+                mock.call(shared=True)])
+            self.assertEqual(2, mocked_client.list_networks.call_count)
+
+    def test_get_available_networks_all_private(self):
+        self._test_get_available_networks(self.nets2, [])
+
+    def test_get_available_networks_all_public(self):
+        self._test_get_available_networks([], self.nets2)
+
+    def test_get_available_networks_private_and_public(self):
+        self._test_get_available_networks(self.nets1, self.nets4)
+
+    def test_get_available_networks_with_network_ids(self):
+        prv_nets = [self.nets3[0]]
+        pub_nets = [self.nets3[-1]]
+        # specify only first and last network
+        req_ids = [net['id'] for net in (self.nets3[0], self.nets3[-1])]
+        self._test_get_available_networks(prv_nets, pub_nets, req_ids=req_ids)
+
+    def test_get_available_networks_with_custom_policy(self):
+        rules = {'network:attach_external_network': ''}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
+        req_ids = [net['id'] for net in self.nets5]
+        self._test_get_available_networks(self.nets5, [],
+                                          req_ids=req_ids)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_floating_ip_pools(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        search_opts = {'router:external': True}
+        mocked_client.list_networks.return_value = {
+            'networks': [self.fip_pool, self.fip_pool_nova]}
+
+        pools = self.api.get_floating_ip_pools(self.context)
+
+        expected = [self.fip_pool['name'], self.fip_pool_nova['name']]
+        self.assertEqual(expected, pools)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_called_once_with(**search_opts)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_trusted(self, mock_get_client):
