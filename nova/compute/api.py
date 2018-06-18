@@ -2443,7 +2443,9 @@ class API(base.Base):
         skip_build_request = False
         orig_limit = limit
         if filter_ip:
-            skip_build_request = True
+            # We cannot skip build requests if there is a marker since the
+            # the marker could be a build request.
+            skip_build_request = marker is None
             if self.network_api.has_substr_port_filtering_extension(context):
                 # We're going to filter by IP using Neutron so set filter_ip
                 # to False so we don't attempt post-DB query filtering in
