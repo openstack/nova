@@ -1,0 +1,8 @@
+---
+security:
+  - |
+    The 'AMD-SSBD' and 'AMD-NO-SSB' flags have been added to the list of available
+    choices for the ``[libvirt]/cpu_model_extra_flags`` config option. These are
+    important for proper mitigation of security issues in AMD CPUs. For more
+    information see
+    https://www.redhat.com/archives/libvir-list/2018-June/msg01111.html
