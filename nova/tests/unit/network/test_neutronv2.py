@@ -825,118 +825,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
 
-    def test_validate_networks_with_ports_and_networks(self):
-        # Test validation for a request for one instance needing
-        # one port allocated via nova with another port being passed in.
-        port_b = self.port_data2[1]
-        port_b['device_id'] = None
-        port_b['device_owner'] = None
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=uuids.my_netid1),
-                     objects.NetworkRequest(port_id=port_b['id'])])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.show_port(port_b['id']).AndReturn({'port': port_b})
-        ids = [uuids.my_netid1]
-        self.moxed_client.list_networks(
-            id=mox.SameElementsAs(ids)).AndReturn(
-                {'networks': self.nets1})
-        self.moxed_client.show_quota(
-            uuids.my_tenant).AndReturn(
-                    {'quota': {'port': 5}})
-        self.moxed_client.list_ports(
-            tenant_id=uuids.my_tenant, fields=['id']).AndReturn(
-                    {'ports': self.port_data2})
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        max_count = api.validate_networks(self.context,
-                                          requested_networks, 1)
-        self.assertEqual(1, max_count)
-
-    def test_validate_networks_one_port_and_no_networks(self):
-        # Test that show quota is not called if no networks are
-        # passed in and only ports.
-        port_b = self.port_data2[1]
-        port_b['device_id'] = None
-        port_b['device_owner'] = None
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=port_b['id'])])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.show_port(port_b['id']).AndReturn({'port': port_b})
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        max_count = api.validate_networks(self.context,
-                                          requested_networks, 1)
-        self.assertEqual(1, max_count)
-
-    def test_validate_networks_some_quota(self):
-        # Test validation for a request for two instance needing
-        # two ports each, where the quota is 5 and 2 ports are in use
-        #  => instances which can be created = 1
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=uuids.my_netid1),
-                     objects.NetworkRequest(network_id=uuids.my_netid2)])
-        ids = [uuids.my_netid1, uuids.my_netid2]
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_networks(
-            id=mox.SameElementsAs(ids)).AndReturn(
-                {'networks': self.nets2})
-        self.moxed_client.show_quota(
-            uuids.my_tenant).AndReturn(
-                    {'quota': {'port': 5}})
-        self.moxed_client.list_ports(
-            tenant_id=uuids.my_tenant, fields=['id']).AndReturn(
-                    {'ports': self.port_data2})
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        max_count = api.validate_networks(self.context,
-                                          requested_networks, 2)
-        self.assertEqual(1, max_count)
-
-    def test_validate_networks_unlimited_quota(self):
-        # Test validation for a request for two instance needing
-        # two ports each, where the quota is -1 (unlimited)
-        #  => instances which can be created = 1
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=uuids.my_netid1),
-                     objects.NetworkRequest(network_id=uuids.my_netid2)])
-        ids = [uuids.my_netid1, uuids.my_netid2]
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_networks(
-            id=mox.SameElementsAs(ids)).AndReturn(
-                {'networks': self.nets2})
-        self.moxed_client.show_quota(
-            uuids.my_tenant).AndReturn(
-                    {'quota': {'port': -1}})
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        max_count = api.validate_networks(self.context,
-                                          requested_networks, 2)
-        self.assertEqual(2, max_count)
-
-    def test_validate_networks_no_quota_but_ports_supplied(self):
-        port_a = self.port_data3[0]
-        port_a['fixed_ips'] = {'ip_address': '10.0.0.2',
-                               'subnet_id': 'subnet_id'}
-        port_b = self.port_data2[1]
-        self.assertNotEqual(port_a['network_id'], port_b['network_id'])
-        for port in [port_a, port_b]:
-            port['device_id'] = None
-            port['device_owner'] = None
-
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=port_a['id']),
-                     objects.NetworkRequest(port_id=port_b['id'])])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.show_port(port_a['id']).AndReturn({'port': port_a})
-        self.moxed_client.show_port(port_b['id']).AndReturn({'port': port_b})
-
-        self.mox.ReplayAll()
-
-        api = neutronapi.API()
-        max_count = api.validate_networks(self.context,
-                                          requested_networks, 1)
-        self.assertEqual(1, max_count)
-
     def _mock_list_ports(self, port_data=None):
         if port_data is None:
             port_data = self.port_data2
@@ -3506,6 +3394,131 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         mocked_client.show_quota.assert_called_once_with(uuids.my_tenant)
         mocked_client.list_ports.assert_called_once_with(
             tenant_id=uuids.my_tenant, fields=['id'])
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_with_ports_and_networks(self, mock_get_client):
+        # Test validation for a request for one instance needing
+        # one port allocated via nova with another port being passed in.
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        port_b = self.port_data2[1]
+        port_b['device_id'] = None
+        port_b['device_owner'] = None
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=uuids.my_netid1),
+                     objects.NetworkRequest(port_id=port_b['id'])])
+        mocked_client.show_port.return_value = {'port': port_b}
+        ids = [uuids.my_netid1]
+        mocked_client.list_networks.return_value = {'networks': self.nets1}
+        mocked_client.show_quota.return_value = {'quota': {'port': 5}}
+        mocked_client.list_ports.return_value = {'ports': self.port_data2}
+
+        max_count = self.api.validate_networks(self.context,
+                                               requested_networks, 1)
+
+        self.assertEqual(1, max_count)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.show_port.assert_called_once_with(port_b['id'])
+        mocked_client.list_networks.assert_called_once_with(id=ids)
+        mocked_client.show_quota.assert_called_once_with(uuids.my_tenant)
+        mocked_client.list_ports.assert_called_once_with(
+            tenant_id=uuids.my_tenant, fields=['id'])
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_one_port_and_no_networks(self, mock_get_client):
+        # Test that show quota is not called if no networks are
+        # passed in and only ports.
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        port_b = self.port_data2[1]
+        port_b['device_id'] = None
+        port_b['device_owner'] = None
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=port_b['id'])])
+        mocked_client.show_port.return_value = {'port': port_b}
+
+        max_count = self.api.validate_networks(self.context,
+                                               requested_networks, 1)
+
+        self.assertEqual(1, max_count)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.show_port.assert_called_once_with(port_b['id'])
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_some_quota(self, mock_get_client):
+        # Test validation for a request for two instance needing
+        # two ports each, where the quota is 5 and 2 ports are in use
+        #  => instances which can be created = 1
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=uuids.my_netid1),
+                     objects.NetworkRequest(network_id=uuids.my_netid2)])
+        ids = [uuids.my_netid1, uuids.my_netid2]
+        mocked_client.list_networks.return_value = {'networks': self.nets2}
+        mocked_client.show_quota.return_value = {'quota': {'port': 5}}
+        mocked_client.list_ports.return_value = {'ports': self.port_data2}
+
+        max_count = self.api.validate_networks(self.context,
+                                               requested_networks, 2)
+
+        self.assertEqual(1, max_count)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_called_once_with(id=ids)
+        mocked_client.show_quota.assert_called_once_with(uuids.my_tenant)
+        mocked_client.list_ports.assert_called_once_with(
+            tenant_id=uuids.my_tenant, fields=['id'])
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_unlimited_quota(self, mock_get_client):
+        # Test validation for a request for two instance needing
+        # two ports each, where the quota is -1 (unlimited)
+        #  => instances which can be created = 1
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=uuids.my_netid1),
+                     objects.NetworkRequest(network_id=uuids.my_netid2)])
+        ids = [uuids.my_netid1, uuids.my_netid2]
+        mocked_client.list_networks.return_value = {'networks': self.nets2}
+        mocked_client.show_quota.return_value = {'quota': {'port': -1}}
+
+        max_count = self.api.validate_networks(self.context,
+                                               requested_networks, 2)
+
+        self.assertEqual(2, max_count)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_called_once_with(id=ids)
+        mocked_client.show_quota.assert_called_once_with(uuids.my_tenant)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_no_quota_but_ports_supplied(self,
+                                                           mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        port_a = self.port_data3[0]
+        port_a['fixed_ips'] = {'ip_address': '10.0.0.2',
+                               'subnet_id': 'subnet_id'}
+        port_b = self.port_data2[1]
+        self.assertNotEqual(port_a['network_id'], port_b['network_id'])
+        for port in [port_a, port_b]:
+            port['device_id'] = None
+            port['device_owner'] = None
+
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=port_a['id']),
+                     objects.NetworkRequest(port_id=port_b['id'])])
+        mocked_client.show_port.side_effect = [{'port': port_a},
+                                               {'port': port_b}]
+
+        max_count = self.api.validate_networks(self.context,
+                                               requested_networks, 1)
+
+        self.assertEqual(1, max_count)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.show_port.assert_has_calls([mock.call(port_a['id']),
+                                                  mock.call(port_b['id'])])
+        self.assertEqual(2, mocked_client.show_port.call_count)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_trusted(self, mock_get_client):
