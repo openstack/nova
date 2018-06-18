@@ -822,136 +822,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
 
-    def test_validate_networks_ex_1(self):
-        requested_networks = [(uuids.my_netid1, None, None, None)]
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_networks(
-            id=mox.SameElementsAs([uuids.my_netid1])).AndReturn(
-                {'networks': self.nets1})
-        self.moxed_client.show_quota(
-            uuids.my_tenant).AndReturn(
-                    {'quota': {'port': 50}})
-        self.moxed_client.list_ports(
-            tenant_id=uuids.my_tenant, fields=['id']).AndReturn(
-                    {'ports': []})
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        try:
-            api.validate_networks(self.context, requested_networks, 1)
-        except exception.NetworkNotFound as ex:
-            self.assertIn("my_netid2", six.text_type(ex))
-
-    def test_validate_networks_ex_2(self):
-        requested_networks = [(uuids.my_netid1, None, None, None),
-                              (uuids.my_netid2, None, None, None),
-                              (uuids.my_netid3, None, None, None)]
-        ids = [uuids.my_netid1, uuids.my_netid2, uuids.my_netid3]
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_networks(
-            id=mox.SameElementsAs(ids)).AndReturn(
-                {'networks': self.nets1})
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        try:
-            api.validate_networks(self.context, requested_networks, 1)
-        except exception.NetworkNotFound as ex:
-            self.assertIn(uuids.my_netid2, six.text_type(ex))
-            self.assertIn(uuids.my_netid3, six.text_type(ex))
-
-    def test_validate_networks_duplicate_enable(self):
-        # Verify that no duplicateNetworks exception is thrown when duplicate
-        # network ids are passed to validate_networks.
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=uuids.my_netid1),
-                     objects.NetworkRequest(network_id=uuids.my_netid1)])
-        ids = [uuids.my_netid1, uuids.my_netid1]
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_networks(
-            id=mox.SameElementsAs(ids)).AndReturn(
-                 {'networks': self.nets1})
-        self.moxed_client.show_quota(
-            uuids.my_tenant).AndReturn(
-                {'quota': {'port': 50}})
-        self.moxed_client.list_ports(
-            tenant_id=uuids.my_tenant, fields=['id']).AndReturn(
-                 {'ports': []})
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        api.validate_networks(self.context, requested_networks, 1)
-
-    def test_validate_networks_not_specified(self):
-        requested_networks = objects.NetworkRequestList(objects=[])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_networks(
-            tenant_id=self.context.project_id,
-            shared=False).AndReturn(
-                {'networks': self.nets1})
-        self.moxed_client.list_networks(
-            shared=True).AndReturn(
-                {'networks': self.nets2})
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        self.assertRaises(exception.NetworkAmbiguous,
-                          api.validate_networks,
-                          self.context, requested_networks, 1)
-
-    def test_validate_networks_port_not_found(self):
-        # Verify that the correct exception is thrown when a non existent
-        # port is passed to validate_networks.
-
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(
-                network_id=uuids.my_netid1,
-                port_id=uuids.portid_1)])
-
-        PortNotFound = exceptions.PortNotFoundClient()
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.show_port(requested_networks[0].port_id).AndRaise(
-            PortNotFound)
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        self.assertRaises(exception.PortNotFound,
-                          api.validate_networks,
-                          self.context, requested_networks, 1)
-
-    def test_validate_networks_port_show_raises_non404(self):
-        # Verify that the correct exception is thrown when a non existent
-        # port is passed to validate_networks.
-        fake_port_id = uuids.portid_1
-
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(
-                network_id=uuids.my_netid1,
-                port_id=fake_port_id)])
-
-        NeutronNotFound = exceptions.NeutronClientException(status_code=0)
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.show_port(requested_networks[0].port_id).AndRaise(
-                                                        NeutronNotFound)
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        exc = self.assertRaises(exception.NovaException,
-                                api.validate_networks,
-                                self.context, requested_networks, 1)
-        expected_exception_message = ('Failed to access port %(port_id)s: '
-                                      'An unknown exception occurred.' %
-                                      {'port_id': fake_port_id})
-        self.assertEqual(expected_exception_message, str(exc))
-
-    def test_validate_networks_port_in_use(self):
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=self.port_data3[0]['id'])])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.show_port(self.port_data3[0]['id']).\
-            AndReturn({'port': self.port_data3[0]})
-
-        self.mox.ReplayAll()
-
-        api = neutronapi.API()
-        self.assertRaises(exception.PortInUse,
-                          api.validate_networks,
-                          self.context, requested_networks, 1)
-
     def test_validate_networks_port_no_subnet_id(self):
         port_a = self.port_data3[0]
         port_a['device_id'] = None
@@ -3419,6 +3289,63 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         mocked_client.list_networks.assert_called_once_with(id=ids)
         mocked_client.show_quota.assert_called_once_with(uuids.my_tenant)
 
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_ex_1(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        requested_networks = [(uuids.my_netid1, None, None, None)]
+        mocked_client.list_networks.return_value = {'networks': []}
+
+        ex = self.assertRaises(exception.NetworkNotFound,
+                               self.api.validate_networks, self.context,
+                               requested_networks, 1)
+
+        self.assertIn(uuids.my_netid1, six.text_type(ex))
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_called_once_with(
+            id=[uuids.my_netid1])
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_ex_2(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        requested_networks = [(uuids.my_netid1, None, None, None),
+                              (uuids.my_netid2, None, None, None),
+                              (uuids.my_netid3, None, None, None)]
+        ids = [uuids.my_netid1, uuids.my_netid2, uuids.my_netid3]
+        mocked_client.list_networks.return_value = {'networks': self.nets1}
+
+        ex = self.assertRaises(exception.NetworkNotFound,
+                               self.api.validate_networks,
+                               self.context, requested_networks, 1)
+
+        self.assertIn(uuids.my_netid2, six.text_type(ex))
+        self.assertIn(uuids.my_netid3, six.text_type(ex))
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_called_once_with(id=ids)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_duplicate_enable(self, mock_get_client):
+        # Verify that no duplicateNetworks exception is thrown when duplicate
+        # network ids are passed to validate_networks.
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=uuids.my_netid1),
+                     objects.NetworkRequest(network_id=uuids.my_netid1)])
+        ids = [uuids.my_netid1, uuids.my_netid1]
+        mocked_client.list_networks.return_value = {'networks': self.nets1}
+        mocked_client.show_quota.return_value = {'quota': {'port': 50}}
+        mocked_client.list_ports.return_value = {'ports': []}
+
+        self.api.validate_networks(self.context, requested_networks, 1)
+
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_called_once_with(id=ids)
+        mocked_client.show_quota.assert_called_once_with(uuids.my_tenant)
+        mocked_client.list_ports.assert_called_once_with(
+            tenant_id=uuids.my_tenant, fields=['id'])
+
     def test_allocate_for_instance_with_requested_networks_duplicates(self):
         # specify a duplicate network to allocate to instance
         requested_networks = objects.NetworkRequestList(
@@ -3444,6 +3371,83 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
                      objects.NetworkRequest(port_id=self.port_data3[0]['id'])])
         self._test_allocate_for_instance_with_virtual_interface(
             net_idx=7, requested_networks=requested_networks)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_not_specified(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        requested_networks = objects.NetworkRequestList(objects=[])
+        mocked_client.list_networks.side_effect = [
+            {'networks': self.nets1}, {'networks': self.nets2}]
+        self.assertRaises(exception.NetworkAmbiguous,
+                          self.api.validate_networks,
+                          self.context, requested_networks, 1)
+
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_has_calls([
+            mock.call(tenant_id=self.context.project_id, shared=False),
+            mock.call(shared=True)])
+        self.assertEqual(2, mocked_client.list_networks.call_count)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_port_not_found(self, mock_get_client):
+        # Verify that the correct exception is thrown when a non existent
+        # port is passed to validate_networks.
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(
+                network_id=uuids.my_netid1,
+                port_id=uuids.portid_1)])
+
+        mocked_client.show_port.side_effect = exceptions.PortNotFoundClient
+        self.assertRaises(exception.PortNotFound,
+                          self.api.validate_networks,
+                          self.context, requested_networks, 1)
+
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.show_port.assert_called_once_with(
+            requested_networks[0].port_id)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_port_show_raises_non404(self, mock_get_client):
+        # Verify that the correct exception is thrown when a non existent
+        # port is passed to validate_networks.
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        fake_port_id = uuids.portid_1
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(
+                network_id=uuids.my_netid1,
+                port_id=fake_port_id)])
+        mocked_client.show_port.side_effect = (
+            exceptions.NeutronClientException(status_code=0))
+
+        exc = self.assertRaises(exception.NovaException,
+                                self.api.validate_networks,
+                                self.context, requested_networks, 1)
+        expected_exception_message = ('Failed to access port %(port_id)s: '
+                                      'An unknown exception occurred.' %
+                                      {'port_id': fake_port_id})
+        self.assertEqual(expected_exception_message, str(exc))
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.show_port.assert_called_once_with(
+            requested_networks[0].port_id)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_port_in_use(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=self.port_data3[0]['id'])])
+        mocked_client.show_port.return_value = {'port': self.port_data3[0]}
+
+        self.assertRaises(exception.PortInUse,
+                          self.api.validate_networks,
+                          self.context, requested_networks, 1)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.show_port.assert_called_once_with(
+            self.port_data3[0]['id'])
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_trusted(self, mock_get_client):
