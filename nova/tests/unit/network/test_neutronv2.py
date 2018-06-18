@@ -825,137 +825,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
 
-    def _get_expected_fip_model(self, fip_data, idx=0):
-        expected = {'id': fip_data['id'],
-                    'address': fip_data['floating_ip_address'],
-                    'pool': self.fip_pool['name'],
-                    'project_id': fip_data['tenant_id'],
-                    'fixed_ip': None,
-                    'instance': ({'uuid': self.port_data2[idx]['device_id']}
-                                 if fip_data['port_id']
-                                 else None)}
-        if fip_data['fixed_ip_address']:
-            expected['fixed_ip'] = {'address': fip_data['fixed_ip_address']}
-        return expected
-
-    def _compare(self, obj, dic):
-        for key, value in dic.items():
-            objvalue = obj[key]
-            if isinstance(value, dict):
-                self._compare(objvalue, value)
-            elif isinstance(objvalue, netaddr.IPAddress):
-                self.assertEqual(value, str(objvalue))
-            else:
-                self.assertEqual(value, objvalue)
-
-    def _test_get_floating_ip(self, fip_data, idx=0, by_address=False):
-        api = neutronapi.API()
-        fip_id = fip_data['id']
-        net_id = fip_data['floating_network_id']
-        address = fip_data['floating_ip_address']
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        if by_address:
-            self.moxed_client.list_floatingips(floating_ip_address=address).\
-                AndReturn({'floatingips': [fip_data]})
-        else:
-            self.moxed_client.show_floatingip(fip_id).\
-                AndReturn({'floatingip': fip_data})
-        self.moxed_client.show_network(net_id).\
-            AndReturn({'network': self.fip_pool})
-        if fip_data['port_id']:
-            self.moxed_client.show_port(fip_data['port_id']).\
-                AndReturn({'port': self.port_data2[idx]})
-        self.mox.ReplayAll()
-
-        expected = self._get_expected_fip_model(fip_data, idx)
-
-        if by_address:
-            fip = api.get_floating_ip_by_address(self.context, address)
-        else:
-            fip = api.get_floating_ip(self.context, fip_id)
-        self._compare(fip, expected)
-
-    def test_get_floating_ip_unassociated(self):
-        self._test_get_floating_ip(self.fip_unassociated, idx=0)
-
-    def test_get_floating_ip_associated(self):
-        self._test_get_floating_ip(self.fip_associated, idx=1)
-
-    def test_get_floating_ip_by_address(self):
-        self._test_get_floating_ip(self.fip_unassociated, idx=0,
-                                   by_address=True)
-
-    def test_get_floating_ip_by_address_associated(self):
-        self._test_get_floating_ip(self.fip_associated, idx=1,
-                                   by_address=True)
-
-    def test_get_floating_ip_by_address_not_found(self):
-        api = neutronapi.API()
-        address = self.fip_unassociated['floating_ip_address']
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_floatingips(floating_ip_address=address).\
-            AndReturn({'floatingips': []})
-        self.mox.ReplayAll()
-        self.assertRaises(exception.FloatingIpNotFoundForAddress,
-                          api.get_floating_ip_by_address,
-                          self.context, address)
-
-    def test_get_floating_ip_by_id_not_found(self):
-        api = neutronapi.API()
-        NeutronNotFound = exceptions.NeutronClientException(status_code=404)
-        floating_ip_id = self.fip_unassociated['id']
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.show_floatingip(floating_ip_id).\
-            AndRaise(NeutronNotFound)
-        self.mox.ReplayAll()
-        self.assertRaises(exception.FloatingIpNotFound,
-                          api.get_floating_ip,
-                          self.context, floating_ip_id)
-
-    def test_get_floating_ip_raises_non404(self):
-        api = neutronapi.API()
-        NeutronNotFound = exceptions.NeutronClientException(status_code=0)
-        floating_ip_id = self.fip_unassociated['id']
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.show_floatingip(floating_ip_id).\
-            AndRaise(NeutronNotFound)
-        self.mox.ReplayAll()
-        self.assertRaises(exceptions.NeutronClientException,
-                          api.get_floating_ip,
-                          self.context, floating_ip_id)
-
-    def test_get_floating_ip_by_address_multiple_found(self):
-        api = neutronapi.API()
-        address = self.fip_unassociated['floating_ip_address']
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_floatingips(floating_ip_address=address).\
-            AndReturn({'floatingips': [self.fip_unassociated] * 2})
-        self.mox.ReplayAll()
-        self.assertRaises(exception.FloatingIpMultipleFoundForAddress,
-                          api.get_floating_ip_by_address,
-                          self.context, address)
-
-    def test_get_floating_ips_by_project(self):
-        api = neutronapi.API()
-        project_id = self.context.project_id
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_floatingips(tenant_id=project_id).\
-            AndReturn({'floatingips': [self.fip_unassociated,
-                                       self.fip_associated]})
-        search_opts = {'router:external': True}
-        self.moxed_client.list_networks(**search_opts).\
-            AndReturn({'networks': [self.fip_pool, self.fip_pool_nova]})
-        self.moxed_client.list_ports(tenant_id=project_id).\
-                AndReturn({'ports': self.port_data2})
-        self.mox.ReplayAll()
-
-        expected = [self._get_expected_fip_model(self.fip_unassociated),
-                    self._get_expected_fip_model(self.fip_associated, idx=1)]
-        fips = api.get_floating_ips_by_project(self.context)
-        self.assertEqual(len(expected), len(fips))
-        for i, expected_value in enumerate(expected):
-            self._compare(fips[i], expected_value)
-
     def _test_get_instance_id_by_floating_address(self, fip_data,
                                                   associated=False):
         api = neutronapi.API()
@@ -3532,6 +3401,159 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         self.assertEqual(expected, pools)
         mock_get_client.assert_called_once_with(self.context)
         mocked_client.list_networks.assert_called_once_with(**search_opts)
+
+    def _get_expected_fip_model(self, fip_data, idx=0):
+        expected = {'id': fip_data['id'],
+                    'address': fip_data['floating_ip_address'],
+                    'pool': self.fip_pool['name'],
+                    'project_id': fip_data['tenant_id'],
+                    'fixed_ip': None,
+                    'instance': ({'uuid': self.port_data2[idx]['device_id']}
+                                 if fip_data['port_id']
+                                 else None)}
+        if fip_data['fixed_ip_address']:
+            expected['fixed_ip'] = {'address': fip_data['fixed_ip_address']}
+        return expected
+
+    def _compare(self, obj, dic):
+        for key, value in dic.items():
+            objvalue = obj[key]
+            if isinstance(value, dict):
+                self._compare(objvalue, value)
+            elif isinstance(objvalue, netaddr.IPAddress):
+                self.assertEqual(value, str(objvalue))
+            else:
+                self.assertEqual(value, objvalue)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def _test_get_floating_ip(self, fip_data, mock_get_client,
+                              idx=0, by_address=False):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        fip_id = fip_data['id']
+        net_id = fip_data['floating_network_id']
+        address = fip_data['floating_ip_address']
+        if by_address:
+            mocked_client.list_floatingips.return_value = {
+               'floatingips': [fip_data]}
+        else:
+            mocked_client.show_floatingip.return_value = {
+                'floatingip': fip_data}
+        mocked_client.show_network.return_value = {'network': self.fip_pool}
+        if fip_data['port_id']:
+            mocked_client.show_port.return_value = {
+                'port': self.port_data2[idx]}
+
+        expected = self._get_expected_fip_model(fip_data, idx)
+
+        if by_address:
+            fip = self.api.get_floating_ip_by_address(self.context, address)
+        else:
+            fip = self.api.get_floating_ip(self.context, fip_id)
+
+        self._compare(fip, expected)
+        mock_get_client.assert_called_once_with(self.context)
+        if by_address:
+            mocked_client.list_floatingips.assert_called_once_with(
+                floating_ip_address=address)
+        else:
+            mocked_client.show_floatingip.assert_called_once_with(fip_id)
+        mocked_client.show_network.assert_called_once_with(net_id)
+        if fip_data['port_id']:
+            mocked_client.show_port.assert_called_once_with(
+                fip_data['port_id'])
+
+    def test_get_floating_ip_unassociated(self):
+        self._test_get_floating_ip(self.fip_unassociated, idx=0)
+
+    def test_get_floating_ip_associated(self):
+        self._test_get_floating_ip(self.fip_associated, idx=1)
+
+    def test_get_floating_ip_by_address(self):
+        self._test_get_floating_ip(self.fip_unassociated, idx=0,
+                                   by_address=True)
+
+    def test_get_floating_ip_by_address_associated(self):
+        self._test_get_floating_ip(self.fip_associated, idx=1,
+                                   by_address=True)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_floating_ip_by_address_not_found(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        address = self.fip_unassociated['floating_ip_address']
+        mocked_client.list_floatingips.return_value = {'floatingips': []}
+        self.assertRaises(exception.FloatingIpNotFoundForAddress,
+                          self.api.get_floating_ip_by_address,
+                          self.context, address)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_floatingips.assert_called_once_with(
+            floating_ip_address=address)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_floating_ip_by_id_not_found(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        floating_ip_id = self.fip_unassociated['id']
+        mocked_client.show_floatingip.side_effect = (
+            exceptions.NeutronClientException(status_code=404))
+        self.assertRaises(exception.FloatingIpNotFound,
+                          self.api.get_floating_ip,
+                          self.context, floating_ip_id)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.show_floatingip.assert_called_once_with(floating_ip_id)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_floating_ip_raises_non404(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        floating_ip_id = self.fip_unassociated['id']
+        mocked_client.show_floatingip.side_effect = (
+            exceptions.NeutronClientException(status_code=0))
+        self.assertRaises(exceptions.NeutronClientException,
+                          self.api.get_floating_ip,
+                          self.context, floating_ip_id)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.show_floatingip.assert_called_once_with(floating_ip_id)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_floating_ip_by_address_multiple_found(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        address = self.fip_unassociated['floating_ip_address']
+        mocked_client.list_floatingips.return_value = {
+            'floatingips': [self.fip_unassociated] * 2}
+        self.assertRaises(exception.FloatingIpMultipleFoundForAddress,
+                          self.api.get_floating_ip_by_address,
+                          self.context, address)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_floatingips.assert_called_once_with(
+            floating_ip_address=address)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_floating_ips_by_project(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        project_id = self.context.project_id
+        mocked_client.list_floatingips.return_value = {
+            'floatingips': [self.fip_unassociated, self.fip_associated]}
+        mocked_client.list_networks.return_value = {
+            'networks': [self.fip_pool, self.fip_pool_nova]}
+        mocked_client.list_ports.return_value = {'ports': self.port_data2}
+        expected = [self._get_expected_fip_model(self.fip_unassociated),
+                    self._get_expected_fip_model(self.fip_associated, idx=1)]
+
+        fips = self.api.get_floating_ips_by_project(self.context)
+
+        self.assertEqual(len(expected), len(fips))
+        for i, expected_value in enumerate(expected):
+            self._compare(fips[i], expected_value)
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_floatingips.assert_called_once_with(
+            tenant_id=project_id)
+        mocked_client.list_networks.assert_called_once_with(
+            **{'router:external': True})
+        mocked_client.list_ports.assert_called_once_with(tenant_id=project_id)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_trusted(self, mock_get_client):
