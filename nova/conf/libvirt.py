@@ -524,7 +524,7 @@ would result in an error and the instance launch will fail.
     cfg.ListOpt(
         'cpu_model_extra_flags',
         item_type=types.String(
-            choices=['pcid', 'ssbd', 'virt-ssbd'],
+            choices=['pcid', 'ssbd', 'virt-ssbd', 'amd-ssbd', 'amd-no-ssb'],
             ignore_case=True,
         ),
         default=[],
@@ -540,11 +540,11 @@ virtual CPU model::
     cpu_model_extra_flags = pcid
 
 Currently, the choice is restricted to a few options: ``pcid``,
-``ssbd``, and ``virt-ssbd`` (the options are case-insensitive, so
-``PCID`` is also valid, for example).  These flags are now required to
-address the guest performance degradation as a result of applying the
-"Meltdown" CVE fixes (``pcid``) and exposure mitigation (``ssbd`` and
-``virt-ssbd``) on affected CPU models.
+``ssbd``, ``virt-ssbd``, ``amd-ssbd``, and ``amd-no-ssb`` (the options
+are case-insensitive, so ``PCID`` is also valid, for example).  These
+flags are now required to address the guest performance degradation as
+a result of applying the "Meltdown" CVE fixes (``pcid``) and exposure
+mitigation (``ssbd`` and related options) on affected CPU models.
 
 Note that when using this config attribute to set the 'PCID' and
 related CPU flags, not all virtual (i.e. libvirt / QEMU) CPU models
@@ -558,12 +558,14 @@ need it:
   even if the host CPUs by the same name include it.  I.e.  'PCID' needs
   to be explicitly specified when using the said virtual CPU models.
 
-For more information about ``ssbd`` and ``virt-ssbd`` applicability,
+For more information about ``ssbd`` and related options,
 please refer to the following security updates:
 
 https://www.us-cert.gov/ncas/alerts/TA18-141A
 
 https://www.redhat.com/archives/libvir-list/2018-May/msg01562.html
+
+https://www.redhat.com/archives/libvir-list/2018-June/msg01111.html
 
 For now, the ``cpu_model_extra_flags`` config attribute is valid only in
 combination with ``cpu_mode`` + ``cpu_model`` options.
