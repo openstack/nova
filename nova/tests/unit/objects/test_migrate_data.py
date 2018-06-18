@@ -230,19 +230,23 @@ class _TestLibvirtLiveMigrateData(object):
             supported_perf_events=[],
             serial_listen_addr='127.0.0.1',
             target_connect_addr='127.0.0.1')
-        primitive = obj.obj_to_primitive(target_version='1.0')
+
+        data = lambda x: x['nova_object.data']
+
+        primitive = data(obj.obj_to_primitive())
+        self.assertIn('serial_listen_addr', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.0'))
         self.assertNotIn('target_connect_addr', primitive)
-        self.assertNotIn('serial_listen_addr=', primitive)
         self.assertNotIn('supported_perf_events', primitive)
         self.assertNotIn('old_vol_attachment_ids', primitive)
         self.assertNotIn('src_supports_native_luks', primitive)
-        primitive = obj.obj_to_primitive(target_version='1.1')
-        self.assertNotIn('serial_listen_addr=', primitive)
-        primitive = obj.obj_to_primitive(target_version='1.2')
+        primitive = data(obj.obj_to_primitive(target_version='1.1'))
+        self.assertNotIn('serial_listen_ports', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.2'))
         self.assertNotIn('supported_perf_events', primitive)
-        primitive = obj.obj_to_primitive(target_version='1.3')
+        primitive = data(obj.obj_to_primitive(target_version='1.3'))
         self.assertNotIn('old_vol_attachment_ids', primitive)
-        primitive = obj.obj_to_primitive(target_version='1.4')
+        primitive = data(obj.obj_to_primitive(target_version='1.4'))
         self.assertNotIn('src_supports_native_luks', primitive)
 
     def test_bdm_obj_make_compatible(self):
@@ -381,9 +385,14 @@ class _TestHyperVLiveMigrateData(object):
         obj = migrate_data.HyperVLiveMigrateData(
             is_shared_instance_path=True,
             old_vol_attachment_ids={'yes': 'no'})
-        primitive = obj.obj_to_primitive(target_version='1.0')
+
+        data = lambda x: x['nova_object.data']
+
+        primitive = data(obj.obj_to_primitive())
+        self.assertIn('is_shared_instance_path', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.0'))
         self.assertNotIn('is_shared_instance_path', primitive)
-        primitive = obj.obj_to_primitive(target_version='1.1')
+        primitive = data(obj.obj_to_primitive(target_version='1.1'))
         self.assertNotIn('old_vol_attachment_ids', primitive)
 
     def test_to_legacy_dict(self):
@@ -450,9 +459,14 @@ class _TestPowerVMLiveMigrateData(object):
 
     def test_obj_make_compatible(self):
         obj = self._mk_obj()
-        primitive = obj.obj_to_primitive(target_version='1.0')
+
+        data = lambda x: x['nova_object.data']
+
+        primitive = data(obj.obj_to_primitive())
+        self.assertIn('vea_vlan_mappings', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.0'))
         self.assertNotIn('vea_vlan_mappings', primitive)
-        primitive = obj.obj_to_primitive(target_version='1.1')
+        primitive = data(obj.obj_to_primitive(target_version='1.1'))
         self.assertNotIn('old_vol_attachment_ids', primitive)
 
     def test_to_legacy_dict(self):
