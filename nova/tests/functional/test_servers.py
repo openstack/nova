@@ -1447,29 +1447,66 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
 
 
 class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
-    compute_driver = 'fake.SmallFakeDriver'
+    compute_driver = 'fake.MediumFakeDriver'
 
     def setUp(self):
         super(ProviderTreeTests, self).setUp()
-        _p = mock.patch.object(fake.SmallFakeDriver, 'update_provider_tree')
-        self.addCleanup(_p.stop)
-        self.mock_upt = _p.start()
-
         # Before starting compute, placement has no providers registered
         self.assertEqual([], self._get_all_providers())
 
+        # Start compute without mocking update_provider_tree. The fake driver
+        # doesn't implement the method, so this will cause us to start with the
+        # legacy get_available_resource()-based inventory discovery and
+        # boostrapping of placement data.
         self.compute = self._start_compute(host='host1')
 
-        # The compute host should have been created in placement with empty
-        # inventory and no traits
+        # Mock out update_provider_tree *after* starting compute with the
+        # (unmocked, default, unimplemented) version from the fake driver.
+        _p = mock.patch.object(fake.MediumFakeDriver, 'update_provider_tree')
+        self.addCleanup(_p.stop)
+        self.mock_upt = _p.start()
+
+        # The compute host should have been created in placement with
+        # appropriate inventory and no traits
         rps = self._get_all_providers()
         self.assertEqual(1, len(rps))
         self.assertEqual(self.compute.host, rps[0]['name'])
         self.host_uuid = self._get_provider_uuid_by_host(self.compute.host)
-        self.assertEqual({}, self._get_provider_inventory(self.host_uuid))
+        self.assertEqual({
+            'DISK_GB': {
+                'total': 1028,
+                'allocation_ratio': 1.0,
+                'max_unit': 1028,
+                'min_unit': 1,
+                'reserved': 0,
+                'step_size': 1,
+            },
+            'MEMORY_MB': {
+                'total': 8192,
+                'allocation_ratio': 1.5,
+                'max_unit': 8192,
+                'min_unit': 1,
+                'reserved': 512,
+                'step_size': 1,
+            },
+            'VCPU': {
+                'total': 10,
+                'allocation_ratio': 16.0,
+                'max_unit': 10,
+                'min_unit': 1,
+                'reserved': 0,
+                'step_size': 1,
+            },
+        }, self._get_provider_inventory(self.host_uuid))
         self.assertEqual([], self._get_provider_traits(self.host_uuid))
 
-    def _run_update_available_resource_and_assert_sync_error(self):
+    def _run_update_available_resource(self, startup):
+        ctx = context.get_admin_context()
+        rt = self.compute._get_resource_tracker()
+        rt.update_available_resource(ctx, self.compute.host, startup=startup)
+
+    def _run_update_available_resource_and_assert_raises(
+            self, exc=exception.ResourceProviderSyncFailed, startup=False):
         """Invoke ResourceTracker.update_available_resource and assert that it
         results in ResourceProviderSyncFailed.
 
@@ -1477,11 +1514,7 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         for this, because ResourceTracker.update_available_resource_for_node
         swallows all exceptions.
         """
-        ctx = context.get_admin_context()
-        rt = self.compute._get_resource_tracker()
-        self.assertRaises(
-            exception.ResourceProviderSyncFailed,
-            rt.update_available_resource, ctx, self.compute.host)
+        self.assertRaises(exc, self._run_update_available_resource, startup)
 
     def test_update_provider_tree_associated_info(self):
         """Inventory in some standard and custom resource classes.  Standard
@@ -1494,7 +1527,8 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
                 'reserved': 0,
                 'min_unit': 1,
                 'max_unit': 2,
-                'step_size': 1, 'allocation_ratio': 10.0,
+                'step_size': 1,
+                'allocation_ratio': 10.0,
             },
             'MEMORY_MB': {
                 'total': 1048576,
@@ -1535,17 +1569,22 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual(aggs,
                          set(self._get_provider_aggregates(self.host_uuid)))
 
-    def test_update_provider_tree_multiple_providers(self):
+    def _update_provider_tree_multiple_providers(self, startup=False,
+                                                 do_reshape=False):
         """Make update_provider_tree create multiple providers, including an
         additional root as a sharing provider; and some descendants in the
         compute node's tree.
         """
-        def update_provider_tree(prov_tree, nodename):
+        def update_provider_tree(prov_tree, nodename, allocations=None):
+            if do_reshape and allocations is None:
+                raise exception.ReshapeNeeded()
+
             # Create a shared storage provider as a root
             prov_tree.new_root('ssp', uuids.ssp)
             prov_tree.update_traits(
                 'ssp', ['MISC_SHARES_VIA_AGGREGATE', 'STORAGE_DISK_SSD'])
             prov_tree.update_aggregates('ssp', [uuids.agg])
+            prov_tree.update_inventory('ssp', {'DISK_GB': {'total': 500}})
             # Compute node is in the same aggregate
             prov_tree.update_aggregates(self.compute.host, [uuids.agg])
             # Create two NUMA nodes as children
@@ -1567,9 +1606,9 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
                     'MEMORY_MB': {
                          'total': 1048576 * n,
                          'reserved': 2048,
-                         'min_unit': 1024,
+                         'min_unit': 512,
                          'max_unit': 131072,
-                         'step_size': 1024,
+                         'step_size': 512,
                          'allocation_ratio': 1.0,
                      },
                 }
@@ -1595,9 +1634,43 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
                         },
                     }
                     prov_tree.update_inventory(name, inv)
+            if do_reshape:
+                # Clear out the compute node's inventory. Its VCPU and
+                # MEMORY_MB "moved" to the NUMA RPs and its DISK_GB "moved" to
+                # the shared storage provider.
+                prov_tree.update_inventory(self.host_uuid, {})
+                # Move all the allocations
+                for consumer_uuid, alloc_info in allocations.items():
+                    allocs = alloc_info['allocations']
+                    # All allocations should belong to the compute node.
+                    self.assertEqual([self.host_uuid], list(allocs))
+                    new_allocs = {}
+                    for rc, amt in allocs[self.host_uuid]['resources'].items():
+                        # Move VCPU to NUMA1 and MEMORY_MB to NUMA2. Bogus, but
+                        # lets us prove stuff ends up where we tell it to go.
+                        if rc == 'VCPU':
+                            rp_uuid = uuids.numa1
+                        elif rc == 'MEMORY_MB':
+                            rp_uuid = uuids.numa2
+                        elif rc == 'DISK_GB':
+                            rp_uuid = uuids.ssp
+                        else:
+                            self.fail("Unexpected resource on compute node: "
+                                      "%s=%d" % (rc, amt))
+                        new_allocs[rp_uuid] = {
+                            'resources': {rc: amt},
+                        }
+                    # Add a VF for the heck of it. Again bogus, but see above.
+                    new_allocs[uuids.pf1_1] = {
+                        'resources': {'SRIOV_NET_VF': 1}
+                    }
+                    # Now replace just the allocations, leaving the other stuff
+                    # (proj/user ID and consumer generation) alone
+                    alloc_info['allocations'] = new_allocs
+
         self.mock_upt.side_effect = update_provider_tree
 
-        self._run_periodics()
+        self._run_update_available_resource(startup)
 
         # Create a dict, keyed by provider UUID, of all the providers
         rps_by_uuid = {}
@@ -1622,6 +1695,10 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual(
             set(['MISC_SHARES_VIA_AGGREGATE', 'STORAGE_DISK_SSD']),
             set(self._get_provider_traits(uuids.ssp)))
+
+        # SSP has the right inventory
+        self.assertEqual(
+            500, self._get_provider_inventory(uuids.ssp)['DISK_GB']['total'])
 
         # SSP and compute are in the same aggregate
         agg_uuids = set([self.host_uuid, uuids.ssp])
@@ -1679,6 +1756,13 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         for uuid in (self.host_uuid, uuids.numa1, uuids.numa2):
             self.assertEqual([], self._get_provider_traits(uuid))
 
+    def test_update_provider_tree_multiple_providers(self):
+        self._update_provider_tree_multiple_providers()
+
+    def test_update_provider_tree_multiple_providers_startup(self):
+        """The above works the same for startup when no reshape requested."""
+        self._update_provider_tree_multiple_providers(startup=True)
+
     def test_update_provider_tree_bogus_resource_class(self):
         def update_provider_tree(prov_tree, nodename):
             prov_tree.update_inventory(self.compute.host, {'FOO': {}})
@@ -1688,7 +1772,7 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertIn('VCPU', rcs)
         self.assertNotIn('FOO', rcs)
 
-        self._run_update_available_resource_and_assert_sync_error()
+        self._run_update_available_resource_and_assert_raises()
 
         rcs = self._get_all_resource_classes()
         self.assertIn('VCPU', rcs)
@@ -1703,11 +1787,182 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertIn('HW_CPU_X86_AVX', traits)
         self.assertNotIn('FOO', traits)
 
-        self._run_update_available_resource_and_assert_sync_error()
+        self._run_update_available_resource_and_assert_raises()
 
         traits = self._get_all_traits()
         self.assertIn('HW_CPU_X86_AVX', traits)
         self.assertNotIn('FOO', traits)
+
+    def test_reshape_needed_non_startup(self):
+        """ReshapeNeeded is reraised when not starting up."""
+        self.mock_upt.side_effect = exception.ReshapeNeeded()
+
+        # Note that we _run_periodics here (rather than
+        # _run_update_available_resource_and_assert_raises) to prove that, for
+        # this case, the exception does *not* get swallowed by
+        # update_available_resource_for_node.
+        self.assertRaises(exception.ReshapeNeeded, self._run_periodics)
+
+        # update_provider_tree was only called once, without allocs
+        self.mock_upt.assert_called_once_with(mock.ANY, 'host1')
+
+    def test_reshape_needed_twice_startup(self):
+        """ReshapeNeeded is reraised if it happens on the second call to
+        update_provider_tree (the one with allocations).
+        """
+        self.mock_upt.side_effect = exception.ReshapeNeeded()
+
+        self._run_update_available_resource_and_assert_raises(
+            exc=exception.ReshapeNeeded, startup=True)
+
+        # This time update_provider_tree was called twice: the second time with
+        # the allocations argument.
+        self.assertEqual(2, self.mock_upt.call_count)
+        self.mock_upt.assert_has_calls([
+            mock.call(mock.ANY, 'host1'),
+            mock.call(mock.ANY, 'host1', allocations={}),
+        ])
+
+    def _create_instance(self, flavor):
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'some-server', flavor_id=flavor['id'],
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none', az='nova:host1')
+        inst = self.api.post_server({'server': server_req})
+        return self._wait_for_state_change(self.admin_api, inst, 'ACTIVE')
+
+    def test_reshape(self):
+        """On startup, virt driver signals it needs to reshape, then does so.
+
+        Okay, not really on actual startup. That still happens via setUp. We
+        simulate startup after the fact by passing startup=True to
+        update_available_resource.
+
+        This test creates a couple of instances so there are allocations to be
+        moved by the reshape operation. Then we do the reshape and make sure
+        the inventories and allocations end up where they should.
+        """
+        # First let's create some instances so we have allocations to move.
+        flavors = self.api.get_flavors()
+        inst1 = self._create_instance(flavors[0])
+        inst2 = self._create_instance(flavors[1])
+
+        # Instance create calls _update, which calls update_provider_tree,
+        # which is currently mocked to a no-op.
+        self.assertEqual(2, self.mock_upt.call_count)
+        self.mock_upt.reset_mock()
+
+        # Hit the reshape.
+        self._update_provider_tree_multiple_providers(startup=True,
+                                                      do_reshape=True)
+
+        # Check the final allocations
+        # The compute node provider should have *no* allocations.
+        self.assertEqual(
+            {}, self._get_allocations_by_provider_uuid(self.host_uuid))
+        # And no inventory
+        self.assertEqual({}, self._get_provider_inventory(self.host_uuid))
+        # NUMA1 got all the VCPU
+        self.assertEqual(
+            {inst1['id']: {'resources': {'VCPU': 1}},
+             inst2['id']: {'resources': {'VCPU': 1}}},
+            self._get_allocations_by_provider_uuid(uuids.numa1))
+        # NUMA2 got all the memory
+        self.assertEqual(
+            {inst1['id']: {'resources': {'MEMORY_MB': 512}},
+             inst2['id']: {'resources': {'MEMORY_MB': 2048}}},
+            self._get_allocations_by_provider_uuid(uuids.numa2))
+        # Disk resource ended up on the shared storage provider
+        self.assertEqual(
+            {inst1['id']: {'resources': {'DISK_GB': 1}},
+             inst2['id']: {'resources': {'DISK_GB': 20}}},
+            self._get_allocations_by_provider_uuid(uuids.ssp))
+        # We put VFs on the first PF in NUMA1
+        self.assertEqual(
+            {inst1['id']: {'resources': {'SRIOV_NET_VF': 1}},
+             inst2['id']: {'resources': {'SRIOV_NET_VF': 1}}},
+            self._get_allocations_by_provider_uuid(uuids.pf1_1))
+        self.assertEqual(
+            {}, self._get_allocations_by_provider_uuid(uuids.pf1_2))
+        self.assertEqual(
+            {}, self._get_allocations_by_provider_uuid(uuids.pf2_1))
+        self.assertEqual(
+            {}, self._get_allocations_by_provider_uuid(uuids.pf2_2))
+        # This is *almost* redundant - but it makes sure the instances don't
+        # have extra allocations from some other provider.
+        self.assertEqual(
+            {
+                uuids.numa1: {
+                    'resources': {'VCPU': 1},
+                    # Don't care about the generations - rely on placement db
+                    # tests to validate that those behave properly.
+                    'generation': mock.ANY,
+                },
+                uuids.numa2: {
+                    'resources': {'MEMORY_MB': 512},
+                    'generation': mock.ANY,
+                },
+                uuids.ssp: {
+                    'resources': {'DISK_GB': 1},
+                    'generation': mock.ANY,
+                },
+                uuids.pf1_1: {
+                    'resources': {'SRIOV_NET_VF': 1},
+                    'generation': mock.ANY,
+                },
+            }, self._get_allocations_by_server_uuid(inst1['id']))
+        self.assertEqual(
+            {
+                uuids.numa1: {
+                    'resources': {'VCPU': 1},
+                    'generation': mock.ANY,
+                },
+                uuids.numa2: {
+                    'resources': {'MEMORY_MB': 2048},
+                    'generation': mock.ANY,
+                },
+                uuids.ssp: {
+                    'resources': {'DISK_GB': 20},
+                    'generation': mock.ANY,
+                },
+                uuids.pf1_1: {
+                    'resources': {'SRIOV_NET_VF': 1},
+                    'generation': mock.ANY,
+                },
+            }, self._get_allocations_by_server_uuid(inst2['id']))
+
+        # The first call raises ReshapeNeeded, resulting in the second.
+        self.assertEqual(2, self.mock_upt.call_count)
+        # The expected value of the allocations kwarg to update_provider_tree
+        # for that second call:
+        exp_allocs = {
+            inst1['id']: {
+                'allocations': {
+                    uuids.numa1: {'resources': {'VCPU': 1}},
+                    uuids.numa2: {'resources': {'MEMORY_MB': 512}},
+                    uuids.ssp: {'resources': {'DISK_GB': 1}},
+                    uuids.pf1_1: {'resources': {'SRIOV_NET_VF': 1}},
+                },
+                'consumer_generation': mock.ANY,
+                'project_id': mock.ANY,
+                'user_id': mock.ANY,
+            },
+            inst2['id']: {
+                'allocations': {
+                    uuids.numa1: {'resources': {'VCPU': 1}},
+                    uuids.numa2: {'resources': {'MEMORY_MB': 2048}},
+                    uuids.ssp: {'resources': {'DISK_GB': 20}},
+                    uuids.pf1_1: {'resources': {'SRIOV_NET_VF': 1}},
+                },
+                'consumer_generation': mock.ANY,
+                'project_id': mock.ANY,
+                'user_id': mock.ANY,
+            },
+        }
+        self.mock_upt.assert_has_calls([
+            mock.call(mock.ANY, 'host1'),
+            mock.call(mock.ANY, 'host1', allocations=exp_allocs),
+        ])
 
 
 class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):

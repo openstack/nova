@@ -859,7 +859,7 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def update_provider_tree(self, provider_tree, nodename):
+    def update_provider_tree(self, provider_tree, nodename, allocations=None):
         """Update a ProviderTree object with current resource provider and
         inventory information.
 
@@ -871,8 +871,8 @@ class ComputeDriver(object):
         This method supersedes get_inventory(): if this method is implemented,
         get_inventory() is not used.
 
-        :note: Renaming a provider (by deleting it from provider_tree and
-        re-adding it with a different name) is not supported at this time.
+        :note: Renaming the root provider (by deleting it from provider_tree
+        and re-adding it with a different name) is not supported at this time.
 
         See the developer reference documentation for more details:
 
@@ -902,6 +902,37 @@ class ComputeDriver(object):
             the compute node provider in the ProviderTree. Drivers managing
             more than one node (e.g. ironic) may also use it as a cue to
             indicate which node is being processed by the caller.
+        :param allocations:
+            Dict of allocation data of the form:
+              { $CONSUMER_UUID: {
+                    # The shape of each "allocations" dict below is identical
+                    # to the return from GET /allocations/{consumer_uuid}
+                    "allocations": {
+                        $RP_UUID: {
+                            "generation": $RP_GEN,
+                            "resources": {
+                                $RESOURCE_CLASS: $AMOUNT,
+                                ...
+                            },
+                        },
+                        ...
+                    },
+                    "project_id": $PROJ_ID,
+                    "user_id": $USER_ID,
+                    "consumer_generation": $CONSUMER_GEN,
+                },
+                ...
+              }
+            If None, and the method determines that any inventory needs to be
+            moved (from one provider to another and/or to a different resource
+            class), the ReshapeNeeded exception must be raised. Otherwise, this
+            dict must be edited in place to indicate the desired final state of
+            allocations. Drivers should *only* edit allocation records for
+            providers whose inventories are being affected by the reshape
+            operation.
+        :raises ReshapeNeeded: If allocations is None and any inventory needs
+            to be moved from one provider to another and/or to a different
+            resource class.
         """
         raise NotImplementedError()
 

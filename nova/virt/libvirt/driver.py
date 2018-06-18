@@ -6405,7 +6405,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def refresh_instance_security_rules(self, instance):
         self.firewall_driver.refresh_instance_security_rules(instance)
 
-    def update_provider_tree(self, provider_tree, nodename):
+    def update_provider_tree(self, provider_tree, nodename, allocations=None):
         """Update a ProviderTree object with current resource provider,
         inventory information and CPU traits.
 
@@ -6416,11 +6416,39 @@ class LibvirtDriver(driver.ComputeDriver):
             trait) associated via aggregate with any of those providers (but
             not *their* tree- or aggregate-associated providers), as currently
             known by placement.
-
         :param nodename:
             String name of the compute node (i.e.
             ComputeNode.hypervisor_hostname) for which the caller is requesting
             updated provider information.
+        :param allocations:
+            Dict of allocation data of the form:
+              { $CONSUMER_UUID: {
+                    # The shape of each "allocations" dict below is identical
+                    # to the return from GET /allocations/{consumer_uuid}
+                    "allocations": {
+                        $RP_UUID: {
+                            "generation": $RP_GEN,
+                            "resources": {
+                                $RESOURCE_CLASS: $AMOUNT,
+                                ...
+                            },
+                        },
+                        ...
+                    },
+                    "project_id": $PROJ_ID,
+                    "user_id": $USER_ID,
+                    "consumer_generation": $CONSUMER_GEN,
+                },
+                ...
+              }
+            If None, and the method determines that any inventory needs to be
+            moved (from one provider to another and/or to a different resource
+            class), the ReshapeNeeded exception must be raised. Otherwise, this
+            dict must be edited in place to indicate the desired final state of
+            allocations.
+        :raises ReshapeNeeded: If allocations is None and any inventory needs
+            to be moved from one provider to another and/or to a different
+            resource class.
         """
         disk_gb = int(self._get_local_gb_info()['total'])
         memory_mb = int(self._host.get_memory_mb_total())

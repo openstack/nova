@@ -483,14 +483,15 @@ class TestUpdateAvailableResources(BaseTestCase):
 
     @mock.patch('nova.objects.Service.get_minimum_version',
                 return_value=22)
-    def _update_available_resources(self, version_mock):
+    def _update_available_resources(self, version_mock, **kwargs):
         # We test RT._update separately, since the complexity
         # of the update_available_resource() function is high enough as
         # it is, we just want to focus here on testing the resources
         # parameter that update_available_resource() eventually passes
         # to _update().
         with mock.patch.object(self.rt, '_update') as update_mock:
-            self.rt.update_available_resource(mock.MagicMock(), _NODENAME)
+            self.rt.update_available_resource(mock.MagicMock(), _NODENAME,
+                                              **kwargs)
         return update_mock
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
@@ -576,6 +577,28 @@ class TestUpdateAvailableResources(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
         update_mock.assert_called_once()
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList())
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_startup_makes_it_through(self, get_mock, migr_mock, get_cn_mock,
+                                      pci_mock, instance_pci_mock):
+        """Just make sure the startup kwarg makes it from
+           _update_available_resource all the way down the call stack to
+           _update.
+        """
+        self._setup_rt()
+
+        get_mock.return_value = []
+        migr_mock.return_value = []
+        get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
+
+        update_mock = self._update_available_resources(startup=True)
+        update_mock.assert_called_once_with(mock.ANY, mock.ANY, startup=True)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -1060,7 +1083,7 @@ class TestInitComputeNode(BaseTestCase):
         get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
                                          _NODENAME)
         get_by_hypervisor_mock.assert_called_once_with(mock.sentinel.ctx,
-                                                     _NODENAME)
+                                                       _NODENAME)
         create_mock.assert_not_called()
         update_mock.assert_called_once_with(mock.sentinel.ctx, cn)
 
@@ -1363,7 +1386,8 @@ class TestUpdateComputeNode(BaseTestCase):
             },
         }
 
-        def fake_upt(ptree, nodename):
+        def fake_upt(ptree, nodename, allocations=None):
+            self.assertIsNone(allocations)
             ptree.update_inventory(nodename, fake_inv)
 
         # These will get set on ptree by _normalize_inventory_from_cn_obj
@@ -1406,7 +1430,7 @@ class TestUpdateComputeNode(BaseTestCase):
         self.driver_mock.update_provider_tree.assert_called_once_with(
             ptree, new_compute.hypervisor_hostname)
         rc_mock.update_from_provider_tree.assert_called_once_with(
-            mock.sentinel.ctx, ptree)
+            mock.sentinel.ctx, ptree, allocations=None)
         self.sched_client_mock.update_compute_node.assert_not_called()
         self.sched_client_mock.set_inventory_for_provider.assert_not_called()
         # _normalize_inventory_from_cn_obj should have set allocation ratios

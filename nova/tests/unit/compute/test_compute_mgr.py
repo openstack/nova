@@ -260,6 +260,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         rt.update_available_resource.assert_called_once_with(
             self.context,
             mock.sentinel.node,
+            startup=False,
         )
 
     @mock.patch('nova.compute.manager.LOG')
@@ -281,9 +282,47 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         rt.update_available_resource.assert_called_once_with(
             self.context,
             mock.sentinel.node,
+            startup=False,
         )
         self.assertTrue(log_mock.info.called)
         self.assertIsNone(self.compute._resource_tracker)
+
+    @mock.patch('nova.compute.manager.LOG')
+    @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
+    def test_update_available_resource_for_node_reshape_failed(self, get_rt,
+                                                               log_mock):
+        """ReshapeFailed logs and reraises."""
+        rt = mock.Mock(spec_set=['update_available_resource'])
+        get_rt.return_value = rt
+        rt.update_available_resource.side_effect = exception.ReshapeFailed(
+            error='error')
+
+        self.assertRaises(exception.ReshapeFailed,
+                          self.compute._update_available_resource_for_node,
+                          self.context, mock.sentinel.node,
+                          # While we're here, unit test the startup kwarg
+                          startup=True)
+        rt.update_available_resource.assert_called_once_with(
+            self.context, mock.sentinel.node, startup=True)
+        log_mock.critical.assert_called_once()
+
+    @mock.patch('nova.compute.manager.LOG')
+    @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
+    def test_update_available_resource_for_node_reshape_needed(self, get_rt,
+                                                               log_mock):
+        """ReshapeFailed logs and reraises."""
+        rt = mock.Mock(spec_set=['update_available_resource'])
+        get_rt.return_value = rt
+        rt.update_available_resource.side_effect = exception.ReshapeNeeded()
+
+        self.assertRaises(exception.ReshapeNeeded,
+                          self.compute._update_available_resource_for_node,
+                          self.context, mock.sentinel.node,
+                          # While we're here, unit test the startup kwarg
+                          startup=True)
+        rt.update_available_resource.assert_called_once_with(
+            self.context, mock.sentinel.node, startup=True)
+        log_mock.exception.assert_called_once()
 
     @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -301,11 +340,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         get_db_nodes.return_value = db_nodes
         get_avail_nodes.return_value = avail_nodes
-        self.compute.update_available_resource(self.context)
+        self.compute.update_available_resource(self.context, startup=True)
         get_db_nodes.assert_called_once_with(self.context, use_slave=True,
-                                             startup=False)
+                                             startup=True)
         update_mock.has_calls(
-            [mock.call(self.context, node) for node in avail_nodes_l]
+            [mock.call(self.context, node, startup=True)
+             for node in avail_nodes_l]
         )
 
         # First node in set should have been removed from DB

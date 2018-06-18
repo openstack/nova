@@ -665,7 +665,7 @@ class ResourceTracker(object):
                 context, self.host, CONF.my_ip, nodename, metrics)
         return metric_list
 
-    def update_available_resource(self, context, nodename):
+    def update_available_resource(self, context, nodename, startup=False):
         """Override in-memory calculations of compute node resource usage based
         on data audited from the hypervisor layer.
 
@@ -677,6 +677,8 @@ class ResourceTracker(object):
                          node. This parameter will be removed once Ironic
                          baremetal resource nodes are handled like any other
                          resource in the system.
+        :param startup: Boolean indicating whether we're running this on
+                        on startup (True) or periodic (False).
         """
         LOG.debug("Auditing locally available compute resources for "
                   "%(host)s (node: %(node)s)",
@@ -698,7 +700,7 @@ class ResourceTracker(object):
 
         self._report_hypervisor_resource_view(resources)
 
-        self._update_available_resource(context, resources)
+        self._update_available_resource(context, resources, startup=startup)
 
     def _pair_instances_to_migrations(self, migrations, instance_by_uuid):
         for migration in migrations:
@@ -717,7 +719,7 @@ class ResourceTracker(object):
                           {'uuid': migration.instance_uuid})
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
-    def _update_available_resource(self, context, resources):
+    def _update_available_resource(self, context, resources, startup=False):
 
         # initialize the compute node object, creating it
         # if it does not already exist.
@@ -775,7 +777,7 @@ class ResourceTracker(object):
         cn.metrics = jsonutils.dumps(metrics)
 
         # update the compute_node
-        self._update(context, cn)
+        self._update(context, cn, startup=startup)
         LOG.debug('Compute_service record updated for %(host)s:%(node)s',
                   {'host': self.host, 'node': nodename})
 
@@ -871,7 +873,7 @@ class ResourceTracker(object):
             return True
         return False
 
-    def _update_to_placement(self, context, compute_node):
+    def _update_to_placement(self, context, compute_node, startup):
         """Send resource and inventory changes to placement."""
         # NOTE(jianghuaw): Some resources(e.g. VGPU) are not saved in the
         # object of compute_node; instead the inventory data for these
@@ -893,7 +895,22 @@ class ResourceTracker(object):
         # Let the virt driver rearrange the provider tree and set/update
         # the inventory, traits, and aggregates throughout.
         try:
-            self.driver.update_provider_tree(prov_tree, nodename)
+            allocs = None
+            try:
+                self.driver.update_provider_tree(prov_tree, nodename)
+            except exception.ReshapeNeeded:
+                if not startup:
+                    # This isn't supposed to happen during periodic, so raise
+                    # it up; the compute manager will treat it specially.
+                    raise
+                LOG.info("Performing resource provider inventory and "
+                         "allocation data migration during compute service "
+                         "startup or FFU.")
+                allocs = reportclient.get_allocations_for_provider_tree(
+                    context, nodename)
+                self.driver.update_provider_tree(prov_tree, nodename,
+                                                 allocations=allocs)
+
             # We need to normalize inventory data for the compute node provider
             # (inject allocation ratio and reserved amounts from the
             # compute_node record if not set by the virt driver) because the
@@ -902,7 +919,8 @@ class ResourceTracker(object):
             _normalize_inventory_from_cn_obj(inv_data, compute_node)
             prov_tree.update_inventory(nodename, inv_data)
             # Flush any changes.
-            reportclient.update_from_provider_tree(context, prov_tree)
+            reportclient.update_from_provider_tree(context, prov_tree,
+                                                   allocations=allocs)
         except NotImplementedError:
             # update_provider_tree isn't implemented yet - try get_inventory
             try:
@@ -924,7 +942,7 @@ class ResourceTracker(object):
     @retrying.retry(stop_max_attempt_number=4,
                     retry_on_exception=lambda e: isinstance(
                         e, exception.ResourceProviderUpdateConflict))
-    def _update(self, context, compute_node):
+    def _update(self, context, compute_node, startup=False):
         """Update partial stats locally and populate them to Scheduler."""
         if self._resource_change(compute_node):
             # If the compute_node's resource changed, update to DB.
@@ -933,7 +951,7 @@ class ResourceTracker(object):
             # At the moment we still need this check and save compute_node.
             compute_node.save()
 
-        self._update_to_placement(context, compute_node)
+        self._update_to_placement(context, compute_node, startup)
 
         if self.pci_tracker:
             self.pci_tracker.save(context)
