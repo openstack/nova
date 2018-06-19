@@ -37,7 +37,6 @@ Other options are:
 * 'caching_scheduler' which aggressively caches the system state for better
   individual scheduler performance at the risk of more retries when running
   multiple schedulers. [DEPRECATED]
-* 'chance_scheduler' which simply picks a host at random. [DEPRECATED]
 * 'fake_scheduler' which is used for testing.
 
 Possible values:
@@ -46,7 +45,6 @@ Possible values:
 
   * filter_scheduler
   * caching_scheduler
-  * chance_scheduler
   * fake_scheduler
 
 * You may also set this to the entry point name of a custom scheduler driver,
