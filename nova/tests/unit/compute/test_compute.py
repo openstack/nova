@@ -428,7 +428,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                 mock.call(self.context, instance, 'fake-mini',
                           action='volume_attach', phase='error',
                           volume_id=uuids.volume_id,
-                          exception=expected_exception),
+                          exception=expected_exception,
+                          tb=mock.ANY),
             ])
             mock_event.assert_called_once_with(
                 self.context, 'compute_attach_volume', CONF.host,
@@ -468,7 +469,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                 mock.call(self.context, instance, 'fake-mini',
                           action='volume_attach', phase='error',
                           volume_id=uuids.volume_id,
-                          exception=expected_exception),
+                          exception=expected_exception,
+                          tb=mock.ANY),
             ])
 
     @mock.patch.object(compute_utils, 'EventReporter')
@@ -3182,7 +3184,7 @@ class ComputeTestCase(BaseTestCase,
                 notify_action_call_list.append(
                     mock.call(econtext, instance, 'fake-mini',
                               action='reboot', phase='error', exception=fault,
-                              bdms=bdms))
+                              bdms=bdms, tb=mock.ANY))
             notify_call_list.append(mock.call(econtext, instance,
                                               'reboot.end'))
             notify_action_call_list.append(
@@ -10253,7 +10255,7 @@ class ComputeAPITestCase(BaseTestCase):
                 mock.call(self.context, instance, self.compute.host,
                           action='interface_attach',
                           exception=mock_attach.side_effect,
-                          phase='error')])
+                          phase='error', tb=mock.ANY)])
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
     def test_detach_interface(self, mock_notify):
@@ -12529,7 +12531,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
                     task_states.RESIZE_PREP, exc_info, host_list=None)
             mock_notify.assert_called_once_with(
                 self.context, instance, 'fake-mini', action='resize',
-                phase='error', exception=mock_res.side_effect)
+                phase='error', exception=mock_res.side_effect, tb=mock.ANY)
 
     @mock.patch.object(compute_manager.ComputeManager, "_reschedule")
     def test_reschedule_false(self, mock_res):

@@ -21,24 +21,27 @@ from nova.objects import fields
 @nova_base.NovaObjectRegistry.register_notification
 class ExceptionPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add traceback field to ExceptionPayload
+    VERSION = '1.1'
     fields = {
         'module_name': fields.StringField(),
         'function_name': fields.StringField(),
         'exception': fields.StringField(),
-        'exception_message': fields.StringField()
+        'exception_message': fields.StringField(),
+        'traceback': fields.StringField()
     }
 
     def __init__(self, module_name, function_name, exception,
-                 exception_message):
+                 exception_message, traceback):
         super(ExceptionPayload, self).__init__()
         self.module_name = module_name
         self.function_name = function_name
         self.exception = exception
         self.exception_message = exception_message
+        self.traceback = traceback
 
     @classmethod
-    def from_exception(cls, fault):
+    def from_exc_and_traceback(cls, fault, traceback):
         trace = inspect.trace()[-1]
         # TODO(gibi): apply strutils.mask_password on exception_message and
         # consider emitting the exception_message only if the safe flag is
@@ -49,7 +52,8 @@ class ExceptionPayload(base.NotificationPayloadBase):
                 function_name=trace[3],
                 module_name=module_name,
                 exception=fault.__class__.__name__,
-                exception_message=six.text_type(fault))
+                exception_message=six.text_type(fault),
+                traceback=traceback)
 
 
 @base.notification_sample('compute-exception.json')

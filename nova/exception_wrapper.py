@@ -12,6 +12,7 @@
 
 import functools
 import inspect
+import traceback
 
 from oslo_utils import excutils
 
@@ -27,15 +28,16 @@ CONF = nova.conf.CONF
 
 
 def _emit_exception_notification(notifier, context, ex, function_name, args,
-                                 source):
+                                 source, trace_back):
     _emit_legacy_exception_notification(notifier, context, ex, function_name,
                                         args)
-    _emit_versioned_exception_notification(context, ex, source)
+    _emit_versioned_exception_notification(context, ex, source, trace_back)
 
 
 @rpc.if_notifications_enabled
-def _emit_versioned_exception_notification(context, ex, source):
-    versioned_exception_payload = exception.ExceptionPayload.from_exception(ex)
+def _emit_versioned_exception_notification(context, ex, source, trace_back):
+    versioned_exception_payload = \
+        exception.ExceptionPayload.from_exc_and_traceback(ex, trace_back)
     publisher = base.NotificationPublisher(host=CONF.host, source=source)
     event_type = base.EventType(
             object='compute',
@@ -66,6 +68,7 @@ def wrap_exception(notifier=None, get_notifier=None, binary=None):
             try:
                 return f(self, context, *args, **kw)
             except Exception as e:
+                tb = traceback.format_exc()
                 with excutils.save_and_reraise_exception():
                     if notifier or get_notifier:
                         call_dict = _get_call_dict(
@@ -73,7 +76,7 @@ def wrap_exception(notifier=None, get_notifier=None, binary=None):
                         function_name = f.__name__
                         _emit_exception_notification(
                             notifier or get_notifier(), context, e,
-                            function_name, call_dict, binary)
+                            function_name, call_dict, binary, tb)
 
         return functools.wraps(f)(wrapped)
     return inner

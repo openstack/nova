@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    A new ``traceback`` field has been added to each versioned instance
+    notification. In an error notification this field contains the full
+    traceback string of the exception which caused the error notification.
+    See the `notification dev ref`_ for the sample file of
+    ``instance.create.error`` as an example.
+
+    .. _notification dev ref: https://docs.openstack.org/nova/latest/reference/notifications.html#existing-versioned-notifications

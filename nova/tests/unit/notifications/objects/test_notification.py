@@ -371,7 +371,7 @@ notification_object_data = {
     'BlockDevicePayload': '1.0-29751e1b6d41b1454e36768a1e764df8',
     'EventType': '1.10-2a6ab743d767837366ab1aec387d7c3b',
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'ExceptionPayload': '1.0-27db46ee34cd97e39f2643ed92ad0cc5',
+    'ExceptionPayload': '1.1-6c43008bd81885a63bc7f7c629f0793b',
     'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'FlavorPayload': '1.4-2e7011b8b4e59167fe8b7a0a81f0d452',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',

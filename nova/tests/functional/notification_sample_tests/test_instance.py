@@ -367,6 +367,10 @@ class TestInstanceNotificationSample(
 
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 
+        tb = fake_notifier.VERSIONED_NOTIFICATIONS[1]['payload'][
+            'nova_object.data']['fault']['nova_object.data']['traceback']
+        self.assertIn('raise exception.FlavorDiskTooSmall()', tb)
+
         self._verify_notification(
             'instance-create-start',
             replacements={
@@ -377,7 +381,8 @@ class TestInstanceNotificationSample(
             'instance-create-error',
             replacements={
                 'reservation_id': server['reservation_id'],
-                'uuid': server['id']},
+                'uuid': server['id'],
+                'fault.traceback': self.ANY},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     def test_instance_exists_usage_audit(self):
@@ -910,10 +915,16 @@ class TestInstanceNotificationSample(
                              fake_notifier.VERSIONED_NOTIFICATIONS)
         # Note(gibi): There is also an instance.exists notification emitted
         # during the rescheduling
+
+        tb = fake_notifier.VERSIONED_NOTIFICATIONS[2]['payload'][
+            'nova_object.data']['fault']['nova_object.data']['traceback']
+        self.assertIn("raise exception.FlavorDiskTooSmall()", tb)
+
         self._verify_notification('instance-resize-error',
             replacements={
                 'reservation_id': server['reservation_id'],
-                'uuid': server['id']
+                'uuid': server['id'],
+                'fault.traceback': self.ANY
             },
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
 
@@ -970,10 +981,16 @@ class TestInstanceNotificationSample(
         self.assertEqual(5, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          'Unexpected number of notifications: %s' %
                          fake_notifier.VERSIONED_NOTIFICATIONS)
+
+        tb = fake_notifier.VERSIONED_NOTIFICATIONS[2]['payload'][
+            'nova_object.data']['fault']['nova_object.data']['traceback']
+        self.assertIn("raise exception.FlavorDiskTooSmall()", tb)
+
         self._verify_notification('instance-resize-error',
             replacements={
                 'reservation_id': server['reservation_id'],
-                'uuid': server['id']
+                'uuid': server['id'],
+                'fault.traceback': self.ANY
             },
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
 
@@ -1146,12 +1163,18 @@ class TestInstanceNotificationSample(
         self._wait_for_state_change(self.api, server, expected_status='ERROR')
         notification = self._get_notifications('instance.rebuild.error')
         self.assertEqual(1, len(notification))
+
+        tb = fake_notifier.VERSIONED_NOTIFICATIONS[0]['payload'][
+            'nova_object.data']['fault']['nova_object.data']['traceback']
+        self.assertIn('raise exception.VirtualInterfaceCreateException()', tb)
+
         self._verify_notification(
             'instance-rebuild-error',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id'],
-                'trusted_image_certificates': None},
+                'trusted_image_certificates': None,
+                'fault.traceback': self.ANY},
             actual=notification[0])
 
     def _test_restore_server(self, server):
@@ -1207,6 +1230,11 @@ class TestInstanceNotificationSample(
         self._wait_for_notification('instance.reboot.start')
         self._wait_for_notification('instance.reboot.error')
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+
+        tb = fake_notifier.VERSIONED_NOTIFICATIONS[1]['payload'][
+            'nova_object.data']['fault']['nova_object.data']['traceback']
+        self.assertIn("raise exception.UnsupportedVirtType", tb)
+
         self._verify_notification(
             'instance-reboot-start',
             replacements={
@@ -1217,7 +1245,8 @@ class TestInstanceNotificationSample(
             'instance-reboot-error',
             replacements={
                 'reservation_id': server['reservation_id'],
-                'uuid': server['id']},
+                'uuid': server['id'],
+                'fault.traceback': self.ANY},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     def _detach_volume_from_server(self, server, volume_id):
@@ -1312,12 +1341,21 @@ class TestInstanceNotificationSample(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
+
+        tb1 = fake_notifier.VERSIONED_NOTIFICATIONS[6]['payload'][
+            'nova_object.data']['fault']['nova_object.data']['traceback']
+        self.assertIn("_swap_volume", tb1)
+        tb2 = fake_notifier.VERSIONED_NOTIFICATIONS[7]['payload'][
+            'nova_object.data']['traceback']
+        self.assertIn("_swap_volume", tb2)
+
         self._verify_notification(
             'instance-volume_swap-error',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'block_devices': block_devices,
-                'uuid': server['id']},
+                'uuid': server['id'],
+                'fault.traceback': self.ANY},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[6])
 
     def test_resize_confirm_server(self):
@@ -1525,13 +1563,19 @@ class TestInstanceNotificationSample(
                 'volume_id': self.cinder.SWAP_NEW_VOL,
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+
+        tb = fake_notifier.VERSIONED_NOTIFICATIONS[1]['payload'][
+            'nova_object.data']['fault']['nova_object.data']['traceback']
+        self.assertIn("CinderConnectionFailed:", tb)
+
         self._verify_notification(
             'instance-volume_attach-error',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'block_devices': block_devices,
                 'volume_id': self.cinder.SWAP_NEW_VOL,
-                'uuid': server['id']},
+                'uuid': server['id'],
+                'fault.traceback': self.ANY},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     @mock.patch('nova.volume.cinder.API.attachment_update')
@@ -1605,11 +1649,17 @@ class TestInstanceNotificationSample(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+
+        tb = fake_notifier.VERSIONED_NOTIFICATIONS[1]['payload'][
+            'nova_object.data']['fault']['nova_object.data']['traceback']
+        self.assertIn("raise exception.InterfaceAttachFailed", tb)
+
         self._verify_notification(
             'instance-interface_attach-error',
             replacements={
                 'reservation_id': server['reservation_id'],
-                'uuid': server['id']},
+                'uuid': server['id'],
+                'fault.traceback': self.ANY},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
 

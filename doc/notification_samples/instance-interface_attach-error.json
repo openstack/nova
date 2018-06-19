@@ -9,11 +9,12 @@
                     "exception": "InterfaceAttachFailed",
                     "exception_message": "dummy",
                     "function_name": "_unsuccessful_attach_interface",
-                    "module_name": "nova.tests.functional.notification_sample_tests.test_instance"
+                    "module_name": "nova.tests.functional.notification_sample_tests.test_instance",
+                    "traceback": "Traceback (most recent call last):\n  File \"nova/compute/manager.py\", line ..."
                 },
                 "nova_object.name": "ExceptionPayload",
                 "nova_object.namespace": "nova",
-                "nova_object.version": "1.0"
+                "nova_object.version": "1.1"
             }
         }
     },
