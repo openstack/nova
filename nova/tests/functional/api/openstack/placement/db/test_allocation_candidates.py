@@ -1810,9 +1810,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 (fields.ResourceClass.VCPU, 16, 0),
                 (fields.ResourceClass.MEMORY_MB, 32768, 0),
             ]),
-            # TODO(tetsuro): Return all resource providers in the tree
-            #  'cn_numa0': set([]),
-            #  'cn_numa1': set([]),
+            'cn_numa0': set([]),
+            'cn_numa1': set([]),
             'cn_numa0_pf0': set([
                 (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
             ]),
@@ -1824,9 +1823,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         expected = {
             'cn': set([]),
-            # TODO(tetsuro): Return all resource providers in the tree
-            #  'cn_numa0': set([]),
-            #  'cn_numa1': set([]),
+            'cn_numa0': set([]),
+            'cn_numa1': set([]),
             'cn_numa0_pf0': set([]),
             'cn_numa1_pf1': set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
         }
@@ -1859,12 +1857,11 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 (fields.ResourceClass.VCPU, 16, 0),
                 (fields.ResourceClass.MEMORY_MB, 32768, 0),
             ]),
-            # TODO(tetsuro): Return all resource providers in the tree
-            #  'cn_numa0': set([]),
-            #  'cn_numa1': set([]),
-            #  'cn_numa0_pf0': set([
-            #      (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
-            #  ]),
+            'cn_numa0': set([]),
+            'cn_numa1': set([]),
+            'cn_numa0_pf0': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+            ]),
             'cn_numa1_pf1': set([
                 (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
             ]),
@@ -1873,10 +1870,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         expected = {
             'cn': set([]),
-            # TODO(tetsuro): Return all resource providers in the tree
-            #  'cn_numa0': set([]),
-            #  'cn_numa1': set([]),
-            #  'cn_numa0_pf0': set([]),
+            'cn_numa0': set([]),
+            'cn_numa1': set([]),
+            'cn_numa0_pf0': set([]),
             'cn_numa1_pf1': set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
         }
         self._validate_provider_summary_traits(expected, alloc_cands)
@@ -1899,13 +1895,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self._validate_allocation_requests(expected, alloc_cands)
 
         expected = {
-            # TODO(tetsuro): Return all resource providers in the tree
-            # 'cn': set([
-            #     (fields.ResourceClass.VCPU, 16, 0),
-            #     (fields.ResourceClass.MEMORY_MB, 32768, 0),
-            # ]),
-            # 'cn_numa0': set([]),
-            # 'cn_numa1': set([]),
+            'cn': set([
+                (fields.ResourceClass.VCPU, 16, 0),
+                (fields.ResourceClass.MEMORY_MB, 32768, 0),
+            ]),
+            'cn_numa0': set([]),
+            'cn_numa1': set([]),
             'cn_numa0_pf0': set([
                 (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
             ]),
@@ -1916,9 +1911,51 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self._validate_provider_summary_resources(expected, alloc_cands)
 
         expected = {
-            # 'cn': set([]),
-            # 'cn_numa0': set([]),
-            # 'cn_numa1': set([]),
+            'cn': set([]),
+            'cn_numa0': set([]),
+            'cn_numa1': set([]),
+            'cn_numa0_pf0': set([]),
+            'cn_numa1_pf1': set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
+        }
+        self._validate_provider_summary_traits(expected, alloc_cands)
+
+        # Same, but with the request in a granular group, which hits a
+        # different code path.
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    fields.ResourceClass.SRIOV_NET_VF: 1,
+                },
+            )}
+        )
+
+        expected = [
+            [('cn_numa0_pf0', fields.ResourceClass.SRIOV_NET_VF, 1)],
+            [('cn_numa1_pf1', fields.ResourceClass.SRIOV_NET_VF, 1)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn': set([
+                (fields.ResourceClass.VCPU, 16, 0),
+                (fields.ResourceClass.MEMORY_MB, 32768, 0),
+            ]),
+            'cn_numa0': set([]),
+            'cn_numa1': set([]),
+            'cn_numa0_pf0': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+            ]),
+            'cn_numa1_pf1': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
+        expected = {
+            'cn': set([]),
+            'cn_numa0': set([]),
+            'cn_numa1': set([]),
             'cn_numa0_pf0': set([]),
             'cn_numa1_pf1': set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
         }
@@ -2264,10 +2301,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             'cn1': set([
                 (fields.ResourceClass.VCPU, 16, 0)
             ]),
-        # NOTE(tetsuro): In summary, we'd like to expose all nested providers
-        # in the tree.
-        #     'cn1_numa0': set([])
-        #     'cn1_numa1': set([])
+            'cn1_numa0': set([]),
+            'cn1_numa1': set([]),
             'cn1_numa0_pf0': set([
                 (fields.ResourceClass.SRIOV_NET_VF, 8, 0)
             ]),
@@ -2307,13 +2342,11 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             'cn1': set([
                 (fields.ResourceClass.VCPU, 16, 0)
             ]),
-        # NOTE(tetsuro): In summary, we'd like to expose all nested providers
-        # in the tree.
-        #     'cn1_numa0': set([])
-        #     'cn1_numa1': set([])
-        #     'cn1_numa0_pf0': set([
-        #         (fields.ResourceClass.SRIOV_NET_VF, 8, 0)
-        #     ]),
+            'cn1_numa0': set([]),
+            'cn1_numa1': set([]),
+            'cn1_numa0_pf0': set([
+                (fields.ResourceClass.SRIOV_NET_VF, 8, 0)
+            ]),
             'cn1_numa1_pf1': set([
                 (fields.ResourceClass.SRIOV_NET_VF, 8, 0)
             ]),

@@ -47,7 +47,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
     """Test resource-provider objects' lifecycles."""
 
     def test_provider_traits_empty_param(self):
-        self.assertRaises(ValueError, rp_obj._provider_traits,
+        self.assertRaises(ValueError, rp_obj._get_traits_by_provider_tree,
                           self.ctx, [])
 
     def test_trait_ids_from_names_empty_param(self):
