@@ -33,7 +33,8 @@ rules = [
                 'method': 'GET',
                 'path': '/resource_classes'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
         CREATE,
         base.RULE_ADMIN_API,
@@ -43,7 +44,8 @@ rules = [
                 'method': 'POST',
                 'path': '/resource_classes'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
         SHOW,
         base.RULE_ADMIN_API,
@@ -53,7 +55,8 @@ rules = [
                 'method': 'GET',
                 'path': '/resource_classes/{name}'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
         UPDATE,
         base.RULE_ADMIN_API,
@@ -63,7 +66,8 @@ rules = [
                 'method': 'PUT',
                 'path': '/resource_classes/{name}'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
         DELETE,
         base.RULE_ADMIN_API,
@@ -73,7 +77,8 @@ rules = [
                 'method': 'DELETE',
                 'path': '/resource_classes/{name}'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 

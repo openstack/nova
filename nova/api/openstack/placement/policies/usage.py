@@ -30,9 +30,10 @@ rules = [
                 'method': 'GET',
                 'path': '/resource_providers/{uuid}/usages'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        # TODO(mriedem): At some point we should set scope_types=['project']
+        # TODO(mriedem): At some point we might set scope_types=['project']
         # so that non-admin project-scoped token users can query usages for
         # their project. The context.can() target will need to change as well
         # in the actual policy enforcement check in the handler code.
@@ -44,7 +45,8 @@ rules = [
                 'method': 'GET',
                 'path': '/usages'
             }
-        ])
+        ],
+        scope_types=['system'])
 ]
 
 
