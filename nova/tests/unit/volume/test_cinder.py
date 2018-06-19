@@ -192,9 +192,7 @@ class CinderApiTestCase(test.NoDBTestCase):
                                                     description='',
                                                     imageRef=None,
                                                     metadata=None, name='',
-                                                    project_id=None,
                                                     snapshot_id=None,
-                                                    user_id=None,
                                                     volume_type=None)
 
     @mock.patch('nova.volume.cinder.cinderclient')
@@ -212,9 +210,9 @@ class CinderApiTestCase(test.NoDBTestCase):
         self.assertRaises(exception.OverQuota, self.api.create, self.ctx,
                           1, '', '')
         mock_cinderclient.return_value.volumes.create.assert_called_once_with(
-            1, user_id=None, imageRef=None, availability_zone=None,
+            1, imageRef=None, availability_zone=None,
             volume_type=None, description='', snapshot_id=None, name='',
-            project_id=None, metadata=None)
+            metadata=None)
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_get_all(self, mock_cinderclient):
