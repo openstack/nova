@@ -19,12 +19,22 @@ import os
 import os.path
 
 from oslo_log import log as logging
+from oslo_utils import importutils
+import pbr.version
 
+from nova.api.openstack.placement import db_api
 from nova.api.openstack.placement import deploy
+from nova.common import config
 from nova import conf
-from nova import config
+
+
+profiler = importutils.try_import('osprofiler.opts')
+
 
 CONFIG_FILE = 'nova.conf'
+
+
+version_info = pbr.version.VersionInfo('nova')
 
 
 def setup_logging(config):
@@ -47,10 +57,23 @@ def _get_config_file(env=None):
     return os.path.join(dirname, CONFIG_FILE)
 
 
+def _parse_args(argv, default_config_files):
+    logging.register_options(conf.CONF)
+
+    if profiler:
+        profiler.set_defaults(conf.CONF)
+
+    config.set_middleware_defaults()
+
+    conf.CONF(argv[1:], project='nova', version=version_info.version_string(),
+              default_config_files=default_config_files)
+
+
 def init_application():
     # initialize the config system
     conffile = _get_config_file()
-    config.parse_args([], default_config_files=[conffile])
+    _parse_args([], default_config_files=[conffile])
+    db_api.configure(conf.CONF)
 
     # initialize the logging system
     setup_logging(conf.CONF)

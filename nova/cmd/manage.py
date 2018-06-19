@@ -44,6 +44,7 @@ import six
 import six.moves.urllib.parse as urlparse
 from sqlalchemy.engine import url as sqla_url
 
+from nova.api.openstack.placement import db_api as placement_db
 from nova.api.openstack.placement.objects import consumer as consumer_obj
 from nova.cmd import common as cmd_common
 import nova.conf
@@ -853,6 +854,8 @@ class ApiDbCommands(object):
         # the placement sync to and with the api sync.
         result = True
         if CONF.placement_database.connection is not None:
+            # Establish the independent context manager for the placement db.
+            placement_db.configure(CONF)
             result = migration.db_sync(version, database='placement')
         return migration.db_sync(version2, database='api') and result
 

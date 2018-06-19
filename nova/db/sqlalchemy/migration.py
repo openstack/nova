@@ -24,6 +24,7 @@ from oslo_log import log as logging
 import sqlalchemy
 from sqlalchemy.sql import null
 
+from nova.api.openstack.placement import db_api as placement_db
 from nova.db.sqlalchemy import api as db_session
 from nova import exception
 from nova.i18n import _
@@ -43,7 +44,7 @@ def get_engine(database='main', context=None):
     if database == 'api':
         return db_session.get_api_engine()
     if database == 'placement':
-        return db_session.get_placement_engine()
+        return placement_db.get_placement_engine()
 
 
 def db_sync(version=None, database='main', context=None):
