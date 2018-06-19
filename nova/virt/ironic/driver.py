@@ -1407,6 +1407,37 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         self.firewall_driver.unfilter_instance(instance, network_info)
 
+    def _plug_vif(self, node, port_id):
+        last_attempt = 5
+        for attempt in range(0, last_attempt + 1):
+            try:
+                self.ironicclient.call("node.vif_attach", node.uuid,
+                                       port_id, retry_on_conflict=False)
+            except ironic.exc.BadRequest as e:
+                # NOTE(danms): If we race with ironic startup, there
+                # will be no ironic-conductor running, which will
+                # give us a failure to do this plug operation. So,
+                # be graceful in that case and wait/retry.
+                if ('No conductor' in six.text_type(e) and
+                        attempt < last_attempt):
+                    LOG.warning('No ironic conductor is running; '
+                                'waiting...')
+                    time.sleep(10)
+                    continue
+
+                msg = (_("Cannot attach VIF %(vif)s to the node %(node)s "
+                         "due to error: %(err)s") % {
+                             'vif': port_id,
+                             'node': node.uuid, 'err': e})
+                LOG.error(msg)
+                raise exception.VirtualInterfacePlugException(msg)
+            except ironic.exc.Conflict:
+                # NOTE (vsaienko) Return since the VIF is already attached.
+                return
+
+            # Success, so don't retry
+            return
+
     def _plug_vifs(self, node, instance, network_info):
         # NOTE(PhilDay): Accessing network_info will block if the thread
         # it wraps hasn't finished, so do this ahead of time so that we
@@ -1417,18 +1448,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                    'network_info': network_info_str})
         for vif in network_info:
             port_id = six.text_type(vif['id'])
-            try:
-                self.ironicclient.call("node.vif_attach", node.uuid, port_id,
-                                       retry_on_conflict=False)
-            except ironic.exc.BadRequest as e:
-                msg = (_("Cannot attach VIF %(vif)s to the node %(node)s due "
-                         "to error: %(err)s") % {'vif': port_id,
-                                                 'node': node.uuid, 'err': e})
-                LOG.error(msg)
-                raise exception.VirtualInterfacePlugException(msg)
-            except ironic.exc.Conflict:
-                # NOTE (vsaienko) Pass since VIF already attached.
-                pass
+            self._plug_vif(node, port_id)
 
     def _unplug_vifs(self, node, instance, network_info):
         # NOTE(PhilDay): Accessing network_info will block if the thread
