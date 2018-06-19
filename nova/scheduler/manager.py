@@ -123,16 +123,18 @@ class SchedulerManager(manager.Manager):
                                                            request_spec,
                                                            filter_properties)
 
-        try:
-            request_filter.process_reqspec(ctxt, spec_obj)
-        except exception.RequestFilterFailed as e:
-            raise exception.NoValidHost(reason=e.message)
-
-        resources = utils.resources_from_request_spec(spec_obj)
         is_rebuild = utils.request_is_rebuild(spec_obj)
         alloc_reqs_by_rp_uuid, provider_summaries, allocation_request_version \
             = None, None, None
         if self.driver.USES_ALLOCATION_CANDIDATES and not is_rebuild:
+            # Only process the Placement request spec filters when Placement
+            # is used.
+            try:
+                request_filter.process_reqspec(ctxt, spec_obj)
+            except exception.RequestFilterFailed as e:
+                raise exception.NoValidHost(reason=e.message)
+
+            resources = utils.resources_from_request_spec(spec_obj)
             res = self.placement_client.get_allocation_candidates(ctxt,
                                                                   resources)
             if res is None:
