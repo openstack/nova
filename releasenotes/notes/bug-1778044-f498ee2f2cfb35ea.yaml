@@ -1,0 +1,15 @@
+---
+issues:
+  - |
+    The initial implementation of native LUKS decryption within Libvirt 2.2.0
+    had a `known issue`_ with the use of passphrases that were a multiple of 16
+    bytes in size. This was `resolved`_ in the upstream 3.3.0 release of
+    Libvirt and has been backported to various downstream distribution specific
+    versions.
+
+    A simple warning will reference the above if this issue is encountered by
+    Nova however operators of the environment will still need to update
+    Libvirt to a version where this issue has been fixed to resolve the issue.
+
+    .. _known issue: https://bugzilla.redhat.com/show_bug.cgi?id=1447297
+    .. _resolved: https://libvirt.org/git/?p=libvirt.git;a=commit;h=7189099
