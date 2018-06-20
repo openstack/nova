@@ -1,0 +1,18 @@
+{
+  "allocations": {
+    "4e061c03-611e-4caa-bf26-999dcff4284e": {
+      "resources": {
+        "DISK_GB": 20
+      }
+    },
+    "89873422-1373-46e5-b467-f0c5e6acf08f": {
+      "resources": {
+        "MEMORY_MB": 1024,
+        "VCPU": 1
+      }
+    }
+  },
+  "consumer_generation": 1,
+  "user_id": "66cb2f29-c86d-47c3-8af5-69ae7b778c70",
+  "project_id": "42a32c07-3eeb-4401-9373-68a8cdca6784"
+}

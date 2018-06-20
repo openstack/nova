@@ -336,3 +336,73 @@ resource provider inventory to be equal to total.
 Include all resource class inventories in the ``provider_summaries`` field in
 response of the ``GET /allocation_candidates`` API even if the resource class
 is not in the requested resources.
+
+1.28 Consumer generation support
+--------------------------------
+
+A new generation field has been added to the consumer concept. Consumers are
+the actors that are allocated resources in the placement API. When an
+allocation is created, a consumer UUID is specified, along with a project and
+user ID (after microversion 1.8).
+
+The consumer generation facilitates safe concurrent modification of an
+allocation.
+
+A consumer generation is now returned from the following URIs:
+
+``GET /resource_providers/{uuid}/allocations``
+
+The response continues to be a dict with a key of ``allocations``, which itself
+is a dict, keyed by consumer UUID, of allocations against the resource
+provider. For each of those dicts, a ``consumer_generation`` field will now be
+shown.
+
+``GET /allocations/{consumer_uuid}``
+
+The response continues to be a dict with a key of ``allocations``, which
+itself is a dict, keyed by resource provider UUID, of allocations being
+consumed by the consumer with the ``{consumer_uuid}``. The top-level dict will
+also now contain a ``consumer_generation`` field.
+
+The value of the ``consumer_generation`` field will be an unsigned integer.
+
+The ``PUT /allocations/{consumer_uuid}`` URI has been modified to now require a
+``consumer_generation`` field in the request payload. This field is required to
+be ``null`` if the caller expects that there are no allocations already
+existing for the consumer. Otherwise, it should contain the integer generation
+that the caller understands the consumer to be at the time of the call.
+
+A ``409 Conflict`` will be returned from the ``PUT
+/allocations/{consumer_uuid}`` if there was a mismatch between the supplied
+generation and the consumer's generation as known by the server. Similarly, a
+``409 Conflict`` will be returned if during the course of replacing the
+consumer's allocations another process concurrently changed the consumer's
+allocations. This allows the caller to react to the concurrent write by
+re-reading the consumer's allocations and re-issuing the call to replace
+allocations as needed.
+
+The ``PUT /allocations/{consumer_uuid}`` URI has also been modified to accept
+an empty allocations object, thereby bringing it to parity with the behaviour
+of ``POST /allocations``, which uses an empty allocations object to indicate
+that the allocations for a particular consumer should be removed. Passing an
+empty allocations object along with a ``consumer_generation`` makes ``PUT
+/allocations/{consumer_uuid}`` a **safe** way to delete allocations for a
+consumer. The ``DELETE /allocations/{consumer_uuid}`` URI remains unsafe to
+call in deployments where multiple callers may simultaneously be attempting to
+modify a consumer's allocations.
+
+The ``POST /allocations`` URI variant has also been changed to require a
+``consumer_generation`` field in the request payload **for each consumer
+involved in the request**. Similar responses to ``PUT
+/allocations/{consumer_uuid}`` are returned when any of the consumers
+generations conflict with the server's view of those consumers or if any of the
+consumers involved in the request are modified by another process.
+
+**WARNING**:
+
+In all cases, it is absolutely **NOT SAFE** to create and modify allocations
+for a consumer using different microversions where one of the microversions is
+prior to 1.28. The only way to safely modify allocations for a consumer and
+satisfy expectations you have regarding the prior existence (or lack of
+existence) of those allocations is to always use microversion 1.28+ when
+calling allocations API endpoints.

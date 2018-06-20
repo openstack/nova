@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    Adds a new ``generation`` column to the consumers table. This value is
+    incremented every time allocations are made for a consumer. The new
+    placement microversion 1.28 requires that all ``POST`` and ``PUT
+    /allocations`` requests now include the ``consumer_generation`` parameter
+    to ensure that if two processes are allocating resources for the same
+    consumer, the second one to post doesn't overwrite the first. If there is a
+    mismatch between the ``consumer_generation`` in the request and the current
+    value in the database, the allocation will fail, and a 409 Conflict
+    response will be returned. The calling process must then get the
+    allocations for that consumer by calling ``GET /allocations/{consumer}``.
+    That response will now contain, in addition to the allocations, the current
+    value of the generation value for that consumer. The calling process should
+    then combine the existing allocations with the ones it is trying to post,
+    and re-submit with the current consumer_generation.

@@ -577,7 +577,8 @@ def parse_qs_request_groups(req):
     return by_suffix
 
 
-def ensure_consumer(ctx, consumer_uuid, project_id, user_id):
+def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
+                    consumer_generation, want_version):
     """Ensures there are records in the consumers, projects and users table for
     the supplied external identifiers.
 
@@ -587,7 +588,13 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id):
     :param consumer_uuid: The uuid of the consumer of the resources.
     :param project_id: The external ID of the project consuming the resources.
     :param user_id: The external ID of the user consuming the resources.
+    :param consumer_generation: The generation provided by the user for this
+        consumer.
+    :param want_version: the microversion matcher.
+    :raises webob.exc.HTTPConflict if consumer generation is required and there
+            was a mismatch
     """
+    requires_consumer_generation = want_version.matches((1, 28))
     if project_id is None:
         project_id = CONF.placement.incomplete_consumer_project_id
         user_id = CONF.placement.incomplete_consumer_user_id
@@ -614,7 +621,26 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id):
 
     try:
         consumer = consumer_obj.Consumer.get_by_uuid(ctx, consumer_uuid)
+        if requires_consumer_generation:
+            if consumer.generation != consumer_generation:
+                raise webob.exc.HTTPConflict(
+                    _('consumer generation conflict - '
+                      'expected %(expected_gen)s but got %(got_gen)s') %
+                      {
+                          'expected_gen': consumer.generation,
+                          'got_gen': consumer_generation,
+                      })
     except exception.NotFound:
+        # If we are attempting to modify or create allocations after 1.26, we
+        # need a consumer generation specified. The user must have specified
+        # None for the consumer generation if we get here, since there was no
+        # existing consumer with this UUID and therefore the user should be
+        # indicating that they expect the consumer did not exist.
+        if requires_consumer_generation:
+            if consumer_generation is not None:
+                raise webob.exc.HTTPConflict(
+                    _('consumer generation conflict - '
+                      'expected None but got %s') % consumer_generation)
         # No such consumer. This is common for new allocations. Create the
         # consumer record
         try:

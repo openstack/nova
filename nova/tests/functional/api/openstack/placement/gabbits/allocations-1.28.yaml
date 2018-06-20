@@ -1,0 +1,168 @@
+fixtures:
+    - AllocationFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement 1.28
+#
+# Scenarios to test
+# Start with no consumers
+#    old, no CG = success, consumer gets created
+#    new, no CG = fail, due to schema
+#    new, CG=None = success, consumer gets created
+#    new, CG=<any> = fail
+# Create an allocation, and with it, a consumer
+# Now create another allocation
+#    old, no CG = success
+#    new, CG=None = fail
+#    new, CG !match = fail
+#    new, get CG from /allocations
+#    new, CG matches = success
+
+tests:
+
+- name: old version no gen no existing
+  PUT: /allocations/11111111-1111-1111-1111-111111111111
+  request_headers:
+      openstack-api-version: placement 1.27
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+            resources:
+              DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+  status: 204
+
+- name: new version no gen no existing
+  PUT: /allocations/22222222-2222-2222-2222-222222222222
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+            resources:
+              DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+  status: 400
+  response_strings:
+    - JSON does not validate
+
+- name: new version gen is None no existing
+  PUT: /allocations/22222222-2222-2222-2222-222222222222
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+            resources:
+              DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_generation: null
+  status: 204
+
+- name: new version any gen no existing
+  PUT: /allocations/33333333-3333-3333-3333-333333333333
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+            resources:
+              DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_generation: 33
+  status: 409
+  response_strings:
+    - consumer generation conflict
+
+# Now create an allocation for a specific consumer
+- name: put an allocation
+  PUT: /allocations/44444444-4444-4444-4444-444444444444
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_generation: null
+  status: 204
+
+- name: new version no gen existing
+  PUT: /allocations/44444444-4444-4444-4444-444444444444
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_generation: null
+  status: 409
+  response_strings:
+    - consumer generation conflict
+
+- name: get the current consumer generation
+  GET: /allocations/44444444-4444-4444-4444-444444444444
+  status: 200
+
+- name: new version matching gen existing
+  PUT: /allocations/44444444-4444-4444-4444-444444444444
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_generation: $HISTORY["get the current consumer generation"].$RESPONSE["consumer_generation"]
+  status: 204
+
+- name: new version mismatch gen existing
+  PUT: /allocations/44444444-4444-4444-4444-444444444444
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_generation: 12
+  status: 409
+  response_strings:
+    - consumer generation conflict
+
+- name: old version no gen existing
+  PUT: /allocations/44444444-4444-4444-4444-444444444444
+  request_headers:
+      openstack-api-version: placement 1.27
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+            resources:
+              DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+  status: 204
+
+- name: new version serialization contains consumer generation
+  GET: /allocations/44444444-4444-4444-4444-444444444444
+  status: 200
+  response_json_paths:
+      $.consumer_generation: /^\d+$/
+
+- name: empty allocations dict now possible in PUT /allocations/{consumer_uuid}
+  PUT: /allocations/44444444-4444-4444-4444-444444444444
+  data:
+      allocations: {}
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_generation: $HISTORY["new version serialization contains consumer generation"].$RESPONSE["consumer_generation"]
+  status: 204
+
+- name: should now return no allocations for this consumer
+  GET: /allocations/44444444-4444-4444-4444-444444444444
+  status: 200
+  response_json_paths:
+      $.allocations.`len`: 0

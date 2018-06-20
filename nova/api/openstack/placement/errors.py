@@ -40,3 +40,4 @@ URI.
 # value.
 DEFAULT = 'placement.undefined_code'
 INVENTORY_INUSE = 'placement.inventory.inuse'
+CONCURRENT_UPDATE = 'placement.concurrent_update'

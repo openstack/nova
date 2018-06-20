@@ -19,6 +19,7 @@ from oslo_utils import encodeutils
 from oslo_utils import timeutils
 import webob
 
+from nova.api.openstack.placement import errors
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
@@ -72,7 +73,9 @@ def _serialize_allocations_for_consumer(allocations, want_version):
         },
         # project_id and user_id are added with microverion 1.12
         'project_id': PROJECT_ID,
-        'user_id': USER_ID
+        'user_id': USER_ID,
+        # Generation for consumer >= 1.28
+        'consumer_generation': 1
     }
     """
     allocation_data = collections.defaultdict(dict)
@@ -90,17 +93,21 @@ def _serialize_allocations_for_consumer(allocations, want_version):
     if allocations and want_version.matches((1, 12)):
         # We're looking at a list of allocations by consumer id so project and
         # user are consistent across the list
-        project_id = allocations[0].consumer.project.external_id
-        user_id = allocations[0].consumer.user.external_id
-
+        consumer = allocations[0].consumer
+        project_id = consumer.project.external_id
+        user_id = consumer.user.external_id
         result['project_id'] = project_id
         result['user_id'] = user_id
+        show_consumer_gen = want_version.matches((1, 28))
+        if show_consumer_gen:
+            result['consumer_generation'] = consumer.generation
 
     return result
 
 
 def _serialize_allocations_for_resource_provider(allocations,
-                                                 resource_provider):
+                                                 resource_provider,
+                                                 want_version):
     """Turn a list of allocations into a dict by consumer id.
 
     {'resource_provider_generation': GENERATION,
@@ -109,16 +116,21 @@ def _serialize_allocations_for_resource_provider(allocations,
            'resources': {
               'DISK_GB': 4,
               'VCPU': 2
-           }
+           },
+           # Generation for consumer >= 1.28
+           'consumer_generation': 0
        },
        CONSUMER_ID_2: {
            'resources': {
               'DISK_GB': 6,
               'VCPU': 3
-           }
+           },
+           # Generation for consumer >= 1.28
+           'consumer_generation': 0
        }
     }
     """
+    show_consumer_gen = want_version.matches((1, 28))
     allocation_data = collections.defaultdict(dict)
     for allocation in allocations:
         key = allocation.consumer.uuid
@@ -127,6 +139,12 @@ def _serialize_allocations_for_resource_provider(allocations,
 
         resource_class = allocation.resource_class
         allocation_data[key]['resources'][resource_class] = allocation.used
+
+        if show_consumer_gen:
+            consumer_gen = None
+            if allocation.consumer is not None:
+                consumer_gen = allocation.consumer.generation
+            allocation_data[key]['consumer_generation'] = consumer_gen
 
     result = {'allocations': allocation_data}
     result['resource_provider_generation'] = resource_provider.generation
@@ -187,7 +205,8 @@ def list_for_resource_provider(req):
 
     allocs = rp_obj.AllocationList.get_all_by_resource_provider(context, rp)
 
-    output = _serialize_allocations_for_resource_provider(allocs, rp)
+    output = _serialize_allocations_for_resource_provider(
+        allocs, rp, want_version)
     last_modified = _last_modified_from_allocations(allocs, want_version)
     allocations_json = jsonutils.dumps(output)
 
@@ -202,7 +221,8 @@ def list_for_resource_provider(req):
 
 
 def _new_allocations(context, resource_provider_uuid, consumer_uuid,
-                     resources, project_id, user_id):
+                     resources, project_id, user_id, consumer_generation,
+                     want_version):
     """Create new allocation objects for a set of resources
 
     Returns a list of Allocation objects.
@@ -214,6 +234,10 @@ def _new_allocations(context, resource_provider_uuid, consumer_uuid,
     :param resources: A dict of resource classes and values.
     :param project_id: The project consuming the resources.
     :param user_id: The user consuming the resources.
+    :param consumer_generation: The generation supplied by the user when
+                                PUT/POST'ing allocations. May be None if
+                                the microversion is <1.28
+    :param want_version: The microversion object from the context.
     """
     allocations = []
     try:
@@ -225,7 +249,8 @@ def _new_allocations(context, resource_provider_uuid, consumer_uuid,
               "that does not exist.") %
             {'rp_uuid': resource_provider_uuid})
     consumer = util.ensure_consumer(
-        context, consumer_uuid, project_id, user_id)
+        context, consumer_uuid, project_id, user_id, consumer_generation,
+        want_version)
     for resource_class in resources:
         allocation = rp_obj.Allocation(
             resource_provider=resource_provider,
@@ -258,14 +283,33 @@ def _set_allocations_for_consumer(req, schema):
     # If the body includes an allocation for a resource provider
     # that does not exist, raise a 400.
     allocation_objects = []
-    for resource_provider_uuid, allocation in allocation_data.items():
-        new_allocations = _new_allocations(context,
-                                           resource_provider_uuid,
-                                           consumer_uuid,
-                                           allocation['resources'],
-                                           data.get('project_id'),
-                                           data.get('user_id'))
-        allocation_objects.extend(new_allocations)
+    if not allocation_data:
+        # The allocations are empty, which means wipe them out. Internal
+        # to the allocation object this is signalled by a used value of 0.
+        # We still need to verify the consumer's generation, though, which
+        # we do in _ensure_consumer()
+        # NOTE(jaypipes): This will only occur 1.28+. The JSONSchema will
+        # prevent an empty allocations object from being passed when there is
+        # no consumer generation, so this is safe to do.
+        util.ensure_consumer(context, consumer_uuid, data.get('project_id'),
+             data.get('user_id'), data.get('consumer_generation'),
+             want_version)
+        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+            context, consumer_uuid)
+        for allocation in allocations:
+            allocation.used = 0
+            allocation_objects.append(allocation)
+    else:
+        for resource_provider_uuid, allocation in allocation_data.items():
+            new_allocations = _new_allocations(context,
+                                               resource_provider_uuid,
+                                               consumer_uuid,
+                                               allocation['resources'],
+                                               data.get('project_id'),
+                                               data.get('user_id'),
+                                               data.get('consumer_generation'),
+                                               want_version)
+            allocation_objects.extend(new_allocations)
 
     allocations = rp_obj.AllocationList(
         context, objects=allocation_objects)
@@ -286,8 +330,9 @@ def _set_allocations_for_consumer(req, schema):
             _('Unable to allocate inventory: %(error)s') % {'error': exc})
     except exception.ConcurrentUpdateDetected as exc:
         raise webob.exc.HTTPConflict(
-            _('Inventory changed while attempting to allocate: %(error)s') %
-            {'error': exc})
+            _('Inventory and/or allocations changed while attempting to '
+              'allocate: %(error)s') % {'error': exc},
+              comment=errors.CONCURRENT_UPDATE)
 
     req.response.status = 204
     req.response.content_type = None
@@ -309,10 +354,17 @@ def set_allocations_for_consumer(req):
 
 
 @wsgi_wrapper.PlacementWsgify  # noqa
-@microversion.version_handler('1.12')
+@microversion.version_handler('1.12', '1.27')
 @util.require_content('application/json')
 def set_allocations_for_consumer(req):
     return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA_V1_12)
+
+
+@wsgi_wrapper.PlacementWsgify  # noqa
+@microversion.version_handler('1.28')
+@util.require_content('application/json')
+def set_allocations_for_consumer(req):
+    return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA_V1_28)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -321,7 +373,11 @@ def set_allocations_for_consumer(req):
 def set_allocations(req):
     context = req.environ['placement.context']
     context.can(policies.ALLOC_MANAGE)
-    data = util.extract_json(req.body, schema.POST_ALLOCATIONS_V1_13)
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    want_schema = schema.POST_ALLOCATIONS_V1_13
+    if want_version.matches((1, 28)):
+        want_schema = schema.POST_ALLOCATIONS_V1_28
+    data = util.extract_json(req.body, want_schema)
 
     # Create a sequence of allocation objects to be used in an
     # AllocationList.create_all() call, which will mean all the changes
@@ -333,6 +389,7 @@ def set_allocations(req):
         project_id = data[consumer_uuid]['project_id']
         user_id = data[consumer_uuid]['user_id']
         allocations = data[consumer_uuid]['allocations']
+        consumer_generation = data[consumer_uuid].get('consumer_generation')
         if allocations:
             for resource_provider_uuid in allocations:
                 resources = allocations[resource_provider_uuid]['resources']
@@ -341,7 +398,9 @@ def set_allocations(req):
                                                    consumer_uuid,
                                                    resources,
                                                    project_id,
-                                                   user_id)
+                                                   user_id,
+                                                   consumer_generation,
+                                                   want_version)
                 allocation_objects.extend(new_allocations)
         else:
             # The allocations are empty, which means wipe them out.
@@ -370,8 +429,9 @@ def set_allocations(req):
             _('Unable to allocate inventory: %(error)s') % {'error': exc})
     except exception.ConcurrentUpdateDetected as exc:
         raise webob.exc.HTTPConflict(
-            _('Inventory changed while attempting to allocate: %(error)s') %
-            {'error': exc})
+            _('Inventory and/or allocations changed while attempting to '
+              'allocate: %(error)s') % {'error': exc},
+              comment=errors.CONCURRENT_UPDATE)
 
     req.response.status = 204
     req.response.content_type = None

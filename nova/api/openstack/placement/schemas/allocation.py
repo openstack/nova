@@ -139,3 +139,28 @@ POST_ALLOCATIONS_V1_13 = {
         "^[0-9a-fA-F-]{36}$": DELETABLE_ALLOCATIONS
     }
 }
+
+# A required consumer generation was added to the top-level dict in this
+# version of PUT /allocations/{consumer_uuid}. In addition, the PUT
+# /allocations/{consumer_uuid}/now allows for empty allocations (indicating the
+# allocations are being removed)
+ALLOCATION_SCHEMA_V1_28 = copy.deepcopy(DELETABLE_ALLOCATIONS)
+ALLOCATION_SCHEMA_V1_28['properties']['consumer_generation'] = {
+    "type": ["integer", "null"],
+    "additionalProperties": False
+}
+ALLOCATION_SCHEMA_V1_28['required'].append("consumer_generation")
+
+# A required consumer generation was added to the allocations dicts in this
+# version of POST /allocations
+REQUIRED_GENERATION_ALLOCS_POST = copy.deepcopy(DELETABLE_ALLOCATIONS)
+alloc_props = REQUIRED_GENERATION_ALLOCS_POST['properties']
+alloc_props['consumer_generation'] = {
+    "type": ["integer", "null"],
+    "additionalProperties": False
+}
+REQUIRED_GENERATION_ALLOCS_POST['required'].append("consumer_generation")
+POST_ALLOCATIONS_V1_28 = copy.deepcopy(POST_ALLOCATIONS_V1_13)
+POST_ALLOCATIONS_V1_28["patternProperties"] = {
+    "^[0-9a-fA-F-]{36}$": REQUIRED_GENERATION_ALLOCS_POST
+}

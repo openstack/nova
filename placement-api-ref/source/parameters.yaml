@@ -314,6 +314,14 @@ capacity:
   required: true
   description: >
     The amount of the resource that the provider can accommodate.
+consumer_generation:
+  type: integer
+  in: body
+  required: true
+  min_version: 1.28
+  description: >
+    The generation of the consumer. Should be set to ``None`` when indicating
+    the the caller expects the consumer does not yet exist.
 consumer_uuid_body:
   <<: *consumer_uuid
   in: body

@@ -1,0 +1,35 @@
+{
+  "30328d13-e299-4a93-a102-61e4ccabe474": {
+    "consumer_generation": 1,
+    "project_id": "131d4efb-abc0-4872-9b92-8c8b9dc4320f",
+    "user_id": "131d4efb-abc0-4872-9b92-8c8b9dc4320f",
+    "allocations": {
+      "e10927c4-8bc9-465d-ac60-d2f79f7e4a00": {
+        "resources": {
+          "VCPU": 2,
+          "MEMORY_MB": 3
+        }
+      }
+    }
+  },
+  "71921e4e-1629-4c5b-bf8d-338d915d2ef3": {
+    "consumer_generation": 1,
+    "project_id": "131d4efb-abc0-4872-9b92-8c8b9dc4320f",
+    "user_id": "131d4efb-abc0-4872-9b92-8c8b9dc4320f",
+    "allocations": {}
+  },
+  "48c1d40f-45d8-4947-8d46-52b4e1326df8": {
+    "consumer_generation": 1,
+    "project_id": "131d4efb-abc0-4872-9b92-8c8b9dc4320f",
+    "user_id": "131d4efb-abc0-4872-9b92-8c8b9dc4320f",
+    "allocations": {
+      "e10927c4-8bc9-465d-ac60-d2f79f7e4a00": {
+        "resources": {
+          "VCPU": 4,
+          "MEMORY_MB": 5
+        }
+      }
+    }
+  }
+}
+
