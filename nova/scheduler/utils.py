@@ -58,6 +58,8 @@ class ResourceRequest(object):
         # { ident: RequestGroup }
         self._rg_by_id = {}
         self._group_policy = None
+        # Default to the configured limit but _limit can be
+        # set to None to indicate "no limit".
         self._limit = CONF.scheduler.max_placement_results
 
     def __str__(self):
@@ -272,7 +274,10 @@ class ResourceRequest(object):
                 qs_params.extend(sorted(aggs))
             return qs_params
 
-        qparams = [('limit', self._limit)]
+        if self._limit is not None:
+            qparams = [('limit', self._limit)]
+        else:
+            qparams = []
         if self._group_policy is not None:
             qparams.append(('group_policy', self._group_policy))
         for ident, rg in self._rg_by_id.items():
@@ -448,6 +453,12 @@ def resources_from_request_spec(spec_obj):
             grp = res_req.get_request_group(None)
             grp.member_of = [tuple(ored.split(','))
                              for ored in destination.aggregates]
+
+    # Don't limit allocation candidates when using force_hosts or force_nodes.
+    if 'force_hosts' in spec_obj and spec_obj.force_hosts:
+        res_req._limit = None
+    if 'force_nodes' in spec_obj and spec_obj.force_nodes:
+        res_req._limit = None
 
     return res_req
 

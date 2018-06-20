@@ -370,6 +370,76 @@ class TestUtils(test.NoDBTestCase):
         fake_spec = objects.RequestSpec(flavor=flavor)
         utils.resources_from_request_spec(fake_spec)
 
+    def test_process_no_force_hosts_or_force_nodes(self):
+        flavor = objects.Flavor(vcpus=1,
+                                memory_mb=1024,
+                                root_gb=15,
+                                ephemeral_gb=0,
+                                swap=0)
+        expected = utils.ResourceRequest()
+        expected._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+        )
+        rr = self._test_resources_from_request_spec(expected, flavor)
+        expected_querystring = (
+            'limit=1000&'
+            'resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1'
+        )
+        self.assertEqual(expected_querystring, rr.to_querystring())
+
+    def test_process_use_force_nodes(self):
+        flavor = objects.Flavor(vcpus=1,
+                                memory_mb=1024,
+                                root_gb=15,
+                                ephemeral_gb=0,
+                                swap=0)
+        fake_spec = objects.RequestSpec(flavor=flavor, force_nodes=['test'])
+        expected = utils.ResourceRequest()
+        expected._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+        )
+        expected._limit = None
+        resources = utils.resources_from_request_spec(fake_spec)
+        self.assertResourceRequestsEqual(expected, resources)
+        expected_querystring = (
+            'resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1'
+        )
+        self.assertEqual(expected_querystring, resources.to_querystring())
+
+    def test_process_use_force_hosts(self):
+        flavor = objects.Flavor(vcpus=1,
+                                memory_mb=1024,
+                                root_gb=15,
+                                ephemeral_gb=0,
+                                swap=0)
+        fake_spec = objects.RequestSpec(flavor=flavor, force_hosts=['test'])
+        expected = utils.ResourceRequest()
+        expected._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+        )
+        expected._limit = None
+        resources = utils.resources_from_request_spec(fake_spec)
+        self.assertResourceRequestsEqual(expected, resources)
+        expected_querystring = (
+            'resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1'
+        )
+        self.assertEqual(expected_querystring, resources.to_querystring())
+
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     def test_resources_from_flavor_no_bfv(self, mock_is_bfv):
