@@ -676,9 +676,7 @@ class HostTestCase(test.NoDBTestCase):
             self.assertEqual('one', self.host.get_memory_mb_total())
 
     def test_get_memory_total_file_backed(self):
-        self.flags(file_backed_memory=1048576,
-                   group="libvirt")
-
+        self.flags(file_backed_memory=1048576, group="libvirt")
         self.assertEqual(1048576, self.host.get_memory_mb_total())
 
     def test_get_memory_used(self):

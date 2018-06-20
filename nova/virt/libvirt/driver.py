@@ -607,8 +607,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     'qemu': libvirt_utils.version_to_string(
                         MIN_QEMU_FILE_BACKED_VERSION)})
 
-            # file backed memory doesn't work with memory overcommit.
-            # Block service startup if file backed memory is enabled and
+            # file-backed memory doesn't work with memory overcommit.
+            # Block service startup if file-backed memory is enabled and
             # ram_allocation_ratio is not 1.0
             if CONF.ram_allocation_ratio != 1.0:
                 raise exception.InternalError(
@@ -4713,7 +4713,7 @@ class LibvirtDriver(driver.ComputeDriver):
         wantsfilebacked = CONF.libvirt.file_backed_memory > 0
 
         if wantsmempages and wantsfilebacked:
-            # Can't use file backed memory with hugepages
+            # Can't use file-backed memory with hugepages
             LOG.warning("Instance requested huge pages, but file-backed "
                     "memory is enabled, and incompatible with huge pages")
             raise exception.MemoryPagesUnsupported()
@@ -6552,7 +6552,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         # TODO(zcornelius): Remove this check in Stein, as we'll only support
-        #                    Rocky and newer computes.
+        #                   Rocky and newer computes.
         # If file_backed_memory is enabled on this host, we have to make sure
         # the source is new enough to support it. Since the source generates
         # the XML for the destination, we depend on the source generating a

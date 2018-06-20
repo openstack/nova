@@ -1,5 +1,5 @@
 ==================
-File backed memory
+File-backed memory
 ==================
 
 .. important::
@@ -7,7 +7,7 @@ File backed memory
    As of the 18.0.0 Rocky release, the functionality described below is
    only supported by the libvirt/KVM driver.
 
-The file backed memory feature in Openstack allows a Nova node to serve guest
+The file-backed memory feature in Openstack allows a Nova node to serve guest
 memory from a file backing store. This mechanism uses the libvirt file memory
 source, causing guest instance memory to be allocated as files within the
 libvirt memory backing directory.
@@ -17,48 +17,46 @@ this feature works best when used with very fast block devices or virtual file
 systems - such as flash or RAM devices.
 
 When configured, ``nova-compute`` will report the capacity configured for
-file backed memory to placement in place of the total system memory capacity.
+file-backed memory to placement in place of the total system memory capacity.
 This allows the node to run more instances than would normally fit
 within system memory.
 
-To enable file backed memory, follow the steps below:
+To enable file-backed memory, follow the steps below:
 
 #. `Configure the backing store`_
 
-#. `Configure Nova Compute for file backed memory`_
+#. `Configure Nova Compute for file-backed memory`_
 
 .. important::
 
    It is not possible to live migrate from a node running a version of
-   OpenStack that does not support file backed memory to a node with file
+   OpenStack that does not support file-backed memory to a node with file
    backed memory enabled. It is recommended that all Nova compute nodes are
-   upgraded to Rocky before enabling file backed memory.
+   upgraded to Rocky before enabling file-backed memory.
 
 Prerequisites and Limitations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Libvirt
-   File backed memory requires libvirt version 4.0.0 or newer
+   File-backed memory requires libvirt version 4.0.0 or newer
 
 Qemu
-   File backed memory requires qemu version 2.6.0 or newer
+   File-backed memory requires qemu version 2.6.0 or newer
 
 Memory overcommit
-   File backed memory is not compatible with memory overcommit.
+   File-backed memory is not compatible with memory overcommit.
    ``ram_allocation_ratio`` must be set to ``1.0`` in ``nova.conf``, and the
    host must not be added to a host aggregate with ``ram_allocation_ratio``
    set to anything but ``1.0``.
 
 Huge pages
-   File backed memory is not compatible with huge pages. Instances with huge
-   pages configured will not start on a host with file backed memory enabled. It
+   File-backed memory is not compatible with huge pages. Instances with huge
+   pages configured will not start on a host with file-backed memory enabled. It
    is recommended to use host aggregates to ensure instances configured for
-   huge pages are not placed on hosts with file backed memory configured
+   huge pages are not placed on hosts with file-backed memory configured.
 
 Handling these limitations could be optimized with a scheduler filter in the
-future
-
-
+future.
 
 Configure the backing store
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -95,12 +93,12 @@ store mounted at (or above) this location.
 
       # mount /dev/sdb /var/lib/libvirt/qemu/ram
 
-Configure Nova Compute for file backed memory
+Configure Nova Compute for file-backed memory
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#. Enable File backed memory in ``nova-compute``
+#. Enable File-backed memory in ``nova-compute``
 
-   Configure Nova to utilize file backed memory with the capacity of the
+   Configure Nova to utilize file-backed memory with the capacity of the
    backing store in MiB. 1048576 MiB (1 TiB) is used in this example.
 
    Edit ``/etc/nova/nova.conf``
