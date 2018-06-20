@@ -344,8 +344,9 @@ class SchedulerReportClient(object):
             for (rc, amount) in res.items()))
         qs_params = {
             'resources': resource_query,
-            'limit': CONF.scheduler.max_placement_results,
         }
+        if resources._limit is not None:
+            qs_params['limit'] = resources._limit
         if required_traits:
             qs_params['required'] = ",".join(required_traits)
 

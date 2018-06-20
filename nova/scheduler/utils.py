@@ -56,6 +56,9 @@ class ResourceRequest(object):
     def __init__(self):
         # { ident: RequestGroup }
         self._rg_by_id = {}
+        # Default to the configured limit but _limit can be
+        # set to None to indicate "no limit".
+        self._limit = CONF.scheduler.max_placement_results
 
     def get_request_group(self, ident):
         if ident not in self._rg_by_id:
@@ -332,6 +335,12 @@ def resources_from_request_spec(spec_obj):
     # Add the (remaining) items from the spec_resources to the sharing group
     for rclass, amount in spec_resources.items():
         res_req.get_request_group(None).resources[rclass] = amount
+
+    # Don't limit allocation candidates when using force_hosts or force_nodes.
+    if 'force_hosts' in spec_obj and spec_obj.force_hosts:
+        res_req._limit = None
+    if 'force_nodes' in spec_obj and spec_obj.force_nodes:
+        res_req._limit = None
 
     return res_req
 

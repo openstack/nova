@@ -1632,6 +1632,36 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertEqual(expected_query, query)
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
 
+    def test_get_allocation_candidates_with_no_limit(self):
+        resp_mock = mock.Mock(status_code=200)
+        json_data = {
+            'allocation_requests': mock.sentinel.alloc_reqs,
+            'provider_summaries': mock.sentinel.p_sums,
+        }
+        resources = scheduler_utils.ResourceRequest.from_extra_specs({
+            'resources:VCPU': '1',
+            'resources:MEMORY_MB': '1024',
+        })
+        resources._limit = None
+        expected_path = '/allocation_candidates'
+        expected_query = {'resources': ['MEMORY_MB:1024,VCPU:1']}
+
+        resp_mock.json.return_value = json_data
+        self.ks_adap_mock.get.return_value = resp_mock
+
+        alloc_reqs, p_sums, allocation_request_version = \
+                self.client.get_allocation_candidates(self.context, resources)
+
+        self.ks_adap_mock.get.assert_called_once_with(
+            mock.ANY, raise_exc=False, microversion='1.17',
+            headers={'X-Openstack-Request-Id': self.context.global_id})
+        url = self.ks_adap_mock.get.call_args[0][0]
+        split_url = parse.urlsplit(url)
+        query = parse.parse_qs(split_url.query)
+        self.assertEqual(expected_path, split_url.path)
+        self.assertEqual(expected_query, query)
+        self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
+
     def test_get_allocation_candidates_not_found(self):
         # Ensure _get_resource_provider() just returns None when the placement
         # API doesn't find a resource provider matching a UUID
