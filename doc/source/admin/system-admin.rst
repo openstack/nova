@@ -70,6 +70,10 @@ responsibilities of services and drivers are:
   ``FlatDHCPManager``, or ``VLANManager`` (defaults to ``VLANManager`` if
   nothing is specified).
 
+  .. deprecated:: 14.0.0
+
+   ``nova-network`` was deprecated in the OpenStack Newton release.
+
 ``nova-scheduler``
   Dispatches requests for new virtual machines to the correct node.
 
