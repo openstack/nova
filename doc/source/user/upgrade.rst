@@ -89,6 +89,11 @@ same time.
    * For maximum safety (no failed API operations), gracefully shutdown all
      the services (i.e. SIG_TERM) except nova-compute.
 
+   * Before restarting services with new code, perform the release-specific
+     readiness check with ``nova-status upgrade check``. See the
+     :ref:`nova-status upgrade check <nova-status-checks>` for more details
+     on status check.
+
    * Start all services on the new code, with
      ``[upgrade_levels]compute=auto`` in nova.conf.  It is safest to
      start nova-conductor first and nova-api last. Note that you may

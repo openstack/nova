@@ -52,6 +52,8 @@ These sections describe the available categories and arguments for
 Upgrade
 ~~~~~~~
 
+.. _nova-status-checks:
+
 ``nova-status upgrade check``
   Performs a release-specific readiness check before restarting services with
   new code. This command expects to have complete configuration and access
