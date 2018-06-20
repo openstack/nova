@@ -801,9 +801,10 @@ class IronicDriver(virt_driver.ComputeDriver):
                 }
 
         provider_tree.update_inventory(nodename, result)
-        # TODO(efried): *Unset* traits that are "owned" by ironic virt but not
-        # set on the node object.
-        provider_tree.add_traits(nodename, *node.traits)
+        # TODO(efried): *Unset* (remove_traits) if "owned" by ironic virt but
+        # not set on the node object, and *set* (add_traits) only those both
+        # owned by ironic virt and set on the node object.
+        provider_tree.update_traits(nodename, node.traits)
 
     def get_available_resource(self, nodename):
         """Retrieve resource information.
