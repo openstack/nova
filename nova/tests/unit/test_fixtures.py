@@ -478,6 +478,8 @@ class TestPlacementFixture(testtools.TestCase):
         self.useFixture(conf_fixture.ConfFixture())
         # We need PlacementPolicyFixture because placement-api checks policy.
         self.useFixture(policy_fixture.PlacementPolicyFixture())
+        # Database is needed to start placement API
+        self.useFixture(fixtures.Database(database='placement'))
 
     def test_responds_to_version(self):
         """Ensure the Placement server responds to calls sensibly."""

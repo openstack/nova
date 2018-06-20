@@ -123,7 +123,7 @@ def _trait_sync(ctx):
             pass  # some other process sync'd, just ignore
 
 
-def _ensure_trait_sync(ctx):
+def ensure_trait_sync(ctx):
     """Ensures that the os_traits library is synchronized to the traits db.
 
     If _TRAITS_SYNCED is False then this process has not tried to update the
@@ -1448,7 +1448,6 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
         :type filters: dict
         """
         _ensure_rc_cache(context)
-        _ensure_trait_sync(context)
         resource_providers = cls._get_all_by_filters_from_db(context, filters)
         return base.obj_make_list(context, cls(context),
                                   ResourceProvider, resource_providers)
@@ -2387,7 +2386,6 @@ class Trait(base.VersionedObject, base.TimestampedObject):
     @staticmethod
     @db_api.placement_context_manager.writer  # trait sync can cause a write
     def _get_by_name_from_db(context, name):
-        _ensure_trait_sync(context)
         result = context.session.query(models.Trait).filter_by(
             name=name).first()
         if not result:
@@ -2437,7 +2435,6 @@ class TraitList(base.ObjectListBase, base.VersionedObject):
     @staticmethod
     @db_api.placement_context_manager.writer  # trait sync can cause a write
     def _get_all_from_db(context, filters):
-        _ensure_trait_sync(context)
         if not filters:
             filters = {}
 
@@ -3826,7 +3823,6 @@ class AllocationCandidates(base.VersionedObject):
                  according to `limit`.
         """
         _ensure_rc_cache(context)
-        _ensure_trait_sync(context)
         alloc_reqs, provider_summaries = cls._get_by_requests(
             context, requests, limit=limit, group_policy=group_policy)
         return cls(

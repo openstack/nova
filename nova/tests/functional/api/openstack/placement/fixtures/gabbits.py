@@ -88,6 +88,9 @@ class APIFixture(fixture.GabbiFixture):
         self.placement_db_fixture.reset()
         self.api_db_fixture.reset()
         self.main_db_fixture.reset()
+        # Do this now instead of waiting for the WSGI app to start so that
+        # fixtures can have traits.
+        deploy.update_database()
 
         os.environ['RP_UUID'] = uuidutils.generate_uuid()
         os.environ['RP_NAME'] = uuidutils.generate_uuid()

@@ -16,9 +16,11 @@ import oslo_middleware
 from oslo_middleware import cors
 
 from nova.api.openstack.placement import auth
+from nova.api.openstack.placement import db_api
 from nova.api.openstack.placement import fault_wrap
 from nova.api.openstack.placement import handler
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.objects import resource_provider
 from nova.api.openstack.placement import requestlog
 from nova.api.openstack.placement import util
 
@@ -82,6 +84,14 @@ def deploy(conf):
     return application
 
 
+def update_database():
+    """Do any database updates required at process boot time, such as
+    updating the traits database.
+    """
+    ctx = db_api.DbContext()
+    resource_provider.ensure_trait_sync(ctx)
+
+
 # NOTE(cdent): Althought project_name is no longer used because of the
 # resolution of https://bugs.launchpad.net/nova/+bug/1734491, loadapp()
 # is considered a public interface for the creation of a placement
@@ -98,4 +108,5 @@ def loadapp(config, project_name=NAME):
                          backwards compatibility
     """
     application = deploy(config)
+    update_database()
     return application
