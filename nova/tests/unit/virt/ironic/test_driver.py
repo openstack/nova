@@ -1944,6 +1944,30 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           self.driver._plug_vifs, node, instance,
                           network_info)
 
+    @mock.patch('time.sleep')
+    @mock.patch.object(FAKE_CLIENT, 'node')
+    def test_plug_vifs_failure_no_conductor(self, mock_node, mock_sleep):
+        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        node = _get_cached_node(uuid=node_uuid)
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node_uuid)
+        first_vif_id = 'aaaaaaaa-vv11-cccc-dddd-eeeeeeeeeeee'
+        second_vif_id = 'aaaaaaaa-vv22-cccc-dddd-eeeeeeeeeeee'
+        first_vif = ironic_utils.get_test_vif(address='22:FF:FF:FF:FF:FF',
+                                              id=first_vif_id)
+        second_vif = ironic_utils.get_test_vif(address='11:FF:FF:FF:FF:FF',
+                                               id=second_vif_id)
+        msg = 'No conductor service registered which supports driver ipmi.'
+        mock_node.vif_attach.side_effect = [None,
+                                            ironic_exception.BadRequest(msg),
+                                            None]
+        network_info = [first_vif, second_vif]
+        self.driver._plug_vifs(node, instance, network_info)
+        calls = [mock.call(node.uuid, first_vif_id),
+                 mock.call(node.uuid, second_vif_id),
+                 mock.call(node.uuid, second_vif_id)]
+        mock_node.vif_attach.assert_has_calls(calls, any_order=True)
+
     @mock.patch.object(FAKE_CLIENT, 'node')
     def test_plug_vifs_already_attached(self, mock_node):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
