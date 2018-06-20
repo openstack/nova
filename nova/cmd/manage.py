@@ -1804,8 +1804,9 @@ class PlacementCommands(object):
         # TODO(mriedem): Store a marker in system_metadata so we can
         # automatically pick up where we left off without the user having
         # to pass it in (if unlimited is False).
+        filters = {'deleted': False}
         instances = objects.InstanceList.get_by_filters(
-            ctxt, filters={}, sort_key='created_at', sort_dir='asc',
+            ctxt, filters=filters, sort_key='created_at', sort_dir='asc',
             limit=max_count, expected_attrs=['flavor'])
         while instances:
             output(_('Found %s candidate instances.') % len(instances))
@@ -1867,7 +1868,7 @@ class PlacementCommands(object):
             # Note that InstanceList doesn't support slice notation.
             marker = instances[len(instances) - 1].uuid
             instances = objects.InstanceList.get_by_filters(
-                ctxt, filters={}, sort_key='created_at', sort_dir='asc',
+                ctxt, filters=filters, sort_key='created_at', sort_dir='asc',
                 limit=max_count, marker=marker, expected_attrs=['flavor'])
 
         return num_processed
