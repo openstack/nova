@@ -134,7 +134,8 @@ class LibvirtLiveMigrateData(LiveMigrateData):
     # Version 1.5: Added src_supports_native_luks
     # Version 1.6: Added wait_for_vif_plugged
     # Version 1.7: Added dst_wants_file_backed_memory
-    VERSION = '1.7'
+    # Version 1.8: Added file_backed_memory_discard
+    VERSION = '1.8'
 
     fields = {
         'filename': fields.StringField(),
@@ -155,12 +156,18 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         'supported_perf_events': fields.ListOfStringsField(),
         'src_supports_native_luks': fields.BooleanField(),
         'dst_wants_file_backed_memory': fields.BooleanField(),
+        # file_backed_memory_discard is ignored unless
+        # dst_wants_file_backed_memory is set
+        'file_backed_memory_discard': fields.BooleanField(),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(LibvirtLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 8):
+            if 'file_backed_memory_discard' in primitive:
+                del primitive['file_backed_memory_discard']
         if target_version < (1, 7):
             if 'dst_wants_file_backed_memory' in primitive:
                 del primitive['dst_wants_file_backed_memory']

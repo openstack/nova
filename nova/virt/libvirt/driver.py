@@ -288,6 +288,8 @@ MIN_QEMU_LUKS_VERSION = (2, 6, 0)
 MIN_LIBVIRT_FILE_BACKED_VERSION = (4, 0, 0)
 MIN_QEMU_FILE_BACKED_VERSION = (2, 6, 0)
 
+MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION = (4, 4, 0)
+MIN_QEMU_FILE_BACKED_DISCARD_VERSION = (2, 10, 0)
 
 VGPU_RESOURCE_SEMAPHORE = "vgpu_resources"
 
@@ -4736,6 +4738,10 @@ class LibvirtDriver(driver.ComputeDriver):
             membacking.filesource = True
             membacking.sharedaccess = True
             membacking.allocateimmediate = True
+            if self._host.has_min_version(
+                    MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION,
+                    MIN_QEMU_FILE_BACKED_DISCARD_VERSION):
+                membacking.discard = True
 
         return membacking
 
@@ -6601,6 +6607,9 @@ class LibvirtDriver(driver.ComputeDriver):
         data.disk_available_mb = disk_available_mb
         data.dst_wants_file_backed_memory = \
                 CONF.libvirt.file_backed_memory > 0
+        data.file_backed_memory_discard = (CONF.libvirt.file_backed_memory and
+            self._host.has_min_version(MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION,
+                                       MIN_QEMU_FILE_BACKED_DISCARD_VERSION))
 
         return data
 

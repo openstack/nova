@@ -220,7 +220,9 @@ class _TestLibvirtLiveMigrateData(object):
             instance_relative_path='foo/bar',
             graphics_listen_addrs={'vnc': '127.0.0.1'},
             serial_listen_addr='127.0.0.1',
-            bdms=[test_bdmi])
+            bdms=[test_bdmi],
+            dst_wants_file_backed_memory=True,
+            file_backed_memory_discard=True)
         obj2 = migrate_data.LibvirtLiveMigrateData()
         obj2.from_legacy_dict(obj.to_legacy_dict(pre_migration_result=True))
         self.assertEqual(obj.to_legacy_dict(),
@@ -256,6 +258,8 @@ class _TestLibvirtLiveMigrateData(object):
         self.assertNotIn('src_supports_native_luks', primitive)
         primitive = data(obj.obj_to_primitive(target_version='1.6'))
         self.assertNotIn('dst_wants_file_backed_memory', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.7'))
+        self.assertNotIn('file_backed_memory_discard', primitive)
 
     def test_bdm_obj_make_compatible(self):
         obj = migrate_data.LibvirtLiveMigrateBDMInfo(

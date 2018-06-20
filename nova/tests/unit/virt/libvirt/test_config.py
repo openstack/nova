@@ -3410,12 +3410,14 @@ class LibvirtConfigGuestMemoryBackingTest(LibvirtConfigBaseTest):
         obj.sharedaccess = True
         obj.allocateimmediate = True
         obj.filesource = True
+        obj.discard = True
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
             <memoryBacking>
               <source type="file"/>
               <access mode="shared"/>
               <allocation mode="immediate"/>
+              <discard />
             </memoryBacking>""")
 
 

@@ -236,11 +236,15 @@ def _update_memory_backing_xml(xml_doc, migrate_data):
     """
     old_xml_has_memory_backing = True
     file_backed = False
+    discard = False
 
     memory_backing = xml_doc.findall('./memoryBacking')
 
     if 'dst_wants_file_backed_memory' in migrate_data:
         file_backed = migrate_data.dst_wants_file_backed_memory
+
+    if 'file_backed_memory_discard' in migrate_data:
+        discard = migrate_data.file_backed_memory_discard
 
     if not memory_backing:
         # Create memoryBacking element
@@ -249,7 +253,7 @@ def _update_memory_backing_xml(xml_doc, migrate_data):
     else:
         memory_backing = memory_backing[0]
         # Remove existing file-backed memory tags, if they exist.
-        for name in ("access", "source", "allocation"):
+        for name in ("access", "source", "allocation", "discard"):
             tag = memory_backing.findall(name)
             if tag:
                 memory_backing.remove(tag[0])
@@ -262,6 +266,9 @@ def _update_memory_backing_xml(xml_doc, migrate_data):
     memory_backing.append(etree.Element("source", type="file"))
     memory_backing.append(etree.Element("access", mode="shared"))
     memory_backing.append(etree.Element("allocation", mode="immediate"))
+
+    if discard:
+        memory_backing.append(etree.Element("discard"))
 
     if not old_xml_has_memory_backing:
         xml_doc.append(memory_backing)
