@@ -107,20 +107,21 @@ class CreateIncompleteConsumersTestCase(test.NoDBTestCase):
 
     @db_api.placement_context_manager.reader
     def _check_incomplete_consumers(self, ctx):
-        incomplete_external_id = CONF.placement.incomplete_consumer_project_id
+        incomplete_project_id = CONF.placement.incomplete_consumer_project_id
 
         # Verify we have a record in projects for the missing sentinel
         sel = PROJECT_TBL.select(
-            PROJECT_TBL.c.external_id == incomplete_external_id)
+            PROJECT_TBL.c.external_id == incomplete_project_id)
         rec = ctx.session.execute(sel).first()
-        self.assertEqual(incomplete_external_id, rec['external_id'])
+        self.assertEqual(incomplete_project_id, rec['external_id'])
         incomplete_proj_id = rec['id']
 
         # Verify we have a record in users for the missing sentinel
+        incomplete_user_id = CONF.placement.incomplete_consumer_user_id
         sel = user_obj.USER_TBL.select(
-            USER_TBL.c.external_id == incomplete_external_id)
+            USER_TBL.c.external_id == incomplete_user_id)
         rec = ctx.session.execute(sel).first()
-        self.assertEqual(incomplete_external_id, rec['external_id'])
+        self.assertEqual(incomplete_user_id, rec['external_id'])
         incomplete_user_id = rec['id']
 
         # Verify there are records in the consumers table for our old
