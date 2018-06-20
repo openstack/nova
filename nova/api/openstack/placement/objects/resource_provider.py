@@ -705,7 +705,7 @@ def _provider_ids_from_uuid(context, uuid):
     return ProviderIds(**dict(res))
 
 
-def _provider_ids_matching_aggregates(context, member_of):
+def _provider_ids_matching_aggregates(context, member_of, rp_ids=None):
     """Given a list of lists of aggregate UUIDs, return the internal IDs of all
     resource providers associated with the aggregates.
 
@@ -722,6 +722,8 @@ def _provider_ids_matching_aggregates(context, member_of):
 
         we will return all the resource providers that are
         associated with agg1 as well as either (agg2 or agg3)
+    :param rp_ids: When present, returned resource providers are limited
+        to only those in this value
 
     :returns: A list of internal resource provider IDs having all required
         aggregate associations
@@ -748,6 +750,8 @@ def _provider_ids_matching_aggregates(context, member_of):
     # JOIN resource_provider_aggregates AS rpa3
     #   ON rp.id = rpa3.resource_provider_id
     #   AND rpa3.aggregate_id IN ($AGG3_ID, $AGG4_ID)
+    # # Only if we have rp_ids...
+    # WHERE rp.id IN ($RP_IDs)
 
     # First things first, get a map of all the aggregate UUID to internal
     # aggregate IDs
@@ -780,6 +784,8 @@ def _provider_ids_matching_aggregates(context, member_of):
             rpa_tbl.c.aggregate_id.in_(agg_ids))
         join_chain = sa.join(join_chain, rpa_tbl, join_cond)
     sel = sa.select([rp_tbl.c.id]).select_from(join_chain)
+    if rp_ids:
+        sel = sel.where(rp_tbl.c.id.in_(rp_ids))
     return [r[0] for r in context.session.execute(sel).fetchall()]
 
 
@@ -3084,13 +3090,9 @@ def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
 
     # If 'member_of' has values, do a separate lookup to identify the
     # resource providers that meet the member_of constraints.
-    # TODO(tetsuro): This approach is not efficient. We could potentially
-    # change _provider_ids_matching_aggregates() to accept an optional root_ids
-    # parameter that would further winnow results to a set of resource provider
-    # IDs (which we have here as we've already looked up the providers that
-    # have appropriate inventory capacity)
     if member_of:
-        rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of)
+        rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of,
+                                                        rp_ids=trees_with_inv)
         if not rps_in_aggs:
             # Short-circuit. The user either asked for a non-existing
             # aggregate or there were no resource providers that matched
