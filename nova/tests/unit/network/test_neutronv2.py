@@ -778,132 +778,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
 
-    def test_nw_info_build_no_match(self):
-        fake_port = {
-            'fixed_ips': [{'ip_address': '1.1.1.1'}],
-            'id': 'port-id',
-            'network_id': 'net-id1',
-            'tenant_id': 'tenant',
-            'binding:vif_type': model.VIF_TYPE_OVS,
-            }
-        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
-        fake_nets = [{'id': 'net-id2', 'name': 'foo', 'tenant_id': 'tenant'}]
-        api = neutronapi.API()
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
-            self.moxed_client)
-        self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
-        api._get_physnet_tunneled_info(self.context, self.moxed_client,
-                                       'net-id1').AndReturn((None, False))
-        self.mox.ReplayAll()
-        neutronapi.get_client(uuids.fake)
-        net, iid = api._nw_info_build_network(self.context, fake_port,
-                                              fake_nets, fake_subnets)
-        self.assertEqual(fake_subnets, net['subnets'])
-        self.assertEqual('net-id1', net['id'])
-        self.assertEqual('tenant', net['meta']['tenant_id'])
-
-    def test_nw_info_build_network_vhostuser(self):
-        fake_port = {
-            'fixed_ips': [{'ip_address': '1.1.1.1'}],
-            'id': 'port-id',
-            'network_id': 'net-id',
-            'binding:vif_type': model.VIF_TYPE_VHOSTUSER,
-            'binding:vif_details': {
-                    model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: True
-                                    }
-            }
-        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
-        fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
-        api = neutronapi.API()
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
-            self.moxed_client)
-        self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
-        api._get_physnet_tunneled_info(mox.IgnoreArg(), mox.IgnoreArg(),
-                                       'net-id').AndReturn((None, False))
-        self.mox.ReplayAll()
-        neutronapi.get_client(uuids.fake)
-        net, iid = api._nw_info_build_network(self.context, fake_port,
-                                              fake_nets, fake_subnets)
-        self.assertEqual(fake_subnets, net['subnets'])
-        self.assertEqual('net-id', net['id'])
-        self.assertEqual('foo', net['label'])
-        self.assertEqual('tenant', net.get_meta('tenant_id'))
-        self.assertEqual(CONF.flat_injected, net.get_meta('injected'))
-        self.assertEqual(CONF.neutron.ovs_bridge, net['bridge'])
-        self.assertNotIn('should_create_bridge', net)
-        self.assertEqual('port-id', iid)
-
-    def test_nw_info_build_network_vhostuser_fp(self):
-        fake_port = {
-            'fixed_ips': [{'ip_address': '1.1.1.1'}],
-            'id': 'port-id',
-            'network_id': 'net-id',
-            'binding:vif_type': model.VIF_TYPE_VHOSTUSER,
-            'binding:vif_details': {
-                    model.VIF_DETAILS_VHOSTUSER_FP_PLUG: True,
-                    model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: False,
-                                    }
-            }
-        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
-        fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
-        api = neutronapi.API()
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
-            self.moxed_client)
-        self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
-        api._get_physnet_tunneled_info(mox.IgnoreArg(), mox.IgnoreArg(),
-                                       'net-id').AndReturn((None, False))
-        self.mox.ReplayAll()
-        neutronapi.get_client(uuids.fake)
-        net, ovs_interfaceid = api._nw_info_build_network(
-            self.context, fake_port, fake_nets, fake_subnets)
-        self.assertEqual(fake_subnets, net['subnets'])
-        self.assertEqual('net-id', net['id'])
-        self.assertEqual('foo', net['label'])
-        self.assertEqual('tenant', net.get_meta('tenant_id'))
-        self.assertEqual('brqnet-id', net['bridge'])
-        self.assertIsNone(ovs_interfaceid)
-
-    def _test_nw_info_build_custom_bridge(self, vif_type, extra_details=None):
-        fake_port = {
-            'fixed_ips': [{'ip_address': '1.1.1.1'}],
-            'id': 'port-id',
-            'network_id': 'net-id',
-            'binding:vif_type': vif_type,
-            'binding:vif_details': {
-                model.VIF_DETAILS_BRIDGE_NAME: 'custom-bridge',
-            }
-        }
-        if extra_details:
-            fake_port['binding:vif_details'].update(extra_details)
-        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
-        fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
-        api = neutronapi.API()
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
-            self.moxed_client)
-        self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
-        api._get_physnet_tunneled_info(mox.IgnoreArg(), mox.IgnoreArg(),
-                                       'net-id').AndReturn((None, False))
-        self.mox.ReplayAll()
-        neutronapi.get_client(uuids.fake)
-        net, iid = api._nw_info_build_network(self.context, fake_port,
-                                              fake_nets, fake_subnets)
-        self.assertNotEqual(CONF.neutron.ovs_bridge, net['bridge'])
-        self.assertEqual('custom-bridge', net['bridge'])
-
-    def test_nw_info_build_custom_ovs_bridge(self):
-        self._test_nw_info_build_custom_bridge(model.VIF_TYPE_OVS)
-
-    def test_nw_info_build_custom_ovs_bridge_vhostuser(self):
-        self._test_nw_info_build_custom_bridge(model.VIF_TYPE_VHOSTUSER,
-                {model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: True})
-
-    def test_nw_info_build_custom_lb_bridge(self):
-        self._test_nw_info_build_custom_bridge(model.VIF_TYPE_BRIDGE)
-
     def test_build_network_info_model(self):
         api = neutronapi.API()
 
@@ -3599,6 +3473,132 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         self.assertIsNone(net['bridge'])
         self.assertNotIn('should_create_bridge', net)
         self.assertIsNone(iid)
+
+    @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info',
+                       return_value=(None, False))
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_nw_info_build_no_match(self, mock_get_client, mock_get_physnet):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        fake_port = {
+            'fixed_ips': [{'ip_address': '1.1.1.1'}],
+            'id': 'port-id',
+            'network_id': 'net-id1',
+            'tenant_id': 'tenant',
+            'binding:vif_type': model.VIF_TYPE_OVS,
+            }
+        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
+        fake_nets = [{'id': 'net-id2', 'name': 'foo', 'tenant_id': 'tenant'}]
+        net, iid = self.api._nw_info_build_network(self.context, fake_port,
+                                                   fake_nets, fake_subnets)
+        self.assertEqual(fake_subnets, net['subnets'])
+        self.assertEqual('net-id1', net['id'])
+        self.assertEqual('tenant', net['meta']['tenant_id'])
+        mock_get_client.assert_called_once_with(mock.ANY, admin=True)
+        mock_get_physnet.assert_called_once_with(self.context, mocked_client,
+                                                 'net-id1')
+
+    @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info',
+                       return_value=(None, False))
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_nw_info_build_network_vhostuser(self, mock_get_client,
+                                             mock_get_physnet):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        fake_port = {
+            'fixed_ips': [{'ip_address': '1.1.1.1'}],
+            'id': 'port-id',
+            'network_id': 'net-id',
+            'binding:vif_type': model.VIF_TYPE_VHOSTUSER,
+            'binding:vif_details': {
+                    model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: True
+                                    }
+            }
+        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
+        fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
+        net, iid = self.api._nw_info_build_network(self.context, fake_port,
+                                                   fake_nets, fake_subnets)
+        self.assertEqual(fake_subnets, net['subnets'])
+        self.assertEqual('net-id', net['id'])
+        self.assertEqual('foo', net['label'])
+        self.assertEqual('tenant', net.get_meta('tenant_id'))
+        self.assertEqual(CONF.flat_injected, net.get_meta('injected'))
+        self.assertEqual(CONF.neutron.ovs_bridge, net['bridge'])
+        self.assertNotIn('should_create_bridge', net)
+        self.assertEqual('port-id', iid)
+        mock_get_client.assert_called_once_with(mock.ANY, admin=True)
+        mock_get_physnet.assert_called_once_with(self.context, mocked_client,
+                                                 'net-id')
+
+    @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info',
+                       return_value=(None, False))
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_nw_info_build_network_vhostuser_fp(self, mock_get_client,
+                                                mock_get_physnet):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        fake_port = {
+            'fixed_ips': [{'ip_address': '1.1.1.1'}],
+            'id': 'port-id',
+            'network_id': 'net-id',
+            'binding:vif_type': model.VIF_TYPE_VHOSTUSER,
+            'binding:vif_details': {
+                    model.VIF_DETAILS_VHOSTUSER_FP_PLUG: True,
+                    model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: False,
+                                    }
+            }
+        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
+        fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
+        net, ovs_interfaceid = self.api._nw_info_build_network(
+            self.context, fake_port, fake_nets, fake_subnets)
+        self.assertEqual(fake_subnets, net['subnets'])
+        self.assertEqual('net-id', net['id'])
+        self.assertEqual('foo', net['label'])
+        self.assertEqual('tenant', net.get_meta('tenant_id'))
+        self.assertEqual('brqnet-id', net['bridge'])
+        self.assertIsNone(ovs_interfaceid)
+        mock_get_client.assert_called_once_with(mock.ANY, admin=True)
+        mock_get_physnet.assert_called_once_with(self.context, mocked_client,
+                                                 'net-id')
+
+    @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info',
+                       return_value=(None, False))
+    @mock.patch.object(neutronapi, 'get_client')
+    def _test_nw_info_build_custom_bridge(self, vif_type, mock_get_client,
+                                          mock_get_physnet,
+                                          extra_details=None):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        fake_port = {
+            'fixed_ips': [{'ip_address': '1.1.1.1'}],
+            'id': 'port-id',
+            'network_id': 'net-id',
+            'binding:vif_type': vif_type,
+            'binding:vif_details': {
+                model.VIF_DETAILS_BRIDGE_NAME: 'custom-bridge',
+            }
+        }
+        if extra_details:
+            fake_port['binding:vif_details'].update(extra_details)
+        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
+        fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
+        net, iid = self.api._nw_info_build_network(self.context, fake_port,
+                                                   fake_nets, fake_subnets)
+        self.assertNotEqual(CONF.neutron.ovs_bridge, net['bridge'])
+        self.assertEqual('custom-bridge', net['bridge'])
+        mock_get_client.assert_called_once_with(mock.ANY, admin=True)
+        mock_get_physnet.assert_called_once_with(self.context, mocked_client,
+                                                 'net-id')
+
+    def test_nw_info_build_custom_ovs_bridge(self):
+        self._test_nw_info_build_custom_bridge(model.VIF_TYPE_OVS)
+
+    def test_nw_info_build_custom_ovs_bridge_vhostuser(self):
+        self._test_nw_info_build_custom_bridge(model.VIF_TYPE_VHOSTUSER,
+                extra_details={model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: True})
+
+    def test_nw_info_build_custom_lb_bridge(self):
+        self._test_nw_info_build_custom_bridge(model.VIF_TYPE_BRIDGE)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_trusted(self, mock_get_client):
