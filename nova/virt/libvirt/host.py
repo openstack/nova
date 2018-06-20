@@ -765,13 +765,16 @@ class Host(object):
 
         :returns: the total amount of memory(MB).
         """
-        return self._get_hardware_info()[1]
+        if CONF.libvirt.file_backed_memory > 0:
+            return CONF.libvirt.file_backed_memory
+        else:
+            return self._get_hardware_info()[1]
 
-    def _sum_domain_memory_mb(self):
+    def _sum_domain_memory_mb(self, include_host=True):
         """Get the total memory consumed by guest domains
 
-        Subtract available host memory from dom0 to get real used memory
-        within dom0
+        If include_host is True, subtract available host memory from guest 0
+        to get real used memory within dom0 within xen
         """
         used = 0
         for guest in self.list_guests(only_guests=False):
@@ -783,7 +786,7 @@ class Host(object):
                             " %(uuid)s, exception: %(ex)s",
                             {"uuid": guest.uuid, "ex": e})
                 continue
-            if guest.id == 0:
+            if include_host and guest.id == 0:
                 # Memory usage for the host domain (dom0 in xen) is the
                 # reported memory minus available memory
                 used += (dom_mem - self._get_avail_memory_kb())
@@ -814,7 +817,11 @@ class Host(object):
 
         if CONF.libvirt.virt_type == 'xen':
             # For xen, report the sum of all domains, with
-            return self._sum_domain_memory_mb()
+            return self._sum_domain_memory_mb(include_host=True)
+        elif CONF.libvirt.file_backed_memory > 0:
+            # For file_backed_memory, report the total usage of guests,
+            # ignoring host memory
+            return self._sum_domain_memory_mb(include_host=False)
         else:
             return (self.get_memory_mb_total() -
                    (self._get_avail_memory_kb() // units.Ki))

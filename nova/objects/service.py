@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 31
+SERVICE_VERSION = 32
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -132,6 +132,11 @@ SERVICE_VERSION_HISTORY = (
     # Version 30: Compute RPC version 5.0
     {'compute_rpc': '5.0'},
     # Version 31: The compute manager checks if 'trusted_certs' are supported
+    {'compute_rpc': '5.0'},
+    # Version 32: Add 'file_backed_memory' support. The service version bump is
+    # needed to allow the destination of a live migration to reject the
+    # migration if 'file_backed_memory' is enabled and the source does not
+    # support 'file_backed_memory'
     {'compute_rpc': '5.0'},
 )
 

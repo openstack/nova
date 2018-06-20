@@ -285,6 +285,9 @@ MIN_LIBVIRT_MULTIATTACH = (3, 10, 0)
 MIN_LIBVIRT_LUKS_VERSION = (2, 2, 0)
 MIN_QEMU_LUKS_VERSION = (2, 6, 0)
 
+MIN_LIBVIRT_FILE_BACKED_VERSION = (4, 0, 0)
+MIN_QEMU_FILE_BACKED_VERSION = (2, 6, 0)
+
 
 VGPU_RESOURCE_SEMAPHORE = "vgpu_resources"
 
@@ -476,6 +479,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._set_multiattach_support()
 
+        self._check_file_backed_memory_support()
+
         if (CONF.libvirt.virt_type == 'lxc' and
                 not (CONF.libvirt.uid_maps and CONF.libvirt.gid_maps)):
             LOG.warning("Running libvirt-lxc without user namespaces is "
@@ -579,6 +584,36 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.debug('Volume multiattach is not supported based on current '
                       'versions of QEMU and libvirt. QEMU must be less than '
                       '2.10 or libvirt must be greater than or equal to 3.10.')
+
+    def _check_file_backed_memory_support(self):
+        if CONF.libvirt.file_backed_memory:
+            # file_backed_memory is only compatible with qemu/kvm virts
+            if CONF.libvirt.virt_type not in ("qemu", "kvm"):
+                raise exception.InternalError(
+                    _('Running Nova with file_backed_memory and virt_type '
+                      '%(type)s is not supported. file_backed_memory is only '
+                      'supported with qemu and kvm types.') %
+                    {'type': CONF.libvirt.virt_type})
+
+            # Check needed versions for file_backed_memory
+            if not self._host.has_min_version(
+                    MIN_LIBVIRT_FILE_BACKED_VERSION,
+                    MIN_QEMU_FILE_BACKED_VERSION):
+                raise exception.InternalError(
+                    _('Running Nova with file_backed_memory requires libvirt '
+                      'version %(libvirt)s and qemu version %(qemu)s') %
+                    {'libvirt': libvirt_utils.version_to_string(
+                        MIN_LIBVIRT_FILE_BACKED_VERSION),
+                    'qemu': libvirt_utils.version_to_string(
+                        MIN_QEMU_FILE_BACKED_VERSION)})
+
+            # file backed memory doesn't work with memory overcommit.
+            # Block service startup if file backed memory is enabled and
+            # ram_allocation_ratio is not 1.0
+            if CONF.ram_allocation_ratio != 1.0:
+                raise exception.InternalError(
+                    'Running Nova with file_backed_memory requires '
+                    'ram_allocation_ratio configured to 1.0')
 
     def _prepare_migration_flags(self):
         migration_flags = 0
@@ -4675,6 +4710,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
         wantsrealtime = hardware.is_realtime_enabled(flavor)
 
+        wantsfilebacked = CONF.libvirt.file_backed_memory > 0
+
+        if wantsmempages and wantsfilebacked:
+            # Can't use file backed memory with hugepages
+            LOG.warning("Instance requested huge pages, but file-backed "
+                    "memory is enabled, and incompatible with huge pages")
+            raise exception.MemoryPagesUnsupported()
+
         membacking = None
         if wantsmempages:
             pages = self._get_memory_backing_hugepages_support(
@@ -4687,6 +4730,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 membacking = vconfig.LibvirtConfigGuestMemoryBacking()
             membacking.locked = True
             membacking.sharedpages = False
+        if wantsfilebacked:
+            if not membacking:
+                membacking = vconfig.LibvirtConfigGuestMemoryBacking()
+            membacking.filesource = True
+            membacking.sharedaccess = True
+            membacking.allocateimmediate = True
 
         return membacking
 
@@ -6501,6 +6550,22 @@ class LibvirtDriver(driver.ComputeDriver):
         :param disk_over_commit: if true, allow disk over commit
         :returns: a LibvirtLiveMigrateData object
         """
+
+        # TODO(zcornelius): Remove this check in Stein, as we'll only support
+        #                    Rocky and newer computes.
+        # If file_backed_memory is enabled on this host, we have to make sure
+        # the source is new enough to support it. Since the source generates
+        # the XML for the destination, we depend on the source generating a
+        # file-backed XML for us, so fail if it won't do that.
+        if CONF.libvirt.file_backed_memory > 0:
+            srv = objects.Service.get_by_compute_host(context, instance.host)
+            if srv.version < 32:
+                msg = ("Cannot migrate instance %(uuid)s from node %(node)s. "
+                       "Node %(node)s is not compatible with "
+                       "file_backed_memory" % {"uuid": instance.uuid,
+                                               "node": srv.host})
+                raise exception.MigrationPreCheckError(reason=msg)
+
         if disk_over_commit:
             disk_available_gb = dst_compute_info['local_gb']
         else:
@@ -6534,6 +6599,9 @@ class LibvirtDriver(driver.ComputeDriver):
         if disk_over_commit is not None:
             data.disk_over_commit = disk_over_commit
         data.disk_available_mb = disk_available_mb
+        data.dst_wants_file_backed_memory = \
+                CONF.libvirt.file_backed_memory > 0
+
         return data
 
     def cleanup_live_migration_destination_check(self, context,

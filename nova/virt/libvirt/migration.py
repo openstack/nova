@@ -83,6 +83,7 @@ def get_updated_guest_xml(guest, migrate_data, get_volume_config):
     xml_doc = _update_serial_xml(xml_doc, migrate_data)
     xml_doc = _update_volume_xml(xml_doc, migrate_data, get_volume_config)
     xml_doc = _update_perf_events_xml(xml_doc, migrate_data)
+    xml_doc = _update_memory_backing_xml(xml_doc, migrate_data)
     return etree.tostring(xml_doc, encoding='unicode')
 
 
@@ -218,6 +219,52 @@ def _update_perf_events_xml(xml_doc, migrate_data):
 
     if not old_xml_has_perf:
         xml_doc.append(perf_events)
+
+    return xml_doc
+
+
+def _update_memory_backing_xml(xml_doc, migrate_data):
+    """Update libvirt domain XML for file backed memory
+
+    If incoming XML has a memoryBacking element, remove access, source,
+    and allocation children elements to get it to a known consistent state.
+
+    If no incoming memoryBacking element, create one.
+
+    If destination wants file backed memory, add source, access,
+    and allocation children.
+    """
+    old_xml_has_memory_backing = True
+    file_backed = False
+
+    memory_backing = xml_doc.findall('./memoryBacking')
+
+    if 'dst_wants_file_backed_memory' in migrate_data:
+        file_backed = migrate_data.dst_wants_file_backed_memory
+
+    if not memory_backing:
+        # Create memoryBacking element
+        memory_backing = etree.Element("memoryBacking")
+        old_xml_has_memory_backing = False
+    else:
+        memory_backing = memory_backing[0]
+        # Remove existing file backed memory tags, if they exist.
+        for name in ("access", "source", "allocation"):
+            tag = memory_backing.findall(name)
+            if tag:
+                memory_backing.remove(tag[0])
+
+    # Leave empty memoryBacking element
+    if not file_backed:
+        return xml_doc
+
+    # Add file_backed memoryBacking children
+    memory_backing.append(etree.Element("source", type="file"))
+    memory_backing.append(etree.Element("access", mode="shared"))
+    memory_backing.append(etree.Element("allocation", mode="immediate"))
+
+    if not old_xml_has_memory_backing:
+        xml_doc.append(memory_backing)
 
     return xml_doc
 

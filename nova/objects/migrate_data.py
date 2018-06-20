@@ -133,7 +133,8 @@ class LibvirtLiveMigrateData(LiveMigrateData):
     # Version 1.4: Added old_vol_attachment_ids
     # Version 1.5: Added src_supports_native_luks
     # Version 1.6: Added wait_for_vif_plugged
-    VERSION = '1.6'
+    # Version 1.7: Added dst_wants_file_backed_memory
+    VERSION = '1.7'
 
     fields = {
         'filename': fields.StringField(),
@@ -153,12 +154,16 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         'target_connect_addr': fields.StringField(nullable=True),
         'supported_perf_events': fields.ListOfStringsField(),
         'src_supports_native_luks': fields.BooleanField(),
+        'dst_wants_file_backed_memory': fields.BooleanField(),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(LibvirtLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 7):
+            if 'dst_wants_file_backed_memory' in primitive:
+                del primitive['dst_wants_file_backed_memory']
         if target_version < (1, 6) and 'wait_for_vif_plugged' in primitive:
             del primitive['wait_for_vif_plugged']
         if target_version < (1, 5):

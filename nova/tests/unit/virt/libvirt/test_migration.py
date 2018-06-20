@@ -92,13 +92,14 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         self.assertEqual([], ports)
 
     @mock.patch('lxml.etree.tostring')
+    @mock.patch.object(migration, '_update_memory_backing_xml')
     @mock.patch.object(migration, '_update_perf_events_xml')
     @mock.patch.object(migration, '_update_graphics_xml')
     @mock.patch.object(migration, '_update_serial_xml')
     @mock.patch.object(migration, '_update_volume_xml')
     def test_get_updated_guest_xml(
             self, mock_volume, mock_serial, mock_graphics,
-            mock_perf_events_xml, mock_tostring):
+            mock_perf_events_xml, mock_memory_backing, mock_tostring):
         data = objects.LibvirtLiveMigrateData()
         mock_guest = mock.Mock(spec=libvirt_guest.Guest)
         get_volume_config = mock.MagicMock()
@@ -109,6 +110,7 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         mock_serial.assert_called_once_with(mock.ANY, data)
         mock_volume.assert_called_once_with(mock.ANY, data, get_volume_config)
         mock_perf_events_xml.assert_called_once_with(mock.ANY, data)
+        mock_memory_backing.assert_called_once_with(mock.ANY, data)
         self.assertEqual(1, mock_tostring.called)
 
     def test_update_serial_xml_serial(self):
@@ -534,6 +536,63 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         self.assertThat(res, matchers.XMLMatches("""<domain>
   <perf>
     </perf>
+</domain>"""))
+
+    def test_update_memory_backing_xml_remove(self):
+        data = objects.LibvirtLiveMigrateData(
+            dst_wants_file_backed_memory=False)
+        xml = """<domain>
+  <memoryBacking>
+    <source type="file"/>
+    <access mode="shared"/>
+    <allocation mode="immediate"/>
+  </memoryBacking>
+</domain>"""
+        doc = etree.fromstring(xml)
+        res = etree.tostring(migration._update_memory_backing_xml(doc, data),
+                             encoding='unicode')
+
+        self.assertThat(res, matchers.XMLMatches("""<domain>
+  <memoryBacking/>
+</domain>"""))
+
+    def test_update_memory_backing_xml_add(self):
+        data = objects.LibvirtLiveMigrateData(
+            dst_wants_file_backed_memory=True)
+        xml = """<domain/>"""
+        doc = etree.fromstring(xml)
+        res = etree.tostring(migration._update_memory_backing_xml(doc, data),
+                             encoding='unicode')
+
+        self.assertThat(res, matchers.XMLMatches("""<domain>
+  <memoryBacking>
+    <source type="file"/>
+    <access mode="shared"/>
+    <allocation mode="immediate"/>
+  </memoryBacking>
+</domain>"""))
+
+    def test_update_memory_backing_xml_keep(self):
+        data = objects.LibvirtLiveMigrateData(
+            dst_wants_file_backed_memory=True)
+
+        xml = """<domain>
+  <memoryBacking>
+    <source type="file"/>
+    <access mode="shared"/>
+    <allocation mode="immediate"/>
+  </memoryBacking>
+</domain>"""
+        doc = etree.fromstring(xml)
+        res = etree.tostring(migration._update_memory_backing_xml(doc, data),
+                             encoding='unicode')
+
+        self.assertThat(res, matchers.XMLMatches("""<domain>
+  <memoryBacking>
+    <source type="file"/>
+    <access mode="shared"/>
+    <allocation mode="immediate"/>
+  </memoryBacking>
 </domain>"""))
 
 
