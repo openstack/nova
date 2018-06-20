@@ -10993,23 +10993,26 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self.compute_api.get(self.context, instance['uuid'])
         self.compute_api.reset_network(self.context, instance)
 
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch.object(compute_utils, 'EventReporter')
-    def test_lock(self, mock_event, mock_record, mock_elevate):
-        ctxt = self.context.elevated()
-        mock_elevate.return_value = ctxt
+    def test_lock(self, mock_event, mock_record, mock_elevate, mock_notify):
+        mock_elevate.return_value = self.context
         instance = self._create_fake_instance_obj()
         self.stub_out('nova.network.api.API.deallocate_for_instance',
                        lambda *a, **kw: None)
         self.compute_api.lock(self.context, instance)
         mock_record.assert_called_once_with(
-            ctxt, instance, instance_actions.LOCK
+            self.context, instance, instance_actions.LOCK
         )
-        mock_event.assert_called_once_with(ctxt,
+        mock_event.assert_called_once_with(self.context,
                                            'api_lock',
                                            CONF.host,
                                            instance.uuid)
+        mock_notify.assert_called_once_with(
+            self.context, instance, CONF.host, action='lock',
+            source='nova-api')
 
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.compute.api.API._record_action_start')
