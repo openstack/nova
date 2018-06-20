@@ -37,7 +37,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - consumer_uuid: consumer_uuid_body
-  - consumer_generation: consumer_generation
+  - consumer_generation: consumer_generation_min
   - project_id: project_id_body
   - user_id: user_id_body
   - allocations: allocations_dict_empty
@@ -89,7 +89,7 @@ Response
   - allocations: allocations_by_resource_provider
   - generation: resource_provider_generation
   - resources: resources
-  - consumer_generation: consumer_generation
+  - consumer_generation: consumer_generation_min
   - project_id: project_id_body_1_12
   - user_id: user_id_body_1_12
 
@@ -131,7 +131,7 @@ Request (microversions 1.12 - )
   - consumer_uuid: consumer_uuid
   - allocations: allocations_dict
   - resources: resources
-  - consumer_generation: consumer_generation
+  - consumer_generation: consumer_generation_min
   - project_id: project_id_body
   - user_id: user_id_body
   - generation: resource_provider_generation_optional

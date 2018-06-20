@@ -1,0 +1,20 @@
+# This tests POSTs to /reshaper using a non-admin user with an open policy
+# configuration. The response is a 400 because of bad content, meaning we got
+# past policy enforcement. If policy was being enforced we'd get a 403.
+fixtures:
+    - OpenPolicyFixture
+
+defaults:
+    request_headers:
+        x-auth-token: user
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement latest
+
+tests:
+
+- name: attempt reshape
+  POST: /reshaper
+  data:
+      bad: content
+  status: 400

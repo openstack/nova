@@ -17,6 +17,7 @@ import uuid
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+from oslo_utils import excutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import webob
@@ -195,6 +196,47 @@ def create_allocation_list(context, data, consumers):
     return rp_obj.AllocationList(context, objects=allocation_objects)
 
 
+def inspect_consumers(context, data, want_version):
+    """Look at consumer data in allocations and create consumers as needed.
+
+    Keep a record of the consumers that are created in case they need
+    to be removed later.
+
+    If an exception is raised by ensure_consumer, commonly HTTPConflict but
+    also anything else, the newly created consumers will be deleted and the
+    exception reraised to the caller.
+
+    :param context: The placement context.
+    :param data: A dictionary of multiple allocations by consumer uuid.
+    :param want_version: the microversion matcher.
+    :return: A tuple of a dict of all consumer objects (by consumer uuid)
+             and a list of those consumer objects which are new.
+    """
+    # First, ensure that all consumers referenced in the payload actually
+    # exist. And if not, create them. Keep a record of auto-created consumers
+    # so we can clean them up if the end allocation replace_all() fails.
+    consumers = {}  # dict of Consumer objects, keyed by consumer UUID
+    new_consumers_created = []
+    for consumer_uuid in data:
+        project_id = data[consumer_uuid]['project_id']
+        user_id = data[consumer_uuid]['user_id']
+        consumer_generation = data[consumer_uuid].get('consumer_generation')
+        try:
+            consumer, new_consumer_created = util.ensure_consumer(
+                context, consumer_uuid, project_id, user_id,
+                consumer_generation, want_version)
+            if new_consumer_created:
+                new_consumers_created.append(consumer)
+            consumers[consumer_uuid] = consumer
+        except Exception:
+            # If any errors (for instance, a consumer generation conflict)
+            # occur when ensuring consumer records above, make sure we delete
+            # any auto-created consumers.
+            with excutils.save_and_reraise_exception():
+                delete_consumers(new_consumers_created)
+    return consumers, new_consumers_created
+
+
 @wsgi_wrapper.PlacementWsgify
 @util.check_accept('application/json')
 def list_for_consumer(req):
@@ -313,7 +355,7 @@ def _new_allocations(context, resource_provider, consumer, resources):
     return allocations
 
 
-def _delete_consumers(consumers):
+def delete_consumers(consumers):
     """Helper function that deletes any consumer object supplied to it
 
     :param consumers: iterable of Consumer objects to delete
@@ -399,7 +441,7 @@ def _set_allocations_for_consumer(req, schema):
             LOG.debug("Successfully wrote allocations %s", alloc_list)
         except Exception:
             if created_new_consumer:
-                _delete_consumers([consumer])
+                delete_consumers([consumer])
             raise
 
     try:
@@ -466,29 +508,8 @@ def set_allocations(req):
         want_schema = schema.POST_ALLOCATIONS_V1_28
     data = util.extract_json(req.body, want_schema)
 
-    # First, ensure that all consumers referenced in the payload actually
-    # exist. And if not, create them. Keep a record of auto-created consumers
-    # so we can clean them up if the end allocation replace_all() fails.
-    consumers = {}  # dict of Consumer objects, keyed by consumer UUID
-    new_consumers_created = []
-    for consumer_uuid in data:
-        project_id = data[consumer_uuid]['project_id']
-        user_id = data[consumer_uuid]['user_id']
-        consumer_generation = data[consumer_uuid].get('consumer_generation')
-        try:
-            consumer, new_consumer_created = util.ensure_consumer(
-                context, consumer_uuid, project_id, user_id,
-                consumer_generation, want_version)
-            if new_consumer_created:
-                new_consumers_created.append(consumer)
-            consumers[consumer_uuid] = consumer
-        except Exception:
-            # If any errors (for instance, a consumer generation conflict)
-            # occur when ensuring consumer records above, make sure we delete
-            # any auto-created consumers.
-            _delete_consumers(new_consumers_created)
-            raise
-
+    consumers, new_consumers_created = inspect_consumers(
+        context, data, want_version)
     # Create a sequence of allocation objects to be used in one
     # AllocationList.replace_all() call, which will mean all the changes
     # happen within a single transaction and with resource provider
@@ -500,7 +521,7 @@ def set_allocations(req):
             alloc_list.replace_all()
             LOG.debug("Successfully wrote allocations %s", alloc_list)
         except Exception:
-            _delete_consumers(new_consumers_created)
+            delete_consumers(new_consumers_created)
             raise
 
     try:

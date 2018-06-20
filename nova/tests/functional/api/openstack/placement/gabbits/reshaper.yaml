@@ -1,0 +1,599 @@
+# /reshaper provides a way to atomically move inventory and allocations from
+# one resource provider to another, often from a root provider to a new child.
+
+fixtures:
+    - AllocationFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement 1.30
+
+tests:
+
+- name: reshaper is POST only
+  GET: /reshaper
+  status: 405
+  response_headers:
+      allow: POST
+
+- name: reshaper requires admin not user
+  POST: /reshaper
+  request_headers:
+      x-auth-token: user
+  status: 403
+
+- name: reshaper not there old
+  POST: /reshaper
+  request_headers:
+      openstack-api-version: placement 1.29
+  status: 404
+
+- name: very invalid 400
+  POST: /reshaper
+  status: 400
+  data:
+      cows: moo
+  response_strings:
+      - JSON does not validate
+
+- name: missing allocations
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 0
+              inventories:
+                  VCPU:
+                      total: 1
+  status: 400
+
+# There are existing allocations on RP_UUID (created by the AllocationFixture).
+# As the code is currently we cannot null out those allocations from reshaper
+# because the allocations identify nothing (replace_all() is a no op).
+- name: empty allocations inv in use
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 5
+              inventories:
+                  VCPU:
+                      total: 1
+      allocations: {}
+  status: 409
+  response_json_paths:
+      $.errors[0].code: placement.inventory.inuse
+
+# Again, with the existing allocations on RP_UUID being held by CONSUMER_ID,
+# not INSTANCE_ID, when we try to allocate here, we don't have room. This
+# is a correctly invalid operation as to be actually reshaping here, we
+# would be needing to move the CONSUMER_ID allocations in this call (and
+# setting the inventory to something that could accomodate them).
+- name: with allocations
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 5
+              inventories:
+                  VCPU:
+                      total: 1
+      allocations:
+          $ENVIRON['INSTANCE_UUID']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          VCPU: 1
+              consumer_generation: null
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+  status: 409
+  response_strings:
+      - Unable to allocate inventory
+
+- name: bad rp gen
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 4
+              inventories:
+                  VCPU:
+                      total: 1
+      allocations: {}
+  status: 409
+  response_strings:
+      - resource provider generation conflict
+      - 'actual: 5, given: 4'
+
+- name: bad consumer gen
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 5
+              inventories:
+                  VCPU:
+                      total: 1
+      allocations:
+          $ENVIRON['INSTANCE_UUID']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          VCPU: 1
+              # The correct generation here is null, because INSTANCE_UUID
+              # represents a new consumer at this point.
+              consumer_generation: 99
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+  status: 409
+  response_strings:
+      - consumer generation conflict
+
+- name: create a child provider
+  POST: /resource_providers
+  data:
+      uuid: $ENVIRON['ALT_RP_UUID']
+      name: $ENVIRON['ALT_RP_NAME']
+      parent_provider_uuid: $ENVIRON['RP_UUID']
+
+# This and subsequent error checking tests are modelled on the successful
+# test which is at the end of this file. Using the same data, with minor
+# adjustments, so that the cause of failure is clear.
+
+- name: move to bad child 400
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 5
+              inventories:
+                  DISK_GB:
+                      total: 2048
+                      step_size: 10
+                      min_unit: 10
+                      # this was 600 originally but we reset it to 1200
+                      # here because the fixture allocated twice for
+                      # the same consumer and we can't do that from
+                      # the api.
+                      max_unit: 1200
+          # This resource provider does not exist.
+          '39bafc00-3fff-444d-b87a-2ead3f866e05':
+              resource_provider_generation: 0
+              inventories:
+                  VCPU:
+                      total: 10
+                      # this was 4 originally but we reset it to 8
+                      # here because the fixture allocated twice for
+                      # the same consumer and we can't do that from
+                      # the api.
+                      max_unit: 8
+      # these consumer generations are all 1 because they have
+      # previously allocated
+      allocations:
+          $ENVIRON['CONSUMER_0']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 1000
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+          $ENVIRON['CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['ALT_RP_UUID']:
+                      resources:
+                          VCPU: 8
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+          $ENVIRON['ALT_CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 20
+                  $ENVIRON['ALT_RP_UUID']:
+                      resources:
+                          VCPU: 1
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['ALT_USER_ID']
+              consumer_generation: 1
+  status: 400
+  response_json_paths:
+      $.errors[0].code: placement.resource_provider.not_found
+
+- name: poorly formed inventory 400
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 5
+              inventories:
+                  DISK_GB:
+                      total: 2048
+                      step_size: 10
+                      min_unit: 10
+                      # this was 600 originally but we reset it to 1200
+                      # here because the fixture allocated twice for
+                      # the same consumer and we can't do that from
+                      # the api.
+                      max_unit: 1200
+                      bad_field: moo
+          $ENVIRON['ALT_RP_UUID']:
+              resource_provider_generation: 0
+              inventories:
+                  VCPU:
+                      total: 10
+                      # this was 4 originally but we reset it to 8
+                      # here because the fixture allocated twice for
+                      # the same consumer and we can't do that from
+                      # the api.
+                      max_unit: 8
+      # these consumer generations are all 1 because they have
+      # previously allocated
+      allocations:
+          $ENVIRON['CONSUMER_0']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 1000
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+          $ENVIRON['CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['ALT_RP_UUID']:
+                      resources:
+                          VCPU: 8
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+          $ENVIRON['ALT_CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 20
+                  $ENVIRON['ALT_RP_UUID']:
+                      resources:
+                          VCPU: 1
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['ALT_USER_ID']
+              consumer_generation: 1
+  status: 400
+  response_strings:
+      - JSON does not validate
+      - "'bad_field' was unexpected"
+
+- name: poorly formed allocation 400
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 5
+              inventories:
+                  DISK_GB:
+                      total: 2048
+                      step_size: 10
+                      min_unit: 10
+                      # this was 600 originally but we reset it to 1200
+                      # here because the fixture allocated twice for
+                      # the same consumer and we can't do that from
+                      # the api.
+                      max_unit: 1200
+          $ENVIRON['ALT_RP_UUID']:
+              resource_provider_generation: 0
+              inventories:
+                  VCPU:
+                      total: 10
+                      # this was 4 originally but we reset it to 8
+                      # here because the fixture allocated twice for
+                      # the same consumer and we can't do that from
+                      # the api.
+                      max_unit: 8
+      # these consumer generations are all 1 because they have
+      # previously allocated
+      allocations:
+          $ENVIRON['CONSUMER_0']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 1000
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+              # This bad field will cause a failure in the schema.
+              bad_field: moo
+          $ENVIRON['CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['ALT_RP_UUID']:
+                      resources:
+                          VCPU: 8
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+          $ENVIRON['ALT_CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 20
+                  $ENVIRON['ALT_RP_UUID']:
+                      resources:
+                          VCPU: 1
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['ALT_USER_ID']
+              consumer_generation: 1
+  status: 400
+  response_strings:
+      - JSON does not validate
+      - "'bad_field' was unexpected"
+
+- name: target resource class not found
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 5
+              inventories:
+                  # not a real inventory, but valid form
+                  DISK_OF_STEEL:
+                      total: 2048
+                      step_size: 10
+                      min_unit: 10
+                      # this was 600 originally but we reset it to 1200
+                      # here because the fixture allocated twice for
+                      # the same consumer and we can't do that from
+                      # the api.
+                      max_unit: 1200
+          $ENVIRON['ALT_RP_UUID']:
+              resource_provider_generation: 0
+              inventories:
+                  VCPU:
+                      total: 10
+                      # this was 4 originally but we reset it to 8
+                      # here because the fixture allocated twice for
+                      # the same consumer and we can't do that from
+                      # the api.
+                      max_unit: 8
+      # these consumer generations are all 1 because they have
+      # previously allocated
+      allocations:
+          $ENVIRON['CONSUMER_0']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 1000
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+          $ENVIRON['CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['ALT_RP_UUID']:
+                      resources:
+                          VCPU: 8
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+          $ENVIRON['ALT_CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 20
+                  $ENVIRON['ALT_RP_UUID']:
+                      resources:
+                          VCPU: 1
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['ALT_USER_ID']
+              consumer_generation: 1
+  status: 400
+  response_strings:
+      - No such resource class DISK_OF_STEEL
+
+- name: move bad allocation 409
+  desc: max unit on disk gb inventory violated
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 5
+              inventories:
+                  DISK_GB:
+                      total: 2048
+                      step_size: 10
+                      min_unit: 10
+                      max_unit: 600
+          $ENVIRON['ALT_RP_UUID']:
+              resource_provider_generation: 0
+              inventories:
+                  VCPU:
+                      total: 10
+                      # this was 4 originally but we reset it to 8
+                      # here because the fixture allocated twice for
+                      # the same consumer and we can't do that from
+                      # the api.
+                      max_unit: 8
+      # these consumer generations are all 1 because they have
+      # previously allocated
+      allocations:
+          $ENVIRON['CONSUMER_0']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          # Violates max unit
+                          DISK_GB: 1000
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+          $ENVIRON['CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['ALT_RP_UUID']:
+                      resources:
+                          VCPU: 8
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+          $ENVIRON['ALT_CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 20
+                  $ENVIRON['ALT_RP_UUID']:
+                      resources:
+                          VCPU: 1
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['ALT_USER_ID']
+              consumer_generation: 1
+  status: 409
+  response_strings:
+      - Unable to allocate inventory
+
+# This is a successful reshape using information as it was established above
+# or in the AllocationFixture. A non-obvious fact of this test is that it
+# confirms that resource provider and consumer generations are rolled back
+# when failures occur, as in the tests above.
+- name: move vcpu inventory and allocations to child
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 5
+              inventories:
+                  DISK_GB:
+                      total: 2048
+                      step_size: 10
+                      min_unit: 10
+                      # this was 600 originally but we reset it to 1200
+                      # here because the fixture allocated twice for
+                      # the same consumer and we can't do that from
+                      # the api.
+                      max_unit: 1200
+          $ENVIRON['ALT_RP_UUID']:
+              resource_provider_generation: 0
+              inventories:
+                  VCPU:
+                      total: 10
+                      # this was 4 originally but we reset it to 8
+                      # here because the fixture allocated twice for
+                      # the same consumer and we can't do that from
+                      # the api.
+                      max_unit: 8
+      # these consumer generations are all 1 because they have
+      # previously allocated
+      allocations:
+          $ENVIRON['CONSUMER_0']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 1000
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+          $ENVIRON['CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['ALT_RP_UUID']:
+                      resources:
+                          VCPU: 8
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 1
+          $ENVIRON['ALT_CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 20
+                  $ENVIRON['ALT_RP_UUID']:
+                      resources:
+                          VCPU: 1
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['ALT_USER_ID']
+              consumer_generation: 1
+  status: 204
+
+- name: get usages on parent after move
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  response_json_paths:
+    $.usages:
+      DISK_GB: 1020
+    $.resource_provider_generation: 8
+
+- name: get usages on child after move
+  GET: /resource_providers/$ENVIRON['ALT_RP_UUID']/usages
+  response_json_paths:
+    $.usages:
+      VCPU: 9
+    $.resource_provider_generation: 3
+
+# Now move some of the inventory back to the original provider, and put all
+# the allocations under two new consumers. This is an artificial test to
+# exercise new consumer creation.
+- name: consolidate inventory and allocations
+  # TODO(efried): bug https://bugs.launchpad.net/nova/+bug/1783130
+  xfail: true
+  POST: /reshaper
+  data:
+      inventories:
+          $ENVIRON['RP_UUID']:
+              resource_provider_generation: 8
+              inventories:
+                  DISK_GB:
+                      total: 2048
+                      step_size: 10
+                      min_unit: 10
+                      max_unit: 1200
+                  VCPU:
+                      total: 10
+                      max_unit: 8
+          $ENVIRON['ALT_RP_UUID']:
+              resource_provider_generation: 3
+              # bug https://bugs.launchpad.net/nova/+bug/1783130
+              # means that this will cause an IndexError.
+              inventories: {}
+      allocations:
+          $ENVIRON['CONSUMER_0']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 1000
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 2
+          '7bd2e864-0415-445c-8fc2-328520ef7642':
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          VCPU: 8
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: null
+          '2dfa608c-cecb-4fe0-a1bb-950015fa731f':
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 20
+                          VCPU: 1
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['ALT_USER_ID']
+              consumer_generation: null
+  status: 204
+
+- name: get usages on parent after move back
+  # TODO(efried): bug https://bugs.launchpad.net/nova/+bug/1783130
+  # Fails because 'consolidate inventory and allocations' above fails.
+  xfail: true
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  response_json_paths:
+    $.usages:
+      VCPU: 9
+      DISK_GB: 1040
+    $.resource_provider_generation: 11
+
+- name: get usages on child after move back
+  # TODO(efried): bug https://bugs.launchpad.net/nova/+bug/1783130
+  # Fails because 'consolidate inventory and allocations' above fails.
+  xfail: true
+  GET: /resource_providers/$ENVIRON['ALT_RP_UUID']/usages
+  response_json_paths:
+    $.usages: {}
+    $.resource_provider_generation: 5

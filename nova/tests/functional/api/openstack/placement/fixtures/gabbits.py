@@ -174,7 +174,6 @@ class AllocationFixture(APIFixture):
         # Create a second consumer for the VCPU allocations
         consumer2 = tb.ensure_consumer(self.context, user, project)
         tb.set_allocation(self.context, rp, consumer2, {'VCPU': 6})
-        # This consumer is referenced from the gabbits
         os.environ['CONSUMER_ID'] = consumer2.uuid
 
         # Create a consumer object for a different user

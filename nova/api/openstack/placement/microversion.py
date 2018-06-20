@@ -75,6 +75,8 @@ VERSIONS = [
              # the resource class is not in the requested resources.
     '1.28',  # Add support for consumer generation
     '1.29',  # Support nested providers in GET /allocation_candidates API.
+    '1.30',  # Add POST /reshaper for atomically migrating resource provider
+             # inventories and allocations.
 ]
 
 

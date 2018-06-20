@@ -315,14 +315,16 @@ capacity:
   required: true
   description: >
     The amount of the resource that the provider can accommodate.
-consumer_generation:
+consumer_generation: &consumer_generation
   type: integer
   in: body
   required: true
-  min_version: 1.28
   description: >
     The generation of the consumer. Should be set to ``null`` when indicating
     that the caller expects the consumer does not yet exist.
+consumer_generation_min:
+  <<: *consumer_generation
+  min_version: 1.28
 consumer_uuid_body:
   <<: *consumer_uuid
   in: body
@@ -392,6 +394,26 @@ reserved_opt:
     Up to microversion 1.25, this value has to be less than the value of
     ``total``. Starting from microversion 1.26, this value has to be less
     than or equal to the value of ``total``.
+reshaper_allocations:
+  type: object
+  in: body
+  required: true
+  description: >
+    A dictionary of multiple allocations, keyed by consumer uuid. Each
+    collection of allocations describes the full set of allocations for
+    each consumer. Each consumer allocations dict is itself a dictionary
+    of resource allocations keyed by resource provider uuid. An empty
+    dictionary indicates no change in existing allocations, whereas an empty
+    ``allocations`` dictionary **within** a consumer dictionary indicates that
+    all allocations for that consumer should be deleted.
+reshaper_inventories:
+  type: object
+  in: body
+  required: true
+  description: >
+    A dictionary of multiple inventories, keyed by resource provider uuid. Each
+    inventory describes the desired full inventory for each resource provider.
+    An empty dictionary causes the inventory for that provider to be deleted.
 resource_class:
   <<: *resource_class_path
   in: body

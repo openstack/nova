@@ -45,3 +45,4 @@ DUPLICATE_NAME = 'placement.duplicate_name'
 PROVIDER_IN_USE = 'placement.resource_provider.inuse'
 PROVIDER_CANNOT_DELETE_PARENT = (
     'placement.resource_provider.cannot_delete_parent')
+RESOURCE_PROVIDER_NOT_FOUND = 'placement.resource_provider.not_found'

@@ -33,6 +33,7 @@ from nova.api.openstack.placement.handlers import aggregate
 from nova.api.openstack.placement.handlers import allocation
 from nova.api.openstack.placement.handlers import allocation_candidate
 from nova.api.openstack.placement.handlers import inventory
+from nova.api.openstack.placement.handlers import reshaper
 from nova.api.openstack.placement.handlers import resource_class
 from nova.api.openstack.placement.handlers import resource_provider
 from nova.api.openstack.placement.handlers import root
@@ -125,6 +126,9 @@ ROUTE_DECLARATIONS = {
     },
     '/usages': {
         'GET': usage.get_total_usages,
+    },
+    '/reshaper': {
+        'POST': reshaper.reshape,
     },
 }
 
