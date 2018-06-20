@@ -1,0 +1,20 @@
+---
+other:
+  - |
+    A new configuration option, ``[compute]/live_migration_wait_for_vif_plug``,
+    has been added which can be used to configure compute services to wait
+    for network interface plugging to complete on the destination host before
+    starting the guest transfer on the source host during live migration.
+
+    Note that this option is read on the destination host of a live migration.
+    If you set this option the same on all of your compute hosts, which you
+    should do if you use the same networking backend universally, you do not
+    have to worry about this.
+
+    This is disabled by default for backward compatibilty and because the
+    compute service cannot reliably determine which types of virtual
+    interfaces (``port.binding:vif_type``) will send ``network-vif-plugged``
+    events without an accompanying port ``binding:host_id`` change.
+    Open vSwitch and linuxbridge should be OK, but OpenDaylight is at least
+    one known backend that will not currently work in this case, see bug
+    https://launchpad.net/bugs/1755890 for more details.
