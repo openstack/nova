@@ -124,13 +124,13 @@ class TestOpenStackClient(object):
 
     """
 
-    def __init__(self, auth_user, auth_key, auth_uri,
+    def __init__(self, auth_user, auth_key, auth_url,
                  project_id=None):
         super(TestOpenStackClient, self).__init__()
         self.auth_result = None
         self.auth_user = auth_user
         self.auth_key = auth_key
-        self.auth_uri = auth_uri
+        self.auth_url = auth_url
         if project_id is None:
             self.project_id = "6f70656e737461636b20342065766572"
         else:
@@ -148,16 +148,17 @@ class TestOpenStackClient(object):
         if self.auth_result:
             return self.auth_result
 
-        auth_uri = self.auth_uri
+        auth_url = self.auth_url
         headers = {'X-Auth-User': self.auth_user,
                    'X-Auth-Key': self.auth_key,
                    'X-Auth-Project-Id': self.project_id}
-        response = self.request(auth_uri,
+        response = self.request(auth_url,
                                 headers=headers)
 
         http_status = response.status_code
-        LOG.debug("%(auth_uri)s => code %(http_status)s",
-                  {'auth_uri': auth_uri, 'http_status': http_status})
+        LOG.debug("%(auth_url)s => code %(http_status)s",
+                  {'auth_url': auth_url,
+                   'http_status': http_status})
 
         # NOTE(cdent): This is a workaround for an issue where the placement
         # API fixture may respond when a request was supposed to go to the
