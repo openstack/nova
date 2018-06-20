@@ -377,15 +377,16 @@ class TestSecurityGroupsV21(test.TestCase):
 
         expected = {'security_groups': [expected]}
 
-        def return_security_groups(context, project, search_opts):
-            return [security_group_db(sg) for sg in groups]
-
-        self.stubs.Set(self.controller.security_group_api, 'list',
-                       return_security_groups)
-
-        res_dict = self.controller.index(self.req)
+        with mock.patch.object(
+                self.controller.security_group_api, 'list',
+                return_value=[
+                    security_group_db(
+                        secgroup) for secgroup in groups]) as mock_list:
+            res_dict = self.controller.index(self.req)
 
         self.assertEqual(res_dict, expected)
+        mock_list.assert_called_once_with(self.req.environ['nova.context'],
+                                          project='fake', search_opts={})
 
     def test_get_security_group_list_all_tenants(self):
         all_groups = []
