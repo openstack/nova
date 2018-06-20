@@ -883,17 +883,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def get_traits(self, nodename):
-        """Get the traits for a given node.
-
-        Any custom traits returned are not required to exist in the placement
-        service - the caller will ensure their existence.
-
-        :param nodename: the name of the node.
-        :returns: an iterable of string trait names for the supplied node.
-        """
-        raise NotImplementedError()
-
     def get_available_resource(self, nodename):
         """Retrieve resource information.
 

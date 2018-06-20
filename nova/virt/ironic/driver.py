@@ -734,9 +734,21 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         return node_uuids
 
-    def get_inventory(self, nodename):
-        """Return a dict, keyed by resource class, of inventory information for
-        the supplied node.
+    def update_provider_tree(self, provider_tree, nodename):
+        """Update a ProviderTree object with current resource provider and
+        inventory information.
+
+        :param nova.compute.provider_tree.ProviderTree provider_tree:
+            A nova.compute.provider_tree.ProviderTree object representing all
+            the providers in the tree associated with the compute node, and any
+            sharing providers (those with the ``MISC_SHARES_VIA_AGGREGATE``
+            trait) associated via aggregate with any of those providers (but
+            not *their* tree- or aggregate-associated providers), as currently
+            known by placement.
+        :param nodename:
+            String name of the compute node (i.e.
+            ComputeNode.hypervisor_hostname) for which the caller is requesting
+            updated provider information.
         """
         # nodename is the ironic node's UUID.
         node = self._node_from_cache(nodename)
@@ -788,19 +800,10 @@ class IronicDriver(virt_driver.ComputeDriver):
                     'allocation_ratio': 1.0,
                 }
 
-        return result
-
-    def get_traits(self, nodename):
-        """Get the traits for a given node.
-
-        Any custom traits returned are not required to exist in the placement
-        service - the caller will ensure their existence.
-
-        :param nodename: the UUID of the node.
-        :returns: an iterable of string trait names for the supplied node.
-        """
-        node = self._node_from_cache(nodename)
-        return list(node.traits)
+        provider_tree.update_inventory(nodename, result)
+        # TODO(efried): *Unset* traits that are "owned" by ironic virt but not
+        # set on the node object.
+        provider_tree.add_traits(nodename, *node.traits)
 
     def get_available_resource(self, nodename):
         """Retrieve resource information.

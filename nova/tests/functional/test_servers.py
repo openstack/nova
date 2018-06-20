@@ -1714,24 +1714,6 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertNotIn('FOO', traits)
 
 
-class TraitsTrackingTests(integrated_helpers.ProviderUsageBaseTestCase):
-    compute_driver = 'fake.SmallFakeDriver'
-
-    @mock.patch.object(fake.SmallFakeDriver, 'get_traits')
-    def test_resource_provider_traits(self, mock_traits):
-        traits = ['CUSTOM_FOO', 'HW_CPU_X86_VMX']
-        mock_traits.return_value = traits
-
-        self.assertNotIn('CUSTOM_FOO', self._get_all_traits())
-        self.assertEqual([], self._get_all_providers())
-
-        self.compute = self._start_compute(host='host1')
-
-        rp_uuid = self._get_provider_uuid_by_host('host1')
-        self.assertEqual(traits, sorted(self._get_provider_traits(rp_uuid)))
-        self.assertIn('CUSTOM_FOO', self._get_all_traits())
-
-
 class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
     """Tests moving servers while checking the resource allocations and usages
 
