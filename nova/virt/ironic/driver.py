@@ -1402,6 +1402,11 @@ class IronicDriver(virt_driver.ComputeDriver):
                 # will be no ironic-conductor running, which will
                 # give us a failure to do this plug operation. So,
                 # be graceful in that case and wait/retry.
+                # NOTE(mdbooth): This will be fixed in ironic by
+                # change I2c21baae. This will ensure ironic returns a 503 here,
+                # which will cause ironicclient to automatically retry for us.
+                # We can remove this workaround once we are confident that we
+                # are only running against ironic containing this fix.
                 if ('No conductor' in six.text_type(e) and
                         attempt < last_attempt):
                     LOG.warning('No ironic conductor is running; '
