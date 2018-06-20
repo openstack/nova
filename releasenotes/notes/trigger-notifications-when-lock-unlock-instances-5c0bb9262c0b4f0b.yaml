@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    The versioned ``instance.lock`` and ``instance.unlock`` notifications have
+    been added. These notifications are emitted as a result of the respective
+    server ``lock`` and server ``unlock`` REST API calls.
+
+    See https://docs.openstack.org/nova/latest/reference/notifications.html#existing-versioned-notifications
+    for notification samples.

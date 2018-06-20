@@ -11014,23 +11014,26 @@ class ComputeAPITestCase(BaseTestCase):
             self.context, instance, CONF.host, action='lock',
             source='nova-api')
 
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch.object(compute_utils, 'EventReporter')
-    def test_unlock(self, mock_event, mock_record, mock_elevate):
-        ctxt = self.context.elevated()
-        mock_elevate.return_value = ctxt
+    def test_unlock(self, mock_event, mock_record, mock_elevate, mock_notify):
+        mock_elevate.return_value = self.context
         instance = self._create_fake_instance_obj()
         self.stub_out('nova.network.api.API.deallocate_for_instance',
                        lambda *a, **kw: None)
         self.compute_api.unlock(self.context, instance)
         mock_record.assert_called_once_with(
-            ctxt, instance, instance_actions.UNLOCK
+            self.context, instance, instance_actions.UNLOCK
         )
-        mock_event.assert_called_once_with(ctxt,
+        mock_event.assert_called_once_with(self.context,
                                            'api_unlock',
                                            CONF.host,
                                            instance.uuid)
+        mock_notify.assert_called_once_with(
+            self.context, instance, CONF.host, action='unlock',
+            source='nova-api')
 
     def test_add_remove_security_group(self):
         instance = self._create_fake_instance_obj()

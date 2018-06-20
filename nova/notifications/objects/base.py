@@ -58,7 +58,8 @@ class EventType(NotificationObject):
     # Version 1.10: UPDATE_METADATA value is added to the
     #               NotificationActionField enum
     # Version 1.11: LOCK is added to NotificationActionField enum
-    VERSION = '1.11'
+    # Version 1.12: UNLOCK is added to NotificationActionField enum
+    VERSION = '1.12'
 
     fields = {
         'object': fields.StringField(nullable=False),
