@@ -21,7 +21,6 @@ from keystoneauth1.fixture import V2Token
 from keystoneauth1 import loading as ks_loading
 from keystoneauth1 import service_token
 import mock
-from mox3 import mox
 import netaddr
 from neutronclient.common import exceptions
 from neutronclient.v2_0 import client
@@ -777,140 +776,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.addCleanup(self.mox.VerifyAll)
         self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
-
-    @mock.patch('nova.network.neutronv2.api.API._nw_info_get_subnets')
-    @mock.patch('nova.network.neutronv2.api.API._nw_info_get_ips')
-    @mock.patch('nova.network.neutronv2.api.API._nw_info_build_network')
-    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
-    @mock.patch('nova.network.neutronv2.api.API._gather_port_ids_and_networks')
-    def test_build_network_info_model_empty(
-            self, mock_gather_port_ids_and_networks,
-            mock_get_preexisting_port_ids,
-            mock_nw_info_build_network,
-            mock_nw_info_get_ips,
-            mock_nw_info_get_subnets):
-        # An empty instance info network cache should not be populated from
-        # ports found in Neutron.
-        api = neutronapi.API()
-
-        fake_inst = objects.Instance()
-        fake_inst.project_id = uuids.fake
-        fake_inst.uuid = uuids.instance
-        fake_inst.info_cache = objects.InstanceInfoCache()
-        fake_inst.info_cache.network_info = model.NetworkInfo()
-        fake_ports = [
-            # admin_state_up=True and status='ACTIVE' thus vif.active=True
-            {'id': 'port1',
-             'network_id': 'net-id',
-             'admin_state_up': True,
-             'status': 'ACTIVE',
-             'fixed_ips': [{'ip_address': '1.1.1.1'}],
-             'mac_address': 'de:ad:be:ef:00:01',
-             'binding:vif_type': model.VIF_TYPE_BRIDGE,
-             'binding:vnic_type': model.VNIC_TYPE_NORMAL,
-             'binding:vif_details': {},
-             },
-            ]
-        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
-
-        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
-            self.moxed_client)
-        self.moxed_client.list_ports(
-            tenant_id=uuids.fake, device_id=uuids.instance).AndReturn(
-                {'ports': fake_ports})
-
-        mock_gather_port_ids_and_networks.return_value = ([], [])
-        mock_get_preexisting_port_ids.return_value = []
-        mock_nw_info_build_network.return_value = (None, None)
-        mock_nw_info_get_ips.return_value = []
-        mock_nw_info_get_subnets.return_value = fake_subnets
-
-        self.mox.ReplayAll()
-
-        nw_infos = api._build_network_info_model(
-            self.context, fake_inst)
-        self.assertEqual(0, len(nw_infos))
-
-    def test_get_subnets_from_port(self):
-        api = neutronapi.API()
-
-        port_data = copy.copy(self.port_data1[0])
-        # add another IP on the same subnet and verify the subnet is deduped
-        port_data['fixed_ips'].append({'ip_address': '10.0.1.3',
-                                       'subnet_id': 'my_subid1'})
-        subnet_data1 = copy.copy(self.subnet_data1)
-        subnet_data1[0]['host_routes'] = [
-            {'destination': '192.168.0.0/24', 'nexthop': '1.0.0.10'}
-        ]
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_subnets(
-            id=[port_data['fixed_ips'][0]['subnet_id']]
-        ).AndReturn({'subnets': subnet_data1})
-        self.moxed_client.list_ports(
-            network_id=subnet_data1[0]['network_id'],
-            device_owner='network:dhcp').AndReturn({'ports': []})
-        self.mox.ReplayAll()
-
-        subnets = api._get_subnets_from_port(self.context, port_data)
-
-        self.assertEqual(1, len(subnets))
-        self.assertEqual(1, len(subnets[0]['routes']))
-        self.assertEqual(subnet_data1[0]['host_routes'][0]['destination'],
-                         subnets[0]['routes'][0]['cidr'])
-        self.assertEqual(subnet_data1[0]['host_routes'][0]['nexthop'],
-                         subnets[0]['routes'][0]['gateway']['address'])
-
-    @mock.patch.object(neutronapi, 'get_client')
-    def test_get_subnets_from_port_enabled_dhcp(self, mock_get_client):
-        api = neutronapi.API()
-        mocked_client = mock.create_autospec(client.Client)
-        mock_get_client.return_value = mocked_client
-
-        port_data = copy.copy(self.port_data1[0])
-        # add another IP on the same subnet and verify the subnet is deduped
-        port_data['fixed_ips'].append({'ip_address': '10.0.1.3',
-                                       'subnet_id': 'my_subid1'})
-        subnet_data1 = copy.copy(self.subnet_data1)
-        subnet_data1[0]['enable_dhcp'] = True
-
-        mocked_client.list_subnets.return_value = {'subnets': subnet_data1}
-        mocked_client.list_ports.return_value = {'ports': self.dhcp_port_data1}
-
-        subnets = api._get_subnets_from_port(self.context, port_data)
-
-        self.assertEqual(self.dhcp_port_data1[0]['fixed_ips'][0]['ip_address'],
-                         subnets[0]['meta']['dhcp_server'])
-
-    @mock.patch.object(neutronapi, 'get_client')
-    def test_get_subnets_from_port_enabled_dhcp_no_dhcp_ports(self,
-            mock_get_client):
-        api = neutronapi.API()
-        mocked_client = mock.create_autospec(client.Client)
-        mock_get_client.return_value = mocked_client
-
-        port_data = copy.copy(self.port_data1[0])
-        # add another IP on the same subnet and verify the subnet is deduped
-        port_data['fixed_ips'].append({'ip_address': '10.0.1.3',
-                                       'subnet_id': 'my_subid1'})
-        subnet_data1 = copy.copy(self.subnet_data1)
-        subnet_data1[0]['enable_dhcp'] = True
-
-        mocked_client.list_subnets.return_value = {'subnets': subnet_data1}
-        mocked_client.list_ports.return_value = {'ports': []}
-
-        subnets = api._get_subnets_from_port(self.context, port_data)
-
-        self.assertEqual(subnet_data1[0]['gateway_ip'],
-                         subnets[0]['meta']['dhcp_server'])
-
-    def test_get_all_empty_list_networks(self):
-        api = neutronapi.API()
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_networks().AndReturn({'networks': []})
-        self.mox.ReplayAll()
-        networks = api.get_all(self.context)
-        self.assertIsInstance(networks, objects.NetworkList)
-        self.assertEqual(0, len(networks))
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_physnet_tunneled_info_multi_segment(self, mock_get_client):
@@ -3606,6 +3471,141 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         mock_get_preexisting.assert_called_once_with(fake_inst)
         mock_get_physnet.assert_has_calls([
             mock.call(self.context, mocked_client, 'net-id')] * 6)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    @mock.patch('nova.network.neutronv2.api.API._nw_info_get_subnets')
+    @mock.patch('nova.network.neutronv2.api.API._nw_info_get_ips')
+    @mock.patch('nova.network.neutronv2.api.API._nw_info_build_network')
+    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
+    @mock.patch('nova.network.neutronv2.api.API._gather_port_ids_and_networks')
+    def test_build_network_info_model_empty(
+            self, mock_gather_port_ids_and_networks,
+            mock_get_preexisting_port_ids,
+            mock_nw_info_build_network,
+            mock_nw_info_get_ips,
+            mock_nw_info_get_subnets,
+            mock_get_client):
+        # An empty instance info network cache should not be populated from
+        # ports found in Neutron.
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        fake_inst = objects.Instance()
+        fake_inst.project_id = uuids.fake
+        fake_inst.uuid = uuids.instance
+        fake_inst.info_cache = objects.InstanceInfoCache()
+        fake_inst.info_cache.network_info = model.NetworkInfo()
+        fake_ports = [
+            # admin_state_up=True and status='ACTIVE' thus vif.active=True
+            {'id': 'port1',
+             'network_id': 'net-id',
+             'admin_state_up': True,
+             'status': 'ACTIVE',
+             'fixed_ips': [{'ip_address': '1.1.1.1'}],
+             'mac_address': 'de:ad:be:ef:00:01',
+             'binding:vif_type': model.VIF_TYPE_BRIDGE,
+             'binding:vnic_type': model.VNIC_TYPE_NORMAL,
+             'binding:vif_details': {},
+             },
+            ]
+        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
+
+        mocked_client.list_ports.return_value = {'ports': fake_ports}
+
+        mock_gather_port_ids_and_networks.return_value = ([], [])
+        mock_get_preexisting_port_ids.return_value = []
+        mock_nw_info_build_network.return_value = (None, None)
+        mock_nw_info_get_ips.return_value = []
+        mock_nw_info_get_subnets.return_value = fake_subnets
+
+        nw_infos = self.api._build_network_info_model(
+            self.context, fake_inst)
+
+        self.assertEqual(0, len(nw_infos))
+        mock_get_client.assert_called_once_with(self.context, admin=True)
+        mocked_client.list_ports.assert_called_once_with(
+            tenant_id=uuids.fake, device_id=uuids.instance)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_subnets_from_port(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        port_data = copy.copy(self.port_data1[0])
+        # add another IP on the same subnet and verify the subnet is deduped
+        port_data['fixed_ips'].append({'ip_address': '10.0.1.3',
+                                       'subnet_id': 'my_subid1'})
+        subnet_data1 = copy.copy(self.subnet_data1)
+        subnet_data1[0]['host_routes'] = [
+            {'destination': '192.168.0.0/24', 'nexthop': '1.0.0.10'}
+        ]
+        mocked_client.list_subnets.return_value = {'subnets': subnet_data1}
+        mocked_client.list_ports.return_value = {'ports': []}
+
+        subnets = self.api._get_subnets_from_port(self.context, port_data)
+
+        self.assertEqual(1, len(subnets))
+        self.assertEqual(1, len(subnets[0]['routes']))
+        self.assertEqual(subnet_data1[0]['host_routes'][0]['destination'],
+                         subnets[0]['routes'][0]['cidr'])
+        self.assertEqual(subnet_data1[0]['host_routes'][0]['nexthop'],
+                         subnets[0]['routes'][0]['gateway']['address'])
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_subnets.assert_called_once_with(
+            id=[port_data['fixed_ips'][0]['subnet_id']])
+        mocked_client.list_ports.assert_called_once_with(
+            network_id=subnet_data1[0]['network_id'],
+            device_owner='network:dhcp')
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_subnets_from_port_enabled_dhcp(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+
+        port_data = copy.copy(self.port_data1[0])
+        # add another IP on the same subnet and verify the subnet is deduped
+        port_data['fixed_ips'].append({'ip_address': '10.0.1.3',
+                                       'subnet_id': 'my_subid1'})
+        subnet_data1 = copy.copy(self.subnet_data1)
+        subnet_data1[0]['enable_dhcp'] = True
+
+        mocked_client.list_subnets.return_value = {'subnets': subnet_data1}
+        mocked_client.list_ports.return_value = {'ports': self.dhcp_port_data1}
+
+        subnets = self.api._get_subnets_from_port(self.context, port_data)
+
+        self.assertEqual(self.dhcp_port_data1[0]['fixed_ips'][0]['ip_address'],
+                         subnets[0]['meta']['dhcp_server'])
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_subnets_from_port_enabled_dhcp_no_dhcp_ports(self,
+            mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+
+        port_data = copy.copy(self.port_data1[0])
+        # add another IP on the same subnet and verify the subnet is deduped
+        port_data['fixed_ips'].append({'ip_address': '10.0.1.3',
+                                       'subnet_id': 'my_subid1'})
+        subnet_data1 = copy.copy(self.subnet_data1)
+        subnet_data1[0]['enable_dhcp'] = True
+
+        mocked_client.list_subnets.return_value = {'subnets': subnet_data1}
+        mocked_client.list_ports.return_value = {'ports': []}
+
+        subnets = self.api._get_subnets_from_port(self.context, port_data)
+
+        self.assertEqual(subnet_data1[0]['gateway_ip'],
+                         subnets[0]['meta']['dhcp_server'])
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_all_empty_list_networks(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        mocked_client.list_networks.return_value = {'networks': []}
+        networks = self.api.get_all(self.context)
+        self.assertIsInstance(networks, objects.NetworkList)
+        self.assertEqual(0, len(networks))
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_called_once_with()
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_trusted(self, mock_get_client):
