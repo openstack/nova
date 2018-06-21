@@ -370,3 +370,15 @@ class NetworkAPI(base.Base):
 
     def has_substr_port_filtering_extension(self, context):
         return False
+
+    def supports_port_binding_extension(self, context):
+        """Checks to see if the networking API supports the binding-extended
+        ports API extension.
+
+        Defaults to False since this is only implemented by the neutron API.
+
+        :param context: the user request context
+        :returns: True if the binding-extended API extension is available,
+                  False otherwise
+        """
+        return False
