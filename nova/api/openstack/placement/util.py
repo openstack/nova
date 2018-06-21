@@ -640,7 +640,7 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
             if consumer_generation is not None:
                 raise webob.exc.HTTPConflict(
                     _('consumer generation conflict - '
-                      'expected None but got %s') % consumer_generation)
+                      'expected null but got %s') % consumer_generation)
         # No such consumer. This is common for new allocations. Create the
         # consumer record
         try:
