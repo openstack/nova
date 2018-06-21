@@ -1717,6 +1717,15 @@ class PlacementFixture(placement.PlacementFixture):
 
     It's possible to ask for a specific token when running the fixtures so
     all calls would be passing this token.
+
+    Most of the time users of this fixture will also want the placement
+    database fixture (called first) as well:
+
+        self.useFixture(nova_fixtures.Database(database='placement'))
+
+    That is left as a manual step so tests may have fine grain control, and
+    because it is likely that these fixtures will continue to evolve as
+    the separation of nova and placement continues.
     """
 
     def setUp(self):

@@ -20,14 +20,13 @@ from oslo_db.sqlalchemy import enginefacade
 placement_context_manager = enginefacade.transaction_context()
 
 
-def _get_db_conf(conf_group, connection=None):
-    kw = dict(conf_group.items())
-    if connection is not None:
-        kw['connection'] = connection
-    return kw
+def _get_db_conf(conf_group):
+    return dict(conf_group.items())
 
 
 def configure(conf):
+    # If [placement_database]/connection is not set in conf, then placement
+    # data will be stored in the nova_api database.
     if conf.placement_database.connection is None:
         placement_context_manager.configure(
             **_get_db_conf(conf.api_database))
