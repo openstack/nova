@@ -151,6 +151,51 @@ def _serialize_allocations_for_resource_provider(allocations,
     return result
 
 
+# TODO(cdent): Extracting this is useful, for reuse by reshaper code,
+# but having it in this file seems wrong, however, since it uses
+# _new_allocations it's being left here for now. We need a place for shared
+# handler code, but util.py is already too big and too diverse.
+def create_allocation_list(context, data, want_version):
+    """Create an AllocationList based on provided data.
+
+    :param context: The placement context.
+    :param data: A dictionary of multiples allocations by consumer uuid.
+    :param want_version: The desired microversion, which controls how
+                         consumer generations are handled.
+    :return: An AllocationList.
+    """
+    allocation_objects = []
+
+    for consumer_uuid in data:
+        project_id = data[consumer_uuid]['project_id']
+        user_id = data[consumer_uuid]['user_id']
+        allocations = data[consumer_uuid]['allocations']
+        consumer_generation = data[consumer_uuid].get('consumer_generation')
+        if allocations:
+            for resource_provider_uuid in allocations:
+                resources = allocations[resource_provider_uuid]['resources']
+                new_allocations = _new_allocations(context,
+                                                   resource_provider_uuid,
+                                                   consumer_uuid,
+                                                   resources,
+                                                   project_id,
+                                                   user_id,
+                                                   consumer_generation,
+                                                   want_version)
+                allocation_objects.extend(new_allocations)
+        else:
+            # The allocations are empty, which means wipe them out.
+            # Internal to the allocation object this is signalled by a
+            # used value of 0.
+            allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+                context, consumer_uuid)
+            for allocation in allocations:
+                allocation.used = 0
+                allocation_objects.append(allocation)
+
+    return rp_obj.AllocationList(context, objects=allocation_objects)
+
+
 @wsgi_wrapper.PlacementWsgify
 @util.check_accept('application/json')
 def list_for_consumer(req):
@@ -379,41 +424,11 @@ def set_allocations(req):
         want_schema = schema.POST_ALLOCATIONS_V1_28
     data = util.extract_json(req.body, want_schema)
 
-    # Create a sequence of allocation objects to be used in an
+    # Create a sequence of allocation objects to be used in one
     # AllocationList.create_all() call, which will mean all the changes
     # happen within a single transaction and with resource provider
-    # generations check all in one go.
-    allocation_objects = []
-
-    for consumer_uuid in data:
-        project_id = data[consumer_uuid]['project_id']
-        user_id = data[consumer_uuid]['user_id']
-        allocations = data[consumer_uuid]['allocations']
-        consumer_generation = data[consumer_uuid].get('consumer_generation')
-        if allocations:
-            for resource_provider_uuid in allocations:
-                resources = allocations[resource_provider_uuid]['resources']
-                new_allocations = _new_allocations(context,
-                                                   resource_provider_uuid,
-                                                   consumer_uuid,
-                                                   resources,
-                                                   project_id,
-                                                   user_id,
-                                                   consumer_generation,
-                                                   want_version)
-                allocation_objects.extend(new_allocations)
-        else:
-            # The allocations are empty, which means wipe them out.
-            # Internal to the allocation object this is signalled by a
-            # used value of 0.
-            allocations = rp_obj.AllocationList.get_all_by_consumer_id(
-                context, consumer_uuid)
-            for allocation in allocations:
-                allocation.used = 0
-                allocation_objects.append(allocation)
-
-    allocations = rp_obj.AllocationList(
-        context, objects=allocation_objects)
+    # and consumer generations (if applicable) check all in one go.
+    allocations = create_allocation_list(context, data, want_version)
 
     try:
         allocations.create_all()
