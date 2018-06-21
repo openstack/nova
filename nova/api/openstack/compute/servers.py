@@ -93,7 +93,6 @@ class ServersController(wsgi.Controller):
     # should be removed in the future.
     schema_func_list = [
         block_device_mapping.get_server_create_schema,
-        block_device_mapping_v1.get_server_create_schema,
         config_drive.get_server_create_schema,
         keypairs.get_server_create_schema,
         multiple_create.get_server_create_schema,

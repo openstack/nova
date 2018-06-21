@@ -18,8 +18,6 @@
 from oslo_utils import strutils
 from webob import exc
 
-from nova.api.openstack.compute.schemas import block_device_mapping_v1 as \
-    schema_block_device_mapping
 from nova.i18n import _
 
 ATTRIBUTE_NAME = "block_device_mapping"
@@ -46,7 +44,3 @@ def server_create(server_dict, create_kwargs, body_deprecated_param):
         create_kwargs['block_device_mapping'] = block_device_mapping
         # Sets the legacy_bdm flag if we got a legacy block device mapping.
         create_kwargs['legacy_bdm'] = True
-
-
-def get_server_create_schema(version):
-    return schema_block_device_mapping.server_create
