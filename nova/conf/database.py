@@ -19,6 +19,7 @@ from oslo_db import options as oslo_db_options
 from nova.conf import paths
 
 _DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
+_ENRICHED = False
 
 
 # NOTE(markus_z): We cannot simply do:
@@ -169,8 +170,11 @@ def list_opts():
     # As I think it is useful to have the "oslo.db" namespace information
     # in the "sample.conf" file, I omit the listing of the "oslo_db_options"
     # here.
-    enrich_help_text(api_db_opts)
-    enrich_help_text(placement_db_opts)
+    global _ENRICHED
+    if not _ENRICHED:
+        enrich_help_text(api_db_opts)
+        enrich_help_text(placement_db_opts)
+        _ENRICHED = True
     return {
         api_db_group: api_db_opts,
         placement_db_group: placement_db_opts,
