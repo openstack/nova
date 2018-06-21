@@ -8829,16 +8829,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
-    def test_check_can_live_migrate_dest_file_backed_discard(
-            self, mock_cpu, mock_test_file, mock_svc, mock_lib_version,
-            mock_version):
+    def _test_check_can_live_migrate_dest_file_backed_discard(
+            self, libvirt_version, qemu_version, mock_cpu, mock_test_file,
+            mock_svc, mock_lib_version, mock_version):
 
         self.flags(file_backed_memory=1024, group='libvirt')
 
-        mock_lib_version.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION)
-        mock_version.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_QEMU_FILE_BACKED_DISCARD_VERSION)
+        mock_lib_version.return_value = libvirt_version
+        mock_version.return_value = qemu_version
 
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
@@ -8862,92 +8860,43 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         return_value = drvr.check_can_live_migrate_destination(self.context,
                 instance_ref, None, compute_info, False)
 
-        self.assertTrue(return_value.dst_wants_file_backed_memory)
-        self.assertTrue(return_value.file_backed_memory_discard)
+        return return_value
 
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       '_create_shared_storage_test_file')
-    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
-    def test_check_can_live_migrate_dest_file_backed_discard_bad_libvirt(
-            self, mock_cpu, mock_test_file, mock_svc, mock_lib_version,
-            mock_version):
+    def test_check_can_live_migrate_dest_file_backed_discard(self):
+        libvirt_version = versionutils.convert_version_to_int(
+                libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION)
+        qemu_version = versionutils.convert_version_to_int(
+                libvirt_driver.MIN_QEMU_FILE_BACKED_DISCARD_VERSION)
 
-        self.flags(file_backed_memory=1024, group='libvirt')
+        data = self._test_check_can_live_migrate_dest_file_backed_discard(
+                libvirt_version, qemu_version)
 
-        mock_lib_version.return_value = versionutils.convert_version_to_int(
+        self.assertTrue(data.dst_wants_file_backed_memory)
+        self.assertTrue(data.file_backed_memory_discard)
+
+    def test_check_can_live_migrate_dest_file_backed_discard_bad_libvirt(self):
+        libvirt_version = versionutils.convert_version_to_int(
             libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION) - 1
-        mock_version.return_value = versionutils.convert_version_to_int(
+        qemu_version = versionutils.convert_version_to_int(
             libvirt_driver.MIN_QEMU_FILE_BACKED_DISCARD_VERSION)
 
-        instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
+        data = self._test_check_can_live_migrate_dest_file_backed_discard(
+            libvirt_version, qemu_version)
 
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        compute_info = {'disk_available_least': 400,
-                        'cpu_info': 'asdf',
-                        }
+        self.assertTrue(data.dst_wants_file_backed_memory)
+        self.assertFalse(data.file_backed_memory_discard)
 
-        filename = "file"
-
-        svc = objects.Service()
-        svc.version = 32
-        mock_svc.return_value = svc
-
-        # _check_cpu_match
-        mock_cpu.return_value = 1
-        # mounted_on_same_shared_storage
-        mock_test_file.return_value = filename
-        # No need for the src_compute_info
-        return_value = drvr.check_can_live_migrate_destination(self.context,
-                instance_ref, None, compute_info, False)
-
-        self.assertTrue(return_value.dst_wants_file_backed_memory)
-        self.assertFalse(return_value.file_backed_memory_discard)
-
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       '_create_shared_storage_test_file')
-    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
-    def test_check_can_live_migrate_dest_file_backed_discard_bad_qemu(
-            self, mock_cpu, mock_test_file, mock_svc, mock_lib_version,
-            mock_version):
-
-        self.flags(file_backed_memory=1024, group='libvirt')
-
-        mock_lib_version.return_value = versionutils.convert_version_to_int(
+    def test_check_can_live_migrate_dest_file_backed_discard_bad_qemu(self):
+        libvirt_version = versionutils.convert_version_to_int(
             libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION)
-        mock_version.return_value = versionutils.convert_version_to_int(
+        qemu_version = versionutils.convert_version_to_int(
             libvirt_driver.MIN_QEMU_FILE_BACKED_DISCARD_VERSION) - 1
 
-        instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
+        data = self._test_check_can_live_migrate_dest_file_backed_discard(
+            libvirt_version, qemu_version)
 
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        compute_info = {'disk_available_least': 400,
-                        'cpu_info': 'asdf',
-                        }
-
-        filename = "file"
-
-        svc = objects.Service()
-        svc.version = 32
-        mock_svc.return_value = svc
-
-        # _check_cpu_match
-        mock_cpu.return_value = 1
-        # mounted_on_same_shared_storage
-        mock_test_file.return_value = filename
-        # No need for the src_compute_info
-        return_value = drvr.check_can_live_migrate_destination(self.context,
-                instance_ref, None, compute_info, False)
-
-        self.assertTrue(return_value.dst_wants_file_backed_memory)
-        self.assertFalse(return_value.file_backed_memory_discard)
+        self.assertTrue(data.dst_wants_file_backed_memory)
+        self.assertFalse(data.file_backed_memory_discard)
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
