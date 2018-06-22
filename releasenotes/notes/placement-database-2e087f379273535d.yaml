@@ -9,8 +9,9 @@ features:
     ``placement_database`` configuration group will be used to configure a
     separate placement database, including using ``connection`` to identify the
     target database. That database will have a schema that is a replica of all
-    the tables used in the API database. The new database will be created and
-    synchronized when the ``nova-manage api_db sync`` command is run.
+    the tables used in the API database. The new database schema will be
+    created and synchronized when the ``nova-manage api_db sync`` command is
+    run.
 
     When the ``placement_database.connection`` setting is omitted the existing
     settings for the ``api_database`` will be used for hosting placement data.
