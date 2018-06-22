@@ -3010,7 +3010,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         server_req = self._build_minimal_create_server_request(
                 self.api, "some-server", flavor_id=self.flavor1["id"],
                 image_uuid="155d900f-4e14-4e4c-a73d-069cbf4541e6",
-                networks=[])
+                networks='none')
 
         created_server = self.api.post_server({"server": server_req})
         server = self._wait_for_state_change(self.api, created_server,
@@ -3249,7 +3249,7 @@ class ServerRescheduleTests(integrated_helpers.ProviderUsageBaseTestCase):
         server_req = self._build_minimal_create_server_request(
                 self.api, 'some-server', flavor_id=self.flavor1['id'],
                 image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                networks=[])
+                networks='none')
 
         created_server = self.api.post_server({'server': server_req})
         server = self._wait_for_state_change(
@@ -3298,7 +3298,7 @@ class ServerBuildAbortTests(integrated_helpers.ProviderUsageBaseTestCase):
         server_req = self._build_minimal_create_server_request(
                 self.api, 'some-server', flavor_id=self.flavor1['id'],
                 image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                networks=[])
+                networks='none')
 
         created_server = self.api.post_server({'server': server_req})
         self._wait_for_state_change(self.api, created_server, 'ERROR')

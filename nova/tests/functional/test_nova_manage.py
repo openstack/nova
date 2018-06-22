@@ -394,7 +394,7 @@ class TestNovaManagePlacementHealAllocations(
         server_req = self._build_minimal_create_server_request(
             self.api, 'some-server', flavor_id=flavor['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            networks=[])
+            networks='none')
         server_req['availability_zone'] = 'nova:%s' % hostname
         created_server = self.api.post_server({'server': server_req})
         server = self._wait_for_state_change(
