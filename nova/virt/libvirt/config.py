@@ -2054,6 +2054,7 @@ class LibvirtConfigGuestMemoryBacking(LibvirtConfigObject):
         self.filesource = False
         self.sharedaccess = False
         self.allocateimmediate = False
+        self.discard = False
 
     def format_dom(self):
         root = super(LibvirtConfigGuestMemoryBacking, self).format_dom()
@@ -2073,6 +2074,8 @@ class LibvirtConfigGuestMemoryBacking(LibvirtConfigObject):
             root.append(etree.Element("access", mode="shared"))
         if self.allocateimmediate:
             root.append(etree.Element("allocation", mode="immediate"))
+        if self.discard:
+            root.append(etree.Element("discard"))
 
         return root
 
