@@ -226,8 +226,12 @@ class NUMATopology(base.NovaObject):
 
     @classmethod
     def obj_from_db_obj(cls, db_obj):
-        return cls.obj_from_primitive(
-            jsonutils.loads(db_obj))
+        """Convert serialized representation to object.
+
+        Deserialize instances of this object that have been stored as JSON
+        blobs in the database.
+        """
+        return cls.obj_from_primitive(jsonutils.loads(db_obj))
 
     def __len__(self):
         """Defined so that boolean testing works the same as for lists."""
@@ -265,19 +269,3 @@ class NUMATopologyLimits(base.NovaObject):
                  'cpu_limit': len(cell.cpuset) * self.cpu_allocation_ratio,
                  'id': cell.id})
         return {'cells': cells}
-
-    @classmethod
-    def obj_from_db_obj(cls, db_obj):
-        if 'nova_object.name' in db_obj:
-            obj_topology = cls.obj_from_primitive(db_obj)
-        else:
-            # NOTE(sahid): This compatibility code needs to stay until we can
-            # guarantee that all compute nodes are using RPC API => 3.40.
-            cell = db_obj['cells'][0]
-            ram_ratio = cell['mem']['limit'] / float(cell['mem']['total'])
-            cpu_ratio = cell['cpu_limit'] / float(len(hardware.parse_cpu_spec(
-                cell['cpus'])))
-            obj_topology = NUMATopologyLimits(
-                cpu_allocation_ratio=cpu_ratio,
-                ram_allocation_ratio=ram_ratio)
-        return obj_topology
