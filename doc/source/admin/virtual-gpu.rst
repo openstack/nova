@@ -172,7 +172,8 @@ Caveats
 
 .. note::
 
-       All the caveats are related to the Queens release
+   This information is correct as of the 17.0.0 Queens release. Where
+   improvements have been made or issues fixed, they are noted per item.
 
 For libvirt:
 
@@ -199,6 +200,8 @@ For libvirt:
   instance immediately after rescue. However, rebuilding the rescued instance
   only helps if there are other free vGPUs on the host.
 
+  .. note:: This has been resolved in the Rocky release [#]_.
+
 For XenServer:
 
 * Suspend and live migration with vGPUs attached depends on support from the
@@ -219,6 +222,7 @@ For XenServer:
   resize. If you want to migrate an instance, make sure to rebuild it after the
   migration.
 
+.. [#] https://bugs.launchpad.net/nova/+bug/1762688
 
 .. Links
 .. _Intel GVT-g: https://01.org/igvt-g

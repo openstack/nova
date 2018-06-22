@@ -3013,11 +3013,16 @@ class LibvirtDriver(driver.ComputeDriver):
         gen_confdrive = functools.partial(self._create_configdrive,
                                           context, instance, injection_info,
                                           rescue=True)
+        # NOTE(sbauza): Since rescue recreates the guest XML, we need to
+        # remember the existing mdevs for reusing them.
+        mdevs = self._get_all_assigned_mediated_devices(instance)
+        mdevs = list(mdevs.keys())
         self._create_image(context, instance, disk_info['mapping'],
                            injection_info=injection_info, suffix='.rescue',
                            disk_images=rescue_images)
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
-                                  image_meta, rescue=rescue_images)
+                                  image_meta, rescue=rescue_images,
+                                  mdevs=mdevs)
         self._destroy(instance)
         self._create_domain(xml, post_xml_callback=gen_confdrive)
 

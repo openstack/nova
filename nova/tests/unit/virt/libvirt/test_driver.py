@@ -18811,6 +18811,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.drvr.detach_interface(self.context, instance, network_info[0])
         self.mox.VerifyAll()
 
+    @mock.patch('nova.virt.libvirt.LibvirtDriver.'
+                '_get_all_assigned_mediated_devices')
     @mock.patch('nova.virt.libvirt.utils.write_to_file')
     # NOTE(mdbooth): The following 4 mocks are required to execute
     #                get_guest_xml().
@@ -18822,10 +18824,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                      mock_instance_metadata, mock_supports_direct_io,
                      mock_build_device_metadata, mock_set_host_enabled,
                      mock_write_to_file,
+                     mock_get_mdev,
                      exists=None):
         self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
         mock_build_device_metadata.return_value = None
         mock_supports_direct_io.return_value = True
+
+        mock_get_mdev.return_value = {uuids.mdev1: uuids.inst1}
 
         backend = self.useFixture(
             fake_imagebackend.ImageBackendFixture(exists=exists))
@@ -18889,6 +18894,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             doc.xpath('os/*[self::initrd|self::kernel]/text()')
         self.assertEqual(expected_kernel_ramdisk_paths,
                          kernel_ramdisk_paths)
+
+        # The generated domain XML should also contain any existing mdev
+        self.assertEqual(
+            [uuids.mdev1],
+            doc.xpath("devices/*[@type='mdev']/source/address/@uuid"))
 
     @mock.patch('nova.virt.configdrive.ConfigDriveBuilder._make_iso9660')
     def test_rescue_config_drive(self, mock_mkisofs):
