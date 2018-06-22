@@ -38,7 +38,7 @@ def verify_project_id(context, project_id):
             explanation=_("Project ID %s is not a valid project.") %
             project_id)
     try:
-        resp = adap.get('/projects/%s' % project_id, raise_exc=False)
+        resp = adap.get('/projects/%s' % project_id)
     except kse.EndpointNotFound:
         LOG.error(
             "Keystone identity service version 3.0 was not found. This might "

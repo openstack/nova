@@ -69,12 +69,10 @@ class PlacementDirect(interceptor.RequestsInterceptor):
         # TODO(efried): See below
         if latest_microversion:
             headers['OpenStack-API-Version'] = 'placement latest'
-        # TODO(efried): Set raise_exc globally when
-        # https://review.openstack.org/#/c/574784/ is released.
         self.adapter = adapter.Adapter(
             session.Session(auth=None, session=request_session,
                             additional_headers=headers),
-            service_type='placement')
+            service_type='placement', raise_exc=False)
         # TODO(efried): Figure out why this isn't working:
         #   default_microversion='latest' if latest_microversion else None)
         self._mocked_endpoint = mock.patch(

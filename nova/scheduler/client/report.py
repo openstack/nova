@@ -276,8 +276,7 @@ class SchedulerReportClient(object):
     def get(self, url, version=None, global_request_id=None):
         headers = ({request_id.INBOUND_HEADER: global_request_id}
                    if global_request_id else {})
-        return self._client.get(url, raise_exc=False, microversion=version,
-                                headers=headers)
+        return self._client.get(url, microversion=version, headers=headers)
 
     def post(self, url, data, version=None, global_request_id=None):
         headers = ({request_id.INBOUND_HEADER: global_request_id}
@@ -286,8 +285,8 @@ class SchedulerReportClient(object):
         # media type to application/json for us. Placement API is
         # more sensitive to this than other APIs in the OpenStack
         # ecosystem.
-        return self._client.post(url, json=data, raise_exc=False,
-                                 microversion=version, headers=headers)
+        return self._client.post(url, json=data, microversion=version,
+                                 headers=headers)
 
     def put(self, url, data, version=None, global_request_id=None):
         # NOTE(sdague): using json= instead of data= sets the
@@ -299,13 +298,12 @@ class SchedulerReportClient(object):
                               global_request_id} if global_request_id else {}}
         if data is not None:
             kwargs['json'] = data
-        return self._client.put(url, raise_exc=False, **kwargs)
+        return self._client.put(url, **kwargs)
 
     def delete(self, url, version=None, global_request_id=None):
         headers = ({request_id.INBOUND_HEADER: global_request_id}
                    if global_request_id else {})
-        return self._client.delete(url, raise_exc=False, microversion=version,
-                                   headers=headers)
+        return self._client.delete(url, microversion=version, headers=headers)
 
     @safe_connect
     def get_allocation_candidates(self, context, resources):

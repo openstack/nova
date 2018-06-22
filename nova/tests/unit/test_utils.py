@@ -1241,7 +1241,7 @@ class GetKSAAdapterTestCase(test.NoDBTestCase):
         # load_adapter* called with what we passed in (and the right group)
         self.load_adap.assert_called_once_with(
             utils.CONF, 'glance', session='sess', auth='auth',
-            min_version='min', max_version='max')
+            min_version='min', max_version='max', raise_exc=False)
 
     def test_auth_from_session(self):
         self.sess.auth = 'auth'
@@ -1255,7 +1255,7 @@ class GetKSAAdapterTestCase(test.NoDBTestCase):
         # load_adapter* called with the auth from the session
         self.load_adap.assert_called_once_with(
             utils.CONF, 'ironic', session=self.sess, auth='auth',
-            min_version=None, max_version=None)
+            min_version=None, max_version=None, raise_exc=False)
 
     def test_load_auth_and_session(self):
         ret = utils.get_ksa_adapter('volumev3')
@@ -1269,7 +1269,7 @@ class GetKSAAdapterTestCase(test.NoDBTestCase):
         # load_adapter* called with the loaded auth & session
         self.load_adap.assert_called_once_with(
             utils.CONF, 'cinder', session=self.sess, auth=self.auth,
-            min_version=None, max_version=None)
+            min_version=None, max_version=None, raise_exc=False)
 
 
 class GetEndpointTestCase(test.NoDBTestCase):

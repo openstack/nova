@@ -25,6 +25,7 @@ import os
 import warnings
 
 import fixtures
+from keystoneauth1 import adapter as ka
 from keystoneauth1 import session as ks
 import mock
 from oslo_concurrency import lockutils
@@ -1738,7 +1739,7 @@ class PlacementFixture(placement.PlacementFixture):
             'keystoneauth1.session.TCPKeepAliveAdapter.init_poolmanager',
             adapters.HTTPAdapter.init_poolmanager))
 
-        self._client = ks.Session(auth=None)
+        self._client = ka.Adapter(ks.Session(auth=None), raise_exc=False)
         # NOTE(sbauza): We need to mock the scheduler report client because
         # we need to fake Keystone by directly calling the endpoint instead
         # of looking up the service catalog, like we did for the OSAPIFixture.
@@ -1776,8 +1777,7 @@ class PlacementFixture(placement.PlacementFixture):
         return self._client.get(
             url,
             endpoint_override=self.endpoint,
-            headers=headers,
-            raise_exc=False)
+            headers=headers)
 
     def _fake_post(self, *args, **kwargs):
         (url, data) = args[1:]
@@ -1793,8 +1793,7 @@ class PlacementFixture(placement.PlacementFixture):
         return self._client.post(
             url, json=data,
             endpoint_override=self.endpoint,
-            headers=headers,
-            raise_exc=False)
+            headers=headers)
 
     def _fake_put(self, *args, **kwargs):
         (url, data) = args[1:]
@@ -1810,8 +1809,7 @@ class PlacementFixture(placement.PlacementFixture):
         return self._client.put(
             url, json=data,
             endpoint_override=self.endpoint,
-            headers=headers,
-            raise_exc=False)
+            headers=headers)
 
     def _fake_delete(self, *args, **kwargs):
         (url,) = args[1:]
@@ -1821,8 +1819,7 @@ class PlacementFixture(placement.PlacementFixture):
         return self._client.delete(
             url,
             endpoint_override=self.endpoint,
-            headers={'x-auth-token': self.token},
-            raise_exc=False)
+            headers={'x-auth-token': self.token})
 
 
 class UnHelperfulClientChannel(privsep_daemon._ClientChannel):
