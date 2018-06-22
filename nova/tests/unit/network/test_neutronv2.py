@@ -4902,8 +4902,8 @@ class TestNeutronv2WithMock(test.TestCase):
         self.assertTrue(mock_log.called)
 
     @mock.patch.object(neutronapi, 'get_client')
-    def test_create_pci_requests_for_sriov_ports_no_allocate(self, getclient):
-        """Tests that create_pci_requests_for_sriov_ports is a noop if
+    def test_create_resource_requests_no_allocate(self, getclient):
+        """Tests that create_resource_requests is a noop if
         networks are specifically requested to not be allocated.
         """
         requested_networks = objects.NetworkRequestList(objects=[
@@ -4911,14 +4911,14 @@ class TestNeutronv2WithMock(test.TestCase):
         ])
         pci_requests = objects.InstancePCIRequests()
         api = neutronapi.API()
-        api.create_pci_requests_for_sriov_ports(
-            self.context, pci_requests, requested_networks)
+        api.create_resource_requests(
+            self.context, requested_networks, pci_requests)
         self.assertFalse(getclient.called)
 
     @mock.patch.object(neutronapi.API, '_get_physnet_info')
     @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
     @mock.patch.object(neutronapi, 'get_client')
-    def test_create_pci_requests_for_sriov_ports(self, getclient,
+    def test_create_resource_requests(self, getclient,
             mock_get_port_vnic_info, mock_get_physnet_info):
         requested_networks = objects.NetworkRequestList(
             objects = [
@@ -4943,8 +4943,8 @@ class TestNeutronv2WithMock(test.TestCase):
         ]
         api = neutronapi.API()
 
-        api.create_pci_requests_for_sriov_ports(
-            self.context, pci_requests, requested_networks)
+        api.create_resource_requests(
+            self.context, requested_networks, pci_requests)
 
         self.assertEqual(5, len(pci_requests.requests))
         has_pci_request_id = [net.pci_request_id is not None for net in

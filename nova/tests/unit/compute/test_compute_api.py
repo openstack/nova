@@ -219,7 +219,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                             port_id=port)])
 
         with mock.patch.object(self.compute_api.network_api,
-                               'create_pci_requests_for_sriov_ports'):
+                               'create_resource_requests'):
             self.compute_api.create(self.context, instance_type, 'image_id',
                                     requested_networks=requested_networks,
                                     max_count=None)

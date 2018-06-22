@@ -1214,7 +1214,7 @@ class NeutronFixture(fixtures.Fixture):
             lambda *args, **kwargs: 1)
         self.test.stub_out(
             'nova.network.neutronv2.api.API.'
-            'create_pci_requests_for_sriov_ports',
+            'create_resource_requests',
             lambda *args, **kwargs: None)
         self.test.stub_out(
             'nova.network.neutronv2.api.API.setup_networks_on_host',
