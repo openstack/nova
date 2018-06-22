@@ -21,9 +21,9 @@ file-backed memory to placement in place of the total system memory capacity.
 This allows the node to run more instances than would normally fit
 within system memory.
 
-When available in libivrt and qemu, instance memory will be discarded by qemu
-at shutdown by calling madvise(MADV_REMOVE), to avoid flushing any dirty memory
-to the backing store on exit.
+When available in libvirt and qemu, instance memory will be discarded by qemu
+at shutdown by calling ``madvise(MADV_REMOVE)``, to avoid flushing any dirty
+memory to the backing store on exit.
 
 To enable file-backed memory, follow the steps below:
 
@@ -42,12 +42,12 @@ Prerequisites and Limitations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Libvirt
-   File-backed memory requires libvirt version 4.0.0 or newer
-   Discard capability requires libvirt ersion 4.4.0 or newer
+   File-backed memory requires libvirt version 4.0.0 or newer. Discard
+   capability requires libvirt version 4.4.0 or newer.
 
 Qemu
-   File-backed memory requires qemu version 2.6.0 or newer
-   Discard capability requires qemu version 2.10.0 or newer
+   File-backed memory requires qemu version 2.6.0 or newer.Discard capability
+   requires qemu version 2.10.0 or newer.
 
 Memory overcommit
    File-backed memory is not compatible with memory overcommit.
