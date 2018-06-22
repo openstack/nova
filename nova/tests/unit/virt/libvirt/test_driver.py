@@ -5348,7 +5348,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[6].model, 'random')
-        self.assertIsNone(cfg.devices[6].backend)
+        self.assertEqual(cfg.devices[6].backend, '/dev/urandom')
         self.assertIsNone(cfg.devices[6].rate_bytes)
         self.assertIsNone(cfg.devices[6].rate_period)
 
@@ -5422,7 +5422,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                             vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[6].model, 'random')
-        self.assertIsNone(cfg.devices[6].backend)
+        self.assertEqual(cfg.devices[6].backend, '/dev/urandom')
         self.assertEqual(cfg.devices[6].rate_bytes, 1024)
         self.assertEqual(cfg.devices[6].rate_period, 2)
 

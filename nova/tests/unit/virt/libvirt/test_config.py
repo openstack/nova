@@ -3271,7 +3271,7 @@ class LibvirtConfigGuestRngTest(LibvirtConfigBaseTest):
 
     def test_config_rng_driver_with_rate(self):
         obj = config.LibvirtConfigGuestRng()
-        obj.backend = '/dev/random'
+        obj.backend = '/dev/urandom'
         obj.rate_period = '12'
         obj.rate_bytes = '34'
 
@@ -3279,7 +3279,7 @@ class LibvirtConfigGuestRngTest(LibvirtConfigBaseTest):
         self.assertXmlEqual(xml, """
 <rng model='virtio'>
     <rate period='12' bytes='34'/>
-    <backend model='random'>/dev/random</backend>
+    <backend model='random'>/dev/urandom</backend>
 </rng>""")
 
 
