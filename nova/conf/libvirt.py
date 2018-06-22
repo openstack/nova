@@ -747,9 +747,9 @@ Default value '0' moves calculating amount of ports to libvirt.
                default=0,
                min=0,
                help="""
-Available capacity in MiB for file backed memory.
+Available capacity in MiB for file-backed memory.
 
-Set to 0 to disable file backed memory.
+Set to 0 to disable file-backed memory.
 
 When enabled, instances will create memory files in the directory specified
 in ``/etc/libvirt/qemu.conf``'s ``memory_backing_dir`` option. The default

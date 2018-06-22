@@ -239,7 +239,7 @@ class _TestLibvirtLiveMigrateData(object):
         data = lambda x: x['nova_object.data']
 
         primitive = data(obj.obj_to_primitive())
-        self.assertIn('serial_listen_addr', primitive)
+        self.assertIn('dst_wants_file_backed_memory', primitive)
         primitive = data(obj.obj_to_primitive(target_version='1.0'))
         self.assertNotIn('target_connect_addr', primitive)
         self.assertNotIn('supported_perf_events', primitive)

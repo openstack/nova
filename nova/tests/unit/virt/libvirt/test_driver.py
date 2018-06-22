@@ -1069,12 +1069,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
-    @mock.patch.object(
-        libvirt_driver.LibvirtDriver, "_check_file_backed_memory_support",)
-    def test_file_backed_memory_support_called(self, mock_file_backed_support):
+    def test_file_backed_memory_support_called(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        drvr.init_host("dummyhost")
-        self.assertTrue(mock_file_backed_support.called)
+        with mock.patch.object(drvr,
+                '_check_file_backed_memory_support') as mock_check_fb_support:
+            drvr.init_host("dummyhost")
+            self.assertTrue(mock_check_fb_support.called)
 
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(

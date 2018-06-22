@@ -224,14 +224,14 @@ def _update_perf_events_xml(xml_doc, migrate_data):
 
 
 def _update_memory_backing_xml(xml_doc, migrate_data):
-    """Update libvirt domain XML for file backed memory
+    """Update libvirt domain XML for file-backed memory
 
     If incoming XML has a memoryBacking element, remove access, source,
     and allocation children elements to get it to a known consistent state.
 
     If no incoming memoryBacking element, create one.
 
-    If destination wants file backed memory, add source, access,
+    If destination wants file-backed memory, add source, access,
     and allocation children.
     """
     old_xml_has_memory_backing = True
@@ -248,7 +248,7 @@ def _update_memory_backing_xml(xml_doc, migrate_data):
         old_xml_has_memory_backing = False
     else:
         memory_backing = memory_backing[0]
-        # Remove existing file backed memory tags, if they exist.
+        # Remove existing file-backed memory tags, if they exist.
         for name in ("access", "source", "allocation"):
             tag = memory_backing.findall(name)
             if tag:

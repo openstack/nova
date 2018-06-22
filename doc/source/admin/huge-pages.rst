@@ -56,8 +56,8 @@ Enabling huge pages on the host
 -------------------------------
 
 .. important::
-   Huge pages may not be used on a host configured for file backed memory. See
-   `File backed memory`_ for details
+   Huge pages may not be used on a host configured for file-backed memory. See
+   :doc:`file-backed-memory` for details
 
 Persistent huge pages are required owing to their guaranteed availability.
 However, persistent huge pages are not enabled by default in most environments.
@@ -240,4 +240,3 @@ guide.
 .. _`Linux THP guide`: https://www.kernel.org/doc/Documentation/vm/transhuge.txt
 .. _`Linux hugetlbfs guide`: https://www.kernel.org/doc/Documentation/vm/hugetlbpage.txt
 .. _`Image metadata`: https://docs.openstack.org/image-guide/image-metadata.html
-.. _`File backed memory`: https://docs.openstack.org/nova/latest/admin/file-backed-memory.html
