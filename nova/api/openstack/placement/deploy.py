@@ -86,7 +86,7 @@ def deploy(conf):
 
 def update_database():
     """Do any database updates required at process boot time, such as
-    updating the traits database.
+    updating the traits table.
     """
     ctx = db_api.DbContext()
     resource_provider.ensure_trait_sync(ctx)
