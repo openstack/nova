@@ -73,6 +73,7 @@ from nova.objects import fields as fields_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
 from nova.pci import request as pci_request
+from nova.policies import servers as servers_policies
 import nova.policy
 from nova import profiler
 from nova import rpc
@@ -631,6 +632,15 @@ class API(base.Base):
                 if image_min_disk > dest_size:
                     raise exception.FlavorDiskSmallerThanMinDisk(
                         flavor_size=dest_size, image_min_disk=image_min_disk)
+            else:
+                # The user is attempting to create a server with a 0-disk
+                # image-backed flavor, which can lead to issues with a large
+                # image consuming an unexpectedly large amount of local disk
+                # on the compute host. Check to see if the deployment will
+                # allow that.
+                if not context.can(
+                        servers_policies.ZERO_DISK_FLAVOR, fatal=False):
+                    raise exception.BootFromVolumeRequiredForZeroDiskFlavor()
 
     def _get_image_defined_bdms(self, instance_type, image_meta,
                                 root_device_name):

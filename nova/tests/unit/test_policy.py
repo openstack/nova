@@ -381,6 +381,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:servers:create",
 "os_compute_api:servers:create:attach_network",
 "os_compute_api:servers:create:attach_volume",
+"os_compute_api:servers:create:zero_disk_flavor",
 "os_compute_api:servers:create_image",
 "os_compute_api:servers:delete",
 "os_compute_api:servers:detail",

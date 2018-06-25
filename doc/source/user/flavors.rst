@@ -43,7 +43,9 @@ Root Disk GB
   case which uses the native base image size as the size of the ephemeral root
   volume. However, in this case the filter scheduler cannot select the compute
   host based on the virtual image size. As a result, ``0`` should only be used
-  for volume booted instances or for testing purposes.
+  for volume booted instances or for testing purposes. Volume-backed instances
+  can be enforced for flavors with zero root disk via the
+  ``os_compute_api:servers:create:zero_disk_flavor`` policy rule.
 
 Ephemeral Disk GB
   Amount of disk space (in gigabytes) to use for the ephemeral partition. This
