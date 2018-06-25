@@ -1123,6 +1123,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(expected, output)
 
     def test_map_cell_and_hosts_no_transport_url(self):
+        self.flags(transport_url=None)
         retval = self.commands.map_cell_and_hosts()
         self.assertEqual(1, retval)
         output = self.output.getvalue().strip()
@@ -1739,6 +1740,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
                          self.commands._validate_transport_url(from_cli))
 
     def test_validate_transport_url_missing(self):
+        self.flags(transport_url=None)
         self.assertIsNone(self.commands._validate_transport_url(None))
 
     def test_validate_transport_url_favors_command_line(self):
@@ -1823,6 +1825,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertIn('exists', self.output.getvalue())
 
     def test_create_cell_failed_if_no_transport_url(self):
+        self.flags(transport_url=None)
         status = self.commands.create_cell()
         self.assertEqual(1, status)
         self.assertIn('--transport-url', self.output.getvalue())

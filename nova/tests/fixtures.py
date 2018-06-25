@@ -724,7 +724,7 @@ class RPCFixture(fixtures.Fixture):
         rpc.add_extra_exmods(*self.exmods)
         self.addCleanup(rpc.clear_extra_exmods)
         self.messaging_conf = messaging_conffixture.ConfFixture(CONF)
-        self.messaging_conf.transport_driver = 'fake'
+        self.messaging_conf.transport_url = 'fake:/'
         self.useFixture(self.messaging_conf)
         self.useFixture(fixtures.MonkeyPatch(
             'nova.rpc.create_transport', self._fake_create_transport))
