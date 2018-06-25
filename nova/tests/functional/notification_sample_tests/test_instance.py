@@ -305,6 +305,7 @@ class TestInstanceNotificationSample(
             self._test_attach_volume_error,
             self._test_interface_attach_and_detach,
             self._test_interface_attach_error,
+            self._test_lock_instance,
         ]
 
         for action in actions:
@@ -1661,6 +1662,20 @@ class TestInstanceNotificationSample(
                 'uuid': server['id'],
                 'fault.traceback': self.ANY},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    def _test_lock_instance(self, server):
+        self.api.post_server_action(server['id'], {'lock': {}})
+        self._wait_for_server_parameter(self.api, server, {'locked': True})
+        # One versioned notification is generated
+        # 0. instance-lock
+
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-lock',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
 
 
 class TestInstanceNotificationSampleOldAttachFlow(

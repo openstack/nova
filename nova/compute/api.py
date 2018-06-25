@@ -3820,6 +3820,10 @@ class API(base.Base):
             instance.save()
 
         lock(self, context, instance)
+        compute_utils.notify_about_instance_action(
+            context, instance, CONF.host,
+            action=fields_obj.NotificationAction.LOCK,
+            source=fields_obj.NotificationSource.API)
 
     def is_expected_locked_by(self, context, instance):
         is_owner = instance.project_id == context.project_id

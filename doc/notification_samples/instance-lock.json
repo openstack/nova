@@ -1,0 +1,11 @@
+{
+    "event_type":"instance.lock",
+    "payload":{
+        "$ref": "common_payloads/InstanceActionPayload.json#",
+        "nova_object.data":{
+            "locked":true
+        }
+    },
+    "priority":"INFO",
+    "publisher_id":"nova-api:fake-mini"
+}
