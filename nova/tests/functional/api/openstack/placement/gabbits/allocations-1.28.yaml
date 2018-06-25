@@ -166,3 +166,74 @@ tests:
   status: 200
   response_json_paths:
       $.allocations.`len`: 0
+
+# The following tests cover cases where we are putting allocations to
+# multiple resource providers from one consumer uuid, both a brand new
+# consumer and an existing one.
+
+- name: create shared disk
+  POST: /resource_providers
+  data:
+      name: shared_disker
+      uuid: 8aa83304-4b6d-4a23-b954-06d8b36b206a
+
+- name: trait that disk
+  PUT: /resource_providers/8aa83304-4b6d-4a23-b954-06d8b36b206a/traits
+  data:
+      resource_provider_generation: $RESPONSE['$.generation']
+      traits:
+          - MISC_SHARES_VIA_AGGREGATE
+          - STORAGE_DISK_SSD
+
+
+- name: set disk inventory
+  PUT: /resource_providers/8aa83304-4b6d-4a23-b954-06d8b36b206a/inventories
+  data:
+      inventories:
+          DISK_GB:
+              total: 5000
+      resource_provider_generation: $RESPONSE['$.resource_provider_generation']
+
+- name: disk in aggregate
+  PUT: /resource_providers/8aa83304-4b6d-4a23-b954-06d8b36b206a/aggregates
+  data:
+      resource_provider_generation: $RESPONSE['$.resource_provider_generation']
+      aggregates:
+          - 7fade9e1-ab01-4d1b-84db-ac74f740bb42
+
+- name: compute in aggregate
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers:
+      # avoid generation in aggregates
+      openstack-api-version: placement 1.10
+  data:
+      - 7fade9e1-ab01-4d1b-84db-ac74f740bb42
+
+- name: get candidates with shared
+  GET: /allocation_candidates?resources=VCPU:1,DISK_GB:200&required=STORAGE_DISK_SSD
+  response_json_paths:
+      $.allocation_requests.`len`: 1
+      $.allocation_requests[0].allocations['$ENVIRON["RP_UUID"]'].resources.VCPU: 1
+      $.allocation_requests[0].allocations['8aa83304-4b6d-4a23-b954-06d8b36b206a'].resources.DISK_GB: 200
+
+# This fails because of bug 1778576
+# https://bugs.launchpad.net/nova/+bug/1778576
+- name: put that allocation to new consumer
+  xfail: True
+  PUT: /allocations/55555555-5555-5555-5555-555555555555
+  data:
+      allocations: $RESPONSE['$.allocation_requests[0].allocations']
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_generation: null
+  status: 204
+
+- name: put that allocation to existing consumer
+  PUT: /allocations/22222222-2222-2222-2222-222222222222
+  data:
+      allocations: $HISTORY['get candidates with shared'].$RESPONSE['$.allocation_requests[0].allocations']
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      # we just happen to know this is supposed to be 1 here, so shortcutting
+      consumer_generation: 1
+  status: 204
