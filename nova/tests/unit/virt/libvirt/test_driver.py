@@ -15077,19 +15077,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     [(4, 1024 * i), (2048, i)])
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        expected_topo_dict = {'cells': [
-                                {'cpus': '0,1', 'cpu_usage': 0,
-                                  'mem': {'total': 256, 'used': 0},
-                                  'id': 0},
-                                {'cpus': '3', 'cpu_usage': 0,
-                                  'mem': {'total': 256, 'used': 0},
-                                  'id': 1},
-                                {'cpus': '', 'cpu_usage': 0,
-                                  'mem': {'total': 256, 'used': 0},
-                                  'id': 2},
-                                {'cpus': '', 'cpu_usage': 0,
-                                  'mem': {'total': 256, 'used': 0},
-                                  'id': 3}]}
+
         with test.nested(
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
@@ -15100,9 +15088,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   return_value=set([0, 1, 2, 3, 6])),
                 ):
             got_topo = drvr._get_host_numa_topology()
-            got_topo_dict = got_topo._to_dict()
-            self.assertThat(
-                    expected_topo_dict, matchers.DictMatches(got_topo_dict))
 
             if mempages:
                 # cells 0
@@ -15119,7 +15104,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual([], got_topo.cells[0].mempages)
                 self.assertEqual([], got_topo.cells[1].mempages)
 
-            self.assertEqual(expected_topo_dict, got_topo_dict)
             self.assertEqual(set([]), got_topo.cells[0].pinned_cpus)
             self.assertEqual(set([]), got_topo.cells[1].pinned_cpus)
             self.assertEqual(set([]), got_topo.cells[2].pinned_cpus)
@@ -17711,10 +17695,9 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(stats["disk_available_least"], 80)
         self.assertEqual(jsonutils.loads(stats["pci_passthrough_devices"]),
                          HostStateTestCase.pci_devices)
-        self.assertThat(objects.NUMATopology.obj_from_db_obj(
-                            stats['numa_topology'])._to_dict(),
-                        matchers.DictMatches(
-                                HostStateTestCase.numa_topology._to_dict()))
+        self.assertEqual(objects.NUMATopology.obj_from_db_obj(
+                            stats['numa_topology']),
+                         HostStateTestCase.numa_topology)
 
 
 class TestUpdateProviderTree(test.NoDBTestCase):

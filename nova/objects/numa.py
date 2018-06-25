@@ -22,6 +22,9 @@ from nova.virt import hardware
 
 
 def all_things_equal(obj_a, obj_b):
+    if obj_b is None:
+        return False
+
     for name in obj_a.fields:
         set_a = obj_a.obj_attr_is_set(name)
         set_b = obj_b.obj_attr_is_set(name)
@@ -114,16 +117,6 @@ class NUMACell(base.NovaObject):
                 pin_siblings.update(sib)
         self.unpin_cpus(pin_siblings)
 
-    def _to_dict(self):
-        return {
-            'id': self.id,
-            'cpus': hardware.format_cpu_spec(
-                self.cpuset, allow_ranges=False),
-            'mem': {
-                'total': self.memory,
-                'used': self.memory_usage},
-            'cpu_usage': self.cpu_usage}
-
     @classmethod
     def _from_dict(cls, data_dict):
         cpuset = hardware.parse_cpu_spec(
@@ -202,7 +195,13 @@ class NUMATopology(base.NovaObject):
 
     fields = {
         'cells': fields.ListOfObjectsField('NUMACell'),
-        }
+    }
+
+    def __eq__(self, other):
+        return all_things_equal(self, other)
+
+    def __ne__(self, other):
+        return not (self == other)
 
     @property
     def has_threads(self):
@@ -237,10 +236,6 @@ class NUMATopology(base.NovaObject):
         """Defined so that boolean testing works the same as for lists."""
         return len(self.cells)
 
-    def _to_dict(self):
-        # TODO(sahid): needs to be removed.
-        return {'cells': [cell._to_dict() for cell in self.cells]}
-
     @classmethod
     def _from_dict(cls, data_dict):
         return cls(cells=[
@@ -257,15 +252,3 @@ class NUMATopologyLimits(base.NovaObject):
         'cpu_allocation_ratio': fields.FloatField(),
         'ram_allocation_ratio': fields.FloatField(),
         }
-
-    def to_dict_legacy(self, host_topology):
-        cells = []
-        for cell in host_topology.cells:
-            cells.append(
-                {'cpus': hardware.format_cpu_spec(
-                    cell.cpuset, allow_ranges=False),
-                 'mem': {'total': cell.memory,
-                         'limit': cell.memory * self.ram_allocation_ratio},
-                 'cpu_limit': len(cell.cpuset) * self.cpu_allocation_ratio,
-                 'id': cell.id})
-        return {'cells': cells}

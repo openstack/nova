@@ -1913,26 +1913,8 @@ class HelperMethodsTestCase(test.NoDBTestCase):
         self.assertIsInstance(res, objects.NUMATopology)
         self._check_usage(res)
 
-    def test_dicts_instance_json_old(self):
-        host = {'numa_topology': self.hosttopo}
-        instance = {'numa_topology':
-                    jsonutils.dumps(self.instancetopo._to_dict())}
-
-        res = hw.get_host_numa_usage_from_instance(host, instance)
-        self.assertIsInstance(res, objects.NUMATopology)
-        self._check_usage(res)
-
     def test_dicts_host_json(self):
         host = {'numa_topology': self.hosttopo._to_json()}
-        instance = {'numa_topology': self.instancetopo}
-
-        res = hw.get_host_numa_usage_from_instance(host, instance)
-        self.assertIsInstance(res, six.string_types)
-        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
-
-    def test_dicts_host_json_old(self):
-        host = {'numa_topology': jsonutils.dumps(
-            self.hosttopo._to_dict())}
         instance = {'numa_topology': self.instancetopo}
 
         res = hw.get_host_numa_usage_from_instance(host, instance)
