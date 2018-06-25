@@ -209,7 +209,7 @@ class TestPlacementCheck(test.NoDBTestCase):
             "versions": [
                 {
                     "min_version": "1.0",
-                    "max_version": "1.25",
+                    "max_version": status.MIN_PLACEMENT_MICROVERSION,
                     "id": "v1.0"
                 }
             ]
@@ -229,7 +229,7 @@ class TestPlacementCheck(test.NoDBTestCase):
              "versions": [
                 {
                     "min_version": "1.0",
-                    "max_version": "1.25",
+                    "max_version": status.MIN_PLACEMENT_MICROVERSION,
                     "id": "v1.0"
                 }
             ]
@@ -250,8 +250,8 @@ class TestPlacementCheck(test.NoDBTestCase):
         }
         res = self.cmd._check_placement()
         self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
-        self.assertIn('Placement API version 1.25 needed, you have 0.9',
-                      res.details)
+        self.assertIn('Placement API version %s needed, you have 0.9' %
+                      status.MIN_PLACEMENT_MICROVERSION, res.details)
 
 
 class TestUpgradeCheckBasic(test.NoDBTestCase):

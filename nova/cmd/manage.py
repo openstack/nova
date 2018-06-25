@@ -1797,7 +1797,7 @@ class PlacementCommands(object):
             return
 
         allocations = placement.get_allocations_for_consumer(
-            ctxt, instance.uuid, include_project_user=True)
+            ctxt, instance.uuid, include_generation=True)
         # get_allocations_for_consumer uses safe_connect which will
         # return None if we can't communicate with Placement, and the
         # response can have an empty {'allocations': {}} response if
@@ -1823,11 +1823,10 @@ class PlacementCommands(object):
             # provider allocations.
             allocations['project_id'] = instance.project_id
             allocations['user_id'] = instance.user_id
-            # We use 1.12 for PUT /allocations/{consumer_id} to mirror
+            # We use 1.28 for PUT /allocations/{consumer_id} to mirror
             # the body structure from get_allocations_for_consumer.
-            # TODO(mriedem): Pass a consumer generation using 1.28.
             resp = placement.put('/allocations/%s' % instance.uuid,
-                                 allocations, version='1.12')
+                                 allocations, version='1.28')
             if resp:
                 output(_('Successfully updated allocations for '
                          'instance %s.') % instance.uuid)

@@ -2571,13 +2571,13 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         self.assertIn('Processed 1 instances.', self.output.getvalue())
         mock_get_allocs.assert_called_once_with(
             test.MatchType(context.RequestContext), uuidsentinel.instance,
-            include_project_user=True)
+            include_generation=True)
         expected_put_data = mock_get_allocs.return_value
         expected_put_data['project_id'] = 'fake-project'
         expected_put_data['user_id'] = 'fake-user'
         mock_put.assert_called_once_with(
             '/allocations/%s' % uuidsentinel.instance, expected_put_data,
-            version='1.12')
+            version='1.28')
 
     @mock.patch('nova.objects.CellMappingList.get_all',
                 return_value=objects.CellMappingList(objects=[
@@ -2623,13 +2623,13 @@ class TestNovaManagePlacement(test.NoDBTestCase):
             'Inventory and/or allocations changed', self.output.getvalue())
         mock_get_allocs.assert_called_once_with(
             test.MatchType(context.RequestContext), uuidsentinel.instance,
-            include_project_user=True)
+            include_generation=True)
         expected_put_data = mock_get_allocs.return_value
         expected_put_data['project_id'] = 'fake-project'
         expected_put_data['user_id'] = 'fake-user'
         mock_put.assert_called_once_with(
             '/allocations/%s' % uuidsentinel.instance, expected_put_data,
-            version='1.12')
+            version='1.28')
 
 
 class TestNovaManageMain(test.NoDBTestCase):
