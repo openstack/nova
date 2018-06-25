@@ -532,7 +532,6 @@ class ComputeManager(manager.Manager):
                 CONF.max_concurrent_live_migrations)
         else:
             self._live_migration_semaphore = compute_utils.UnlimitedSemaphore()
-        self._failed_builds = 0
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -1710,29 +1709,15 @@ class ComputeManager(manager.Manager):
         return block_device_info
 
     def _build_failed(self):
-        self._failed_builds += 1
-        limit = CONF.compute.consecutive_build_service_disable_threshold
-        if limit and self._failed_builds >= limit:
-            # NOTE(danms): If we're doing a bunch of parallel builds,
-            # it is possible (although not likely) that we have already
-            # failed N-1 builds before this and we race with a successful
-            # build and disable ourselves here when we might've otherwise
-            # not.
-            LOG.error('Disabling service due to %(fails)i '
-                      'consecutive build failures',
-                      {'fails': self._failed_builds})
-            ctx = nova.context.get_admin_context()
-            service = objects.Service.get_by_compute_host(ctx, CONF.host)
-            service.disabled = True
-            service.disabled_reason = (
-                'Auto-disabled due to %i build failures' % self._failed_builds)
-            service.save()
-            # NOTE(danms): Reset our counter now so that when the admin
-            # re-enables us we can start fresh
-            self._failed_builds = 0
-        elif self._failed_builds > 1:
-            LOG.warning('%(fails)i consecutive build failures',
-                        {'fails': self._failed_builds})
+        if CONF.compute.consecutive_build_service_disable_threshold:
+            rt = self._get_resource_tracker()
+            # NOTE(danms): Update our counter, but wait for the next
+            # update_available_resource() periodic to flush it to the DB
+            rt.stats.build_failed()
+
+    def _build_succeeded(self):
+        rt = self._get_resource_tracker()
+        rt.stats.build_succeeded()
 
     @wrap_exception()
     @reverts_task_state
@@ -1783,7 +1768,7 @@ class ComputeManager(manager.Manager):
 
                         self._build_failed()
                     else:
-                        self._failed_builds = 0
+                        self._build_succeeded()
 
         # NOTE(danms): We spawn here to return the RPC worker thread back to
         # the pool. Since what follows could take a really long time, we don't

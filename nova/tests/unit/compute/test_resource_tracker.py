@@ -1148,7 +1148,7 @@ class TestInitComputeNode(BaseTestCase):
             ram_allocation_ratio=1.0,
             cpu_allocation_ratio=1.0,
             disk_allocation_ratio=1.0,
-            stats={},
+            stats={'failed_builds': 0},
             pci_device_pools=objects.PciDevicePoolList(objects=[]),
             uuid=uuids.compute_node_uuid
         )
