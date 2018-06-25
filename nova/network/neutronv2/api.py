@@ -1587,24 +1587,21 @@ class API(base_api.NetworkAPI):
         :param neutron: The Neutron client
         :param port_id: The id of port to be queried
 
-        :return: A triplet composed of the VNIC type (see:
-                 network_model.VNIC_TYPES_*), the attached physical
-                 network name, for SR-IOV whether the port should be
-                 considered as trusted or None for other VNIC types.
+        :return: A tuple of vNIC type, trusted status and network ID. Trusted
+            status only affects SR-IOV ports and will always be None for other
+            port types.
         """
-        trusted = None
-        phynet_name = None
         port = self._show_port(context, port_id, neutron_client=neutron,
-                               fields=['binding:vnic_type', 'network_id',
-                                       BINDING_PROFILE])
+                               fields=['binding:vnic_type', BINDING_PROFILE,
+                                       'network_id'])
+        network_id = port.get('network_id')
+        trusted = None
         vnic_type = port.get('binding:vnic_type',
                              network_model.VNIC_TYPE_NORMAL)
         if vnic_type in network_model.VNIC_TYPES_SRIOV:
-            net_id = port['network_id']
-            phynet_name = self._get_phynet_info(context, neutron, net_id)
             trusted = self._get_trusted_mode_from_port(port)
 
-        return vnic_type, phynet_name, trusted
+        return vnic_type, trusted, network_id
 
     def create_pci_requests_for_sriov_ports(self, context, pci_requests,
                                             requested_networks):
@@ -1623,8 +1620,10 @@ class API(base_api.NetworkAPI):
             vnic_type = network_model.VNIC_TYPE_NORMAL
 
             if request_net.port_id:
-                vnic_type, phynet_name, trusted = self._get_port_vnic_info(
+                vnic_type, trusted, network_id = self._get_port_vnic_info(
                     context, neutron, request_net.port_id)
+                phynet_name = self._get_phynet_info(
+                    context, neutron, network_id)
                 LOG.debug("Creating PCI device request for port_id=%s, "
                           "vnic_type=%s, phynet_name=%s, trusted=%s",
                           request_net.port_id, vnic_type, phynet_name,
