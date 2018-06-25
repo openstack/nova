@@ -130,6 +130,10 @@ def delete_resource_provider(req):
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
             _("No resource provider with uuid %s found for delete") % uuid)
+    except exception.CannotDeleteParentResourceProvider as exc:
+        raise webob.exc.HTTPConflict(
+            _("Unable to delete parent resource provider %(rp_uuid)s: "
+              "It has child resource providers.") % {'rp_uuid': uuid})
     req.response.status = 204
     req.response.content_type = None
     return req.response
