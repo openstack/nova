@@ -3847,6 +3847,10 @@ class API(base.Base):
             instance.save()
 
         unlock(self, context, instance)
+        compute_utils.notify_about_instance_action(
+            context, instance, CONF.host,
+            action=fields_obj.NotificationAction.UNLOCK,
+            source=fields_obj.NotificationSource.API)
 
     @check_instance_lock
     @check_instance_cell
