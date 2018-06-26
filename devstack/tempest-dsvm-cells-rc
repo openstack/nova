@@ -115,6 +115,8 @@ r="$r|(?:.*id\-9c9fae77\-4feb\-402f\-8450\-bf1c8b609713.*)"
 r="$r|(?:.*id\-bef56b09\-2e8c\-4883\-a370\-4950812f430e.*)"
 # tempest.api.compute.servers.test_server_actions.ServerActionsTestJSON.test_rebuild_server
 r="$r|(?:.*id\-aaa6cdf3\-55a7\-461a\-add9\-1c8596b9a07c.*)"
+# tempest.api.compute.servers.test_servers.ServerShowV247Test.test_update_rebuild_list_server
+r="$r|(?:.*id\-8de397c2\-57d0\-4b90\-aa30\-e5d668f21a8b.*)"
 # tempest.api.compute.servers.test_servers_microversions.ServerShowV254Test.test_rebuild_server
 r="$r|(?:.*id\-09170a98\-4940\-4637\-add7\-1a35121f1a5a.*)"
 # NOTE(mriedem): cells v1 api doesn't route os-server-external-events
