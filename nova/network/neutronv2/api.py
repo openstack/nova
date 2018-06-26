@@ -1612,12 +1612,10 @@ class API(base_api.NetworkAPI):
 
         return vnic_type, trusted, network_id
 
-    def create_pci_requests_for_sriov_ports(self, context, pci_requests,
-                                            requested_networks):
-        """Check requested networks for any SR-IOV port request.
-
-        Create a PCI request object for each SR-IOV port, and add it to the
-        pci_requests object that contains a list of PCI request object.
+    def create_resource_requests(self, context, requested_networks,
+                                 pci_requests=None):
+        """Retrieve all information for the networks passed at the time of
+        creating the server.
         """
         if not requested_networks or requested_networks.no_allocate:
             return

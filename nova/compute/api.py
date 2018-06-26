@@ -817,8 +817,8 @@ class API(base.Base):
         # InstancePCIRequests object
         pci_request_info = pci_request.get_pci_requests_from_flavor(
             instance_type)
-        self.network_api.create_pci_requests_for_sriov_ports(context,
-            pci_request_info, requested_networks)
+        self.network_api.create_resource_requests(
+            context, requested_networks, pci_request_info)
 
         base_options = {
             'reservation_id': reservation_id,
