@@ -1665,12 +1665,15 @@ def _check_capacity_exceeded(ctx, allocs):
                 resource_provider=provider_str)
 
     res_providers = {}
+    rp_resource_class_sum = collections.defaultdict(
+        lambda: collections.defaultdict(int))
     for alloc in allocs:
         rc_id = _RC_CACHE.id_from_string(alloc.resource_class)
         rp_uuid = alloc.resource_provider.uuid
         if rp_uuid not in res_providers:
             res_providers[rp_uuid] = alloc.resource_provider
         amount_needed = alloc.used
+        rp_resource_class_sum[rp_uuid][rc_id] += amount_needed
         # No use checking usage if we're not asking for anything
         if amount_needed == 0:
             continue
@@ -1708,7 +1711,8 @@ def _check_capacity_exceeded(ctx, allocs):
         # usage["used"] can be returned as None
         used = usage['used'] or 0
         capacity = (usage['total'] - usage['reserved']) * allocation_ratio
-        if capacity < (used + amount_needed):
+        if (capacity < (used + amount_needed) or
+            capacity < (used + rp_resource_class_sum[rp_uuid][rc_id])):
             LOG.warning(
                 "Over capacity for %(rc)s on resource provider %(rp)s. "
                 "Needed: %(needed)s, Used: %(used)s, Capacity: %(cap)s",
