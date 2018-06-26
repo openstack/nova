@@ -9,6 +9,9 @@ upgrade:
     * ``GET /os-fping``
     * ``GET /os-fping/{server_id}``
     * ``GET /servers/{server_id}/os-virtual-interfaces``
+    * ``GET /os-fixed-ips/{fixed_ip}``
+    * ``POST /os-fixed-ips/{fixed_ip}/action (reserve)``
+    * ``POST /os-fixed-ips/{fixed_ip}/action (unreserve)``
 
     In addition, the following configuration options have been removed.
 

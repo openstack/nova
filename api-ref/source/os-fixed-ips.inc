@@ -6,9 +6,9 @@
 
 .. warning::
 
-   These APIs are proxy calls to the Network service. Nova has
-   deprecated all the proxy APIs and users should use the native APIs
-   instead. These will fail with a 404 starting from microversion 2.36.
+   These APIs only work with **nova-network** which is deprecated.
+   These will fail with a 404 starting from microversion 2.36.
+   They were removed in the 18.0.0 Rocky release.
 
 Shows data for a fixed IP, such as host name, CIDR, and address. Also,
 reserves and releases a fixed IP address.
@@ -22,7 +22,8 @@ Shows details for a fixed IP address.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), gone(410)
 
 Request
 -------
@@ -61,7 +62,8 @@ To release a fixed IP address, specify ``unreserve`` in the request body.
 
 Normal response codes: 202
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), gone(410)
 
 Request
 -------

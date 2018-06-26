@@ -302,7 +302,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-cells:sync_instances",
 "os_compute_api:os-evacuate",
 "os_compute_api:os-extended-server-attributes",
-"os_compute_api:os-fixed-ips",
 "os_compute_api:os-flavor-access:remove_tenant_access",
 "os_compute_api:os-flavor-access:add_tenant_access",
 "os_compute_api:os-flavor-extra-specs:create",
