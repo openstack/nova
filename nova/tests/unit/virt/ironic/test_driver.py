@@ -1014,6 +1014,14 @@ class IronicDriverTestCase(test.NoDBTestCase):
         result = self.ptree.data(mock.sentinel.nodename).traits
         self.assertEqual(set(traits), result)
 
+        # A different set of traits - we should replace (for now).
+        traits = ['trait1', 'trait7', 'trait42']
+        mock_nfc.return_value = _get_cached_node(
+            uuid=mock.sentinel.nodename, traits=traits)
+        self.driver.update_provider_tree(self.ptree, mock.sentinel.nodename)
+        result = self.ptree.data(mock.sentinel.nodename).traits
+        self.assertEqual(set(traits), result)
+
     @mock.patch.object(FAKE_CLIENT.node, 'get')
     @mock.patch.object(FAKE_CLIENT.node, 'list')
     @mock.patch.object(objects.InstanceList, 'get_uuids_by_host')
