@@ -56,8 +56,7 @@ class IdentityValidationTest(test.NoDBTestCase):
         self.mock_get_adap.assert_called_once_with(
             'identity', ksa_auth=mock.ANY,
             min_version=(3, 0), max_version=(3, 'latest'))
-        self.mock_adap.get.assert_called_once_with(
-            '/projects/foo', raise_exc=False)
+        self.mock_adap.get.assert_called_once_with('/projects/foo')
 
     def test_good_id(self):
         """Test response 200.

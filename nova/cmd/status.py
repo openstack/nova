@@ -193,7 +193,7 @@ class UpgradeCommands(object):
 
         """
         client = utils.get_ksa_adapter('placement')
-        return client.get(path).json()
+        return client.get(path, raise_exc=True).json()
 
     def _check_placement(self):
         """Checks to see if the placement API is ready for scheduling.

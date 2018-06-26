@@ -66,10 +66,7 @@ class TestDirect(test.NoDBTestCase):
     def test_json_validation_happens(self):
         data = {'name': 'fake', 'cowsay': 'moo'}
         with direct.PlacementDirect(CONF) as client:
-            # TODO(efried): Set raise_exc globally when
-            # https://review.openstack.org/#/c/574784/ is released.
-            resp = client.post('/resource_providers', json=data,
-                               raise_exc=False)
+            resp = client.post('/resource_providers', json=data)
             self.assertFalse(resp)
             self.assertEqual(400, resp.status_code)
 
@@ -84,13 +81,12 @@ class TestDirect(test.NoDBTestCase):
             # attempt to create child
             data = {'name': 'child', 'parent_provider_uuid': uuidsentinel.p_rp}
             # no microversion, 400
-            resp = client.post('/resource_providers', json=data,
-                               raise_exc=False)
+            resp = client.post('/resource_providers', json=data)
             self.assertFalse(resp)
             self.assertEqual(400, resp.status_code)
             # low microversion, 400
             resp = client.post('/resource_providers', json=data,
-                               raise_exc=False, microversion='1.13')
+                               microversion='1.13')
             self.assertFalse(resp)
             self.assertEqual(400, resp.status_code)
             resp = client.post('/resource_providers', json=data,
