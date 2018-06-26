@@ -15,6 +15,8 @@ from nova.db.sqlalchemy import models
 from nova import test
 
 
+# TODO(mriedem): Drop this test when the "main" DB instance group API
+# methods are all removed.
 class InstanceGroupTablesCompareTestCase(test.NoDBTestCase):
     def _get_column_list(self, model):
         column_list = [m.key for m in model.__table__.columns]

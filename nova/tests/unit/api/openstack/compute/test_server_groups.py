@@ -19,7 +19,6 @@ import webob
 
 from nova.api.openstack.compute import server_groups as sg_v21
 from nova import context
-import nova.db
 from nova import exception
 from nova import objects
 from nova.policies import server_groups as sg_policies
@@ -200,8 +199,8 @@ class ServerGroupTestV21(test.NoDBTestCase):
             limited='&offset=1&limit=1',
             path='/os-server-groups?all_projects=True')
 
-    @mock.patch.object(nova.db, 'instance_group_get_all_by_project_id')
-    @mock.patch.object(nova.db, 'instance_group_get_all')
+    @mock.patch('nova.objects.InstanceGroupList.get_by_project_id')
+    @mock.patch('nova.objects.InstanceGroupList.get_all')
     def _test_list_server_group(self, mock_get_all, mock_get_by_project,
                                 path, api_version='2.1', limited=None):
         policies = ['anti-affinity']
@@ -247,12 +246,16 @@ class ServerGroupTestV21(test.NoDBTestCase):
             tenant_specific = {'server_groups': tenant_groups}
 
         def return_all_server_groups():
-            return [server_group_db(sg) for sg in all_groups]
+            return objects.InstanceGroupList(
+                objects=[objects.InstanceGroup(
+                    **server_group_db(sg)) for sg in all_groups])
 
         mock_get_all.return_value = return_all_server_groups()
 
         def return_tenant_server_groups():
-            return [server_group_db(sg) for sg in tenant_groups]
+            return objects.InstanceGroupList(
+                objects=[objects.InstanceGroup(
+                    **server_group_db(sg)) for sg in tenant_groups])
 
         mock_get_by_project.return_value = return_tenant_server_groups()
 
@@ -271,7 +274,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         res_dict = self.controller.index(req)
         self.assertEqual(tenant_specific, res_dict)
 
-    @mock.patch.object(nova.db, 'instance_group_get_all_by_project_id')
+    @mock.patch('nova.objects.InstanceGroupList.get_by_project_id')
     def _test_list_server_group_by_tenant(self, mock_get_by_project,
                                          api_version='2.1'):
         policies = ['anti-affinity']
@@ -310,7 +313,9 @@ class ServerGroupTestV21(test.NoDBTestCase):
         expected = {'server_groups': groups}
 
         def return_server_groups():
-            return [server_group_db(sg) for sg in groups]
+            return objects.InstanceGroupList(
+                objects=[objects.InstanceGroup(
+                    **server_group_db(sg)) for sg in groups])
 
         return_get_by_project = return_server_groups()
         mock_get_by_project.return_value = return_get_by_project
@@ -587,25 +592,19 @@ class ServerGroupTestV21(test.NoDBTestCase):
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
 
-    def test_delete_server_group_by_id(self):
+    @mock.patch('nova.objects.InstanceGroup.destroy')
+    def test_delete_server_group_by_id(self, mock_destroy):
         sg = server_group_template(id=uuidsentinel.sg1_id)
 
-        self.called = False
-
-        def server_group_delete(context, id):
-            self.called = True
-
-        def return_server_group(context, group_id):
+        def return_server_group(_cls, context, group_id):
             self.assertEqual(sg['id'], group_id)
-            return server_group_db(sg)
+            return objects.InstanceGroup(**server_group_db(sg))
 
-        self.stub_out('nova.db.instance_group_delete',
-                      server_group_delete)
-        self.stub_out('nova.db.instance_group_get',
+        self.stub_out('nova.objects.InstanceGroup.get_by_uuid',
                       return_server_group)
 
         resp = self.controller.delete(self.req, uuidsentinel.sg1_id)
-        self.assertTrue(self.called)
+        mock_destroy.assert_called_once_with()
 
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
