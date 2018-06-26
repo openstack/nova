@@ -49,9 +49,16 @@ Response (microversions 1.12 - )
   - resources: resources
   - capacity: capacity
   - used: used
+  - traits: traits_1_17
 
-Response Example (microversions 1.12 - )
+Response Example (microversions 1.17 - )
 ----------------------------------------
+
+.. literalinclude:: ./samples/allocation_candidates/get-allocation_candidates-1.17.json
+   :language: javascript
+
+Response Example (microversions 1.12 - 1.16)
+--------------------------------------------
 
 .. literalinclude:: ./samples/allocation_candidates/get-allocation_candidates-1.12.json
    :language: javascript

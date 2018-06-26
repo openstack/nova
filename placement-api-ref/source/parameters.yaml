@@ -523,12 +523,15 @@ total:
   required: true
   description: >
     The actual amount of the resource that the provider can accommodate.
-traits:
+traits: &traits
   type: array
   in: body
   required: true
   description: >
     A list of traits.
+traits_1_17:
+  <<: *traits
+  min_version: 1.17
 used:
   type: integer
   in: body

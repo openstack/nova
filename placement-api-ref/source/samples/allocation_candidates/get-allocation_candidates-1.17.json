@@ -1,0 +1,71 @@
+{
+    "allocation_requests": [
+        {
+            "allocations": {
+                "a99bad54-a275-4c4f-a8a3-ac00d57e5c64": {
+                    "resources": {
+                        "DISK_GB": 100
+                    }
+                },
+                "35791f28-fb45-4717-9ea9-435b3ef7c3b3": {
+                    "resources": {
+                        "VCPU": 1,
+                        "MEMORY_MB": 1024
+                    }
+                }
+            }
+        },
+        {
+            "allocations": {
+                "a99bad54-a275-4c4f-a8a3-ac00d57e5c64": {
+                    "resources": {
+                        "DISK_GB": 100
+                    }
+                },
+                "915ef8ed-9b91-4e38-8802-2e4224ad54cd": {
+                    "resources": {
+                        "VCPU": 1,
+                        "MEMORY_MB": 1024
+                    }
+                }
+            }
+        }
+    ],
+    "provider_summaries": {
+        "a99bad54-a275-4c4f-a8a3-ac00d57e5c64": {
+            "resources": {
+                "DISK_GB": {
+                    "used": 0,
+                    "capacity": 1900
+                }
+            },
+            "traits": ["HW_CPU_X86_SSE2", "HW_CPU_X86_AVX2"]
+        },
+        "915ef8ed-9b91-4e38-8802-2e4224ad54cd": {
+            "resources": {
+                "VCPU": {
+                    "used": 0,
+                    "capacity": 384
+                },
+                "MEMORY_MB": {
+                    "used": 0,
+                    "capacity": 196608
+                }
+            },
+            "traits": ["HW_NIC_SRIOV"]
+        },
+        "35791f28-fb45-4717-9ea9-435b3ef7c3b3": {
+            "resources": {
+                "VCPU": {
+                    "used": 0,
+                    "capacity": 384
+                },
+                "MEMORY_MB": {
+                    "used": 0,
+                    "capacity": 196608
+                }
+            },
+            "traits": []
+        }
+    }
+}
