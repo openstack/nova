@@ -35,7 +35,7 @@ Our mission statement starts with:
 Our official mission statement also includes the following examples of
 compute resources: bare metal, virtual machines, and containers.
 For the full official mission statement see:
-http://governance.openstack.org/reference/projects/nova.html#mission
+https://governance.openstack.org/tc/reference/projects/nova.html#mission
 
 This document aims to help clarify what the mission statement means.
 
