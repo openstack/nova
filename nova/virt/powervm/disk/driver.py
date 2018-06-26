@@ -103,16 +103,12 @@ class DiskAdapter(object):
         raise NotImplementedError()
 
     def get_bootdisk_path(self, instance, vios_uuid):
-        """Find scsi mappings on given VIOS for the instance.
-
-        This method finds all scsi mappings on a given vios that are associated
-        with the instance and disk_type.
+        """Find the local path for the instance's boot disk.
 
         :param instance: nova.objects.instance.Instance object owning the
                          requested disk.
         :param vios_uuid: PowerVM UUID of the VIOS to search for mappings.
-        :return: Iterator of scsi mappings that are associated with the
-                 instance and disk_type or None.
+        :return: Local path for instance's boot disk.
         """
         vm_uuid = vm.get_pvm_uuid(instance)
         match_func = self._disk_match_func(DiskType.BOOT, instance)
