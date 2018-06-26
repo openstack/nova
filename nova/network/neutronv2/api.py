@@ -1536,8 +1536,17 @@ class API(base_api.NetworkAPI):
         raise exception.FixedIpNotFoundForSpecificInstance(
                 instance_uuid=instance.uuid, ip=address)
 
-    def _get_phynet_info(self, context, neutron, net_id):
-        phynet_name = None
+    def _get_physnet_info(self, context, neutron, net_id):
+        """Retrieve detailed network info.
+
+        :param context: The request context.
+        :param neutron: The neutron client object.
+        :param net_id: The ID of the network to retrieve information for.
+
+        :return: Name of physical network as indicated by the
+            ``provider:physical_network`` attribute of the network, else None
+            if that attribute is not defined.
+        """
         if self._has_multi_provider_extension(context, neutron=neutron):
             network = neutron.show_network(net_id,
                                            fields='segments').get('network')
@@ -1552,9 +1561,10 @@ class API(base_api.NetworkAPI):
                 # TODO(vladikr): Additional work will be required to handle the
                 # case of multiple vlan segments associated with different
                 # physical networks.
-                phynet_name = net.get('provider:physical_network')
-                if phynet_name:
-                    return phynet_name
+                physnet_name = net.get('provider:physical_network')
+                if physnet_name:
+                    return physnet_name
+
             # Raising here as at least one segment should
             # have a physical network provided.
             if segments:
@@ -1562,10 +1572,9 @@ class API(base_api.NetworkAPI):
                          "physical_network") % net_id)
                 raise exception.NovaException(message=msg)
 
-        net = neutron.show_network(net_id,
-                        fields='provider:physical_network').get('network')
-        phynet_name = net.get('provider:physical_network')
-        return phynet_name
+        net = neutron.show_network(
+            net_id, fields=['provider:physical_network']).get('network')
+        return net.get('provider:physical_network')
 
     @staticmethod
     def _get_trusted_mode_from_port(port):
@@ -1581,7 +1590,7 @@ class API(base_api.NetworkAPI):
             return strutils.bool_from_string(value)
 
     def _get_port_vnic_info(self, context, neutron, port_id):
-        """Retrieve port vnic info
+        """Retrieve port vNIC info
 
         :param context: The request context
         :param neutron: The Neutron client
@@ -1615,18 +1624,18 @@ class API(base_api.NetworkAPI):
 
         neutron = get_client(context, admin=True)
         for request_net in requested_networks:
-            phynet_name = None
+            physnet = None
             trusted = None
             vnic_type = network_model.VNIC_TYPE_NORMAL
 
             if request_net.port_id:
                 vnic_type, trusted, network_id = self._get_port_vnic_info(
                     context, neutron, request_net.port_id)
-                phynet_name = self._get_phynet_info(
+                physnet = self._get_physnet_info(
                     context, neutron, network_id)
                 LOG.debug("Creating PCI device request for port_id=%s, "
                           "vnic_type=%s, phynet_name=%s, trusted=%s",
-                          request_net.port_id, vnic_type, phynet_name,
+                          request_net.port_id, vnic_type, physnet,
                           trusted)
             pci_request_id = None
             if vnic_type in network_model.VNIC_TYPES_SRIOV:
@@ -1636,7 +1645,7 @@ class API(base_api.NetworkAPI):
                 # libvirt to expose the nic feature. At the moment
                 # there is a limitation that deployers cannot use both
                 # SR-IOV modes (legacy and ovs) in the same deployment.
-                spec = {pci_request.PCI_NET_TAG: phynet_name}
+                spec = {pci_request.PCI_NET_TAG: physnet}
                 dev_type = pci_request.DEVICE_TYPE_FOR_VNIC_TYPE.get(vnic_type)
                 if dev_type:
                     spec[pci_request.PCI_DEVICE_TYPE_TAG] = dev_type

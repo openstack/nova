@@ -2909,7 +2909,7 @@ class TestNeutronv2(TestNeutronv2Base):
              'binding:vnic_type': model.VNIC_TYPE_DIRECT,
              neutronapi.BINDING_PROFILE: {'pci_vendor_info': '1137:0047',
                                           'pci_slot': '0000:0a:00.1',
-                                          'physical_network': 'phynet1'},
+                                          'physical_network': 'physnet1'},
              'binding:vif_details': {model.VIF_DETAILS_PROFILEID: 'pfid'},
              },
             # admin_state_up=True and status='ACTIVE' thus vif.active=True
@@ -2923,7 +2923,7 @@ class TestNeutronv2(TestNeutronv2Base):
              'binding:vnic_type': model.VNIC_TYPE_MACVTAP,
              neutronapi.BINDING_PROFILE: {'pci_vendor_info': '1137:0047',
                                           'pci_slot': '0000:0a:00.2',
-                                          'physical_network': 'phynet1'},
+                                          'physical_network': 'physnet1'},
              'binding:vif_details': {model.VIF_DETAILS_PROFILEID: 'pfid'},
              },
             # admin_state_up=True and status='ACTIVE' thus vif.active=True
@@ -3123,11 +3123,11 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(0, len(networks))
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
-    def test_get_phynet_info_multi_segment(self, mock_get_client):
+    def test_get_physnet_info_multi_segment(self, mock_get_client):
         api = neutronapi.API()
         self.mox.ResetAll()
         test_net = {'network': {'segments':
-                                    [{'provider:physical_network': 'phynet10',
+                                    [{'provider:physical_network': 'physnet10',
                                       'provider:segmentation_id': 1000,
                                       'provider:network_type': 'vlan'},
                                      {'provider:physical_network': None,
@@ -3140,19 +3140,19 @@ class TestNeutronv2(TestNeutronv2Base):
         mock_client = mock_get_client()
         mock_client.list_extensions.return_value = test_ext_list
         mock_client.show_network.return_value = test_net
-        physnet_name = api._get_phynet_info(
+        physnet_name = api._get_physnet_info(
             self.context, mock_client, 'test-net')
 
         mock_client.show_network.assert_called_once_with(
             'test-net', fields='segments')
-        self.assertEqual('phynet10', physnet_name)
+        self.assertEqual('physnet10', physnet_name)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
-    def test_get_phynset_info_vlan_with_multi_segment_ext(
+    def test_get_physnet_info_vlan_with_multi_segment_ext(
             self, mock_get_client):
         api = neutronapi.API()
         self.mox.ResetAll()
-        test_net = {'network': {'provider:physical_network': 'phynet10',
+        test_net = {'network': {'provider:physical_network': 'physnet10',
                                 'provider:segmentation_id': 1000,
                                 'provider:network_type': 'vlan'}}
         test_ext_list = {'extensions':
@@ -3162,15 +3162,15 @@ class TestNeutronv2(TestNeutronv2Base):
         mock_client = mock_get_client()
         mock_client.list_extensions.return_value = test_ext_list
         mock_client.show_network.return_value = test_net
-        physnet_name = api._get_phynet_info(
+        physnet_name = api._get_physnet_info(
             self.context, mock_client, 'test-net')
 
         mock_client.show_network.assert_called_with(
-            'test-net', fields='provider:physical_network')
-        self.assertEqual('phynet10', physnet_name)
+            'test-net', fields=['provider:physical_network'])
+        self.assertEqual('physnet10', physnet_name)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
-    def test_get_phynet_info_multi_segment_no_physnet(
+    def test_get_physnet_info_multi_segment_no_physnet(
             self, mock_get_client):
         api = neutronapi.API()
         self.mox.ResetAll()
@@ -3189,7 +3189,7 @@ class TestNeutronv2(TestNeutronv2Base):
         mock_client.list_extensions.return_value = test_ext_list
         mock_client.show_network.return_value = test_net
         self.assertRaises(exception.NovaException,
-                          api._get_phynet_info,
+                          api._get_physnet_info,
                           self.context, mock_client, 'test-net')
 
     def _test_get_port_vnic_info(self, mock_get_client,
@@ -4693,13 +4693,13 @@ class TestNeutronv2WithMock(test.TestCase):
             'id': uuids.port,
             'binding:profile': {'pci_vendor_info': '1377:0047',
                                 'pci_slot': '0000:0a:00.1',
-                                'physical_network': 'phynet1',
+                                'physical_network': 'physnet1',
                                 'capabilities': ['switchdev']}
             }
         self.api._unbind_ports(self.context, ports, neutron, port_client)
         port_req_body = {'port': {'binding:host_id': None,
                                   'binding:profile':
-                                    {'physical_network': 'phynet1',
+                                    {'physical_network': 'physnet1',
                                      'capabilities': ['switchdev']},
                                   'device_id': '',
                                   'device_owner': ''}
@@ -4915,11 +4915,11 @@ class TestNeutronv2WithMock(test.TestCase):
             self.context, pci_requests, requested_networks)
         self.assertFalse(getclient.called)
 
-    @mock.patch.object(neutronapi.API, '_get_phynet_info')
+    @mock.patch.object(neutronapi.API, '_get_physnet_info')
     @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
     @mock.patch.object(neutronapi, 'get_client')
     def test_create_pci_requests_for_sriov_ports(self, getclient,
-            mock_get_port_vnic_info, mock_get_phynet_info):
+            mock_get_port_vnic_info, mock_get_physnet_info):
         requested_networks = objects.NetworkRequestList(
             objects = [
                 objects.NetworkRequest(port_id=uuids.portid_1),
@@ -4938,7 +4938,7 @@ class TestNeutronv2WithMock(test.TestCase):
             (model.VNIC_TYPE_DIRECT_PHYSICAL, None, 'netN'),
             (model.VNIC_TYPE_DIRECT, True, 'netN'),
         ]
-        mock_get_phynet_info.side_effect = [
+        mock_get_physnet_info.side_effect = [
             'physnet1', '', 'physnet1', 'physnet2', 'physnet3', 'physnet4',
         ]
         api = neutronapi.API()
@@ -5084,12 +5084,12 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         mydev = PciDevice(**pci_dev)
         profile = {'pci_vendor_info': '1377:0047',
                    'pci_slot': '0000:0a:00.1',
-                   'physical_network': 'phynet1',
+                   'physical_network': 'physnet1',
                   }
 
         mock_get_instance_pci_devs.return_value = [mydev]
         devspec = mock.Mock()
-        devspec.get_tags.return_value = {'physical_network': 'phynet1'}
+        devspec.get_tags.return_value = {'physical_network': 'physnet1'}
         mock_get_pci_device_devspec.return_value = devspec
         api._populate_neutron_binding_profile(instance,
                                               pci_req_id, port_req_body)
@@ -5118,13 +5118,13 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         mydev = PciDevice(**pci_dev)
         profile = {'pci_vendor_info': '1377:0047',
                    'pci_slot': '0000:0a:00.1',
-                   'physical_network': 'phynet1',
+                   'physical_network': 'physnet1',
                    'capabilities': ['switchdev'],
                   }
 
         mock_get_instance_pci_devs.return_value = [mydev]
         devspec = mock.Mock()
-        devspec.get_tags.return_value = {'physical_network': 'phynet1'}
+        devspec.get_tags.return_value = {'physical_network': 'physnet1'}
         mock_get_pci_device_devspec.return_value = devspec
         api._populate_neutron_binding_profile(instance,
                                               pci_req_id, port_req_body)
