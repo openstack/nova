@@ -10,17 +10,59 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
 from oslo_utils import versionutils
+import six.moves.urllib.parse as urlparse
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql import false
 from sqlalchemy.sql import true
 
+import nova.conf
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova.objects import base
 from nova.objects import fields
+
+CONF = nova.conf.CONF
+LOG = logging.getLogger(__name__)
+
+
+def _parse_netloc(netloc):
+    """Parse a user:pass@host:port and return a dict suitable for formatting
+    a cell mapping template.
+    """
+    these = {
+        'username': None,
+        'password': None,
+        'hostname': None,
+        'port': None,
+    }
+
+    if '@' in netloc:
+        userpass, hostport = netloc.split('@', 1)
+    else:
+        hostport = netloc
+        userpass = ''
+
+    if hostport.startswith('['):
+        host_end = hostport.find(']')
+        if host_end < 0:
+            raise ValueError('Invalid IPv6 URL')
+        these['hostname'] = hostport[1:host_end]
+        these['port'] = hostport[host_end + 1:]
+    elif ':' in hostport:
+        these['hostname'], these['port'] = hostport.split(':', 1)
+    else:
+        these['hostname'] = hostport
+
+    if ':' in userpass:
+        these['username'], these['password'] = userpass.split(':', 1)
+    else:
+        these['username'] = userpass
+
+    return these
 
 
 @base.NovaObjectRegistry.register
@@ -55,9 +97,71 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
             return self.uuid
 
     @staticmethod
+    def _format_url(url, default):
+        default_url = urlparse.urlparse(default)
+
+        subs = {
+            'username': default_url.username,
+            'password': default_url.password,
+            'hostname': default_url.hostname,
+            'port': default_url.port,
+            'scheme': default_url.scheme,
+            'query': default_url.query,
+            'fragment': default_url.fragment,
+            'path': default_url.path.lstrip('/'),
+        }
+
+        # NOTE(danms): oslo.messaging has an extended format for the URL
+        # which we need to support:
+        #   scheme://user:pass@host:port[,user1:pass@host1:port, ...]/path
+        # Encode these values, if they exist, as indexed keys like
+        # username1, password1, hostname1, port1.
+        if ',' in default_url.netloc:
+            netlocs = default_url.netloc.split(',')
+            index = 0
+            for netloc in netlocs:
+                index += 1
+                these = _parse_netloc(netloc)
+                for key in these:
+                    subs['%s%i' % (key, index)] = these[key]
+
+        return url.format(**subs)
+
+    @staticmethod
+    def _format_db_url(url):
+        if CONF.database.connection is None and '{' in url:
+            LOG.error('Cell mapping database_connection is a template, but '
+                      '[database]/connection is not set')
+            return url
+        try:
+            return CellMapping._format_url(url, CONF.database.connection)
+        except Exception:
+            LOG.exception('Failed to parse [database]/connection to '
+                          'format cell mapping')
+            return url
+
+    @staticmethod
+    def _format_mq_url(url):
+        if CONF.transport_url is None and '{' in url:
+            LOG.error('Cell mapping transport_url is a template, but '
+                      '[DEFAULT]/transport_url is not set')
+            return url
+        try:
+            return CellMapping._format_url(url, CONF.transport_url)
+        except Exception:
+            LOG.exception('Failed to parse [DEFAULT]/transport_url to '
+                          'format cell mapping')
+            return url
+
+    @staticmethod
     def _from_db_object(context, cell_mapping, db_cell_mapping):
         for key in cell_mapping.fields:
-            setattr(cell_mapping, key, db_cell_mapping[key])
+            val = db_cell_mapping[key]
+            if key == 'database_connection':
+                val = cell_mapping._format_db_url(val)
+            elif key == 'transport_url':
+                val = cell_mapping._format_mq_url(val)
+            setattr(cell_mapping, key, val)
         cell_mapping.obj_reset_changes()
         cell_mapping._context = context
         return cell_mapping

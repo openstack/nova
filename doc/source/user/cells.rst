@@ -337,6 +337,100 @@ instances. Any time you add more compute hosts to a cell, you need to
 re-run this command to map them from the top-level so they can be
 utilized.
 
+Template URLs in Cell Mappings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Starting in the Rocky release, the URLs provided in the cell mappings
+for ``--database_connection`` and ``--transport-url`` can contain
+variables which are evaluated each time they are loaded from the
+database, and the values of which are taken from the corresponding
+base options in the host's configuration file.  The base URL is parsed
+and the following elements may be substituted into the cell mapping
+URL (using ``rabbit://bob:s3kret@myhost:123/nova?sync=true#extra``):
+
+.. list-table:: Cell Mapping URL Variables
+   :header-rows: 1
+   :widths: 15, 50, 15
+
+   * - Variable
+     - Meaning
+     - Part of example URL
+   * - ``scheme``
+     - The part before the `://`
+     - ``rabbit``
+   * - ``username``
+     - The username part of the credentials
+     - ``bob``
+   * - ``password``
+     - The password part of the credentials
+     - ``s3kret``
+   * - ``hostname``
+     - The hostname or address
+     - ``myhost``
+   * - ``port``
+     - The port number (must be specified)
+     - ``123``
+   * - ``path``
+     - The "path" part of the URL (without leading slash)
+     - ``nova``
+   * - ``query``
+     - The full query string arguments (without leading question mark)
+     - ``sync=true``
+   * - ``fragment``
+     - Everything after the first hash mark
+     - ``extra``
+
+Variables are provided in curly brackets, like ``{username}``. A simple template
+of ``rabbit://{username}:{password}@otherhost/{path}`` will generate a full URL
+of ``rabbit://bob:s3kret@otherhost/nova`` when used with the above example.
+
+.. note:: The ``[database]/connection`` and
+   ``[DEFAULT]/transport_url`` values are not reloaded from the
+   configuration file during a SIGHUP, which means that a full service
+   restart will be required to notice changes in a cell mapping record
+   if variables are changed.
+
+.. note:: The ``[DEFAULT]/transport_url`` option can contain an
+   extended syntax for the "netloc" part of the url
+   (i.e. `userA:passwordA@hostA:portA,userB:passwordB:hostB:portB`). In this
+   case, substitions of the form ``username1``, ``username2``, etc will be
+   honored and can be used in the template URL.
+
+The templating of these URLs may be helpful in order to provide each service host
+with its own credentials for, say, the database. Without templating, all hosts
+will use the same URL (and thus credentials) for accessing services like the
+database and message queue. By using a URL with a template that results in the
+credentials being taken from the host-local configuration file, each host will
+use different values for those connections.
+
+Assuming you have two service hosts that are normally configured with the cell0
+database as their primary connection, their (abbreviated) configurations would
+look like this::
+
+ [database]
+ connection = mysql+pymysql://service1:foo@myapidbhost/nova_cell0
+
+and::
+
+ [database]
+ connection = mysql+pymysql://service2:bar@myapidbhost/nova_cell0
+
+Without cell mapping template URLs, they would still use the same credentials
+(as stored in the mapping) to connect to the cell databases. However, consider
+template URLs like the following::
+
+ mysql+pymysql://{username}:{password}@mycell1dbhost/nova
+
+and::
+
+ mysql+pymysql://{username}:{password}@mycell2dbhost/nova
+
+Using the first service and cell1 mapping, the calculated URL that will actually
+be used for connecting to that database will be::
+
+ mysql+pymysql://service1:foo@mycell1dbhost/nova
+
+
 References
 ~~~~~~~~~~
 

@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    The URLs in cell mapping records may now include variables that are filled
+    from the corresponding default URL specified in the host's configuration
+    file. This allows per-host credentials, as well as other values to be set
+    in the config file which will affect the URL of a cell, as calculated when
+    loading the record. For ``database_connection``, the ``[database]/connection``
+    URL is used as the base. For ``transport_url``, the ``[DEFAULT]/transport_url``
+    is used. For more information, see the cells configuration docs:
+    https://docs.openstack.org/nova/latest/user/cells.html
