@@ -317,6 +317,7 @@ class TestOcataCheck(test.TestCase):
             'project_id': 'bar',
             'uuid': uuidsentinel.ig,
             'name': 'baz',
+            'deleted': 0
         }
 
     def test_upgrade_clean(self):
@@ -345,8 +346,10 @@ class TestOcataCheck(test.TestCase):
                           self.migration.upgrade, self.engine)
 
     def test_upgrade_with_deleted_instance_groups(self):
-        group = db_api.instance_group_create(self.context, self.ig_values)
-        db_api.instance_group_delete(self.context, group['uuid'])
+        igs = db_utils.get_table(self.engine, 'instance_groups')
+        group_id = igs.insert().execute(self.ig_values).inserted_primary_key[0]
+        igs.update().where(igs.c.id == group_id).values(
+            deleted=group_id).execute()
         self.migration.upgrade(self.engine)
 
 

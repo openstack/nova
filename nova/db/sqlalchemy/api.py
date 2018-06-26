@@ -1813,9 +1813,6 @@ def instance_destroy(context, instance_uuid, constraint=None):
     model_query(context, models.InstanceSystemMetadata).\
             filter_by(instance_uuid=instance_uuid).\
             soft_delete()
-    model_query(context, models.InstanceGroupMember).\
-            filter_by(instance_id=instance_uuid).\
-            soft_delete()
     model_query(context, models.BlockDeviceMapping).\
             filter_by(instance_uuid=instance_uuid).\
             soft_delete()
@@ -5778,25 +5775,6 @@ def instance_group_update(context, group_uuid, values):
         values['policies'] = policies
     if members:
         values['members'] = members
-
-
-@pick_context_manager_writer
-def instance_group_delete(context, group_uuid):
-    """Delete a group."""
-    group_id = _instance_group_id(context, group_uuid)
-
-    count = _instance_group_get_query(context,
-                                      models.InstanceGroup,
-                                      models.InstanceGroup.uuid,
-                                      group_uuid).soft_delete()
-    if count == 0:
-        raise exception.InstanceGroupNotFound(group_uuid=group_uuid)
-
-    # Delete policies, metadata and members
-    instance_models = [models.InstanceGroupPolicy,
-                       models.InstanceGroupMember]
-    for model in instance_models:
-        model_query(context, model).filter_by(group_id=group_id).soft_delete()
 
 
 @pick_context_manager_reader

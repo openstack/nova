@@ -2485,23 +2485,6 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Make sure instance faults is deleted as well
         self.assertEqual(0, len(faults[uuid]))
 
-    def test_delete_instance_group_member_on_instance_destroy(self):
-        ctxt = context.get_admin_context()
-        uuid = uuidsentinel.uuid1
-        db.instance_create(ctxt, {'uuid': uuid})
-        values = {'name': 'fake_name', 'user_id': 'fake',
-                  'project_id': 'fake'}
-        group = db.instance_group_create(ctxt, values,
-                                         policies=None, members=[uuid])
-        self.assertEqual([uuid],
-                         db.instance_group_members_get(ctxt,
-                                                       group['uuid']))
-
-        db.instance_destroy(ctxt, uuid)
-        self.assertEqual([],
-                         db.instance_group_members_get(ctxt,
-                                                       group['uuid']))
-
     def test_delete_migrations_on_instance_destroy(self):
         ctxt = context.get_admin_context()
         uuid = uuidsentinel.uuid1
@@ -8593,23 +8576,9 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                         'created_at', 'project_id', 'user_id']
         self._assertEqualObjects(result2, values, ignored_keys)
 
-    def test_instance_group_delete(self):
-        values = self._get_default_values()
-        result = self._create_instance_group(self.context, values)
-        db.instance_group_delete(self.context, result['uuid'])
-        self.assertRaises(exception.InstanceGroupNotFound,
-                          db.instance_group_delete, self.context,
-                          result['uuid'])
-
     def test_instance_group_get_nonexistent(self):
         self.assertRaises(exception.InstanceGroupNotFound,
                           db.instance_group_get,
-                          self.context,
-                          'nonexistent')
-
-    def test_instance_group_delete_nonexistent(self):
-        self.assertRaises(exception.InstanceGroupNotFound,
-                          db.instance_group_delete,
                           self.context,
                           'nonexistent')
 
@@ -8701,13 +8670,6 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.instance_group_get,
                           self.new_context, result['uuid'])
 
-    def test_instance_group_delete_by_other_project_user(self):
-        values = self._get_default_values()
-        result = self._create_instance_group(self.context, values)
-        self.assertRaises(exception.InstanceGroupNotFound,
-                          db.instance_group_delete,
-                          self.new_context, result['uuid'])
-
     def test_instance_group_get_by_admin(self):
         values = self._get_default_values()
         result = self._create_instance_group(self.context, values)
@@ -8716,12 +8678,6 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(result['uuid'], group.uuid)
         self.assertEqual(values['user_id'], group.user_id)
         self.assertEqual(values['project_id'], group.project_id)
-
-    def test_instance_group_delete_by_admin(self):
-        values = self._get_default_values()
-        result = self._create_instance_group(self.context, values)
-        db.instance_group_delete(context.get_admin_context(),
-                                 result['uuid'])
 
 
 class InstanceGroupMembersDBApiTestCase(InstanceGroupDBApiTestCase):

@@ -929,11 +929,6 @@ def instance_group_update(context, group_uuid, values):
     return IMPL.instance_group_update(context, group_uuid, values)
 
 
-def instance_group_delete(context, group_uuid):
-    """Delete an group."""
-    return IMPL.instance_group_delete(context, group_uuid)
-
-
 def instance_group_get_all(context):
     """Get all groups."""
     return IMPL.instance_group_get_all(context)
