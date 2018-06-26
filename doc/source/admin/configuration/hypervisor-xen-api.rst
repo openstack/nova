@@ -361,7 +361,6 @@ To enable the XenAPI driver, add the following configuration options to
    connection_username = root
    connection_password = your_password
    ovs_integration_bridge = br-int
-   vif_driver = nova.virt.xenapi.vif.XenAPIOpenVswitchDriver
 
 These connection details are used by OpenStack Compute service to contact your
 hypervisor and are the same details you use to connect XenCenter, the XenServer

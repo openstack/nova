@@ -58,6 +58,7 @@ from nova.virt import driver as virt_driver
 from nova.virt import firewall
 from nova.virt.xenapi import agent as xapi_agent
 from nova.virt.xenapi.image import utils as image_utils
+from nova.virt.xenapi import vif as xapi_vif
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import volumeops
@@ -147,8 +148,8 @@ class VMOps(object):
         self.firewall_driver = firewall.load_driver(
             DEFAULT_FIREWALL_DRIVER,
             xenapi_session=self._session)
-        vif_impl = importutils.import_class(CONF.xenserver.vif_driver)
-        self.vif_driver = vif_impl(xenapi_session=self._session)
+        self.vif_driver = xapi_vif.XenAPIOpenVswitchDriver(
+            xenapi_session=self._session)
         self.default_root_dev = '/dev/sda'
 
         image_handler_cfg = CONF.xenserver.image_handler

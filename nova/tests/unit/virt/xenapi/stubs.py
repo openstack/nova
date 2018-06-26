@@ -397,10 +397,6 @@ def get_fake_session(error=None):
 class XenAPITestBase(test.TestCase):
     def setUp(self):
         super(XenAPITestBase, self).setUp()
-        # TODO(mriedem): The tests need to be fixed to work with the
-        # XenAPIOpenVswitchDriver vif driver.
-        self.flags(vif_driver='nova.virt.xenapi.vif.XenAPIBridgeDriver',
-                   group='xenserver')
         self.useFixture(ReplaceModule('XenAPI', fake))
         fake.reset()
 
@@ -408,9 +404,5 @@ class XenAPITestBase(test.TestCase):
 class XenAPITestBaseNoDB(test.NoDBTestCase):
     def setUp(self):
         super(XenAPITestBaseNoDB, self).setUp()
-        # TODO(mriedem): The tests need to be fixed to work with the
-        # XenAPIOpenVswitchDriver vif driver.
-        self.flags(vif_driver='nova.virt.xenapi.vif.XenAPIBridgeDriver',
-                   group='xenserver')
         self.useFixture(ReplaceModule('XenAPI', fake))
         fake.reset()
