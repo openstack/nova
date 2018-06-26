@@ -280,6 +280,9 @@ class NetworkAPI(base.Base):
         :param pci_requests: The list of PCI requests to which additional PCI
             requests created here will be added.
         :type pci_requests: nova.objects.InstancePCIRequests
+
+        :returns: An instance of ``objects.NetworkMetadata`` for use by the
+            scheduler or None.
         """
         raise NotImplementedError()
 

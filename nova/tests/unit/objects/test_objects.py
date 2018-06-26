@@ -1131,6 +1131,7 @@ object_data = {
     'Network': '1.2-a977ab383aa462a479b2fae8211a5dde',
     'NetworkInterfaceMetadata': '1.2-6f3d480b40fe339067b1c0dd4d656716',
     'NetworkList': '1.2-69eca910d8fa035dfecd8ba10877ee59',
+    'NetworkMetadata': '1.0-2cb8d21b34f87b0261d3e1d1ae5cf218',
     'NetworkRequest': '1.2-af1ff2d986999fbb79377712794d82aa',
     'NetworkRequestList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'PciDevice': '1.6-2a2612baaa1786679e52084e82ca7e66',

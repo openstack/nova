@@ -4925,18 +4925,42 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         self.assertTrue(mock_log.called)
 
     @mock.patch.object(neutronapi, 'get_client')
-    def test_create_resource_requests_no_allocate(self, getclient):
-        """Tests that create_resource_requests is a noop if
-        networks are specifically requested to not be allocated.
+    def test_create_resource_requests_no_allocate(self, mock_get_client):
+        """Ensure physnet info is not retrieved when networks are not to be
+        allocated.
         """
         requested_networks = objects.NetworkRequestList(objects=[
             objects.NetworkRequest(network_id=net_req_obj.NETWORK_ID_NONE)
         ])
         pci_requests = objects.InstancePCIRequests()
         api = neutronapi.API()
-        api.create_resource_requests(
+
+        network_metadata = api.create_resource_requests(
             self.context, requested_networks, pci_requests)
-        self.assertFalse(getclient.called)
+
+        self.assertFalse(mock_get_client.called)
+        self.assertIsNone(network_metadata)
+
+    @mock.patch.object(neutronapi.API, '_get_physnet_info')
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_create_resource_requests_auto_allocated(self, mock_get_client,
+            mock_get_physnet_info):
+        """Ensure physnet info is not retrieved for auto-allocated networks.
+
+        This isn't possible so we shouldn't attempt to do it.
+        """
+        requested_networks = objects.NetworkRequestList(objects=[
+            objects.NetworkRequest(network_id=net_req_obj.NETWORK_ID_AUTO)
+        ])
+        pci_requests = objects.InstancePCIRequests()
+        api = neutronapi.API()
+
+        network_metadata = api.create_resource_requests(
+            self.context, requested_networks, pci_requests)
+
+        mock_get_physnet_info.assert_not_called()
+        self.assertEqual(set(), network_metadata.physnets)
+        self.assertFalse(network_metadata.tunneled)
 
     @mock.patch.object(neutronapi.API, '_get_physnet_info')
     @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
@@ -4953,6 +4977,8 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
                 objects.NetworkRequest(port_id=uuids.portid_5),
                 objects.NetworkRequest(port_id=uuids.trusted_port)])
         pci_requests = objects.InstancePCIRequests(requests=[])
+        # _get_port_vnic_info should be called for every NetworkRequest with a
+        # port_id attribute (so six times)
         mock_get_port_vnic_info.side_effect = [
             (model.VNIC_TYPE_DIRECT, None, 'netN'),
             (model.VNIC_TYPE_NORMAL, None, 'netN'),
@@ -4961,12 +4987,15 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
             (model.VNIC_TYPE_DIRECT_PHYSICAL, None, 'netN'),
             (model.VNIC_TYPE_DIRECT, True, 'netN'),
         ]
+        # _get_physnet_info should be called for every NetworkRequest (so seven
+        # times)
         mock_get_physnet_info.side_effect = [
-            'physnet1', '', 'physnet1', 'physnet2', 'physnet3', 'physnet4',
+            'physnet1', 'physnet1', '', 'physnet1', 'physnet2', 'physnet3',
+            'physnet4',
         ]
         api = neutronapi.API()
 
-        api.create_resource_requests(
+        network_metadata = api.create_resource_requests(
             self.context, requested_networks, pci_requests)
 
         self.assertEqual(5, len(pci_requests.requests))
@@ -4985,6 +5014,13 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
                 self.assertEqual('True', spec[pci_request.PCI_TRUSTED_TAG])
             else:
                 self.assertNotIn(pci_request.PCI_TRUSTED_TAG, spec)
+
+        self.assertItemsEqual(
+            ['physnet1', 'physnet2', 'physnet3', 'physnet4'],
+            network_metadata.physnets)
+        # TODO(stephenfin): Expand this to be a positive check when we start
+        # retrieving this information
+        self.assertFalse(network_metadata.tunneled)
 
     @mock.patch.object(neutronapi, 'get_client')
     def test_associate_floating_ip_conflict(self, mock_get_client):
