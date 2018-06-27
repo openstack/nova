@@ -15,8 +15,6 @@
 
 from webob import exc
 
-from nova.api.openstack.compute.schemas import multiple_create as \
-                                                  schema_multiple_create
 from nova.i18n import _
 
 MIN_ATTRIBUTE_NAME = "min_count"
@@ -42,7 +40,3 @@ def server_create(server_dict, create_kwargs, body_deprecated_param):
     create_kwargs['min_count'] = min_count
     create_kwargs['max_count'] = max_count
     create_kwargs['return_reservation_id'] = return_id
-
-
-def get_server_create_schema(version):
-    return schema_multiple_create.server_create
