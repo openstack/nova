@@ -196,6 +196,20 @@ base_create = {
                 'min_count': parameter_types.positive_integer,
                 'max_count': parameter_types.positive_integer,
                 'return_reservation_id': parameter_types.boolean,
+                'security_groups': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            # NOTE(oomichi): allocate_for_instance() of
+                            # neutronv2/api.py gets security_group names
+                            # or UUIDs from this parameter.
+                            # parameter_types.name allows both format.
+                            'name': parameter_types.name,
+                        },
+                        'additionalProperties': False,
+                    }
+                },
             },
             'required': ['name', 'flavorRef'],
             'additionalProperties': False,
@@ -215,6 +229,9 @@ base_create_v20['properties']['server']['properties'][
     'availability_zone'] = parameter_types.name_with_leading_trailing_spaces
 base_create_v20['properties']['server']['properties'][
     'key_name'] = parameter_types.name_with_leading_trailing_spaces
+base_create_v20['properties']['server']['properties'][
+    'security_groups']['items']['properties']['name'] = (
+    parameter_types.name_with_leading_trailing_spaces)
 
 base_create_v219 = copy.deepcopy(base_create)
 base_create_v219['properties']['server'][
