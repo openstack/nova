@@ -93,7 +93,6 @@ class ServersController(wsgi.Controller):
     # NOTE(alex_xu): Please do not add more items into this list. This list
     # should be removed in the future.
     schema_func_list = [
-        scheduler_hints.get_server_create_schema,
         security_groups.get_server_create_schema,
         user_data.get_server_create_schema,
     ]
@@ -689,15 +688,7 @@ class ServersController(wsgi.Controller):
 
     def _create_schema_by_func(self, create_schema, version, schema_func):
         schema = schema_func(version)
-
-        if (schema_func.__module__ ==
-                'nova.api.openstack.compute.scheduler_hints'):
-            # NOTE(oomichi): The request parameter position of scheduler-hint
-            # extension is different from the other extensions, so here handles
-            # the difference.
-            create_schema['properties'].update(schema)
-        else:
-            create_schema['properties']['server']['properties'].update(schema)
+        create_schema['properties']['server']['properties'].update(schema)
 
     def _delete(self, context, req, instance_uuid):
         instance = self._get_server(context, req, instance_uuid)
