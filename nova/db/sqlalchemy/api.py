@@ -5845,37 +5845,6 @@ def _instance_group_members_add(context, id, members, set_delete=False):
     return members
 
 
-@pick_context_manager_writer
-def instance_group_members_add(context, group_uuid, members,
-                               set_delete=False):
-    id = _instance_group_id(context, group_uuid)
-    return _instance_group_members_add(context, id, members,
-                                       set_delete=set_delete)
-
-
-@pick_context_manager_writer
-def instance_group_member_delete(context, group_uuid, instance_id):
-    id = _instance_group_id(context, group_uuid)
-    count = _instance_group_model_get_query(context,
-                                            models.InstanceGroupMember,
-                                            id).\
-                            filter_by(instance_id=instance_id).\
-                            soft_delete()
-    if count == 0:
-        raise exception.InstanceGroupMemberNotFound(group_uuid=group_uuid,
-                                                    instance_id=instance_id)
-
-
-@pick_context_manager_reader
-def instance_group_members_get(context, group_uuid):
-    id = _instance_group_id(context, group_uuid)
-    instances = model_query(context,
-                            models.InstanceGroupMember,
-                            (models.InstanceGroupMember.instance_id,)).\
-                    filter_by(group_id=id).all()
-    return [instance[0] for instance in instances]
-
-
 def _instance_group_policies_add(context, id, policies, set_delete=False):
     allpols = set(policies)
     query = _instance_group_model_get_query(context,

@@ -8651,18 +8651,6 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.instance_group_update, self.context,
                           'invalid_id', values)
 
-    def test_instance_group_get_by_instance(self):
-        values = self._get_default_values()
-        group1 = self._create_instance_group(self.context, values)
-
-        members = ['instance_id1', 'instance_id2']
-        db.instance_group_members_add(self.context, group1.uuid, members)
-
-        group2 = db.instance_group_get_by_instance(self.context,
-                                                   'instance_id1')
-
-        self.assertEqual(group2.uuid, group1.uuid)
-
     def test_instance_group_get_by_other_project_user(self):
         values = self._get_default_values()
         result = self._create_instance_group(self.context, values)
@@ -8691,64 +8679,6 @@ class InstanceGroupMembersDBApiTestCase(InstanceGroupDBApiTestCase):
                         'created_at']
         self._assertEqualObjects(result, values, ignored_keys)
         self._assertEqualListsOfPrimitivesAsSets(result['members'], members)
-
-    def test_instance_group_members_add(self):
-        values = self._get_default_values()
-        values['uuid'] = 'fake_id'
-        result = self._create_instance_group(self.context, values)
-        id = result['uuid']
-        members = db.instance_group_members_get(self.context, id)
-        self.assertEqual(members, [])
-        members2 = ['instance_id1', 'instance_id2']
-        db.instance_group_members_add(self.context, id, members2)
-        members = db.instance_group_members_get(self.context, id)
-        self._assertEqualListsOfPrimitivesAsSets(members, members2)
-
-    def test_instance_group_members_update(self):
-        values = self._get_default_values()
-        values['uuid'] = 'fake_id'
-        result = self._create_instance_group(self.context, values)
-        id = result['uuid']
-        members2 = ['instance_id1', 'instance_id2']
-        db.instance_group_members_add(self.context, id, members2)
-        members = db.instance_group_members_get(self.context, id)
-        self._assertEqualListsOfPrimitivesAsSets(members, members2)
-        # check add with existing keys
-        members3 = ['instance_id1', 'instance_id2', 'instance_id3']
-        db.instance_group_members_add(self.context, id, members3)
-        members = db.instance_group_members_get(self.context, id)
-        self._assertEqualListsOfPrimitivesAsSets(members, members3)
-
-    def test_instance_group_members_delete(self):
-        values = self._get_default_values()
-        values['uuid'] = 'fake_id'
-        result = self._create_instance_group(self.context, values)
-        id = result['uuid']
-        members3 = ['instance_id1', 'instance_id2', 'instance_id3']
-        db.instance_group_members_add(self.context, id, members3)
-        members = db.instance_group_members_get(self.context, id)
-        self._assertEqualListsOfPrimitivesAsSets(members, members3)
-        for instance_id in members3[:]:
-            db.instance_group_member_delete(self.context, id, instance_id)
-            members3.remove(instance_id)
-            members = db.instance_group_members_get(self.context, id)
-            self._assertEqualListsOfPrimitivesAsSets(members, members3)
-
-    def test_instance_group_members_invalid_ids(self):
-        values = self._get_default_values()
-        result = self._create_instance_group(self.context, values)
-        id = result['uuid']
-        self.assertRaises(exception.InstanceGroupNotFound,
-                          db.instance_group_members_get,
-                          self.context, 'invalid')
-        self.assertRaises(exception.InstanceGroupNotFound,
-                          db.instance_group_member_delete, self.context,
-                          'invalidid', 'instance_id1')
-        members = ['instance_id1', 'instance_id2']
-        db.instance_group_members_add(self.context, id, members)
-        self.assertRaises(exception.InstanceGroupMemberNotFound,
-                          db.instance_group_member_delete,
-                          self.context, id, 'invalid_id')
 
 
 class InstanceGroupPoliciesDBApiTestCase(InstanceGroupDBApiTestCase):
