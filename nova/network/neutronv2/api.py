@@ -56,6 +56,7 @@ DEFAULT_SECGROUP = 'default'
 BINDING_PROFILE = 'binding:profile'
 BINDING_HOST_ID = 'binding:host_id'
 MIGRATING_ATTR = 'migrating_to'
+L3_NETWORK_TYPES = ['vxlan', 'gre', 'geneve']
 
 
 def reset_state():
@@ -1538,17 +1539,21 @@ class API(base_api.NetworkAPI):
         raise exception.FixedIpNotFoundForSpecificInstance(
                 instance_uuid=instance.uuid, ip=address)
 
-    def _get_physnet_info(self, context, neutron, net_id):
+    def _get_physnet_tunneled_info(self, context, neutron, net_id):
         """Retrieve detailed network info.
 
         :param context: The request context.
         :param neutron: The neutron client object.
         :param net_id: The ID of the network to retrieve information for.
 
-        :return: Name of physical network as indicated by the
-            ``provider:physical_network`` attribute of the network, else None
-            if that attribute is not defined.
+        :return: A tuple containing the physnet name, if defined, and the
+            tunneled status of the network. If the network uses multiple
+            segments, the first segment that defines a physnet value will be
+            used for the physnet name.
         """
+        def is_tunneled(net):
+            return net.get('provider:network_type') in L3_NETWORK_TYPES
+
         if self._has_multi_provider_extension(context, neutron=neutron):
             network = neutron.show_network(net_id,
                                            fields='segments').get('network')
@@ -1565,7 +1570,7 @@ class API(base_api.NetworkAPI):
                 # physical networks.
                 physnet_name = net.get('provider:physical_network')
                 if physnet_name:
-                    return physnet_name
+                    return physnet_name, is_tunneled(net)
 
             # Raising here as at least one segment should
             # have a physical network provided.
@@ -1575,8 +1580,9 @@ class API(base_api.NetworkAPI):
                 raise exception.NovaException(message=msg)
 
         net = neutron.show_network(
-            net_id, fields=['provider:physical_network']).get('network')
-        return net.get('provider:physical_network')
+            net_id, fields=['provider:physical_network',
+                            'provider:network_type']).get('network')
+        return net.get('provider:physical_network'), is_tunneled(net)
 
     @staticmethod
     def _get_trusted_mode_from_port(port):
@@ -1639,19 +1645,28 @@ class API(base_api.NetworkAPI):
         for request_net in requested_networks:
             physnet = None
             trusted = None
+            tunneled_ = False
             vnic_type = network_model.VNIC_TYPE_NORMAL
             pci_request_id = None
 
             if request_net.port_id:
                 vnic_type, trusted, network_id = self._get_port_vnic_info(
                     context, neutron, request_net.port_id)
-                physnet = self._get_physnet_info(
+                physnet, tunneled_ = self._get_physnet_tunneled_info(
                     context, neutron, network_id)
             elif request_net.network_id and not request_net.auto_allocate:
                 network_id = request_net.network_id
-                physnet = self._get_physnet_info(
+                physnet, tunneled_ = self._get_physnet_tunneled_info(
                     context, neutron, network_id)
 
+            # All tunneled traffic must use the same logical NIC so we just
+            # need to know if there is one or more tunneled networks present.
+            tunneled = tunneled or tunneled_
+
+            # ...conversely, there can be multiple physnets, which will
+            # generally be mapped to different NICs, and some requested
+            # networks may use the same physnet. As a result, we need to know
+            # the *set* of physnets from every network requested
             if physnet:
                 physnets.add(physnet)
 

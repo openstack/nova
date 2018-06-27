@@ -3045,7 +3045,7 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(0, len(networks))
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
-    def test_get_physnet_info_multi_segment(self, mock_get_client):
+    def test_get_physnet_tunneled_info_multi_segment(self, mock_get_client):
         api = neutronapi.API()
         self.mox.ResetAll()
         test_net = {'network': {'segments':
@@ -3062,15 +3062,16 @@ class TestNeutronv2(TestNeutronv2Base):
         mock_client = mock_get_client()
         mock_client.list_extensions.return_value = test_ext_list
         mock_client.show_network.return_value = test_net
-        physnet_name = api._get_physnet_info(
+        physnet_name, tunneled = api._get_physnet_tunneled_info(
             self.context, mock_client, 'test-net')
 
         mock_client.show_network.assert_called_once_with(
             'test-net', fields='segments')
         self.assertEqual('physnet10', physnet_name)
+        self.assertFalse(tunneled)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
-    def test_get_physnet_info_vlan_with_multi_segment_ext(
+    def test_get_physnet_tunneled_info_vlan_with_multi_segment_ext(
             self, mock_get_client):
         api = neutronapi.API()
         self.mox.ResetAll()
@@ -3084,15 +3085,17 @@ class TestNeutronv2(TestNeutronv2Base):
         mock_client = mock_get_client()
         mock_client.list_extensions.return_value = test_ext_list
         mock_client.show_network.return_value = test_net
-        physnet_name = api._get_physnet_info(
+        physnet_name, tunneled = api._get_physnet_tunneled_info(
             self.context, mock_client, 'test-net')
 
         mock_client.show_network.assert_called_with(
-            'test-net', fields=['provider:physical_network'])
+            'test-net', fields=['provider:physical_network',
+                                'provider:network_type'])
         self.assertEqual('physnet10', physnet_name)
+        self.assertFalse(tunneled)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
-    def test_get_physnet_info_multi_segment_no_physnet(
+    def test_get_physnet_tunneled_info_multi_segment_no_physnet(
             self, mock_get_client):
         api = neutronapi.API()
         self.mox.ResetAll()
@@ -3111,8 +3114,48 @@ class TestNeutronv2(TestNeutronv2Base):
         mock_client.list_extensions.return_value = test_ext_list
         mock_client.show_network.return_value = test_net
         self.assertRaises(exception.NovaException,
-                          api._get_physnet_info,
+                          api._get_physnet_tunneled_info,
                           self.context, mock_client, 'test-net')
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_get_physnet_tunneled_info_tunneled(
+            self, mock_get_client):
+        api = neutronapi.API()
+        self.mox.ResetAll()
+        test_net = {'network': {'provider:network_type': 'vxlan'}}
+        test_ext_list = {'extensions': []}
+
+        mock_client = mock_get_client()
+        mock_client.list_extensions.return_value = test_ext_list
+        mock_client.show_network.return_value = test_net
+        physnet_name, tunneled = api._get_physnet_tunneled_info(
+            self.context, mock_client, 'test-net')
+
+        mock_client.show_network.assert_called_once_with(
+            'test-net', fields=['provider:physical_network',
+                                'provider:network_type'])
+        self.assertTrue(tunneled)
+        self.assertIsNone(physnet_name)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_get_phynet_tunneled_info_non_tunneled(
+            self, mock_get_client):
+        api = neutronapi.API()
+        self.mox.ResetAll()
+        test_net = {'network': {'provider:network_type': 'vlan'}}
+        test_ext_list = {'extensions': []}
+
+        mock_client = mock_get_client()
+        mock_client.list_extensions.return_value = test_ext_list
+        mock_client.show_network.return_value = test_net
+        physnet_name, tunneled = api._get_physnet_tunneled_info(
+            self.context, mock_client, 'test-net')
+
+        mock_client.show_network.assert_called_once_with(
+            'test-net', fields=['provider:physical_network',
+                                'provider:network_type'])
+        self.assertFalse(tunneled)
+        self.assertIsNone(physnet_name)
 
     def _test_get_port_vnic_info(self, mock_get_client,
                                  binding_vnic_type,
@@ -4941,10 +4984,10 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         self.assertFalse(mock_get_client.called)
         self.assertIsNone(network_metadata)
 
-    @mock.patch.object(neutronapi.API, '_get_physnet_info')
+    @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info')
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_create_resource_requests_auto_allocated(self, mock_get_client,
-            mock_get_physnet_info):
+            mock_get_physnet_tunneled_info):
         """Ensure physnet info is not retrieved for auto-allocated networks.
 
         This isn't possible so we shouldn't attempt to do it.
@@ -4958,15 +5001,15 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         network_metadata = api.create_resource_requests(
             self.context, requested_networks, pci_requests)
 
-        mock_get_physnet_info.assert_not_called()
+        mock_get_physnet_tunneled_info.assert_not_called()
         self.assertEqual(set(), network_metadata.physnets)
         self.assertFalse(network_metadata.tunneled)
 
-    @mock.patch.object(neutronapi.API, '_get_physnet_info')
+    @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info')
     @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
     @mock.patch.object(neutronapi, 'get_client')
     def test_create_resource_requests(self, getclient,
-            mock_get_port_vnic_info, mock_get_physnet_info):
+            mock_get_port_vnic_info, mock_get_physnet_tunneled_info):
         requested_networks = objects.NetworkRequestList(
             objects = [
                 objects.NetworkRequest(port_id=uuids.portid_1),
@@ -4987,11 +5030,12 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
             (model.VNIC_TYPE_DIRECT_PHYSICAL, None, 'netN'),
             (model.VNIC_TYPE_DIRECT, True, 'netN'),
         ]
-        # _get_physnet_info should be called for every NetworkRequest (so seven
-        # times)
-        mock_get_physnet_info.side_effect = [
-            'physnet1', 'physnet1', '', 'physnet1', 'physnet2', 'physnet3',
-            'physnet4',
+        # _get_physnet_tunneled_info should be called for every NetworkRequest
+        # (so seven times)
+        mock_get_physnet_tunneled_info.side_effect = [
+            ('physnet1', False), ('physnet1', False), ('', True),
+            ('physnet1', False), ('physnet2', False), ('physnet3', False),
+            ('physnet4', False),
         ]
         api = neutronapi.API()
 
@@ -5018,9 +5062,7 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         self.assertItemsEqual(
             ['physnet1', 'physnet2', 'physnet3', 'physnet4'],
             network_metadata.physnets)
-        # TODO(stephenfin): Expand this to be a positive check when we start
-        # retrieving this information
-        self.assertFalse(network_metadata.tunneled)
+        self.assertTrue(network_metadata.tunneled)
 
     @mock.patch.object(neutronapi, 'get_client')
     def test_associate_floating_ip_conflict(self, mock_get_client):
