@@ -327,10 +327,3 @@ def server_create(server_dict, create_kwargs, body_deprecated_param):
     # backward-compatible some users already created keypair and name with
     # leading/trailing spaces by legacy v2 API.
     create_kwargs['key_name'] = server_dict.get('key_name')
-
-
-def get_server_create_schema(version):
-    if version == '2.0':
-        return keypairs.server_create_v20
-    else:
-        return keypairs.server_create

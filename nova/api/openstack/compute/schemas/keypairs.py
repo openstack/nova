@@ -83,14 +83,6 @@ create_v210 = {
     'additionalProperties': False,
 }
 
-server_create = {
-    'key_name': parameter_types.name,
-}
-
-server_create_v20 = {
-    'key_name': parameter_types.name_with_leading_trailing_spaces,
-}
-
 index_query_schema_v20 = {
     'type': 'object',
     'properties': {},
