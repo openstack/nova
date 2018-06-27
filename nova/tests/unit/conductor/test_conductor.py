@@ -18,7 +18,6 @@
 import copy
 
 import mock
-from mox3 import mox
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
@@ -2072,33 +2071,19 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                  'expected_task_state': task_states.MIGRATING},
                 ex, self._build_request_spec(inst_obj))
 
+    @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
+    @mock.patch.object(live_migrate.LiveMigrationTask, 'execute')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
-    def test_migrate_server_deals_with_invalidcpuinfo_exception(self, get_im):
+    def test_migrate_server_deals_with_invalidcpuinfo_exception(
+            self, get_im, mock_execute, mock_set):
         get_im.return_value.cell_mapping = (
             objects.CellMappingList.get_all(self.context)[0])
         instance = fake_instance.fake_db_instance(uuid=uuids.instance,
                                                   vm_state=vm_states.ACTIVE)
         inst_obj = objects.Instance._from_db_object(
             self.context, objects.Instance(), instance, [])
-        self.mox.StubOutWithMock(live_migrate.LiveMigrationTask, 'execute')
-        self.mox.StubOutWithMock(scheduler_utils,
-                'set_vm_state_and_notify')
-
         ex = exc.InvalidCPUInfo(reason="invalid cpu info.")
-
-        task = self.conductor._build_live_migrate_task(
-            self.context, inst_obj, 'destination', 'block_migration',
-            'disk_over_commit', mox.IsA(objects.Migration))
-        task.execute().AndRaise(ex)
-
-        scheduler_utils.set_vm_state_and_notify(self.context,
-                inst_obj.uuid,
-                'compute_task', 'migrate_server',
-                {'vm_state': vm_states.ACTIVE,
-                 'task_state': None,
-                 'expected_task_state': task_states.MIGRATING},
-                ex, self._build_request_spec(inst_obj))
-        self.mox.ReplayAll()
+        mock_execute.side_effect = ex
 
         self.conductor = utils.ExceptionHelper(self.conductor)
 
@@ -2106,6 +2091,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             self.conductor.migrate_server, self.context, inst_obj,
             {'host': 'destination'}, True, False, None, 'block_migration',
             'disk_over_commit')
+        mock_execute.assert_called_once_with()
+        mock_set.assert_called_once_with(
+            self.context, inst_obj.uuid, 'compute_task', 'migrate_server',
+            {'vm_state': vm_states.ACTIVE,
+             'task_state': None,
+             'expected_task_state': task_states.MIGRATING},
+            ex, self._build_request_spec(inst_obj))
 
     def test_migrate_server_deals_with_expected_exception(self):
         exs = [exc.InstanceInvalidState(instance_uuid="fake", attr='',
@@ -2154,17 +2146,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                         expected_ex, request_spec)
         self.assertEqual(ex.kwargs['reason'], six.text_type(expected_ex))
 
-    def test_set_vm_state_and_notify(self):
-        self.mox.StubOutWithMock(scheduler_utils,
-                                 'set_vm_state_and_notify')
-        scheduler_utils.set_vm_state_and_notify(
-                self.context, 1, 'compute_task', 'method', 'updates',
-                'ex', 'request_spec')
-
-        self.mox.ReplayAll()
-
+    @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
+    def test_set_vm_state_and_notify(self, mock_set):
         self.conductor._set_vm_state_and_notify(
                 self.context, 1, 'method', 'updates', 'ex', 'request_spec')
+        mock_set.assert_called_once_with(
+            self.context, 1, 'compute_task', 'method', 'updates', 'ex',
+            'request_spec')
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.RequestSpec, 'from_components')
@@ -2476,50 +2464,35 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                     True, fake_spec, None)
             self.assertIn('resize', nvh.message)
 
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'build_and_run_instance')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_schedule_instances')
+    @mock.patch.object(scheduler_utils, 'build_request_spec')
+    @mock.patch.object(objects.Instance, 'save')
     @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
     @mock.patch.object(objects.RequestSpec, 'from_primitives')
-    def test_build_instances_instance_not_found(self, fp, _mock_buildreq):
+    def test_build_instances_instance_not_found(
+            self, fp, _mock_buildreq, mock_save, mock_build_rspec,
+            mock_schedule, mock_build_run):
         fake_spec = objects.RequestSpec()
         fp.return_value = fake_spec
         instances = [fake_instance.fake_instance_obj(self.context)
                 for i in range(2)]
-        self.mox.StubOutWithMock(instances[0], 'save')
-        self.mox.StubOutWithMock(instances[1], 'save')
         image = {'fake-data': 'should_pass_silently'}
         spec = {'fake': 'specs',
                 'instance_properties': instances[0]}
-        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
-        self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
-        self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
-                'build_and_run_instance')
 
-        scheduler_utils.build_request_spec(image,
-                mox.IgnoreArg()).AndReturn(spec)
+        mock_build_rspec.return_value = spec
         filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
         inst_uuids = [inst.uuid for inst in instances]
 
         sched_return = copy.deepcopy(fake_host_lists2)
-        self.conductor_manager._schedule_instances(self.context,
-                fake_spec, inst_uuids, return_alternates=True).AndReturn(
-                sched_return)
-        instances[0].save().AndRaise(
-                exc.InstanceNotFound(instance_id=instances[0].uuid))
-        instances[1].save()
+        mock_schedule.return_value = sched_return
+        mock_save.side_effect = [
+            exc.InstanceNotFound(instance_id=instances[0].uuid), None]
         filter_properties2 = {'limits': {},
                               'retry': {'num_attempts': 1,
                                         'hosts': [['host2', 'node2']]}}
-        self.conductor_manager.compute_rpcapi.build_and_run_instance(
-                self.context, instance=instances[1], host='host2',
-                image={'fake-data': 'should_pass_silently'},
-                request_spec=fake_spec,
-                filter_properties=filter_properties2,
-                admin_password='admin_password',
-                injected_files='injected_files',
-                requested_networks=None,
-                security_groups='security_groups',
-                block_device_mapping=mox.IsA(objects.BlockDeviceMappingList),
-                node='node2', limits=None, host_list=[])
-        self.mox.ReplayAll()
 
         # build_instances() is a cast, we need to wait for it to complete
         self.useFixture(cast_as_call.CastAsCall(self))
@@ -2540,6 +2513,22 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         fp.assert_has_calls([
             mock.call(self.context, spec, filter_properties),
             mock.call(self.context, spec, filter_properties2)])
+        mock_build_rspec.assert_called_once_with(image, mock.ANY)
+        mock_schedule.assert_called_once_with(
+            self.context, fake_spec, inst_uuids, return_alternates=True)
+        mock_save.assert_has_calls([mock.call(), mock.call()])
+        mock_build_run.assert_called_once_with(
+            self.context, instance=instances[1], host='host2',
+            image={'fake-data': 'should_pass_silently'},
+            request_spec=fake_spec,
+            filter_properties=filter_properties2,
+            admin_password='admin_password',
+            injected_files='injected_files',
+            requested_networks=None,
+            security_groups='security_groups',
+            block_device_mapping=test.MatchType(
+                objects.BlockDeviceMappingList),
+            node='node2', limits=None, host_list=[])
 
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(scheduler_utils, 'build_request_spec')
