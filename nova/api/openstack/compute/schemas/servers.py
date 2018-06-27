@@ -14,7 +14,6 @@
 
 import copy
 
-from nova.api.openstack.compute.schemas import user_data
 from nova.api.validation import parameter_types
 from nova.api.validation.parameter_types import multi_params
 from nova.objects import instance
@@ -210,6 +209,11 @@ base_create = {
                         'additionalProperties': False,
                     }
                 },
+                'user_data': {
+                    'type': 'string',
+                    'format': 'base64',
+                    'maxLength': 65535
+                }
             },
             'required': ['name', 'flavorRef'],
             'additionalProperties': False,
@@ -232,6 +236,12 @@ base_create_v20['properties']['server']['properties'][
 base_create_v20['properties']['server']['properties'][
     'security_groups']['items']['properties']['name'] = (
     parameter_types.name_with_leading_trailing_spaces)
+base_create_v20['properties']['server']['properties'][
+    'user_data'] = {
+        'oneOf': [{'type': 'string', 'format': 'base64', 'maxLength': 65535},
+                  {'type': 'null'},
+        ],
+    }
 
 base_create_v219 = copy.deepcopy(base_create)
 base_create_v219['properties']['server'][
@@ -410,7 +420,7 @@ base_rebuild_v257 = copy.deepcopy(base_rebuild_v254)
 base_rebuild_v257['properties']['rebuild']['properties'].pop('personality')
 base_rebuild_v257['properties']['rebuild']['properties']['user_data'] = ({
     'oneOf': [
-        user_data.common_user_data,
+        {'type': 'string', 'format': 'base64', 'maxLength': 65535},
         {'type': 'null'}
     ]
 })
