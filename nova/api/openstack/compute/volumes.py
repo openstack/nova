@@ -348,7 +348,7 @@ class VolumeAttachmentController(wsgi.Controller):
         except (exception.InvalidVolume,
                 exception.InvalidDevicePath,
                 exception.InvalidInput,
-                exception.TaggedAttachmentNotSupported,
+                exception.VolumeTaggedAttachNotSupported,
                 exception.MultiattachNotSupportedOldMicroversion,
                 exception.MultiattachToShelvedNotSupported) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())

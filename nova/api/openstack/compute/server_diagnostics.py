@@ -21,7 +21,6 @@ from nova.api.openstack.compute.views import server_diagnostics
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
-from nova.i18n import _
 from nova.policies import server_diagnostics as sd_policies
 
 
@@ -51,16 +50,5 @@ class ServerDiagnosticsController(wsgi.Controller):
                     'get_diagnostics', server_id)
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
-        except exception.InstanceDiagnosticsNotSupported:
-            # NOTE(snikitin): During upgrade we may face situation when env
-            # has new API and old compute. New compute returns a
-            # Diagnostics object. Old compute returns a dictionary. So we
-            # can't perform a request correctly if compute is too old.
-            msg = _('Compute node is too old. You must complete the '
-                    'upgrade process to be able to get standardized '
-                    'diagnostics data which is available since v2.48. However '
-                    'you are still able to get diagnostics data in '
-                    'non-standardized format which is available until v2.47.')
-            raise webob.exc.HTTPBadRequest(explanation=msg)
         except NotImplementedError:
             common.raise_feature_not_supported()

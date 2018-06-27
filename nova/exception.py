@@ -303,21 +303,17 @@ class VolumeEncryptionNotSupported(Invalid):
                 "volume %(volume_id)s")
 
 
-class TaggedAttachmentNotSupported(Invalid):
-    msg_fmt = _("Tagged device attachment is not yet available.")
-
-
-class VolumeTaggedAttachNotSupported(TaggedAttachmentNotSupported):
+class VolumeTaggedAttachNotSupported(Invalid):
     msg_fmt = _("Tagged volume attachment is not supported for this server "
                 "instance.")
 
 
-class VolumeTaggedAttachToShelvedNotSupported(TaggedAttachmentNotSupported):
+class VolumeTaggedAttachToShelvedNotSupported(VolumeTaggedAttachNotSupported):
     msg_fmt = _("Tagged volume attachment is not supported for "
                 "shelved-offloaded instances.")
 
 
-class NetworkInterfaceTaggedAttachNotSupported(TaggedAttachmentNotSupported):
+class NetworkInterfaceTaggedAttachNotSupported(Invalid):
     msg_fmt = _("Tagged network interface attachment is not supported for "
                 "this server instance.")
 
@@ -1831,11 +1827,6 @@ class InvalidWatchdogAction(Invalid):
     msg_fmt = _("Provided watchdog action (%(action)s) is not supported.")
 
 
-class LiveMigrationWithOldNovaNotSupported(NovaException):
-    msg_fmt = _("Live migration with API v2.25 requires all the Mitaka "
-                "upgrade to be complete before it is available.")
-
-
 class SelectionObjectsWithOldRPCVersionNotSupported(NovaException):
     msg_fmt = _("Requests for Selection objects with alternates are not "
                 "supported in select_destinations() before RPC version 4.5; "
@@ -2109,10 +2100,6 @@ class BuildRequestNotFound(NotFound):
 class AttachInterfaceNotSupported(Invalid):
     msg_fmt = _("Attaching interfaces is not supported for "
                 "instance %(instance_uuid)s.")
-
-
-class InstanceDiagnosticsNotSupported(Invalid):
-    msg_fmt = _("Instance diagnostics are not supported by compute node.")
 
 
 class InvalidReservedMemoryPagesOption(Invalid):
