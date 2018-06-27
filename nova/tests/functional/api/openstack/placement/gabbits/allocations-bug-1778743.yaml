@@ -1,0 +1,72 @@
+# Test to see if capacity check in POST allocations works as expected.
+# It does not, due to bug 1778743.
+
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        openstack-api-version: placement latest
+        x-auth-token: admin
+        content-type: application/json
+        accept: application/json
+
+tests:
+
+- name: create an rp
+  POST: /resource_providers
+  data:
+      uuid: 4e05a85b-e8a6-4b3a-82c1-5f6ad3f71d55
+      name: rp1
+
+- name: add vcpu inventory
+  PUT: /resource_providers/4e05a85b-e8a6-4b3a-82c1-5f6ad3f71d55/inventories
+  data:
+      resource_provider_generation: 0
+      inventories:
+          VCPU:
+              total: 2
+
+- name: post multiple allocations
+  desc: this should fail because we're allocating 3 VCPU!
+  POST: /allocations
+  data:
+      a6ace019-f230-4dcc-8a76-36d27b9c2257:
+          allocations:
+              4e05a85b-e8a6-4b3a-82c1-5f6ad3f71d55:
+                  resources:
+                      VCPU: 1
+          project_id: a2cec092-0f67-42ed-b870-f3925cc5c6d4
+          user_id: d28385b2-7860-4055-b32d-4cd1057cd5f2
+          consumer_generation: null
+      2e613d4f-f5b2-4956-bd61-ea5be6600f80:
+          allocations:
+              4e05a85b-e8a6-4b3a-82c1-5f6ad3f71d55:
+                  resources:
+                      VCPU: 1
+          project_id: a2cec092-0f67-42ed-b870-f3925cc5c6d4
+          user_id: d28385b2-7860-4055-b32d-4cd1057cd5f2
+          consumer_generation: null
+      2b3abca1-b72b-4817-9217-397f19b52c92:
+          allocations:
+              4e05a85b-e8a6-4b3a-82c1-5f6ad3f71d55:
+                  resources:
+                      VCPU: 1
+          project_id: a2cec092-0f67-42ed-b870-f3925cc5c6d4
+          user_id: d28385b2-7860-4055-b32d-4cd1057cd5f2
+          consumer_generation: null
+  # we expect 409 but are getting 204
+  # status: 409
+  status: 204
+
+- name: check usage
+  GET: /resource_providers/4e05a85b-e8a6-4b3a-82c1-5f6ad3f71d55/usages
+  response_json_paths:
+      # this ought to be impossible
+      $.usages.VCPU: 3
+
+- name: check inventory
+  GET: /resource_providers/4e05a85b-e8a6-4b3a-82c1-5f6ad3f71d55/inventories
+  response_json_paths:
+      $.inventories.VCPU.total: 2
