@@ -6,11 +6,13 @@
 
 .. warning::
 
-   These APIs are proxy calls to the Network service. Nova has
+   This API is a proxy call to the Network service. Nova has
    deprecated all the proxy APIs and users should use the native APIs
-   instead. These will fail with a 404 starting from microversion 2.36.
-   See: `Relevant Network APIs
-   <https://developer.openstack.org/api-ref/networking/v2/#networks>`__.
+   instead. This API will fail with a 404 starting from microversion 2.36.
+
+   For the equivalent functionality in the Network service, one can request::
+
+     GET /networks?router:external=True&fields=name
 
 Manages groups of floating IPs.
 
