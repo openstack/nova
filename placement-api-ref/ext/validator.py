@@ -12,7 +12,6 @@
 """Test to see if docs exists for routes and methods in the placement API."""
 
 import os
-import sys
 
 from nova.api.openstack.placement import handler
 
@@ -27,11 +26,14 @@ def _header_line(map_entry):
     return line
 
 
-def inspect_doc(doc_files):
+def inspect_doc(app):
     """Load up doc_files and see if any routes are missing.
 
     The routes are defined in handler.ROUTE_DECLARATIONS.
     """
+    doc_files = [os.path.join(app.srcdir, file)
+                 for file in os.listdir(app.srcdir) if file.endswith(".inc")]
+
     routes = []
     for route in sorted(handler.ROUTE_DECLARATIONS, key=len):
         # Skip over the '' route.
@@ -56,16 +58,11 @@ def inspect_doc(doc_files):
             missing_lines.append(line)
 
     if missing_lines:
-        print('Documentation likely missing for the following routes:')
+        msg = ['Documentation likely missing for the following routes:', '']
         for line in missing_lines:
-            print(line)
-        return 1
-
-    return 0
+            msg.append(line)
+        raise ValueError('\n'.join(msg))
 
 
-if __name__ == '__main__':
-    path = sys.argv[1]
-    doc_files = [os.path.join(path, file)
-                 for file in os.listdir(path) if file.endswith(".inc")]
-    sys.exit(inspect_doc(doc_files))
+def setup(app):
+    app.connect('builder-inited', inspect_doc)

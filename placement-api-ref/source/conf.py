@@ -22,12 +22,17 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import os
+import sys
+
 from nova.version import version_info
 
+sys.path.insert(0, os.path.abspath('../'))
 
 extensions = [
     'openstackdocstheme',
     'os_api_ref',
+    'ext.validator',
 ]
 
 # -- General configuration ----------------------------------------------------
