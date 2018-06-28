@@ -1,0 +1,72 @@
+# Demonstrate part of bug 1778591, where when creating an allocation for
+# a new consumer will create the consumer and its generation, but if it
+# fails the subsequent request requires generation 0, not null, which is
+# not what we expect. This is made more problematic in the we cannot query
+# the generation when the consumer has no allocations.
+
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        # consumer generations were added in 1.28
+        openstack-api-version: placement 1.28
+        content-type: application/json
+        accept: application/json
+
+tests:
+# create a simple resource provider with limited inventory
+
+- name: create provider
+  POST: /resource_providers
+  data:
+      name: simple
+      uuid: $ENVIRON['RP_UUID']
+
+- name: set inventory
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  data:
+      resource_provider_generation: 0
+      inventories:
+          VCPU:
+              total: 4
+
+- name: fail allocations new consumer, bad capacity
+  PUT: /allocations/88888888-8888-8888-8888-888888888888
+  data:
+      allocations:
+          "$ENVIRON['RP_UUID']":
+              resources:
+                  VCPU: 9999
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_generation: null
+  status: 409
+  response_strings:
+      - The requested amount would exceed the capacity
+
+- name: try to get consumer generation
+  desc: when there are no allocations we can't see the generation of a consumer
+  GET: /allocations/88888888-8888-8888-8888-888888888888
+  response_json_paths:
+      # check entire response
+      $:
+          allocations: {}
+
+- name: retry allocations new consumer, wrong gen
+  desc: consumer generation is wrong below to make test pass
+  PUT: /allocations/88888888-8888-8888-8888-888888888888
+  data:
+      allocations:
+          "$ENVIRON['RP_UUID']":
+              resources:
+                  VCPU: 1
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      # The API suggests we should have null here
+      # consumer_generation: null
+      # but the error response says 0, so use it to make test pass
+      consumer_generation: 0
+  status: 204
