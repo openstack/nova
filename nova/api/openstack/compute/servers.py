@@ -36,7 +36,6 @@ from nova.api.openstack.compute import multiple_create
 from nova.api.openstack.compute import scheduler_hints
 from nova.api.openstack.compute.schemas import servers as schema_servers
 from nova.api.openstack.compute import security_groups
-from nova.api.openstack.compute import user_data
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -76,7 +75,6 @@ class ServersController(wsgi.Controller):
         multiple_create.server_create,
         scheduler_hints.server_create,
         security_groups.server_create,
-        user_data.server_create,
     ]
 
     @staticmethod
@@ -436,6 +434,7 @@ class ServersController(wsgi.Controller):
         # extension interface. But the final goal is that merging
         # all of extended code into ServersController.
         self._create_by_func_list(server_dict, create_kwargs, body)
+        create_kwargs['user_data'] = server_dict.get('user_data')
 
         availability_zone = server_dict.pop("availability_zone", None)
 
