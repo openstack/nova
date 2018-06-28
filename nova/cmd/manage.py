@@ -60,7 +60,6 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import build_request as build_request_obj
 from nova.objects import host_mapping as host_mapping_obj
 from nova.objects import instance as instance_obj
-from nova.objects import instance_group as instance_group_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import request_spec
@@ -394,8 +393,6 @@ class DbCommands(object):
         request_spec.migrate_instances_add_request_spec,
         # Added in Newton
         keypair_obj.migrate_keypairs_to_api_db,
-        # Added in Newton
-        instance_group_obj.migrate_instance_groups_to_api_db,
         # Added in Ocata
         # NOTE(mriedem): This online migration is going to be backported to
         # Newton also since it's an upgrade issue when upgrading from Mitaka.
