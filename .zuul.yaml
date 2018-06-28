@@ -169,6 +169,26 @@
     # Please try to keep the list of job names sorted alphabetically.
     check:
       jobs:
+        # We define our own irrelevant-files so we don't run the job
+        # on things like nova docs-only changes.
+        - ironic-tempest-dsvm-ipa-wholedisk-bios-agent_ipmitool-tinyipa:
+            voting: false
+            # This irrelevant-files list should match nova-dsvm-base.
+            # TODO(mriedem): Define a node anchor to deduplicate this.
+            irrelevant-files:
+              - ^(placement-)?api-.*$
+              - ^(test-|)requirements.txt$
+              - ^.*\.rst$
+              - ^.git.*$
+              - ^doc/.*$
+              - ^nova/hacking/.*$
+              - ^nova/locale/.*$
+              - ^nova/tests/.*$
+              - ^releasenotes/.*$
+              - ^setup.cfg$
+              - ^tests-py3.txt$
+              - ^tools/.*$
+              - ^tox.ini$
         - nova-cells-v1
         - nova-live-migration
         - nova-lvm
