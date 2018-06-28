@@ -86,15 +86,13 @@ Enable and access the configuration drive
    parameter to the :command:`openstack server create` command.
 
    The following example enables the configuration drive and passes user
-   data, two files, and two key/value metadata pairs, all of which are
+   data, a user data file, and two key/value metadata pairs, all of which are
    accessible from the configuration drive:
 
    .. code-block:: console
 
       $ openstack server create --config-drive true --image my-image-name \
         --flavor 1 --key-name mykey --user-data ./my-user-data.txt \
-        --file /etc/network/interfaces=/home/myuser/instance-interfaces \
-        --file known_hosts=/home/myuser/.ssh/known_hosts \
         --property role=webservers --property essential=false MYINSTANCE
 
    You can also configure the Compute service to always create a
@@ -107,9 +105,9 @@ Enable and access the configuration drive
 
    .. note::
 
-      If a user passes the ``--config-drive true`` flag to the :command:`nova
-      boot` command, an administrator cannot disable the configuration
-      drive.
+      If a user passes the ``--config-drive true`` flag to the
+      :command:`openstack server create` command, an administrator cannot
+      disable the configuration drive.
 
 #. If your guest operating system supports accessing disk by label, you
    can mount the configuration drive as the
@@ -182,16 +180,6 @@ The file contents are formatted for readability.
 
    {
        "availability_zone": "nova",
-       "files": [
-           {
-               "content_path": "/content/0000",
-               "path": "/etc/network/interfaces"
-           },
-           {
-               "content_path": "/content/0001",
-               "path": "known_hosts"
-           }
-       ],
        "hostname": "test.novalocal",
        "launch_index": 0,
        "name": "test",
@@ -204,13 +192,6 @@ The file contents are formatted for readability.
        },
        "uuid": "83679162-1378-4288-a2d4-70e13ec132aa"
    }
-
-Note the effect of the
-``--file /etc/network/interfaces=/home/myuser/instance-interfaces``
-argument that was passed to the :command:`openstack server create` command.
-The contents of this file are contained in the ``openstack/content/0000``
-file on the configuration drive, and the path is specified as
-``/etc/network/interfaces`` in the ``meta_data.json`` file.
 
 EC2 metadata format
 -------------------
