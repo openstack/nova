@@ -114,10 +114,31 @@
     name: nova-lvm
     parent: nova-dsvm-base
     description: |
-      Run standard integration tests using LVM image backend. This is useful if
-      there are tests touching this code.
+      Run tempest compute API tests using LVM image backend. This only runs
+      against nova/virt/libvirt/* changes.
     run: playbooks/legacy/nova-lvm/run.yaml
     post-run: playbooks/legacy/nova-lvm/post.yaml
+    # Copy irrelevant-files from nova-dsvm-base and then exclude anything
+    # that is not in the nova/virt/libvirt/* tree (besides the actual zuul
+    # playbook and tempest rc files so this can be self-testing).
+    irrelevant-files:
+      - ^(?!.zuul.yaml)(?!playbooks/legacy/nova-lvm/)(?!devstack/tempest-dsvm-lvm-rc)(?!nova/virt/libvirt/).*$
+      - ^(placement-)?api-.*$
+      - ^(test-|)requirements.txt$
+      - ^.*\.rst$
+      - ^.git.*$
+      - ^doc/.*$
+      - ^nova/hacking/.*$
+      - ^nova/locale/.*$
+      - ^nova/tests/.*$
+      - ^releasenotes/.*$
+      - ^setup.cfg$
+      - ^tests-py3.txt$
+      - ^tools/.*$
+      - ^tox.ini$
+    # TODO(mriedem): Make this voting and gating once bug 1771700 is fixed
+    # and we've had enough runs to feel comfortable with this setup.
+    voting: false
 
 - job:
     name: nova-multiattach
@@ -150,6 +171,7 @@
       jobs:
         - nova-cells-v1
         - nova-live-migration
+        - nova-lvm
         - nova-multiattach
         - nova-next
         - nova-tox-functional
@@ -167,4 +189,3 @@
     experimental:
       jobs:
         - nova-caching-scheduler
-        - nova-lvm
