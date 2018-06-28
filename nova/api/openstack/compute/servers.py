@@ -35,7 +35,6 @@ from nova.api.openstack.compute import keypairs
 from nova.api.openstack.compute import multiple_create
 from nova.api.openstack.compute import scheduler_hints
 from nova.api.openstack.compute.schemas import servers as schema_servers
-from nova.api.openstack.compute import security_groups
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -74,7 +73,6 @@ class ServersController(wsgi.Controller):
         keypairs.server_create,
         multiple_create.server_create,
         scheduler_hints.server_create,
-        security_groups.server_create,
     ]
 
     @staticmethod
@@ -435,6 +433,12 @@ class ServersController(wsgi.Controller):
         # all of extended code into ServersController.
         self._create_by_func_list(server_dict, create_kwargs, body)
         create_kwargs['user_data'] = server_dict.get('user_data')
+        security_groups = server_dict.get('security_groups')
+        if security_groups is not None:
+            create_kwargs['security_groups'] = [
+                sg['name'] for sg in security_groups if sg.get('name')]
+            create_kwargs['security_groups'] = list(
+                set(create_kwargs['security_groups']))
 
         availability_zone = server_dict.pop("availability_zone", None)
 
