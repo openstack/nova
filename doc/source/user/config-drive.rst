@@ -63,8 +63,8 @@ requirements for the compute host and image.
    details about how data is organized on the configuration drive.
 
 -  If you use Xen with a configuration drive, use the
-   ``xenapi_disable_agent`` configuration parameter to disable the
-   agent.
+   :oslo.config:option:`xenserver.disable_agent` configuration parameter to
+   disable the agent.
 
 **Guidelines**
 
