@@ -81,6 +81,7 @@ class ServersController(wsgi.Controller):
     schema_server_rebuild_v257 = schema_servers.base_rebuild_v257
 
     schema_server_create_v232 = schema_servers.base_create_v232
+    schema_server_create_v233 = schema_servers.base_create_v233
     schema_server_create_v237 = schema_servers.base_create_v237
     schema_server_create_v242 = schema_servers.base_create_v242
     schema_server_create_v252 = schema_servers.base_create_v252
@@ -92,7 +93,6 @@ class ServersController(wsgi.Controller):
     # NOTE(alex_xu): Please do not add more items into this list. This list
     # should be removed in the future.
     schema_func_list = [
-        block_device_mapping.get_server_create_schema,
         config_drive.get_server_create_schema,
         keypairs.get_server_create_schema,
         multiple_create.get_server_create_schema,
@@ -139,6 +139,7 @@ class ServersController(wsgi.Controller):
         self._create_schema(self.schema_server_create_v252, '2.52')
         self._create_schema(self.schema_server_create_v242, '2.42')
         self._create_schema(self.schema_server_create_v237, '2.37')
+        self._create_schema(self.schema_server_create_v233, '2.33')
         self._create_schema(self.schema_server_create_v232, '2.32')
         self._create_schema(self.schema_server_create_v219, '2.19')
         self._create_schema(self.schema_server_create, '2.1')
@@ -459,7 +460,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_server_create_v20, '2.0', '2.0')
     @validation.schema(schema_server_create, '2.1', '2.18')
     @validation.schema(schema_server_create_v219, '2.19', '2.31')
-    @validation.schema(schema_server_create_v232, '2.32', '2.36')
+    @validation.schema(schema_server_create_v232, '2.32', '2.32')
+    @validation.schema(schema_server_create_v233, '2.33', '2.36')
     @validation.schema(schema_server_create_v237, '2.37', '2.41')
     @validation.schema(schema_server_create_v242, '2.42', '2.51')
     @validation.schema(schema_server_create_v252, '2.52', '2.56')

@@ -46,6 +46,51 @@ legacy_block_device_mapping = {
     'additionalProperties': False
 }
 
+block_device_mapping_v2_new_item = {
+    # defined in nova/block_device.py:from_api()
+    # NOTE: Client can specify the Id with the combination of
+    # source_type and uuid, or a single attribute like volume_id/
+    # image_id/snapshot_id.
+    'source_type': {
+        'type': 'string',
+        'enum': ['volume', 'image', 'snapshot', 'blank'],
+    },
+    'uuid': {
+        'type': 'string', 'minLength': 1, 'maxLength': 255,
+        'pattern': '^[a-zA-Z0-9._-]*$',
+    },
+    'image_id': parameter_types.image_id,
+    'destination_type': {
+        'type': 'string',
+        'enum': ['local', 'volume'],
+    },
+    # Defined as varchar(255) in column "guest_format" in table
+    # "block_device_mapping"
+    'guest_format': {
+        'type': 'string', 'maxLength': 255,
+    },
+    # Defined as varchar(255) in column "device_type" in table
+    # "block_device_mapping"
+    'device_type': {
+        'type': 'string', 'maxLength': 255,
+    },
+    # Defined as varchar(255) in column "disk_bus" in table
+    # "block_device_mapping"
+    'disk_bus': {
+        'type': 'string', 'maxLength': 255,
+    },
+    # Defined as integer in nova/block_device.py:from_api()
+    # NOTE(mriedem): boot_index=None is also accepted for backward
+    # compatibility with the legacy v2 API.
+    'boot_index': {
+        'type': ['integer', 'string', 'null'],
+        'pattern': '^-?[0-9]+$',
+    },
+}
+
+block_device_mapping_v2 = copy.deepcopy(legacy_block_device_mapping)
+block_device_mapping_v2['properties'].update(block_device_mapping_v2_new_item)
+
 base_create = {
     'type': 'object',
     'properties': {
@@ -85,7 +130,12 @@ base_create = {
                 'block_device_mapping': {
                     'type': 'array',
                     'items': legacy_block_device_mapping
+                },
+                'block_device_mapping_v2': {
+                    'type': 'array',
+                    'items': block_device_mapping_v2
                 }
+
 
             },
             'required': ['name', 'flavorRef'],
@@ -108,18 +158,38 @@ base_create_v219 = copy.deepcopy(base_create)
 base_create_v219['properties']['server'][
     'properties']['description'] = parameter_types.description
 
-
 base_create_v232 = copy.deepcopy(base_create_v219)
 base_create_v232['properties']['server'][
     'properties']['networks']['items'][
     'properties']['tag'] = parameter_types.tag
+base_create_v232['properties']['server'][
+    'properties']['block_device_mapping_v2']['items'][
+    'properties']['tag'] = parameter_types.tag
 
+# NOTE(artom) the following conditional was merged as
+# "if version == '2.32'" The intent all along was to check whether
+# version was greater than or equal to 2.32. In other words, we wanted
+# to support tags in versions 2.32 and up, but ended up supporting them
+# in version 2.32 only. Since we need a new microversion to add request
+# body attributes, tags have been re-added in version 2.42.
+
+# NOTE(gmann) Below schema 'base_create_v233' is added (builds on 2.19 schema)
+# to keep the above mentioned behavior while merging the extension schema code
+# into server schema file. Below is the ref code where BDM tag was originally
+# got added for 2.32 microversion *only*.
+# Ref- https://github.com/openstack/nova/blob/
+#      9882a60e69a5ab8da314a199a56defc05098b743/nova/api/
+#      openstack/compute/block_device_mapping.py#L71
+base_create_v233 = copy.deepcopy(base_create_v219)
+base_create_v233['properties']['server'][
+    'properties']['networks']['items'][
+    'properties']['tag'] = parameter_types.tag
 
 # 2.37 builds on 2.32 and makes the following changes:
 # 1. server.networks is required
 # 2. server.networks is now either an enum or a list
 # 3. server.networks.uuid is now required to be a uuid
-base_create_v237 = copy.deepcopy(base_create_v232)
+base_create_v237 = copy.deepcopy(base_create_v233)
 base_create_v237['properties']['server']['required'].append('networks')
 base_create_v237['properties']['server']['properties']['networks'] = {
     'oneOf': [
@@ -163,6 +233,9 @@ base_create_v242['properties']['server']['properties']['networks'] = {
         },
         {'type': 'string', 'enum': ['none', 'auto']},
     ]}
+base_create_v242['properties']['server'][
+    'properties']['block_device_mapping_v2']['items'][
+    'properties']['tag'] = parameter_types.tag
 
 
 # 2.52 builds on 2.42 and makes the following changes:
