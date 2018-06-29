@@ -311,13 +311,7 @@ class NetworkCommands(object):
             raise Exception(_("Please specify either fixed_range or uuid"))
 
         net_manager = importutils.import_object(CONF.network_manager)
-        if "NeutronManager" in CONF.network_manager:
-            if uuid is None:
-                raise Exception(_("UUID is required to delete "
-                                  "Neutron Networks"))
-            if fixed_range:
-                raise Exception(_("Deleting by fixed_range is not supported "
-                                "with the NeutronManager"))
+
         # delete the network
         net_manager.delete_network(context.get_admin_context(),
             fixed_range, uuid)
