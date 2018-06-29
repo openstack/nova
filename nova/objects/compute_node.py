@@ -347,7 +347,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                 "vcpus_used", "memory_mb_used", "local_gb_used",
                 "numa_topology", "hypervisor_type",
                 "hypervisor_version", "hypervisor_hostname",
-                "disk_available_least", "host_ip"]
+                "disk_available_least", "host_ip", "uuid"]
         for key in keys:
             if key in resources:
                 setattr(self, key, resources[key])

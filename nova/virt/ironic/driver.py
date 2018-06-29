@@ -314,6 +314,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             local_gb = 0
 
         dic = {
+            'uuid': str(node.uuid),
             'hypervisor_hostname': str(node.uuid),
             'hypervisor_type': self._get_hypervisor_type(),
             'hypervisor_version': self._get_hypervisor_version(),
