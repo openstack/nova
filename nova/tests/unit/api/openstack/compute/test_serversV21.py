@@ -3714,6 +3714,34 @@ class ServersControllerCreateTest(test.TestCase):
         test_group = objects.InstanceGroup.get_by_uuid(ctxt, test_group.uuid)
         self.assertIn(server['id'], test_group.members)
 
+    def _test_create_instance_with_group_hint(self, hint,
+            hint_name='os:scheduler_hints'):
+        def fake_instance_destroy(context, uuid, constraint):
+            return fakes.stub_instance(1)
+
+        def fake_create(*args, **kwargs):
+            self.assertEqual(kwargs['scheduler_hints'], hint)
+            return ([fakes.stub_instance(1)], '')
+
+        self.stub_out('nova.compute.api.API.create', fake_create)
+        self.stub_out('nova.db.instance_destroy', fake_instance_destroy)
+        self.body[hint_name] = hint
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        return self.controller.create(self.req, body=self.body).obj['server']
+
+    def test_create_instance_with_group_hint_legacy(self):
+        self._test_create_instance_with_group_hint(
+            {'different_host': '9c47bf55-e9d8-42da-94ab-7f9e80cd1857'},
+            hint_name='OS-SCH-HNT:scheduler_hints')
+
+    def test_create_server_with_different_host_hint(self):
+        self._test_create_instance_with_group_hint(
+            {'different_host': '9c47bf55-e9d8-42da-94ab-7f9e80cd1857'})
+
+        self._test_create_instance_with_group_hint(
+            {'different_host': ['9c47bf55-e9d8-42da-94ab-7f9e80cd1857',
+                                '82412fa6-0365-43a9-95e4-d8b20e00c0de']})
+
     def test_create_instance_with_group_hint_group_not_found(self):
         def fake_instance_destroy(context, uuid, constraint):
             return fakes.stub_instance(1)
@@ -3728,6 +3756,34 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_group_hint_wrong_uuid_format(self):
         self.body['os:scheduler_hints'] = {
             'group': 'non-uuid'}
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, self.req, body=self.body)
+
+    def test_create_server_bad_hints_non_dict(self):
+        sch_hints = ['os:scheduler_hints', 'OS-SCH-HNT:scheduler_hints']
+        for hint in sch_hints:
+            self.body[hint] = 'non-dict'
+            self.req.body = jsonutils.dump_as_bytes(self.body)
+            self.assertRaises(exception.ValidationError,
+                              self.controller.create, self.req, body=self.body)
+
+    def test_create_server_bad_hints_long_group(self):
+        self.body['os:scheduler_hints'] = {
+            'group': 'a' * 256}
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, self.req, body=self.body)
+
+    def test_create_server_with_bad_different_host_hint(self):
+        self.body['os:scheduler_hints'] = {
+            'different_host': 'non-server-id'}
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, self.req, body=self.body)
+
+        self.body['os:scheduler_hints'] = {
+            'different_host': ['non-server-id01', 'non-server-id02']}
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
                           self.controller.create, self.req, body=self.body)
