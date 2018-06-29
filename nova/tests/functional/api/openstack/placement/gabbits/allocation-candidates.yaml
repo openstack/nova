@@ -325,3 +325,92 @@ tests:
         MEMORY_MB:
           capacity: 196608 # 1.5 * 128G
           used: 0
+
+# Before microversion 1.29, no root/parent uuid is included
+- name: get allocation candidates no root or parent uuid
+  GET: /allocation_candidates?resources=VCPU:1
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.28
+  response_json_paths:
+      $.allocation_requests.`len`: 2
+      $.provider_summaries.`len`: 2
+      $.provider_summaries.["$ENVIRON['CN1_UUID']"].`len`: 2
+      $.provider_summaries.["$ENVIRON['CN2_UUID']"].`len`: 2
+
+- name: get allocation candidates with root and parent uuid
+  GET: /allocation_candidates?resources=VCPU:1
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.29
+  response_json_paths:
+      $.allocation_requests.`len`: 2
+      $.provider_summaries.`len`: 10
+      $.provider_summaries.["$ENVIRON['CN1_UUID']"].`len`: 4
+      $.provider_summaries.["$ENVIRON['CN2_UUID']"].`len`: 4
+      $.provider_summaries.["$ENVIRON['CN1_UUID']"].parent_provider_uuid: null
+      $.provider_summaries.["$ENVIRON['CN1_UUID']"].root_provider_uuid: "$ENVIRON['CN1_UUID']"
+      $.provider_summaries.["$ENVIRON['NUMA1_1_UUID']"].parent_provider_uuid: "$ENVIRON['CN1_UUID']"
+      $.provider_summaries.["$ENVIRON['NUMA1_1_UUID']"].root_provider_uuid: "$ENVIRON['CN1_UUID']"
+      $.provider_summaries.["$ENVIRON['NUMA1_2_UUID']"].parent_provider_uuid: "$ENVIRON['CN1_UUID']"
+      $.provider_summaries.["$ENVIRON['NUMA1_2_UUID']"].root_provider_uuid: "$ENVIRON['CN1_UUID']"
+      $.provider_summaries.["$ENVIRON['PF1_1_UUID']"].parent_provider_uuid: "$ENVIRON['NUMA1_1_UUID']"
+      $.provider_summaries.["$ENVIRON['PF1_1_UUID']"].root_provider_uuid: "$ENVIRON['CN1_UUID']"
+      $.provider_summaries.["$ENVIRON['PF1_2_UUID']"].parent_provider_uuid: "$ENVIRON['NUMA1_2_UUID']"
+      $.provider_summaries.["$ENVIRON['PF1_2_UUID']"].root_provider_uuid: "$ENVIRON['CN1_UUID']"
+
+# Before microversion 1.29, it isn't aware of nested providers.
+# Namely, it can return non-root providers for allocation candidates,
+- name: get allocation candidates only nested provider old microversion
+  GET: /allocation_candidates?resources=SRIOV_NET_VF:4
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.28
+  response_json_paths:
+      $.allocation_requests.`len`: 4
+      $.provider_summaries.`len`: 4
+
+- name: get allocation candidates only nested provider new microversion
+  GET: /allocation_candidates?resources=SRIOV_NET_VF:4
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.29
+  response_json_paths:
+      $.allocation_requests.`len`: 4
+      $.provider_summaries.`len`: 10
+
+# ...but it can't return combinations of providers in a tree.
+- name: get allocation candidates root and nested old microversion
+  GET: /allocation_candidates?resources=VCPU:1,SRIOV_NET_VF:4
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.28
+  response_json_paths:
+      $.allocation_requests.`len`: 0
+      $.provider_summaries.`len`: 0
+
+- name: get allocation candidates root and nested new microversion
+  GET: /allocation_candidates?resources=VCPU:1,SRIOV_NET_VF:4
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.29
+  response_json_paths:
+      $.allocation_requests.`len`: 4
+      $.provider_summaries.`len`: 10
+      $.allocation_requests..allocations["$ENVIRON['CN1_UUID']"].resources.VCPU: [1, 1]
+      $.allocation_requests..allocations["$ENVIRON['PF1_1_UUID']"].resources.SRIOV_NET_VF: 4
+      $.allocation_requests..allocations["$ENVIRON['PF1_2_UUID']"].resources.SRIOV_NET_VF: 4
+      $.allocation_requests..allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: [1, 1]
+      $.allocation_requests..allocations["$ENVIRON['PF2_1_UUID']"].resources.SRIOV_NET_VF: 4
+      $.allocation_requests..allocations["$ENVIRON['PF2_2_UUID']"].resources.SRIOV_NET_VF: 4
+
+# Make sure that old microversions can return combinations where
+# sharing providers are involved
+- name: get allocation candidates shared and nested old microversion
+  GET: /allocation_candidates?resources=DISK_GB:10,SRIOV_NET_VF:4
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.28
+  response_json_paths:
+      $.allocation_requests.`len`: 4
+      $.provider_summaries.`len`: 5

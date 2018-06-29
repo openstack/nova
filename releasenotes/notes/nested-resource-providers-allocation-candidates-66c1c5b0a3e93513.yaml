@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    From microversion 1.29, we support allocation candidates with nested
+    resource providers. Namely, the following features are added.
+    1) ``GET /allocation_candidates`` is aware of nested providers. Namely,
+    when provider trees are present, ``allocation_requests`` in the response
+    of ``GET /allocation_candidates`` can include allocations on combinations
+    of multiple resource providers in the same tree.
+    2) ``root_provider_uuid`` and ``parent_provider_uuid`` are added to
+    ``provider_summaries`` in the response of ``GET /allocation_candidates``.

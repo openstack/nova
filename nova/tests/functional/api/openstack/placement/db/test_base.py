@@ -26,6 +26,21 @@ from nova.tests import fixtures
 from nova.tests import uuidsentinel as uuids
 
 
+def create_provider(context, name, *aggs, **kwargs):
+    parent = kwargs.get('parent')
+    root = kwargs.get('root')
+    uuid = kwargs.get('uuid', getattr(uuids, name))
+    rp = rp_obj.ResourceProvider(context, name=name, uuid=uuid)
+    if parent:
+        rp.parent_provider_uuid = parent
+    if root:
+        rp.root_provider_uuid = root
+    rp.create()
+    if aggs:
+        rp.set_aggregates(aggs)
+    return rp
+
+
 def add_inventory(rp, rc, total, **kwargs):
     kwargs.setdefault('max_unit', total)
     inv = rp_obj.Inventory(rp._context, resource_provider=rp,
@@ -69,17 +84,7 @@ class PlacementDbBaseTestCase(test.NoDBTestCase):
         self.rp_uuid_to_name = {}
 
     def _create_provider(self, name, *aggs, **kwargs):
-        parent = kwargs.get('parent')
-        root = kwargs.get('root')
-        uuid = kwargs.get('uuid', getattr(uuids, name))
-        rp = rp_obj.ResourceProvider(self.ctx, name=name, uuid=uuid)
-        if parent:
-            rp.parent_provider_uuid = parent
-        if root:
-            rp.root_provider_uuid = root
-        rp.create()
-        if aggs:
-            rp.set_aggregates(aggs)
+        rp = create_provider(self.ctx, name, *aggs, **kwargs)
         self.rp_uuid_to_name[rp.uuid] = name
         return rp
 
