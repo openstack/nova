@@ -1174,7 +1174,7 @@ def get_stats_from_cluster(session, cluster):
     prop_dict = session._call_method(vutil,
                                      "get_object_properties_dict",
                                      cluster,
-                                     ["host", "resourcePool"])
+                                     ["host"])
     if prop_dict:
         host_ret = prop_dict.get('host')
         if host_ret:
