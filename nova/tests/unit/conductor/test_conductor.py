@@ -424,7 +424,7 @@ class _BaseTaskTestCase(object):
         """Tests creating two instances and the scheduler returns a unique
         host/node combo for each instance.
         """
-        fake_spec = objects.RequestSpec
+        fake_spec = objects.RequestSpec()
         mock_fp.return_value = fake_spec
         instance_type = flavors.get_default_flavor()
         # NOTE(danms): Avoid datetime timezone issues with converted flavors
