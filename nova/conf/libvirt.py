@@ -661,9 +661,19 @@ Possible cache modes:
   mode in production environments.
 """),
     cfg.StrOpt('rng_dev_path',
-               help='A path to a device that will be used as source of '
-                    'entropy on the host. Permitted options are: '
-                    '/dev/random or /dev/hwrng'),
+               default='/dev/urandom',
+               help="""
+The path to an RNG (Random Number Generator) device that will be used as
+the source of entropy on the host.  Since libvirt 1.3.4, any path (that
+returns random numbers when read) is accepted.  The recommended source
+of entropy is ``/dev/urandom`` -- it is non-blocking, therefore
+relatively fast; and avoids the limitations of ``/dev/random``, which is
+a legacy interface.  For more details (and comparision between different
+RNG sources), refer to the "Usage" section in the Linux kernel API
+documentation for ``[u]random``:
+http://man7.org/linux/man-pages/man4/urandom.4.html and
+http://man7.org/linux/man-pages/man7/random.7.html.
+"""),
     cfg.ListOpt('hw_machine_type',
                 help='For qemu or KVM guests, set this option to specify '
                      'a default machine type per host architecture. '
