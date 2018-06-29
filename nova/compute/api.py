@@ -3272,9 +3272,9 @@ class API(base.Base):
                                                               overs,
                                                               quotas,
                                                               deltas)
-                LOG.warning("%(overs)s quota exceeded for %(pid)s,"
-                            " tried to resize instance.",
-                            {'overs': overs, 'pid': context.project_id})
+                LOG.info("%(overs)s quota exceeded for %(pid)s,"
+                         " tried to resize instance.",
+                         {'overs': overs, 'pid': context.project_id})
                 raise exception.TooManyInstances(overs=overs,
                                                  req=reqs,
                                                  used=useds,
