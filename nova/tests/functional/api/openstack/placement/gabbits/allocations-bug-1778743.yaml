@@ -1,5 +1,5 @@
 # Test to see if capacity check in POST allocations works as expected.
-# It does not, due to bug 1778743.
+# It did not, due to bug 1778743, but it is now fixed.
 
 
 fixtures:
@@ -7,7 +7,8 @@ fixtures:
 
 defaults:
     request_headers:
-        openstack-api-version: placement latest
+        # 1.28 provides consumer generation in allocations
+        openstack-api-version: placement 1.28
         x-auth-token: admin
         content-type: application/json
         accept: application/json
@@ -29,7 +30,7 @@ tests:
               total: 2
 
 - name: post multiple allocations
-  desc: this should fail because we're allocating 3 VCPU!
+  desc: this should 409 because we're allocating 3 VCPU!
   POST: /allocations
   data:
       a6ace019-f230-4dcc-8a76-36d27b9c2257:
@@ -56,15 +57,12 @@ tests:
           project_id: a2cec092-0f67-42ed-b870-f3925cc5c6d4
           user_id: d28385b2-7860-4055-b32d-4cd1057cd5f2
           consumer_generation: null
-  # we expect 409 but are getting 204
-  # status: 409
-  status: 204
+  status: 409
 
 - name: check usage
   GET: /resource_providers/4e05a85b-e8a6-4b3a-82c1-5f6ad3f71d55/usages
   response_json_paths:
-      # this ought to be impossible
-      $.usages.VCPU: 3
+      $.usages.VCPU: 0
 
 - name: check inventory
   GET: /resource_providers/4e05a85b-e8a6-4b3a-82c1-5f6ad3f71d55/inventories
