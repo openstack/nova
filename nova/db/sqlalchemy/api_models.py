@@ -12,6 +12,7 @@
 
 
 from oslo_db.sqlalchemy import models
+from oslo_log import log as logging
 from sqlalchemy import Boolean
 from sqlalchemy import Column
 from sqlalchemy import DateTime
@@ -28,6 +29,8 @@ from sqlalchemy import schema
 from sqlalchemy import String
 from sqlalchemy import Text
 from sqlalchemy import Unicode
+
+LOG = logging.getLogger(__name__)
 
 
 def MediumText():
@@ -441,6 +444,16 @@ class InstanceGroup(API_BASE):
             primaryjoin='InstanceGroup.id == InstanceGroupPolicy.group_id')
     _members = orm.relationship(InstanceGroupMember,
             primaryjoin='InstanceGroup.id == InstanceGroupMember.group_id')
+
+    @property
+    def policy(self):
+        if len(self._policies) not in (0, 1):
+            msg = ("More than one policy (%(policies)s) is associated with "
+                   "group %(group_name)s, only the first one in the list "
+                   "would be returned.")
+            LOG.warning(msg, {"policies": [p.policy for p in self._policies],
+                              "group_name": self.name})
+        return self._policies[0] if self._policies else None
 
     @property
     def policies(self):

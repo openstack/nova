@@ -68,17 +68,6 @@ def _instance_group_model_add(context, model_class, items, item_models, field,
     return models
 
 
-def _instance_group_policies_add(context, group, policies):
-    query = _instance_group_model_get_query(context,
-                                            api_models.InstanceGroupPolicy,
-                                            group.id)
-    query = query.filter(
-                api_models.InstanceGroupPolicy.policy.in_(set(policies)))
-    return _instance_group_model_add(context, api_models.InstanceGroupPolicy,
-                                     policies, query.all(), 'policy', group.id,
-                                     append_to_models=group._policies)
-
-
 def _instance_group_members_add(context, group, members):
     query = _instance_group_model_get_query(context,
                                             api_models.InstanceGroupMember,
@@ -132,7 +121,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         'uuid': fields.UUIDField(),
         'name': fields.StringField(nullable=True),
 
-        'policies': fields.ListOfStringsField(nullable=True),
+        'policies': fields.ListOfStringsField(nullable=True, read_only=True),
         'members': fields.ListOfStringsField(nullable=True),
         'hosts': fields.ListOfStringsField(nullable=True),
         }
@@ -214,13 +203,10 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
     def _save_in_db(context, group_uuid, values):
         grp = InstanceGroup._get_from_db_by_uuid(context, group_uuid)
         values_copy = copy.copy(values)
-        policies = values_copy.pop('policies', None)
         members = values_copy.pop('members', None)
 
         grp.update(values_copy)
 
-        if policies is not None:
-            _instance_group_policies_add(context, grp, policies)
         if members is not None:
             _instance_group_members_add(context, grp, members)
 
@@ -237,8 +223,10 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
             raise exception.InstanceGroupIdExists(group_uuid=values['uuid'])
 
         if policies:
-            group._policies = _instance_group_policies_add(context, group,
-                                                           policies)
+            policy = api_models.InstanceGroupPolicy(
+                group_id=group['id'], policy=policies[0], rules=None)
+            group._policies = [policy]
+            group.save(context.session)
         else:
             group._policies = []
 
@@ -334,6 +322,12 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         # the field.
         if 'hosts' in updates:
             raise exception.InstanceGroupSaveException(field='hosts')
+
+        # NOTE(yikun): You have to provide exactly one policy on group create,
+        # and also there are no group update APIs, so we do NOT support
+        # policies update.
+        if 'policies' in updates:
+            raise exception.InstanceGroupSaveException(field='policies')
 
         if not updates:
             return

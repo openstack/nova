@@ -16,6 +16,7 @@ import copy
 
 import mock
 from oslo_utils import timeutils
+from oslo_versionedobjects import exception as ovo_exc
 
 from nova import exception
 from nova import objects
@@ -35,7 +36,8 @@ _INST_GROUP_DB = {
     'user_id': 'fake_user',
     'project_id': 'fake_project',
     'name': 'fake_name',
-    'policies': ['policy1', 'policy2'],
+    # a group can only have 1 policy associated with it
+    'policies': ['policy1'],
     'members': ['instance_id1', 'instance_id2'],
     'created_at': _TS_NOW,
     'updated_at': _TS_NOW
@@ -79,10 +81,8 @@ class _TestInstanceGroupObject(object):
 
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
     @mock.patch('nova.objects.InstanceGroup._get_from_db_by_uuid')
-    @mock.patch('nova.objects.instance_group._instance_group_policies_add')
     @mock.patch('nova.objects.instance_group._instance_group_members_add')
-    def test_save(self, mock_members_add, mock_policies_add, mock_db_get,
-                  mock_notify):
+    def test_save(self, mock_members_add, mock_db_get, mock_notify):
         changed_group = copy.deepcopy(_INST_GROUP_DB)
         changed_group['name'] = 'new_name'
         db_group = copy.deepcopy(_INST_GROUP_DB)
@@ -91,18 +91,14 @@ class _TestInstanceGroupObject(object):
         self.assertEqual(obj.name, 'fake_name')
         obj.obj_reset_changes()
         obj.name = 'new_name'
-        obj.policies = ['policy1']  # Remove policy 2
         obj.members = ['instance_id1']  # Remove member 2
         obj.save()
         self.assertEqual(set([]), obj.obj_what_changed())
-        mock_policies_add.assert_called_once_with(
-            self.context, mock_db_get.return_value, ['policy1'])
         mock_members_add.assert_called_once_with(
             self.context, mock_db_get.return_value, ['instance_id1'])
         mock_notify.assert_called_once_with(self.context, "update",
                                                {'name': 'new_name',
                                                 'members': ['instance_id1'],
-                                                'policies': ['policy1'],
                                                 'server_group_id': _DB_UUID})
 
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
@@ -119,6 +115,18 @@ class _TestInstanceGroupObject(object):
         obj.save()
         # since hosts was the only update, there is no actual call
         self.assertFalse(mock_notify.called)
+
+    def test_set_policies_failure(self):
+        group_obj = objects.InstanceGroup(context=self.context,
+                                          policies=['affinity'])
+        self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
+                          group_obj, 'policies', ['anti-affinity'])
+
+    def test_save_policies(self):
+        group_obj = objects.InstanceGroup(context=self.context)
+        group_obj.policies = ['fake-host1']
+        self.assertRaises(exception.InstanceGroupSaveException,
+                          group_obj.save)
 
     @mock.patch('nova.compute.utils.notify_about_server_group_action')
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
