@@ -27,18 +27,10 @@ class LibvirtReportTraitsTests(integrated_helpers.ProviderUsageBaseTestCase):
 
     def setUp(self):
         super(LibvirtReportTraitsTests, self).setUp()
-        self.useFixture(fixtures.MonkeyPatch(
-                        'nova.virt.libvirt.driver.libvirt',
-                        fakelibvirt))
-        self.useFixture(fixtures.MonkeyPatch('nova.virt.libvirt.host.libvirt',
-                        fakelibvirt))
+        self.useFixture(fakelibvirt.FakeLibvirtFixture(stub_os_vif=False))
         self.useFixture(
             fixtures.MockPatch(
                 'nova.virt.libvirt.driver.LibvirtDriver.init_host'))
-
-        self.useFixture(
-            fixtures.MockPatch('nova.virt.libvirt.utils.get_fs_info'))
-
         self.assertEqual([], self._get_all_providers())
         self.compute = self._start_compute(CONF.host)
         nodename = self.compute.manager._get_nodename(None)
