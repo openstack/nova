@@ -1437,11 +1437,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_node.validate.return_value = ironic_utils.get_test_validation()
         image_meta = ironic_utils.get_test_image_meta()
 
-        class TestException(Exception):
-            pass
-
-        mock_sf.side_effect = TestException()
-        self.assertRaises(TestException, self.driver.spawn,
+        mock_sf.side_effect = test.TestingException()
+        self.assertRaises(test.TestingException, self.driver.spawn,
                           self.ctx, instance, image_meta, [], None, {})
 
         mock_node.get.assert_called_once_with(
@@ -1469,13 +1466,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_node.validate.return_value = ironic_utils.get_test_validation()
         image_meta = ironic_utils.get_test_image_meta()
 
-        class TestException(Exception):
-            pass
-
-        mock_configdrive.side_effect = TestException()
+        mock_configdrive.side_effect = test.TestingException()
         with mock.patch.object(self.driver, '_cleanup_deploy',
                                autospec=True) as mock_cleanup_deploy:
-            self.assertRaises(TestException, self.driver.spawn,
+            self.assertRaises(test.TestingException, self.driver.spawn,
                               self.ctx, instance, image_meta, [], None, {})
 
         mock_node.get.assert_called_once_with(
