@@ -564,7 +564,8 @@ class ServersController(wsgi.Controller):
         except exception.ConfigDriveInvalidValue:
             msg = _("Invalid config_drive provided.")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.ExternalNetworkAttachForbidden as error:
+        except (exception.BootFromVolumeRequiredForZeroDiskFlavor,
+                exception.ExternalNetworkAttachForbidden) as error:
             raise exc.HTTPForbidden(explanation=error.format_message())
         except messaging.RemoteError as err:
             msg = "%(err_type)s: %(err_msg)s" % {'err_type': err.exc_type,

@@ -1359,6 +1359,11 @@ class VolumeSmallerThanMinDisk(FlavorDiskTooSmall):
                 "size is %(image_min_disk)i bytes.")
 
 
+class BootFromVolumeRequiredForZeroDiskFlavor(Forbidden):
+    msg_fmt = _("Only volume-backed servers are allowed for flavors with "
+                "zero disk.")
+
+
 class InsufficientFreeMemory(NovaException):
     msg_fmt = _("Insufficient free memory on compute node to start %(uuid)s.")
 
