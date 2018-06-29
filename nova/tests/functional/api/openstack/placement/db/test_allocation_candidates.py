@@ -1741,6 +1741,119 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         }
         self._validate_provider_summary_resources(expected, alloc_cands)
 
+    def test_two_sharing_indirectly_connected_connecting_not_give_resource(
+            self):
+        # This covers the following setup
+        #        CN1 (VCPU, MEMORY_MB)
+        #        /      \
+        #       /agg1    \agg2
+        #      /          \
+        #     SS1 (      SS2 (
+        #      DISK_GB)   IPV4_ADDRESS
+        #                 SRIOV_NET_VF)
+        # The request then made for resources from the sharing RPs only
+
+        ss1 = self._create_provider('ss1', uuids.agg1)
+        tb.set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
+
+        cn1 = self._create_provider('cn1', uuids.agg1, uuids.agg2)
+        tb.add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+
+        ss2 = self._create_provider('ss2', uuids.agg2)
+        tb.set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss2, fields.ResourceClass.IPV4_ADDRESS, 24)
+        tb.add_inventory(ss2, fields.ResourceClass.SRIOV_NET_VF, 16)
+
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'IPV4_ADDRESS': 2,
+                    'SRIOV_NET_VF': 1,
+                    'DISK_GB': 1500,
+                }
+            )}
+        )
+
+        expected = [
+            [('ss1', fields.ResourceClass.DISK_GB, 1500),
+             ('ss2', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss2', fields.ResourceClass.SRIOV_NET_VF, 1)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'ss1': set([
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+            'ss2': set([
+                (fields.ResourceClass.IPV4_ADDRESS, 24, 0),
+                (fields.ResourceClass.SRIOV_NET_VF, 16, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
+    def test_two_sharing_indirectly_connected_connecting_gives_resource(self):
+        # This covers the following setup
+        #        CN1 (VCPU, MEMORY_MB)
+        #        /      \
+        #       /agg1    \agg2
+        #      /          \
+        #     SS1 (      SS2 (
+        #      DISK_GB)   IPV4_ADDRESS
+        #                 SRIOV_NET_VF)
+        # The request then made for resources from all three RPs
+
+        ss1 = self._create_provider('ss1', uuids.agg1)
+        tb.set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
+
+        cn1 = self._create_provider('cn1', uuids.agg1, uuids.agg2)
+        tb.add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+
+        ss2 = self._create_provider('ss2', uuids.agg2)
+        tb.set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss2, fields.ResourceClass.IPV4_ADDRESS, 24)
+        tb.add_inventory(ss2, fields.ResourceClass.SRIOV_NET_VF, 16)
+
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'VCPU': 2,
+                    'IPV4_ADDRESS': 2,
+                    'SRIOV_NET_VF': 1,
+                    'DISK_GB': 1500,
+                }
+            )}
+        )
+
+        expected = [
+            [('cn1', fields.ResourceClass.VCPU, 2),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500),
+             ('ss2', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss2', fields.ResourceClass.SRIOV_NET_VF, 1)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
+            ]),
+            'ss1': set([
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+            'ss2': set([
+                (fields.ResourceClass.IPV4_ADDRESS, 24, 0),
+                (fields.ResourceClass.SRIOV_NET_VF, 16, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
     def test_simple_tree_of_providers(self):
         """Tests that we properly winnow allocation requests when including
         traits in the request group and that the traits appear in the provider
