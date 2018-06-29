@@ -26,7 +26,7 @@ requirements for the compute host and image.
 **Compute host requirements**
 
 -  The following hypervisors support the configuration drive: libvirt,
-   XenServer, Hyper-V, and VMware.
+   XenServer, Hyper-V, VMware, and (since 17.0.0 Queens) PowerVM.
 
    Also, the Bare Metal service supports the configuration drive.
 
@@ -44,9 +44,9 @@ requirements for the compute host and image.
    in the ``hyperv`` configuration section to the full path to an
    :command:`qemu-img` command installation.
 
--  To use configuration drive with the Bare Metal service,
-   you do not need to prepare anything because the Bare Metal
-   service treats the configuration drive properly.
+-  To use configuration drive with PowerVM or the Bare Metal service,
+   you do not need to prepare anything because these treat the configuration
+   drive properly.
 
 **Image requirements**
 
