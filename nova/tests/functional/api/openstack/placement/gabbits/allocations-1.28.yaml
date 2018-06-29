@@ -50,6 +50,21 @@ tests:
   response_strings:
     - JSON does not validate
 
+- name: new version gen is not null no existing
+  PUT: /allocations/22222222-2222-2222-2222-222222222222
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+            resources:
+              DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+      consumer_generation: 5
+  status: 409
+  response_strings:
+    - consumer generation conflict
+    - expected null but got 5
+
 - name: new version gen is None no existing
   PUT: /allocations/22222222-2222-2222-2222-222222222222
   data:
