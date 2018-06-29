@@ -134,9 +134,8 @@ base_create = {
                 'block_device_mapping_v2': {
                     'type': 'array',
                     'items': block_device_mapping_v2
-                }
-
-
+                },
+                'config_drive': parameter_types.boolean,
             },
             'required': ['name', 'flavorRef'],
             'additionalProperties': False,

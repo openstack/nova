@@ -15,8 +15,6 @@
 
 """Config Drive extension."""
 
-from nova.api.openstack.compute.schemas import config_drive as \
-                                                  schema_config_drive
 from nova.api.openstack import wsgi
 from nova.policies import config_drive as cd_policies
 
@@ -56,7 +54,3 @@ class ConfigDriveController(wsgi.Controller):
 # parameter as this is placed to handle scheduler_hint extension for V2.1.
 def server_create(server_dict, create_kwargs, body_deprecated_param):
     create_kwargs['config_drive'] = server_dict.get(ATTRIBUTE_NAME)
-
-
-def get_server_create_schema(version):
-    return schema_config_drive.server_create
