@@ -125,11 +125,18 @@ Nova API Database
 ~~~~~~~~~~~~~~~~~
 
 ``nova-manage api_db version``
-    Print the current cells api database version.
+    Print the current API database version.
 
-``nova-manage api_db sync``
-    Sync the api cells database up to the most recent version. This is the
-    standard way to create the db as well.
+``nova-manage api_db sync [VERSION]``
+    Upgrade the API database schema up to the most recent version or
+    ``[VERSION]`` if specified. This command does not create the API
+    database, it runs schema migration scripts. The API database connection is
+    determined by ``[api_database]/connection`` in the configuration file
+    passed to nova-manage.
+
+    Starting in the 18.0.0 Rocky release, this command will also upgrade the
+    optional placement database if ``[placement_database]/connection`` is
+    configured.
 
 .. _man-page-cells-v2:
 
