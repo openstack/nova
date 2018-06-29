@@ -14,7 +14,7 @@
 
 import copy
 
-from nova.api.openstack.compute.schemas import block_device_mapping_v1
+from nova.api.openstack.compute.schemas import servers
 from nova.api.validation import parameter_types
 
 
@@ -61,7 +61,7 @@ block_device_mapping_new_item = {
 }
 
 block_device_mapping = copy.deepcopy(
-                        block_device_mapping_v1.legacy_block_device_mapping)
+                        servers.legacy_block_device_mapping)
 block_device_mapping['properties'].update(block_device_mapping_new_item)
 
 server_create = {
