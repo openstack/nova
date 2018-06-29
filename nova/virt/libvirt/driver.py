@@ -10039,7 +10039,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
-                         block_device_info=None, power_on=True):
+                         allocations, block_device_info=None, power_on=True):
         LOG.debug("Starting finish_migration", instance=instance)
 
         block_disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,

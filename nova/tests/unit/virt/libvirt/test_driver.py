@@ -21443,7 +21443,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.drvr.finish_migration(
                       context.get_admin_context(), migration, instance,
                       disk_info_text, [], image_meta,
-                      resize_instance, bdi, power_on)
+                      resize_instance, mock.ANY, bdi, power_on)
 
         # Assert that we converted the root, ephemeral, and swap disks
         instance_path = libvirt_utils.get_instance_path(instance)
