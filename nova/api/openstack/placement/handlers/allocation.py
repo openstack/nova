@@ -159,7 +159,7 @@ def create_allocation_list(context, data, want_version):
     """Create an AllocationList based on provided data.
 
     :param context: The placement context.
-    :param data: A dictionary of multiples allocations by consumer uuid.
+    :param data: A dictionary of multiple allocations by consumer uuid.
     :param want_version: The desired microversion, which controls how
                          consumer generations are handled.
     :return: An AllocationList.
