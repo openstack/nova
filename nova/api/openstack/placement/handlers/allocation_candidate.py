@@ -116,15 +116,14 @@ def _transform_allocation_requests_list(alloc_reqs):
     return results
 
 
-def _transform_provider_summaries(p_sums, requests, include_traits=False,
-                                  include_all_resources=False,
-                                  enable_nested_providers=False):
+def _transform_provider_summaries(p_sums, requests, want_version):
     """Turn supplied list of ProviderSummary objects into a dict, keyed by
     resource provider UUID, of dicts of provider and inventory information.
-    The traits only show up when `include_traits` is `True`.
-    When `include_all_resources` is `True`, all the resource classes are
-    shown while only requested resources are included in the
-    `provider_summaries` when `include_all_resources` is `False`.
+    The traits only show up when `want_version` is 1.17 or newer. All the
+    resource classes are shown when `want_version` is 1.27 or newer while
+    only requested resources are included in the `provider_summaries`
+    for older versions. The parent and root provider uuids only show up
+    when `want_version` is 1.29 or newer.
 
     {
        RP_UUID_1: {
@@ -138,10 +137,12 @@ def _transform_provider_summaries(p_sums, requests, include_traits=False,
                 'used': 0,
               }
            },
+           # traits shows up from microversion 1.17
            'traits': [
                 'HW_CPU_X86_AVX512F',
                 'HW_CPU_X86_AVX512CD'
            ]
+           # parent/root provider uuids show up from microversion 1.29
            parent_provider_uuid: null,
            root_provider_uuid: RP_UUID_1
        },
@@ -156,21 +157,26 @@ def _transform_provider_summaries(p_sums, requests, include_traits=False,
                 'used': 0,
               }
            },
+           # traits shows up from microversion 1.17
            'traits': [
                 'HW_NIC_OFFLOAD_TSO',
                 'HW_NIC_OFFLOAD_GRO'
            ],
+           # parent/root provider uuids show up from microversion 1.29
            parent_provider_uuid: null,
            root_provider_uuid: RP_UUID_2
        }
     }
     """
+    include_traits = want_version.matches((1, 17))
+    include_all_resources = want_version.matches((1, 27))
+    enable_nested_providers = want_version.matches((1, 29))
 
     ret = {}
     requested_resources = set()
 
     for requested_group in requests.values():
-        requested_resources |= set(requested_group.resources.keys())
+        requested_resources |= set(requested_group.resources)
 
     # if include_all_resources is false, only requested resources are
     # included in the provider_summaries.
@@ -243,8 +249,7 @@ def _transform_allocation_candidates(alloc_cands, requests, want_version):
     }
     """
     # exclude nested providers with old microversions
-    enable_nested_providers = want_version.matches((1, 29))
-    if not enable_nested_providers:
+    if not want_version.matches((1, 29)):
         alloc_cands = _exclude_nested_providers(alloc_cands)
 
     if want_version.matches((1, 12)):
@@ -254,13 +259,8 @@ def _transform_allocation_candidates(alloc_cands, requests, want_version):
         a_reqs = _transform_allocation_requests_list(
             alloc_cands.allocation_requests)
 
-    include_traits = want_version.matches((1, 17))
-    include_all_resources = want_version.matches((1, 27))
     p_sums = _transform_provider_summaries(
-        alloc_cands.provider_summaries, requests,
-        include_traits=include_traits,
-        include_all_resources=include_all_resources,
-        enable_nested_providers=enable_nested_providers)
+        alloc_cands.provider_summaries, requests, want_version)
 
     return {
         'allocation_requests': a_reqs,
