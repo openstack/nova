@@ -232,7 +232,7 @@ class _TestRequestSpecObject(object):
         spec = objects.RequestSpec()
         spec._populate_group_info(filt_props)
         self.assertIsInstance(spec.instance_group, objects.InstanceGroup)
-        self.assertEqual(['affinity'], spec.instance_group.policies)
+        self.assertEqual('affinity', spec.instance_group.policy)
         self.assertEqual(['fake1'], spec.instance_group.hosts)
         self.assertEqual(['fake-instance1'], spec.instance_group.members)
 
