@@ -487,7 +487,7 @@ class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
         for vdi_ref in [vdi_1, vdi_2]:
             fake.create_vbd(vm_ref, vdi_ref)
 
-        stubs.stubout_session(self.stubs, fake.SessionBase)
+        stubs.stubout_session(self, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
 
         result = list(vm_utils.get_instance_vdis_for_sr(
@@ -499,7 +499,7 @@ class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
         vm_ref = fake.create_vm("foo", "Running")
         sr_ref = fake.create_sr()
 
-        stubs.stubout_session(self.stubs, fake.SessionBase)
+        stubs.stubout_session(self, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
 
         result = list(vm_utils.get_instance_vdis_for_sr(
@@ -545,7 +545,7 @@ class VMRefOrRaiseVMNotFoundTestCase(VMUtilsTestBase):
 class CreateCachedImageTestCase(VMUtilsTestBase):
     def setUp(self):
         super(CreateCachedImageTestCase, self).setUp()
-        self.session = stubs.get_fake_session()
+        self.session = self.get_fake_session()
 
     @mock.patch.object(vm_utils, '_clone_vdi', return_value='new_vdi_ref')
     def test_cached(self, mock_clone_vdi, mock_safe_find_sr):
@@ -598,7 +598,7 @@ class CreateCachedImageTestCase(VMUtilsTestBase):
 class DestroyCachedImageTestCase(VMUtilsTestBase):
     def setUp(self):
         super(DestroyCachedImageTestCase, self).setUp()
-        self.session = stubs.get_fake_session()
+        self.session = self.get_fake_session()
 
     @mock.patch.object(vm_utils, '_find_cached_images')
     @mock.patch.object(vm_utils, 'destroy_vdi')
@@ -791,7 +791,7 @@ class CreateVBDTestCase(VMUtilsTestBase):
 class UnplugVbdTestCase(VMUtilsTestBase):
     @mock.patch.object(greenthread, 'sleep')
     def test_unplug_vbd_works(self, mock_sleep):
-        session = stubs.get_fake_session()
+        session = self.get_fake_session()
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
@@ -801,7 +801,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self.assertEqual(0, mock_sleep.call_count)
 
     def test_unplug_vbd_raises_unexpected_error(self):
-        session = stubs.get_fake_session()
+        session = self.get_fake_session()
         session.XenAPI.Failure = fake.Failure
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
@@ -813,7 +813,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
 
     def test_unplug_vbd_already_detached_works(self):
         error = "DEVICE_ALREADY_DETACHED"
-        session = stubs.get_fake_session(error)
+        session = self.get_fake_session(error)
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
@@ -821,7 +821,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self.assertEqual(1, session.call_xenapi.call_count)
 
     def test_unplug_vbd_already_raises_unexpected_xenapi_error(self):
-        session = stubs.get_fake_session("")
+        session = self.get_fake_session("")
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
@@ -830,7 +830,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self.assertEqual(1, session.call_xenapi.call_count)
 
     def _test_uplug_vbd_retries(self, mock_sleep, error):
-        session = stubs.get_fake_session(error)
+        session = self.get_fake_session(error)
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
@@ -841,7 +841,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self.assertEqual(10, mock_sleep.call_count)
 
     def _test_uplug_vbd_retries_with_neg_val(self):
-        session = stubs.get_fake_session()
+        session = self.get_fake_session()
         self.flags(num_vbd_unplug_retries=-1, group='xenserver')
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
@@ -971,7 +971,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                                             mock_create_vdi, mock_findsr,
                                             mock_dom0ref, mock_mkfs,
                                             mock_attached_here):
-        session = stubs.get_fake_session()
+        session = self.get_fake_session()
         vdi_ref = mock.MagicMock()
         mock_attached_here.return_value = vdi_ref
 
@@ -998,7 +998,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                                 mock_create_vdi,
                                 mock_findsr, mock_dom0ref, mock_mkfs,
                                 mock_attached_here):
-        session = stubs.get_fake_session()
+        session = self.get_fake_session()
         vdi_dev = mock.MagicMock()
         mock_attached_here.return_value = vdi_dev
         vdi_dev.__enter__.return_value = 'fakedev'
@@ -1031,7 +1031,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                                      mock_create_vdi, mock_findsr,
                                      mock_dom0ref, mock_mkfs,
                                      mock_attached_here):
-        session = stubs.get_fake_session()
+        session = self.get_fake_session()
         vdi_ref = mock.MagicMock()
         mock_attached_here.return_value = vdi_ref
         instance = {'uuid': 'fake_uuid'}
@@ -1062,7 +1062,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                                                  mock_dom0ref,
                                                  mock_create_vdi,
                                                  mock_findsr):
-        session = stubs.get_fake_session()
+        session = self.get_fake_session()
         instance = {'uuid': 'fake_uuid'}
 
         self.assertRaises(test.TestingException, vm_utils._generate_disk,
@@ -1081,7 +1081,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                                               mock_attached_here,
                                               mock_create_vdi,
                                               mock_findsr):
-        session = stubs.get_fake_session()
+        session = self.get_fake_session()
         vdi_ref = mock.MagicMock()
         mock_attached_here.return_value = vdi_ref
         instance = {'uuid': 'fake_uuid'}
@@ -1243,7 +1243,7 @@ class VMUtilsSRPath(VMUtilsTestBase):
         self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
-        stubs.stubout_session(self.stubs, fake.SessionBase)
+        stubs.stubout_session(self, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
         self.session = driver._session
         self.session.is_local_connection = False
@@ -1447,7 +1447,7 @@ class ScanSrTestCase(VMUtilsTestBase):
 class CreateVmTestCase(VMUtilsTestBase):
     def test_vss_provider(self, mock_extract):
         self.flags(vcpu_pin_set="2,3")
-        session = stubs.get_fake_session()
+        session = self.get_fake_session()
         instance = objects.Instance(uuid=uuids.nova_uuid,
                                     os_type="windows",
                                     system_metadata={})
@@ -2113,7 +2113,7 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
 
     def _test_create_vm_record(self, mock_extract_flavor, instance,
                                is_viridian):
-        session = stubs.get_fake_session()
+        session = self.get_fake_session()
         flavor = {"memory_mb": 1024, "vcpus": 1, "vcpu_weight": 2}
         mock_extract_flavor.return_value = flavor
 
@@ -2179,7 +2179,7 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
         fake.create_vm("foo1", "Halted")
         vm_ref = fake.create_vm("foo2", "Running")
 
-        stubs.stubout_session(self.stubs, fake.SessionBase)
+        stubs.stubout_session(self, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
 
         result = list(vm_utils.list_vms(driver._session))

@@ -47,7 +47,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
                 'user', 'project', auth_token='foobar')
 
         fake.reset()
-        stubs.stubout_session(self.stubs, fake.SessionBase)
+        stubs.stubout_session(self, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
         self.session = driver._session
 
