@@ -112,7 +112,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'disk_bus': 'scsi',
         'device_type': 'disk',
         'guest_format': 'ext4',
-        'boot_index': 0}
+        'boot_index': 0,
+        'volume_type': None}
 
     volume_legacy_driver_bdm = {
         'mount_device': '/dev/sda1',
@@ -131,7 +132,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'connection_info': '{"fake": "connection_info"}',
          'snapshot_id': 'fake-snapshot-id-1',
          'volume_id': 'fake-volume-id-2',
-         'boot_index': -1})
+         'boot_index': -1,
+         'volume_type': None})
 
     volsnapshot_driver_bdm = {
         'mount_device': '/dev/sda2',
@@ -140,7 +142,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'disk_bus': 'scsi',
         'device_type': 'disk',
         'guest_format': None,
-        'boot_index': -1}
+        'boot_index': -1,
+        'volume_type': None}
 
     volsnapshot_legacy_driver_bdm = {
         'mount_device': '/dev/sda2',
@@ -159,7 +162,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'connection_info': '{"fake": "connection_info"}',
          'image_id': 'fake-image-id-1',
          'volume_id': 'fake-volume-id-2',
-         'boot_index': -1})
+         'boot_index': -1,
+         'volume_type': None})
 
     volimage_driver_bdm = {
         'mount_device': '/dev/sda2',
@@ -168,7 +172,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'disk_bus': 'scsi',
         'device_type': 'disk',
         'guest_format': None,
-        'boot_index': -1}
+        'boot_index': -1,
+        'volume_type': None}
 
     volimage_legacy_driver_bdm = {
         'mount_device': '/dev/sda2',
@@ -187,7 +192,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'connection_info': '{"fake": "connection_info"}',
          'snapshot_id': 'fake-snapshot-id-1',
          'volume_id': 'fake-volume-id-2',
-         'boot_index': -1})
+         'boot_index': -1,
+         'volume_type': None})
 
     volblank_driver_bdm = {
         'mount_device': '/dev/sda2',
@@ -196,7 +202,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'disk_bus': 'scsi',
         'device_type': 'disk',
         'guest_format': None,
-        'boot_index': -1}
+        'boot_index': -1,
+        'volume_type': None}
 
     volblank_legacy_driver_bdm = {
         'mount_device': '/dev/sda2',
@@ -851,7 +858,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.volume_api.get_snapshot(self.context,
                                      'fake-snapshot-id-1').AndReturn(snapshot)
         self.volume_api.create(self.context, 3, '', '', snapshot,
-                               availability_zone=None).AndReturn(volume)
+                               availability_zone=None,
+                               volume_type=None).AndReturn(volume)
         wait_func(self.context, 'fake-volume-id-2').AndReturn(None)
         instance, expected_conn_info = self._test_volume_attach(
                test_bdm, no_volume_snapshot, volume)
@@ -883,7 +891,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.volume_api.get_snapshot(self.context,
                                      'fake-snapshot-id-1').AndReturn(snapshot)
         self.volume_api.create(self.context, 3, '', '', snapshot,
-                               availability_zone='test-az').AndReturn(volume)
+                               availability_zone='test-az',
+                               volume_type=None).AndReturn(volume)
         wait_func(self.context, 'fake-volume-id-2').AndReturn(None)
         instance, expected_conn_info = self._test_volume_attach(
                test_bdm, no_volume_snapshot, volume,
@@ -930,7 +939,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             vol_get_snap.assert_called_once_with(
                 self.context, 'fake-snapshot-id-1')
             vol_create.assert_called_once_with(
-                self.context, 3, '', '', snapshot, availability_zone=None)
+                self.context, 3, '', '', snapshot, availability_zone=None,
+                volume_type=None)
             vol_delete.assert_called_once_with(self.context, volume['id'])
 
     def test_snapshot_attach_volume(self):
@@ -970,7 +980,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         wait_func = self.mox.CreateMockAnything()
 
         self.volume_api.create(self.context, 1, '', '', image_id=image['id'],
-                               availability_zone=None).AndReturn(volume)
+                               availability_zone=None,
+                               volume_type=None).AndReturn(volume)
         wait_func(self.context, 'fake-volume-id-2').AndReturn(None)
         instance, expected_conn_info = self._test_volume_attach(
                test_bdm, no_volume_image, volume)
@@ -999,7 +1010,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         wait_func = self.mox.CreateMockAnything()
 
         self.volume_api.create(self.context, 1, '', '', image_id=image['id'],
-                               availability_zone='test-az').AndReturn(volume)
+                               availability_zone='test-az',
+                               volume_type=None).AndReturn(volume)
         wait_func(self.context, 'fake-volume-id-2').AndReturn(None)
         instance, expected_conn_info = self._test_volume_attach(
                test_bdm, no_volume_image, volume,
@@ -1042,7 +1054,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
             vol_create.assert_called_once_with(
                 self.context, 1, '', '', image_id=image['id'],
-                availability_zone=None)
+                availability_zone=None, volume_type=None)
             vol_delete.assert_called_once_with(self.context, volume['id'])
 
     def test_image_attach_volume(self):
@@ -1097,7 +1109,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             vol_create.assert_called_once_with(
                 self.context, test_bdm.volume_size,
                 '%s-blank-vol' % uuids.uuid,
-                '', availability_zone=None)
+                '', volume_type=None, availability_zone=None)
             vol_delete.assert_called_once_with(
                 self.context, volume['id'])
 
@@ -1123,7 +1135,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             vol_create.assert_called_once_with(
                 self.context, test_bdm.volume_size,
                 '%s-blank-vol' % uuids.uuid,
-                '', availability_zone=None)
+                '', volume_type=None, availability_zone=None)
             vol_attach.assert_called_once_with(self.context, instance,
                                                self.volume_api,
                                                self.virt_driver)
@@ -1154,7 +1166,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                 vol_create.assert_called_once_with(
                     self.context, test_bdm.volume_size,
                     '%s-blank-vol' % uuids.uuid,
-                    '', availability_zone='test-az')
+                    '', volume_type=None, availability_zone='test-az')
                 vol_attach.assert_called_once_with(self.context, instance,
                                                    self.volume_api,
                                                    self.virt_driver)
@@ -1318,6 +1330,155 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                          D(bdm)._proxy_as_attr)
         self.assertEqual(set(['uuid', 'is_volume', 'B', 'C', 'E']),
                          E(bdm)._proxy_as_attr)
+
+    def _test_boot_from_volume_source_blank_volume_type(
+            self, bdm, expected_volume_type):
+        self.flags(cross_az_attach=False, group='cinder')
+        test_bdm = self.driver_classes['volblank'](bdm)
+        updates = {'uuid': uuids.uuid, 'availability_zone': 'test-az'}
+        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
+                                                   **updates)
+        volume_class = self.driver_classes['volume']
+        volume = {'id': 'fake-volume-id-2',
+                  'display_name': '%s-blank-vol' % uuids.uuid}
+
+        with mock.patch.object(self.volume_api, 'create',
+                               return_value=volume) as vol_create:
+            with mock.patch.object(volume_class, 'attach') as vol_attach:
+                test_bdm.attach(self.context, instance, self.volume_api,
+                                self.virt_driver)
+
+                vol_create.assert_called_once_with(
+                    self.context, test_bdm.volume_size,
+                    '%s-blank-vol' % uuids.uuid, '',
+                    volume_type=expected_volume_type,
+                    availability_zone='test-az')
+                vol_attach.assert_called_once_with(
+                    self.context, instance, self.volume_api, self.virt_driver)
+                self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
+
+    def test_boot_from_volume_source_blank_with_unset_volume_type(self):
+        """Tests the scenario that the BlockDeviceMapping.volume_type field
+        is unset for RPC compatibility to an older compute.
+        """
+        no_blank_volume = self.volblank_bdm_dict.copy()
+        no_blank_volume['volume_id'] = None
+        bdm = fake_block_device.fake_bdm_object(self.context, no_blank_volume)
+        delattr(bdm, 'volume_type')
+        self.assertNotIn('volume_type', bdm)
+        self._test_boot_from_volume_source_blank_volume_type(bdm, None)
+
+    def test_boot_from_volume_source_blank_with_volume_type(self):
+        # Tests that the blank volume created specifies the volume type.
+        no_blank_volume = self.volblank_bdm_dict.copy()
+        no_blank_volume['volume_id'] = None
+        no_blank_volume['volume_type'] = 'fake-lvm-1'
+        bdm = fake_block_device.fake_bdm_object(self.context, no_blank_volume)
+        self._test_boot_from_volume_source_blank_volume_type(bdm, 'fake-lvm-1')
+
+    def _test_boot_from_volume_source_image_volume_type(
+            self, bdm, expected_volume_type):
+        self.flags(cross_az_attach=False, group='cinder')
+        test_bdm = self.driver_classes['volimage'](bdm)
+
+        updates = {'uuid': uuids.uuid, 'availability_zone': 'test-az'}
+        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
+                                                   **updates)
+        volume_class = self.driver_classes['volume']
+        image = {'id': 'fake-image-id-1'}
+        volume = {'id': 'fake-volume-id-2',
+                  'display_name': 'fake-image-vol'}
+
+        with mock.patch.object(self.volume_api, 'create',
+                               return_value=volume) as vol_create:
+            with mock.patch.object(volume_class, 'attach') as vol_attach:
+                test_bdm.attach(self.context, instance, self.volume_api,
+                                self.virt_driver)
+
+                vol_create.assert_called_once_with(
+                    self.context, test_bdm.volume_size,
+                    '', '', image_id=image['id'],
+                    volume_type=expected_volume_type,
+                    availability_zone='test-az')
+                vol_attach.assert_called_once_with(
+                    self.context, instance, self.volume_api, self.virt_driver)
+                self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
+
+    def test_boot_from_volume_source_image_with_unset_volume_type(self):
+        """Tests the scenario that the BlockDeviceMapping.volume_type field
+        is unset for RPC compatibility to an older compute.
+        """
+        no_volume_image = self.volimage_bdm_dict.copy()
+        no_volume_image['volume_id'] = None
+        bdm = fake_block_device.fake_bdm_object(self.context, no_volume_image)
+        delattr(bdm, 'volume_type')
+        self.assertNotIn('volume_type', bdm)
+        self._test_boot_from_volume_source_image_volume_type(bdm, None)
+
+    def test_boot_from_volume_source_image_with_volume_type(self):
+        # Tests that the volume created from the image specifies the volume
+        # type.
+        no_volume_image = self.volimage_bdm_dict.copy()
+        no_volume_image['volume_id'] = None
+        no_volume_image['volume_type'] = 'fake-lvm-1'
+        bdm = fake_block_device.fake_bdm_object(self.context, no_volume_image)
+        self._test_boot_from_volume_source_image_volume_type(bdm, 'fake-lvm-1')
+
+    def _test_boot_from_volume_source_snapshot_volume_type(
+            self, bdm, expected_volume_type):
+        self.flags(cross_az_attach=False, group='cinder')
+        test_bdm = self.driver_classes['volsnapshot'](bdm)
+
+        snapshot = {'id': 'fake-snapshot-id-1',
+                    'attach_status': 'detached'}
+
+        updates = {'uuid': uuids.uuid, 'availability_zone': 'test-az'}
+        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
+                                                   **updates)
+        volume_class = self.driver_classes['volume']
+        volume = {'id': 'fake-volume-id-2',
+                  'display_name': 'fake-snapshot-vol'}
+
+        with test.nested(
+            mock.patch.object(self.volume_api, 'create', return_value=volume),
+            mock.patch.object(self.volume_api, 'get_snapshot',
+                              return_value=snapshot),
+            mock.patch.object(volume_class, 'attach')
+        ) as (
+            vol_create, vol_get_snap, vol_attach
+        ):
+            test_bdm.attach(self.context, instance, self.volume_api,
+                            self.virt_driver)
+
+            vol_create.assert_called_once_with(
+                self.context, test_bdm.volume_size, '', '', snapshot,
+                volume_type=expected_volume_type, availability_zone='test-az')
+            vol_attach.assert_called_once_with(
+                self.context, instance, self.volume_api, self.virt_driver)
+            self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
+
+    def test_boot_from_volume_source_snapshot_with_unset_volume_type(self):
+        """Tests the scenario that the BlockDeviceMapping.volume_type field
+        is unset for RPC compatibility to an older compute.
+        """
+        no_volume_snapshot = self.volsnapshot_bdm_dict.copy()
+        no_volume_snapshot['volume_id'] = None
+        bdm = fake_block_device.fake_bdm_object(
+            self.context, no_volume_snapshot)
+        delattr(bdm, 'volume_type')
+        self.assertNotIn('volume_type', bdm)
+        self._test_boot_from_volume_source_snapshot_volume_type(bdm, None)
+
+    def test_boot_from_volume_source_snapshot_with_volume_type(self):
+        # Tests that the volume created from the snapshot specifies the volume
+        # type.
+        no_volume_snapshot = self.volsnapshot_bdm_dict.copy()
+        no_volume_snapshot['volume_id'] = None
+        no_volume_snapshot['volume_type'] = 'fake-lvm-1'
+        bdm = fake_block_device.fake_bdm_object(
+            self.context, no_volume_snapshot)
+        self._test_boot_from_volume_source_snapshot_volume_type(
+            bdm, 'fake-lvm-1')
 
 
 class TestDriverBlockDeviceNewFlow(TestDriverBlockDevice):

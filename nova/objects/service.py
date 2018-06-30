@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 35
+SERVICE_VERSION = 36
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -145,6 +145,9 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '5.0'},
     # Version 35: Indicates that nova-compute supports live migration with
     # ports bound early on the destination host using VIFMigrateData.
+    {'compute_rpc': '5.0'},
+    # Version 36: Indicates that nova-compute supports specifying volume
+    # type when booting a volume-backed server.
     {'compute_rpc': '5.0'},
 )
 
