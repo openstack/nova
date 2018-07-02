@@ -103,6 +103,9 @@ Enable and access the configuration drive
 
       force_config_drive = true
 
+   It is also possible to force the config drive by specifying the
+   ``img_config_drive=mandatory`` property in the image.
+
    .. note::
 
       If a user passes the ``--config-drive true`` flag to the
@@ -262,7 +265,11 @@ following line to the ``/etc/nova/nova.conf`` file:
 
 .. code-block:: console
 
+   [hyperv]
    config_drive_cdrom=true
+
+.. note:: Attaching a configuration drive as a CD drive is only supported
+          by the Hyper-V compute driver.
 
 For legacy reasons, you can configure the configuration drive to use
 VFAT format instead of ISO 9660. It is unlikely that you would require
