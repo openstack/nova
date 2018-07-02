@@ -41,3 +41,7 @@ URI.
 DEFAULT = 'placement.undefined_code'
 INVENTORY_INUSE = 'placement.inventory.inuse'
 CONCURRENT_UPDATE = 'placement.concurrent_update'
+DUPLICATE_NAME = 'placement.duplicate_name'
+PROVIDER_IN_USE = 'placement.resource_provider.inuse'
+PROVIDER_CANNOT_DELETE_PARENT = (
+    'placement.resource_provider.cannot_delete_parent')

@@ -103,6 +103,7 @@ tests:
       - "Conflicting resource provider name: $ENVIRON['RP_NAME'] already exists"
   response_json_paths:
       $.errors[0].title: Conflict
+      $.errors[0].code: placement.duplicate_name
 
 - name: confirm the correct post
   GET: /resource_providers/$ENVIRON['RP_UUID']
@@ -394,6 +395,8 @@ tests:
   response_strings:
       - "Unable to delete parent resource provider
        $ENVIRON['PARENT_PROVIDER_UUID']: It has child resource providers."
+  response_json_paths:
+      $.errors[0].code: placement.resource_provider.cannot_delete_parent
 
 - name: list all resource providers in a tree that does not exist
   GET: /resource_providers?in_tree=$ENVIRON['ALT_PARENT_PROVIDER_UUID']
@@ -620,6 +623,7 @@ tests:
   status: 409
   response_json_paths:
       $.errors[0].title: Conflict
+      $.errors[0].code: placement.duplicate_name
 
 - name: fail to put that provider with uuid
   PUT: $LAST_URL

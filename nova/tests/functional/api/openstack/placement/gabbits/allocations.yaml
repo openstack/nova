@@ -144,6 +144,19 @@ tests:
                 DISK_GB: 10
   status: 204
 
+- name: fail to delete that provider
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+      # we need this microversion to get error codes in the response
+      openstack-api-version: placement 1.23
+  status: 409
+  response_strings:
+      - "Unable to delete resource provider $ENVIRON['RP_UUID']"
+  response_json_paths:
+      errors[0].code: placement.resource_provider.inuse
+
+
 - name: put an allocation different consumer
   PUT: /allocations/39715579-2167-4c63-8247-301311cc6703
   request_headers:
