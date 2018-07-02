@@ -847,7 +847,7 @@ class ApiDbCommands(object):
         if CONF.placement_database.connection is not None:
             # Establish the independent context manager for the placement db.
             placement_db.configure(CONF)
-            result = migration.db_sync(version, database='placement')
+            result = migration.db_sync(version2, database='placement')
         return migration.db_sync(version2, database='api') and result
 
     def version(self):
