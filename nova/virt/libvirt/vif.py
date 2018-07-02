@@ -48,8 +48,11 @@ CONF = nova.conf.CONF
 MIN_LIBVIRT_VHOSTUSER_MQ = (1, 2, 17)
 #  vlan tag for macvtap passthrough mode on SRIOV VFs
 MIN_LIBVIRT_MACVTAP_PASSTHROUGH_VLAN = (1, 3, 5)
-# setting interface mtu was intoduced in libvirt 3.3
+# setting interface mtu was intoduced in libvirt 3.3, We also need to
+# check for QEMU that because libvirt is configuring in same time
+# host_mtu for virtio-net, fails if not supported.
 MIN_LIBVIRT_INTERFACE_MTU = (3, 3, 0)
+MIN_QEMU_INTERFACE_MTU = (2, 9, 0)
 
 
 def is_vif_model_valid_for_virt(virt_type, vif_model):
@@ -254,7 +257,8 @@ class LibvirtGenericVIFDriver(object):
             designer.set_vif_mtu_config(conf, network.get_meta("mtu"))
 
     def _has_min_version_for_mtu(self, host):
-        return host.has_min_version(MIN_LIBVIRT_INTERFACE_MTU)
+        return host.has_min_version(MIN_LIBVIRT_INTERFACE_MTU,
+                                    MIN_QEMU_INTERFACE_MTU)
 
     def get_config_ivs_hybrid(self, instance, vif, image_meta,
                               inst_type, virt_type, host):
