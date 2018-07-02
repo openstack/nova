@@ -2666,7 +2666,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.MagicMock()
         # Call the method.
-        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [], {})
         # Only one call should be made to delete allocations, and that should
         # be for the first instance created above
         rc.delete_allocation_for_instance.assert_called_once_with(
@@ -2691,7 +2691,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.MagicMock()
         # Call the method.
-        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [], {})
         # Instance wasn't found in the database at all, so the allocation
         # should not have been deleted
         self.assertFalse(rc.delete_allocation_for_instance.called)
@@ -2713,7 +2713,8 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         ctx = mock.MagicMock()
         # Call the method.
         self.rt._remove_deleted_instances_allocations(
-            ctx, cn, [mig])
+            ctx, cn, [mig], {uuids.migration:
+                             objects.Instance(uuid=uuids.imigration)})
         # Only one call should be made to delete allocations, and that should
         # be for the first instance created above
         rc.delete_allocation_for_instance.assert_called_once_with(
@@ -2728,18 +2729,14 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         rc.get_allocations_for_resource_provider = mock.MagicMock(
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
-
-        def get_by_uuid(ctx, inst_uuid, expected_attrs=None):
-            ret = _INSTANCE_FIXTURES[0].obj_clone()
-            ret.uuid = inst_uuid
-            ret.host = None  # This indicates the instance is being scheduled
-            return ret
-
-        mock_inst_get.side_effect = get_by_uuid
+        instance_by_uuid = {uuids.scheduled:
+                            objects.Instance(uuid=uuids.scheduled,
+                                             deleted=False, host=None)}
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.MagicMock()
         # Call the method.
-        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [],
+                                                      instance_by_uuid)
         # Scheduled instances should not have their allocations removed
         rc.delete_allocation_for_instance.assert_not_called()
 
@@ -2767,7 +2764,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
 
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.MagicMock()
-        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [], mock.ANY)
         mock_delete_allocs.assert_not_called()
 
     def test_remove_deleted_instances_allocations_known_instance(self):
@@ -2792,7 +2789,8 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.MagicMock()
         # Call the method.
-        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [],
+            self.rt.tracked_instances)
         # We don't delete the allocation because the node is tracking the
         # instance and has allocations for it.
         rc.delete_allocation_for_instance.assert_not_called()
@@ -2826,7 +2824,8 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.MagicMock()
         # Call the method.
-        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
+        self.rt._remove_deleted_instances_allocations(
+            ctx, cn, [], self.rt.tracked_instances)
         # We don't delete the allocation because we're not sure what to do.
         # NOTE(mriedem): This is not actually the behavior we want. This is
         # testing the current behavior but in the future when we get smart
