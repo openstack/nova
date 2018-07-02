@@ -453,21 +453,27 @@ resource_provider_object:
   required: true
   description: >
     A dictionary which contains the UUID of the resource provider.
-resource_provider_parent_provider_uuid: &resource_provider_parent_provider_uuid
+resource_provider_parent_provider_uuid_request:
   type: string
   in: body
   required: false
   description: >
-    The UUID of the immediate parent of the resource provider.
-resource_provider_parent_provider_uuid_1_14: &resource_provider_parent_provider_uuid_1_14
-  <<: *resource_provider_parent_provider_uuid
-  description: >
     The UUID of the immediate parent of the resource provider. Once set, the
     parent of a resource provider cannot be changed.
   min_version: 1.14
-resource_provider_parent_provider_uuid_required:
-  <<: *resource_provider_parent_provider_uuid
+resource_provider_parent_provider_uuid_required_no_min:
+  type: string
+  in: body
   required: true
+  description: >
+    The UUID of the immediate parent of the resource provider.
+resource_provider_parent_provider_uuid_response_1_14:
+  type: string
+  in: body
+  required: true
+  description: >
+    The UUID of the immediate parent of the resource provider.
+  min_version: 1.14
 resource_provider_root_provider_uuid_no_min: &resource_provider_root_provider_uuid_no_min
   type: string
   in: body
