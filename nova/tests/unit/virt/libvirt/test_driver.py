@@ -11965,8 +11965,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             # mix-in is ever used for these objects.
             expected_migrate_data.obj_reset_changes(recursive=True)
             returned_migrate_data.obj_reset_changes(recursive=True)
-            self.assertEqual(expected_migrate_data.obj_to_primitive(),
-                             returned_migrate_data.obj_to_primitive())
+            self.assertJsonEqual(expected_migrate_data.obj_to_primitive(),
+                                 returned_migrate_data.obj_to_primitive())
 
     def test_pre_live_migration_volume_backed(self):
         self._test_pre_live_migration_volume_backed()
