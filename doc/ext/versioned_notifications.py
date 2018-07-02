@@ -56,9 +56,9 @@ jQuery(document).ready(function(){
         return self._build_markup(notifications)
 
     def _import_all_notification_packages(self):
-        map(lambda module: importlib.import_module(module),
-            ('nova.notifications.objects.' + name for _, name, _ in
-             pkgutil.iter_modules(nova.notifications.objects.__path__)))
+        list(map(lambda module: importlib.import_module(module),
+                 ('nova.notifications.objects.' + name for _, name, _ in
+                  pkgutil.iter_modules(nova.notifications.objects.__path__))))
 
     def _collect_notifications(self):
         self._import_all_notification_packages()
