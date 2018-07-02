@@ -723,3 +723,14 @@ tests:
   response_forbidden_headers:
       - cache-control
       - last-modified
+
+- name: fail updating a parent to itself
+  PUT: /resource_providers/$ENVIRON['PARENT_PROVIDER_UUID']
+  request_headers:
+      content-type: application/json
+  data:
+      name: parent
+      parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+# this reproduces bug 1779635 as this should be HTTP 400 as we have a loop now
+# in the tree
+  status: 200
