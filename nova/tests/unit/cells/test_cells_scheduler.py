@@ -96,7 +96,6 @@ class CellsSchedulerTestCase(test.TestCase):
                           'security_groups': 'removed',
                           'info_cache': 'removed',
                           'name': 'instance-00000001',
-                          'hostname': 'meow',
                           'display_name': 'moo',
                           'image_ref': uuidsentinel.fake_image_ref,
                           'user_id': self.ctxt.user_id,
@@ -137,7 +136,7 @@ class CellsSchedulerTestCase(test.TestCase):
             self.assertEqual('cow', meta['moo'])
             sys_meta = utils.instance_sys_meta(instance)
             self.assertEqual('cat', sys_meta['meow'])
-            self.assertEqual('meow', instance['hostname'])
+            self.assertEqual('moo-%d' % (count + 1), instance['hostname'])
             self.assertEqual('moo-%d' % (count + 1),
                              instance['display_name'])
             self.assertEqual(uuidsentinel.fake_image_ref,

@@ -1480,40 +1480,37 @@ class API(base.Base):
                                                 instance=instance)
 
     def _populate_instance_names(self, instance, num_instances, index):
-        """Populate instance display_name and hostname."""
-        display_name = instance.get('display_name')
-        if instance.obj_attr_is_set('hostname'):
-            hostname = instance.get('hostname')
-        else:
-            hostname = None
+        """Populate instance display_name and hostname.
 
+        :param instance: The instance to set the display_name, hostname for
+        :type instance: nova.objects.Instance
+        :param num_instances: Total number of instances being created in this
+            request
+        :param index: The 0-based index of this particular instance
+        """
         # NOTE(mriedem): This is only here for test simplicity since a server
         # name is required in the REST API.
-        if display_name is None:
-            display_name = self._default_display_name(instance.uuid)
-            instance.display_name = display_name
+        if 'display_name' not in instance or instance.display_name is None:
+            instance.display_name = 'Server %s' % instance.uuid
 
-        if hostname is None and num_instances == 1:
-            hostname = display_name
-            default_hostname = self._default_host_name(instance.uuid)
-            instance.hostname = utils.sanitize_hostname(hostname,
-                                                        default_hostname)
+        # if we're booting multiple instances, we need to add an indexing
+        # suffix to both instance.hostname and instance.display_name. This is
+        # not necessary for a single instance.
+        if num_instances == 1:
+            default_hostname = 'Server-%s' % instance.uuid
+            instance.hostname = utils.sanitize_hostname(
+                instance.display_name, default_hostname)
+        elif num_instances > 1 and self.cell_type != 'api':
+            old_display_name = instance.display_name
+            new_display_name = '%s-%d' % (old_display_name, index + 1)
 
-        if num_instances > 1 and self.cell_type != 'api':
-            original_name = instance.display_name
-            new_name = '%s-%d' % (original_name, index + 1)
-            instance.display_name = new_name
-            if not instance.get('hostname', None):
-                if utils.sanitize_hostname(original_name) == "":
-                    instance.hostname = self._default_host_name(instance.uuid)
-                else:
-                    instance.hostname = utils.sanitize_hostname(new_name)
+            if utils.sanitize_hostname(old_display_name) == "":
+                instance.hostname = 'Server-%s' % instance.uuid
+            else:
+                instance.hostname = utils.sanitize_hostname(
+                    new_display_name)
 
-    def _default_display_name(self, instance_uuid):
-        return "Server %s" % instance_uuid
-
-    def _default_host_name(self, instance_uuid):
-        return "Server-%s" % instance_uuid
+            instance.display_name = new_display_name
 
     def _populate_instance_for_create(self, context, instance, image,
                                       index, security_groups, instance_type,
