@@ -731,6 +731,17 @@ tests:
   data:
       name: parent
       parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
-# this reproduces bug 1779635 as this should be HTTP 400 as we have a loop now
-# in the tree
-  status: 200
+  status: 400
+  response_strings:
+      - 'creating loop in the provider tree is not allowed.'
+
+- name: fail updating the parent to point to its child
+  PUT: /resource_providers/$ENVIRON['PARENT_PROVIDER_UUID']
+  request_headers:
+      content-type: application/json
+  data:
+      name: parent
+      parent_provider_uuid: $ENVIRON['RP_UUID']
+  status: 400
+  response_strings:
+      - 'creating loop in the provider tree is not allowed.'
