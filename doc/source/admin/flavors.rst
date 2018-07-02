@@ -56,22 +56,29 @@ Create a flavor
       Unique ID (integer or UUID) for the new flavor. If specifying 'auto', a
       UUID will be automatically generated.
 
-   Here is an example with additional optional parameters filled in that
-   creates a public ``extra_tiny`` flavor that automatically gets an ID
-   assigned, with 256 MB memory, no disk space, and one VCPU. The rxtx-factor
-   indicates the slice of bandwidth that the instances with this flavor can use
-   (through the Virtual Interface (vif) creation in the hypervisor):
+   Here is an example that creates a public ``m1.extra_tiny`` flavor that
+   automatically gets an ID assigned, with 256 MB memory, no disk space,
+   and one VCPU.
 
    .. code-block:: console
 
       $ openstack flavor create --public m1.extra_tiny --id auto \
-          --ram 256 --disk 0 --vcpus 1 --rxtx-factor 1
+          --ram 256 --disk 0 --vcpus 1
 
 #. If an individual user or group of users needs a custom flavor that you do
-   not want other projects to have access to, you can change the flavor's
-   access to make it a private flavor.
+   not want other projects to have access to, you can create a private flavor.
 
-   .. todo:: Add an example of how to do this
+   .. code-block:: console
+
+      $ openstack flavor create --private m1.extra_tiny --id auto \
+          --ram 256 --disk 0 --vcpus 1
+
+   After you create a flavor, assign it to a project by specifying the flavor
+   name or ID and the project ID:
+
+   .. code-block:: console
+
+      $ openstack flavor set --project PROJECT_ID m1.extra_tiny
 
    For a list of optional parameters, run this command:
 
@@ -79,43 +86,46 @@ Create a flavor
 
       $ openstack help flavor create
 
-.. todo:: This should be migrated to the 'openstack' tool
-
-#. After you create a flavor, assign it to a project by specifying the flavor
-   name or ID and the project ID:
-
-   .. code-block:: console
-
-      $ nova flavor-access-add FLAVOR TENANT_ID
-
-#. In addition, you can set or unset ``extra_spec`` for the existing flavor.
-   The ``extra_spec`` metadata keys can influence the instance directly when it
-   is launched. If a flavor sets the ``extra_spec key/value
-   quota:vif_outbound_peak=65536``, the instance's outbound peak bandwidth I/O
-   should be less than or equal to 512 Mbps. There are several aspects that can
-   work for an instance including *CPU limits*, *Disk tuning*, *Bandwidth I/O*,
+#. In addition, you can set or unset properties, commonly referred to as
+   "extra specs", for the existing flavor.
+   The ``extra_specs`` metadata keys can influence the instance directly when
+   it is launched. If a flavor sets the ``quota:vif_outbound_peak=65536``
+   extra spec, the instance's outbound peak bandwidth I/O should be less than
+   or equal to 512 Mbps. There are several aspects that can work for
+   an instance including *CPU limits*, *Disk tuning*, *Bandwidth I/O*,
    *Watchdog behavior*, and *Random-number generator*.  For information about
-   supporting metadata keys, see :doc:`flavors`.
+   available metadata keys, see :doc:`/user/flavors`.
 
    For a list of optional parameters, run this command:
 
    .. code-block:: console
 
-      $ nova help flavor-key
+      $ openstack flavor set --help
 
 Modify a flavor
 ---------------
 
-.. todo(stephenfin): Populate this section
+Only the description of flavors can be modified (starting from microversion
+2.55). To modify the description of a flavor, specify the flavor name or ID
+and a new description as follows:
+
+.. code-block:: console
+
+   $ nova flavor-update FLAVOR DESCRIPTION
+
+.. note::
+
+   There are no commands to update a description of a flavor
+   in the :command:`openstack` command currently (version 3.15.0).
 
 Delete a flavor
 ---------------
 
-Delete a specified flavor, as follows:
+To delete a flavor, specify the flavor name or ID as follows:
 
 .. code-block:: console
 
-   $ openstack flavor delete FLAVOR_ID
+   $ openstack flavor delete FLAVOR
 
 Default Flavors
 ---------------
