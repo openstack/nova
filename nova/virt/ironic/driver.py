@@ -599,7 +599,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         # NOTE(lucasagomes): limit == 0 is an indicator to continue
         # pagination until there're no more values to be returned.
-        node_list = self._get_node_list(associated=True, limit=0)
+        node_list = self._get_node_list(associated=True,
+                                        fields=['instance_uuid'], limit=0)
         context = nova_context.get_admin_context()
         return [objects.Instance.get_by_uuid(context,
                                              i.instance_uuid).name
@@ -614,8 +615,9 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         # NOTE(lucasagomes): limit == 0 is an indicator to continue
         # pagination until there're no more values to be returned.
-        return list(n.instance_uuid
-                    for n in self._get_node_list(associated=True, limit=0))
+        node_list = self._get_node_list(associated=True,
+                                        fields=['instance_uuid'], limit=0)
+        return list(n.instance_uuid for n in node_list)
 
     def node_is_available(self, nodename):
         """Confirms a Nova hypervisor node exists in the Ironic inventory.
