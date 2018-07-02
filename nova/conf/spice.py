@@ -154,6 +154,7 @@ A keyboard layout which is supported by the underlying hypervisor on this
 node.
 
 Possible values:
+
 * This is usually an 'IETF language tag' (default is 'en-us'). If you
   use QEMU as hypervisor, you should find the list of supported keyboard
   layouts at /usr/share/qemu/keymaps.

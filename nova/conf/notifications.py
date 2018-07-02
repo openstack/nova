@@ -74,6 +74,7 @@ Note that notifications can be completely disabled by setting ``driver=noop``
 in the ``[oslo_messaging_notifications]`` group.
 
 Possible values:
+
 * unversioned: Only the legacy unversioned notifications are emitted.
 * versioned: Only the new versioned notifications are emitted.
 * both: Both the legacy unversioned and the new versioned notifications are

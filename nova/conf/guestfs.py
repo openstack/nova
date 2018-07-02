@@ -37,11 +37,13 @@ enable verbose debug messages. In order to use the above feature,
 "libguestfs" package must be installed.
 
 Related options:
+
 Since libguestfs access and modifies VM's managed by libvirt, below options
 should be set to give access to those VM's.
-    * libvirt.inject_key
-    * libvirt.inject_partition
-    * libvirt.inject_password
+
+* ``libvirt.inject_key``
+* ``libvirt.inject_partition``
+* ``libvirt.inject_password``
 """)
 ]
 

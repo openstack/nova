@@ -1121,8 +1121,8 @@ Possible values:
   ``instance_delete_interval`` to disable the delete attempts.
 
 Related options:
-* ``instance_delete_interval`` in interval_opts group can be used to disable
-  this option.
+
+* ``[DEFAULT] instance_delete_interval`` can be used to disable this option.
 """)
 ]
 

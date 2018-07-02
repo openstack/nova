@@ -43,10 +43,12 @@ Other options are:
 Possible values:
 
 * Any of the drivers included in Nova:
-** filter_scheduler
-** caching_scheduler
-** chance_scheduler
-** fake_scheduler
+
+  * filter_scheduler
+  * caching_scheduler
+  * chance_scheduler
+  * fake_scheduler
+
 * You may also set this to the entry point name of a custom scheduler driver,
   but you will be responsible for creating and maintaining it in your setup.cfg
   file.

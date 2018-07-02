@@ -522,7 +522,7 @@ rabbit://USERNAME:PASSWORD@HOSTNAME:PORT/VIRTUAL_HOST
 Possible values:
 
 The scheme can be either qpid or rabbit, the following sample shows
-this optional configuration:
+this optional configuration::
 
     {
         "parent": {
@@ -550,7 +550,6 @@ this optional configuration:
             "is_parent": false
         }
     }
-
 """)
 ]
 

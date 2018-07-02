@@ -154,13 +154,13 @@ root user is available, the instance won't be launched and an error is thrown.
 Be aware that the injection is *not* possible when the instance gets launched
 from a volume.
 
+*Linux* distribution guest only.
+
 Possible values:
 
 * True: Allows the injection.
-* False (default): Disallows the injection. Any via the REST API provided
-admin password will be silently ignored.
-
-*Linux* distribution guest only.
+* False: Disallows the injection. Any via the REST API provided admin password
+  will be silently ignored.
 
 Related options:
 
@@ -237,6 +237,7 @@ and/or SPICE is enabled. If the node doesn't support a graphical framebuffer,
 then it is valid to set this to False.
 
 Related options:
+
 * ``[vnc]enabled``: If VNC is enabled, ``use_usb_tablet`` will have an effect.
 * ``[spice]enabled`` + ``[spice].agent_enabled``: If SPICE is enabled and the
   spice agent is disabled, the config value of ``use_usb_tablet`` will have
@@ -500,16 +501,15 @@ Possible values:
 * ``host-passthrough``: Use the host CPU model exactly
 * ``custom``: Use a named CPU model
 * ``none``: Don't set a specific CPU model. For instances with
-``virt_type`` as KVM/QEMU, the default CPU model from QEMU will be used,
-which provides a basic set of CPU features that are compatible with most
-hosts.
+  ``virt_type`` as KVM/QEMU, the default CPU model from QEMU will be used,
+  which provides a basic set of CPU features that are compatible with most
+  hosts.
 
 Related options:
 
 * ``cpu_model``: This should be set ONLY when ``cpu_mode`` is set to
-``custom``. Otherwise, it would result in an error and the instance
-launch will fail.
-
+  ``custom``. Otherwise, it would result in an error and the instance launch
+  will fail.
 """),
     cfg.StrOpt('cpu_model',
                help="""
@@ -522,9 +522,8 @@ Possible values:
 Related options:
 
 * ``cpu_mode``: This should be set to ``custom`` ONLY when you want to
-configure (via ``cpu_model``) a specific named CPU model.  Otherwise, it
-would result in an error and the instance launch will fail.
-
+  configure (via ``cpu_model``) a specific named CPU model.  Otherwise, it
+  would result in an error and the instance launch will fail.
 * ``virt_type``: Only the virtualization types ``kvm`` and ``qemu`` use this.
 """),
     cfg.ListOpt(
@@ -548,7 +547,7 @@ to address the guest performance degradation as a result of applying the
 
 To specify multiple CPU flags (e.g. the Intel ``VMX`` to expose the
 virtualization extensions to the guest, or ``pdpe1gb`` to configure 1GB
-huge pages for CPU models that do not provide it):
+huge pages for CPU models that do not provide it)::
 
     [libvirt]
     cpu_mode = custom
