@@ -108,6 +108,31 @@ tests:
           user_id: $ENVIRON['USER_ID']
   status: 204
 
+- name: get allocations for instance consumer
+  GET: /allocations/$ENVIRON['INSTANCE_UUID']
+  request_headers:
+      # We want to inspect the consumer generations...
+      openstack-api-version: placement 1.28
+  response_json_paths:
+      $.allocations["$HISTORY['rp compute02'].$RESPONSE['uuid']"].resources[MEMORY_MB]: 1024
+      $.allocations["$HISTORY['rp compute02'].$RESPONSE['uuid']"].resources[VCPU]: 2
+      $.allocations["$HISTORY['rp storage01'].$RESPONSE['uuid']"].resources[DISK_GB]: 5
+      $.consumer_generation: 1
+      $.project_id: $ENVIRON['PROJECT_ID']
+      $.user_id: $ENVIRON['USER_ID']
+
+- name: get allocations for migration consumer
+  GET: /allocations/$ENVIRON['MIGRATION_UUID']
+  request_headers:
+      # We want to inspect the consumer generations...
+      openstack-api-version: placement 1.28
+  response_json_paths:
+      $.allocations["$HISTORY['rp compute01'].$RESPONSE['uuid']"].resources[MEMORY_MB]: 1024
+      $.allocations["$HISTORY['rp compute01'].$RESPONSE['uuid']"].resources[VCPU]: 2
+      $.consumer_generation: 1
+      $.project_id: $ENVIRON['PROJECT_ID']
+      $.user_id: $ENVIRON['USER_ID']
+
 - name: confirm usages
   GET: /usages?project_id=$ENVIRON['PROJECT_ID']
   response_json_paths:
