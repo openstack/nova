@@ -93,7 +93,6 @@ class ServersController(wsgi.Controller):
     # NOTE(alex_xu): Please do not add more items into this list. This list
     # should be removed in the future.
     schema_func_list = [
-        keypairs.get_server_create_schema,
         multiple_create.get_server_create_schema,
         scheduler_hints.get_server_create_schema,
         security_groups.get_server_create_schema,
