@@ -336,6 +336,23 @@ class _TestInstanceObject(object):
         self.assertNotIn('keypairs', inst.obj_what_changed())
 
     @mock.patch.object(db, 'instance_get_by_uuid')
+    def test_lazy_load_flavor_from_extra(self, mock_get):
+        inst = objects.Instance(context=self.context, uuid=uuids.instance)
+        # These disabled values are only here for logic testing purposes to
+        # make sure we default the "new" flavor's disabled value to False on
+        # load from the database.
+        fake_flavor = jsonutils.dumps(
+            {'cur': objects.Flavor(disabled=False).obj_to_primitive(),
+             'old': objects.Flavor(disabled=True).obj_to_primitive(),
+             'new': objects.Flavor().obj_to_primitive()})
+        fake_inst = dict(self.fake_instance, extra={'flavor': fake_flavor})
+        mock_get.return_value = fake_inst
+        # Assert the disabled values on the flavors.
+        self.assertFalse(inst.flavor.disabled)
+        self.assertTrue(inst.old_flavor.disabled)
+        self.assertFalse(inst.new_flavor.disabled)
+
+    @mock.patch.object(db, 'instance_get_by_uuid')
     def test_get_remote(self, mock_get):
         # isotime doesn't have microseconds and is always UTC
         fake_instance = self.fake_instance
