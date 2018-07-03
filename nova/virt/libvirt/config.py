@@ -2334,6 +2334,8 @@ class LibvirtConfigGuestFeatureHyperV(LibvirtConfigGuestFeature):
 
     # QEMU requires at least this value to be set
     MIN_SPINLOCK_RETRIES = 4095
+    # The spoofed vendor_id can be any alphanumeric string
+    SPOOFED_VENDOR_ID = "1234567890ab"
 
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestFeatureHyperV, self).__init__("hyperv",
@@ -2343,6 +2345,8 @@ class LibvirtConfigGuestFeatureHyperV(LibvirtConfigGuestFeature):
         self.vapic = False
         self.spinlocks = False
         self.spinlock_retries = self.MIN_SPINLOCK_RETRIES
+        self.vendorid_spoof = False
+        self.vendorid = self.SPOOFED_VENDOR_ID
 
     def format_dom(self):
         root = super(LibvirtConfigGuestFeatureHyperV, self).format_dom()
@@ -2354,6 +2358,9 @@ class LibvirtConfigGuestFeatureHyperV(LibvirtConfigGuestFeature):
         if self.spinlocks:
             root.append(etree.Element("spinlocks", state="on",
                                       retries=str(self.spinlock_retries)))
+        if self.vendorid_spoof:
+            root.append(etree.Element("vendor_id", state="on",
+                                      value=self.vendorid))
 
         return root
 

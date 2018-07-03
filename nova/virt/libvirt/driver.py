@@ -4737,6 +4737,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _set_features(self, guest, os_type, caps, virt_type, image_meta,
             flavor):
+        hide_hypervisor_id = (strutils.bool_from_string(
+                flavor.extra_specs.get('hide_hypervisor_id')) or
+            image_meta.properties.get('img_hide_hypervisor_id'))
+
         if virt_type == "xen":
             # PAE only makes sense in X86
             if caps.host.cpu.arch in (fields.Architecture.I686,
@@ -4759,13 +4763,23 @@ class LibvirtDriver(driver.ComputeDriver):
             # with Microsoft
             hv.spinlock_retries = 8191
             hv.vapic = True
+
+            # NOTE(kosamara): Spoofing the vendor_id aims to allow the nvidia
+            # driver to work on windows VMs. At the moment, the nvidia driver
+            # checks for the hyperv vendorid, and if it doesn't find that, it
+            # works. In the future, its behaviour could become more strict,
+            # checking for the presence of other hyperv feature flags to
+            # determine that it's loaded in a VM. If that happens, this
+            # workaround will not be enough, and we'll need to drop the whole
+            # hyperv element.
+            # That would disable some optimizations, reducing the guest's
+            # performance.
+            if hide_hypervisor_id:
+                hv.vendorid_spoof = True
+
             guest.features.append(hv)
 
-        flavor_hide_kvm = strutils.bool_from_string(
-                flavor.get('extra_specs', {}).get('hide_hypervisor_id'))
-        if (virt_type in ("qemu", "kvm") and
-                (image_meta.properties.get('img_hide_hypervisor_id') or
-                 flavor_hide_kvm)):
+        if (virt_type in ("qemu", "kvm") and hide_hypervisor_id):
             guest.features.append(vconfig.LibvirtConfigGuestFeatureKvmHidden())
 
     def _check_number_of_serial_console(self, num_ports):

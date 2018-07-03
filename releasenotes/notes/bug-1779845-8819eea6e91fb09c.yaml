@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Blueprints `hide-hypervisor-id-flavor-extra-spec`_ and
+    `add-kvm-hidden-feature`_ enabled NVIDIA drivers in Linux guests using KVM
+    and QEMU, but support was not included for Windows guests. This is now
+    fixed. See `bug 1779845`_ for details.
+
+    .. _hide-hypervisor-id-flavor-extra-spec: https://blueprints.launchpad.net/nova/+spec/hide-hypervisor-id-flavor-extra-spec
+    .. _add-kvm-hidden-feature: https://blueprints.launchpad.net/nova/+spec/add-kvm-hidden-feature
+    .. _bug 1779845: https://bugs.launchpad.net/nova/+bug/1779845
