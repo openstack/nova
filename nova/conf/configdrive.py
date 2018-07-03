@@ -37,14 +37,16 @@ Possible values:
 Related options:
 
 * This option is meaningful when one of the following alternatives occur:
-  1. force_config_drive option set to 'true'
+
+  1. ``force_config_drive`` option set to ``true``
   2. the REST API call to create the instance contains an enable flag for
      config drive option
   3. the image used to create the instance requires a config drive,
-     this is defined by img_config_drive property for that image.
+     this is defined by ``img_config_drive`` property for that image.
+
 * A compute node running Hyper-V hypervisor can be configured to attach
   configuration drive as a CD drive. To attach the configuration drive as a CD
-  drive, set config_drive_cdrom option at hyperv section, to true.
+  drive, set the ``[hyperv] config_drive_cdrom`` option to true.
 """),
     cfg.BoolOpt('force_config_drive',
         default=False,
