@@ -73,29 +73,41 @@ White list of PCI devices available to VMs.
 Possible values:
 
 * A JSON dictionary which describe a whitelisted PCI device. It should take
-  the following format:
+  the following format::
 
     ["vendor_id": "<id>",] ["product_id": "<id>",]
     ["address": "[[[[<domain>]:]<bus>]:][<slot>][.[<function>]]" |
      "devname": "<name>",]
     {"<tag>": "<tag_value>",}
 
-  Where '[' indicates zero or one occurrences, '{' indicates zero or multiple
-  occurrences, and '|' mutually exclusive options. Note that any missing
-  fields are automatically wildcarded.
+  Where ``[`` indicates zero or one occurrences, ``{`` indicates zero or
+  multiple occurrences, and ``|`` mutually exclusive options. Note that any
+  missing fields are automatically wildcarded.
 
   Valid key values are :
 
-  * "vendor_id": Vendor ID of the device in hexadecimal.
-  * "product_id": Product ID of the device in hexadecimal.
-  * "address": PCI address of the device.
-  * "devname": Device name of the device (for e.g. interface name). Not all
-    PCI devices have a name.
-  * "<tag>": Additional <tag> and <tag_value> used for matching PCI devices.
-    Supported <tag>: "physical_network", "trusted".
+  ``vendor_id``
+    Vendor ID of the device in hexadecimal.
 
-  The address key supports traditional glob style and regular expression
-  syntax. Valid examples are:
+  ``product_id``
+    Product ID of the device in hexadecimal.
+
+  ``address``
+    PCI address of the device. Both traditional glob style and regular
+    expression syntax is supported.
+
+  ``devname``
+    Device name of the device (for e.g. interface name). Not all PCI devices
+    have a name.
+
+  ``<tag>``
+    Additional ``<tag>`` and ``<tag_value>`` used for matching PCI devices.
+    Supported ``<tag>`` values are :
+
+    - ``physical_network``
+    - ``trusted``
+
+  Valid examples are::
 
     passthrough_whitelist = {"devname":"eth0",
                              "physical_network":"physnet"}
@@ -119,14 +131,14 @@ Possible values:
     passthrough_whitelist = {"devname": "eth0", "physical_network":"physnet1",
                              "trusted": "true"}
 
-  The following are invalid, as they specify mutually exclusive options:
+  The following are invalid, as they specify mutually exclusive options::
 
     passthrough_whitelist = {"devname":"eth0",
                              "physical_network":"physnet",
                              "address":"*:0a:00.*"}
 
 * A JSON list of JSON dictionaries corresponding to the above format. For
-  example:
+  example::
 
     passthrough_whitelist = [{"product_id":"0001", "vendor_id":"8086"},
                              {"product_id":"0002", "vendor_id":"8086"}]
