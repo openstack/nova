@@ -172,10 +172,12 @@ def create_allocation_list(context, data, want_version):
         allocations = data[consumer_uuid]['allocations']
         consumer_generation = data[consumer_uuid].get('consumer_generation')
         if allocations:
+            rp_objs = _resource_providers_by_uuid(context, allocations.keys())
             for resource_provider_uuid in allocations:
+                resource_provider = rp_objs[resource_provider_uuid]
                 resources = allocations[resource_provider_uuid]['resources']
                 new_allocations = _new_allocations(context,
-                                                   resource_provider_uuid,
+                                                   resource_provider,
                                                    consumer_uuid,
                                                    resources,
                                                    project_id,
@@ -265,7 +267,35 @@ def list_for_resource_provider(req):
     return response
 
 
-def _new_allocations(context, resource_provider_uuid, consumer_uuid,
+def _resource_providers_by_uuid(ctx, rp_uuids):
+    """Helper method that returns a dict, keyed by resource provider UUID, of
+    ResourceProvider objects.
+
+    :param ctx: The placement context.
+    :param rp_uuids: iterable of UUIDs for providers to fetch.
+    :raises: `webob.exc.HTTPBadRequest` if any of the UUIDs do not refer to
+             an existing resource provider.
+    """
+    res = {}
+    for rp_uuid in rp_uuids:
+        # TODO(jaypipes): Clearly, this is not efficient to do one query for
+        # each resource provider UUID in the allocations instead of doing a
+        # single query for all the UUIDs. However, since
+        # ResourceProviderList.get_all_by_filters() is way too complicated for
+        # this purpose and doesn't raise NotFound anyway, we'll do this.
+        # Perhaps consider adding a ResourceProviderList.get_all_by_uuids()
+        # later on?
+        try:
+            res[rp_uuid] = rp_obj.ResourceProvider.get_by_uuid(ctx, rp_uuid)
+        except exception.NotFound:
+            raise webob.exc.HTTPBadRequest(
+                _("Allocation for resource provider '%(rp_uuid)s' "
+                  "that does not exist.") %
+                {'rp_uuid': rp_uuid})
+    return res
+
+
+def _new_allocations(context, resource_provider, consumer_uuid,
                      resources, project_id, user_id, consumer_generation,
                      want_version):
     """Create new allocation objects for a set of resources
@@ -273,8 +303,7 @@ def _new_allocations(context, resource_provider_uuid, consumer_uuid,
     Returns a list of Allocation objects.
 
     :param context: The placement context.
-    :param resource_provider_uuid: The uuid of the resource provider that
-                                   has the resources.
+    :param resource_provider: The resource provider that has the resources.
     :param consumer_uuid: The uuid of the consumer of the resources.
     :param resources: A dict of resource classes and values.
     :param project_id: The project consuming the resources.
@@ -285,14 +314,6 @@ def _new_allocations(context, resource_provider_uuid, consumer_uuid,
     :param want_version: The microversion object from the context.
     """
     allocations = []
-    try:
-        resource_provider = rp_obj.ResourceProvider.get_by_uuid(
-            context, resource_provider_uuid)
-    except exception.NotFound:
-        raise webob.exc.HTTPBadRequest(
-            _("Allocation for resource provider '%(rp_uuid)s' "
-              "that does not exist.") %
-            {'rp_uuid': resource_provider_uuid})
     consumer = util.ensure_consumer(
         context, consumer_uuid, project_id, user_id, consumer_generation,
         want_version)
@@ -345,9 +366,11 @@ def _set_allocations_for_consumer(req, schema):
             allocation.used = 0
             allocation_objects.append(allocation)
     else:
+        rp_objs = _resource_providers_by_uuid(context, allocation_data.keys())
         for resource_provider_uuid, allocation in allocation_data.items():
+            resource_provider = rp_objs[resource_provider_uuid]
             new_allocations = _new_allocations(context,
-                                               resource_provider_uuid,
+                                               resource_provider,
                                                consumer_uuid,
                                                allocation['resources'],
                                                data.get('project_id'),
