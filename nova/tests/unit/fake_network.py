@@ -386,7 +386,7 @@ def unset_stub_network_methods(test):
                           _real_functions[name])
 
 
-def stub_compute_with_ips(stubs):
+def stub_compute_with_ips(test):
     orig_get = compute_api.API.get
     orig_get_all = compute_api.API.get_all
     orig_create = compute_api.API.create
@@ -403,10 +403,11 @@ def stub_compute_with_ips(stubs):
     def fake_pci_device_get_by_addr(context, node_id, dev_addr):
         return test_pci_device.fake_db_dev
 
-    stubs.Set(db, 'pci_device_get_by_addr', fake_pci_device_get_by_addr)
-    stubs.Set(compute_api.API, 'get', fake_get)
-    stubs.Set(compute_api.API, 'get_all', fake_get_all)
-    stubs.Set(compute_api.API, 'create', fake_create)
+    test.stub_out('nova.db.pci_device_get_by_addr',
+                  fake_pci_device_get_by_addr)
+    test.stub_out('nova.compute.api.API.get', fake_get)
+    test.stub_out('nova.compute.api.API.get_all', fake_get_all)
+    test.stub_out('nova.compute.api.API.create', fake_create)
 
 
 def _get_fake_cache():
