@@ -244,6 +244,49 @@ an exception will be raised.
 For more information about image metadata, refer to the `Image metadata`_
 guide.
 
+Customizing instance emulator thread pinning policies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When guests need dedicated vCPU allocation, it may not be acceptable to allow
+emulator threads to steal time from real-time vCPUs.
+
+In order to achieve emulator thread pinning, configure the
+``hw:emulator_threads_policy`` flavor extra spec. Additionally,
+``hw:cpu_policy`` needs to be set to ``dedicated``. The default value for
+``hw:emulator_threads_policy`` is ``share``.
+
+If you want to tell nova to reserve a dedicated CPU per instance for emulator
+thread pinning, configure ``hw:emulator_threads_policy`` as ``isolate``.
+
+.. code-block:: console
+
+   $ openstack flavor set m1.large \
+     --property hw:cpu_policy=dedicated \
+     --property hw:emulator_threads_policy=isolate
+
+An instance spawned with these settings will have a dedicated physical CPU
+which is chosen from the ``vcpu_pin_set`` in addition to the physical CPUs
+which are reserved for the vCPUs.
+
+If you want to tell nova to pin the emulator threads to a shared set of
+dedicated CPUs, configure ``hw:emulator_threads_policy`` as ``share``.
+
+.. code-block:: console
+
+   $ openstack flavor set m1.large \
+     --property hw:cpu_policy=dedicated \
+     --property hw:emulator_threads_policy=share
+
+Additionally, set ``[compute]/cpu_shared_set`` in ``/etc/nova/nova.conf`` to
+the set of host CPUs that should be used for best-effort CPU resources.
+
+.. code-block:: console
+
+   # crudini --set /etc/nova/nova.conf compute cpu_shared_set 4,5,8-11
+
+For more information about the syntax for ``hw:emulator_threads_policy``,
+refer to the :doc:`/admin/flavors` guide.
+
 Customizing instance CPU topologies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
