@@ -13,11 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import contextlib
 import copy
 import functools
 import random
 import re
+import retrying
 import time
 
 from keystoneauth1 import exceptions as ks_exc
@@ -47,9 +49,13 @@ WARN_EVERY = 10
 PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
 GRANULAR_AC_VERSION = '1.25'
 POST_RPS_RETURNS_PAYLOAD_API_VERSION = '1.20'
+AGGREGATE_GENERATION_VERSION = '1.19'
 NESTED_PROVIDER_API_VERSION = '1.14'
 POST_ALLOCATIONS_API_VERSION = '1.13'
 ALLOCATION_PROJECT_USER = '1.12'
+
+AggInfo = collections.namedtuple('AggInfo', ['aggregates', 'generation'])
+TraitInfo = collections.namedtuple('TraitInfo', ['traits', 'generation'])
 
 
 def warn_limit(self, msg):
@@ -365,18 +371,23 @@ class SchedulerReportClient(object):
         """Queries the placement API for a resource provider's aggregates.
 
         :param rp_uuid: UUID of the resource provider to grab aggregates for.
-        :return: A set() of aggregate UUIDs, which may be empty if the
-                 specified provider has no aggregate associations.
+        :return: A namedtuple comprising:
+                    * .aggregates: A set() of string aggregate UUIDs, which may
+                      be empty if the specified provider is associated with no
+                      aggregates.
+                    * .generation: The resource provider generation.
         :raise: ResourceProviderAggregateRetrievalFailed on errors.  In
                 particular, we raise this exception (as opposed to returning
                 None or the empty set()) if the specified resource provider
                 does not exist.
         """
         resp = self.get("/resource_providers/%s/aggregates" % rp_uuid,
-                        version='1.1', global_request_id=context.global_id)
+                        version=AGGREGATE_GENERATION_VERSION,
+                        global_request_id=context.global_id)
         if resp.status_code == 200:
             data = resp.json()
-            return set(data['aggregates'])
+            return AggInfo(aggregates=set(data['aggregates']),
+                           generation=data['resource_provider_generation'])
 
         placement_req_id = get_placement_request_id(resp)
         msg = ("[%(placement_req_id)s] Failed to retrieve aggregates from "
@@ -397,8 +408,10 @@ class SchedulerReportClient(object):
 
         :param context: The security context
         :param rp_uuid: UUID of the resource provider to grab traits for.
-        :return: A set() of string trait names, which may be empty if the
-                 specified provider has no traits.
+        :return: A namedtuple comprising:
+                    * .traits: A set() of string trait names, which may be
+                      empty if the specified provider has no traits.
+                    * .generation: The resource provider generation.
         :raise: ResourceProviderTraitRetrievalFailed on errors.  In particular,
                 we raise this exception (as opposed to returning None or the
                 empty set()) if the specified resource provider does not exist.
@@ -407,7 +420,9 @@ class SchedulerReportClient(object):
                         version='1.6', global_request_id=context.global_id)
 
         if resp.status_code == 200:
-            return set(resp.json()['traits'])
+            json = resp.json()
+            return TraitInfo(traits=set(json['traits']),
+                             generation=json['resource_provider_generation'])
 
         placement_req_id = get_placement_request_id(resp)
         LOG.error(
@@ -674,9 +689,8 @@ class SchedulerReportClient(object):
             # NOTE(efried): _refresh_associations doesn't refresh inventory
             # (yet) - see that method's docstring for the why.
             self._refresh_and_get_inventory(context, rp_to_refresh['uuid'])
-            self._refresh_associations(
-                context, rp_to_refresh['uuid'],
-                generation=rp_to_refresh.get('generation'), force=True)
+            self._refresh_associations(context, rp_to_refresh['uuid'],
+                                       force=True)
 
         return uuid
 
@@ -734,20 +748,14 @@ class SchedulerReportClient(object):
         if curr is None:
             return None
 
-        cur_gen = curr['resource_provider_generation']
-        # TODO(efried): This condition banks on the generation for a new RP
-        # starting at zero, which isn't part of the API.  It also is only
-        # useful as an optimization on a freshly-created RP to which nothing
-        # has ever been done.  And it's not much of an optimization, because
-        # updating the cache is super cheap.  We should remove the condition.
-        if cur_gen:
-            curr_inv = curr['inventories']
-            self._provider_tree.update_inventory(rp_uuid, curr_inv,
-                                                 generation=cur_gen)
+        self._provider_tree.update_inventory(
+            rp_uuid, curr['inventories'],
+            generation=curr['resource_provider_generation'])
+
         return curr
 
-    def _refresh_associations(self, context, rp_uuid, generation=None,
-                              force=False, refresh_sharing=True):
+    def _refresh_associations(self, context, rp_uuid, force=False,
+                              refresh_sharing=True):
         """Refresh aggregates, traits, and (optionally) aggregate-associated
         sharing providers for the specified resource provider uuid.
 
@@ -762,8 +770,6 @@ class SchedulerReportClient(object):
         :param context: The security context
         :param rp_uuid: UUID of the resource provider to check for fresh
                         aggregates and traits
-        :param generation: The resource provider generation to set.  If None,
-                           the provider's generation is not updated.
         :param force: If True, force the refresh
         :param refresh_sharing: If True, fetch all the providers associated
                                 by aggregate with the specified provider,
@@ -776,7 +782,10 @@ class SchedulerReportClient(object):
         """
         if force or self._associations_stale(rp_uuid):
             # Refresh aggregates
-            aggs = self._get_provider_aggregates(context, rp_uuid)
+            agg_info = self._get_provider_aggregates(context, rp_uuid)
+            # If @safe_connect makes the above return None, this will raise
+            # TypeError. Good.
+            aggs, generation = agg_info.aggregates, agg_info.generation
             msg = ("Refreshing aggregate associations for resource provider "
                    "%s, aggregates: %s")
             LOG.debug(msg, rp_uuid, ','.join(aggs or ['None']))
@@ -787,7 +796,10 @@ class SchedulerReportClient(object):
                 rp_uuid, aggs, generation=generation)
 
             # Refresh traits
-            traits = self._get_provider_traits(context, rp_uuid)
+            trait_info = self._get_provider_traits(context, rp_uuid)
+            # If @safe_connect makes the above return None, this will raise
+            # TypeError. Good.
+            traits, generation = trait_info.traits, trait_info.generation
             msg = ("Refreshing trait associations for resource provider %s, "
                    "traits: %s")
             LOG.debug(msg, rp_uuid, ','.join(traits or ['None']))
@@ -1250,7 +1262,7 @@ class SchedulerReportClient(object):
 
     @safe_connect
     def set_aggregates_for_provider(self, context, rp_uuid, aggregates,
-            use_cache=True):
+            use_cache=True, generation=None):
         """Replace a provider's aggregates with those specified.
 
         The provider must exist - this method does not attempt to create it.
@@ -1261,18 +1273,55 @@ class SchedulerReportClient(object):
         :param aggregates: Iterable of aggregates to set on the provider.
         :param use_cache: If False, indicates not to update the cache of
                           resource providers.
-        :raises: ResourceProviderUpdateFailed on any placement API failure.
+        :param generation: Resource provider generation. Required if use_cache
+                           is False.
+        :raises: ResourceProviderUpdateConflict if the provider's generation
+                 doesn't match the generation in the cache.  Callers may choose
+                 to retrieve the provider and its associations afresh and
+                 redrive this operation.
+        :raises: ResourceProviderUpdateFailed on any other placement API
+                 failure.
         """
-        # TODO(efried): Handle generation conflicts when supported by placement
+        # If a generation is specified, it trumps whatever's in the cache.
+        # Otherwise...
+        if generation is None:
+            if use_cache:
+                generation = self._provider_tree.data(rp_uuid).generation
+            else:
+                # Either cache or generation is required
+                raise ValueError(
+                    _("generation is required with use_cache=False"))
+
+        # Check whether aggregates need updating.  We can only do this if we
+        # have a cache entry with a matching generation.
+        try:
+            if (self._provider_tree.data(rp_uuid).generation == generation
+                    and not self._provider_tree.have_aggregates_changed(
+                        rp_uuid, aggregates)):
+                return
+        except ValueError:
+            # Not found in the cache; proceed
+            pass
+
         url = '/resource_providers/%s/aggregates' % rp_uuid
         aggregates = list(aggregates) if aggregates else []
-        resp = self.put(url, aggregates, version='1.1',
+        payload = {'aggregates': aggregates,
+                   'resource_provider_generation': generation}
+        resp = self.put(url, payload, version=AGGREGATE_GENERATION_VERSION,
                         global_request_id=context.global_id)
 
         if resp.status_code == 200:
-            placement_aggs = resp.json()['aggregates']
-            if use_cache:
-                self._provider_tree.update_aggregates(rp_uuid, placement_aggs)
+            # Try to update the cache regardless.  If use_cache=False, ignore
+            # any failures.
+            try:
+                data = resp.json()
+                self._provider_tree.update_aggregates(
+                    rp_uuid, data['aggregates'],
+                    generation=data['resource_provider_generation'])
+            except ValueError:
+                if use_cache:
+                    # The entry should've been there
+                    raise
             return
 
         # Some error occurred; log it
@@ -1286,8 +1335,24 @@ class SchedulerReportClient(object):
             'status_code': resp.status_code,
             'err_text': resp.text,
         }
-        LOG.error(msg, args)
 
+        # If a conflict, invalidate the cache and raise special exception
+        if resp.status_code == 409:
+            # No reason to condition cache invalidation on use_cache - if we
+            # got a 409, the cache entry is still bogus if it exists; and the
+            # below is a no-op if it doesn't.
+            try:
+                self._provider_tree.remove(rp_uuid)
+            except ValueError:
+                pass
+            self._association_refresh_time.pop(rp_uuid, None)
+
+            LOG.warning(msg, args)
+            raise exception.ResourceProviderUpdateConflict(
+                uuid=rp_uuid, generation=generation, error=resp.text)
+
+        # Otherwise, raise generic exception
+        LOG.error(msg, args)
         raise exception.ResourceProviderUpdateFailed(url=url, error=resp.text)
 
     @safe_connect
@@ -1929,6 +1994,9 @@ class SchedulerReportClient(object):
 
         raise exception.ResourceProviderNotFound(name_or_uuid=name)
 
+    @retrying.retry(stop_max_attempt_number=4,
+                    retry_on_exception=lambda e: isinstance(
+                        e, exception.ResourceProviderUpdateConflict))
     def aggregate_add_host(self, context, agg_uuid, host_name):
         """Looks up a resource provider by the supplied host name, and adds the
         aggregate with supplied UUID to that resource provider.
@@ -1947,6 +2015,8 @@ class SchedulerReportClient(object):
                  failing to get a provider's existing aggregates
         :raises: `exception.ResourceProviderUpdateFailed` if there was a
                  failure attempting to save the provider aggregates
+        :raises: `exception.ResourceProviderUpdateConflict` if a concurrent
+                 update to the provider was detected.
         """
         rp = self._get_provider_by_name(context, host_name)
         # NOTE(jaypipes): Unfortunately, due to @safe_connect,
@@ -1962,16 +2032,21 @@ class SchedulerReportClient(object):
         # with, however, so we first grab the list of aggregates for this
         # provider and add the aggregate to the list of aggregates it already
         # has
-        existing_aggs = self._get_provider_aggregates(context, rp_uuid)
+        agg_info = self._get_provider_aggregates(context, rp_uuid)
+        # @safe_connect can make the above return None
+        if agg_info is None:
+            raise exception.PlacementAPIConnectFailure()
+        existing_aggs, gen = agg_info.aggregates, agg_info.generation
         if agg_uuid in existing_aggs:
             return
 
         new_aggs = existing_aggs | set([agg_uuid])
-        # TODO(jaypipes): Send provider generation (which is in the rp dict)
-        # along to set_aggregates_for_provider()
         self.set_aggregates_for_provider(
-            context, rp_uuid, new_aggs, use_cache=False)
+            context, rp_uuid, new_aggs, use_cache=False, generation=gen)
 
+    @retrying.retry(stop_max_attempt_number=4,
+                    retry_on_exception=lambda e: isinstance(
+                        e, exception.ResourceProviderUpdateConflict))
     def aggregate_remove_host(self, context, agg_uuid, host_name):
         """Looks up a resource provider by the supplied host name, and removes
         the aggregate with supplied UUID from that resource provider.
@@ -1990,6 +2065,8 @@ class SchedulerReportClient(object):
                  failing to get a provider's existing aggregates
         :raises: `exception.ResourceProviderUpdateFailed` if there was a
                  failure attempting to save the provider aggregates
+        :raises: `exception.ResourceProviderUpdateConflict` if a concurrent
+                 update to the provider was detected.
         """
         rp = self._get_provider_by_name(context, host_name)
         # NOTE(jaypipes): Unfortunately, due to @safe_connect,
@@ -2005,12 +2082,14 @@ class SchedulerReportClient(object):
         # associated with, however, so we first grab the list of aggregates for
         # this provider and remove the aggregate from the list of aggregates it
         # already has
-        existing_aggs = self._get_provider_aggregates(context, rp_uuid)
+        agg_info = self._get_provider_aggregates(context, rp_uuid)
+        # @safe_connect can make the above return None
+        if agg_info is None:
+            raise exception.PlacementAPIConnectFailure()
+        existing_aggs, gen = agg_info.aggregates, agg_info.generation
         if agg_uuid not in existing_aggs:
             return
 
         new_aggs = existing_aggs - set([agg_uuid])
-        # TODO(jaypipes): Send provider generation (which is in the rp dict)
-        # along to set_aggregates_for_provider()
         self.set_aggregates_for_provider(
-            context, rp_uuid, new_aggs, use_cache=False)
+            context, rp_uuid, new_aggs, use_cache=False, generation=gen)

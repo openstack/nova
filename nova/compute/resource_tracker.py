@@ -20,6 +20,7 @@ model.
 """
 import collections
 import copy
+import retrying
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -858,6 +859,9 @@ class ResourceTracker(object):
             return True
         return False
 
+    @retrying.retry(stop_max_attempt_number=4,
+                    retry_on_exception=lambda e: isinstance(
+                        e, exception.ResourceProviderUpdateConflict))
     def _update(self, context, compute_node):
         """Update partial stats locally and populate them to Scheduler."""
         if self._resource_change(compute_node):
