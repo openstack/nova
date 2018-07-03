@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.schemas import scheduler_hints as schema
-
 
 # NOTE(gmann): Accepting request body in this function to fetch "scheduler
 # hint". This is a workaround to allow OS_SCH-HNT at the top level
@@ -27,7 +25,3 @@ def server_create(server_dict, create_kwargs, req_body):
         scheduler_hints = req_body['OS-SCH-HNT:scheduler_hints']
 
     create_kwargs['scheduler_hints'] = scheduler_hints
-
-
-def get_server_create_schema(version):
-    return schema.server_create
