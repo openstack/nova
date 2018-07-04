@@ -551,9 +551,3 @@ def server_create(server_dict, create_kwargs, body_deprecated_param):
             sg['name'] for sg in security_groups if sg.get('name')]
         create_kwargs['security_groups'] = list(
             set(create_kwargs['security_groups']))
-
-
-def get_server_create_schema(version):
-    if version == '2.0':
-        return schema_security_groups.server_create_v20
-    return schema_security_groups.server_create

@@ -12,30 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
-
 from nova.api.validation import parameter_types
-
-server_create = {
-    'security_groups': {
-        'type': 'array',
-        'items': {
-            'type': 'object',
-            'properties': {
-                # NOTE(oomichi): allocate_for_instance() of neutronv2/api.py
-                # gets security_group names or UUIDs from this parameter.
-                # parameter_types.name allows both format.
-                'name': parameter_types.name,
-            },
-            'additionalProperties': False,
-        }
-    },
-}
-
-
-server_create_v20 = copy.deepcopy(server_create)
-server_create_v20['security_groups']['items']['properties']['name'] = (
-    parameter_types.name_with_leading_trailing_spaces)
 
 index_query = {
     'type': 'object',
