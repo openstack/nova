@@ -939,23 +939,6 @@ def instance_group_get_all_by_project_id(context, project_id):
     return IMPL.instance_group_get_all_by_project_id(context, project_id)
 
 
-def instance_group_members_add(context, group_uuid, members,
-                               set_delete=False):
-    """Add members to the group."""
-    return IMPL.instance_group_members_add(context, group_uuid, members,
-                                           set_delete=set_delete)
-
-
-def instance_group_member_delete(context, group_uuid, instance_id):
-    """Delete a specific member from the group."""
-    return IMPL.instance_group_member_delete(context, group_uuid, instance_id)
-
-
-def instance_group_members_get(context, group_uuid):
-    """Get the members from the group."""
-    return IMPL.instance_group_members_get(context, group_uuid)
-
-
 ###################
 
 
