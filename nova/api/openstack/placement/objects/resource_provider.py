@@ -1041,6 +1041,23 @@ class ResourceProvider(base.VersionedObject, base.TimestampedObject):
                             action='update',
                             reason=_('re-parenting a provider is not '
                                      'currently allowed.'))
+                if my_ids.parent_uuid is None:
+                    # So the user specifies a parent for an RP that doesn't
+                    # have one. We have to check that by this new parent we
+                    # don't create a loop in the tree. Basically the new parent
+                    # cannot be the RP itself or one of its descendants.
+                    # However as the RP's current parent is None the above
+                    # condition is the same as "the new parent cannot be any RP
+                    # from the current RP tree".
+                    same_tree = ResourceProviderList.get_all_by_filters(
+                        context,
+                        filters={'in_tree': self.uuid})
+                    rp_uuids_in_the_same_tree = [rp.uuid for rp in same_tree]
+                    if parent_uuid in rp_uuids_in_the_same_tree:
+                        raise exception.ObjectActionError(
+                            action='update',
+                            reason=_('creating loop in the provider tree is '
+                                     'not allowed.'))
 
                 updates['root_provider_id'] = parent_ids.root_id
                 updates['parent_provider_id'] = parent_ids.id
