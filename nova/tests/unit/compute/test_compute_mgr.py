@@ -21,6 +21,7 @@ from cursive import exception as cursive_exception
 import ddt
 from eventlet import event as eventlet_event
 from eventlet import timeout as eventlet_timeout
+from keystoneauth1 import exceptions as keystone_exception
 import mock
 import netaddr
 from oslo_log import log as logging
@@ -6055,6 +6056,48 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             deallocate.assert_called_once_with(
                 self.context, mock.sentinel.instance,
                 requested_networks=requested_networks)
+
+    @mock.patch('nova.compute.manager.ComputeManager._deallocate_network')
+    @mock.patch('nova.compute.manager.LOG.warning')
+    def test_try_deallocate_network_retry_direct(self, warning_mock,
+                                                 deallocate_network_mock):
+        """Tests that _try_deallocate_network will retry calling
+        _deallocate_network on keystone ConnectFailure errors up to a limit.
+        """
+        deallocate_network_mock.side_effect = \
+            keystone_exception.connection.ConnectFailure
+        req_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='auto')])
+        instance = mock.MagicMock()
+        ctxt = mock.MagicMock()
+        self.assertRaises(keystone_exception.connection.ConnectFailure,
+                          self.compute._try_deallocate_network,
+                          ctxt, instance, req_networks)
+        # should come to 3 retries and 1 default call , total 4
+        self.assertEqual(4, deallocate_network_mock.call_count)
+        # And we should have logged a warning.
+        warning_mock.assert_called()
+        self.assertIn('Failed to deallocate network for instance; retrying.',
+                      warning_mock.call_args[0][0])
+
+    @mock.patch('nova.compute.manager.ComputeManager._deallocate_network')
+    @mock.patch('nova.compute.manager.LOG.warning')
+    def test_try_deallocate_network_no_retry(self, warning_mock,
+                                             deallocate_network_mock):
+        """Tests that _try_deallocate_network will not retry
+        _deallocate_network for non-ConnectFailure errors.
+        """
+        deallocate_network_mock.side_effect = test.TestingException('oops')
+        req_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='auto')])
+        instance = mock.MagicMock()
+        ctxt = mock.MagicMock()
+        self.assertRaises(test.TestingException,
+                          self.compute._try_deallocate_network,
+                          ctxt, instance, req_networks)
+        deallocate_network_mock.assert_called_once_with(
+            ctxt, instance, req_networks)
+        warning_mock.assert_not_called()
 
     @mock.patch('nova.compute.utils.notify_about_instance_create')
     @mock.patch.object(manager.ComputeManager, '_instance_update')

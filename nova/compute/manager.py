@@ -2285,9 +2285,28 @@ class ComputeManager(manager.Manager):
 
     def _try_deallocate_network(self, context, instance,
                                 requested_networks=None):
+
+        # During auto-scale cleanup, we could be deleting a large number
+        # of servers at the same time and overloading parts of the system,
+        # so we retry a few times in case of connection failures to the
+        # networking service.
+        @loopingcall.RetryDecorator(
+            max_retry_count=3, inc_sleep_time=2, max_sleep_time=12,
+            exceptions=(keystone_exception.connection.ConnectFailure,))
+        def _deallocate_network_with_retries():
+            try:
+                self._deallocate_network(
+                    context, instance, requested_networks)
+            except keystone_exception.connection.ConnectFailure as e:
+                # Provide a warning that something is amiss.
+                with excutils.save_and_reraise_exception():
+                    LOG.warning('Failed to deallocate network for instance; '
+                                'retrying. Error: %s', six.text_type(e),
+                                instance=instance)
+
         try:
             # tear down allocated network structure
-            self._deallocate_network(context, instance, requested_networks)
+            _deallocate_network_with_retries()
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 LOG.error('Failed to deallocate network for instance. '
