@@ -1258,6 +1258,7 @@ class UsageList(base.ObjectListBase, base.NovaObject):
 
     @classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
+        _ensure_rc_cache(context)
         usage_list = cls._get_all_by_resource_provider_uuid(context, rp_uuid)
         return base.obj_make_list(context, cls(context), Usage, usage_list)
 
