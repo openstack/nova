@@ -341,7 +341,8 @@ class TestOcataCheck(test.TestCase):
         self.migration.upgrade(self.engine)
 
     def test_upgrade_dirty_instance_groups(self):
-        db_api.instance_group_create(self.context, self.ig_values)
+        igs = db_utils.get_table(self.engine, 'instance_groups')
+        igs.insert().execute(self.ig_values)
         self.assertRaises(exception.ValidationError,
                           self.migration.upgrade, self.engine)
 

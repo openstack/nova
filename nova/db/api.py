@@ -905,43 +905,6 @@ def instance_remove_security_group(context, instance_id, security_group_id):
 ####################
 
 
-def instance_group_create(context, values, policies=None, members=None):
-    """Create a new group.
-
-    Each group will receive a unique uuid. This will be used for access to the
-    group.
-    """
-    return IMPL.instance_group_create(context, values, policies, members)
-
-
-def instance_group_get(context, group_uuid):
-    """Get a specific group by id."""
-    return IMPL.instance_group_get(context, group_uuid)
-
-
-def instance_group_get_by_instance(context, instance_uuid):
-    """Get the group an instance is a member of."""
-    return IMPL.instance_group_get_by_instance(context, instance_uuid)
-
-
-def instance_group_update(context, group_uuid, values):
-    """Update the attributes of an group."""
-    return IMPL.instance_group_update(context, group_uuid, values)
-
-
-def instance_group_get_all(context):
-    """Get all groups."""
-    return IMPL.instance_group_get_all(context)
-
-
-def instance_group_get_all_by_project_id(context, project_id):
-    """Get all groups for a specific project_id."""
-    return IMPL.instance_group_get_all_by_project_id(context, project_id)
-
-
-###################
-
-
 def instance_info_cache_get(context, instance_uuid):
     """Gets an instance info cache from the table.
 
