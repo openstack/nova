@@ -4467,6 +4467,12 @@ name:
   in: body
   required: true
   type: string
+name_sec_group_optional:
+  description: |
+    The security group name.
+  in: body
+  required: false
+  type: string
 name_server_group:
   description: |
     The name of the server group.
@@ -5463,7 +5469,7 @@ secgroup_tenant_id_body:
   description: |
     The UUID of the tenant that owns this security group.
   in: body
-  required: true
+  required: false
   type: string
 security_group:
   description: |
