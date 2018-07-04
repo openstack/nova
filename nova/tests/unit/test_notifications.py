@@ -465,6 +465,21 @@ class NotificationsTestCase(test.TestCase):
                          fake_notifier.VERSIONED_NOTIFICATIONS[0]
                          ['payload']['nova_object.data']['tags'])
 
+    def test_send_versioned_action_initiator_update(self):
+        notifications.send_update(self.context, self.instance, self.instance)
+        action_initiator_user = self.context.user_id
+        action_initiator_project = self.context.project_id
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+
+        self.assertEqual(action_initiator_user,
+                         fake_notifier.VERSIONED_NOTIFICATIONS[0]
+                         ['payload']['nova_object.data']
+                         ['action_initiator_user'])
+        self.assertEqual(action_initiator_project,
+                         fake_notifier.VERSIONED_NOTIFICATIONS[0]
+                         ['payload']['nova_object.data']
+                         ['action_initiator_project'])
+
     def test_send_no_state_change(self):
         called = [False]
 

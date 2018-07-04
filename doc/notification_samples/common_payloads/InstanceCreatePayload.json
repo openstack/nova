@@ -23,5 +23,5 @@
         ]
     },
     "nova_object.name":"InstanceCreatePayload",
-    "nova_object.version": "1.9"
+    "nova_object.version": "1.10"
 }

@@ -6,7 +6,8 @@
             "host": "host2",
             "node": "host2",
             "power_state": "pending",
-            "task_state": "rebuilding"
+            "task_state": "rebuilding",
+            "action_initiator_user": "admin"
         }
     },
     "priority": "INFO",

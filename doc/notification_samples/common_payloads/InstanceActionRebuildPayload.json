@@ -7,5 +7,5 @@
         ]
     },
     "nova_object.name": "InstanceActionRebuildPayload",
-    "nova_object.version": "1.7"
+    "nova_object.version": "1.8"
 }
