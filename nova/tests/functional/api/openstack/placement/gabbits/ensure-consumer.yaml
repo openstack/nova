@@ -12,11 +12,10 @@ defaults:
 
 vars:
 - &default_incomplete_id 00000000-0000-0000-0000-0000000000000
-- &consumer_id fbad1a87-c341-4ac0-be49-777b21ce1b7b
 tests:
 
 - name: put an allocation without project/user (1.7)
-  PUT: /allocations/*consumer_id
+  PUT: /allocations/$ENVIRON['CONSUMER_UUID']
   request_headers:
       content-type: application/json
       openstack-api-version: placement 1.7
@@ -34,7 +33,7 @@ tests:
 # allocation information at a microversion that shows project/user information
 # (1.12+)
 - name: get with 1.12 microversion and check project and user are filled
-  GET: /allocations/*consumer_id
+  GET: /allocations/$ENVIRON['CONSUMER_UUID']
   request_headers:
       openstack-api-version: placement 1.12
   response_json_paths:
