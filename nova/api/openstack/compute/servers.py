@@ -66,36 +66,6 @@ class ServersController(wsgi.Controller):
 
     _view_builder_class = views_servers.ViewBuilder
 
-    schema_server_create = schema_servers.base_create
-    schema_server_update = schema_servers.base_update
-    schema_server_rebuild = schema_servers.base_rebuild
-
-    schema_server_create_v20 = schema_servers.base_create_v20
-    schema_server_update_v20 = schema_servers.base_update_v20
-    schema_server_rebuild_v20 = schema_servers.base_rebuild_v20
-
-    schema_server_create_v219 = schema_servers.base_create_v219
-    schema_server_update_v219 = schema_servers.base_update_v219
-    schema_server_rebuild_v219 = schema_servers.base_rebuild_v219
-    schema_server_rebuild_v254 = schema_servers.base_rebuild_v254
-    schema_server_rebuild_v257 = schema_servers.base_rebuild_v257
-
-    schema_server_create_v232 = schema_servers.base_create_v232
-    schema_server_create_v233 = schema_servers.base_create_v233
-    schema_server_create_v237 = schema_servers.base_create_v237
-    schema_server_create_v242 = schema_servers.base_create_v242
-    schema_server_create_v252 = schema_servers.base_create_v252
-    schema_server_create_v257 = schema_servers.base_create_v257
-
-    schema_server_create_v263 = schema_servers.base_create_v263
-    schema_server_rebuild_v263 = schema_servers.base_rebuild_v263
-
-    # NOTE(alex_xu): Please do not add more items into this list. This list
-    # should be removed in the future.
-    schema_func_list = [
-        user_data.get_server_create_schema,
-    ]
-
     # NOTE(alex_xu): Please do not add more items into this list. This list
     # should be removed in the future.
     server_create_func_list = [
@@ -126,19 +96,6 @@ class ServersController(wsgi.Controller):
 
         super(ServersController, self).__init__(**kwargs)
         self.compute_api = compute.API()
-
-        # TODO(alex_xu): The final goal is that merging all of
-        # extended json-schema into server main json-schema.
-        self._create_schema(self.schema_server_create_v263, '2.63')
-        self._create_schema(self.schema_server_create_v257, '2.57')
-        self._create_schema(self.schema_server_create_v252, '2.52')
-        self._create_schema(self.schema_server_create_v242, '2.42')
-        self._create_schema(self.schema_server_create_v237, '2.37')
-        self._create_schema(self.schema_server_create_v233, '2.33')
-        self._create_schema(self.schema_server_create_v232, '2.32')
-        self._create_schema(self.schema_server_create_v219, '2.19')
-        self._create_schema(self.schema_server_create, '2.1')
-        self._create_schema(self.schema_server_create_v20, '2.0')
 
     @wsgi.expected_errors((400, 403))
     @validation.query_schema(schema_servers.query_params_v226, '2.26')
@@ -452,16 +409,16 @@ class ServersController(wsgi.Controller):
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 409))
-    @validation.schema(schema_server_create_v20, '2.0', '2.0')
-    @validation.schema(schema_server_create, '2.1', '2.18')
-    @validation.schema(schema_server_create_v219, '2.19', '2.31')
-    @validation.schema(schema_server_create_v232, '2.32', '2.32')
-    @validation.schema(schema_server_create_v233, '2.33', '2.36')
-    @validation.schema(schema_server_create_v237, '2.37', '2.41')
-    @validation.schema(schema_server_create_v242, '2.42', '2.51')
-    @validation.schema(schema_server_create_v252, '2.52', '2.56')
-    @validation.schema(schema_server_create_v257, '2.57', '2.62')
-    @validation.schema(schema_server_create_v263, '2.63')
+    @validation.schema(schema_servers.base_create_v20, '2.0', '2.0')
+    @validation.schema(schema_servers.base_create, '2.1', '2.18')
+    @validation.schema(schema_servers.base_create_v219, '2.19', '2.31')
+    @validation.schema(schema_servers.base_create_v232, '2.32', '2.32')
+    @validation.schema(schema_servers.base_create_v233, '2.33', '2.36')
+    @validation.schema(schema_servers.base_create_v237, '2.37', '2.41')
+    @validation.schema(schema_servers.base_create_v242, '2.42', '2.51')
+    @validation.schema(schema_servers.base_create_v252, '2.52', '2.56')
+    @validation.schema(schema_servers.base_create_v257, '2.57', '2.62')
+    @validation.schema(schema_servers.base_create_v263, '2.63')
     def create(self, req, body):
         """Creates a new server for a given user."""
         context = req.environ['nova.context']
@@ -681,14 +638,6 @@ class ServersController(wsgi.Controller):
         for func in self.server_create_func_list:
             func(server_dict, create_kwargs, req_body)
 
-    def _create_schema(self, create_schema, version):
-        for schema_func in self.schema_func_list:
-            self._create_schema_by_func(create_schema, version, schema_func)
-
-    def _create_schema_by_func(self, create_schema, version, schema_func):
-        schema = schema_func(version)
-        create_schema['properties']['server']['properties'].update(schema)
-
     def _delete(self, context, req, instance_uuid):
         instance = self._get_server(context, req, instance_uuid)
         context.can(server_policies.SERVERS % 'delete',
@@ -706,9 +655,9 @@ class ServersController(wsgi.Controller):
             self.compute_api.delete(context, instance)
 
     @wsgi.expected_errors(404)
-    @validation.schema(schema_server_update_v20, '2.0', '2.0')
-    @validation.schema(schema_server_update, '2.1', '2.18')
-    @validation.schema(schema_server_update_v219, '2.19')
+    @validation.schema(schema_servers.base_update_v20, '2.0', '2.0')
+    @validation.schema(schema_servers.base_update, '2.1', '2.18')
+    @validation.schema(schema_servers.base_update_v219, '2.19')
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller."""
 
@@ -899,12 +848,12 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('rebuild')
-    @validation.schema(schema_server_rebuild_v20, '2.0', '2.0')
-    @validation.schema(schema_server_rebuild, '2.1', '2.18')
-    @validation.schema(schema_server_rebuild_v219, '2.19', '2.53')
-    @validation.schema(schema_server_rebuild_v254, '2.54', '2.56')
-    @validation.schema(schema_server_rebuild_v257, '2.57', '2.62')
-    @validation.schema(schema_server_rebuild_v263, '2.63')
+    @validation.schema(schema_servers.base_rebuild_v20, '2.0', '2.0')
+    @validation.schema(schema_servers.base_rebuild, '2.1', '2.18')
+    @validation.schema(schema_servers.base_rebuild_v219, '2.19', '2.53')
+    @validation.schema(schema_servers.base_rebuild_v254, '2.54', '2.56')
+    @validation.schema(schema_servers.base_rebuild_v257, '2.57', '2.62')
+    @validation.schema(schema_servers.base_rebuild_v263, '2.63')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         rebuild_dict = body['rebuild']
