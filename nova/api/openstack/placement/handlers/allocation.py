@@ -12,11 +12,13 @@
 """Placement API handlers for setting and deleting allocations."""
 
 import collections
+import uuid
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack.placement import errors
@@ -330,6 +332,11 @@ def _set_allocations_for_consumer(req, schema):
     context = req.environ['placement.context']
     context.can(policies.ALLOC_UPDATE)
     consumer_uuid = util.wsgi_path_item(req.environ, 'consumer_uuid')
+    if not uuidutils.is_uuid_like(consumer_uuid):
+        raise webob.exc.HTTPBadRequest(
+            _('Malformed consumer_uuid: %(consumer_uuid)s') %
+            {'consumer_uuid': consumer_uuid})
+    consumer_uuid = str(uuid.UUID(consumer_uuid))
     data = util.extract_json(req.body, schema)
     allocation_data = data['allocations']
 
