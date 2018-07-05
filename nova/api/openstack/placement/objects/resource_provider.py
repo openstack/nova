@@ -1015,6 +1015,9 @@ class ResourceProvider(base.VersionedObject, base.TimestampedObject):
 
     @db_api.placement_context_manager.writer
     def _update_in_db(self, context, id, updates):
+        # A list of resource providers in the same tree with the
+        # resource provider to update
+        same_tree = []
         if 'parent_provider_uuid' in updates:
             # TODO(jaypipes): For now, "re-parenting" and "un-parenting" are
             # not possible. If the provider already had a parent, we don't
@@ -1072,8 +1075,24 @@ class ResourceProvider(base.VersionedObject, base.TimestampedObject):
         db_rp = context.session.query(models.ResourceProvider).filter_by(
             id=id).first()
         db_rp.update(updates)
+        context.session.add(db_rp)
+
+        # We should also update the root providers of resource providers
+        # originally in the same tree. If re-parenting is supported,
+        # this logic should be changed to update only descendents of the
+        # re-parented resource providers, not all the providers in the tree.
+        for rp in same_tree:
+            # If the parent is not updated, this clause is skipped since the
+            # `same_tree` has no element.
+            rp.root_provider_uuid = parent_ids.root_uuid
+            db_rp = context.session.query(
+                models.ResourceProvider).filter_by(id=rp.id).first()
+            data = {'root_provider_id': parent_ids.root_id}
+            db_rp.update(data)
+            context.session.add(db_rp)
+
         try:
-            db_rp.save(context.session)
+            context.session.flush()
         except sqla_exc.IntegrityError:
             # NOTE(jaypipes): Another thread snuck in and deleted the parent
             # for this resource provider in between the above check for a valid
