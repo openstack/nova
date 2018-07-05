@@ -799,23 +799,30 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         mock_get_bdms.assert_called_once_with(ctxt, use_slave=True)
 
+    @mock.patch.object(compute_utils, 'notify_about_volume_usage')
     @mock.patch.object(compute_manager.ComputeManager, '_get_host_volume_bdms')
-    @mock.patch.object(compute_manager.ComputeManager,
-                       '_update_volume_usage_cache')
     @mock.patch.object(fake.FakeDriver, 'get_all_volume_usage')
-    def test_poll_volume_usage_with_data(self, mock_get_usage, mock_update,
-                                         mock_get_bdms):
-        ctxt = 'MockContext'
-        mock_get_usage.side_effect = lambda x, y: [3, 4]
+    def test_poll_volume_usage_with_data(self, mock_get_usage, mock_get_bdms,
+                                         mock_notify):
         # All the mocks are called
         mock_get_bdms.return_value = [1, 2]
+        mock_get_usage.return_value = [
+            {'volume': uuids.volume,
+             'instance': self.instance_object,
+             'rd_req': 100,
+             'rd_bytes': 500,
+             'wr_req': 25,
+             'wr_bytes': 75}]
 
         self.flags(volume_usage_poll_interval=10)
-        self.compute._poll_volume_usage(ctxt)
+        self.compute._poll_volume_usage(self.context)
 
-        mock_get_bdms.assert_called_once_with(ctxt, use_slave=True)
-        mock_update.assert_called_once_with(ctxt, [3, 4])
+        mock_get_bdms.assert_called_once_with(self.context, use_slave=True)
+        mock_notify.assert_called_once_with(
+            self.context, test.MatchType(objects.VolumeUsage),
+            self.compute.host)
 
+    @mock.patch.object(compute_utils, 'notify_about_volume_usage')
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
     @mock.patch.object(objects.BlockDeviceMapping,
@@ -826,7 +833,7 @@ class ComputeVolumeTestCase(BaseTestCase):
     @mock.patch.object(fake.FakeDriver, 'instance_exists')
     def test_detach_volume_usage(self, mock_exists, mock_get_all,
                                  mock_get_bdms, mock_stats, mock_get,
-                                 mock_notify, mock_elevate):
+                                 mock_notify, mock_elevate, mock_notify_usage):
         mock_elevate.return_value = self.context
         # Test that detach volume update the volume usage cache table correctly
         instance = self._create_fake_instance_obj()
@@ -891,6 +898,12 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertIsNone(payload['availability_zone'])
         msg = fake_notifier.NOTIFICATIONS[3]
         self.assertEqual('compute.instance.volume.detach', msg.event_type)
+        mock_notify_usage.assert_has_calls([
+            mock.call(self.context, test.MatchType(objects.VolumeUsage),
+                      self.compute.host),
+            mock.call(self.context, test.MatchType(objects.VolumeUsage),
+                      self.compute.host)])
+        self.assertEqual(2, mock_notify_usage.call_count)
 
         # Check the database for the
         volume_usages = db.vol_get_usage_by_time(self.context, 0)

@@ -5567,8 +5567,8 @@ class ComputeManager(manager.Manager):
         vol_usage.curr_writes = wr_req
         vol_usage.curr_write_bytes = wr_bytes
         vol_usage.save(update_totals=True)
-        self.notifier.info(context, 'volume.usage',
-                           compute_utils.usage_volume_info(vol_usage))
+        self.notifier.info(context, 'volume.usage', vol_usage.to_dict())
+        compute_utils.notify_about_volume_usage(context, vol_usage, self.host)
 
     def _detach_volume(self, context, bdm, instance, destroy_bdm=True,
                        attachment_id=None):
@@ -7441,8 +7441,9 @@ class ComputeManager(manager.Manager):
             vol_usage.curr_writes = usage['wr_req']
             vol_usage.curr_write_bytes = usage['wr_bytes']
             vol_usage.save()
-            self.notifier.info(context, 'volume.usage',
-                               compute_utils.usage_volume_info(vol_usage))
+            self.notifier.info(context, 'volume.usage', vol_usage.to_dict())
+            compute_utils.notify_about_volume_usage(context, vol_usage,
+                                                    self.host)
 
     @periodic_task.periodic_task(spacing=CONF.volume_usage_poll_interval)
     def _poll_volume_usage(self, context):

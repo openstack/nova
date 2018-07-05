@@ -370,7 +370,7 @@ notification_object_data = {
     'AuditPeriodPayload': '1.0-2b429dd307b8374636703b843fa3f9cb',
     'BandwidthPayload': '1.0-ee2616a7690ab78406842a2b68e34130',
     'BlockDevicePayload': '1.0-29751e1b6d41b1454e36768a1e764df8',
-    'EventType': '1.16-0da423d66218567962410921f2542c41',
+    'EventType': '1.17-242397275522a04130b3af4c0ea926e2',
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ExceptionPayload': '1.1-6c43008bd81885a63bc7f7c629f0793b',
     'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
@@ -414,6 +414,8 @@ notification_object_data = {
     'ServerGroupPayload': '1.1-4ded2997ea1b07038f7af33ef5c45f7f',
     'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ServiceStatusPayload': '1.1-7b6856bd879db7f3ecbcd0ca9f35f92f',
+    'VolumeUsageNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
+    'VolumeUsagePayload': '1.0-5f99d8b978a32040eecac0975e5a53e9',
 }
 
 

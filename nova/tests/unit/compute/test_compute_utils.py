@@ -17,6 +17,7 @@
 """Tests For miscellaneous util methods used with compute."""
 
 import copy
+import datetime
 import string
 import traceback
 
@@ -878,6 +879,44 @@ class UsageInfoTestCase(test.TestCase):
         image_ref_url = "%s/images/%s" % (
             glance.generate_glance_url(self.context), uuids.fake_image_ref)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
+
+    def test_notify_about_volume_usage(self):
+        # Ensure 'volume.usage' notification generates appropriate usage data.
+        vol_usage = objects.VolumeUsage(
+            id=1, volume_id=uuids.volume, instance_uuid=uuids.instance,
+            project_id=self.project_id, user_id=self.user_id,
+            availability_zone='AZ1',
+            tot_last_refreshed=datetime.datetime(second=1, minute=1, hour=1,
+                                                 day=5, month=7, year=2018),
+            tot_reads=100, tot_read_bytes=100,
+            tot_writes=100, tot_write_bytes=100,
+            curr_last_refreshed=datetime.datetime(second=1, minute=1, hour=2,
+                                                  day=5, month=7, year=2018),
+            curr_reads=100, curr_read_bytes=100,
+            curr_writes=100, curr_write_bytes=100)
+
+        compute_utils.notify_about_volume_usage(self.context, vol_usage,
+                                                'fake-compute')
+
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+
+        self.assertEqual('INFO', notification['priority'])
+        self.assertEqual('volume.usage', notification['event_type'])
+        self.assertEqual('nova-compute:fake-compute',
+                         notification['publisher_id'])
+
+        payload = notification['payload']['nova_object.data']
+        self.assertEqual(uuids.volume, payload['volume_id'])
+        self.assertEqual(uuids.instance, payload['instance_uuid'])
+        self.assertEqual(self.project_id, payload['project_id'])
+        self.assertEqual(self.user_id, payload['user_id'])
+        self.assertEqual('AZ1', payload['availability_zone'])
+        self.assertEqual('2018-07-05T02:01:01Z', payload['last_refreshed'])
+        self.assertEqual(200, payload['read_bytes'])
+        self.assertEqual(200, payload['reads'])
+        self.assertEqual(200, payload['write_bytes'])
+        self.assertEqual(200, payload['writes'])
 
     def test_notify_about_instance_usage(self):
         instance = create_instance(self.context)
