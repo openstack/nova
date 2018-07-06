@@ -40,6 +40,7 @@ from nova.notifications.objects import exception as notification_exception
 from nova.notifications.objects import flavor as flavor_notification
 from nova.notifications.objects import instance as instance_notification
 from nova.notifications.objects import keypair as keypair_notification
+from nova.notifications.objects import metrics as metrics_notification
 from nova.notifications.objects import server_group as sg_notification
 from nova import objects
 from nova.objects import fields
@@ -755,6 +756,34 @@ def notify_about_instance_rebuild(context, instance, host,
                     object='instance',
                     action=action,
                     phase=phase),
+            payload=payload)
+    notification.emit(context)
+
+
+@rpc.if_notifications_enabled
+def notify_about_metrics_update(context, host, host_ip, nodename,
+                                monitor_metric_list):
+    """Send versioned notification about updating metrics
+
+    :param context: the request context
+    :param host: the host emitting the notification
+    :param host_ip: the IP address of the host
+    :param nodename: the node name
+    :param monitor_metric_list: the MonitorMetricList object
+    """
+    payload = metrics_notification.MetricsPayload(
+            host=host,
+            host_ip=host_ip,
+            nodename=nodename,
+            monitor_metric_list=monitor_metric_list)
+    notification = metrics_notification.MetricsNotification(
+            context=context,
+            priority=fields.NotificationPriority.INFO,
+            publisher=notification_base.NotificationPublisher(
+                host=host, source=fields.NotificationSource.COMPUTE),
+            event_type=notification_base.EventType(
+                object='metrics',
+                action=fields.NotificationAction.UPDATE),
             payload=payload)
     notification.emit(context)
 

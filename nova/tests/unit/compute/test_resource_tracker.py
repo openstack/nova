@@ -2995,7 +2995,8 @@ class ComputeMonitorTestCase(BaseTestCase):
             u'Cannot get the metrics from %(mon)s; error: %(exc)s', mock.ANY)
         self.assertEqual(0, len(metrics))
 
-    def test_get_host_metrics(self):
+    @mock.patch('nova.compute.utils.notify_about_metrics_update')
+    def test_get_host_metrics(self, mock_notify):
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
@@ -3021,6 +3022,10 @@ class ComputeMonitorTestCase(BaseTestCase):
         self.rt.monitors = [FakeCPUMonitor(None)]
 
         metrics = self.rt._get_host_metrics(self.context, _NODENAME)
+
+        mock_notify.assert_called_once_with(
+            self.context, _HOSTNAME, '1.1.1.1', _NODENAME,
+            test.MatchType(objects.MonitorMetricList))
 
         expected_metrics = [
             {
