@@ -885,6 +885,15 @@ class API(base.Base):
                         base_options['pci_requests'], filter_properties,
                         instance_group, base_options['availability_zone'],
                         security_groups=security_groups)
+
+                if block_device_mapping:
+                    # Record whether or not we are a BFV instance
+                    root = block_device_mapping.root_bdm()
+                    req_spec.is_bfv = bool(root and root.is_volume)
+                else:
+                    # If we have no BDMs, we're clearly not BFV
+                    req_spec.is_bfv = False
+
                 # NOTE(danms): We need to record num_instances on the request
                 # spec as this is how the conductor knows how many were in this
                 # batch.

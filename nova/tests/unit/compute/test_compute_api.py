@@ -4461,7 +4461,8 @@ class _ComputeAPIUnitTestMixIn(object):
                             'numa_topology': None,
                             'pci_requests': None}
             security_groups = {}
-            block_device_mapping = [objects.BlockDeviceMapping(
+            block_device_mapping = objects.BlockDeviceMappingList(
+                objects=[objects.BlockDeviceMapping(
                     **fake_block_device.FakeDbBlockDeviceDict(
                     {
                      'id': 1,
@@ -4470,7 +4471,7 @@ class _ComputeAPIUnitTestMixIn(object):
                      'destination_type': 'volume',
                      'device_name': 'vda',
                      'boot_index': 0,
-                     }))]
+                     }))])
             shutdown_terminate = True
             instance_group = None
             check_server_group_quota = False

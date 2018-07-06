@@ -44,7 +44,8 @@ class RequestSpec(base.NovaObject):
     # Version 1.8: Added security_groups
     # Version 1.9: Added user_id
     # Version 1.10: Added network_metadata
-    VERSION = '1.10'
+    # Version 1.11: Added is_bfv
+    VERSION = '1.11'
 
     fields = {
         'id': fields.IntegerField(),
@@ -82,11 +83,14 @@ class RequestSpec(base.NovaObject):
         'instance_uuid': fields.UUIDField(),
         'security_groups': fields.ObjectField('SecurityGroupList'),
         'network_metadata': fields.ObjectField('NetworkMetadata'),
+        'is_bfv': fields.BooleanField(),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(RequestSpec, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 11) and 'is_bfv' in primitive:
+            del primitive['is_bfv']
         if target_version < (1, 10):
             if 'network_metadata' in primitive:
                 del primitive['network_metadata']
@@ -473,7 +477,7 @@ class RequestSpec(base.NovaObject):
             # though they should match.
             if key in ['id', 'instance_uuid']:
                 setattr(spec, key, db_spec[key])
-            else:
+            elif key in spec_obj:
                 setattr(spec, key, getattr(spec_obj, key))
         spec._context = context
 

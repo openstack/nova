@@ -3578,6 +3578,85 @@ class ServerSoftDeleteTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._delete_and_check_allocations(server)
 
 
+class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
+    """Tests for volume-backed servers."""
+
+    compute_driver = 'fake.SmallFakeDriver'
+
+    def setUp(self):
+        super(VolumeBackedServerTest, self).setUp()
+        self.compute1 = self._start_compute('host1')
+        self.compute2 = self._start_compute('host2')
+        self.flavor_id = self._create_flavor()
+
+    def _create_flavor(self):
+        body = {
+            'flavor': {
+                'id': 'vbst',
+                'name': 'special',
+                'ram': 512,
+                'vcpus': 1,
+                'disk': 10,
+                'OS-FLV-EXT-DATA:ephemeral': 20,
+                'swap': 5 * 1024,
+                'rxtx_factor': 1.0,
+                'os-flavor-access:is_public': True,
+            },
+        }
+        self.admin_api.post_flavor(body)
+        return body['flavor']['id']
+
+    def _create_server(self):
+        with nova.utils.temporary_mutation(self.api, microversion='2.35'):
+            image_id = self.api.get_images()[0]['id']
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'trait-based-server',
+            image_uuid=image_id,
+            flavor_id=self.flavor_id, networks='none')
+        server = self.api.post_server({'server': server_req})
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        return server
+
+    def _create_volume_backed_server(self):
+        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        volume_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        server_req_body = {
+            # There is no imageRef because this is boot from volume.
+            'server': {
+                'flavorRef': self.flavor_id,
+                'name': 'test_volume_backed',
+                # We don't care about networking for this test. This
+                # requires microversion >= 2.37.
+                'networks': 'none',
+                'block_device_mapping_v2': [{
+                    'boot_index': 0,
+                    'uuid': volume_id,
+                    'source_type': 'volume',
+                    'destination_type': 'volume'
+                }]
+            }
+        }
+        server = self.api.post_server(server_req_body)
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        return server
+
+    def test_ephemeral_has_disk_allocation(self):
+        server = self._create_server()
+        allocs = self._get_allocations_by_server_uuid(server['id'])
+        resources = list(allocs.values())[0]['resources']
+        self.assertIn('MEMORY_MB', resources)
+        # 10gb root, 20gb ephemeral, 5gb swap
+        self.assertEqual(35, resources['DISK_GB'])
+
+    def test_volume_backed_no_disk_allocation(self):
+        server = self._create_volume_backed_server()
+        allocs = self._get_allocations_by_server_uuid(server['id'])
+        resources = list(allocs.values())[0]['resources']
+        self.assertIn('MEMORY_MB', resources)
+        # 0gb root, 20gb ephemeral, 5gb swap
+        self.assertEqual(25, resources['DISK_GB'])
+
+
 class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
     """Tests for requesting a server with required traits in Placement"""
 

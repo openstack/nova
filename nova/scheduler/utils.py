@@ -397,9 +397,14 @@ def resources_from_request_spec(spec_obj):
         fields.ResourceClass.MEMORY_MB: spec_obj.memory_mb,
     }
 
-    requested_disk_mb = (1024 * (spec_obj.root_gb +
-                                 spec_obj.ephemeral_gb) +
+    requested_disk_mb = ((1024 * spec_obj.ephemeral_gb) +
                          spec_obj.swap)
+
+    if 'is_bfv' not in spec_obj or not spec_obj.is_bfv:
+        # Either this is not a BFV instance, or we are not sure,
+        # so ask for root_gb allocation
+        requested_disk_mb += (1024 * spec_obj.root_gb)
+
     # NOTE(sbauza): Disk request is expressed in MB but we count
     # resources in GB. Since there could be a remainder of the division
     # by 1024, we need to ceil the result to the next bigger Gb so we
