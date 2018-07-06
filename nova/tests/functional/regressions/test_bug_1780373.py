@@ -15,7 +15,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
-from nova.virt import fake as fake_virt
 
 
 class TestMultiCreateServerGroupMemberOverQuota(
@@ -59,14 +58,6 @@ class TestMultiCreateServerGroupMemberOverQuota(
         server group and then create 3 servers in the group using a
         multi-create POST /servers request.
         """
-        # TODO(mriedem): We don't need a compute service when the bug is fixed
-        # because we won't be able to get past nova-api validation.
-        self.start_service('conductor')
-        self.start_service('scheduler')
-        fake_virt.set_nodes(['host1'])
-        self.addCleanup(fake_virt.restore_nodes)
-        self.start_service('compute', host='host1')
-
         server_req = self._build_minimal_create_server_request(
             self.api, 'test_multi_create_server_group_members_over_quota',
             image_uuid=fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
@@ -74,20 +65,15 @@ class TestMultiCreateServerGroupMemberOverQuota(
         server_req['min_count'] = 3
         server_req['return_reservation_id'] = True
         hints = {'group': self.created_group['id']}
-        # FIXME(mriedem): When bug 1780373 is fixed this should result in a
-        # 403 error response and 0 members in the group.
-        reservation_id = self.api.post_server(
-            {'server': server_req,
-             'os:scheduler_hints': hints})['reservation_id']
-        # Assert that three servers were created regardless of the
-        # [quota]/server_group_members=2 quota limit.
-        servers = self.api.get_servers(
-            detail=False, search_opts={'reservation_id': reservation_id})
-        self.assertEqual(3, len(servers))
+        # We should get a 403 response due to going over quota on server
+        # group members in a single request.
+        self.api.api_post(
+            '/servers', {'server': server_req, 'os:scheduler_hints': hints},
+            check_response_status=[403])
         group = self.api.api_get(
             '/os-server-groups/%s' %
             self.created_group['id']).body['server_group']
-        self.assertEqual(3, len(group['members']))
+        self.assertEqual(0, len(group['members']))
 
     def test_concurrent_request_server_group_members_over_quota(self):
         """Recreate scenario for the bug where we create 3 servers in the
@@ -105,17 +91,20 @@ class TestMultiCreateServerGroupMemberOverQuota(
                 image_uuid=fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
                 networks='none')
             hints = {'group': self.created_group['id']}
-            # FIXME(mriedem): When bug 1780373 is fixed this should result in a
-            # 403 error response on the 3rd create server request.
-            self.api.post_server(
-                {'server': server_req, 'os:scheduler_hints': hints})
-        # Assert that three servers were created regardless of the
-        # [quota]/server_group_members=2 quota limit.
+            # This should result in a 403 response on the 3rd server.
+            if x == 2:
+                self.api.api_post(
+                    '/servers',
+                    {'server': server_req, 'os:scheduler_hints': hints},
+                    check_response_status=[403])
+            else:
+                self.api.post_server(
+                    {'server': server_req, 'os:scheduler_hints': hints})
+        # There should only be two servers created which are both members of
+        # the same group.
         servers = self.api.get_servers(detail=False)
-        # FIXME(mriedem): When the bug is fixed, there should only be 2 servers
-        # created and 2 members in the group.
-        self.assertEqual(3, len(servers))
+        self.assertEqual(2, len(servers))
         group = self.api.api_get(
             '/os-server-groups/%s' %
             self.created_group['id']).body['server_group']
-        self.assertEqual(3, len(group['members']))
+        self.assertEqual(2, len(group['members']))
