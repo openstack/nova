@@ -6687,7 +6687,6 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.end")
         compute_utils.notify_about_instance_action(context, instance,
-
                 self.host,
                 action=fields.NotificationAction.LIVE_MIGRATION_ROLLBACK,
                 phase=fields.NotificationPhase.END,
