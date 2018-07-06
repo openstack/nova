@@ -11965,8 +11965,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             # mix-in is ever used for these objects.
             expected_migrate_data.obj_reset_changes(recursive=True)
             returned_migrate_data.obj_reset_changes(recursive=True)
-            self.assertJsonEqual(expected_migrate_data.obj_to_primitive(),
-                                 returned_migrate_data.obj_to_primitive())
+            expected = expected_migrate_data.obj_to_primitive()
+            returned = returned_migrate_data.obj_to_primitive()
+            # We have to manually deserialize the connection_info_json so
+            # that the equality comparison uses a dict rather than a string
+            # with a random hashseed sort order on the keys.
+            for migrate_data in (expected, returned):
+                for bdm_data in migrate_data['nova_object.data']['bdms']:
+                    bdm = bdm_data['nova_object.data']
+                    bdm['connection_info_json'] = (
+                        jsonutils.loads(bdm['connection_info_json']))
+            self.assertEqual(expected, returned)
 
     def test_pre_live_migration_volume_backed(self):
         self._test_pre_live_migration_volume_backed()
