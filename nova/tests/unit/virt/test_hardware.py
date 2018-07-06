@@ -1340,6 +1340,41 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(0, hpages1_2M.total)
         self.assertEqual(3, hpages1_2M.used)
 
+    def test_host_usage_contiguous_pages_compute(self):
+        hosttopo = objects.NUMATopology(cells=[
+            objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]), memory=160,
+                             cpu_usage=0, memory_usage=0, mempages=[
+                                 objects.NUMAPagesTopology(
+                                     size_kb=4, total=32768, used=32),
+                                 objects.NUMAPagesTopology(
+                                     size_kb=2048, total=16, used=2)],
+                             siblings=[set([0]), set([1]), set([2]), set([3])],
+                             pinned_cpus=set([])),
+        ])
+        instance1 = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(id=0, cpuset=set([0, 1, 2]), memory=64,
+                                     pagesize=4),
+        ])
+        instance2 = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(id=0, cpuset=set([0, 1]), memory=32,
+                                     pagesize=4),
+        ])
+        instance3 = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(id=0, cpuset=set([0, 1]), memory=16,
+                                     pagesize=2048),
+        ])
+        hostusage = hw.numa_usage_from_instances(
+            hosttopo, [instance1, instance2, instance3])
+
+        # instance1, instance2 are consuming 96MiB smallpages which
+        # means 96*1024/4 = 24576, plus 32 pages already used.
+        self.assertEqual(4, hostusage.cells[0].mempages[0].size_kb)
+        self.assertEqual(24608, hostusage.cells[0].mempages[0].used)
+        # instance3 is consuming 16MiB largepages plus 2 pages already
+        # used.
+        self.assertEqual(2048, hostusage.cells[0].mempages[1].size_kb)
+        self.assertEqual(10, hostusage.cells[0].mempages[1].used)
+
     def test_host_usage_sparse(self):
         hosttopo = objects.NUMATopology(cells=[
             objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]), memory=1024,

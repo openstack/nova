@@ -1610,7 +1610,7 @@ def numa_usage_from_instances(host, instances, free=False):
 
                 if instancecell.pagesize and instancecell.pagesize > 0:
                     newcell.mempages = _numa_pagesize_usage_from_cell(
-                        hostcell, instancecell, sign)
+                        newcell, instancecell, sign)
 
                 if instance.cpu_pinning_requested:
                     pinned_cpus = set(instancecell.cpu_pinning.values())
