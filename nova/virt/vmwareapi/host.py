@@ -55,6 +55,10 @@ class VCState(object):
         self._datastore_regex = datastore_regex
         self._stats = {}
         self._auto_service_disabled = False
+        about_info = self._session._call_method(vim_util, "get_about_info")
+        self._hypervisor_type = about_info.name
+        self._hypervisor_version = versionutils.convert_version_to_int(
+                str(about_info.version))
         self.update_status()
 
     def get_host_stats(self, refresh=False):
@@ -75,7 +79,6 @@ class VCState(object):
             # Get cpu, memory stats from the cluster
             stats = vm_util.get_stats_from_cluster(self._session,
                                                    self._cluster)
-            about_info = self._session._call_method(vim_util, "get_about_info")
         except (vexc.VimConnectionException, vexc.VimAttributeException) as ex:
             # VimAttributeException is thrown when vpxd service is down
             LOG.warning("Failed to connect with %(node)s. "
@@ -90,9 +93,8 @@ class VCState(object):
         data["disk_used"] = data["disk_total"] - data["disk_available"]
         data["host_memory_total"] = stats['mem']['total']
         data["host_memory_free"] = stats['mem']['free']
-        data["hypervisor_type"] = about_info.name
-        data["hypervisor_version"] = versionutils.convert_version_to_int(
-                str(about_info.version))
+        data["hypervisor_type"] = self._hypervisor_type
+        data["hypervisor_version"] = self._hypervisor_version
         data["hypervisor_hostname"] = self._host_name
         data["supported_instances"] = [
             (obj_fields.Architecture.I686,
