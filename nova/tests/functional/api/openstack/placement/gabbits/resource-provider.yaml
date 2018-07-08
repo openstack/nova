@@ -360,6 +360,13 @@ tests:
   response_strings:
       - 'un-parenting a provider is not currently allowed'
 
+- name: 409 conflict while trying to delete parent with existing child
+  DELETE: /resource_providers/$ENVIRON['PARENT_PROVIDER_UUID']
+  status: 409
+  response_strings:
+      - "Unable to delete parent resource provider
+       $ENVIRON['PARENT_PROVIDER_UUID']: It has child resource providers."
+
 - name: list all resource providers in a tree that does not exist
   GET: /resource_providers?in_tree=$ENVIRON['ALT_PARENT_PROVIDER_UUID']
   response_json_paths:
