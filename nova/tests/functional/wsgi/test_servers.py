@@ -319,6 +319,35 @@ class ServersPreSchedulingTestCase(test.TestCase,
         # should have removed them.
         self.assertNotIn(volume_id, cinder.attachments[server['id']])
 
+    def test_instance_list_build_request_marker_ip_filter(self):
+        """Tests listing instances with a marker that is in the build_requests
+        table and also filtering by ip, in which case the ip filter can't
+        possibly find anything because instances that are not yet scheduled
+        can't have ips, but the point is to find the marker in the build
+        requests table.
+        """
+        self.useFixture(nova_fixtures.AllServicesCurrent())
+        # Create the server.
+        body = {
+            'server': {
+                'name': 'test_instance_list_build_request_marker_ip_filter',
+                'imageRef': fake_image.get_valid_image_id(),
+                'flavorRef': '1',
+                'networks': 'none'
+            }
+        }
+        server = self.api.post_server(body)
+        # Now list servers using the one we just created as the marker and
+        # include the ip filter (see bug 1764685).
+        search_opts = {
+            'marker': server['id'],
+            'ip': '192.168.159.150'
+        }
+        servers = self.api.get_servers(search_opts=search_opts)
+        # We'll get 0 servers back because there are none with the specified
+        # ip filter.
+        self.assertEqual(0, len(servers))
+
 
 class EnforceVolumeBackedForZeroDiskFlavorTestCase(
         test.TestCase, integrated_helpers.InstanceHelperMixin):

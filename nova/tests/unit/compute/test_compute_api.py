@@ -5870,7 +5870,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
 
             self.compute_api.get_all(
                 self.context, search_opts={'ip': 'fake'},
-                limit=None, marker='fake-marker', sort_keys=['baz'],
+                limit=None, marker=None, sort_keys=['baz'],
                 sort_dirs=['desc'])
 
             mock_list_port.assert_called_once_with(
@@ -5879,7 +5879,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'ip': 'fake', 'uuid': ['fake_device_id']},
-                None, 'fake-marker', fields, ['baz'], ['desc'])
+                None, None, fields, ['baz'], ['desc'])
 
     @mock.patch.object(neutron_api.API, 'has_substr_port_filtering_extension')
     @mock.patch.object(neutron_api.API, 'list_ports')
@@ -5898,7 +5898,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
 
             self.compute_api.get_all(
                 self.context, search_opts={'ip6': 'fake'},
-                limit=None, marker='fake-marker', sort_keys=['baz'],
+                limit=None, marker=None, sort_keys=['baz'],
                 sort_dirs=['desc'])
 
             mock_list_port.assert_called_once_with(
@@ -5907,7 +5907,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'ip6': 'fake', 'uuid': ['fake_device_id']},
-                None, 'fake-marker', fields, ['baz'], ['desc'])
+                None, None, fields, ['baz'], ['desc'])
 
     @mock.patch.object(neutron_api.API, 'has_substr_port_filtering_extension')
     @mock.patch.object(neutron_api.API, 'list_ports')
@@ -5927,7 +5927,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
 
             self.compute_api.get_all(
                 self.context, search_opts={'ip': 'fake1', 'ip6': 'fake2'},
-                limit=None, marker='fake-marker', sort_keys=['baz'],
+                limit=None, marker=None, sort_keys=['baz'],
                 sort_dirs=['desc'])
 
             mock_list_port.assert_has_calls([
@@ -5942,7 +5942,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             mock_inst_get.assert_called_once_with(
                 self.context, {'ip': 'fake1', 'ip6': 'fake2',
                                'uuid': ['fake_device_id', 'fake_device_id']},
-                None, 'fake-marker', fields, ['baz'], ['desc'])
+                None, None, fields, ['baz'], ['desc'])
 
     @mock.patch.object(neutron_api.API, 'has_substr_port_filtering_extension')
     @mock.patch.object(neutron_api.API, 'list_ports')
