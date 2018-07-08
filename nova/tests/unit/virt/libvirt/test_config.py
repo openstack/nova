@@ -1700,6 +1700,41 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         obj2.parse_str(xml)
         self.assertXmlEqual(xml, obj2.to_xml())
 
+    def test_config_ethernet_with_mtu(self):
+        obj = config.LibvirtConfigGuestInterface()
+        obj.net_type = "ethernet"
+        obj.mac_addr = "DE:AD:BE:EF:CA:FE"
+        obj.model = "virtio"
+        obj.target_dev = "vnet0"
+        obj.driver_name = "vhost"
+        obj.vif_inbound_average = 16384
+        obj.vif_inbound_peak = 32768
+        obj.vif_inbound_burst = 3276
+        obj.vif_outbound_average = 32768
+        obj.vif_outbound_peak = 65536
+        obj.vif_outbound_burst = 6553
+        obj.mtu = 9000
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="ethernet">
+              <mac address="DE:AD:BE:EF:CA:FE"/>
+              <model type="virtio"/>
+              <driver name="vhost"/>
+              <mtu size="9000"/>
+              <target dev="vnet0"/>
+              <bandwidth>
+                <inbound average="16384" peak="32768" burst="3276"/>
+                <outbound average="32768" peak="65536" burst="6553"/>
+              </bandwidth>
+            </interface>""")
+
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
     def test_config_driver_options(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "ethernet"
@@ -1762,6 +1797,46 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         obj2.parse_str(xml)
         self.assertXmlEqual(xml, obj2.to_xml())
 
+    def test_config_bridge_with_mtu(self):
+        obj = config.LibvirtConfigGuestInterface()
+        obj.net_type = "bridge"
+        obj.source_dev = "br0"
+        obj.mac_addr = "DE:AD:BE:EF:CA:FE"
+        obj.model = "virtio"
+        obj.target_dev = "tap12345678"
+        obj.filtername = "clean-traffic"
+        obj.filterparams.append({"key": "IP", "value": "192.168.122.1"})
+        obj.vif_inbound_average = 16384
+        obj.vif_inbound_peak = 32768
+        obj.vif_inbound_burst = 3276
+        obj.vif_outbound_average = 32768
+        obj.vif_outbound_peak = 65536
+        obj.vif_outbound_burst = 6553
+        obj.mtu = 9000
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="bridge">
+              <mac address="DE:AD:BE:EF:CA:FE"/>
+              <model type="virtio"/>
+              <source bridge="br0"/>
+              <mtu size="9000"/>
+              <target dev="tap12345678"/>
+              <filterref filter="clean-traffic">
+                <parameter name="IP" value="192.168.122.1"/>
+              </filterref>
+              <bandwidth>
+                <inbound average="16384" peak="32768" burst="3276"/>
+                <outbound average="32768" peak="65536" burst="6553"/>
+              </bandwidth>
+            </interface>""")
+
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
     def test_config_bridge_ovs(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "bridge"
@@ -1778,6 +1853,36 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <mac address="DE:AD:BE:EF:CA:FE"/>
               <model type="virtio"/>
               <source bridge="br0"/>
+              <target dev="tap12345678"/>
+              <virtualport type="openvswitch">
+                <parameters instanceid="foobar"/>
+              </virtualport>
+            </interface>""")
+
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
+    def test_config_bridge_ovs_with_mtu(self):
+        obj = config.LibvirtConfigGuestInterface()
+        obj.net_type = "bridge"
+        obj.source_dev = "br0"
+        obj.mac_addr = "DE:AD:BE:EF:CA:FE"
+        obj.model = "virtio"
+        obj.target_dev = "tap12345678"
+        obj.vporttype = "openvswitch"
+        obj.vportparams.append({"key": "instanceid", "value": "foobar"})
+        obj.mtu = 9000
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="bridge">
+              <mac address="DE:AD:BE:EF:CA:FE"/>
+              <model type="virtio"/>
+              <source bridge="br0"/>
+              <mtu size="9000"/>
               <target dev="tap12345678"/>
               <virtualport type="openvswitch">
                 <parameters instanceid="foobar"/>

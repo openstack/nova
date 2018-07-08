@@ -1328,6 +1328,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.vif_outbound_average = None
         self.vlan = None
         self.device_addr = None
+        self.mtu = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestInterface, self).format_dom()
@@ -1348,6 +1349,8 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         if self.net_type == "ethernet":
             if self.script is not None:
                 dev.append(etree.Element("script", path=self.script))
+            if self.mtu is not None:
+                dev.append(etree.Element("mtu", size=str(self.mtu)))
         elif self.net_type == "direct":
             dev.append(etree.Element("source", dev=self.source_dev,
                                      mode=self.source_mode))
@@ -1370,6 +1373,8 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             dev.append(etree.Element("source", bridge=self.source_dev))
             if self.script is not None:
                 dev.append(etree.Element("script", path=self.script))
+            if self.mtu is not None:
+                dev.append(etree.Element("mtu", size=str(self.mtu)))
         else:
             dev.append(etree.Element("source", bridge=self.source_dev))
 
@@ -1501,6 +1506,8 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             elif c.tag == 'address':
                 obj = LibvirtConfigGuestDeviceAddress.parse_dom(c)
                 self.device_addr = obj
+            elif c.tag == 'mtu':
+                self.mtu = int(c.get('size'))
 
     def add_filter_param(self, key, value):
         self.filterparams.append({'key': key, 'value': value})

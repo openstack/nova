@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    For libvirt driver. Now when creating tap devices the MTU will be
+    configured. Requires libvirt 3.3.0 at least.
+

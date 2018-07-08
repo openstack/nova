@@ -179,3 +179,8 @@ class DesignerTestCase(test.NoDBTestCase):
         self.assertEqual('unix', conf.vhostuser_type)
         self.assertEqual('fake-mode', conf.vhostuser_mode)
         self.assertEqual('fake-path', conf.vhostuser_path)
+
+    def test_set_vif_mtu_config(self):
+        conf = config.LibvirtConfigGuestInterface()
+        designer.set_vif_mtu_config(conf, 9000)
+        self.assertEqual(9000, conf.mtu)
