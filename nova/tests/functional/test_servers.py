@@ -1362,6 +1362,10 @@ class ProviderUsageBaseTestCase(test.TestCase,
         return self.placement_api.get(
             '/allocations/%s' % server_uuid).body['allocations']
 
+    def _get_provider_inventory(self, rp_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/inventories' % rp_uuid).body['inventories']
+
     def assertFlavorMatchesAllocation(self, flavor, allocation):
         self.assertEqual(flavor['vcpus'], allocation['VCPU'])
         self.assertEqual(flavor['ram'], allocation['MEMORY_MB'])
