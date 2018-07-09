@@ -62,6 +62,29 @@ def create_incomplete_consumers(ctx, batch_size):
     return res.rowcount, res.rowcount
 
 
+@db_api.placement_context_manager.writer
+def delete_consumers_if_no_allocations(ctx, consumer_uuids):
+    """Looks to see if any of the supplied consumers has any allocations and if
+    not, deletes the consumer record entirely.
+
+    :param ctx: `nova.api.openstack.placement.context.RequestContext` that
+                contains an oslo_db Session
+    :param consumer_uuids: UUIDs of the consumers to check and maybe delete
+    """
+    # Delete consumers that are not referenced in the allocations table
+    cons_to_allocs_join = sa.outerjoin(
+        CONSUMER_TBL, _ALLOC_TBL,
+        CONSUMER_TBL.c.uuid == _ALLOC_TBL.c.consumer_id)
+    subq = sa.select([CONSUMER_TBL.c.uuid]).select_from(cons_to_allocs_join)
+    subq = subq.where(sa.and_(
+        _ALLOC_TBL.c.consumer_id.is_(None),
+        CONSUMER_TBL.c.uuid.in_(consumer_uuids)))
+    no_alloc_consumers = [r[0] for r in ctx.session.execute(subq).fetchall()]
+    del_stmt = CONSUMER_TBL.delete()
+    del_stmt = del_stmt.where(CONSUMER_TBL.c.uuid.in_(no_alloc_consumers))
+    ctx.session.execute(del_stmt)
+
+
 @db_api.placement_context_manager.reader
 def _get_consumer_by_uuid(ctx, uuid):
     # The SQL for this looks like the following:

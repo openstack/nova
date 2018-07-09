@@ -20,6 +20,7 @@ from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.objects import user as user_obj
 from nova import context
+from nova import rc_fields as fields
 from nova import test
 from nova.tests import fixtures
 from nova.tests.functional.api.openstack.placement.db import test_base as tb
@@ -190,3 +191,91 @@ class CreateIncompleteConsumersTestCase(test.NoDBTestCase):
         self._check_incomplete_consumers(self.ctx)
         res = consumer_obj.create_incomplete_consumers(self.ctx, 10)
         self.assertEqual((0, 0), res)
+
+
+class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
+    def test_delete_consumer_if_no_allocs(self):
+        """AllocationList.create_all() should attempt to delete consumers that
+        no longer have any allocations. Due to the REST API not having any way
+        to query for consumers directly (only via the GET
+        /allocations/{consumer_uuid} endpoint which returns an empty dict even
+        when no consumer record exists for the {consumer_uuid}) we need to do
+        this functional test using only the object layer.
+        """
+        # We will use two consumers in this test, only one of which will get
+        # all of its allocations deleted in a transaction (and we expect that
+        # consumer record to be deleted)
+        c1 = consumer_obj.Consumer(
+            self.ctx, uuid=uuids.consumer1, user=self.user_obj,
+            project=self.project_obj)
+        c1.create()
+        c2 = consumer_obj.Consumer(
+            self.ctx, uuid=uuids.consumer2, user=self.user_obj,
+            project=self.project_obj)
+        c2.create()
+
+        # Create some inventory that we will allocate
+        cn1 = self._create_provider('cn1')
+        tb.add_inventory(cn1, fields.ResourceClass.VCPU, 8)
+        tb.add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.add_inventory(cn1, fields.ResourceClass.DISK_GB, 2000)
+
+        # Now allocate some of that inventory to two different consumers
+        allocs = [
+            rp_obj.Allocation(
+                self.ctx, consumer=c1, resource_provider=cn1,
+                resource_class=fields.ResourceClass.VCPU, used=1),
+            rp_obj.Allocation(
+                self.ctx, consumer=c1, resource_provider=cn1,
+                resource_class=fields.ResourceClass.MEMORY_MB, used=512),
+            rp_obj.Allocation(
+                self.ctx, consumer=c2, resource_provider=cn1,
+                resource_class=fields.ResourceClass.VCPU, used=1),
+            rp_obj.Allocation(
+                self.ctx, consumer=c2, resource_provider=cn1,
+                resource_class=fields.ResourceClass.MEMORY_MB, used=512),
+        ]
+        alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
+        alloc_list.create_all()
+
+        # Validate that we have consumer records for both consumers
+        for c_uuid in (uuids.consumer1, uuids.consumer2):
+            c_obj = consumer_obj.Consumer.get_by_uuid(self.ctx, c_uuid)
+            self.assertIsNotNone(c_obj)
+
+        # OK, now "remove" the allocation for consumer2 by setting the used
+        # value for both allocated resources to 0 and re-running the
+        # AllocationList.create_all(). This should end up deleting the consumer
+        # record for consumer2
+        allocs = [
+            rp_obj.Allocation(
+                self.ctx, consumer=c2, resource_provider=cn1,
+                resource_class=fields.ResourceClass.VCPU, used=0),
+            rp_obj.Allocation(
+                self.ctx, consumer=c2, resource_provider=cn1,
+                resource_class=fields.ResourceClass.MEMORY_MB, used=0),
+        ]
+        alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
+        alloc_list.create_all()
+
+        # consumer1 should still exist...
+        c_obj = consumer_obj.Consumer.get_by_uuid(self.ctx, uuids.consumer1)
+        self.assertIsNotNone(c_obj)
+
+        # but not consumer2...
+        self.assertRaises(
+            exception.NotFound, consumer_obj.Consumer.get_by_uuid,
+            self.ctx, uuids.consumer2)
+
+        # DELETE /allocations/{consumer_uuid} is the other place where we
+        # delete all allocations for a consumer. Let's delete all for consumer1
+        # and check that the consumer record is deleted
+        alloc_list = rp_obj.AllocationList.get_all_by_consumer_id(
+            self.ctx, uuids.consumer1)
+        alloc_list.delete_all()
+
+        # consumer1 should no longer exist in the DB since we just deleted all
+        # of its allocations
+        self.assertRaises(
+            exception.NotFound, consumer_obj.Consumer.get_by_uuid,
+            self.ctx, uuids.consumer1)

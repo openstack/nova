@@ -1981,6 +1981,15 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
             rp.generation = _increment_provider_generation(context, rp)
         for consumer in visited_consumers.values():
             consumer.increment_generation()
+        # If any consumers involved in this transaction ended up having no
+        # allocations, delete the consumer records. Exclude consumers that had
+        # *some resource* in the allocation list with a total > 0 since clearly
+        # those consumers have allocations...
+        cons_with_allocs = set(a.consumer.uuid for a in allocs if a.used > 0)
+        all_cons = set(c.uuid for c in visited_consumers.values())
+        consumers_to_check = all_cons - cons_with_allocs
+        consumer_obj.delete_consumers_if_no_allocations(
+            context, consumers_to_check)
 
     @classmethod
     def get_all_by_resource_provider(cls, context, rp):
@@ -2076,6 +2085,8 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
         # that fact and do an efficient batch delete
         consumer_uuid = self.objects[0].consumer.uuid
         _delete_allocations_for_consumer(self._context, consumer_uuid)
+        consumer_obj.delete_consumers_if_no_allocations(
+            self._context, [consumer_uuid])
 
     def __repr__(self):
         strings = [repr(x) for x in self.objects]
