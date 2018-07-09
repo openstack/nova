@@ -18,6 +18,8 @@ from oslo_utils import fixture as utils_fixture
 from nova import exception
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack.compute import test_services
+from nova.tests.unit.objects import test_compute_node
+from nova.tests.unit.objects import test_host_mapping
 
 
 class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
@@ -119,7 +121,29 @@ class ServicesV253JsonTest(ServicesV211JsonTest):
                 if svc['uuid'] == service_uuid:
                     return svc
             raise exception.ServiceNotFound(service_id=service_uuid)
+
+        def fake_cn_get_all_by_host(context, host):
+            cn = test_compute_node.fake_compute_node
+            cn['uuid'] = test_services.FAKE_UUID_COMPUTE_HOST1
+            cn['host'] = host
+            return [cn]
+
+        def fake_hm_get_by_host(context, host):
+            hm = test_host_mapping.get_db_mapping()
+            hm['host'] = host
+            return hm
+
+        def fake_hm_destroy(context, host):
+            return 1
+
         self.stub_out('nova.db.service_get_by_uuid', db_service_get_by_uuid)
+        self.stub_out('nova.db.compute_node_get_all_by_host',
+            fake_cn_get_all_by_host)
+        self.stub_out(
+            'nova.objects.host_mapping.HostMapping._get_by_host_from_db',
+                fake_hm_get_by_host)
+        self.stub_out('nova.objects.host_mapping.HostMapping._destroy_in_db',
+            fake_hm_destroy)
 
     def test_service_enable(self):
         """Enable an existing service."""
