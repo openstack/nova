@@ -281,8 +281,8 @@ utility code is tested with unit tests found in
 `nova/tests/unit/api/openstack/placement/`. The back-end objects are tested
 with a combination of unit and functional tests found in
 ``nova/tests/unit/api/openstack/placement/objects/test_resource_provider.py``
-and `nova/tests/functional/db`. Adding unit and non-gabbi functional tests is
-done in the same way as other aspects of nova.
+and `nova/tests/functional/api/openstack/placement/db`. Adding unit and
+non-gabbi functional tests is done in the same way as other aspects of nova.
 
 When writing tests for handler code (that is, the code found in
 ``nova/api/openstack/placement/handlers``) a good rule of thumb is that if you
@@ -311,11 +311,11 @@ being made over a file handle that appears to Python to be a socket.
 
 In the placement API the YAML files (aka "gabbits") can be found in
 ``nova/tests/functional/api/openstack/placement/gabbits``. Fixture definitions
-are in ``fixtures.py`` in the parent directory. Tests are currently grouped by
-handlers (e.g., ``resource-provider.yaml`` and ``inventory.yaml``). This is not
-a requirement and as we increase the number of tests it makes sense to have
-more YAML files with fewer tests, divided up by the arc of API interaction that
-they test.
+are in ``nova/tests/functional/api/openstack/placement/fixtures/gabbits.py``.
+Tests are frequently grouped by handler name (e.g., ``resource-provider.yaml``
+and ``inventory.yaml``). This is not a requirement and as we increase the
+number of tests it makes sense to have more YAML files with fewer tests,
+divided up by the arc of API interaction that they test.
 
 The gabbi tests are integrated into the functional tox target, loaded via
 ``nova/tests/functional/api/openstack/placement/test_placement_api.py``. If you
@@ -401,10 +401,12 @@ self-contained:
 There are some exceptions to the self-contained rule (which are actively being
 addressed to prepare for the extraction):
 
-* Exceptions unique to the placement API are still within the `nova.exceptions`
-  package.
-* Code related to a resource class cache is within the `nova.db` package.
-* Database models, migrations and tables use the nova api database.
+* Some of the code related to a resource class cache is within the `nova.db`
+  package, while other parts are in ``nova/rc_fields.py``.
+* Database models, migrations and tables are described as part of the nova api
+  database. An optional configuration option,
+  :oslo.config:option:`placement_database.connection`, can be set to use a
+  database just for placement (based on the api database schema).
 * `nova.i18n` package provides the ``_`` and related functions.
 * ``nova.conf`` is used for configuration.
 * Unit and functional tests depend on fixtures and other functionality in base

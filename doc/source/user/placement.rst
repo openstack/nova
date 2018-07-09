@@ -29,9 +29,9 @@ from an external shared storage pool resource provider and IP addresses from
 an external IP pool resource provider.
 
 The types of resources consumed are tracked as **classes**. The service
-provides a set of standard resource classes (for example `DISK_GB`,
-`MEMORY_MB`, and `VCPU`) and provides the ability to define custom resource
-classes as needed.
+provides a set of standard resource classes (for example ``DISK_GB``,
+``MEMORY_MB``, and ``VCPU``) and provides the ability to define custom
+resource classes as needed.
 
 Each resource provider may also have a set of traits which describe qualitative
 aspects of the resource provider. Traits describe an aspect of a resource
@@ -147,10 +147,17 @@ option for the placement API service and the resources it manages. After
 upgrading the nova-api service for Newton and running the
 ``nova-manage api_db sync`` command the placement tables will be created.
 
-.. note:: There are plans to add the ability to run the placement service
-        with a separate **placement** database that would just have the tables
-        necessary for that service and not everything else that goes into the
-        Nova **api** database.
+With the Rocky release, it has become possible to use a separate database for
+placement. If :oslo.config:option:`placement_database.connection` is
+configured with a database connect string, that database will be used for
+storing placement data. Once the database is created, the
+``nova-manage api_db sync`` command will create and synchronize both the
+nova api and placement tables. If ``[placement_database]/connection`` is not
+set, the nova api database will be used.
+
+.. note:: At this time there is no facility for migrating existing placement
+        data from the nova api database to a placement database. There are
+        many ways to do this. Which one is best will depend on the environment.
 
 **3. Create accounts and update the service catalog**
 
@@ -300,6 +307,10 @@ Rocky (18.0.0)
   associations to the placement service. This change is idempotent if
   ``[placement]`` is not configured in ``nova-api`` but it will result in new
   warnings in the logs until configured.
+* As described above, before Rocky, the placement service used the nova api
+  database to store placement data. In Rocky, if the ``connection`` setting in
+  a ``[placement_database]`` group is set in configuration, that group will be
+  used to describe where and how placement data is stored.
 
 REST API
 ========
