@@ -4004,6 +4004,30 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, {})
 
+    def test_create_instance_with_user_data(self):
+        value = base64.encode_as_text("A random string")
+        params = {'user_data': value}
+        self._test_create_extra(params)
+
+    def test_create_instance_with_bad_user_data(self):
+        value = "A random string"
+        params = {'user_data': value}
+        self.assertRaises(exception.ValidationError,
+                          self._test_create_extra, params)
+
+    @mock.patch('nova.compute.api.API.create')
+    def test_create_instance_with_none_allowd_for_v20_compat_mode(self,
+            mock_create):
+
+        def create(context, *args, **kwargs):
+            self.assertIsNone(kwargs['user_data'])
+            return ([fakes.stub_instance_obj(context)], None)
+
+        mock_create.side_effect = create
+        self.req.set_legacy_v2()
+        params = {'user_data': None}
+        self._test_create_extra(params)
+
 
 class ServersControllerCreateTestV219(ServersControllerCreateTest):
     def _create_instance_req(self, set_desc, desc=None):
