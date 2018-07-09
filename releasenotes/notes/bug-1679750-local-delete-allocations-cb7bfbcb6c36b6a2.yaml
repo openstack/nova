@@ -1,0 +1,12 @@
+---
+upgrade:
+  - |
+    The ``nova-api`` service now requires the ``[placement]`` section to be
+    configured in nova.conf if you are using a separate config file just for
+    that service. This is because the ``nova-api`` service now needs to talk
+    to the placement service in order to delete resource provider allocations
+    when deleting an instance and the ``nova-compute`` service on which that
+    instance is running is down. This change is idempotent if
+    ``[placement]`` is not configured in ``nova-api`` but it will result in
+    new warnings in the logs until configured. See bug
+    https://bugs.launchpad.net/nova/+bug/1679750 for more details.

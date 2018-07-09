@@ -86,12 +86,7 @@ class TestServicesAPI(test_servers.ProviderUsageBaseTestCase):
         self.assertEqual(409, ex.response.status_code)
 
         # Now delete the instance and wait for it to be gone.
-        # Note that we can't use self._delete_and_check_allocations here
-        # because of bug 1679750 where allocations are not deleted when
-        # an instance is deleted and the compute service it's running on
-        # is down.
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_and_check_allocations(server)
 
         # Now we can delete the service.
         self.admin_api.api_delete('/os-services/%s' % service['id'])
@@ -120,10 +115,3 @@ class TestServicesAPI(test_servers.ProviderUsageBaseTestCase):
         # in a 404 response.
         resp = self.placement_api.get('/resource_providers/%s' % rp_uuid)
         self.assertEqual(200, resp.status)
-        # Assert the allocations still exist for the server against the
-        # compute node resource provider. Once the bug is fixed, there should
-        # be no allocations for the server.
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(flavor, allocation)
