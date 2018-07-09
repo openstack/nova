@@ -1295,6 +1295,9 @@ class ProviderUsageBaseTestCase(test.TestCase,
     Subclasses must define a **compute_driver** attribute for the virt driver
     to use.
 
+    Subclasses must define a **computes** dict with host: compute service key
+    value pairs.
+
     This class sets up standard fixtures and controller services but does not
     start any compute services, that is left to the subclass.
     """
@@ -1359,6 +1362,127 @@ class ProviderUsageBaseTestCase(test.TestCase,
         self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
                          allocation['DISK_GB'])
 
+    def _boot_and_check_allocations(self, flavor, source_hostname):
+        """Boot an instance and check that the resource allocation is correct
+
+        After booting an instance on the given host with a given flavor it
+        asserts that both the providers usages and resource allocations match
+        with the resources requested in the flavor. It also asserts that
+        running the periodic update_available_resource call does not change the
+        resource state.
+
+        :param flavor: the flavor the instance will be booted with
+        :param source_hostname: the name of the host the instance will be
+                                booted on
+        :return: the API representation of the booted instance
+        """
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'some-server', flavor_id=flavor['id'],
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks=[])
+        server_req['availability_zone'] = 'nova:%s' % source_hostname
+        LOG.info('booting on %s', source_hostname)
+        created_server = self.api.post_server({'server': server_req})
+        server = self._wait_for_state_change(
+            self.admin_api, created_server, 'ACTIVE')
+
+        # Verify that our source host is what the server ended up on
+        self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
+
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+
+        # Before we run periodics, make sure that we have allocations/usages
+        # only on the source host
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(flavor, source_usages)
+
+        # Check that the other providers has no usage
+        for rp_uuid in [self._get_provider_uuid_by_host(hostname)
+                        for hostname in self.computes.keys()
+                        if hostname != source_hostname]:
+            usages = self._get_provider_usages(rp_uuid)
+            self.assertEqual({'VCPU': 0,
+                              'MEMORY_MB': 0,
+                              'DISK_GB': 0}, usages)
+
+        # Check that the server only allocates resource from the host it is
+        # booted on
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations),
+                         'No allocation for the server on the host it '
+                         'is booted on')
+        allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(flavor, allocation)
+
+        self._run_periodics()
+
+        # After running the periodics but before we start any other operation,
+        # we should have exactly the same allocation/usage information as
+        # before running the periodics
+
+        # Check usages on the selected host after boot
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(flavor, source_usages)
+
+        # Check that the server only allocates resource from the host it is
+        # booted on
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations),
+                         'No allocation for the server on the host it '
+                         'is booted on')
+        allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(flavor, allocation)
+
+        # Check that the other providers has no usage
+        for rp_uuid in [self._get_provider_uuid_by_host(hostname)
+                        for hostname in self.computes.keys()
+                        if hostname != source_hostname]:
+            usages = self._get_provider_usages(rp_uuid)
+            self.assertEqual({'VCPU': 0,
+                              'MEMORY_MB': 0,
+                              'DISK_GB': 0}, usages)
+        return server
+
+    def _delete_and_check_allocations(self, server):
+        """Delete the instance and asserts that the allocations are cleaned
+
+        :param server: The API representation of the instance to be deleted
+        """
+
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+        # NOTE(gibi): The resource allocation is deleted after the instance is
+        # destroyed in the db so wait_until_deleted might return before the
+        # the resource are deleted in placement. So we need to wait for the
+        # instance.delete.end notification as that is emitted after the
+        # resources are freed.
+        fake_notifier.wait_for_versioned_notification('instance.delete.end')
+
+        for rp_uuid in [self._get_provider_uuid_by_host(hostname)
+                        for hostname in self.computes.keys()]:
+            usages = self._get_provider_usages(rp_uuid)
+            self.assertEqual({'VCPU': 0,
+                              'MEMORY_MB': 0,
+                              'DISK_GB': 0}, usages)
+
+        # and no allocations for the deleted server
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(0, len(allocations))
+
+    def _run_periodics(self):
+        """Run the update_available_resource task on every compute manager
+
+        This runs periodics on the computes in an undefined order; some child
+        class redefined this function to force a specific order.
+        """
+
+        ctx = context.get_admin_context()
+        for compute in self.computes.values():
+            LOG.info('Running periodic for compute (%s)',
+                compute.manager.host)
+            compute.manager.update_available_resource(ctx)
+        LOG.info('Finished with periodics')
+
 
 class ServerMovingTests(ProviderUsageBaseTestCase):
     """Tests moving servers while checking the resource allocations and usages
@@ -1380,9 +1504,11 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
+        self.computes = {}
         fake.set_nodes(['host1'])
         self.flags(host='host1')
         self.compute1 = self.start_service('compute', host='host1')
+        self.computes[self.compute1.host] = self.compute1
 
         # NOTE(sbauza): Make sure the FakeDriver returns a different nodename
         # for the second compute node.
@@ -1390,6 +1516,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self.addCleanup(fake.restore_nodes)
         self.flags(host='host2')
         self.compute2 = self.start_service('compute', host='host2')
+        self.computes[self.compute2.host] = self.compute2
 
         flavors = self.api.get_flavors()
         self.flavor1 = flavors[0]
@@ -1438,71 +1565,6 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
 
     def test_resize_confirm_reverse(self):
         self._test_resize_confirm(dest_hostname='host2')
-
-    def _boot_and_check_allocations(self, flavor, source_hostname):
-        server_req = self._build_minimal_create_server_request(
-            self.api, 'some-server', flavor_id=flavor['id'],
-            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            networks=[])
-        server_req['availability_zone'] = 'nova:%s' % source_hostname
-        LOG.info('booting on %s', source_hostname)
-        created_server = self.api.post_server({'server': server_req})
-        server = self._wait_for_state_change(
-            self.admin_api, created_server, 'ACTIVE')
-
-        # Verify that our source host is what the server ended up on
-        self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
-
-        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
-        dest_rp_uuid = self._get_provider_uuid_by_host(
-            self._other_hostname(source_hostname))
-
-        # Before we run periodics, make sure that we have allocations/usages
-        # only on the source host
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(flavor, source_usages)
-
-        # Check that the other provider has no usage
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertEqual({'VCPU': 0,
-                          'MEMORY_MB': 0,
-                          'DISK_GB': 0}, dest_usages)
-
-        # Check that the server only allocates resource from the host it is
-        # booted on
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations),
-                         'No allocation for the server on the host it'
-                         'is booted on')
-        allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(flavor, allocation)
-
-        self._run_periodics()
-
-        # After running the periodics but before we start any resize operation,
-        # we should have exactly the same allocation/usage information as
-        # before running the periodics
-
-        # Check usages on the selected host after boot
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(flavor, source_usages)
-
-        # Check that the other provider has no usage
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertEqual({'VCPU': 0,
-                          'MEMORY_MB': 0,
-                          'DISK_GB': 0}, dest_usages)
-
-        # Check that the server only allocates resource from the host it is
-        # booted on
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations),
-                         'No allocation for the server on the host it'
-                         'is booted on')
-        allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(flavor, allocation)
-
-        return server
 
     def _resize_and_check_allocations(self, server, old_flavor, new_flavor,
             source_rp_uuid, dest_rp_uuid):
@@ -1556,32 +1618,6 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(new_flavor, dest_allocation)
 
-    def _delete_and_check_allocations(self, server, source_rp_uuid,
-                                      dest_rp_uuid):
-        # Check usages after delete
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
-        # NOTE(gibi): The resource allocation is deleted after the instance is
-        # destroyed in the db so wait_until_deleted might return before the
-        # the resource are deleted in placement. So we need to wait for the
-        # instance.delete.end notification as that is emitted after the
-        # resources are freed.
-        fake_notifier.wait_for_versioned_notification('instance.delete.end')
-
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertEqual({'VCPU': 0,
-                          'MEMORY_MB': 0,
-                          'DISK_GB': 0}, source_usages)
-
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertEqual({'VCPU': 0,
-                          'MEMORY_MB': 0,
-                          'DISK_GB': 0}, dest_usages)
-
-        # and no allocations for the deleted server
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(0, len(allocations))
-
     def _test_resize_revert(self, dest_hostname):
         source_hostname = self._other_hostname(dest_hostname)
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
@@ -1618,8 +1654,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         source_allocation = allocations[source_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, dest_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def _test_resize_confirm(self, dest_hostname):
         source_hostname = self._other_hostname(dest_hostname)
@@ -1685,8 +1720,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor2, dest_allocation)
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, dest_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def _resize_to_same_host_and_check_allocations(self, server, old_flavor,
                                                    new_flavor, rp_uuid):
@@ -1755,7 +1789,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         allocation = allocations[rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor2, allocation)
 
-        self._delete_and_check_allocations(server, rp_uuid, rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def test_resize_confirm_same_host(self):
         # make sure that the test only uses a single host
@@ -1788,7 +1822,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         allocation = allocations[rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor3, allocation)
 
-        self._delete_and_check_allocations(server, rp_uuid, rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def test_resize_not_enough_resource(self):
         # Try to resize to a flavor that requests more VCPU than what the
@@ -1843,8 +1877,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         allocation = allocations[source_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, allocation)
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, dest_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def _restart_compute_service(self, compute):
         # NOTE(gibi): The service interface cannot be used to simulate a real
@@ -1922,8 +1955,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, dest_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def test_evacuate_forced_host(self):
         """Evacuating a server with a forced host bypasses the scheduler
@@ -2004,8 +2036,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, dest_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def test_evacuate_claim_on_dest_fails(self):
         """Tests that the allocations on the destination node are cleaned up
@@ -2202,8 +2233,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         allocation = allocations[source_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, allocation)
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, source_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def _shelve_offload_and_check_allocations(self, server, source_rp_uuid):
         req = {
@@ -2258,8 +2288,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         allocation = allocations[current_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, allocation)
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, source_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def test_shelve_offload_unshelve_same_host(self):
         source_hostname = self.compute1.host
@@ -2297,8 +2326,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         allocation = allocations[current_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, allocation)
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, source_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def test_live_migrate_force(self):
         source_hostname = self.compute1.host
@@ -2338,8 +2366,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, dest_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def test_live_migrate(self):
         source_hostname = self.compute1.host
@@ -2377,8 +2404,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, dest_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def test_live_migrate_pre_check_fails(self):
         """Tests the case that the LiveMigrationTask in conductor has
@@ -2450,8 +2476,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self.assertFlavorMatchesAllocation(
             self.flavor1, allocations[source_rp_uuid]['resources'])
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, dest_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     @mock.patch('nova.virt.fake.FakeDriver.pre_live_migration',
                 # The actual type of exception here doesn't matter. The point
@@ -2510,8 +2535,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self.assertFlavorMatchesAllocation(
             self.flavor1, allocations[source_rp_uuid]['resources'])
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, dest_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     def test_rescheduling_when_migrating_instance(self):
         """Tests that allocations are removed from the destination node by
@@ -2675,8 +2699,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, dest_rp_uuid)
+        self._delete_and_check_allocations(server)
 
     @mock.patch('nova.virt.fake.FakeDriver.live_migration')
     @mock.patch('nova.virt.fake.FakeDriver.live_migration_abort')
@@ -2724,8 +2747,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self.assertFlavorMatchesAllocation(
            {'ram': 0, 'disk': 0, 'vcpus': 0}, dest_usages)
 
-        self._delete_and_check_allocations(
-            server, source_rp_uuid, dest_rp_uuid)
+        self._delete_and_check_allocations(server)
 
 
 class ServerRescheduleTests(ProviderUsageBaseTestCase):
@@ -2740,9 +2762,11 @@ class ServerRescheduleTests(ProviderUsageBaseTestCase):
 
     def setUp(self):
         super(ServerRescheduleTests, self).setUp()
+        self.computes = {}
         fake.set_nodes(['host1'])
         self.flags(host='host1')
         self.compute1 = self.start_service('compute', host='host1')
+        self.computes[self.compute1.host] = self.compute1
 
         # NOTE(sbauza): Make sure the FakeDriver returns a different nodename
         # for the second compute node.
@@ -2750,6 +2774,7 @@ class ServerRescheduleTests(ProviderUsageBaseTestCase):
         self.addCleanup(fake.restore_nodes)
         self.flags(host='host2')
         self.compute2 = self.start_service('compute', host='host2')
+        self.computes[self.compute2.host] = self.compute2
 
         flavors = self.api.get_flavors()
         self.flavor1 = flavors[0]
@@ -2806,7 +2831,9 @@ class ServerBuildAbortTests(ProviderUsageBaseTestCase):
         # We only need one compute service/host/node for these tests.
         fake.set_nodes(['host1'])
         self.flags(host='host1')
+        self.computes = {}
         self.compute1 = self.start_service('compute', host='host1')
+        self.computes[self.compute1.host] = self.compute1
 
         flavors = self.api.get_flavors()
         self.flavor1 = flavors[0]
