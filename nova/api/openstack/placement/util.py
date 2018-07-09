@@ -16,6 +16,7 @@ import re
 
 import jsonschema
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_middleware import request_id
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
@@ -34,6 +35,7 @@ from nova.api.openstack.placement.objects import user as user_obj
 from nova.i18n import _
 
 CONF = cfg.CONF
+LOG = logging.getLogger(__name__)
 
 # Error code handling constants
 ENV_ERROR_CODE = 'placement.error_code'
@@ -586,6 +588,11 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
     and User sub-objects and a boolean indicating whether a new Consumer object
     was created (as opposed to an existing consumer record retrieved)
 
+    :note: If the supplied project or user external identifiers do not match an
+           existing consumer's project and user identifiers, the existing
+           consumer's project and user IDs are updated to reflect the supplied
+           ones.
+
     :param ctx: The request context.
     :param consumer_uuid: The uuid of the consumer of the resources.
     :param project_id: The external ID of the project consuming the resources.
@@ -633,6 +640,37 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
                           'expected_gen': consumer.generation,
                           'got_gen': consumer_generation,
                       })
+        # NOTE(jaypipes): The user may have specified a different project and
+        # user external ID than the one that we had for the consumer. If this
+        # is the case, go ahead and modify the consumer record with the
+        # newly-supplied project/user information, but do not bump the consumer
+        # generation (since it will be bumped in the
+        # AllocationList.create_all() method).
+        #
+        # TODO(jaypipes): This means that there may be a partial update.
+        # Imagine a scenario where a user calls POST /allocations, and the
+        # payload references two consumers. The first consumer is a new
+        # consumer and is auto-created. The second consumer is an existing
+        # consumer, but contains a different project or user ID than the
+        # existing consumer's record. If the eventual call to
+        # AllocationList.create_all() fails for whatever reason (say, a
+        # resource provider generation conflict or out of resources failure),
+        # we will end up deleting the auto-created consumer but we MAY not undo
+        # the changes to the second consumer's project and user ID. I say MAY
+        # and not WILL NOT because I'm not sure that the exception that gets
+        # raised from AllocationList.create_all() will cause the context
+        # manager's transaction to rollback automatically. I believe that the
+        # same transaction context is used for both util.ensure_consumer() and
+        # AllocationList.create_all() within the same HTTP request, but need to
+        # test this to be 100% certain...
+        if (project_id != consumer.project.external_id or
+                user_id != consumer.user.external_id):
+            LOG.debug("Supplied project or user ID for consumer %s was "
+                      "different than existing record. Updating consumer "
+                      "record.", consumer_uuid)
+            consumer.project = proj
+            consumer.user = user
+            consumer.update()
     except exception.NotFound:
         # If we are attempting to modify or create allocations after 1.26, we
         # need a consumer generation specified. The user must have specified

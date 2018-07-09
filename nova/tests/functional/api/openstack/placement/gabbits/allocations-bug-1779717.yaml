@@ -1,0 +1,102 @@
+# Test that it's possible to change the project or user identifier for a
+# consumer by specifying a different project_id or user_id value in the payload
+# of both a PUT /allocations/{consumer_uuid} or POST /allocations
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement 1.28
+
+tests:
+
+- name: create cn1
+  POST: /resource_providers
+  data:
+      name: cn1
+  status: 200
+
+- name: add inventory
+  PUT: $HISTORY['create cn1'].$RESPONSE['links[?rel = "inventories"].href']
+  data:
+    resource_provider_generation: 0
+    inventories:
+      VCPU:
+        total: 16
+      MEMORY_MB:
+        total: 2048
+
+- name: create allocations for consumer1
+  PUT: /allocations/11111111-1111-1111-1111-111111111111
+  data:
+    allocations:
+      $HISTORY['create cn1'].$RESPONSE['uuid']:
+        resources:
+          MEMORY_MB: 1024
+          VCPU: 2
+    project_id: $ENVIRON['PROJECT_ID']
+    user_id: $ENVIRON['USER_ID']
+    consumer_generation: null
+  status: 204
+
+- name: get allocations for consumer1
+  GET: /allocations/11111111-1111-1111-1111-111111111111
+  status: 200
+  response_json_paths:
+    $.project_id: $ENVIRON['PROJECT_ID']
+    $.user_id: $ENVIRON['USER_ID']
+
+- name: change the project for consumer1
+  PUT: /allocations/11111111-1111-1111-1111-111111111111
+  data:
+    allocations:
+      $HISTORY['create cn1'].$RESPONSE['uuid']:
+        resources:
+          MEMORY_MB: 1024
+          VCPU: 2
+    project_id: $ENVIRON['PROJECT_ID_ALT']
+    user_id: $ENVIRON['USER_ID']
+    consumer_generation: 1
+  status: 204
+
+- name: check consumer1's project is now the other project
+  GET: /allocations/11111111-1111-1111-1111-111111111111
+  status: 200
+  response_json_paths:
+    $.project_id: $ENVIRON['PROJECT_ID_ALT']
+    $.user_id: $ENVIRON['USER_ID']
+
+- name: create allocations for two consumers
+  POST: /allocations
+  data:
+    11111111-1111-1111-1111-111111111111:
+      allocations:
+        $HISTORY['create cn1'].$RESPONSE['uuid']:
+          resources:
+            MEMORY_MB: 1024
+            VCPU: 1
+      consumer_generation: 2
+      # Change consumer1's project back to the original PROJECT_ID
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+    22222222-2222-2222-2222-222222222222:
+      allocations:
+        $HISTORY['create cn1'].$RESPONSE['uuid']:
+          resources:
+            MEMORY_MB: 1024
+            VCPU: 1
+      consumer_generation: null
+      project_id: $ENVIRON['PROJECT_ID_ALT']
+      user_id: $ENVIRON['USER_ID_ALT']
+  status: 204
+
+- name: check consumer1's project is back to the original project
+  GET: /allocations/11111111-1111-1111-1111-111111111111
+  status: 200
+  response_json_paths:
+    $.project_id: $ENVIRON['PROJECT_ID']
+    $.user_id: $ENVIRON['USER_ID']
