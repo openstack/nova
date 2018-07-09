@@ -540,14 +540,3 @@ class SecurityGroupsOutputController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         self._extend_servers(req, list(resp_obj.obj['servers']))
-
-
-# NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
-# parameter as this is placed to handle scheduler_hint extension for V2.1.
-def server_create(server_dict, create_kwargs, body_deprecated_param):
-    security_groups = server_dict.get(ATTRIBUTE_NAME)
-    if security_groups is not None:
-        create_kwargs['security_groups'] = [
-            sg['name'] for sg in security_groups if sg.get('name')]
-        create_kwargs['security_groups'] = list(
-            set(create_kwargs['security_groups']))
