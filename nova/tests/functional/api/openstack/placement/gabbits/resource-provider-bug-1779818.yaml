@@ -95,32 +95,29 @@ tests:
       $.resource_providers[?uuid="$ENVIRON['ALT_PARENT_PROVIDER_UUID']"].parent_provider_uuid: null
       $.resource_providers[?uuid="$ENVIRON['PARENT_PROVIDER_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
       $.resource_providers[?uuid="$ENVIRON['PARENT_PROVIDER_UUID']"].parent_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
-      # Bug#1779818: The child's root should be updated to the alt_parent,
-      #              but we actually still get the native parent for root.
-      # $.resource_providers[?uuid="$ENVIRON['RP_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
-      $.resource_providers[?uuid="$ENVIRON['RP_UUID']"].root_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+      $.resource_providers[?uuid="$ENVIRON['RP_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
       $.resource_providers[?uuid="$ENVIRON['RP_UUID']"].parent_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
 
 - name: list all resource providers in a tree with the child
   GET: /resource_providers?in_tree=$ENVIRON['RP_UUID']
   response_json_paths:
-      # There should be 3 providers but we actually get 2
-      $.resource_providers.`len`: 2
-      $.resource_providers[?uuid="$ENVIRON['RP_UUID']"].root_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+      $.resource_providers.`len`: 3
+      $.resource_providers[?uuid="$ENVIRON['RP_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
+      $.resource_providers[?uuid="$ENVIRON['ALT_PARENT_PROVIDER_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
       $.resource_providers[?uuid="$ENVIRON['PARENT_PROVIDER_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
 
 - name: list all resource providers in a tree with the parent
   GET: /resource_providers?in_tree=$ENVIRON['PARENT_PROVIDER_UUID']
   response_json_paths:
-      # There should be 3 providers but we actually get 2
-      $.resource_providers.`len`: 2
+      $.resource_providers.`len`: 3
+      $.resource_providers[?uuid="$ENVIRON['RP_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
       $.resource_providers[?uuid="$ENVIRON['ALT_PARENT_PROVIDER_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
       $.resource_providers[?uuid="$ENVIRON['PARENT_PROVIDER_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
 
 - name: list all resource providers in a tree with the alternative parent
   GET: /resource_providers?in_tree=$ENVIRON['ALT_PARENT_PROVIDER_UUID']
   response_json_paths:
-      # There should be 3 providers but we actually get 2
-      $.resource_providers.`len`: 2
+      $.resource_providers.`len`: 3
+      $.resource_providers[?uuid="$ENVIRON['RP_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
       $.resource_providers[?uuid="$ENVIRON['ALT_PARENT_PROVIDER_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
       $.resource_providers[?uuid="$ENVIRON['PARENT_PROVIDER_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
