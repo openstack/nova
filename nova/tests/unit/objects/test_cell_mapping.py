@@ -128,6 +128,125 @@ class _TestCellMappingObject(object):
         self.assertEqual(uuids.cell, obj.uuid)
         self.assertNotIn('disabled', obj)
 
+    @mock.patch.object(cell_mapping.CellMapping, '_get_by_uuid_from_db')
+    def test_formatted_db_url(self, mock_get):
+        url = 'sqlite://bob:s3kret@localhost:123/nova?munchies=doritos#baz'
+        varurl = ('{scheme}://not{username}:{password}@'
+                  '{hostname}:1{port}/{path}?{query}&flavor=coolranch'
+                  '#{fragment}')
+        self.flags(connection=url, group='database')
+        db_mapping = get_db_mapping(database_connection=varurl)
+        mock_get.return_value = db_mapping
+        mapping_obj = objects.CellMapping().get_by_uuid(self.context,
+                db_mapping['uuid'])
+        self.assertEqual(('sqlite://notbob:s3kret@localhost:1123/nova?'
+                          'munchies=doritos&flavor=coolranch#baz'),
+                         mapping_obj.database_connection)
+
+    @mock.patch.object(cell_mapping.CellMapping, '_get_by_uuid_from_db')
+    def test_formatted_mq_url(self, mock_get):
+        url = 'rabbit://bob:s3kret@localhost:123/nova?munchies=doritos#baz'
+        varurl = ('{scheme}://not{username}:{password}@'
+                  '{hostname}:1{port}/{path}?{query}&flavor=coolranch'
+                  '#{fragment}')
+        self.flags(transport_url=url)
+        db_mapping = get_db_mapping(transport_url=varurl)
+        mock_get.return_value = db_mapping
+        mapping_obj = objects.CellMapping().get_by_uuid(self.context,
+                db_mapping['uuid'])
+        self.assertEqual(('rabbit://notbob:s3kret@localhost:1123/nova?'
+                          'munchies=doritos&flavor=coolranch#baz'),
+                         mapping_obj.transport_url)
+
+    @mock.patch.object(cell_mapping.CellMapping, '_get_by_uuid_from_db')
+    def test_formatted_mq_url_multi_netloc1(self, mock_get):
+        # Multiple netlocs, each with all parameters
+        url = ('rabbit://alice:n0ts3kret@otherhost:456,'
+               'bob:s3kret@localhost:123'
+               '/nova?munchies=doritos#baz')
+        varurl = ('{scheme}://not{username2}:{password1}@'
+                  '{hostname2}:1{port1}/{path}?{query}&flavor=coolranch'
+                  '#{fragment}')
+        self.flags(transport_url=url)
+        db_mapping = get_db_mapping(transport_url=varurl)
+        mock_get.return_value = db_mapping
+        mapping_obj = objects.CellMapping().get_by_uuid(self.context,
+                db_mapping['uuid'])
+        self.assertEqual(('rabbit://notbob:n0ts3kret@localhost:1456/nova?'
+                          'munchies=doritos&flavor=coolranch#baz'),
+                         mapping_obj.transport_url)
+
+    @mock.patch.object(cell_mapping.CellMapping, '_get_by_uuid_from_db')
+    def test_formatted_mq_url_multi_netloc1_but_ipv6(self, mock_get):
+        # Multiple netlocs, each with all parameters
+        url = ('rabbit://alice:n0ts3kret@otherhost:456,'
+               'bob:s3kret@[1:2::7]:123'
+               '/nova?munchies=doritos#baz')
+        varurl = ('{scheme}://not{username2}:{password1}@'
+                  '[{hostname2}]:1{port1}/{path}?{query}&flavor=coolranch'
+                  '#{fragment}')
+        self.flags(transport_url=url)
+        db_mapping = get_db_mapping(transport_url=varurl)
+        mock_get.return_value = db_mapping
+        mapping_obj = objects.CellMapping().get_by_uuid(self.context,
+                db_mapping['uuid'])
+        self.assertEqual(('rabbit://notbob:n0ts3kret@[1:2::7]:1456/nova?'
+                          'munchies=doritos&flavor=coolranch#baz'),
+                         mapping_obj.transport_url)
+
+    @mock.patch.object(cell_mapping.CellMapping, '_get_by_uuid_from_db')
+    def test_formatted_mq_url_multi_netloc2(self, mock_get):
+        # Multiple netlocs, without optional password and port
+        url = ('rabbit://alice@otherhost,'
+               'bob:s3kret@localhost:123'
+               '/nova?munchies=doritos#baz')
+        varurl = ('{scheme}://not{username1}:{password2}@'
+                  '{hostname2}:1{port2}/{path}?{query}&flavor=coolranch'
+                  '#{fragment}')
+        self.flags(transport_url=url)
+        db_mapping = get_db_mapping(transport_url=varurl)
+        mock_get.return_value = db_mapping
+        mapping_obj = objects.CellMapping().get_by_uuid(self.context,
+                db_mapping['uuid'])
+        self.assertEqual(('rabbit://notalice:s3kret@localhost:1123/nova?'
+                          'munchies=doritos&flavor=coolranch#baz'),
+                         mapping_obj.transport_url)
+
+    @mock.patch.object(cell_mapping.CellMapping, '_get_by_uuid_from_db')
+    def test_formatted_mq_url_multi_netloc3(self, mock_get):
+        # Multiple netlocs, without optional args
+        url = ('rabbit://otherhost,'
+               'bob:s3kret@localhost:123'
+               '/nova?munchies=doritos#baz')
+        varurl = ('{scheme}://not{username2}:{password2}@'
+                  '{hostname1}:1{port2}/{path}?{query}&flavor=coolranch'
+                  '#{fragment}')
+        self.flags(transport_url=url)
+        db_mapping = get_db_mapping(transport_url=varurl)
+        mock_get.return_value = db_mapping
+        mapping_obj = objects.CellMapping().get_by_uuid(self.context,
+                db_mapping['uuid'])
+        self.assertEqual(('rabbit://notbob:s3kret@otherhost:1123/nova?'
+                          'munchies=doritos&flavor=coolranch#baz'),
+                         mapping_obj.transport_url)
+
+    @mock.patch.object(cell_mapping.CellMapping, '_get_by_uuid_from_db')
+    def test_formatted_url_without_base_set(self, mock_get):
+        # Make sure we just pass through the template URL if the base
+        # URLs are not set
+        varurl = ('{scheme}://not{username2}:{password2}@'
+                  '{hostname1}:1{port2}/{path}?{query}&flavor=coolranch'
+                  '#{fragment}')
+        self.flags(transport_url=None)
+        self.flags(connection=None, group='database')
+        db_mapping = get_db_mapping(transport_url=varurl,
+                                    database_connection=varurl)
+        mock_get.return_value = db_mapping
+        mapping_obj = objects.CellMapping().get_by_uuid(self.context,
+                db_mapping['uuid'])
+        self.assertEqual(varurl, mapping_obj.database_connection)
+        self.assertEqual(varurl, mapping_obj.transport_url)
+
 
 class TestCellMappingObject(test_objects._LocalTest,
                             _TestCellMappingObject):
