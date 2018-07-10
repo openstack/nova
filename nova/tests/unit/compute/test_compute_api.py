@@ -39,7 +39,7 @@ from nova import conductor
 import nova.conf
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.image import api as image_api
 from nova.network.neutronv2 import api as neutron_api

@@ -89,7 +89,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 self.context, spec_obj, [spec_obj.instance_uuid],
                 {}, {})
 
-    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
+    @mock.patch('nova.db.api.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
     def test_select_destination_works(self, mock_get_extra):
@@ -166,7 +166,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         host_state.failed_builds = 0
         return host_state
 
-    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
+    @mock.patch('nova.db.api.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
     def test_performance_check_select_destination(self, mock_get_extra):

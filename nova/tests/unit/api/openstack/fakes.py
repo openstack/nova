@@ -99,10 +99,10 @@ def stub_out_key_pair_funcs(testcase, have_key_pair=True, **kwargs):
         return []
 
     if have_key_pair:
-        testcase.stub_out('nova.db.key_pair_get_all_by_user', key_pair)
-        testcase.stub_out('nova.db.key_pair_get', one_key_pair)
+        testcase.stub_out('nova.db.api.key_pair_get_all_by_user', key_pair)
+        testcase.stub_out('nova.db.api.key_pair_get', one_key_pair)
     else:
-        testcase.stub_out('nova.db.key_pair_get_all_by_user', no_key_pair)
+        testcase.stub_out('nova.db.api.key_pair_get_all_by_user', no_key_pair)
 
 
 def stub_out_trusted_certs(test, certs=None):

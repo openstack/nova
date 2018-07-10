@@ -90,7 +90,7 @@ class ApiTestCase(test.TestCase):
                          self.network_api.get(self.context, uuids.instance))
 
     @mock.patch('nova.objects.Network.get_by_id')
-    @mock.patch('nova.db.virtual_interface_get_by_instance')
+    @mock.patch('nova.db.api.virtual_interface_get_by_instance')
     def test_get_vifs_by_instance(self, mock_get_by_instance,
                                   mock_get_by_id):
         mock_get_by_instance.return_value = [
@@ -110,7 +110,7 @@ class ApiTestCase(test.TestCase):
                                                project_only='allow_none')
 
     @mock.patch('nova.objects.Network.get_by_id')
-    @mock.patch('nova.db.virtual_interface_get_by_address')
+    @mock.patch('nova.db.api.virtual_interface_get_by_address')
     def test_get_vif_by_mac_address(self, mock_get_by_address,
                                     mock_get_by_id):
         mock_get_by_address.return_value = dict(
@@ -492,7 +492,7 @@ class ApiTestCase(test.TestCase):
         self._test_refresh_cache('remove_fixed_ip_from_instance', self.context,
                                  instance, address)
 
-    @mock.patch('nova.db.fixed_ip_get_by_address')
+    @mock.patch('nova.db.api.fixed_ip_get_by_address')
     def test_get_fixed_ip_by_address(self, fip_get):
         fip_get.return_value = test_fixed_ip.fake_fixed_ip
         fip = self.network_api.get_fixed_ip_by_address(self.context,
@@ -560,7 +560,7 @@ class ApiTestCase(test.TestCase):
 
 
 @mock.patch('nova.network.api.API')
-@mock.patch('nova.db.instance_info_cache_update')
+@mock.patch('nova.db.api.instance_info_cache_update')
 class TestUpdateInstanceCache(test.NoDBTestCase):
     def setUp(self):
         super(TestUpdateInstanceCache, self).setUp()

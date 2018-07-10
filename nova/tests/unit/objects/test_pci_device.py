@@ -20,7 +20,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova import objects
 from nova.objects import fields
@@ -267,7 +267,7 @@ class _TestPciDeviceObject(object):
             return return_dev
 
         ctxt = context.get_admin_context()
-        self.stub_out('nova.db.pci_device_update', _fake_update)
+        self.stub_out('nova.db.api.pci_device_update', _fake_update)
         self.pci_device = pci_device.PciDevice.create(None, dev_dict)
         self.pci_device._context = ctxt
         self.pci_device.save()
@@ -289,8 +289,8 @@ class _TestPciDeviceObject(object):
 
         def _fake_update(ctxt, node_id, addr, updates):
             self.called = True
-        self.stub_out('nova.db.pci_device_destroy', _fake_destroy)
-        self.stub_out('nova.db.pci_device_update', _fake_update)
+        self.stub_out('nova.db.api.pci_device_destroy', _fake_destroy)
+        self.stub_out('nova.db.api.pci_device_update', _fake_update)
         self._create_fake_pci_device()
         self.pci_device.status = fields.PciDeviceStatus.DELETED
         self.called = False

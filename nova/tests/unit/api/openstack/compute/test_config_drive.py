@@ -40,9 +40,9 @@ class ConfigDriveTestV21(test.TestCase):
         self._setup_wsgi()
 
     def test_show(self):
-        self.stub_out('nova.db.instance_get',
+        self.stub_out('nova.db.api.instance_get',
                       fakes.fake_instance_get())
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       fakes.fake_instance_get())
         # NOTE(sdague): because of the way extensions work, we have to
         # also stub out the Request compute cache with a real compute

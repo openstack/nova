@@ -77,10 +77,10 @@ class ServerActionsControllerTestV21(test.TestCase):
     def setUp(self):
         super(ServerActionsControllerTestV21, self).setUp()
         self.flags(group='glance', api_servers=['http://localhost:9292'])
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                               host='fake_host'))
-        self.stub_out('nova.db.instance_update_and_get_original',
+        self.stub_out('nova.db.api.instance_update_and_get_original',
                       instance_update_and_get_original)
 
         fakes.stub_out_nw_api(self)
@@ -195,7 +195,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.req, FAKE_UUID, body=body)
 
     def test_reboot_not_found(self):
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       return_server_not_found)
 
         body = dict(reboot=dict(type="HARD"))
@@ -219,7 +219,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
     def test_reboot_soft_with_soft_in_progress_raises_conflict(self):
         body = dict(reboot=dict(type="SOFT"))
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                             task_state=task_states.REBOOTING))
         self.assertRaises(webob.exc.HTTPConflict,
@@ -228,21 +228,21 @@ class ServerActionsControllerTestV21(test.TestCase):
 
     def test_reboot_hard_with_soft_in_progress_does_not_raise(self):
         body = dict(reboot=dict(type="HARD"))
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                         task_state=task_states.REBOOTING))
         self.controller._action_reboot(self.req, FAKE_UUID, body=body)
 
     def test_reboot_hard_with_hard_in_progress(self):
         body = dict(reboot=dict(type="HARD"))
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                         task_state=task_states.REBOOTING_HARD))
         self.controller._action_reboot(self.req, FAKE_UUID, body=body)
 
     def test_reboot_soft_with_hard_in_progress_raises_conflict(self):
         body = dict(reboot=dict(type="SOFT"))
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                         task_state=task_states.REBOOTING_HARD))
         self.assertRaises(webob.exc.HTTPConflict,
@@ -254,7 +254,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         return_server = fakes.fake_instance_get(image_ref='2',
                                                 vm_state=vm_states.ACTIVE,
                                                 host='fake_host')
-        self.stub_out('nova.db.instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.api.instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -286,7 +286,7 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_rebuild_accepted_minimum(self):
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stub_out('nova.db.instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.api.instance_get_by_uuid', return_server)
         self_href = 'http://localhost/v2/servers/%s' % FAKE_UUID
 
         body = {
@@ -310,7 +310,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         def rebuild(self2, context, instance, image_href, *args, **kwargs):
             info['image_href_in_call'] = image_href
 
-        self.stub_out('nova.db.instance_get',
+        self.stub_out('nova.db.api.instance_get',
                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
         self.stub_out('nova.compute.api.API.rebuild', rebuild)
 
@@ -343,7 +343,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stub_out('nova.db.instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.api.instance_get_by_uuid', return_server)
         self_href = 'http://localhost/v2/servers/%s' % FAKE_UUID
 
         body = {
@@ -383,7 +383,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         return_server = fakes.fake_instance_get(metadata=metadata,
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stub_out('nova.db.instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.api.instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -437,7 +437,7 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_rebuild_admin_pass(self):
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stub_out('nova.db.instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.api.instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -459,7 +459,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stub_out('nova.db.instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.api.instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -478,7 +478,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         def server_not_found(self, instance_id,
                              columns_to_join=None, use_slave=False):
             raise exception.InstanceNotFound(instance_id=instance_id)
-        self.stub_out('nova.db.instance_get_by_uuid', server_not_found)
+        self.stub_out('nova.db.api.instance_get_by_uuid', server_not_found)
 
         body = {
             "rebuild": {
@@ -958,7 +958,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                          'delete_on_termination': False,
                          'no_device': None})]
 
-        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
+        self.stub_out('nova.db.api.block_device_mapping_get_all_by_instance',
                       fake_block_device_mapping_get_all_by_instance)
 
         system_metadata = dict(image_kernel_id=_fake_id('b'),
@@ -970,7 +970,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                                            vm_state=vm_states.ACTIVE,
                                            root_device_name='/dev/vda',
                                            system_metadata=system_metadata)
-        self.stub_out('nova.db.instance_get_by_uuid', instance)
+        self.stub_out('nova.db.api.instance_get_by_uuid', instance)
 
         volume = dict(id=_fake_id('a'),
                       size=1,
@@ -1069,7 +1069,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                          'delete_on_termination': False,
                          'no_device': None})]
 
-        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
+        self.stub_out('nova.db.api.block_device_mapping_get_all_by_instance',
                       fake_block_device_mapping_get_all_by_instance)
 
         instance = fakes.fake_instance_get(
@@ -1078,7 +1078,7 @@ class ServerActionsControllerTestV21(test.TestCase):
             root_device_name='/dev/vda',
             system_metadata={'image_test_key1': 'test_value1',
                              'image_test_key2': 'test_value2'})
-        self.stub_out('nova.db.instance_get_by_uuid', instance)
+        self.stub_out('nova.db.api.instance_get_by_uuid', instance)
 
         volume = dict(id=_fake_id('a'),
                       size=1,

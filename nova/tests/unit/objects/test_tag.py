@@ -40,7 +40,7 @@ def _get_tag(resource_id, tag_name, context=None):
 
 
 class _TestTagObject(object):
-    @mock.patch('nova.db.instance_tag_add')
+    @mock.patch('nova.db.api.instance_tag_add')
     def test_create(self, tag_add):
         tag_add.return_value = fake_tag1
         tag_obj = _get_tag(RESOURCE_ID, TAG_NAME1, context=self.context)
@@ -49,13 +49,13 @@ class _TestTagObject(object):
         tag_add.assert_called_once_with(self.context, RESOURCE_ID, TAG_NAME1)
         self.compare_obj(tag_obj, fake_tag1)
 
-    @mock.patch('nova.db.instance_tag_delete')
+    @mock.patch('nova.db.api.instance_tag_delete')
     def test_destroy(self, tag_delete):
         tag.Tag.destroy(self.context, RESOURCE_ID, TAG_NAME1)
         tag_delete.assert_called_once_with(self.context,
                                            RESOURCE_ID, TAG_NAME1)
 
-    @mock.patch('nova.db.instance_tag_exists')
+    @mock.patch('nova.db.api.instance_tag_exists')
     def test_exists(self, instance_tag_exists):
         tag.Tag.exists(self.context, RESOURCE_ID, TAG_NAME1)
         instance_tag_exists.assert_called_once_with(
@@ -81,7 +81,7 @@ class _TestTagList(object):
             self.assertEqual(obj.tag, fake['tag'])
             self.assertEqual(obj.resource_id, fake['resource_id'])
 
-    @mock.patch('nova.db.instance_tag_get_by_instance_uuid')
+    @mock.patch('nova.db.api.instance_tag_get_by_instance_uuid')
     def test_get_by_resource_id(self, get_by_inst):
         get_by_inst.return_value = fake_tag_list
 
@@ -91,7 +91,7 @@ class _TestTagList(object):
         get_by_inst.assert_called_once_with(self.context, RESOURCE_ID)
         self._compare_tag_list(fake_tag_list, tag_list_obj)
 
-    @mock.patch('nova.db.instance_tag_set')
+    @mock.patch('nova.db.api.instance_tag_set')
     def test_create(self, tag_set):
         tag_set.return_value = fake_tag_list
         tag_list_obj = tag.TagList.create(
@@ -101,7 +101,7 @@ class _TestTagList(object):
                                         RESOURCE_ID, [TAG_NAME1, TAG_NAME2])
         self._compare_tag_list(fake_tag_list, tag_list_obj)
 
-    @mock.patch('nova.db.instance_tag_delete_all')
+    @mock.patch('nova.db.api.instance_tag_delete_all')
     def test_destroy(self, tag_delete_all):
         tag.TagList.destroy(self.context, RESOURCE_ID)
         tag_delete_all.assert_called_once_with(self.context, RESOURCE_ID)

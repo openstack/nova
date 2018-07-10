@@ -54,7 +54,7 @@ class _TestQuotasObject(object):
         self.instance = fake_instance.fake_db_instance(
                 project_id='fake_proj2', user_id='fake_user2')
 
-    @mock.patch('nova.db.quota_get', side_effect=exception.QuotaNotFound)
+    @mock.patch('nova.db.api.quota_get', side_effect=exception.QuotaNotFound)
     @mock.patch('nova.objects.Quotas._create_limit_in_db')
     def test_create_limit(self, mock_create, mock_get):
         quotas_obj.Quotas.create_limit(self.context, 'fake-project',
@@ -62,7 +62,7 @@ class _TestQuotasObject(object):
         mock_create.assert_called_once_with(self.context, 'fake-project',
                                             'foo', 10, user_id='user')
 
-    @mock.patch('nova.db.quota_get')
+    @mock.patch('nova.db.api.quota_get')
     @mock.patch('nova.objects.Quotas._create_limit_in_db')
     def test_create_limit_exists_in_main(self, mock_create, mock_get):
         self.assertRaises(exception.QuotaExists,
@@ -203,7 +203,7 @@ class _TestQuotasObject(object):
 
     @mock.patch('nova.objects.Quotas._update_limit_in_db',
                 side_effect=exception.QuotaNotFound)
-    @mock.patch('nova.db.quota_update')
+    @mock.patch('nova.db.api.quota_update')
     def test_update_limit_main(self, mock_update_main, mock_update):
         quotas_obj.Quotas.update_limit(self.context, 'fake-project',
                                        'foo', 10, user_id='user')
@@ -223,7 +223,7 @@ class _TestQuotasObject(object):
 
     @mock.patch('nova.objects.Quotas._get_from_db',
                 side_effect=exception.QuotaNotFound)
-    @mock.patch('nova.db.quota_get')
+    @mock.patch('nova.db.api.quota_get')
     def test_get_main(self, mock_get_main, mock_get):
         quotas_obj.Quotas.get(self.context, 'fake-project', 'foo',
                               user_id='user')
@@ -233,7 +233,7 @@ class _TestQuotasObject(object):
                                               'foo', user_id='user')
 
     @mock.patch('nova.objects.Quotas._get_all_from_db')
-    @mock.patch('nova.db.quota_get_all')
+    @mock.patch('nova.db.api.quota_get_all')
     def test_get_all(self, mock_get_all_main, mock_get_all):
         mock_get_all.return_value = ['api1']
         mock_get_all_main.return_value = ['main1', 'main2']
@@ -243,7 +243,7 @@ class _TestQuotasObject(object):
         self.assertEqual(['api1', 'main1', 'main2'], quotas)
 
     @mock.patch('nova.objects.Quotas._get_all_from_db_by_project')
-    @mock.patch('nova.db.quota_get_all_by_project')
+    @mock.patch('nova.db.api.quota_get_all_by_project')
     def test_get_all_by_project(self, mock_get_all_main, mock_get_all):
         mock_get_all.return_value = {'project_id': 'fake-project',
                                      'fixed_ips': 20, 'floating_ips': 5}
@@ -258,7 +258,7 @@ class _TestQuotasObject(object):
         self.assertEqual(expected, quotas_dict)
 
     @mock.patch('nova.objects.Quotas._get_all_from_db_by_project_and_user')
-    @mock.patch('nova.db.quota_get_all_by_project_and_user')
+    @mock.patch('nova.db.api.quota_get_all_by_project_and_user')
     def test_get_all_by_project_and_user(self, mock_get_all_main,
                                          mock_get_all):
         mock_get_all.return_value = {'project_id': 'fake-project',
@@ -285,7 +285,7 @@ class _TestQuotasObject(object):
     @mock.patch('nova.objects.Quotas._destroy_all_in_db_by_project',
                 side_effect=exception.ProjectQuotaNotFound(
                     project_id='fake-project'))
-    @mock.patch('nova.db.quota_destroy_all_by_project')
+    @mock.patch('nova.db.api.quota_destroy_all_by_project')
     def test_destroy_all_by_project_main(self, mock_destroy_all_main,
                                          mock_destroy_all):
         quotas_obj.Quotas.destroy_all_by_project(self.context, 'fake-project')
@@ -304,7 +304,7 @@ class _TestQuotasObject(object):
     @mock.patch('nova.objects.Quotas._destroy_all_in_db_by_project_and_user',
                 side_effect=exception.ProjectUserQuotaNotFound(
                     user_id='user', project_id='fake-project'))
-    @mock.patch('nova.db.quota_destroy_all_by_project_and_user')
+    @mock.patch('nova.db.api.quota_destroy_all_by_project_and_user')
     def test_destroy_all_by_project_and_user_main(self, mock_destroy_all_main,
                                                   mock_destroy_all):
         quotas_obj.Quotas.destroy_all_by_project_and_user(self.context,
@@ -323,7 +323,7 @@ class _TestQuotasObject(object):
 
     @mock.patch('nova.objects.Quotas._get_class_from_db',
                 side_effect=exception.QuotaClassNotFound(class_name='class'))
-    @mock.patch('nova.db.quota_class_get')
+    @mock.patch('nova.db.api.quota_class_get')
     def test_get_class_main(self, mock_get_main, mock_get):
         qclass = quotas_obj.Quotas.get_class(self.context, 'class', 'resource')
         mock_get.assert_called_once_with(self.context, 'class', 'resource')
@@ -340,7 +340,7 @@ class _TestQuotasObject(object):
 
     @mock.patch('nova.objects.Quotas._get_all_class_from_db_by_name',
                 side_effect=exception.QuotaClassNotFound(class_name='class'))
-    @mock.patch('nova.db.quota_class_get_default')
+    @mock.patch('nova.db.api.quota_class_get_default')
     def test_get_default_class_main(self, mock_get_default_main, mock_get_all):
         qclass = quotas_obj.Quotas.get_default_class(self.context)
         mock_get_all.assert_called_once_with(self.context,
@@ -349,7 +349,7 @@ class _TestQuotasObject(object):
         self.assertEqual(mock_get_default_main.return_value, qclass)
 
     @mock.patch('nova.objects.Quotas._get_all_class_from_db_by_name')
-    @mock.patch('nova.db.quota_class_get_all_by_name')
+    @mock.patch('nova.db.api.quota_class_get_all_by_name')
     def test_get_class_by_name(self, mock_get_all_main, mock_get_all):
         mock_get_all.return_value = {'class_name': 'foo', 'cores': 10,
                                      'instances': 5}
@@ -363,7 +363,7 @@ class _TestQuotasObject(object):
                     'fixed_ips': 10}
         self.assertEqual(expected, quotas_dict)
 
-    @mock.patch('nova.db.quota_class_get',
+    @mock.patch('nova.db.api.quota_class_get',
                 side_effect=exception.QuotaClassNotFound(class_name='class'))
     @mock.patch('nova.objects.Quotas._create_class_in_db')
     def test_create_class(self, mock_create, mock_get):
@@ -372,7 +372,7 @@ class _TestQuotasObject(object):
         mock_create.assert_called_once_with(self.context, 'class', 'resource',
                                             'limit')
 
-    @mock.patch('nova.db.quota_class_get')
+    @mock.patch('nova.db.api.quota_class_get')
     @mock.patch('nova.objects.Quotas._create_class_in_db')
     def test_create_class_exists_in_main(self, mock_create, mock_get):
         self.assertRaises(exception.QuotaClassExists,
@@ -388,7 +388,7 @@ class _TestQuotasObject(object):
 
     @mock.patch('nova.objects.Quotas._update_class_in_db',
                 side_effect=exception.QuotaClassNotFound(class_name='class'))
-    @mock.patch('nova.db.quota_class_update')
+    @mock.patch('nova.db.api.quota_class_update')
     def test_update_class_main(self, mock_update_main, mock_update):
         quotas_obj.Quotas.update_class(self.context, 'class', 'resource',
                                        'limit')

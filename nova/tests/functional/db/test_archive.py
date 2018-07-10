@@ -23,7 +23,7 @@ from sqlalchemy import MetaData
 from sqlalchemy import select
 
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova.tests.functional import test_servers
 from nova.tests.unit import fake_network

@@ -65,7 +65,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects

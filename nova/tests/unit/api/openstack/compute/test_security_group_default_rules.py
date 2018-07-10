@@ -18,7 +18,7 @@ import webob
 from nova.api.openstack.compute import \
     security_group_default_rules as security_group_default_rules_v21
 from nova import context
-import nova.db
+import nova.db.api
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -226,7 +226,7 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
         res_dict = self.controller.index(self.req)
         self.assertEqual(res_dict, expected)
 
-    @mock.patch('nova.db.security_group_default_rule_list',
+    @mock.patch('nova.db.api.security_group_default_rule_list',
                 side_effect=(exception.
                     SecurityGroupDefaultRuleNotFound("Rule Not Found")))
     def test_non_existing_security_group_default_rules_list(self,
@@ -252,7 +252,7 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
         self.assertEqual(security_group_default_rule['ip_range']['cidr'],
                          sgr['cidr'])
 
-    @mock.patch('nova.db.security_group_default_rule_get',
+    @mock.patch('nova.db.api.security_group_default_rule_get',
                 side_effect=(exception.
                     SecurityGroupDefaultRuleNotFound("Rule Not Found")))
     def test_non_existing_security_group_default_rule_show(self,
@@ -274,16 +274,16 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
             self.assertEqual(sgr['id'], id)
             return security_group_default_rule_db(sgr)
 
-        self.stub_out('nova.db.security_group_default_rule_destroy',
+        self.stub_out('nova.db.api.security_group_default_rule_destroy',
                       security_group_default_rule_destroy)
-        self.stub_out('nova.db.security_group_default_rule_get',
+        self.stub_out('nova.db.api.security_group_default_rule_get',
                       return_security_group_default_rule)
 
         self.controller.delete(self.req, '1')
 
         self.assertTrue(self.called)
 
-    @mock.patch('nova.db.security_group_default_rule_destroy',
+    @mock.patch('nova.db.api.security_group_default_rule_destroy',
                 side_effect=(exception.
                     SecurityGroupDefaultRuleNotFound("Rule Not Found")))
     def test_non_existing_security_group_default_rule_delete(
@@ -299,8 +299,9 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
 
         setattr(ctxt, 'project_id', 'new_project_id')
 
-        sg = nova.db.security_group_ensure_default(ctxt)
-        rules = nova.db.security_group_rule_get_by_security_group(ctxt, sg.id)
+        sg = nova.db.api.security_group_ensure_default(ctxt)
+        rules = nova.db.api.security_group_rule_get_by_security_group(
+            ctxt, sg.id)
         security_group_rule = rules[0]
         self.assertEqual(sgr['id'], security_group_rule.id)
         self.assertEqual(sgr['ip_protocol'], security_group_rule.protocol)

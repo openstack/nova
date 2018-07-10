@@ -132,7 +132,7 @@ class TestCellsStateManager(test.NoDBTestCase):
                       _fake_service_get_all_by_binary)
         self.stub_out('nova.objects.FlavorList.get_all',
                       _fake_instance_type_all)
-        self.stub_out('nova.db.cell_get_all', _fake_cell_get_all)
+        self.stub_out('nova.db.api.cell_get_all', _fake_cell_get_all)
 
     def test_cells_config_not_found(self):
         self.flags(cells_config='no_such_file_exists.conf', group='cells')
@@ -271,7 +271,7 @@ class TestCellsStateManagerNodeDown(test.NoDBTestCase):
                _fake_service_get_all_by_binary_nodedown)
         self.stub_out('nova.objects.FlavorList.get_all',
                       _fake_instance_type_all)
-        self.stub_out('nova.db.cell_get_all', _fake_cell_get_all)
+        self.stub_out('nova.db.api.cell_get_all', _fake_cell_get_all)
 
     def test_capacity_no_reserve_nodedown(self):
         cap = self._capacity(0.0)

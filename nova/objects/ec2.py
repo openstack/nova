@@ -13,7 +13,7 @@
 #    under the License.
 
 from nova.api.ec2 import ec2utils
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.objects import base
 from nova.objects import fields

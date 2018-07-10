@@ -24,7 +24,7 @@ import webob
 
 from nova.api.openstack.compute import security_groups
 from nova import context
-import nova.db
+import nova.db.api
 from nova import exception
 from nova.network import model
 from nova.network.neutronv2 import api as neutron_api
@@ -164,7 +164,7 @@ class TestNeutronSecurityGroupsV21(
             device_id=test_security_groups.FAKE_UUID1)
         expected = [{'rules': [], 'tenant_id': 'fake', 'id': sg['id'],
                     'name': 'test', 'description': 'test-description'}]
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       test_security_groups.return_server_by_uuid)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/os-security-groups'
                                       % test_security_groups.FAKE_UUID1)
@@ -202,7 +202,7 @@ class TestNeutronSecurityGroupsV21(
             _context, instance_obj.Instance(), db_inst,
             expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
         neutron = neutron_api.API()
-        with mock.patch.object(nova.db, 'instance_get_by_uuid',
+        with mock.patch.object(nova.db.api, 'instance_get_by_uuid',
                                return_value=db_inst):
             neutron.allocate_for_instance(_context, instance, False, None,
                                           security_groups=[sg['id']])
@@ -231,7 +231,7 @@ class TestNeutronSecurityGroupsV21(
             network_id=net['network']['id'], security_groups=[sg['id']],
             device_id=UUID_SERVER)
 
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="test"))
 
@@ -249,7 +249,7 @@ class TestNeutronSecurityGroupsV21(
             network_id=net['network']['id'], security_groups=[sg1['id']],
             device_id=UUID_SERVER)
 
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="sg1"))
 
@@ -267,7 +267,7 @@ class TestNeutronSecurityGroupsV21(
             port_security_enabled=True,
             device_id=UUID_SERVER)
 
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="test"))
 
@@ -282,7 +282,7 @@ class TestNeutronSecurityGroupsV21(
             network_id=net['network']['id'], port_security_enabled=False,
             device_id=UUID_SERVER)
 
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="test"))
 
@@ -300,7 +300,7 @@ class TestNeutronSecurityGroupsV21(
             port_security_enabled=True, ip_allocation='deferred',
             device_id=UUID_SERVER)
 
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="test"))
 
@@ -309,7 +309,7 @@ class TestNeutronSecurityGroupsV21(
         self.manager._addSecurityGroup(req, UUID_SERVER, body)
 
     def test_disassociate_by_non_existing_security_group_name(self):
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       test_security_groups.return_server)
         body = dict(removeSecurityGroup=dict(name='non-existing'))
 
@@ -338,7 +338,7 @@ class TestNeutronSecurityGroupsV21(
             network_id=net['network']['id'], security_groups=[sg['id']],
             device_id=UUID_SERVER)
 
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       test_security_groups.return_server)
         body = dict(removeSecurityGroup=dict(name="test"))
 

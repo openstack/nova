@@ -27,7 +27,7 @@ from nova.cmd import common as cmd_common
 import nova.conf
 from nova import config
 from nova import context as nova_context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.i18n import _
 from nova import policies

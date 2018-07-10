@@ -16,7 +16,7 @@ import mock
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import models as db_models
 from nova import exception

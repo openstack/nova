@@ -16,7 +16,7 @@ from oslo_log import log as logging
 
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.objects import base
 from nova.objects import fields

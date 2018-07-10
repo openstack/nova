@@ -19,7 +19,7 @@ from oslo_utils import timeutils
 
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.network import model as network_model
 from nova.objects import instance_info_cache

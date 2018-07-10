@@ -53,7 +53,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy import types as col_types
@@ -1796,7 +1796,7 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(1, len(security_groups))
         self.assertEqual("default", security_groups[0]["name"])
 
-    @mock.patch.object(db.sqlalchemy.api, '_security_group_get_by_names')
+    @mock.patch.object(sqlalchemy_api, '_security_group_get_by_names')
     def test_security_group_ensure_default_called_concurrently(self, sg_mock):
         # make sure NotFound is always raised here to trick Nova to insert the
         # duplicate security group entry
@@ -1885,7 +1885,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         instance = self.create_instance_with_args()
         self.assertTrue(uuidutils.is_uuid_like(instance['uuid']))
 
-    @mock.patch.object(db.sqlalchemy.api, 'security_group_ensure_default')
+    @mock.patch.object(sqlalchemy_api, 'security_group_ensure_default')
     def test_instance_create_with_deadlock_retry(self, mock_sg):
         mock_sg.side_effect = [db_exc.DBDeadlock(), None]
         instance = self.create_instance_with_args()
@@ -7381,7 +7381,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
     @mock.patch("nova.db.sqlalchemy.api.compute_node_get_model")
     def test_dbapi_compute_node_get_model(self, mock_get_model):
         cid = self.item["id"]
-        db.api.compute_node_get_model(self.ctxt, cid)
+        db.compute_node_get_model(self.ctxt, cid)
         mock_get_model.assert_called_once_with(self.ctxt, cid)
 
     @mock.patch("nova.db.sqlalchemy.api.model_query")

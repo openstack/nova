@@ -15,7 +15,7 @@
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.objects import base
 from nova.objects import fields

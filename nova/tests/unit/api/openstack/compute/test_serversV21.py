@@ -159,7 +159,7 @@ class ControllerTest(test.TestCase):
             compute_api.API, 'get_all', side_effect=return_servers)).mock
         self.mock_get = self.useFixture(fixtures.MockPatchObject(
             compute_api.API, 'get', side_effect=return_server)).mock
-        self.stub_out('nova.db.instance_update_and_get_original',
+        self.stub_out('nova.db.api.instance_update_and_get_original',
                       instance_update_and_get_original)
         self.flags(group='glance', api_servers=['http://localhost:9292'])
 
@@ -1796,7 +1796,7 @@ class ServersControllerDeleteTest(ControllerTest):
             self.server_delete_called = True
             deleted_at = timeutils.utcnow()
             return fake_instance.fake_db_instance(deleted_at=deleted_at)
-        self.stub_out('nova.db.instance_destroy', instance_destroy_mock)
+        self.stub_out('nova.db.api.instance_destroy', instance_destroy_mock)
 
         self.controller.delete(req, FAKE_UUID)
         # delete() should be called for instance which has never been active,
@@ -2108,7 +2108,8 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
             self.controller._stop_server, req, FAKE_UUID, body)
 
     @mock.patch(
-        'nova.db.instance_get_by_uuid', fake_instance_get_by_uuid_not_found)
+        'nova.db.api.instance_get_by_uuid',
+        fake_instance_get_by_uuid_not_found)
     def test_start_with_bogus_id(self):
         req = fakes.HTTPRequestV21.blank('/fake/servers/test_inst/action')
         body = dict(start="")
@@ -2116,7 +2117,8 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
             self.controller._start_server, req, 'test_inst', body)
 
     @mock.patch(
-        'nova.db.instance_get_by_uuid', fake_instance_get_by_uuid_not_found)
+        'nova.db.api.instance_get_by_uuid',
+        fake_instance_get_by_uuid_not_found)
     def test_stop_with_bogus_id(self):
         req = fakes.HTTPRequestV21.blank('/fake/servers/test_inst/action')
         body = dict(stop="")
@@ -2183,7 +2185,7 @@ class ServersControllerRebuildTestV254(ServersControllerRebuildInstanceTest):
     def test_rebuild_user_has_no_key_pair(self):
         def no_key_pair(context, user_id, name):
             raise exception.KeypairNotFound(user_id=user_id, name=name)
-        self.stub_out('nova.db.key_pair_get', no_key_pair)
+        self.stub_out('nova.db.api.key_pair_get', no_key_pair)
         fake_get = fakes.fake_compute_get(vm_state=vm_states.ACTIVE,
                                           key_name=None,
                                           project_id=self.req_project_id,
@@ -2325,7 +2327,7 @@ class ServersControllerRebuildTestV257(ServersControllerRebuildTestV254):
         self.assertIn('user_data', six.text_type(ex))
 
     @mock.patch.object(context.RequestContext, 'can')
-    @mock.patch('nova.db.instance_update_and_get_original')
+    @mock.patch('nova.db.api.instance_update_and_get_original')
     def test_rebuild_reset_user_data(self, mock_update, mock_policy):
         """Tests that passing user_data=None resets the user_data on the
         instance.
@@ -2638,7 +2640,7 @@ class ServersControllerUpdateTest(ControllerTest):
                           req, FAKE_UUID, body=body)
 
     def test_update_server_name_all_blank_spaces(self):
-        self.stub_out('nova.db.instance_get',
+        self.stub_out('nova.db.api.instance_get',
                 fakes.fake_instance_get(name='server_test'))
         req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
@@ -2654,7 +2656,7 @@ class ServersControllerUpdateTest(ControllerTest):
         self.controller.update(req, FAKE_UUID, body=body)
 
     def test_update_server_name_with_leading_trailing_spaces(self):
-        self.stub_out('nova.db.instance_get',
+        self.stub_out('nova.db.api.instance_get',
                 fakes.fake_instance_get(name='server_test'))
         req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
@@ -2872,7 +2874,7 @@ class ServerStatusTest(test.TestCase):
         self.controller = servers.ServersController()
 
     def _get_with_state(self, vm_state, task_state=None):
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                 fakes.fake_instance_get(vm_state=vm_state,
                                         task_state=task_state))
 
@@ -3014,14 +3016,14 @@ class ServersControllerCreateTest(test.TestCase):
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
         self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
-        self.stub_out('nova.db.project_get_networks',
+        self.stub_out('nova.db.api.project_get_networks',
                       lambda c, u: dict(id='1', host='localhost'))
-        self.stub_out('nova.db.instance_create', instance_create)
-        self.stub_out('nova.db.instance_system_metadata_update',
+        self.stub_out('nova.db.api.instance_create', instance_create)
+        self.stub_out('nova.db.api.instance_system_metadata_update',
                       lambda *a, **kw: None)
-        self.stub_out('nova.db.instance_get', instance_get)
-        self.stub_out('nova.db.instance_update', instance_update)
-        self.stub_out('nova.db.instance_update_and_get_original',
+        self.stub_out('nova.db.api.instance_get', instance_get)
+        self.stub_out('nova.db.api.instance_update', instance_update)
+        self.stub_out('nova.db.api.instance_update_and_get_original',
                 server_update_and_get_original)
         self.stub_out('nova.network.manager.VlanManager.allocate_fixed_ip',
                       lambda *a, **kw: None)
@@ -3209,7 +3211,7 @@ class ServersControllerCreateTest(test.TestCase):
     #         self.assertEqual(kwargs['key_name'], key_name)
     #         return old_create(*args, **kwargs)
     #
-    #     self.stub_out('nova.db.key_pair_get', key_pair_get)
+    #     self.stub_out('nova.db.api.key_pair_get', key_pair_get)
     #     self.stubs.Set(compute_api.API, 'create', create)
     #     self._test_create_extra(params)
     #
@@ -3681,7 +3683,7 @@ class ServersControllerCreateTest(test.TestCase):
             return fakes.stub_instance(1)
 
         mock_limit_check.side_effect = fake_limit_check
-        self.stub_out('nova.db.instance_destroy', fake_instance_destroy)
+        self.stub_out('nova.db.api.instance_destroy', fake_instance_destroy)
         self.body['os:scheduler_hints'] = {'group': fake_group.uuid}
         self.req.body = jsonutils.dump_as_bytes(self.body)
         expected_msg = "Quota exceeded, too many servers in group"
@@ -3704,7 +3706,7 @@ class ServersControllerCreateTest(test.TestCase):
         def fake_instance_destroy(context, uuid, constraint):
             return fakes.stub_instance(1)
 
-        self.stub_out('nova.db.instance_destroy', fake_instance_destroy)
+        self.stub_out('nova.db.api.instance_destroy', fake_instance_destroy)
         self.body['os:scheduler_hints'] = {'group': test_group.uuid}
         self.req.body = jsonutils.dump_as_bytes(self.body)
         server = self.controller.create(self.req, body=self.body).obj['server']
@@ -3716,7 +3718,7 @@ class ServersControllerCreateTest(test.TestCase):
         def fake_instance_destroy(context, uuid, constraint):
             return fakes.stub_instance(1)
 
-        self.stub_out('nova.db.instance_destroy', fake_instance_destroy)
+        self.stub_out('nova.db.api.instance_destroy', fake_instance_destroy)
         self.body['os:scheduler_hints'] = {
             'group': '5b674f73-c8cf-40ef-9965-3b6fe4b304b1'}
         self.req.body = jsonutils.dump_as_bytes(self.body)

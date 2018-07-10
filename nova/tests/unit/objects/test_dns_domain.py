@@ -14,7 +14,7 @@
 
 import mock
 
-from nova import db
+from nova.db import api as db
 from nova.objects import dns_domain
 from nova.tests.unit.objects import test_objects
 

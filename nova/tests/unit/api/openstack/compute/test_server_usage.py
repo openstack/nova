@@ -66,7 +66,7 @@ class ServerUsageTestV21(test.TestCase):
         self.stub_out('nova.compute.api.API.get', fake_compute_get)
         self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
         return_server = fakes.fake_instance_get()
-        self.stub_out('nova.db.instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.api.instance_get_by_uuid', return_server)
 
     def _make_request(self, url):
         req = fakes.HTTPRequest.blank(url)

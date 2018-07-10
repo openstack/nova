@@ -16,7 +16,7 @@ import netaddr
 from oslo_utils import versionutils
 
 import nova.conf
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.i18n import _
 from nova import objects

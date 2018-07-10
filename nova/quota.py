@@ -23,7 +23,7 @@ from oslo_utils import importutils
 
 import nova.conf
 from nova import context as nova_context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova import objects
 from nova import utils

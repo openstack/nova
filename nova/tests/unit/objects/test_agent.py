@@ -40,21 +40,21 @@ class _TestAgent(object):
         for field, value in db.items():
             test.assertEqual(db[field], getattr(obj, field))
 
-    @mock.patch('nova.db.agent_build_get_by_triple')
+    @mock.patch('nova.db.api.agent_build_get_by_triple')
     def test_get_by_triple(self, mock_get):
         mock_get.return_value = fake_agent
         agent = agent_obj.Agent.get_by_triple(self.context,
                                               'novavm', 'linux', 'DISC')
         self._compare(self, fake_agent, agent)
 
-    @mock.patch('nova.db.agent_build_get_by_triple')
+    @mock.patch('nova.db.api.agent_build_get_by_triple')
     def test_get_by_triple_none(self, mock_get):
         mock_get.return_value = None
         agent = agent_obj.Agent.get_by_triple(self.context,
                                               'novavm', 'linux', 'DISC')
         self.assertIsNone(agent)
 
-    @mock.patch('nova.db.agent_build_create')
+    @mock.patch('nova.db.api.agent_build_create')
     def test_create(self, mock_create):
         mock_create.return_value = fake_agent
         agent = agent_obj.Agent(context=self.context)
@@ -64,19 +64,19 @@ class _TestAgent(object):
                                             {'hypervisor': 'novavm'})
         self._compare(self, fake_agent, agent)
 
-    @mock.patch('nova.db.agent_build_create')
+    @mock.patch('nova.db.api.agent_build_create')
     def test_create_with_id(self, mock_create):
         agent = agent_obj.Agent(context=self.context, id=123)
         self.assertRaises(exception.ObjectActionError, agent.create)
         self.assertFalse(mock_create.called)
 
-    @mock.patch('nova.db.agent_build_destroy')
+    @mock.patch('nova.db.api.agent_build_destroy')
     def test_destroy(self, mock_destroy):
         agent = agent_obj.Agent(context=self.context, id=123)
         agent.destroy()
         mock_destroy.assert_called_once_with(self.context, 123)
 
-    @mock.patch('nova.db.agent_build_update')
+    @mock.patch('nova.db.api.agent_build_update')
     def test_save(self, mock_update):
         mock_update.return_value = fake_agent
         agent = agent_obj.Agent(context=self.context, id=123)
@@ -86,7 +86,7 @@ class _TestAgent(object):
         mock_update.assert_called_once_with(self.context, 123,
                                             {'hypervisor': 'novavm'})
 
-    @mock.patch('nova.db.agent_build_get_all')
+    @mock.patch('nova.db.api.agent_build_get_all')
     def test_get_all(self, mock_get_all):
         mock_get_all.return_value = [fake_agent]
         agents = agent_obj.AgentList.get_all(self.context, hypervisor='novavm')

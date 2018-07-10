@@ -21,7 +21,7 @@ import webob
 from nova.api.openstack.compute import floating_ip_dns \
         as fipdns_v21
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova import network
 from nova import test

@@ -70,7 +70,7 @@ class _TestNetworkObject(object):
                 db_val = str(netaddr.IPNetwork('1::/%i' % db_val).netmask)
             self.assertEqual(db_val, obj_val)
 
-    @mock.patch('nova.db.network_get')
+    @mock.patch('nova.db.api.network_get')
     def test_get_by_id(self, get):
         get.return_value = fake_network
         network = network_obj.Network.get_by_id(self.context, 'foo')
@@ -78,14 +78,14 @@ class _TestNetworkObject(object):
         get.assert_called_once_with(self.context, 'foo',
                                     project_only='allow_none')
 
-    @mock.patch('nova.db.network_get_by_uuid')
+    @mock.patch('nova.db.api.network_get_by_uuid')
     def test_get_by_uuid(self, get):
         get.return_value = fake_network
         network = network_obj.Network.get_by_uuid(self.context, 'foo')
         self._compare(network, fake_network)
         get.assert_called_once_with(self.context, 'foo')
 
-    @mock.patch('nova.db.network_get_by_cidr')
+    @mock.patch('nova.db.api.network_get_by_cidr')
     def test_get_by_cidr(self, get):
         get.return_value = fake_network
         network = network_obj.Network.get_by_cidr(self.context,
@@ -93,8 +93,8 @@ class _TestNetworkObject(object):
         self._compare(network, fake_network)
         get.assert_called_once_with(self.context, '192.168.1.0/24')
 
-    @mock.patch('nova.db.network_update')
-    @mock.patch('nova.db.network_set_host')
+    @mock.patch('nova.db.api.network_update')
+    @mock.patch('nova.db.api.network_set_host')
     def test_save(self, set_host, update):
         result = dict(fake_network, injected=True)
         network = network_obj.Network._from_db_object(self.context,
@@ -110,9 +110,9 @@ class _TestNetworkObject(object):
         self.assertFalse(set_host.called)
         self._compare(network, result)
 
-    @mock.patch('nova.db.network_update')
-    @mock.patch('nova.db.network_set_host')
-    @mock.patch('nova.db.network_get')
+    @mock.patch('nova.db.api.network_update')
+    @mock.patch('nova.db.api.network_set_host')
+    @mock.patch('nova.db.api.network_get')
     def test_save_with_host(self, get, set_host, update):
         result = dict(fake_network, injected=True)
         network = network_obj.Network._from_db_object(self.context,
@@ -126,8 +126,8 @@ class _TestNetworkObject(object):
         self.assertFalse(update.called)
         self._compare(network, result)
 
-    @mock.patch('nova.db.network_update')
-    @mock.patch('nova.db.network_set_host')
+    @mock.patch('nova.db.api.network_update')
+    @mock.patch('nova.db.api.network_set_host')
     def test_save_with_host_and_other(self, set_host, update):
         result = dict(fake_network, injected=True)
         network = network_obj.Network._from_db_object(self.context,
@@ -143,20 +143,20 @@ class _TestNetworkObject(object):
                                        {'label': 'bar'})
         self._compare(network, result)
 
-    @mock.patch('nova.db.network_associate')
+    @mock.patch('nova.db.api.network_associate')
     def test_associate(self, associate):
         network_obj.Network.associate(self.context, 'project',
                                       network_id=123)
         associate.assert_called_once_with(self.context, 'project',
                                           network_id=123, force=False)
 
-    @mock.patch('nova.db.network_disassociate')
+    @mock.patch('nova.db.api.network_disassociate')
     def test_disassociate(self, disassociate):
         network_obj.Network.disassociate(self.context, 123,
                                          host=True, project=True)
         disassociate.assert_called_once_with(self.context, 123, True, True)
 
-    @mock.patch('nova.db.network_create_safe')
+    @mock.patch('nova.db.api.network_create_safe')
     def test_create(self, create):
         create.return_value = fake_network
         network = network_obj.Network(context=self.context, label='foo')
@@ -164,7 +164,7 @@ class _TestNetworkObject(object):
         create.assert_called_once_with(self.context, {'label': 'foo'})
         self._compare(network, fake_network)
 
-    @mock.patch('nova.db.network_delete_safe')
+    @mock.patch('nova.db.api.network_delete_safe')
     def test_destroy(self, delete):
         network = network_obj.Network(context=self.context, id=123)
         network.destroy()
@@ -172,7 +172,7 @@ class _TestNetworkObject(object):
         self.assertTrue(network.deleted)
         self.assertNotIn('deleted', network.obj_what_changed())
 
-    @mock.patch('nova.db.network_get_all')
+    @mock.patch('nova.db.api.network_get_all')
     def test_get_all(self, get_all):
         get_all.return_value = [fake_network]
         networks = network_obj.NetworkList.get_all(self.context)
@@ -180,7 +180,7 @@ class _TestNetworkObject(object):
         get_all.assert_called_once_with(self.context, 'allow_none')
         self._compare(networks[0], fake_network)
 
-    @mock.patch('nova.db.network_get_all_by_uuids')
+    @mock.patch('nova.db.api.network_get_all_by_uuids')
     def test_get_all_by_uuids(self, get_all):
         get_all.return_value = [fake_network]
         networks = network_obj.NetworkList.get_by_uuids(self.context,
@@ -189,7 +189,7 @@ class _TestNetworkObject(object):
         get_all.assert_called_once_with(self.context, ['foo'], 'allow_none')
         self._compare(networks[0], fake_network)
 
-    @mock.patch('nova.db.network_get_all_by_host')
+    @mock.patch('nova.db.api.network_get_all_by_host')
     def test_get_all_by_host(self, get_all):
         get_all.return_value = [fake_network]
         networks = network_obj.NetworkList.get_by_host(self.context, 'host')
@@ -197,14 +197,14 @@ class _TestNetworkObject(object):
         get_all.assert_called_once_with(self.context, 'host')
         self._compare(networks[0], fake_network)
 
-    @mock.patch('nova.db.network_in_use_on_host')
+    @mock.patch('nova.db.api.network_in_use_on_host')
     def test_in_use_on_host(self, in_use):
         in_use.return_value = True
         self.assertTrue(network_obj.Network.in_use_on_host(self.context,
                                                            123, 'foo'))
         in_use.assert_called_once_with(self.context, 123, 'foo')
 
-    @mock.patch('nova.db.project_get_networks')
+    @mock.patch('nova.db.api.project_get_networks')
     def test_get_all_by_project(self, get_nets):
         get_nets.return_value = [fake_network]
         networks = network_obj.NetworkList.get_by_project(self.context, 123)

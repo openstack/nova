@@ -99,8 +99,9 @@ class ServersSampleJsonTest(ServersSampleBase):
             use_common_server_api_samples=self.use_common_server_post)
 
     def test_servers_get(self):
-        self.stub_out('nova.db.block_device_mapping_get_all_by_instance_uuids',
-                      fakes.stub_bdm_get_all_by_instance_uuids)
+        self.stub_out(
+            'nova.db.api.block_device_mapping_get_all_by_instance_uuids',
+            fakes.stub_bdm_get_all_by_instance_uuids)
         uuid = self.test_servers_post()
         response = self._do_get('servers/%s' % uuid)
         subs = {}
@@ -125,8 +126,9 @@ class ServersSampleJsonTest(ServersSampleBase):
         self._verify_response('servers-list-resp', subs, response, 200)
 
     def test_servers_details(self):
-        self.stub_out('nova.db.block_device_mapping_get_all_by_instance_uuids',
-                      fakes.stub_bdm_get_all_by_instance_uuids)
+        self.stub_out(
+            'nova.db.api.block_device_mapping_get_all_by_instance_uuids',
+            fakes.stub_bdm_get_all_by_instance_uuids)
         uuid = self.test_servers_post()
         response = self._do_get('servers/detail?limit=1')
         subs = {}

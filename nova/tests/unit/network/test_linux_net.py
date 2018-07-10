@@ -28,7 +28,7 @@ from oslo_utils import timeutils
 
 import nova.conf
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.network import driver
 from nova.network import linux_net
@@ -367,9 +367,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         def get_instance(_context, instance_id):
             return instances[instance_id]
 
-        self.stub_out('nova.db.virtual_interface_get_by_instance', get_vifs)
-        self.stub_out('nova.db.instance_get', get_instance)
-        self.stub_out('nova.db.network_get_associated_fixed_ips',
+        self.stub_out('nova.db.api.virtual_interface_get_by_instance',
+                      get_vifs)
+        self.stub_out('nova.db.api.instance_get', get_instance)
+        self.stub_out('nova.db.api.network_get_associated_fixed_ips',
                       get_associated)
 
     @mock.patch.object(linux_net.iptables_manager.ipv4['nat'], 'add_rule')

@@ -18,7 +18,7 @@ from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
 import nova.conf
-from nova import db
+from nova.db import api as db
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova import objects

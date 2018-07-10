@@ -80,15 +80,16 @@ class MultiCreateExtensionTestV21(test.TestCase):
 
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
-        self.stub_out('nova.db.instance_add_security_group',
+        self.stub_out('nova.db.api.instance_add_security_group',
                       return_security_group)
-        self.stub_out('nova.db.project_get_networks', project_get_networks)
+        self.stub_out('nova.db.api.project_get_networks', project_get_networks)
         self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
                       create_db_entry_for_new_instance)
-        self.stub_out('nova.db.instance_system_metadata_update', fake_method)
-        self.stub_out('nova.db.instance_get', instance_get)
-        self.stub_out('nova.db.instance_update', instance_update)
-        self.stub_out('nova.db.instance_update_and_get_original',
+        self.stub_out('nova.db.api.instance_system_metadata_update',
+                      fake_method)
+        self.stub_out('nova.db.api.instance_get', instance_get)
+        self.stub_out('nova.db.api.instance_update', instance_update)
+        self.stub_out('nova.db.api.instance_update_and_get_original',
                       server_update)
         self.stub_out('nova.network.manager.VlanManager.allocate_fixed_ip',
                       fake_method)

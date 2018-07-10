@@ -21,7 +21,7 @@ from nova.cells import manager as cells_manager
 from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
 import nova.conf
-import nova.db
+import nova.db.api
 from nova.db import base
 from nova import exception
 from nova import objects
@@ -52,7 +52,7 @@ class FakeDBApi(object):
         self.cell_db_entries = cell_db_entries
 
     def __getattr__(self, key):
-        return getattr(nova.db, key)
+        return getattr(nova.db.api, key)
 
     def cell_get_all(self, ctxt):
         return self.cell_db_entries

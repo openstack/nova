@@ -124,9 +124,9 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
     def setUp(self):
         super(ConsolesControllerTestV21, self).setUp()
         self.instance_db = FakeInstanceDB()
-        self.stub_out('nova.db.instance_get',
+        self.stub_out('nova.db.api.instance_get',
                       self.instance_db.return_server_by_id)
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       self.instance_db.return_server_by_uuid)
         self.uuid = uuids.fake
         self.url = '/v2/fake/servers/%s/consoles' % self.uuid

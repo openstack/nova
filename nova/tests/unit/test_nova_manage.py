@@ -27,7 +27,7 @@ from six.moves import StringIO
 from nova.cmd import manage
 from nova import conf
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova.db import migration
 from nova.db.sqlalchemy import migration as sqla_migration
 from nova import exception
@@ -274,7 +274,7 @@ class NetworkCommandsTestCase(test.NoDBTestCase):
 
         def fake_network_get_all(context):
             return [db_fakes.FakeModel(self.net)]
-        self.stub_out('nova.db.network_get_all', fake_network_get_all)
+        self.stub_out('nova.db.api.network_get_all', fake_network_get_all)
         self.commands.list()
         result = self.output.getvalue()
         _fmt = "\t".join(["%(id)-5s", "%(cidr)-18s", "%(cidr_v6)-15s",
@@ -305,35 +305,37 @@ class NetworkCommandsTestCase(test.NoDBTestCase):
         self.fake_net = self.net
         self.fake_net['project_id'] = None
         self.fake_net['host'] = None
-        self.stub_out('nova.db.network_get_by_uuid',
+        self.stub_out('nova.db.api.network_get_by_uuid',
                       self.fake_network_get_by_uuid)
 
         def fake_network_delete_safe(context, network_id):
             self.assertTrue(context.to_dict()['is_admin'])
             self.assertEqual(network_id, self.fake_net['id'])
-        self.stub_out('nova.db.network_delete_safe', fake_network_delete_safe)
+        self.stub_out('nova.db.api.network_delete_safe',
+                      fake_network_delete_safe)
         self.commands.delete(uuid=self.fake_net['uuid'])
 
     def test_delete_by_cidr(self):
         self.fake_net = self.net
         self.fake_net['project_id'] = None
         self.fake_net['host'] = None
-        self.stub_out('nova.db.network_get_by_cidr',
+        self.stub_out('nova.db.api.network_get_by_cidr',
                       self.fake_network_get_by_cidr)
 
         def fake_network_delete_safe(context, network_id):
             self.assertTrue(context.to_dict()['is_admin'])
             self.assertEqual(network_id, self.fake_net['id'])
-        self.stub_out('nova.db.network_delete_safe', fake_network_delete_safe)
+        self.stub_out('nova.db.api.network_delete_safe',
+                      fake_network_delete_safe)
         self.commands.delete(fixed_range=self.fake_net['cidr'])
 
     def _test_modify_base(self, update_value, project, host, dis_project=None,
                           dis_host=None):
         self.fake_net = self.net
         self.fake_update_value = update_value
-        self.stub_out('nova.db.network_get_by_cidr',
+        self.stub_out('nova.db.api.network_get_by_cidr',
                       self.fake_network_get_by_cidr)
-        self.stub_out('nova.db.network_update', self.fake_network_update)
+        self.stub_out('nova.db.api.network_update', self.fake_network_update)
         self.commands.modify(self.fake_net['cidr'], project=project, host=host,
                              dis_project=dis_project, dis_host=dis_host)
 

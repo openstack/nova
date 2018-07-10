@@ -17,7 +17,7 @@ import mock
 from oslo_utils import timeutils
 
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova.objects import bandwidth_usage
 from nova import test
 from nova.tests.unit.objects import test_objects

@@ -40,7 +40,7 @@ fake_task_log = {
 
 
 class _TestTaskLog(object):
-    @mock.patch('nova.db.task_log_get', return_value=fake_task_log)
+    @mock.patch('nova.db.api.task_log_get', return_value=fake_task_log)
     def test_get(self, mock_get):
         task_log = objects.TaskLog.get(self.context,
                                        fake_task_log['task_name'],
@@ -57,7 +57,7 @@ class _TestTaskLog(object):
             state=fake_task_log['state'])
         self.compare_obj(task_log, fake_task_log)
 
-    @mock.patch('nova.db.task_log_begin_task')
+    @mock.patch('nova.db.api.task_log_begin_task')
     def test_begin_task(self, mock_begin_task):
         task_log = objects.TaskLog(self.context)
         task_log.task_name = fake_task_log['task_name']
@@ -78,7 +78,7 @@ class _TestTaskLog(object):
             task_items=fake_task_log['task_items'],
             message=fake_task_log['message'])
 
-    @mock.patch('nova.db.task_log_end_task')
+    @mock.patch('nova.db.api.task_log_end_task')
     def test_end_task(self, mock_end_task):
         task_log = objects.TaskLog(self.context)
         task_log.task_name = fake_task_log['task_name']
@@ -109,7 +109,7 @@ class TestRemoteTaskLog(test_objects._RemoteTest, _TestTaskLog):
 
 
 class _TestTaskLogList(object):
-    @mock.patch('nova.db.task_log_get_all')
+    @mock.patch('nova.db.api.task_log_get_all')
     def test_get_all(self, mock_get_all):
         fake_task_logs = [dict(fake_task_log, id=1), dict(fake_task_log, id=2)]
         mock_get_all.return_value = fake_task_logs

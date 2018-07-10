@@ -25,7 +25,7 @@ from oslo_utils import excutils
 
 import nova.conf
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova.i18n import _
 
 

@@ -57,7 +57,7 @@ from nova.compute import vm_states
 import nova.conf
 from nova.console import type as ctype
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.image import api as image_api
 from nova.network import model as network_model
@@ -210,7 +210,7 @@ class BaseTestCase(test.TestCase):
         self.stub_out(
             'nova.compute.manager.ComputeManager._get_compute_nodes_in_db',
             fake_get_compute_nodes_in_db)
-        self.stub_out('nova.db.compute_node_delete',
+        self.stub_out('nova.db.api.compute_node_delete',
                 fake_compute_node_delete)
 
         self.compute.update_available_resource(
@@ -378,8 +378,8 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.cinfo = jsonutils.loads(args[-1].get('connection_info'))
             return self.fake_volume
 
-        self.stub_out('nova.db.block_device_mapping_create', store_cinfo)
-        self.stub_out('nova.db.block_device_mapping_update', store_cinfo)
+        self.stub_out('nova.db.api.block_device_mapping_create', store_cinfo)
+        self.stub_out('nova.db.api.block_device_mapping_update', store_cinfo)
 
     @mock.patch.object(compute_utils, 'EventReporter')
     def test_attach_volume_serial(self, mock_event):
@@ -6823,7 +6823,8 @@ class ComputeTestCase(BaseTestCase,
         except NotImplementedError:
             exc_info = sys.exc_info()
 
-        self.stub_out('nova.db.instance_fault_create', fake_db_fault_create)
+        self.stub_out('nova.db.api.instance_fault_create',
+                      fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
@@ -6858,7 +6859,8 @@ class ComputeTestCase(BaseTestCase,
             raised_exc = exc
             exc_info = sys.exc_info()
 
-        self.stub_out('nova.db.instance_fault_create', fake_db_fault_create)
+        self.stub_out('nova.db.api.instance_fault_create',
+                      fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
@@ -6887,7 +6889,8 @@ class ComputeTestCase(BaseTestCase,
         except exception.Invalid:
             exc_info = sys.exc_info()
 
-        self.stub_out('nova.db.instance_fault_create', fake_db_fault_create)
+        self.stub_out('nova.db.api.instance_fault_create',
+                      fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
@@ -6907,7 +6910,8 @@ class ComputeTestCase(BaseTestCase,
             self.assertEqual(expected, values)
             return self._fill_fault(expected)
 
-        self.stub_out('nova.db.instance_fault_create', fake_db_fault_create)
+        self.stub_out('nova.db.api.instance_fault_create',
+                      fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
@@ -6930,7 +6934,8 @@ class ComputeTestCase(BaseTestCase,
             self.assertEqual(expected, values)
             return self._fill_fault(expected)
 
-        self.stub_out('nova.db.instance_fault_create', fake_db_fault_create)
+        self.stub_out('nova.db.api.instance_fault_create',
+                      fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
@@ -6959,7 +6964,8 @@ class ComputeTestCase(BaseTestCase,
         except NotImplementedError:
             exc_info = sys.exc_info()
 
-        self.stub_out('nova.db.instance_fault_create', fake_db_fault_create)
+        self.stub_out('nova.db.api.instance_fault_create',
+                      fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
@@ -7145,9 +7151,9 @@ class ComputeTestCase(BaseTestCase,
                 raise exception.InstanceInfoCacheNotFound(
                                                 instance_uuid=instance['uuid'])
 
-        self.stub_out('nova.db.instance_get_all_by_host',
+        self.stub_out('nova.db.api.instance_get_all_by_host',
                 fake_instance_get_all_by_host)
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                 fake_instance_get_by_uuid)
         if CONF.use_neutron:
             self.stub_out(
@@ -7370,11 +7376,11 @@ class ComputeTestCase(BaseTestCase,
                         migration['instance_uuid']):
                     migration2['status'] = 'confirmed'
 
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                 fake_instance_get_by_uuid)
-        self.stub_out('nova.db.migration_get_unconfirmed_by_dest_compute',
+        self.stub_out('nova.db.api.migration_get_unconfirmed_by_dest_compute',
                 fake_migration_get_unconfirmed_by_dest_compute)
-        self.stub_out('nova.db.migration_update', fake_migration_update)
+        self.stub_out('nova.db.api.migration_update', fake_migration_update)
         self.stub_out('nova.compute.api.API.confirm_resize',
                       fake_confirm_resize)
 
@@ -7421,8 +7427,7 @@ class ComputeTestCase(BaseTestCase,
 
         # creating mocks
         with test.nested(
-            mock.patch.object(self.compute.db.sqlalchemy.api,
-                              'instance_get_all_by_filters',
+            mock.patch.object(db, 'instance_get_all_by_filters',
                               return_value=instances),
             mock.patch.object(objects.Instance, 'save'),
         ) as (
@@ -7643,7 +7648,7 @@ class ComputeTestCase(BaseTestCase,
 
         self.stub_out('nova.objects.instance.Instance.destroy', fake_destroy)
 
-        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
+        self.stub_out('nova.db.api.block_device_mapping_get_all_by_instance',
                       lambda *a, **k: None)
 
         self.stub_out('nova.compute.manager.ComputeManager.'
@@ -11365,7 +11370,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertIsInstance(called_context, context.RequestContext)
         self.assertNotEqual(self.context, called_context)
 
-    @mock.patch("nova.db.migration_get_in_progress_by_instance")
+    @mock.patch("nova.db.api.migration_get_in_progress_by_instance")
     def test_get_migrations_in_progress_by_instance(self, mock_get):
         migration = test_migration.fake_db_migration(
             instance_uuid=uuids.instance)
@@ -11376,7 +11381,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(migrations[0].id, migration['id'])
         mock_get.assert_called_once_with(self.context, uuids.instance, None)
 
-    @mock.patch("nova.db.migration_get_by_id_and_instance")
+    @mock.patch("nova.db.api.migration_get_by_id_and_instance")
     def test_get_migration_by_id_and_instance(self, mock_get):
         migration = test_migration.fake_db_migration(
             instance_uuid=uuids.instance)

@@ -329,7 +329,7 @@ def stub_out_db_network_api(test):
              fake_network_set_host,
              fake_network_update,
              fake_project_get_networks]
-    funcs = {'nova.db.%s' % fn.__name__.replace('fake_', ''): fn
+    funcs = {'nova.db.api.%s' % fn.__name__.replace('fake_', ''): fn
              for fn in funcs}
 
     stub_out(test, funcs)

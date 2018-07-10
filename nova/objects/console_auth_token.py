@@ -19,7 +19,7 @@ from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.i18n import _
 from nova.objects import base

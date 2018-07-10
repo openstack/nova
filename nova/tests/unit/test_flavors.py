@@ -15,7 +15,7 @@ Unit Tests for flavors code
 """
 from nova.compute import flavors
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base

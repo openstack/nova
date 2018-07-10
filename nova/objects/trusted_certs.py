@@ -12,7 +12,7 @@
 
 from oslo_serialization import jsonutils
 
-from nova import db
+from nova.db import api as db
 from nova.objects import base
 from nova.objects import fields
 
