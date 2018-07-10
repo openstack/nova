@@ -11,7 +11,7 @@ defaults:
         openstack-api-version: placement 1.7
 
 vars:
-- &default_incomplete_id 00000000-0000-0000-0000-0000000000000
+- &default_incomplete_id 00000000-0000-0000-0000-000000000000
 tests:
 
 - name: put an allocation without project/user (1.7)

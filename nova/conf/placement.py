@@ -17,7 +17,7 @@ from nova.conf import utils as confutils
 
 
 DEFAULT_SERVICE_TYPE = 'placement'
-DEFAULT_CONSUMER_MISSING_ID = '00000000-0000-0000-0000-0000000000000'
+DEFAULT_CONSUMER_MISSING_ID = '00000000-0000-0000-0000-000000000000'
 
 placement_group = cfg.OptGroup(
     'placement',
