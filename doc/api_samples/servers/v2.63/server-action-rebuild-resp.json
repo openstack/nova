@@ -13,7 +13,6 @@
         },
         "adminPass": "seekr3t",
         "created": "2017-10-10T16:06:02Z",
-        "description": null,
         "flavor": {
             "disk": 1,
             "ephemeral": 0,
