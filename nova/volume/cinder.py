@@ -746,12 +746,15 @@ class API(object):
             return _translate_attachment_ref(attachment_ref)
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
-                LOG.error(('Create attachment failed for volume '
-                           '%(volume_id)s. Error: %(msg)s Code: %(code)s'),
-                          {'volume_id': volume_id,
-                           'msg': six.text_type(ex),
-                           'code': getattr(ex, 'code', None)},
-                          instance_uuid=instance_id)
+                # NOTE: It is unnecessary to output BadRequest(400) error log,
+                # because operators don't need to debug such cases.
+                if getattr(ex, 'code', None) != 400:
+                    LOG.error(('Create attachment failed for volume '
+                               '%(volume_id)s. Error: %(msg)s Code: %(code)s'),
+                              {'volume_id': volume_id,
+                               'msg': six.text_type(ex),
+                               'code': getattr(ex, 'code', None)},
+                              instance_uuid=instance_id)
 
     @translate_attachment_exception
     def attachment_get(self, context, attachment_id):
