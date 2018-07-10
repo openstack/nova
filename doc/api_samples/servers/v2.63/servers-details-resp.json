@@ -91,5 +91,11 @@
             "updated": "2017-10-10T15:49:09Z",
             "user_id": "fake"
         }
+    ],
+    "servers_links": [
+        {
+            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/detail?limit=1&marker=569f39f9-7c76-42a1-9c2d-8394e2638a6d",
+            "rel": "next"
+        }
     ]
 }

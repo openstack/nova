@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
 .. needs:body_verification
 
 ===================
@@ -388,6 +387,11 @@ Request
 .. literalinclude:: ../../doc/api_samples/servers/server-create-req.json
    :language: javascript
 
+**Example Create Server With Networks(array) and Block Device Mapping V2 (v2.32)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.32/server-create-req.json
+   :language: javascript
+
 **Example Create Server With Automatic Networking (v2.37)**
 
 .. literalinclude:: ../../doc/api_samples/servers/v2.37/server-create-req.json
@@ -755,24 +759,13 @@ Request
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - description: server_description
 
-**Example Update server name (2.47)**
+.. note:: You can specify parameters to update independently.
+  e.g. ``name`` only, ``description`` only, ``name`` and ``description``, etc.
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.47/server-update-req.json
+**Example Update Server (2.63)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.63/server-update-req.json
    :language: javascript
-
-..
-   TODO(sdague): split up the update examples to show them being used
-   separately.
-
-   **Example Update server IP addresses: JSON request**
-
-   .. literalinclude:: ../../doc/api_samples/servers/server-update-address-req.json
-      :language: javascript
-
-   **Example Update server OS-DCF:diskConfig parameter: JSON request**
-
-   .. literalinclude:: ../../doc/api_samples/servers/server-update-diskconfig-req.json
-      :language: javascript
 
 Response
 --------
@@ -818,7 +811,7 @@ Response
   - tags: tags
   - trusted_image_certificates: server_trusted_image_certificates_resp
 
-**Example Update server name (2.63)**
+**Example Update Server (2.63)**
 
 .. literalinclude:: ../../doc/api_samples/servers/v2.63/server-update-resp.json
    :language: javascript

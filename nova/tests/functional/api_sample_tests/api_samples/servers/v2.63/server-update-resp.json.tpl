@@ -12,7 +12,7 @@
             ]
         },
         "created": "%(isotime)s",
-        "description": null,
+        "description": "Sample description",
         "flavor": {
             "disk": 1,
             "ephemeral": 0,

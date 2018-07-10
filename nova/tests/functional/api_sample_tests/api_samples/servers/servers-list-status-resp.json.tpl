@@ -17,7 +17,7 @@
     ],
     "servers_links": [
         {
-            "href": "%(versioned_compute_endpoint)s/servers?limit=1&marker=%(id)s",
+            "href": "%(versioned_compute_endpoint)s/servers?limit=1&status=%(status)s&marker=%(id)s",
             "rel": "next"
         }
     ]

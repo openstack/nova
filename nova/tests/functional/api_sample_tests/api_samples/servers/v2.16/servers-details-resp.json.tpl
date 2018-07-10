@@ -84,5 +84,11 @@
             "user_id": "fake",
             "locked": false
         }
+    ],
+    "servers_links": [
+        {
+            "href": "%(versioned_compute_endpoint)s/servers/detail?limit=1&marker=%(id)s",
+            "rel": "next"
+        }
     ]
 }
