@@ -489,18 +489,7 @@ class TestCase(testtools.TestCase):
                 return sorted(items)
             return x
 
-        def try_deserialize(entry):
-            """Try to deserialize string entry; if not json, return entry"""
-            if isinstance(entry, six.string_types):
-                try:
-                    return jsonutils.loads(entry)
-                except ValueError:
-                    pass
-            return entry
-
         def inner(expected, observed, path='root'):
-            expected = try_deserialize(expected)
-            observed = try_deserialize(observed)
             if isinstance(expected, dict) and isinstance(observed, dict):
                 self.assertEqual(
                     len(expected), len(observed),
