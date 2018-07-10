@@ -21,7 +21,6 @@ import unicodedata
 
 import six
 
-from nova.db import api as db
 from nova.i18n import _
 from nova.objects import tag
 
@@ -427,7 +426,9 @@ volume_size = {
     'type': ['integer', 'string'],
     'pattern': '^[0-9]+$',
     'minimum': 1,
-    'maximum': db.MAX_INT
+    # maximum's value is limited to db constant's MAX_INT
+    # (in nova/db/constants.py)
+    'maximum': 0x7FFFFFFF
 }
 
 disk_config = {
