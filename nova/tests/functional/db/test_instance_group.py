@@ -14,6 +14,7 @@ import mock
 from oslo_versionedobjects import fixture as ovo_fixture
 
 from nova import context
+from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -31,7 +32,7 @@ class InstanceGroupObjectTestCase(test.TestCase):
                                       user_id=self.context.user_id,
                                       project_id=self.context.project_id,
                                       name='foogroup',
-                                      policies=['foo1', 'foo2'],
+                                      policies=['foo1'],
                                       members=['memberfoo'])
         group.update(values)
         group.create()
@@ -41,6 +42,10 @@ class InstanceGroupObjectTestCase(test.TestCase):
         create_group = self._api_group()
         db_group = create_group._get_from_db_by_uuid(self.context,
                                                       create_group.uuid)
+        self.assertIsInstance(db_group.policy, api_models.InstanceGroupPolicy)
+        self.assertEqual(create_group.policies[0], db_group.policy.policy)
+        self.assertEqual(create_group.id, db_group.policy.group_id)
+        self.assertIsNone(db_group.policy.rules)
         ovo_fixture.compare_obj(self, create_group, db_group,
                                 allow_missing=('deleted', 'deleted_at'))
 
@@ -54,7 +59,6 @@ class InstanceGroupObjectTestCase(test.TestCase):
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
     def test_save(self, _mock_notify):
         create_group = self._api_group()
-        create_group.policies = ['bar1', 'bar2']
         create_group.members = ['memberbar1', 'memberbar2']
         create_group.name = 'anewname'
         create_group.save()
