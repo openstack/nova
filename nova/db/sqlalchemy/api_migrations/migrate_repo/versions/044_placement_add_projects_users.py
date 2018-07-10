@@ -20,11 +20,6 @@ from sqlalchemy import MetaData
 from sqlalchemy import String
 from sqlalchemy import Table
 
-_INDEXES_TO_REPLACE = (
-    'consumers_project_id_uuid_idx',
-    'consumers_project_id_user_id_uuid_idx',
-)
-
 
 def upgrade(migrate_engine):
     meta = MetaData()
