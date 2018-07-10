@@ -231,10 +231,7 @@ tests:
       $.allocation_requests[0].allocations['$ENVIRON["RP_UUID"]'].resources.VCPU: 1
       $.allocation_requests[0].allocations['8aa83304-4b6d-4a23-b954-06d8b36b206a'].resources.DISK_GB: 200
 
-# This fails because of bug 1778576
-# https://bugs.launchpad.net/nova/+bug/1778576
 - name: put that allocation to new consumer
-  xfail: True
   PUT: /allocations/55555555-5555-5555-5555-555555555555
   data:
       allocations: $RESPONSE['$.allocation_requests[0].allocations']

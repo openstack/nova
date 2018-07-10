@@ -582,7 +582,9 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
     """Ensures there are records in the consumers, projects and users table for
     the supplied external identifiers.
 
-    Returns a populated Consumer object containing Project and User sub-objects
+    Returns a tuple containing the populated Consumer object containing Project
+    and User sub-objects and a boolean indicating whether a new Consumer object
+    was created (as opposed to an existing consumer record retrieved)
 
     :param ctx: The request context.
     :param consumer_uuid: The uuid of the consumer of the resources.
@@ -594,6 +596,7 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
     :raises webob.exc.HTTPConflict if consumer generation is required and there
             was a mismatch
     """
+    created_new_consumer = False
     requires_consumer_generation = want_version.matches((1, 28))
     if project_id is None:
         project_id = CONF.placement.incomplete_consumer_project_id
@@ -647,7 +650,8 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
             consumer = consumer_obj.Consumer(
                 ctx, uuid=consumer_uuid, project=proj, user=user)
             consumer.create()
+            created_new_consumer = True
         except exception.ConsumerExists:
             # No worries, another thread created this user already
             consumer = consumer_obj.Consumer.get_by_uuid(ctx, consumer_uuid)
-    return consumer
+    return consumer, created_new_consumer

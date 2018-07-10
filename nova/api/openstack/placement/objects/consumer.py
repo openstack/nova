@@ -130,6 +130,17 @@ def _increment_consumer_generation(ctx, consumer):
     return new_generation
 
 
+@db_api.placement_context_manager.writer
+def _delete_consumer(ctx, consumer):
+    """Deletes the supplied consumer.
+
+    :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
+    :param consumer: `Consumer` whose generation should be updated.
+    """
+    del_stmt = CONSUMER_TBL.delete().where(CONSUMER_TBL.c.id == consumer.id)
+    ctx.session.execute(del_stmt)
+
+
 @base.VersionedObjectRegistry.register_if(False)
 class Consumer(base.VersionedObject, base.TimestampedObject):
 
@@ -193,3 +204,6 @@ class Consumer(base.VersionedObject, base.TimestampedObject):
             consumer)
         """
         self.generation = _increment_consumer_generation(self._context, self)
+
+    def delete(self):
+        _delete_consumer(self._context, self)

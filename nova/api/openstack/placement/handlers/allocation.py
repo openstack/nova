@@ -155,22 +155,21 @@ def _serialize_allocations_for_resource_provider(allocations,
 # but having it in this file seems wrong, however, since it uses
 # _new_allocations it's being left here for now. We need a place for shared
 # handler code, but util.py is already too big and too diverse.
-def create_allocation_list(context, data, want_version):
+def create_allocation_list(context, data, consumers):
     """Create an AllocationList based on provided data.
 
     :param context: The placement context.
     :param data: A dictionary of multiple allocations by consumer uuid.
-    :param want_version: The desired microversion, which controls how
-                         consumer generations are handled.
+    :param consumers: A dictionary, keyed by consumer UUID, of Consumer objects
     :return: An AllocationList.
+    :raises: `webob.exc.HTTPBadRequest` if a resource provider included in the
+             allocations does not exist.
     """
     allocation_objects = []
 
     for consumer_uuid in data:
-        project_id = data[consumer_uuid]['project_id']
-        user_id = data[consumer_uuid]['user_id']
         allocations = data[consumer_uuid]['allocations']
-        consumer_generation = data[consumer_uuid].get('consumer_generation')
+        consumer = consumers[consumer_uuid]
         if allocations:
             rp_objs = _resource_providers_by_uuid(context, allocations.keys())
             for resource_provider_uuid in allocations:
@@ -178,12 +177,8 @@ def create_allocation_list(context, data, want_version):
                 resources = allocations[resource_provider_uuid]['resources']
                 new_allocations = _new_allocations(context,
                                                    resource_provider,
-                                                   consumer_uuid,
-                                                   resources,
-                                                   project_id,
-                                                   user_id,
-                                                   consumer_generation,
-                                                   want_version)
+                                                   consumer,
+                                                   resources)
                 allocation_objects.extend(new_allocations)
         else:
             # The allocations are empty, which means wipe them out.
@@ -295,28 +290,17 @@ def _resource_providers_by_uuid(ctx, rp_uuids):
     return res
 
 
-def _new_allocations(context, resource_provider, consumer_uuid,
-                     resources, project_id, user_id, consumer_generation,
-                     want_version):
+def _new_allocations(context, resource_provider, consumer, resources):
     """Create new allocation objects for a set of resources
 
-    Returns a list of Allocation objects.
+    Returns a list of Allocation objects
 
     :param context: The placement context.
     :param resource_provider: The resource provider that has the resources.
-    :param consumer_uuid: The uuid of the consumer of the resources.
+    :param consumer: The Consumer object consuming the resources.
     :param resources: A dict of resource classes and values.
-    :param project_id: The project consuming the resources.
-    :param user_id: The user consuming the resources.
-    :param consumer_generation: The generation supplied by the user when
-                                PUT/POST'ing allocations. May be None if
-                                the microversion is <1.28
-    :param want_version: The microversion object from the context.
     """
     allocations = []
-    consumer = util.ensure_consumer(
-        context, consumer_uuid, project_id, user_id, consumer_generation,
-        want_version)
     for resource_class in resources:
         allocation = rp_obj.Allocation(
             resource_provider=resource_provider,
@@ -325,6 +309,21 @@ def _new_allocations(context, resource_provider, consumer_uuid,
             used=resources[resource_class])
         allocations.append(allocation)
     return allocations
+
+
+def _delete_consumers(consumers):
+    """Helper function that deletes any consumer object supplied to it
+
+    :param consumers: iterable of Consumer objects to delete
+    """
+    for consumer in consumers:
+        try:
+            consumer.delete()
+            LOG.debug("Deleted auto-created consumer with consumer UUID "
+                      "%s after failed allocation", consumer.uuid)
+        except Exception as err:
+            LOG.warning("Got an exception when deleting auto-created "
+                        "consumer with UUID %s: %s", consumer.uuid, err)
 
 
 def _set_allocations_for_consumer(req, schema):
@@ -346,9 +345,12 @@ def _set_allocations_for_consumer(req, schema):
             }
         allocation_data = allocations_dict
 
-    # If the body includes an allocation for a resource provider
-    # that does not exist, raise a 400.
     allocation_objects = []
+    # Consumer object saved in case we need to delete the auto-created consumer
+    # record
+    consumer = None
+    # Whether we created a new consumer record
+    created_new_consumer = False
     if not allocation_data:
         # The allocations are empty, which means wipe them out. Internal
         # to the allocation object this is signalled by a used value of 0.
@@ -366,25 +368,35 @@ def _set_allocations_for_consumer(req, schema):
             allocation.used = 0
             allocation_objects.append(allocation)
     else:
+        # If the body includes an allocation for a resource provider
+        # that does not exist, raise a 400.
         rp_objs = _resource_providers_by_uuid(context, allocation_data.keys())
+        consumer, created_new_consumer = util.ensure_consumer(
+            context, consumer_uuid, data.get('project_id'),
+            data.get('user_id'), data.get('consumer_generation'),
+            want_version)
         for resource_provider_uuid, allocation in allocation_data.items():
             resource_provider = rp_objs[resource_provider_uuid]
             new_allocations = _new_allocations(context,
                                                resource_provider,
-                                               consumer_uuid,
-                                               allocation['resources'],
-                                               data.get('project_id'),
-                                               data.get('user_id'),
-                                               data.get('consumer_generation'),
-                                               want_version)
+                                               consumer,
+                                               allocation['resources'])
             allocation_objects.extend(new_allocations)
 
     allocations = rp_obj.AllocationList(
         context, objects=allocation_objects)
 
+    def _create_allocations(alloc_list):
+        try:
+            alloc_list.create_all()
+            LOG.debug("Successfully wrote allocations %s", alloc_list)
+        except Exception:
+            if created_new_consumer:
+                _delete_consumers([consumer])
+            raise
+
     try:
-        allocations.create_all()
-        LOG.debug("Successfully wrote allocations %s", allocations)
+        _create_allocations(allocations)
     # InvalidInventory is a parent for several exceptions that
     # indicate either that Inventory is not present, or that
     # capacity limits have been exceeded.
@@ -447,15 +459,45 @@ def set_allocations(req):
         want_schema = schema.POST_ALLOCATIONS_V1_28
     data = util.extract_json(req.body, want_schema)
 
+    # First, ensure that all consumers referenced in the payload actually
+    # exist. And if not, create them. Keep a record of auto-created consumers
+    # so we can clean them up if the end allocation create_all() fails.
+    consumers = {}  # dict of Consumer objects, keyed by consumer UUID
+    new_consumers_created = []
+    for consumer_uuid in data:
+        project_id = data[consumer_uuid]['project_id']
+        user_id = data[consumer_uuid]['user_id']
+        consumer_generation = data[consumer_uuid].get('consumer_generation')
+        try:
+            consumer, new_consumer_created = util.ensure_consumer(
+                context, consumer_uuid, project_id, user_id,
+                consumer_generation, want_version)
+            if new_consumer_created:
+                new_consumers_created.append(consumer)
+            consumers[consumer_uuid] = consumer
+        except Exception:
+            # If any errors (for instance, a consumer generation conflict)
+            # occur when ensuring consumer records above, make sure we delete
+            # any auto-created consumers.
+            _delete_consumers(new_consumers_created)
+            raise
+
     # Create a sequence of allocation objects to be used in one
     # AllocationList.create_all() call, which will mean all the changes
     # happen within a single transaction and with resource provider
     # and consumer generations (if applicable) check all in one go.
-    allocations = create_allocation_list(context, data, want_version)
+    allocations = create_allocation_list(context, data, consumers)
+
+    def _create_allocations(alloc_list):
+        try:
+            alloc_list.create_all()
+            LOG.debug("Successfully wrote allocations %s", alloc_list)
+        except Exception:
+            _delete_consumers(new_consumers_created)
+            raise
 
     try:
-        allocations.create_all()
-        LOG.debug("Successfully wrote allocations %s", allocations)
+        _create_allocations(allocations)
     except exception.NotFound as exc:
         raise webob.exc.HTTPBadRequest(
             _("Unable to allocate inventory %(error)s") % {'error': exc})

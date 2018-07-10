@@ -55,8 +55,10 @@ tests:
       $:
           allocations: {}
 
-- name: retry allocations new consumer, wrong gen
-  desc: consumer generation is wrong below to make test pass
+# The failure to allocate above should have deleted the auto-created consumer,
+# so when we retry the allocation here, we should be able to use the
+# appropriate null generation to indicate this is a new consumer
+- name: retry allocations new consumer, still null gen
   PUT: /allocations/88888888-8888-8888-8888-888888888888
   data:
       allocations:
@@ -65,8 +67,5 @@ tests:
                   VCPU: 1
       project_id: $ENVIRON['PROJECT_ID']
       user_id: $ENVIRON['USER_ID']
-      # The API suggests we should have null here
-      # consumer_generation: null
-      # but the error response says 0, so use it to make test pass
-      consumer_generation: 0
+      consumer_generation: null
   status: 204
