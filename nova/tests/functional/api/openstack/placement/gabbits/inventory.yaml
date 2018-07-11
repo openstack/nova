@@ -220,6 +220,7 @@ tests:
   PUT: $LAST_URL
   request_headers:
       content-type: application/json
+      openstack-api-version: placement 1.23
   data:
       resource_provider_generation: 5
       total: 2048
@@ -228,6 +229,7 @@ tests:
       - resource provider generation conflict
   response_json_paths:
       $.errors[0].title: Conflict
+      $.errors[0].code: placement.concurrent_update
 
 - name: modify inventory no such resource class in inventory
   PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories/MEMORY_MB
@@ -467,6 +469,7 @@ tests:
   PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
   request_headers:
       content-type: application/json
+      openstack-api-version: placement 1.23
   data:
       resource_provider_generation: 99
       inventories:
@@ -477,6 +480,7 @@ tests:
       - resource provider generation conflict
   response_json_paths:
       $.errors[0].title: Conflict
+      $.errors[0].code: placement.concurrent_update
 
 - name: put all inventory unknown resource class
   PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories

@@ -639,7 +639,8 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
                       {
                           'expected_gen': consumer.generation,
                           'got_gen': consumer_generation,
-                      })
+                      },
+                      comment=errors.CONCURRENT_UPDATE)
         # NOTE(jaypipes): The user may have specified a different project and
         # user external ID than the one that we had for the consumer. If this
         # is the case, go ahead and modify the consumer record with the
@@ -681,7 +682,8 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
             if consumer_generation is not None:
                 raise webob.exc.HTTPConflict(
                     _('consumer generation conflict - '
-                      'expected null but got %s') % consumer_generation)
+                      'expected null but got %s') % consumer_generation,
+                    comment=errors.CONCURRENT_UPDATE)
         # No such consumer. This is common for new allocations. Create the
         # consumer record
         try:

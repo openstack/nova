@@ -122,7 +122,8 @@ def set_aggregates(req):
         if resource_provider.generation != rp_gen:
             raise webob.exc.HTTPConflict(
                 _("Resource provider's generation already changed. Please "
-                  "update the generation and try again."))
+                  "update the generation and try again."),
+                comment=errors.CONCURRENT_UPDATE)
         aggregate_uuids = data['aggregates']
     else:
         aggregate_uuids = data

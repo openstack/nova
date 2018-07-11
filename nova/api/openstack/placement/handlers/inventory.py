@@ -331,7 +331,8 @@ def set_inventories(req):
     data = _extract_inventories(req.body, schema.PUT_INVENTORY_SCHEMA)
     if data['resource_provider_generation'] != resource_provider.generation:
         raise webob.exc.HTTPConflict(
-            _('resource provider generation conflict'))
+            _('resource provider generation conflict'),
+            comment=errors.CONCURRENT_UPDATE)
 
     inv_list = []
     for res_class, inventory_data in data['inventories'].items():
@@ -436,7 +437,8 @@ def update_inventory(req):
     data = _extract_inventory(req.body, schema.BASE_INVENTORY_SCHEMA)
     if data['resource_provider_generation'] != resource_provider.generation:
         raise webob.exc.HTTPConflict(
-            _('resource provider generation conflict'))
+            _('resource provider generation conflict'),
+            comment=errors.CONCURRENT_UPDATE)
 
     inventory = _make_inventory_object(resource_provider,
                                        resource_class,

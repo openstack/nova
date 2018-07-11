@@ -325,6 +325,7 @@ tests:
   PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
   request_headers:
     content-type: application/json
+    openstack-api-version: placement 1.23
   status: 409
   data:
     traits:
@@ -332,6 +333,8 @@ tests:
     resource_provider_generation: 5
   response_strings:
     - Resource provider's generation already changed. Please update the generation and try again.
+  response_json_paths:
+      $.errors[0].code: placement.concurrent_update
 
 - name: set non existed traits for resource provider
   PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
