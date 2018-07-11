@@ -447,7 +447,7 @@ class InstanceGroup(API_BASE):
 
     @property
     def policy(self):
-        if len(self._policies) not in (0, 1):
+        if len(self._policies) > 1:
             msg = ("More than one policy (%(policies)s) is associated with "
                    "group %(group_name)s, only the first one in the list "
                    "would be returned.")

@@ -149,7 +149,7 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
             policy='affinity'))
         self.assertTrue(filt_cls.host_passes(host, spec_obj))
         spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
-            policy=policy, members=[], rules={}), instance_uuid=uuids.fake)
+            policy=policy, members=[]), instance_uuid=uuids.fake)
         spec_obj.instance_group.hosts = []
         self.assertTrue(filt_cls.host_passes(host, spec_obj))
         spec_obj.instance_group.hosts = ['host2']
