@@ -3043,8 +3043,6 @@ class LibvirtDriver(driver.ComputeDriver):
     def poll_rebooting_instances(self, timeout, instances):
         pass
 
-    # NOTE(ilyaalekseyev): Implementation like in multinics
-    # for xenapi(tr3buchet)
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
               block_device_info=None):
