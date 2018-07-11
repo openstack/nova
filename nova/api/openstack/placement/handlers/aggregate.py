@@ -17,6 +17,7 @@ from oslo_utils import encodeutils
 from oslo_utils import timeutils
 import webob
 
+from nova.api.openstack.placement import errors
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
@@ -69,8 +70,11 @@ def _set_aggregates(resource_provider, aggregate_uuids,
     try:
         resource_provider.set_aggregates(
             aggregate_uuids, increment_generation=increment_generation)
-    except (exception.ConcurrentUpdateDetected,
-            db_exc.DBDuplicateEntry) as exc:
+    except exception.ConcurrentUpdateDetected as exc:
+        raise webob.exc.HTTPConflict(
+            _('Update conflict: %(error)s') % {'error': exc},
+            comment=errors.CONCURRENT_UPDATE)
+    except db_exc.DBDuplicateEntry as exc:
         raise webob.exc.HTTPConflict(
             _('Update conflict: %(error)s') % {'error': exc})
 

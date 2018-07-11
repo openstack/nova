@@ -17,6 +17,7 @@ from oslo_utils import encodeutils
 from oslo_utils import timeutils
 import webob
 
+from nova.api.openstack.placement import errors
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
@@ -260,7 +261,8 @@ def delete_traits_for_resource_provider(req):
     try:
         resource_provider.set_traits(rp_obj.TraitList(objects=[]))
     except exception.ConcurrentUpdateDetected as e:
-        raise webob.exc.HTTPConflict(e.format_message())
+        raise webob.exc.HTTPConflict(e.format_message(),
+                                     comment=errors.CONCURRENT_UPDATE)
 
     req.response.status = 204
     req.response.content_type = None

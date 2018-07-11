@@ -202,7 +202,8 @@ def create_inventory(req):
     except (exception.ConcurrentUpdateDetected,
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
-            _('Update conflict: %(error)s') % {'error': exc})
+            _('Update conflict: %(error)s') % {'error': exc},
+            comment=errors.CONCURRENT_UPDATE)
     except (exception.InvalidInventoryCapacity,
             exception.NotFound) as exc:
         raise webob.exc.HTTPBadRequest(
@@ -239,7 +240,8 @@ def delete_inventory(req):
             exception.InventoryInUse) as exc:
         raise webob.exc.HTTPConflict(
             _('Unable to delete inventory of class %(class)s: %(error)s') %
-            {'class': resource_class, 'error': exc})
+            {'class': resource_class, 'error': exc},
+            comment=errors.CONCURRENT_UPDATE)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
             _('No inventory of class %(class)s found for delete: %(error)s') %
@@ -356,7 +358,8 @@ def set_inventories(req):
     except (exception.ConcurrentUpdateDetected,
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
-            _('update conflict: %(error)s') % {'error': exc})
+            _('update conflict: %(error)s') % {'error': exc},
+            comment=errors.CONCURRENT_UPDATE)
     except exception.InventoryInUse as exc:
         raise webob.exc.HTTPConflict(
             _('update conflict: %(error)s') % {'error': exc},
@@ -395,7 +398,8 @@ def delete_inventories(req):
             _('Unable to delete inventory for resource provider '
               '%(rp_uuid)s because the inventory was updated by '
               'another process. Please retry your request.')
-              % {'rp_uuid': resource_provider.uuid})
+              % {'rp_uuid': resource_provider.uuid},
+              comment=errors.CONCURRENT_UPDATE)
     except exception.InventoryInUse as ex:
         # NOTE(mriedem): This message cannot change without impacting the
         # nova.scheduler.client.report._RE_INV_IN_USE regex.
@@ -445,7 +449,8 @@ def update_inventory(req):
     except (exception.ConcurrentUpdateDetected,
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
-            _('update conflict: %(error)s') % {'error': exc})
+            _('update conflict: %(error)s') % {'error': exc},
+            comment=errors.CONCURRENT_UPDATE)
     except exception.InventoryWithResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
             _('No inventory record with resource class for resource provider '
