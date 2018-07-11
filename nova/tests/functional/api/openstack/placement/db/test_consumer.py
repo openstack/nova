@@ -55,6 +55,35 @@ class ConsumerTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(2, c.user.id)
         self.assertRaises(exception.ConsumerExists, c.create)
 
+    def test_update(self):
+        """Tests the scenario where a user supplies a different project/user ID
+        for an allocation's consumer and we call Consumer.update() to save that
+        information to the consumers table.
+        """
+        # First, create the consumer with the "fake-user" and "fake-project"
+        # user/project in the base test class's setUp
+        c = consumer_obj.Consumer(
+            self.ctx, uuid=uuids.consumer, user=self.user_obj,
+            project=self.project_obj)
+        c.create()
+        c = consumer_obj.Consumer.get_by_uuid(self.ctx, uuids.consumer)
+        self.assertEqual(self.project_obj.id, c.project.id)
+        self.assertEqual(self.user_obj.id, c.user.id)
+
+        # Now change the consumer's project and user to a different project
+        another_user = user_obj.User(self.ctx, external_id='another-user')
+        another_user.create()
+        another_proj = project_obj.Project(
+            self.ctx, external_id='another-project')
+        another_proj.create()
+
+        c.project = another_proj
+        c.user = another_user
+        c.update()
+        c = consumer_obj.Consumer.get_by_uuid(self.ctx, uuids.consumer)
+        self.assertEqual(another_proj.id, c.project.id)
+        self.assertEqual(another_user.id, c.user.id)
+
 
 @db_api.placement_context_manager.reader
 def _get_allocs_with_no_consumer_relationship(ctx):

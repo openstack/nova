@@ -217,6 +217,27 @@ class Consumer(base.VersionedObject, base.TimestampedObject):
         _create_in_db(self._context)
         self.obj_reset_changes()
 
+    def update(self):
+        """Used to update the consumer's project and user information without
+        incrementing the consumer's generation.
+        """
+        @db_api.placement_context_manager.writer
+        def _update_in_db(ctx):
+            upd_stmt = CONSUMER_TBL.update().values(
+                project_id=self.project.id, user_id=self.user.id)
+            # NOTE(jaypipes): We add the generation check to the WHERE clause
+            # above just for safety. We don't need to check that the statement
+            # actually updated a single row. If it did not, then the
+            # consumer.increment_generation() call that happens in
+            # AllocationList.create_all() will end up raising
+            # ConcurrentUpdateDetected anyway
+            upd_stmt = upd_stmt.where(sa.and_(
+                CONSUMER_TBL.c.id == self.id,
+                CONSUMER_TBL.c.generation == self.generation))
+            ctx.session.execute(upd_stmt)
+        _update_in_db(self._context)
+        self.obj_reset_changes()
+
     def increment_generation(self):
         """Increments the consumer's generation.
 
