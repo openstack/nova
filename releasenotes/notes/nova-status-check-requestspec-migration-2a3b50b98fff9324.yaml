@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    A new check is added to the ``nova-status upgrade check`` CLI to make sure
+    request spec online migrations have been run per-cell. Missing request spec
+    compatibility code is planned to be removed in the Stein release.
