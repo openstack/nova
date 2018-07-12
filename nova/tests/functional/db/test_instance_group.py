@@ -32,7 +32,8 @@ class InstanceGroupObjectTestCase(test.TestCase):
                                       user_id=self.context.user_id,
                                       project_id=self.context.project_id,
                                       name='foogroup',
-                                      policies=['foo1'],
+                                      policy='anti-affinity',
+                                      rules={'max_server_per_host': 1},
                                       members=['memberfoo'])
         group.update(values)
         group.create()
@@ -45,9 +46,11 @@ class InstanceGroupObjectTestCase(test.TestCase):
         self.assertIsInstance(db_group.policy, api_models.InstanceGroupPolicy)
         self.assertEqual(create_group.policies[0], db_group.policy.policy)
         self.assertEqual(create_group.id, db_group.policy.group_id)
-        self.assertIsNone(db_group.policy.rules)
-        ovo_fixture.compare_obj(self, create_group, db_group,
-                                allow_missing=('deleted', 'deleted_at'))
+        ovo_fixture.compare_obj(
+            self, create_group, db_group,
+            comparators={'policy': lambda a, b: b == a.policy},
+            allow_missing=('deleted', 'deleted_at', 'policies', '_rules'))
+        self.assertEqual({'max_server_per_host': 1}, create_group.rules)
 
     def test_destroy(self):
         create_group = self._api_group()
@@ -64,8 +67,11 @@ class InstanceGroupObjectTestCase(test.TestCase):
         create_group.save()
         db_group = create_group._get_from_db_by_uuid(self.context,
                                                      create_group.uuid)
-        ovo_fixture.compare_obj(self, create_group, db_group,
-                                allow_missing=('deleted', 'deleted_at'))
+        ovo_fixture.compare_obj(
+            self, create_group, db_group,
+            comparators={'policy': lambda a, b: b == a.policy},
+            allow_missing=('deleted', 'deleted_at', 'policies', '_rules'))
+        self.assertEqual({'max_server_per_host': 1}, create_group.rules)
 
     def test_add_members(self):
         create_group = self._api_group()

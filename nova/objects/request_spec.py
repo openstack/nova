@@ -210,7 +210,7 @@ class RequestSpec(base.NovaObject):
             policies = list(filter_properties.get('group_policies'))
             hosts = list(filter_properties.get('group_hosts'))
             members = list(filter_properties.get('group_members'))
-            self.instance_group = objects.InstanceGroup(policies=policies,
+            self.instance_group = objects.InstanceGroup(policy=policies[0],
                                                         hosts=hosts,
                                                         members=members)
             # hosts has to be not part of the updates for saving the object

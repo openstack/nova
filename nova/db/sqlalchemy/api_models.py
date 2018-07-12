@@ -457,10 +457,6 @@ class InstanceGroup(API_BASE):
         return self._policies[0] if self._policies else None
 
     @property
-    def policies(self):
-        return [p.policy for p in self._policies]
-
-    @property
     def members(self):
         return [m.instance_uuid for m in self._members]
 

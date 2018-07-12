@@ -166,7 +166,8 @@ class ServerGroupController(wsgi.Controller):
         sg.user_id = context.user_id
         try:
             sg.name = vals.get('name')
-            sg.policies = vals.get('policies')
+            policies = vals.get('policies')
+            sg.policy = policies[0]
             sg.create()
         except ValueError as e:
             raise exc.HTTPBadRequest(explanation=e)

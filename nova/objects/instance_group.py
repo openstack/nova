@@ -15,6 +15,7 @@
 import copy
 
 from oslo_db import exception as db_exc
+from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
 from sqlalchemy.orm import contains_eager
@@ -110,7 +111,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
     # Version 1.8: Add count_members_by_user()
     # Version 1.9: Add get_by_instance_uuid()
     # Version 1.10: Add hosts field
-    VERSION = '1.10'
+    # Version 1.11: Add policy and deprecate policies, add _rules
+    VERSION = '1.11'
 
     fields = {
         'id': fields.IntegerField(),
@@ -124,10 +126,39 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         'policies': fields.ListOfStringsField(nullable=True, read_only=True),
         'members': fields.ListOfStringsField(nullable=True),
         'hosts': fields.ListOfStringsField(nullable=True),
+        'policy': fields.StringField(nullable=True),
+        # NOTE(danms): Use rules not _rules for general access
+        '_rules': fields.DictOfStringsField(),
         }
+
+    def __init__(self, *args, **kwargs):
+        if 'rules' in kwargs:
+            kwargs['_rules'] = kwargs.pop('rules')
+        super(InstanceGroup, self).__init__(*args, **kwargs)
+
+    @property
+    def rules(self):
+        if '_rules' not in self:
+            return {}
+        # NOTE(danms): Coerce our rules into a typed dict for convenience
+        rules = {}
+        if 'max_server_per_host' in self._rules:
+            rules['max_server_per_host'] = \
+                    int(self._rules['max_server_per_host'])
+        return rules
 
     def obj_make_compatible(self, primitive, target_version):
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 11):
+            # NOTE(yikun): Before 1.11, we had a policies property which is
+            # the list of policy name, even though it was a list, there was
+            # ever only one entry in the list.
+            policy = primitive.pop('policy', None)
+            if policy:
+                primitive['policies'] = [policy]
+            else:
+                primitive['policies'] = []
+            primitive.pop('rules', None)
         if target_version < (1, 7):
             # NOTE(danms): Before 1.7, we had an always-empty
             # metadetails property
@@ -151,8 +182,28 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
             # TODO(mriedem): Remove this when NovaPersistentObject is removed.
             ignore = {'deleted': False,
                       'deleted_at': None}
-            if field in ignore and not hasattr(db_inst, field):
+            if '_rules' == field:
+                db_policy = db_inst['policy']
+                instance_group._rules = (
+                    jsonutils.loads(db_policy['rules'])
+                    if db_policy and db_policy['rules']
+                    else {})
+            elif field in ignore and not hasattr(db_inst, field):
                 instance_group[field] = ignore[field]
+            elif 'policies' == field:
+                continue
+            # NOTE(yikun): The obj.policies is deprecated and marked as
+            # read_only in version 1.11, and there is no "policies" property
+            # in InstanceGroup model anymore, so we just skip to set
+            # "policies" and then load the "policies" when "policy" is set.
+            elif 'policy' == field:
+                db_policy = db_inst['policy']
+                if db_policy:
+                    instance_group.policy = db_policy['policy']
+                    instance_group.policies = [instance_group.policy]
+                else:
+                    instance_group.policy = None
+                    instance_group.policies = []
             else:
                 instance_group[field] = db_inst[field]
 
@@ -214,7 +265,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
 
     @staticmethod
     @db_api.api_context_manager.writer
-    def _create_in_db(context, values, policies=None, members=None):
+    def _create_in_db(context, values, policies=None, members=None,
+                      policy=None, rules=None):
         try:
             group = api_models.InstanceGroup()
             group.update(values)
@@ -223,12 +275,21 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
             raise exception.InstanceGroupIdExists(group_uuid=values['uuid'])
 
         if policies:
-            policy = api_models.InstanceGroupPolicy(
+            db_policy = api_models.InstanceGroupPolicy(
                 group_id=group['id'], policy=policies[0], rules=None)
-            group._policies = [policy]
-            group.save(context.session)
+            group._policies = [db_policy]
+            group.rules = None
+        elif policy:
+            db_rules = jsonutils.dumps(rules or {})
+            db_policy = api_models.InstanceGroupPolicy(
+                group_id=group['id'], policy=policy,
+                rules=db_rules)
+            group._policies = [db_policy]
         else:
             group._policies = []
+
+        if group._policies:
+            group.save(context.session)
 
         if members:
             group._members = _instance_group_members_add(context, group,
@@ -358,6 +419,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         payload = dict(updates)
         updates.pop('id', None)
         policies = updates.pop('policies', None)
+        policy = updates.pop('policy', None)
+        rules = updates.pop('_rules', None)
         members = updates.pop('members', None)
 
         if 'uuid' not in updates:
@@ -366,7 +429,9 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
 
         db_group = self._create_in_db(self._context, updates,
                                       policies=policies,
-                                      members=members)
+                                      members=members,
+                                      policy=policy,
+                                      rules=rules)
         self._from_db_object(self._context, self, db_group)
         payload['server_group_id'] = self.uuid
         compute_utils.notify_about_server_group_update(self._context,
