@@ -185,7 +185,7 @@ class AllocationFixture(APIFixture):
             self.context,
             objects=[alloc1, alloc2]
         )
-        alloc_list.create_all()
+        alloc_list.replace_all()
 
         # Create a second consumer for the VCPU
         consumer_id = uuidutils.generate_uuid()
@@ -215,7 +215,7 @@ class AllocationFixture(APIFixture):
         alloc_list = rp_obj.AllocationList(
                 self.context,
                 objects=[alloc1, alloc2])
-        alloc_list.create_all()
+        alloc_list.replace_all()
 
         # Create a consumer object for a different user
         alt_consumer_id = uuidutils.generate_uuid()
@@ -239,7 +239,7 @@ class AllocationFixture(APIFixture):
         alloc_list = rp_obj.AllocationList(
                 self.context,
                 objects=[alloc1, alloc2])
-        alloc_list.create_all()
+        alloc_list.replace_all()
 
         # The ALT_RP_XXX variables are for a resource provider that has
         # not been created in the Allocation fixture

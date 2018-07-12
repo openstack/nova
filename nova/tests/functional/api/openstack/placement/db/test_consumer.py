@@ -224,7 +224,7 @@ class CreateIncompleteConsumersTestCase(test.NoDBTestCase):
 
 class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
     def test_delete_consumer_if_no_allocs(self):
-        """AllocationList.create_all() should attempt to delete consumers that
+        """AllocationList.replace_all() should attempt to delete consumers that
         no longer have any allocations. Due to the REST API not having any way
         to query for consumers directly (only via the GET
         /allocations/{consumer_uuid} endpoint which returns an empty dict even
@@ -265,7 +265,7 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
                 resource_class=fields.ResourceClass.MEMORY_MB, used=512),
         ]
         alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
-        alloc_list.create_all()
+        alloc_list.replace_all()
 
         # Validate that we have consumer records for both consumers
         for c_uuid in (uuids.consumer1, uuids.consumer2):
@@ -274,8 +274,8 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
 
         # OK, now "remove" the allocation for consumer2 by setting the used
         # value for both allocated resources to 0 and re-running the
-        # AllocationList.create_all(). This should end up deleting the consumer
-        # record for consumer2
+        # AllocationList.replace_all(). This should end up deleting the
+        # consumer record for consumer2
         allocs = [
             rp_obj.Allocation(
                 self.ctx, consumer=c2, resource_provider=cn1,
@@ -285,7 +285,7 @@ class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
                 resource_class=fields.ResourceClass.MEMORY_MB, used=0),
         ]
         alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
-        alloc_list.create_all()
+        alloc_list.replace_all()
 
         # consumer1 should still exist...
         c_obj = consumer_obj.Consumer.get_by_uuid(self.ctx, uuids.consumer1)

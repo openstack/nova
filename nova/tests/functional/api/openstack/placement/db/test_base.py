@@ -108,7 +108,7 @@ class PlacementDbBaseTestCase(test.NoDBTestCase):
                     self.ctx, resource_provider=rp, resource_class=rc,
                     consumer=consumer, used=used)]
         )
-        alloc_list.create_all()
+        alloc_list.replace_all()
         return alloc_list
 
     def _make_allocation(self, inv_dict, alloc_dict):
@@ -128,5 +128,5 @@ class PlacementDbBaseTestCase(test.NoDBTestCase):
         alloc = rp_obj.Allocation(self.ctx, resource_provider=rp,
                 consumer=c, **alloc_dict)
         alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
-        alloc_list.create_all()
+        alloc_list.replace_all()
         return rp, alloc

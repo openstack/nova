@@ -1597,6 +1597,15 @@ def _delete_allocations_for_consumer(ctx, consumer_id):
     ctx.session.execute(del_sql)
 
 
+@db_api.placement_context_manager.writer
+def _delete_allocations_by_ids(ctx, alloc_ids):
+    """Deletes allocations having an internal id value in the set of supplied
+    IDs
+    """
+    del_sql = _ALLOC_TBL.delete().where(_ALLOC_TBL.c.id.in_(alloc_ids))
+    ctx.session.execute(del_sql)
+
+
 def _check_capacity_exceeded(ctx, allocs):
     """Checks to see if the supplied allocation records would result in any of
     the inventories involved having their capacity exceeded.
@@ -1770,6 +1779,7 @@ def _get_allocations_by_provider_id(ctx, rp_id):
     projects = sa.alias(_PROJECT_TBL, name="p")
     users = sa.alias(_PROJECT_TBL, name="u")
     cols = [
+        allocs.c.id,
         allocs.c.resource_class_id,
         allocs.c.used,
         allocs.c.updated_at,
@@ -1804,6 +1814,7 @@ def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
     project = sa.alias(_PROJECT_TBL, name="p")
     user = sa.alias(_USER_TBL, name="u")
     cols = [
+        allocs.c.id,
         allocs.c.resource_provider_id,
         rp.c.name.label("resource_provider_name"),
         rp.c.uuid.label("resource_provider_uuid"),
@@ -1937,11 +1948,6 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
                 provider or consumer failed its increment check.
         """
         _ensure_rc_cache(context)
-        # Make sure that all of the allocations are new.
-        for alloc in allocs:
-            if 'id' in alloc:
-                raise exception.ObjectActionError(action='create',
-                                                  reason='already created')
 
         # First delete any existing allocations for any consumers. This
         # provides a clean slate for the consumers mentioned in the list of
@@ -1989,7 +1995,9 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
                     resource_class_id=rc_id,
                     consumer_id=consumer_id,
                     used=alloc.used)
-            context.session.execute(ins_stmt)
+            res = context.session.execute(ins_stmt)
+            alloc.id = res.lastrowid
+            alloc.obj_reset_changes()
 
         # Generation checking happens here. If the inventory for this resource
         # provider changed out from under us, this will raise a
@@ -2034,7 +2042,7 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
                     external_id=rec['user_external_id']))
             objs.append(
                 Allocation(
-                    context, resource_provider=rp,
+                    context, id=rec['id'], resource_provider=rp,
                     resource_class=_RC_CACHE.string_from_id(
                         rec['resource_class_id']),
                     consumer=consumer,
@@ -2073,7 +2081,8 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
         # fields returned by _get_allocations_by_consumer_id().
         objs = [
             Allocation(
-                context, resource_provider=ResourceProvider(
+                context, id=rec['id'],
+                resource_provider=ResourceProvider(
                     context,
                     id=rec['resource_provider_id'],
                     uuid=rec['resource_provider_uuid'],
@@ -2088,24 +2097,25 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
         alloc_list = cls(context, objects=objs)
         return alloc_list
 
-    def create_all(self):
-        """Create the supplied allocations.
+    def replace_all(self):
+        """Replace the supplied allocations.
 
-        Note that the Allocation objects that are created are not
-        returned to the caller, nor are their database ids set. If
-        those ids are required use one of the get_all_by* methods.
+        :note: This method always deletes all allocations for all consumers
+               referenced in the list of Allocation objects and then replaces
+               the consumer's allocations with the Allocation objects. In doing
+               so, it will end up setting the Allocation.id attribute of each
+               Allocation object.
         """
         # TODO(jaypipes): Retry the allocation writes on
         # ConcurrentUpdateDetected
         self._set_allocations(self._context, self.objects)
 
     def delete_all(self):
-        # Allocations can only have a single consumer, so take advantage of
-        # that fact and do an efficient batch delete
-        consumer_uuid = self.objects[0].consumer.uuid
-        _delete_allocations_for_consumer(self._context, consumer_uuid)
+        consumer_uuids = set(alloc.consumer.uuid for alloc in self.objects)
+        alloc_ids = [alloc.id for alloc in self.objects]
+        _delete_allocations_by_ids(self._context, alloc_ids)
         consumer_obj.delete_consumers_if_no_allocations(
-            self._context, [consumer_uuid])
+            self._context, consumer_uuids)
 
     def __repr__(self):
         strings = [repr(x) for x in self.objects]

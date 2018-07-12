@@ -388,7 +388,7 @@ def _set_allocations_for_consumer(req, schema):
 
     def _create_allocations(alloc_list):
         try:
-            alloc_list.create_all()
+            alloc_list.replace_all()
             LOG.debug("Successfully wrote allocations %s", alloc_list)
         except Exception:
             if created_new_consumer:
@@ -461,7 +461,7 @@ def set_allocations(req):
 
     # First, ensure that all consumers referenced in the payload actually
     # exist. And if not, create them. Keep a record of auto-created consumers
-    # so we can clean them up if the end allocation create_all() fails.
+    # so we can clean them up if the end allocation replace_all() fails.
     consumers = {}  # dict of Consumer objects, keyed by consumer UUID
     new_consumers_created = []
     for consumer_uuid in data:
@@ -483,14 +483,14 @@ def set_allocations(req):
             raise
 
     # Create a sequence of allocation objects to be used in one
-    # AllocationList.create_all() call, which will mean all the changes
+    # AllocationList.replace_all() call, which will mean all the changes
     # happen within a single transaction and with resource provider
     # and consumer generations (if applicable) check all in one go.
     allocations = create_allocation_list(context, data, consumers)
 
     def _create_allocations(alloc_list):
         try:
-            alloc_list.create_all()
+            alloc_list.replace_all()
             LOG.debug("Successfully wrote allocations %s", alloc_list)
         except Exception:
             _delete_consumers(new_consumers_created)
