@@ -2295,3 +2295,7 @@ class CertificateValidationNotYetAvailable(NovaException):
     msg_fmt = _("Image signature certificate validation support is "
                 "not yet available.")
     code = 409
+
+
+class IronicAPIVersionNotAvailable(NovaException):
+    msg_fmt = _('Ironic API version %(version)s is not available.')

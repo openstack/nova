@@ -33,6 +33,13 @@ IRONIC_GROUP = nova.conf.ironic.ironic_group
 
 # The API version required by the Ironic driver
 IRONIC_API_VERSION = (1, 37)
+# NOTE(TheJulia): This version should ALWAYS be the _last_ release
+# supported version of the API version used by nova. If a feature
+# needs 1.38 to be negotiated to operate properly, then the version
+# above should be updated, and this version should only be changed
+# once a cycle to the API version desired for features merging in
+# that cycle.
+PRIOR_IRONIC_API_VERSION = (1, 37)
 
 
 class IronicClientWrapper(object):
@@ -85,7 +92,12 @@ class IronicClientWrapper(object):
         kwargs = {}
         kwargs['max_retries'] = max_retries
         kwargs['retry_interval'] = retry_interval
-        kwargs['os_ironic_api_version'] = '%d.%d' % IRONIC_API_VERSION
+        # NOTE(TheJulia): The ability for a list of available versions to be
+        # accepted was added in python-ironicclient 2.2.0. The highest
+        # available version will be utilized by the client for the lifetime
+        # of the client.
+        kwargs['os_ironic_api_version'] = [
+            '%d.%d' % IRONIC_API_VERSION, '%d.%d' % PRIOR_IRONIC_API_VERSION]
 
         # NOTE(clenimar/efried): by default, the endpoint is taken from the
         # service catalog. Use `endpoint_override` if you want to override it.
@@ -156,3 +168,27 @@ class IronicClientWrapper(object):
         # 0.8.0
         client = self._get_client(retry_on_conflict=retry_on_conflict)
         return self._multi_getattr(client, method)(*args, **kwargs)
+
+    @property
+    def current_api_version(self):
+        """Value representing the negotiated API client version.
+
+        This value represents the current negotiated API version that
+        is being utilized by the client to permit the caller to make
+        decisions based upon that version.
+
+        :returns: The highest available negotiatable version or None
+                  if a version has not yet been negotiated by the underlying
+                  client library.
+        """
+        return self._get_client().current_api_version
+
+    @property
+    def is_api_version_negotiated(self):
+        """Boolean to indicate if the client version has been negotiated.
+
+        :returns: True if the underlying client library has completed API
+                  version negotiation. Otherwise the value returned is
+                  False.
+        """
+        return self._get_client().is_api_version_negotiated

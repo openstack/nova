@@ -86,7 +86,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         expected = {'session': 'session',
             'max_retries': CONF.ironic.api_max_retries,
             'retry_interval': CONF.ironic.api_retry_interval,
-            'os_ironic_api_version': '1.37',
+            'os_ironic_api_version': ['1.37', '1.37'],
             'ironic_url':
                 self.get_ksa_adapter.return_value.get_endpoint.return_value}
         mock_ir_cli.assert_called_once_with(1, **expected)
@@ -112,7 +112,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         expected = {'session': 'session',
                     'max_retries': CONF.ironic.api_max_retries,
                     'retry_interval': CONF.ironic.api_retry_interval,
-                    'os_ironic_api_version': '1.37',
+                    'os_ironic_api_version': ['1.37', '1.37'],
                     'ironic_url': None}
         mock_ir_cli.assert_called_once_with(1, **expected)
 
@@ -130,7 +130,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         expected = {'session': 'session',
                     'max_retries': CONF.ironic.api_max_retries,
                     'retry_interval': CONF.ironic.api_retry_interval,
-                    'os_ironic_api_version': '1.37',
+                    'os_ironic_api_version': ['1.37', '1.37'],
                     'ironic_url': endpoint}
         mock_ir_cli.assert_called_once_with(1, **expected)
 

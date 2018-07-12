@@ -2816,6 +2816,34 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
         self.driver._pike_flavor_migration([uuids.node1])
         mock_normalize.assert_not_called()
 
+    def test__can_send_version(self):
+        self.assertIsNone(
+            self.driver._can_send_version(
+                min_version='%d.%d' % cw.IRONIC_API_VERSION))
+
+    def test__can_send_version_too_new(self):
+        self.assertRaises(exception.IronicAPIVersionNotAvailable,
+                          self.driver._can_send_version,
+                          min_version='%d.%d' % (cw.IRONIC_API_VERSION[0],
+                                                 cw.IRONIC_API_VERSION[1] + 1))
+
+    def test__can_send_version_too_old(self):
+        self.assertRaises(
+            exception.IronicAPIVersionNotAvailable,
+            self.driver._can_send_version,
+            max_version='%d.%d' % (cw.PRIOR_IRONIC_API_VERSION[0],
+                                   cw.PRIOR_IRONIC_API_VERSION[1] - 1))
+
+    @mock.patch.object(cw.IronicClientWrapper, 'current_api_version',
+                       autospec=True)
+    @mock.patch.object(cw.IronicClientWrapper, 'is_api_version_negotiated',
+                       autospec=True)
+    def test__can_send_version_not_negotiated(self, mock_is_negotiated,
+                                              mock_api_version):
+        mock_is_negotiated.return_value = False
+        self.assertIsNone(self.driver._can_send_version())
+        self.assertFalse(mock_api_version.called)
+
 
 @mock.patch.object(instance_metadata, 'InstanceMetadata')
 @mock.patch.object(configdrive, 'ConfigDriveBuilder')

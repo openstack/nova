@@ -14,6 +14,7 @@
 #    under the License.
 
 from nova import objects
+from nova.virt.ironic import client_wrapper
 from nova.virt.ironic import ironic_states
 
 
@@ -220,3 +221,5 @@ class FakeClient(object):
     port = FakePortClient()
     portgroup = FakePortgroupClient()
     volume_target = FakeVolumeTargetClient()
+    current_api_version = '%d.%d' % client_wrapper.IRONIC_API_VERSION
+    is_api_version_negotiated = True
