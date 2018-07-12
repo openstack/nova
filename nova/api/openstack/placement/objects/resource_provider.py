@@ -4034,3 +4034,89 @@ class AllocationCandidates(base.VersionedObject):
             kept_summary_objs = summary_objs
 
         return alloc_request_objs, kept_summary_objs
+
+
+@db_api.placement_context_manager.writer
+def reshape(ctx, inventories, allocations):
+    """The 'replace the world' strategy that is executed when we want to
+    completely replace a set of provider inventory, allocation and consumer
+    information in a single transaction.
+
+    :note: The reason this has to be done in a single monolithic function is so
+           we have a single top-level function on which to decorate with the
+           @db_api.placement_context_manager.writer transaction context
+           manager. Each time a top-level function that is decorated with this
+           exits, the transaction is either COMMIT'd or ROLLBACK'd. We need to
+           avoid calling two functions that are already decorated with a
+           transaction context manager from a function that *isn't* decorated
+           with the transaction context manager if we want all changes involved
+           in the sub-functions to operate within a single DB transaction.
+
+    :param ctx: `nova.api.openstack.placement.context.RequestContext` object
+                containing the DB transaction context.
+    :param inventories: dict, keyed by resource provider UUID, of
+                        `InventoryList` objects representing the replaced
+                        inventory information for the provider.
+    :param allocations: `AllocationList` object containing all allocations for
+                        all consumers being modified by the reshape operation.
+    :raises: `exception.ConcurrentUpdateDetected` when any resource provider or
+             consumer generation increment fails due to concurrent changes to
+             the same objects.
+    """
+    # The resource provider objects, keyed by provider UUID, that are involved
+    # in this transaction. We keep a cache of these because as we perform the
+    # various operations on the providers, their generations increment and we
+    # want to "inject" the changed resource provider objects into the
+    # AllocationList's objects before calling AllocationList.replace_all()
+    affected_providers = {}
+    # We have to do the inventory changes in two steps because:
+    # - we can't delete inventories with allocations; and
+    # - we can't create allocations on nonexistent inventories.
+    # So in the first step we create a kind of "union" inventory for each
+    # provider. It contains all the inventories that the request wishes to
+    # exist in the end, PLUS any inventories that the request wished to remove
+    # (in their original form).
+    # Note that this can cause us to end up with an interim situation where we
+    # have modified an inventory to have less capacity than is currently
+    # allocated, but that's allowed by the code. If the final picture is
+    # overcommitted, we'll get an appropriate exception when we replace the
+    # allocations at the end.
+    for rp_uuid, new_inv_list in inventories.items():
+        LOG.debug("reshaping: *interim* inventory replacement for provider %s",
+                  rp_uuid)
+        rp = new_inv_list[0].resource_provider
+        # A dict, keyed by resource class, of the Inventory objects. We start
+        # with the original inventory list.
+        inv_by_rc = {inv.resource_class: inv for inv in
+                     InventoryList.get_all_by_resource_provider(ctx, rp)}
+        # Now add each inventory in the new inventory list. If an inventory for
+        # that resource class existed in the original inventory list, it is
+        # overwritten.
+        for inv in new_inv_list:
+            inv_by_rc[inv.resource_class] = inv
+        # Set the interim inventory structure.
+        rp.set_inventory(InventoryList(objects=list(inv_by_rc.values())))
+        affected_providers[rp_uuid] = rp
+
+    # NOTE(jaypipes): The above inventory replacements will have
+    # incremented the resource provider generations, so we need to look in
+    # the AllocationList and swap the resource provider object with the one we
+    # saved above that has the updated provider generation in it.
+    for alloc in allocations:
+        rp_uuid = alloc.resource_provider.uuid
+        if rp_uuid in affected_providers:
+            alloc.resource_provider = affected_providers[rp_uuid]
+
+    # Now we can replace all the allocations
+    LOG.debug("reshaping: attempting allocation replacement")
+    allocations.replace_all()
+
+    # And finally, we can set the inventories to their actual desired state.
+    for rp_uuid, new_inv_list in inventories.items():
+        LOG.debug("reshaping: *final* inventory replacement for provider %s",
+                  rp_uuid)
+        # TODO(efried): If we wanted this to be more efficient, we could keep
+        # track of providers for which all inventories are being deleted in the
+        # above loop and just do those and skip the rest, since they're already
+        # in their final form.
+        new_inv_list[0].resource_provider.set_inventory(new_inv_list)
