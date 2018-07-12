@@ -1593,7 +1593,10 @@ class CellV2Commands(object):
 
         with context.target_cell(ctxt, cell_mapping) as cctxt:
             instances = objects.InstanceList.get_by_host(cctxt, host)
-            nodes = objects.ComputeNodeList.get_all_by_host(cctxt, host)
+            try:
+                nodes = objects.ComputeNodeList.get_all_by_host(cctxt, host)
+            except exception.ComputeHostNotFound:
+                nodes = []
 
         if instances:
             print(_('There are instances on the host %s.') % host)
