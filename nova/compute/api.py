@@ -77,6 +77,7 @@ from nova.pci import request as pci_request
 from nova.policies import servers as servers_policies
 import nova.policy
 from nova import profiler
+from nova import quota
 from nova import rpc
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
@@ -1743,16 +1744,11 @@ class API(base.Base):
                                                instance.task_state,
                                                project_id, user_id)
             try:
-                # NOTE(alaski): Though the conductor halts the build process it
-                # does not currently delete the instance record. This is
-                # because in the near future the instance record will not be
-                # created if the buildrequest has been deleted here. For now we
-                # ensure the instance has been set to deleted at this point.
-                # Yes this directly contradicts the comment earlier in this
-                # method, but this is a temporary measure.
                 # Look up the instance because the current instance object was
                 # stashed on the buildrequest and therefore not complete enough
                 # to run .destroy().
+                # NOTE(melwitt): _lookup_instance doesn't raise
+                # InstanceNotFound, it returns (None, None) instead.
                 cell, instance = self._lookup_instance(context, instance.uuid)
                 if instance is not None:
                     # If instance is None it has already been deleted.
@@ -1763,9 +1759,37 @@ class API(base.Base):
                                 instance.destroy()
                     else:
                         instance.destroy()
-                    quotas.commit()
+                # NOTE(melwitt): We need to commit the quota decrement whether
+                # we find the instance or not because we can't get here unless
+                # we succeeded in deleting the build request earlier in this
+                # method. So, if we failed to lookup the instance here, it
+                # means either:
+                #   a) Conductor didn't create the instance record yet.
+                #   b) Conductor has deleted the instance record after finding
+                #      the build request was deleted by us (in the API).
+                # In either case, conductor doesn't do anything to decrement
+                # quota usage, so we need to do it here.
+                quotas.commit()
             except exception.InstanceNotFound:
+                # InstanceNotFound can be raised by instance.destroy() if the
+                # instance was deleted by another racing delete request. If
+                # that happens, we should rollback quota here instead of
+                # committing it.
+                # We need to either rollback or commit here to get rid of the
+                # reservation record, in any case.
                 quotas.rollback()
+                # InstanceNotFound could also be raised by instance.destroy()
+                # if conductor deleted the instance record after we looked it
+                # up but before we attempted to destroy it. If that happened,
+                # we are racing with a create request and the correct thing to
+                # do would be to commit the reservations instead of rolling
+                # them back. Since we can't differentiate between the two
+                # scenarios for InstanceNotFound, refresh the quota usage for
+                # instances, cores, and ram to clean things up if rollback()
+                # wasn't the right choice.
+                quota.QUOTAS.usage_refresh(context,
+                                           resource_names=['instances',
+                                                           'cores', 'ram'])
 
             return True
         return False

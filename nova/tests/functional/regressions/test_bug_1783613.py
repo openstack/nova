@@ -107,6 +107,10 @@ class TestDeleteWhileBootingInstanceNotFound(
         current_usage = self.api.get_limits()
         self.assertEqual(starting_usage['absolute']['totalInstancesUsed'] + 1,
                          current_usage['absolute']['totalInstancesUsed'])
+        self.assertEqual(starting_usage['absolute']['totalCoresUsed'] + 1,
+                         current_usage['absolute']['totalCoresUsed'])
+        self.assertEqual(starting_usage['absolute']['totalRAMUsed'] + 512,
+                         current_usage['absolute']['totalRAMUsed'])
 
         # Stub out the API to make the instance lookup fail, simulating if
         # conductor hadn't yet created it yet or deleted it after the build
@@ -118,14 +122,15 @@ class TestDeleteWhileBootingInstanceNotFound(
         self._delete_server(server['id'])
         self._wait_for_instance_delete(server['id'])
 
-        # Now check the quota again. Because of the bug, we won't have
-        # decremented quota.
+        # Now check the quota again. Since the bug is fixed, ending usage
+        # should be current usage - 1.
         ending_usage = self.api.get_limits()
-        self.assertEqual(current_usage['absolute']['totalInstancesUsed'],
+        self.assertEqual(current_usage['absolute']['totalInstancesUsed'] - 1,
                          ending_usage['absolute']['totalInstancesUsed'])
-        # TODO(melwitt): Uncomment this assert when the bug is fixed.
-        # self.assertEqual(current_usage['absolute']['totalInstancesUsed'] - 1,
-        #                 ending_usage['absolute']['totalInstancesUsed'])
+        self.assertEqual(current_usage['absolute']['totalCoresUsed'] - 1,
+                         ending_usage['absolute']['totalCoresUsed'])
+        self.assertEqual(current_usage['absolute']['totalRAMUsed'] - 512,
+                         ending_usage['absolute']['totalRAMUsed'])
 
     def test_delete_while_booting_instance_destroy_fails(self):
         # Get the current quota usage
@@ -139,6 +144,10 @@ class TestDeleteWhileBootingInstanceNotFound(
         current_usage = self.api.get_limits()
         self.assertEqual(starting_usage['absolute']['totalInstancesUsed'] + 1,
                          current_usage['absolute']['totalInstancesUsed'])
+        self.assertEqual(starting_usage['absolute']['totalCoresUsed'] + 1,
+                         current_usage['absolute']['totalCoresUsed'])
+        self.assertEqual(starting_usage['absolute']['totalRAMUsed'] + 512,
+                         current_usage['absolute']['totalRAMUsed'])
 
         # Stub out the API to make the instance destroy raise InstanceNotFound,
         # simulating if conductor already deleted it.
@@ -156,11 +165,12 @@ class TestDeleteWhileBootingInstanceNotFound(
         self._delete_server(server['id'])
         self._wait_for_instance_delete(server['id'])
 
-        # Now check the quota again. Because of the bug, we won't have
-        # decremented quota.
+        # Now check the quota again. Since the bug is fixed, ending usage
+        # should be current usage - 1.
         ending_usage = self.api.get_limits()
-        self.assertEqual(current_usage['absolute']['totalInstancesUsed'],
+        self.assertEqual(current_usage['absolute']['totalInstancesUsed'] - 1,
                          ending_usage['absolute']['totalInstancesUsed'])
-        # TODO(melwitt): Uncomment this assert when the bug is fixed.
-        # self.assertEqual(current_usage['absolute']['totalInstancesUsed'] - 1,
-        #                 ending_usage['absolute']['totalInstancesUsed'])
+        self.assertEqual(current_usage['absolute']['totalCoresUsed'] - 1,
+                         ending_usage['absolute']['totalCoresUsed'])
+        self.assertEqual(current_usage['absolute']['totalRAMUsed'] - 512,
+                         ending_usage['absolute']['totalRAMUsed'])

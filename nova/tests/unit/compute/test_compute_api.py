@@ -1467,7 +1467,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertTrue(
                 self.compute_api._delete_while_booting(self.context,
                                                        inst))
-            self.assertFalse(quota_mock.commit.called)
+            self.assertTrue(quota_mock.commit.called)
 
         test()
 
@@ -1476,6 +1476,7 @@ class _ComputeAPIUnitTestMixIn(object):
         inst = self._create_instance_obj()
         quota_mock = mock.MagicMock()
 
+        @mock.patch('nova.quota.QUOTAS.usage_refresh')
         @mock.patch.object(self.compute_api, '_attempt_delete_of_buildrequest',
                            return_value=True)
         @mock.patch.object(self.compute_api, '_lookup_instance',
@@ -1483,12 +1484,14 @@ class _ComputeAPIUnitTestMixIn(object):
                                instance_id='fake'))
         @mock.patch.object(self.compute_api, '_create_reservations',
                            return_value=quota_mock)
-        def test(mock_create_res, mock_lookup, mock_attempt):
+        def test(mock_create_res, mock_lookup, mock_attempt, mock_refresh):
             self.assertTrue(
                 self.compute_api._delete_while_booting(self.context,
                                                        inst))
             self.assertFalse(quota_mock.commit.called)
             self.assertTrue(quota_mock.rollback.called)
+            mock_refresh.assert_called_once_with(
+                self.context, resource_names=['instances', 'cores', 'ram'])
 
         test()
 
