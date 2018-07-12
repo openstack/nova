@@ -236,7 +236,7 @@ But here is the rough idea:
    with limited deployer and doc impact, it probably doesn't need a
    spec.
 
-If you are unsure, please ask johnthetubaguy on IRC, or one of the other
+If you are unsure, please ask the PTL on IRC, or one of the other
 nova-drivers.
 
 How do I get my blueprint approved?
@@ -254,7 +254,7 @@ So you need your blueprint approved? Here is how:
 -  if you need a spec, then please submit a nova-spec for review, see:
    https://docs.openstack.org/infra/manual/developers.html
 
-Got any more questions? Contact johnthetubaguy or one of the other
+Got any more questions? Contact the PTL or one of the other
 nova-specs-core who are awake at the same time as you. IRC is best as
 you will often get an immediate response, if they are too busy send
 him/her an email.
