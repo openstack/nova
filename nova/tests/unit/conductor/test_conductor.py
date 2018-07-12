@@ -2561,7 +2561,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             project_id=self.context.project_id)
         image = 'fake-image'
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
-        legacy_request_spec = fake_spec.to_legacy_request_spec_dict()
         spec_fc_mock.return_value = fake_spec
 
         im_mock.return_value = objects.InstanceMapping(
@@ -2592,9 +2591,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         select_dest_mock.assert_called_once_with(self.context, fake_spec,
                 [inst_obj.uuid], return_objects=True, return_alternates=True)
         prep_resize_mock.assert_called_once_with(
-            self.context, inst_obj, legacy_request_spec['image'],
+            self.context, inst_obj, fake_spec.image,
             flavor, hosts[0]['host'], _preallocate_migration.return_value,
-            request_spec=legacy_request_spec,
+            request_spec=fake_spec,
             filter_properties=legacy_filter_props,
             node=hosts[0]['nodename'], clean_shutdown=True, host_list=[])
         notify_mock.assert_called_once_with(self.context, inst_obj.uuid,

@@ -163,9 +163,8 @@ class MigrationTask(base.TaskBase):
         return migration
 
     def _execute(self):
-        # TODO(sbauza): Remove that once prep_resize() accepts a  RequestSpec
-        # object in the signature and all the scheduler.utils methods too
-        legacy_spec = self.request_spec.to_legacy_request_spec_dict()
+        # TODO(sbauza): Remove once all the scheduler.utils methods accept a
+        # RequestSpec object in the signature.
         legacy_props = self.request_spec.to_legacy_filter_properties_dict()
         scheduler_utils.setup_instance_group(self.context, self.request_spec)
         # If a target host is set in a requested destination,
@@ -285,20 +284,19 @@ class MigrationTask(base.TaskBase):
             availability_zones.get_host_availability_zone(
                 self.context, host))
 
-        # FIXME(sbauza): Serialize/Unserialize the legacy dict because of
-        # oslo.messaging #1529084 to transform datetime values into strings.
-        # tl;dr: datetimes in dicts are not accepted as correct values by the
-        # rpc fake driver.
-        legacy_spec = jsonutils.loads(jsonutils.dumps(legacy_spec))
-
         LOG.debug("Calling prep_resize with selected host: %s; "
                   "Selected node: %s; Alternates: %s", host, node,
                   self.host_list, instance=self.instance)
         # RPC cast to the destination host to start the migration process.
         self.compute_rpcapi.prep_resize(
-            self.context, self.instance, legacy_spec['image'],
+            # NOTE(mriedem): Using request_spec.image here is potentially
+            # dangerous if it is not kept up to date (i.e. rebuild/unshelve);
+            # seems like the sane thing to do would be to pass the current
+            # instance.image_meta since that is what MoveClaim will use for
+            # any NUMA topology claims on the destination host...
+            self.context, self.instance, self.request_spec.image,
             self.flavor, host, migration,
-            request_spec=legacy_spec, filter_properties=legacy_props,
+            request_spec=self.request_spec, filter_properties=legacy_props,
             node=node, clean_shutdown=self.clean_shutdown,
             host_list=self.host_list)
 

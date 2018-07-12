@@ -487,7 +487,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.0')
+    target = messaging.Target(version='5.1')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1416,6 +1416,8 @@ class ComputeManager(manager.Manager):
         LOG.error('Error: %s', exc_info[1], instance_uuid=instance_uuid,
                   exc_info=exc_info)
 
+    # TODO(mriedem): This method is confusing and only ever used for resize
+    # reschedules; remove it and merge into _reschedule_resize_or_reraise.
     def _reschedule(self, context, request_spec, filter_properties,
             instance, reschedule_method, method_args, task_state,
             exc_info=None, host_list=None):
@@ -1426,11 +1428,6 @@ class ComputeManager(manager.Manager):
         if not retry:
             # no retry information, do not reschedule.
             LOG.debug("Retry info not present, will not reschedule",
-                      instance_uuid=instance_uuid)
-            return
-
-        if not request_spec:
-            LOG.debug("No request spec, will not reschedule",
                       instance_uuid=instance_uuid)
             return
 
@@ -1446,7 +1443,8 @@ class ComputeManager(manager.Manager):
             retry['exc'] = traceback.format_exception_only(exc_info[0],
                                     exc_info[1])
 
-        reschedule_method(context, *method_args, host_list=host_list)
+        reschedule_method(context, *method_args, request_spec=request_spec,
+                          host_list=host_list)
         return True
 
     @periodic_task.periodic_task
@@ -4238,7 +4236,7 @@ class ComputeManager(manager.Manager):
                 self._revert_allocation(context, instance, migration)
                 # try to re-schedule the resize elsewhere:
                 exc_info = sys.exc_info()
-                self._reschedule_resize_or_reraise(context, image, instance,
+                self._reschedule_resize_or_reraise(context, instance,
                         exc_info, instance_type, request_spec,
                         filter_properties, host_list)
             finally:
@@ -4253,13 +4251,11 @@ class ComputeManager(manager.Manager):
                     context, instance, self.host,
                     fields.NotificationPhase.END, instance_type)
 
-    def _reschedule_resize_or_reraise(self, context, image, instance, exc_info,
+    def _reschedule_resize_or_reraise(self, context, instance, exc_info,
             instance_type, request_spec, filter_properties, host_list):
         """Try to re-schedule the resize or re-raise the original error to
         error out the instance.
         """
-        if not request_spec:
-            request_spec = {}
         if not filter_properties:
             filter_properties = {}
 

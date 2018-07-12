@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 36
+SERVICE_VERSION = 37
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -149,6 +149,8 @@ SERVICE_VERSION_HISTORY = (
     # Version 36: Indicates that nova-compute supports specifying volume
     # type when booting a volume-backed server.
     {'compute_rpc': '5.0'},
+    # Version 37: prep_resize takes a RequestSpec object
+    {'compute_rpc': '5.1'},
 )
 
 

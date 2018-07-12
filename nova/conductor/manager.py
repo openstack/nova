@@ -300,7 +300,11 @@ class ComputeTaskManager(base.Base):
 
         # NOTE(sbauza): If a reschedule occurs when prep_resize(), then
         # it only provides filter_properties legacy dict back to the
-        # conductor with no RequestSpec part of the payload.
+        # conductor with no RequestSpec part of the payload for <Stein
+        # computes.
+        # TODO(mriedem): We should be able to remove this in Train when we
+        # only support >=Stein computes and request_spec is passed back to
+        # conductor on reschedule.
         if not request_spec:
             # Make sure we hydrate a new RequestSpec object with the new flavor
             # and not the nested one from the instance

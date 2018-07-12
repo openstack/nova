@@ -347,7 +347,9 @@ class ComputeAPI(object):
         can accept 4.x calls from Pike nodes, and can be pinned to 4.x
         for Pike compatibility. All new changes should go against 5.x.
 
-        * 5.0  - Remove 4.x compatibility
+        * 5.0 - Remove 4.x compatibility
+        * 5.1 - Make prep_resize() take a RequestSpec object rather than a
+                legacy dict.
     '''
 
     VERSION_ALIASES = {
@@ -728,7 +730,15 @@ class ComputeAPI(object):
     def prep_resize(self, ctxt, instance, image, instance_type, host,
                     migration, request_spec, filter_properties, node,
                     clean_shutdown, host_list):
-        image_p = jsonutils.to_primitive(image)
+        # TODO(mriedem): We should pass the ImageMeta object through to the
+        # compute but that also requires plumbing changes through the resize
+        # flow for other methods like resize_instance and finish_resize.
+        image_p = objects_base.obj_to_primitive(image)
+        # FIXME(sbauza): Serialize/Unserialize the legacy dict because of
+        # oslo.messaging #1529084 to transform datetime values into strings.
+        # tl;dr: datetimes in dicts are not accepted as correct values by the
+        # rpc fake driver.
+        image_p = jsonutils.loads(jsonutils.dumps(image_p))
         msg_args = {'instance': instance,
                     'instance_type': instance_type,
                     'image': image_p,
@@ -739,7 +749,11 @@ class ComputeAPI(object):
                     'clean_shutdown': clean_shutdown,
                     'host_list': host_list}
         client = self.router.client(ctxt)
-        version = '5.0'
+        version = '5.1'
+        if not client.can_send_version(version):
+            msg_args['request_spec'] = (
+                request_spec.to_legacy_request_spec_dict())
+            version = '5.0'
         cctxt = client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'prep_resize', **msg_args)
 
