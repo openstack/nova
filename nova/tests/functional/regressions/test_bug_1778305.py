@@ -49,19 +49,13 @@ class InstanceListWithOldDeletedServiceTestCase(test.TestCase):
                                 host='fake-host')
         inst.create()
 
-        # TODO(melwitt): Remove this assert when the bug is fixed.
-        self.assertRaises(nova.exception.ServiceTooOld,
-                          objects.InstanceList.get_by_filters,
-                          self.context, {}, expected_attrs=['services'])
-
-        # TODO(melwitt): Uncomment these asserts when the bug is fixed.
-        # insts = objects.InstanceList.get_by_filters(
-        #    self.context, {}, expected_attrs=['services'])
-        # self.assertEqual(1, len(insts))
-        # self.assertEqual(2, len(insts[0].services))
+        insts = objects.InstanceList.get_by_filters(
+            self.context, {}, expected_attrs=['services'])
+        self.assertEqual(1, len(insts))
+        self.assertEqual(2, len(insts[0].services))
         # Deleted service should not have a UUID
-        # for service in insts[0].services:
-        #    if service.deleted:
-        #        self.assertNotIn('uuid', service)
-        #    else:
-        #        self.assertIsNotNone(service.uuid)
+        for service in insts[0].services:
+            if service.deleted:
+                self.assertNotIn('uuid', service)
+            else:
+                self.assertIsNotNone(service.uuid)
