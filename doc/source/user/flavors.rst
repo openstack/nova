@@ -675,6 +675,8 @@ Required traits
     The FilterScheduler is currently the only scheduler driver that supports
     this feature.
 
+    Traits can be managed using the `osc-placement plugin`_.
+
 Forbidden traits
     Added in the 18.0.0 Rocky release.
 
@@ -690,3 +692,7 @@ Forbidden traits
 
     The FilterScheduler is currently the only scheduler driver that supports
     this feature.
+
+    Traits can be managed using the `osc-placement plugin`_.
+
+.. _osc-placement plugin: https://docs.openstack.org/osc-placement/latest/index.html
