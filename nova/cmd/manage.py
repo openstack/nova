@@ -1778,6 +1778,8 @@ class PlacementCommands(object):
             given instance cannot be found
         :raises: AllocationCreateFailed if unable to create allocations for
             a given instance against a given compute node resource provider
+        :raises: AllocationUpdateFailed if unable to update allocations for
+            a given instance with consumer project/user information
         """
         # Keep a cache of instance.node to compute node resource provider UUID.
         # This will save some queries for non-ironic instances to the
@@ -1817,15 +1819,45 @@ class PlacementCommands(object):
                     continue
 
                 allocations = placement.get_allocations_for_consumer(
-                    ctxt, instance.uuid)
-                if allocations:
-                    output(_('Instance %s already has allocations.') %
-                           instance.uuid)
-                    # TODO(mriedem): Check to see if the allocation project_id
+                    ctxt, instance.uuid, include_project_user=True)
+                # get_allocations_for_consumer uses safe_connect which will
+                # return None if we can't communicate with Placement, and the
+                # response can have an empty {'allocations': {}} response if
+                # there are no allocations for the instance so handle both
+                if allocations and allocations.get('allocations'):
+                    # Check to see if the allocation project_id
                     # and user_id matches the instance project and user and
-                    # fix the allocation project/user if they don't match; see
-                    # blueprint add-consumer-generation for details.
-                    continue
+                    # fix the allocation project/user if they don't match.
+                    # Allocations created before Placement API version 1.8
+                    # did not have a project_id/user_id, and migrated records
+                    # could have sentinel values from config.
+                    if (allocations.get('project_id') ==
+                            instance.project_id and
+                            allocations.get('user_id') == instance.user_id):
+                        output(_('Instance %s already has allocations with '
+                                 'matching consumer project/user.') %
+                               instance.uuid)
+                        continue
+                    # We have an instance with allocations but not the correct
+                    # project_id/user_id, so we want to update the allocations
+                    # and re-put them. We don't use put_allocations here
+                    # because we don't want to mess up shared or nested
+                    # provider allocations.
+                    allocations['project_id'] = instance.project_id
+                    allocations['user_id'] = instance.user_id
+                    # We use 1.12 for PUT /allocations/{consumer_id} to mirror
+                    # the body structure from get_allocations_for_consumer.
+                    # TODO(mriedem): Pass a consumer generation using 1.28.
+                    resp = placement.put('/allocations/%s' % instance.uuid,
+                                         allocations, version='1.12')
+                    if resp:
+                        num_processed += 1
+                        output(_('Successfully updated allocations for '
+                                 'instance %s.') % instance.uuid)
+                        continue
+                    else:
+                        raise exception.AllocationUpdateFailed(
+                            instance=instance.uuid, error=resp.text)
 
                 # This instance doesn't have allocations so we need to find
                 # its compute node resource provider.
@@ -1866,12 +1898,14 @@ class PlacementCommands(object):
 
     @action_description(
         _("Iterates over non-cell0 cells looking for instances which do "
-          "not have allocations in the Placement service and which are not "
-          "undergoing a task state transition. For each instance found, "
-          "allocations are created against the compute node resource provider "
-          "for that instance based on the flavor associated with the "
-          "instance. This command requires that the [api_database]/connection "
-          "and [placement] configuration options are set."))
+          "not have allocations in the Placement service, or have incomplete "
+          "consumer project_id/user_id values in existing allocations, and "
+          "which are not undergoing a task state transition. For each "
+          "instance found, allocations are created (or updated) against the "
+          "compute node resource provider for that instance based on the "
+          "flavor associated with the instance. This command requires that "
+          "the [api_database]/connection and [placement] configuration "
+          "options are set."))
     @args('--max-count', metavar='<max_count>', dest='max_count',
           help='Maximum number of instances to process. If not specified, all '
                'instances in each cell will be mapped in batches of 50. '
@@ -1888,8 +1922,8 @@ class PlacementCommands(object):
         * 0: Command completed successfully and allocations were created.
         * 1: --max-count was reached and there are more instances to process.
         * 2: Unable to find a compute node record for a given instance.
-        * 3: Unable to create allocations for an instance against its
-             compute node resource provider.
+        * 3: Unable to create (or update) allocations for an instance against
+             its compute node resource provider.
         * 4: Command completed successfully but no allocations were created.
         * 127: Invalid input.
         """
@@ -1961,7 +1995,8 @@ class PlacementCommands(object):
                 except exception.ComputeHostNotFound as e:
                     print(e.format_message())
                     return 2
-                except exception.AllocationCreateFailed as e:
+                except (exception.AllocationCreateFailed,
+                        exception.AllocationUpdateFailed) as e:
                     print(e.format_message())
                     return 3
 

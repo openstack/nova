@@ -14,10 +14,13 @@ import fixtures
 from six.moves import StringIO
 
 from nova.cmd import manage
+from nova import config
 from nova import context
 from nova import objects
 from nova import test
 from nova.tests.functional import integrated_helpers
+
+CONF = config.CONF
 
 
 class NovaManageDBIronicTest(test.TestCase):
@@ -585,3 +588,57 @@ class TestNovaManagePlacementHealAllocations(
         result = self.cli.heal_allocations(verbose=True)
         self.assertEqual(0, result, self.output.getvalue())
         self.assertIn('Processed 1 instances.', self.output.getvalue())
+
+    def test_heal_allocations_update_sentinel_consumer(self):
+        """Tests the scenario that allocations were created before microversion
+        1.8 when consumer (project_id and user_id) were not required so the
+        consumer information is using sentinel values from config.
+
+        Since the CachingScheduler used in this test class won't actually
+        create allocations during scheduling, we have to create the allocations
+        out-of-band and then run our heal routine to see they get updated with
+        the instance project and user information.
+        """
+        server, rp_uuid = self._boot_and_assert_no_allocations(
+            self.flavor, 'cell1')
+        # Now we'll create allocations using microversion < 1.8 to so that
+        # placement creates the consumer record with the config-based project
+        # and user values.
+        alloc_body = {
+            "allocations": [
+                {
+                    "resource_provider": {
+                        "uuid": rp_uuid
+                    },
+                    "resources": {
+                        "MEMORY_MB": self.flavor['ram'],
+                        "VCPU": self.flavor['vcpus'],
+                        "DISK_GB": self.flavor['disk']
+                    }
+                }
+            ]
+        }
+        self.placement_api.put('/allocations/%s' % server['id'], alloc_body)
+        # Make sure we did that correctly. Use version 1.12 so we can assert
+        # the project_id and user_id are based on the sentinel values.
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id'], version='1.12').body
+        self.assertEqual(CONF.placement.incomplete_consumer_project_id,
+                         allocations['project_id'])
+        self.assertEqual(CONF.placement.incomplete_consumer_user_id,
+                         allocations['user_id'])
+        allocations = allocations['allocations']
+        self.assertIn(rp_uuid, allocations)
+        self.assertFlavorMatchesAllocation(
+            self.flavor, allocations[rp_uuid]['resources'])
+        # Now run heal_allocations which should update the consumer info.
+        result = self.cli.heal_allocations(verbose=True)
+        self.assertEqual(0, result, self.output.getvalue())
+        output = self.output.getvalue()
+        self.assertIn('Successfully updated allocations for instance', output)
+        self.assertIn('Processed 1 instances.', output)
+        # Now assert that the consumer was actually updated.
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id'], version='1.12').body
+        self.assertEqual(server['tenant_id'], allocations['project_id'])
+        self.assertEqual(server['user_id'], allocations['user_id'])

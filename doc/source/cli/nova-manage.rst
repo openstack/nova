@@ -296,6 +296,11 @@ Placement
     the compute node resource provider for that instance based on the flavor
     associated with the instance.
 
+    There is also a special case handled for instances that *do* have
+    allocations created before Placement API microversion 1.8 where project_id
+    and user_id values were required. For those types of allocations, the
+    project_id and user_id are updated using the values from the instance.
+
     Specify ``--max-count`` to control the maximum number of instances to
     process. If not specified, all instances in each cell will be mapped in
     batches of 50. If you have a large number of instances, consider
@@ -311,7 +316,7 @@ Placement
     * 0: Command completed successfully and allocations were created.
     * 1: --max-count was reached and there are more instances to process.
     * 2: Unable to find a compute node record for a given instance.
-    * 3: Unable to create allocations for an instance against its
+    * 3: Unable to create (or update) allocations for an instance against its
       compute node resource provider.
     * 4: Command completed successfully but no allocations were created.
     * 127: Invalid input.

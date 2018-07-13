@@ -3202,7 +3202,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         self.client.update_instance_allocation(self.context, cn, inst, 1)
         self.assertFalse(mock_put.called)
         mock_get.assert_called_once_with(
-            '/allocations/%s' % inst.uuid,
+            '/allocations/%s' % inst.uuid, version='1.12',
             global_request_id=self.context.global_id)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'

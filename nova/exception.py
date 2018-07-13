@@ -2286,6 +2286,11 @@ class AllocationCreateFailed(NovaException):
                 'against resource provider %(provider)s.')
 
 
+class AllocationUpdateFailed(NovaException):
+    msg_fmt = _('Failed to update allocations for instance %(instance)s. '
+                'Error: %(error)s')
+
+
 class CertificateValidationFailed(NovaException):
     msg_fmt = _("Image signature certificate validation failed for "
                 "certificate: %(cert_uuid)s. %(reason)s")

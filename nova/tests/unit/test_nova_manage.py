@@ -35,6 +35,7 @@ from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.db import fakes as db_fakes
+from nova.tests.unit import fake_requests
 from nova.tests.unit.objects import test_network
 from nova.tests import uuidsentinel
 
@@ -2489,6 +2490,114 @@ class TestNovaManagePlacement(test.NoDBTestCase):
             test.MatchType(context.RequestContext), uuidsentinel.node,
             uuidsentinel.instance, mock.sentinel.resources, 'fake-project',
             'fake-user')
+
+    @mock.patch('nova.objects.CellMappingList.get_all',
+                return_value=objects.CellMappingList(objects=[
+                    objects.CellMapping(name='cell1',
+                                        uuid=uuidsentinel.cell1)]))
+    @mock.patch('nova.objects.InstanceList.get_by_filters',
+                # Called twice, first returns 1 instance, second returns []
+                side_effect=(
+                    objects.InstanceList(objects=[
+                        objects.Instance(
+                            uuid=uuidsentinel.instance, host='fake',
+                            node='fake', task_state=None,
+                            project_id='fake-project', user_id='fake-user')]),
+                    objects.InstanceList()))
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
+                new_callable=mock.NonCallableMock)  # assert not called
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
+                return_value=fake_requests.FakeResponse(204))
+    def test_heal_allocations_sentinel_consumer(
+            self, mock_put, mock_get_compute_node, mock_get_allocs,
+            mock_get_instances, mock_get_all_cells):
+        """Tests the scenario that there are allocations created using
+        placement API microversion < 1.8 where project/user weren't provided.
+        The allocations will be re-put with the instance project_id/user_id
+        values. Note that GET /allocations/{consumer_id} since commit f44965010
+        will create the missing consumer record using the config option
+        sentinels for project and user, so we won't get null back for the
+        consumer project/user.
+        """
+        mock_get_allocs.return_value = {
+            "allocations": {
+                "92637880-2d79-43c6-afab-d860886c6391": {
+                    "generation": 2,
+                    "resources": {
+                        "DISK_GB": 50,
+                        "MEMORY_MB": 512,
+                        "VCPU": 2
+                    }
+                }
+            },
+            "project_id": CONF.placement.incomplete_consumer_project_id,
+            "user_id": CONF.placement.incomplete_consumer_user_id
+        }
+        self.assertEqual(0, self.cli.heal_allocations(verbose=True))
+        self.assertIn('Processed 1 instances.', self.output.getvalue())
+        mock_get_allocs.assert_called_once_with(
+            test.MatchType(context.RequestContext), uuidsentinel.instance,
+            include_project_user=True)
+        expected_put_data = mock_get_allocs.return_value
+        expected_put_data['project_id'] = 'fake-project'
+        expected_put_data['user_id'] = 'fake-user'
+        mock_put.assert_called_once_with(
+            '/allocations/%s' % uuidsentinel.instance, expected_put_data,
+            version='1.12')
+
+    @mock.patch('nova.objects.CellMappingList.get_all',
+                return_value=objects.CellMappingList(objects=[
+                    objects.CellMapping(name='cell1',
+                                        uuid=uuidsentinel.cell1)]))
+    @mock.patch('nova.objects.InstanceList.get_by_filters',
+                return_value=objects.InstanceList(objects=[
+                    objects.Instance(
+                        uuid=uuidsentinel.instance, host='fake', node='fake',
+                        task_state=None, project_id='fake-project',
+                        user_id='fake-user')]))
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
+                return_value=fake_requests.FakeResponse(
+                    409, content='Inventory and/or allocations changed while '
+                                 'attempting to allocate'))
+    def test_heal_allocations_sentinel_consumer_put_fails(
+            self, mock_put, mock_get_allocs, mock_get_instances,
+            mock_get_all_cells):
+        """Tests the scenario that there are allocations created using
+        placement API microversion < 1.8 where project/user weren't provided
+        and there was no consumer. The allocations will be re-put with the
+        instance project_id/user_id values but that fails with a 409 so a
+        return code of 3 is expected from the command.
+        """
+        mock_get_allocs.return_value = {
+            "allocations": {
+                "92637880-2d79-43c6-afab-d860886c6391": {
+                    "generation": 2,
+                    "resources": {
+                        "DISK_GB": 50,
+                        "MEMORY_MB": 512,
+                        "VCPU": 2
+                    }
+                }
+            },
+            "project_id": CONF.placement.incomplete_consumer_project_id,
+            "user_id": CONF.placement.incomplete_consumer_user_id
+        }
+        self.assertEqual(3, self.cli.heal_allocations(verbose=True))
+        self.assertIn(
+            'Inventory and/or allocations changed', self.output.getvalue())
+        mock_get_allocs.assert_called_once_with(
+            test.MatchType(context.RequestContext), uuidsentinel.instance,
+            include_project_user=True)
+        expected_put_data = mock_get_allocs.return_value
+        expected_put_data['project_id'] = 'fake-project'
+        expected_put_data['user_id'] = 'fake-user'
+        mock_put.assert_called_once_with(
+            '/allocations/%s' % uuidsentinel.instance, expected_put_data,
+            version='1.12')
 
 
 class TestNovaManageMain(test.NoDBTestCase):
