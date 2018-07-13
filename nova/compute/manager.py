@@ -1275,15 +1275,28 @@ class ComputeManager(manager.Manager):
         @utils.synchronized(group_hint)
         def _do_validation(context, instance, group_hint):
             group = objects.InstanceGroup.get_by_hint(context, group_hint)
-            if 'anti-affinity' in group.policies:
-                group_hosts = group.get_hosts(exclude=[instance.uuid])
-                if self.host in group_hosts:
+            if group.policy and 'anti-affinity' == group.policy:
+                instances_uuids = objects.InstanceList.get_uuids_by_host(
+                    context, self.host)
+                ins_on_host = set(instances_uuids)
+                members = set(group.members)
+                # Determine the set of instance group members on this host
+                # which are not the instance in question. This is used to
+                # determine how many other members from the same anti-affinity
+                # group can be on this host.
+                members_on_host = ins_on_host & members - set([instance.uuid])
+                rules = group.rules
+                if rules and 'max_server_per_host' in rules:
+                    max_server = rules['max_server_per_host']
+                else:
+                    max_server = 1
+                if len(members_on_host) >= max_server:
                     msg = _("Anti-affinity instance group policy "
                             "was violated.")
                     raise exception.RescheduledException(
                             instance_uuid=instance.uuid,
                             reason=msg)
-            elif 'affinity' in group.policies:
+            elif group.policy and 'affinity' == group.policy:
                 group_hosts = group.get_hosts(exclude=[instance.uuid])
                 if group_hosts and self.host not in group_hosts:
                     msg = _("Affinity instance group policy was violated.")
