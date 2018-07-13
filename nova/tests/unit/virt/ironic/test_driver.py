@@ -2875,6 +2875,25 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
                           self.driver.rescue,
                           self.ctx, instance, None, None, 'xyz')
 
+    @mock.patch.object(ironic_driver.IronicDriver, '_can_send_version')
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test_rescue_api_unavailable(self, mock_log, mock_csv):
+        node = ironic_utils.get_test_node()
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+        mock_csv.side_effect = exception.IronicAPIVersionNotAvailable(
+            version='1.38')
+
+        def _fake_log_error(msg, *args, **kwargs):
+            regex = r'Required Ironic API version.*for rescuing.'
+            self.assertThat(msg, matchers.MatchesRegex(regex))
+        mock_log.error.side_effect = _fake_log_error
+
+        self.assertRaises(exception.InstanceRescueFailure,
+                          self.driver.rescue,
+                          self.ctx, instance, None, None, 'xyz')
+        self.assertTrue(mock_log.error.called)
+
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
     def test_unrescue(self, mock_sps, mock_looping):
@@ -2932,6 +2951,26 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
         self.assertRaises(exception.InstanceUnRescueFailure,
                           self.driver.unrescue,
                           instance, None)
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_can_send_version')
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test_unrescue_api_unavailable(self, mock_log, mock_csv):
+        node = ironic_utils.get_test_node()
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+
+        mock_csv.side_effect = exception.IronicAPIVersionNotAvailable(
+            version='1.38')
+
+        def _fake_log_error(msg, *args, **kwargs):
+            regex = r'Required Ironic API version.*for unrescuing.'
+            self.assertThat(msg, matchers.MatchesRegex(regex))
+        mock_log.error.side_effect = _fake_log_error
+
+        self.assertRaises(exception.InstanceUnRescueFailure,
+                          self.driver.unrescue,
+                          instance, None)
+        self.assertTrue(mock_log.error.called)
 
     def test__can_send_version(self):
         self.assertIsNone(
