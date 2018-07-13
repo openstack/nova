@@ -704,6 +704,39 @@ class ServicesTestV21(test.TestCase):
                               self.controller.delete, self.req, 1234)
             self.assertTrue(host_api.service_delete.called)
 
+    @mock.patch('nova.objects.InstanceList.get_uuids_by_host',
+                return_value=objects.InstanceList())
+    @mock.patch('nova.objects.HostMapping.get_by_host',
+                side_effect=exception.HostMappingNotFound(name='host1'))
+    def test_compute_service_delete_host_mapping_not_found(
+            self, get_instances, get_hm):
+        """Tests that we are still able to successfully delete a nova-compute
+        service even if the HostMapping is not found.
+        """
+        @mock.patch.object(self.controller.host_api, 'service_get_by_id',
+                           return_value=objects.Service(
+                               host='host1', binary='nova-compute',
+                               compute_node=objects.ComputeNode()))
+        @mock.patch.object(self.controller.aggregate_api,
+                           'get_aggregates_by_host',
+                           return_value=objects.AggregateList())
+        @mock.patch.object(self.controller.placementclient,
+                           'delete_resource_provider')
+        @mock.patch.object(self.controller.host_api, 'service_delete')
+        def _test(service_delete, delete_resource_provider,
+                  get_aggregates_by_host, service_get_by_id):
+            self.controller.delete(self.req, 2)
+            ctxt = self.req.environ['nova.context']
+            service_get_by_id.assert_called_once_with(ctxt, 2)
+            get_instances.assert_called_once_with(ctxt, 'host1')
+            get_aggregates_by_host.assert_called_once_with(ctxt, 'host1')
+            delete_resource_provider.assert_called_once_with(
+                ctxt, service_get_by_id.return_value.compute_node,
+                cascade=True)
+            get_hm.assert_called_once_with(ctxt, 'host1')
+            service_delete.assert_called_once_with(ctxt, 2)
+        _test()
+
     # This test is just to verify that the servicegroup API gets used when
     # calling the API
     @mock.patch.object(db_driver.DbDriver, 'is_up', side_effect=KeyError)
