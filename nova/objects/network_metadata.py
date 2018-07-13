@@ -18,7 +18,7 @@ from nova.objects import fields
 
 @base.NovaObjectRegistry.register
 class NetworkMetadata(base.NovaObject):
-    """Hold aggregate metadata for a collection on networks.
+    """Hold aggregate metadata for a collection of networks.
 
     This object holds aggregate information for a collection of neutron
     networks. There are two types of network collections we care about and use

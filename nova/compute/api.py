@@ -818,9 +818,8 @@ class API(base.Base):
         # InstancePCIRequests object
         pci_request_info = pci_request.get_pci_requests_from_flavor(
             instance_type)
-
-        network_metadata = self.network_api.create_resource_requests(context,
-            requested_networks, pci_request_info)
+        network_metadata = self.network_api.create_resource_requests(
+            context, requested_networks, pci_request_info)
 
         base_options = {
             'reservation_id': reservation_id,
