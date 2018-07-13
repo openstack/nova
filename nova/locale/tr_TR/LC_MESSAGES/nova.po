@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-04-11 03:31+0000\n"
+"POT-Creation-Date: 2018-07-13 03:26+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -623,13 +623,6 @@ msgstr "PBM etkin ise varsayılan PBM ilkesi gerekir."
 msgid "Deleted %(records)d records from table '%(table_name)s'."
 msgstr "'%(table_name)s' tablosundan %(records)d kayıt silindi."
 
-msgid "Deleting by fixed_range is not supported with the NeutronManager"
-msgstr "fixed_range ile silme NeutronManager ile desteklenmiyor"
-
-#, python-format
-msgid "Destination host:%s must be in the same aggregate as the source server"
-msgstr "Hedef istemci: %s kaynak sunucuyla aynı takımda olmalı"
-
 #, python-format
 msgid "Detected existing vlan with id %(vlan)d"
 msgstr "%(vlan)d kimliğine sahip var olan vlan algılandı"
@@ -943,20 +936,8 @@ msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
 msgstr "Sabit IP %(ip)s %(network_id)s için gereçli bir ip adresi değil."
 
 #, python-format
-msgid "Fixed IP %s has been deleted"
-msgstr "Sabit IP %s silindi"
-
-#, python-format
 msgid "Fixed IP %s is already in use."
 msgstr "Sabit IP %s zaten kullanılıyor."
-
-#, python-format
-msgid "Fixed IP %s not found"
-msgstr "Sabit IP %s bulunamadı"
-
-#, python-format
-msgid "Fixed IP %s not valid"
-msgstr "%s sabit IP'si geçerli değil"
 
 #, python-format
 msgid ""
@@ -1049,10 +1030,6 @@ msgid ""
 msgstr ""
 "İmaj metasına geçirilen nitelik seri bağlantı noktası sayısı değerini "
 "geçmeye izin verilmez."
-
-#, python-format
-msgid "Found no PIF for device %s"
-msgstr "%s aygıtı için PIF bulunamadı"
 
 msgid "Found no disk to snapshot."
 msgstr "Anlık görüntüsü alınacak disk bulunamadı."
@@ -1455,10 +1432,6 @@ msgstr "Geçersiz is_public filtresi [%s]"
 
 msgid "Invalid key_name provided."
 msgstr "Geçersiz anahtar adı verildi."
-
-#, python-format
-msgid "Invalid libvirt version %(version)s"
-msgstr "Geçersiz libvirt sürümü %(version)s"
 
 #, python-format
 msgid "Invalid memory page size '%(pagesize)s'"
@@ -2082,14 +2055,6 @@ msgid "PCI device %(id)s not found"
 msgstr "PCI aygıtı %(id)s bulunamadı"
 
 #, python-format
-msgid ""
-"PIF %(pif_uuid)s for network %(bridge)s has VLAN id %(pif_vlan)d. Expected "
-"%(vlan_num)d"
-msgstr ""
-"%(bridge)s ağı için PIF %(pif_uuid)s %(pif_vlan)d VLAN kimliğine sahip. "
-"Beklenen %(vlan_num)d"
-
-#, python-format
 msgid "PIF %s does not contain IP address"
 msgstr "PIF %s IP adresi içermiyor"
 
@@ -2309,11 +2274,6 @@ msgstr "Kök öğe ismi '%(name)s' olmalı '%(tag)s' değil"
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "Kural (%s) bulunamadı"
-
-#, python-format
-msgid "Running Nova with parallels virt_type requires libvirt version %s"
-msgstr ""
-"Nova'yı parallels virt_type ile çalıştırma libvirt sürümü %s'e ihtiyaç duyar"
 
 #, python-format
 msgid "Running cmd (subprocess): %s"
@@ -2722,9 +2682,6 @@ msgstr ""
 
 msgid "Type and Code must be integers for ICMP protocol type"
 msgstr "ICMP iletişim kuralı türü için Tür ve Kod tam sayı olmalı"
-
-msgid "UUID is required to delete Neutron Networks"
-msgstr "Neutron Ağlarını silmek için UUID gerekiyor"
 
 msgid "Unable to authenticate Ironic client."
 msgstr "Ironic istemcisi doğrulanamıyor."
@@ -3192,9 +3149,6 @@ msgstr "dosya ismi None olamaz"
 #, python-format
 msgid "fmt=%(fmt)s backed by: %(backing_file)s"
 msgstr "%(backing_file)s tarafından desteklenen fmt=%(fmt)s"
-
-msgid "fping utility is not found."
-msgstr "fping aracı bulunamadı."
 
 #, python-format
 msgid "href %s does not contain version"

@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-04-11 03:31+0000\n"
+"POT-Creation-Date: 2018-07-13 03:26+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -726,13 +726,6 @@ msgstr "Výchozí zásada PVM je pro povolení PBM vyžadována."
 msgid "Deleted %(records)d records from table '%(table_name)s'."
 msgstr "Smazáno %(records)d záznamů z tabulky '%(table_name)s'."
 
-msgid "Deleting by fixed_range is not supported with the NeutronManager"
-msgstr "NeutronManager nepodporuje mazání pomocí rozsahu pevných ip adres"
-
-#, python-format
-msgid "Destination host:%s must be in the same aggregate as the source server"
-msgstr "Cílový hostitel:%s musí být ve stejném agregátu jako zdrojový server"
-
 #, python-format
 msgid "Detected existing vlan with id %(vlan)d"
 msgstr "Zjištěna existující vlan s id %(vlan)d"
@@ -1075,20 +1068,8 @@ msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
 msgstr "Pevná IP %(ip)s není platnou ip adresou pro síť %(network_id)s."
 
 #, python-format
-msgid "Fixed IP %s has been deleted"
-msgstr "Pevná IP adresa %s byla smazána"
-
-#, python-format
 msgid "Fixed IP %s is already in use."
 msgstr "Pevná IP adresa %s se již používá."
-
-#, python-format
-msgid "Fixed IP %s not found"
-msgstr "Pevná IP adresa %s nebyla nalezena"
-
-#, python-format
-msgid "Fixed IP %s not valid"
-msgstr "Pevná Ip adresa %s není platná"
 
 #, python-format
 msgid ""
@@ -1242,10 +1223,6 @@ msgid ""
 msgstr ""
 "Je zakázáno překročit hodnotu z konfigurace ohledně počtu sériových portů "
 "předaných v popisných datech obrazu."
-
-#, python-format
-msgid "Found no PIF for device %s"
-msgstr "Nenalezeno žádné PIF pro zařízení %s"
 
 msgid "Found no disk to snapshot."
 msgstr "Nenalezen žádný disk k pořízení snímku."
@@ -1676,10 +1653,6 @@ msgstr "Neplatný filtr is_public [%s]"
 
 msgid "Invalid key_name provided."
 msgstr "Zadán neplatný název klíče."
-
-#, python-format
-msgid "Invalid libvirt version %(version)s"
-msgstr "Neplatná verze libvirt %(version)s"
 
 #, python-format
 msgid "Invalid memory page size '%(pagesize)s'"
@@ -2343,14 +2316,6 @@ msgid "PCI device request %(requests)s failed"
 msgstr "Žádost zařízení PCI %(requests)s selhala"
 
 #, python-format
-msgid ""
-"PIF %(pif_uuid)s for network %(bridge)s has VLAN id %(pif_vlan)d. Expected "
-"%(vlan_num)d"
-msgstr ""
-"Fyz. rozhraní %(pif_uuid)s sítě %(bridge)s má VLAN id %(pif_vlan)d. "
-"Očekáváno %(vlan_num)d"
-
-#, python-format
 msgid "PIF %s does not contain IP address"
 msgstr "Fyz. rozhraní %s neobsahuje IP adresu"
 
@@ -2607,11 +2572,6 @@ msgstr "Název kořenového prvku by měl být '%(name)s' ne '%(tag)s'"
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "Pravidlo (%s) nenalezeno"
-
-#, python-format
-msgid "Running Nova with parallels virt_type requires libvirt version %s"
-msgstr ""
-"Spuštění Nova s paralelními typy virtualizací vyžaduje libvirt verze %s"
 
 #, python-format
 msgid "Running cmd (subprocess): %s"
@@ -3081,9 +3041,6 @@ msgstr ""
 
 msgid "Type and Code must be integers for ICMP protocol type"
 msgstr "Typ a kód musí být v protokolu ICMP celá čísla"
-
-msgid "UUID is required to delete Neutron Networks"
-msgstr "Pro smazání sítí Neutron je vyžadováno UUID"
 
 #, python-format
 msgid ""
@@ -3629,9 +3586,6 @@ msgstr "Plovoucí IP adresa nenalezena"
 #, python-format
 msgid "fmt=%(fmt)s backed by: %(backing_file)s"
 msgstr "fmt=%(fmt)s zálohováno: %(backing_file)s"
-
-msgid "fping utility is not found."
-msgstr "nástroj fping nenalezen."
 
 #, python-format
 msgid "href %s does not contain version"

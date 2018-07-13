@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-04-11 03:31+0000\n"
+"POT-Creation-Date: 2018-07-13 03:26+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -503,15 +503,6 @@ msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "No se pueden conectar uno o más volúmenes a varias instancias"
 
 #, python-format
-msgid ""
-"Cannot block migrate instance %(uuid)s with mapped volumes. Selective block "
-"device migration feature requires libvirt version %(libvirt_ver)s"
-msgstr ""
-"No se puede bloquear la instancia de  migración %(uuid)s con volúmenes "
-"correlacionados. La característica de migración de dispositivos de bloqueo "
-"selectivo requiere la versión libvirt %(libvirt_ver)s"
-
-#, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "No se puede ejecutar %(method)s en un objecto huérfano %(objtype)s"
 
@@ -820,15 +811,6 @@ msgstr "Se requiere una política PBM por defecto si se habilita PBM."
 #, python-format
 msgid "Deleted %(records)d records from table '%(table_name)s'."
 msgstr "Se han eliminado %(records)d registros de la tabla '%(table_name)s'."
-
-msgid "Deleting by fixed_range is not supported with the NeutronManager"
-msgstr "Eliminar por fixed_range no está soportado por el NeutronManager"
-
-#, python-format
-msgid "Destination host:%s must be in the same aggregate as the source server"
-msgstr ""
-"El anfitrión destino: %s debe estar en el mismo agregado que el servidor "
-"fuente"
 
 #, python-format
 msgid "Detected existing vlan with id %(vlan)d"
@@ -1199,20 +1181,8 @@ msgstr ""
 "La IP fija %(ip)s no es una direccion IP valida para la red %(network_id)s."
 
 #, python-format
-msgid "Fixed IP %s has been deleted"
-msgstr "La IP fija %s se ha suprimido"
-
-#, python-format
 msgid "Fixed IP %s is already in use."
 msgstr "IP fija %s ya está en uso."
-
-#, python-format
-msgid "Fixed IP %s not found"
-msgstr "No se encuentra la IP fija %s "
-
-#, python-format
-msgid "Fixed IP %s not valid"
-msgstr "IP fija %s no válida"
 
 #, python-format
 msgid ""
@@ -1379,10 +1349,6 @@ msgid ""
 msgstr ""
 "Se prohíbe exceder el tipo de serie del número de puertos seriales presentes "
 "en meta imagen."
-
-#, python-format
-msgid "Found no PIF for device %s"
-msgstr "No se ha encontrado ninguna PIF para el dispositivo %s"
 
 msgid "Found no disk to snapshot."
 msgstr "No se ha encontrado disco relacionado a instantánea."
@@ -1852,10 +1818,6 @@ msgid "Invalid key_name provided."
 msgstr "Se ha proporcionado un nombre de clave no válido."
 
 #, python-format
-msgid "Invalid libvirt version %(version)s"
-msgstr "Versión libvirt %(version)s no válida"
-
-#, python-format
 msgid "Invalid memory page size '%(pagesize)s'"
 msgstr "Tamaño de página de memoria no válido '%(pagesize)s'"
 
@@ -2025,20 +1987,10 @@ msgstr "Sólo se admiten límites a partir de vCenter 6.0 "
 msgid "Link Local address is not found.:%s"
 msgstr "No se encuentra la dirección del enlace local.:%s"
 
-msgid "Listing virtual interfaces is not supported by this cloud."
-msgstr "Esta nube no da soporte para mostrar listas de interfaces virtuales."
-
 #, python-format
 msgid "Live migration %(id)s for server %(uuid)s is not in progress."
 msgstr ""
 "La migración en vivo %(id)s para el servidor %(uuid)s no está en curso."
-
-msgid ""
-"Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
-"before it is available."
-msgstr ""
-"La migración en vivo con la API v2.25 no estará disponible hasta que se haya "
-"completado totalmente la acualización de Mitaka."
 
 #, python-format
 msgid "Malformed message body: %(reason)s"
@@ -2621,14 +2573,6 @@ msgid "PCI device request %(requests)s failed"
 msgstr "La solicitud de dispositivo PCI %(requests)s ha fallado"
 
 #, python-format
-msgid ""
-"PIF %(pif_uuid)s for network %(bridge)s has VLAN id %(pif_vlan)d. Expected "
-"%(vlan_num)d"
-msgstr ""
-"PIF %(pif_uuid)s para la red %(bridge)s tiene identificador de VLAN "
-"%(pif_vlan)d. Se esperaba %(vlan_num)d"
-
-#, python-format
 msgid "PIF %s does not contain IP address"
 msgstr "PIC %s no contiene una dirección IP"
 
@@ -2825,9 +2769,6 @@ msgstr ""
 "vCPU  y una vCPU ordinaria.  Consulte hw:cpu_realtime_mask o "
 "hw_cpu_realtime_mask"
 
-msgid "Realtime policy not supported by hypervisor"
-msgstr "El hipervisor no da soporte a la política en tiempo real"
-
 msgid "Request body and URI mismatch"
 msgstr "Discrepancia de URI y cuerpo de solicitud"
 
@@ -2921,19 +2862,6 @@ msgstr "El nombre de elemento raíz debe ser '%(name)s' no '%(tag)s'"
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "No se ha encontrado la regla (%s)"
-
-#, python-format
-msgid "Running Nova with parallels virt_type requires libvirt version %s"
-msgstr ""
-"La ejecución de Nova con paralelos virt_type requiere versión libvirt %s"
-
-#, python-format
-msgid ""
-"Running Nova with qemu/kvm virt_type on %(arch)s requires libvirt version "
-"%(libvirt_ver)s and qemu version %(qemu_ver)s, or greater"
-msgstr ""
-"La ejecución de Nova con qemu/kvm virt_type en %(arch)s requiere la versión "
-"libvirt %(libvirt_ver)s y la versión qemu %(qemu_ver)s o superiores"
 
 #, python-format
 msgid "Running batches of %i until complete"
@@ -3445,9 +3373,6 @@ msgstr "Tipo y Código deben ser enteros del tipo de protocolo ICMP"
 
 msgid "UEFI is not supported"
 msgstr "UEFI no está soportado"
-
-msgid "UUID is required to delete Neutron Networks"
-msgstr "UUID es obligatorio para borrar redes en Neutron"
 
 #, python-format
 msgid ""
@@ -4025,9 +3950,6 @@ msgstr "No se ha encontrado la IP flotante"
 #, python-format
 msgid "fmt=%(fmt)s backed by: %(backing_file)s"
 msgstr "fmt=%(fmt)s respaldado por: %(backing_file)s"
-
-msgid "fping utility is not found."
-msgstr "No se encuentra el programa de utilidad fping."
 
 #, python-format
 msgid "href %s does not contain version"

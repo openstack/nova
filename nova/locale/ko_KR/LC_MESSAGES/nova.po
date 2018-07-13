@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-04-11 03:31+0000\n"
+"POT-Creation-Date: 2018-07-13 03:26+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -478,15 +478,6 @@ msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "복수 인스턴스에 하나 이상의 볼륨을 첨부할 수 없음"
 
 #, python-format
-msgid ""
-"Cannot block migrate instance %(uuid)s with mapped volumes. Selective block "
-"device migration feature requires libvirt version %(libvirt_ver)s"
-msgstr ""
-"맵핑된 볼륨으로 마이그레이션 인스턴스 %(uuid)s을(를) 차단할 수 없습니다. 선택"
-"적 차단 디바이스 마이그레이션 기능에는 libvirt 버전 %(libvirt_ver)s이(가) 필"
-"요합니다."
-
-#, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "고아 %(objtype)s 오브젝트에서 %(method)s 메소드를 호출할 수 없음"
 
@@ -777,13 +768,6 @@ msgstr "PBM을 사용하는 경우 기본 PBM 정책이 필요합니다."
 #, python-format
 msgid "Deleted %(records)d records from table '%(table_name)s'."
 msgstr "테이블 '%(table_name)s'에서 %(records)d개의 레코드를 삭제했습니다."
-
-msgid "Deleting by fixed_range is not supported with the NeutronManager"
-msgstr "NeutronManager는 고정 범위에 의한 삭제를 지원하지 않습니다. "
-
-#, python-format
-msgid "Destination host:%s must be in the same aggregate as the source server"
-msgstr "대상 호스트:%s은(는) 소스 서버와 동일한 집합에 있어야 합니다"
 
 #, python-format
 msgid "Detected existing vlan with id %(vlan)d"
@@ -1169,20 +1153,8 @@ msgstr ""
 "다. "
 
 #, python-format
-msgid "Fixed IP %s has been deleted"
-msgstr "고정 IP %s이(가) 삭제되었음"
-
-#, python-format
 msgid "Fixed IP %s is already in use."
 msgstr "고정 IP %s을(를) 이미 사용하고 있습니다."
-
-#, python-format
-msgid "Fixed IP %s not found"
-msgstr "고정 IP %s을(를) 찾을 수 없음"
-
-#, python-format
-msgid "Fixed IP %s not valid"
-msgstr "고정 IP %s이(가) 올바르지 않음"
 
 #, python-format
 msgid ""
@@ -1345,10 +1317,6 @@ msgid ""
 "meta."
 msgstr ""
 "이미지 메타에 패스된 직렬 포트 수의 플레이버 값 초과가 금지되어 있습니다."
-
-#, python-format
-msgid "Found no PIF for device %s"
-msgstr "%s에 대한 PIF를 찾지 못함"
 
 msgid "Found no disk to snapshot."
 msgstr "스냅샷할 디스크를 찾지 못함."
@@ -1808,10 +1776,6 @@ msgid "Invalid key_name provided."
 msgstr "올바르지 않은 key_name이 제공되었습니다. "
 
 #, python-format
-msgid "Invalid libvirt version %(version)s"
-msgstr "올바르지 않은 libvirt 버전 %(version)s"
-
-#, python-format
 msgid "Invalid memory page size '%(pagesize)s'"
 msgstr "올바르지 않은 메모리 페이지 크기 '%(pagesize)s'"
 
@@ -1971,19 +1935,9 @@ msgstr "vCenter 6.0 이상에서만 지원되는 한계"
 msgid "Link Local address is not found.:%s"
 msgstr "링크 로컬 주소를 찾을 수 없음.:%s"
 
-msgid "Listing virtual interfaces is not supported by this cloud."
-msgstr "이 클라우드에서는 가상 인터페이스 나열이 지원되지 않습니다. "
-
 #, python-format
 msgid "Live migration %(id)s for server %(uuid)s is not in progress."
 msgstr "%(uuid)s 서버의 라이브 마이그레이션 %(id)s이(가) 진행 중이 아닙니다."
-
-msgid ""
-"Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
-"before it is available."
-msgstr ""
-"API v2.25를 사용한 라이브 마이그레이션을 사용할 수 있으려면 모든 Mitaka 업그"
-"레이드를 완료해야 합니다."
 
 #, python-format
 msgid "Malformed message body: %(reason)s"
@@ -2560,14 +2514,6 @@ msgid "PCI device request %(requests)s failed"
 msgstr "PCI 디바이스 요청 %(requests)s에 실패함"
 
 #, python-format
-msgid ""
-"PIF %(pif_uuid)s for network %(bridge)s has VLAN id %(pif_vlan)d. Expected "
-"%(vlan_num)d"
-msgstr ""
-"네트워크 %(bridge)s에 대한 PIF %(pif_uuid)s이(가) VLAN id %(pif_vlan)d을(를) "
-"갖고 있습니다. 예상 %(vlan_num)d"
-
-#, python-format
 msgid "PIF %s does not contain IP address"
 msgstr "PIF %s에 IP 주소가 없음"
 
@@ -2776,9 +2722,6 @@ msgstr ""
 "실시간 정책에는 하나 이상의 1 RT vCPU와 1 일반 vCPU로 구성된 vCPU(s) 마스크"
 "가 필요합니다. hw:cpu_realtime_mask 또는 hw_cpu_realtime_mask를 참조하십시오."
 
-msgid "Realtime policy not supported by hypervisor"
-msgstr "실시간 정책은 하이퍼바이저에서 지원되지 않음"
-
 msgid "Request body and URI mismatch"
 msgstr "요청 본문 및 URI 불일치"
 
@@ -2867,18 +2810,6 @@ msgstr "루트 요소 이름은 '%(tag)s'이(가) 아닌 '%(name)s'이어야 함
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "규칙(%s)을 찾을 수 없음"
-
-#, python-format
-msgid "Running Nova with parallels virt_type requires libvirt version %s"
-msgstr "병렬 virt_type으로 Nova를 실행하려면 libvirt 버전 %s이(가) 필요함"
-
-#, python-format
-msgid ""
-"Running Nova with qemu/kvm virt_type on %(arch)s requires libvirt version "
-"%(libvirt_ver)s and qemu version %(qemu_ver)s, or greater"
-msgstr ""
-"%(arch)s에서 qemu/kvm virt_type을 사용하여 Nova를 실행하려면 libvirt 버전 "
-"%(libvirt_ver)s 및 qemu 버전 %(qemu_ver)s 이상이 필요함"
 
 #, python-format
 msgid "Running batches of %i until complete"
@@ -3380,9 +3311,6 @@ msgstr "ICMP 프로토콜 유형의 경우 유형 및 코드는 정수여야 함
 
 msgid "UEFI is not supported"
 msgstr "UEFI가 지원되지 않음"
-
-msgid "UUID is required to delete Neutron Networks"
-msgstr "Neutron 네트워크를 삭제하기 위해 UUID가 필요합니다. "
 
 #, python-format
 msgid ""
@@ -3948,9 +3876,6 @@ msgstr "Floating IP를 찾을 수 없음"
 #, python-format
 msgid "fmt=%(fmt)s backed by: %(backing_file)s"
 msgstr "fmt=%(fmt)s 백업: %(backing_file)s"
-
-msgid "fping utility is not found."
-msgstr "fping 유틸리티를 찾을 수 없습니다. "
 
 #, python-format
 msgid "href %s does not contain version"

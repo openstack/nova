@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-04-11 03:31+0000\n"
+"POT-Creation-Date: 2018-07-13 03:26+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -443,14 +443,6 @@ msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "無法將一個以上的磁區連接至多個實例"
 
 #, python-format
-msgid ""
-"Cannot block migrate instance %(uuid)s with mapped volumes. Selective block "
-"device migration feature requires libvirt version %(libvirt_ver)s"
-msgstr ""
-"無法封鎖具有已對映磁區的移轉實例 %(uuid)s。選擇性區塊裝置移轉功能需要 "
-"libvirt %(libvirt_ver)s 版"
-
-#, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "無法對孤立的 %(objtype)s 物件呼叫 %(method)s"
 
@@ -726,13 +718,6 @@ msgstr "如果已啟用 PBM，則需要預設 PBM 原則。"
 #, python-format
 msgid "Deleted %(records)d records from table '%(table_name)s'."
 msgstr "已從表格 '%(table_name)s' 刪除 %(records)d 筆記錄。"
-
-msgid "Deleting by fixed_range is not supported with the NeutronManager"
-msgstr "NeutronManager 不支援依 fixed_range 進行刪除"
-
-#, python-format
-msgid "Destination host:%s must be in the same aggregate as the source server"
-msgstr "目的地主機：%s 必須位於來源伺服器所在的聚集中"
 
 #, python-format
 msgid "Detected existing vlan with id %(vlan)d"
@@ -1078,20 +1063,8 @@ msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
 msgstr "固定 IP %(ip)s 不是網路 %(network_id)s 的有效 IP 位址。"
 
 #, python-format
-msgid "Fixed IP %s has been deleted"
-msgstr "已刪除固定 IP %s"
-
-#, python-format
 msgid "Fixed IP %s is already in use."
 msgstr "固定 IP %s 已在使用中。"
-
-#, python-format
-msgid "Fixed IP %s not found"
-msgstr "找不到固定 IP %s"
-
-#, python-format
-msgid "Fixed IP %s not valid"
-msgstr "固定 IP %s 無效"
 
 #, python-format
 msgid ""
@@ -1236,10 +1209,6 @@ msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
 "meta."
 msgstr "已禁止超出映像檔 meta 中傳遞之序列埠數目的特性值。"
-
-#, python-format
-msgid "Found no PIF for device %s"
-msgstr "找不到裝置 %s 的 PIF"
 
 msgid "Found no disk to snapshot."
 msgstr "找不到磁碟來取得 Snapshot。"
@@ -1679,10 +1648,6 @@ msgid "Invalid key_name provided."
 msgstr "提供的 key_name 無效。"
 
 #, python-format
-msgid "Invalid libvirt version %(version)s"
-msgstr "libvirt 版本 %(version)s 無效"
-
-#, python-format
 msgid "Invalid memory page size '%(pagesize)s'"
 msgstr "記憶體頁面大小 '%(pagesize)s' 無效"
 
@@ -1840,18 +1805,9 @@ msgstr "只有 vCenter 6.0 及更高版本中的限制才受支援"
 msgid "Link Local address is not found.:%s"
 msgstr "找不到鏈結本端位址：%s"
 
-msgid "Listing virtual interfaces is not supported by this cloud."
-msgstr "這個雲端不支援列出虛擬介面。"
-
 #, python-format
 msgid "Live migration %(id)s for server %(uuid)s is not in progress."
 msgstr "伺服器 %(uuid)s 的即時移轉 %(id)s 不在進行中。"
-
-msgid ""
-"Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
-"before it is available."
-msgstr ""
-"使用 API V2.25 進行的即時移轉需要先完成所有 Mitaka 升級，然後才可供使用。"
 
 #, python-format
 msgid "Malformed message body: %(reason)s"
@@ -2396,14 +2352,6 @@ msgid "PCI device request %(requests)s failed"
 msgstr "PCI 裝置要求 %(requests)s 失敗"
 
 #, python-format
-msgid ""
-"PIF %(pif_uuid)s for network %(bridge)s has VLAN id %(pif_vlan)d. Expected "
-"%(vlan_num)d"
-msgstr ""
-"網路 %(bridge)s 的 PIF %(pif_uuid)s 具有 VLAN ID %(pif_vlan)d。預期 "
-"%(vlan_num)d"
-
-#, python-format
 msgid "PIF %s does not contain IP address"
 msgstr "PIF %s 不包含 IP 位址"
 
@@ -2592,9 +2540,6 @@ msgstr ""
 "即時原則需要使用至少 1 個 RT vCPU 和 1 個普通 vCPU 進行配置的 vCPU 遮罩。請參"
 "閱 hw:cpu_realtime_mask 或 hw_cpu_realtime_mask"
 
-msgid "Realtime policy not supported by hypervisor"
-msgstr "Hypervisor 不支援即時原則"
-
 msgid "Request body and URI mismatch"
 msgstr "要求內文與 URI 不符"
 
@@ -2673,18 +2618,6 @@ msgstr "根元素名稱應該為 '%(name)s' 而不是 '%(tag)s'"
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "找不到規則 (%s)"
-
-#, python-format
-msgid "Running Nova with parallels virt_type requires libvirt version %s"
-msgstr "執行 virt_type 為 parallels 的 Nova 需要 libVirt %s 版"
-
-#, python-format
-msgid ""
-"Running Nova with qemu/kvm virt_type on %(arch)s requires libvirt version "
-"%(libvirt_ver)s and qemu version %(qemu_ver)s, or greater"
-msgstr ""
-"在 %(arch)s 上使用 qemu/kvm virt_type 執行 Nova 需要 libvirt %(libvirt_ver)s "
-"版和 qemu %(qemu_ver)s 版，或者更高版本"
 
 #, python-format
 msgid "Running batches of %i until complete"
@@ -3144,9 +3077,6 @@ msgstr "ICMP 通訊協定類型的類型及代碼必須是整數"
 
 msgid "UEFI is not supported"
 msgstr "不支援 UEFI"
-
-msgid "UUID is required to delete Neutron Networks"
-msgstr "需要 UUID 才能刪除「Neutron 網路」"
 
 #, python-format
 msgid ""
@@ -3682,9 +3612,6 @@ msgstr "找不到浮動 IP"
 #, python-format
 msgid "fmt=%(fmt)s backed by: %(backing_file)s"
 msgstr "fmt = %(fmt)s 受 %(backing_file)s 支援"
-
-msgid "fping utility is not found."
-msgstr "找不到 fping 公用程式。"
 
 #, python-format
 msgid "href %s does not contain version"
