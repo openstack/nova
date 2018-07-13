@@ -3595,6 +3595,10 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
             self.flavor_with_trait['id'],
             {'extra_specs': {'trait:HW_CPU_X86_VMX': 'required'}})
         self.flavor_without_trait = flavors[1]
+        self.flavor_with_forbidden_trait = flavors[2]
+        self.admin_api.post_extra_spec(
+            self.flavor_with_forbidden_trait['id'],
+            {'extra_specs': {'trait:HW_CPU_X86_SGX': 'forbidden'}})
 
         # Note that we're using v2.35 explicitly as the api returns 404
         # starting with 2.36
@@ -3821,6 +3825,175 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         # Make sure the failure was due to NoValidHost by checking the fault.
         self.assertIn('fault', server)
         self.assertIn('No valid host', server['fault']['message'])
+
+    def test_rebuild_instance_with_image_traits(self):
+        """Rebuilds a server with a different image which has traits
+        associated with it and which will run it through the scheduler to
+        validate the image is still OK with the compute host that the
+        instance is running on.
+         """
+        # Decorate compute2 resource provider with both flavor and image trait.
+        rp_uuid = self._get_provider_uuid_by_host(self.compute2.host)
+        self._set_provider_traits(rp_uuid, ['HW_CPU_X86_VMX',
+                                            'HW_CPU_X86_SGX'])
+        # make sure we start with no usage on the compute node
+        rp_usages = self._get_provider_usages(rp_uuid)
+        self.assertEqual({'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}, rp_usages)
+
+        # create a server without traits on image and with traits on flavour
+        server = self._create_server_with_traits(
+            self.flavor_with_trait['id'], self.image_id_without_trait)
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # make the compute node full and ensure rebuild still succeed
+        inv = {"resource_class": "VCPU",
+               "total": 1}
+        self._set_inventory(rp_uuid, inv)
+
+        # Now rebuild the server with a different image with traits
+        rebuild_req_body = {
+            'rebuild': {
+                'imageRef': self.image_id_with_trait
+            }
+        }
+        self.api.api_post('/servers/%s/action' % server['id'],
+                          rebuild_req_body)
+        self._wait_for_server_parameter(
+            self.api, server, {'OS-EXT-STS:task_state': None})
+
+        allocs = self._get_allocations_by_server_uuid(server['id'])
+        self.assertIn(rp_uuid, allocs)
+
+        # Assert the server ended up on the expected compute host that has
+        # the required trait.
+        self.assertEqual(self.compute2.host, server['OS-EXT-SRV-ATTR:host'])
+
+    def test_rebuild_instance_with_image_traits_no_host(self):
+        """Rebuilding a server with a different image which has required
+        traits on the image fails to valid the host that this server is
+        currently running, cause the compute host resource provider is not
+        associated with similar trait.
+        """
+        # Decorate compute2 resource provider with traits on flavor
+        rp_uuid = self._get_provider_uuid_by_host(self.compute2.host)
+        self._set_provider_traits(rp_uuid, ['HW_CPU_X86_VMX'])
+
+        # make sure we start with no usage on the compute node
+        rp_usages = self._get_provider_usages(rp_uuid)
+        self.assertEqual({'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}, rp_usages)
+
+        # create a server without traits on image and with traits on flavour
+        server = self._create_server_with_traits(
+            self.flavor_with_trait['id'], self.image_id_without_trait)
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # Now rebuild the server with a different image with traits
+        rebuild_req_body = {
+            'rebuild': {
+                'imageRef': self.image_id_with_trait
+            }
+        }
+
+        self.api.api_post('/servers/%s/action' % server['id'],
+                          rebuild_req_body)
+        # Look for the failed rebuild action.
+        self._wait_for_action_fail_completion(
+            server, instance_actions.REBUILD, 'rebuild_server', self.admin_api)
+        # Assert the server image_ref was rolled back on failure.
+        server = self.api.get_server(server['id'])
+        self.assertEqual(self.image_id_without_trait, server['image']['id'])
+
+        # The server should be in ERROR state
+        self.assertEqual('ERROR', server['status'])
+        self.assertEqual("No valid host was found. Image traits cannot be "
+                         "satisfied by the current resource providers. "
+                         "Please relaunch the instance.",
+                         server['fault']['message'])
+
+    def test_rebuild_instance_with_image_traits_no_image_change(self):
+        """Rebuilds a server with a same image which has traits
+        associated with it and which will run it through the scheduler to
+        validate the image is still OK with the compute host that the
+        instance is running on.
+         """
+        # Decorate compute2 resource provider with both flavor and image trait.
+        rp_uuid = self._get_provider_uuid_by_host(self.compute2.host)
+        self._set_provider_traits(rp_uuid, ['HW_CPU_X86_VMX',
+                                            'HW_CPU_X86_SGX'])
+        # make sure we start with no usage on the compute node
+        rp_usages = self._get_provider_usages(rp_uuid)
+        self.assertEqual({'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0},
+                         rp_usages)
+
+        # create a server with traits in both image and flavour
+        server = self._create_server_with_traits(
+            self.flavor_with_trait['id'], self.image_id_with_trait)
+        server = self._wait_for_state_change(self.admin_api, server,
+                                             'ACTIVE')
+
+        # Now rebuild the server with a different image with traits
+        rebuild_req_body = {
+            'rebuild': {
+                'imageRef': self.image_id_with_trait
+            }
+        }
+        self.api.api_post('/servers/%s/action' % server['id'],
+                          rebuild_req_body)
+        self._wait_for_server_parameter(
+            self.api, server, {'OS-EXT-STS:task_state': None})
+
+        allocs = self._get_allocations_by_server_uuid(server['id'])
+        self.assertIn(rp_uuid, allocs)
+
+        # Assert the server ended up on the expected compute host that has
+        # the required trait.
+        self.assertEqual(self.compute2.host,
+                         server['OS-EXT-SRV-ATTR:host'])
+
+    def test_rebuild_instance_with_image_traits_and_forbidden_flavor_traits(
+                                                                        self):
+        """Rebuilding a server with a different image which has required
+        traits on the image fails to validate image traits because flavor
+        associated with the current instance has the similar triat that is
+        forbidden
+        """
+        # Decorate compute2 resource provider with traits on flavor
+        rp_uuid = self._get_provider_uuid_by_host(self.compute2.host)
+        self._set_provider_traits(rp_uuid, ['HW_CPU_X86_VMX'])
+
+        # make sure we start with no usage on the compute node
+        rp_usages = self._get_provider_usages(rp_uuid)
+        self.assertEqual({'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}, rp_usages)
+
+        # create a server with forbidden traits on flavor and no triats on
+        # image
+        server = self._create_server_with_traits(
+            self.flavor_with_forbidden_trait['id'],
+            self.image_id_without_trait)
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # Now rebuild the server with a different image with traits
+        rebuild_req_body = {
+            'rebuild': {
+                'imageRef': self.image_id_with_trait
+            }
+        }
+
+        self.api.api_post('/servers/%s/action' % server['id'],
+                          rebuild_req_body)
+        # Look for the failed rebuild action.
+        self._wait_for_action_fail_completion(
+            server, instance_actions.REBUILD, 'rebuild_server', self.admin_api)
+        # Assert the server image_ref was rolled back on failure.
+        server = self.api.get_server(server['id'])
+        self.assertEqual(self.image_id_without_trait, server['image']['id'])
+
+        # The server should be in ERROR state
+        self.assertEqual('ERROR', server['status'])
+        self.assertEqual("No valid host was found. Image traits are part of "
+                         "forbidden traits in flavor associated with the "
+                         "Image. Please relaunch the instance.",
+                         server['fault']['message'])
 
 
 class ServerTestV256Common(ServersTestBase):

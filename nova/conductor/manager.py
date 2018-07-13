@@ -941,6 +941,12 @@ class ComputeTaskManager(base.Base):
                     # is not forced to be the original host
                     request_spec.reset_forced_destinations()
                 try:
+                    # if this is a rebuild of instance on the same host with
+                    # new image.
+                    if not recreate and orig_image_ref != image_ref:
+                        self._validate_image_traits_for_rebuild(context,
+                                                                instance,
+                                                                image_ref)
                     request_spec.ensure_project_and_user_id(instance)
                     host_lists = self._schedule_instances(context,
                             request_spec, [instance.uuid],
@@ -988,6 +994,74 @@ class ComputeTaskManager(base.Base):
                     migration=migration,
                     host=host, node=node, limits=limits,
                     request_spec=request_spec)
+
+    def _validate_image_traits_for_rebuild(self, context, instance, image_ref):
+        """Validates that the traits specified in the image can be satisfied
+        by the providers of the current allocations for the instance during
+        rebuild of the instance. If the traits cannot be
+        satisfied, fails the action by raising a NoValidHost exception.
+
+        :raises: NoValidHost exception in case the traits on the providers
+                 of the allocated resources for the instance do not match
+                 the required traits on the image.
+        """
+        image_meta = objects.ImageMeta.from_image_ref(
+            context, self.image_api, image_ref)
+        if ('properties' not in image_meta or
+                'traits_required' not in image_meta.properties or not
+                image_meta.properties.traits_required):
+            return
+
+        image_traits = set(image_meta.properties.traits_required)
+
+        # check any of the image traits are forbidden in flavor traits.
+        # if so raise an exception
+        extra_specs = instance.flavor.extra_specs
+        forbidden_flavor_traits = set()
+        for key, val in extra_specs.items():
+            if key.startswith('trait'):
+                # get the actual key.
+                prefix, parsed_key = key.split(':', 1)
+                if val == 'forbidden':
+                    forbidden_flavor_traits.add(parsed_key)
+
+        forbidden_traits = image_traits & forbidden_flavor_traits
+
+        if forbidden_traits:
+            raise exception.NoValidHost(
+                reason=_("Image traits are part of forbidden "
+                         "traits in flavor associated with the Image. "
+                         "Please relaunch the instance."))
+            return
+
+        # If image traits are present, then validate against allocations.
+        allocations = self.report_client.get_allocations_for_consumer(
+            context, instance.uuid)
+        instance_rp_uuids = list(allocations)
+
+        # Get provider tree for the instance. We use the uuid of the host
+        # on which the instance is rebuilding to get the provider tree.
+        compute_node = objects.ComputeNode.get_by_host_and_nodename(
+            context, instance.host, instance.node)
+
+        # TODO(karimull): Call with a read-only version, when available.
+        instance_rp_tree = (
+            self.report_client.get_provider_tree_and_ensure_root(
+                context, compute_node.uuid))
+
+        traits_in_instance_rps = set()
+
+        for rp_uuid in instance_rp_uuids:
+            traits_in_instance_rps.update(
+                instance_rp_tree.data(rp_uuid).traits)
+
+        missing_traits = image_traits - traits_in_instance_rps
+
+        if missing_traits:
+            raise exception.NoValidHost(
+                reason=_("Image traits cannot be "
+                         "satisfied by the current resource providers. "
+                         "Please relaunch the instance."))
 
     # TODO(avolkov): move method to bdm
     @staticmethod
