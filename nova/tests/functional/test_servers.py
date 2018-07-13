@@ -3907,7 +3907,8 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual('ERROR', server['status'])
         self.assertEqual("No valid host was found. Image traits cannot be "
                          "satisfied by the current resource providers. "
-                         "Please relaunch the instance.",
+                         "Either specify a different image during rebuild "
+                         "or create a new server with the specified image.",
                          server['fault']['message'])
 
     def test_rebuild_instance_with_image_traits_no_image_change(self):
@@ -3954,7 +3955,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
                                                                         self):
         """Rebuilding a server with a different image which has required
         traits on the image fails to validate image traits because flavor
-        associated with the current instance has the similar triat that is
+        associated with the current instance has the similar trait that is
         forbidden
         """
         # Decorate compute2 resource provider with traits on flavor
@@ -3992,7 +3993,9 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual('ERROR', server['status'])
         self.assertEqual("No valid host was found. Image traits are part of "
                          "forbidden traits in flavor associated with the "
-                         "Image. Please relaunch the instance.",
+                         "server. Either specify a different image during "
+                         "rebuild or create a new server with the specified "
+                         "image and a compatible flavor.",
                          server['fault']['message'])
 
 

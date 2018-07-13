@@ -1030,8 +1030,10 @@ class ComputeTaskManager(base.Base):
         if forbidden_traits:
             raise exception.NoValidHost(
                 reason=_("Image traits are part of forbidden "
-                         "traits in flavor associated with the Image. "
-                         "Please relaunch the instance."))
+                         "traits in flavor associated with the server. "
+                         "Either specify a different image during rebuild "
+                         "or create a new server with the specified image "
+                         "and a compatible flavor."))
             return
 
         # If image traits are present, then validate against allocations.
@@ -1061,7 +1063,8 @@ class ComputeTaskManager(base.Base):
             raise exception.NoValidHost(
                 reason=_("Image traits cannot be "
                          "satisfied by the current resource providers. "
-                         "Please relaunch the instance."))
+                         "Either specify a different image during rebuild "
+                         "or create a new server with the specified image."))
 
     # TODO(avolkov): move method to bdm
     @staticmethod
