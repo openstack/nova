@@ -1,5 +1,5 @@
 {
-    "nova_object.version": "1.0",
+    "nova_object.version": "1.1",
     "nova_object.namespace": "nova",
     "nova_object.name": "ServerGroupPayload",
     "nova_object.data": {
@@ -10,6 +10,8 @@
         "policies": [
           "anti-affinity"
         ],
+        "policy": "anti-affinity",
+        "rules": {},
         "members": [],
         "hosts": null
     }

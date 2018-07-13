@@ -1,0 +1,10 @@
+---
+
+features:
+  - |
+    The new style ``policy`` field has been added to ``ServerGroupPayload``.
+    The ``server_group.create``, ``server_group.delete`` and
+    ``server_group.add_member`` versioned notifications will be updated to
+    include the new ``policy`` and ``rules``field. The ``policies`` field is
+    deprecated for removal but still put into the notification payload for
+    backward compatibility.
