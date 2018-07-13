@@ -4941,6 +4941,8 @@ class HostAPI(base.Base):
             raise exception.ServiceNotFound(service_id=service_id)
         service.destroy()
 
+    # TODO(mriedem): Nothing outside of tests is using this now so we should
+    # be able to remove it.
     def service_delete(self, context, service_id):
         """Deletes the specified service found via id or uuid."""
         self._service_delete(context, service_id)

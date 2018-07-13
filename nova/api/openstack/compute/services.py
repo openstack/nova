@@ -248,7 +248,7 @@ class ServiceController(wsgi.Controller):
                     # delete it (maybe it was accidental?) before mapping it to
                     # a cell using discover_hosts, so we just ignore this.
                     pass
-            self.host_api.service_delete(context, id)
+            service.destroy()
 
         except exception.ServiceNotFound:
             explanation = _("Service %s not found.") % id
