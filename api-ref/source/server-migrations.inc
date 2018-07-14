@@ -167,7 +167,7 @@ Request
 
 **Example Force Migration Complete (force_complete Action)**
 
-.. literalinclude:: ../../doc/api_samples/server-migrations/force_complete.json
+.. literalinclude:: ../../doc/api_samples/server-migrations/v2.22/force_complete.json
    :language: javascript
 
 Response

@@ -29,12 +29,12 @@ from nova.tests.unit import fake_instance
 class ServerMigrationsSampleJsonTest(test_servers.ServersSampleBase):
     sample_dir = 'server-migrations'
     scenarios = [('v2_22', {'api_major_version': 'v2.1'})]
+    microversion = '2.22'
 
     def setUp(self):
         """setUp method for server usage."""
         super(ServerMigrationsSampleJsonTest, self).setUp()
         self.uuid = self._post_server()
-        self.api.microversion = '2.22'
 
     @mock.patch.object(conductor_manager.ComputeTaskManager, '_live_migrate')
     @mock.patch.object(db, 'service_get_by_compute_host')
