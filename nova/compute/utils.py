@@ -723,13 +723,18 @@ def notify_about_server_group_add_member(context, group_id):
 
 
 @rpc.if_notifications_enabled
-def notify_about_instance_rebuild(context, instance, host, phase=None,
+def notify_about_instance_rebuild(context, instance, host,
+                                  action=fields.NotificationAction.REBUILD,
+                                  phase=None,
+                                  source=fields.NotificationSource.COMPUTE,
                                   exception=None, bdms=None, tb=None):
     """Send versioned notification about instance rebuild
 
     :param instance: the instance which the action performed on
     :param host: the host emitting the notification
+    :param action: the name of the action
     :param phase: the phase of the action
+    :param source: the source of the notification
     :param exception: the thrown exception (used in error notifications)
     :param bdms: BlockDeviceMappingList object for the instance. If it is not
                 provided then we will load it from the db if so configured
@@ -745,10 +750,10 @@ def notify_about_instance_rebuild(context, instance, host, phase=None,
             context=context,
             priority=priority,
             publisher=notification_base.NotificationPublisher(
-                host=host, source=fields.NotificationSource.COMPUTE),
+                host=host, source=source),
             event_type=notification_base.EventType(
                     object='instance',
-                    action=fields.NotificationAction.REBUILD,
+                    action=action,
                     phase=phase),
             payload=payload)
     notification.emit(context)
