@@ -6415,6 +6415,10 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(ctxt, instance,
                                           "live_migration._post.start",
                                           network_info=network_info)
+        compute_utils.notify_about_instance_action(
+            ctxt, instance, self.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_POST,
+            phase=fields.NotificationPhase.START)
         # Releasing security group ingress rule.
         LOG.debug('Calling driver.unfilter_instance from _post_live_migration',
                   instance=instance)
@@ -6477,6 +6481,10 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(ctxt, instance,
                                           "live_migration._post.end",
                                           network_info=network_info)
+        compute_utils.notify_about_instance_action(
+            ctxt, instance, self.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_POST,
+            phase=fields.NotificationPhase.END)
         if post_at_dest_success:
             LOG.info('Migrating instance to %s finished successfully.',
                      dest, instance=instance)

@@ -7523,6 +7523,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         migrate_data.old_vol_attachment_ids = {volume_id: orig_attachment_id}
         image_bdm.attachment_id = uuids.attachment3
 
+        @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch('nova.objects.ConsoleAuthToken.'
                     'clean_console_auths_for_instance')
         @mock.patch.object(migrate_data.migration, 'save',
@@ -7543,7 +7544,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         def _test(mock_get_bdms, mock_net_api, mock_notify, mock_driver,
                   mock_rpc, mock_get_bdm_info, mock_attach_delete,
                   mock_update_resource, mock_bdm_save, mock_rt, mock_ga,
-                  mock_clean):
+                  mock_clean, mock_notify_action):
             mock_rt.return_value = mock.Mock()
             mock_get_bdms.return_value = [vol_bdm, image_bdm]
 
@@ -7553,6 +7554,12 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock_attach_delete.assert_called_once_with(
                 self.context, orig_attachment_id)
             mock_clean.assert_called_once_with(self.context, instance.uuid)
+            mock_notify_action.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='live_migration_post', phase='start'),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='live_migration_post', phase='end')])
+            self.assertEqual(2, mock_notify_action.call_count)
 
         _test()
 
