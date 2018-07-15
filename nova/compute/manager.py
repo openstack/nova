@@ -6732,6 +6732,10 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
                       context, instance, "live_migration.rollback.dest.start",
                       network_info=network_info)
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_ROLLBACK_DEST,
+            phase=fields.NotificationPhase.START)
         try:
             # NOTE(tr3buchet): tear down networks on destination host
             self.network_api.setup_networks_on_host(context, instance,
@@ -6755,6 +6759,10 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
                         context, instance, "live_migration.rollback.dest.end",
                         network_info=network_info)
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_ROLLBACK_DEST,
+            phase=fields.NotificationPhase.END)
 
     @periodic_task.periodic_task(
         spacing=CONF.heal_instance_info_cache_interval)

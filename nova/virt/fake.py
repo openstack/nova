@@ -551,6 +551,13 @@ class FakeDriver(driver.ComputeDriver):
                            network_info, disk_info, migrate_data):
         return migrate_data
 
+    def rollback_live_migration_at_destination(self, context, instance,
+                                               network_info,
+                                               block_device_info,
+                                               destroy_disks=True,
+                                               migrate_data=None):
+        return
+
     def unfilter_instance(self, instance, network_info):
         return
 
