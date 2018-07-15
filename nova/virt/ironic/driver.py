@@ -19,6 +19,7 @@ A driver wrapping the Ironic API, such that Nova may provision
 bare metal resources.
 """
 import base64
+from distutils import version
 import gzip
 import shutil
 import tempfile
@@ -1954,3 +1955,24 @@ class IronicDriver(virt_driver.ComputeDriver):
                                   instance=instance)
                         return vif_id
         return None
+
+    def _can_send_version(self, min_version=None, max_version=None):
+        """Validate if the suppplied version is available in the API."""
+        # NOTE(TheJulia): This will effectively just be a pass if no
+        # version negotiation has occured, since there is no way for
+        # us to know without explicitly otherwise requesting that
+        # back-end negotiation occurs. This is a capability that is
+        # present in python-ironicclient, however it may not be needed
+        # in this case.
+        if self.ironicclient.is_api_version_negotiated:
+            current_api_version = self.ironicclient.current_api_version
+            if (min_version and
+                    version.StrictVersion(current_api_version) <
+                    version.StrictVersion(min_version)):
+                raise exception.IronicAPIVersionNotAvailable(
+                    version=min_version)
+            if (max_version and
+                    version.StrictVersion(current_api_version) >
+                    version.StrictVersion(max_version)):
+                raise exception.IronicAPIVersionNotAvailable(
+                    version=max_version)
