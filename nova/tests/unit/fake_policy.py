@@ -51,7 +51,6 @@ policy_data = """
     "os_compute_api:os-floating-ip-dns:domain:delete": "",
     "os_compute_api:os-floating-ip-pools": "",
     "os_compute_api:os-floating-ips": "",
-    "os_compute_api:os-floating-ips-bulk": "",
     "os_compute_api:os-instance-actions": "",
     "os_compute_api:os-instance-usage-audit-log": "",
 

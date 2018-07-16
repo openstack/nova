@@ -12,6 +12,10 @@ upgrade:
     * ``GET /os-fixed-ips/{fixed_ip}``
     * ``POST /os-fixed-ips/{fixed_ip}/action (reserve)``
     * ``POST /os-fixed-ips/{fixed_ip}/action (unreserve)``
+    * ``GET /os-floating-ips-bulk``
+    * ``GET /os-floating-ips-bulk/{host_name}``
+    * ``POST /os-floating-ips-bulk``
+    * ``PUT /os-floating-ips-bulk/delete``
 
     In addition, the following configuration options have been removed.
 
