@@ -15,6 +15,9 @@
 from oslo_config import cfg
 
 
+from nova.conf import paths
+
+
 zvm_opt_group = cfg.OptGroup('zvm',
                              title='zVM Options',
                              help="""
@@ -38,6 +41,38 @@ URL to be used to communicate with z/VM Cloud Connector.
 CA certificate file to be verified in httpd server with TLS enabled
 
 A string, it must be a path to a CA bundle to use.
+"""),
+    cfg.StrOpt('image_tmp_path',
+               default=paths.state_path_def('images'),
+               sample_default="$state_path/images",
+               help="""
+The path at which images will be stored (snapshot, deploy, etc).
+
+Images used for deploy and images captured via snapshot
+need to be stored on the local disk of the compute host.
+This configuration identifies the directory location.
+
+Possible values:
+    A file system path on the host running the compute service.
+"""),
+    cfg.IntOpt('reachable_timeout',
+               default=300,
+               help="""
+Timeout (seconds) to wait for an instance to start.
+
+The z/VM driver relies on communication between the instance and cloud
+connector. After an instance is created, it must have enough time to wait
+for all the network info to be written into the user directory.
+The driver will keep rechecking network status to the instance with the
+timeout value, If setting network failed, it will notify the user that
+starting the instance failed and put the instance in ERROR state.
+The underlying z/VM guest will then be deleted.
+
+Possible Values:
+    Any positive integer. Recommended to be at least 300 seconds (5 minutes),
+    but it will vary depending on instance and system load.
+    A value of 0 is used for debug. In this case the underlying z/VM guest
+    will not be deleted when the instance is marked in ERROR state.
 """),
 ]
 

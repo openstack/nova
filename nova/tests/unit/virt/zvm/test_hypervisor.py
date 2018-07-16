@@ -14,8 +14,10 @@
 
 import mock
 
+from nova import context
 from nova import exception
 from nova import test
+from nova.tests.unit import fake_instance
 from nova.virt.zvm import driver as zvmdriver
 
 
@@ -23,12 +25,16 @@ class TestZVMHypervisor(test.NoDBTestCase):
 
     def setUp(self):
         super(TestZVMHypervisor, self).setUp()
+        self.flags(instance_name_template='abc%5d')
         self.flags(cloud_connector_url='https://1.1.1.1:1111', group='zvm')
         with mock.patch('nova.virt.zvm.utils.'
                         'ConnectorClient.call') as mcall:
-            mcall.return_value = {'hypervisor_hostname': 'TESTHOST'}
+            mcall.return_value = {'hypervisor_hostname': 'TESTHOST',
+                                  'ipl_time': 'IPL at 11/14/17 10:47:44 EST'}
             driver = zvmdriver.ZVMDriver('virtapi')
             self._hypervisor = driver._hypervisor
+
+        self._context = context.RequestContext('fake_user', 'fake_project')
 
     @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
     def test_get_available_resource(self, call):
@@ -67,3 +73,27 @@ class TestZVMHypervisor(test.NoDBTestCase):
         call.return_value = ['vm1', 'vm2']
         inst_list = self._hypervisor.list_names()
         self.assertEqual(['vm1', 'vm2'], inst_list)
+
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_get_host_uptime(self, call):
+        host_info = {'disk_available': 1144,
+                     'ipl_time': 'IPL at 11/14/17 10:47:44 EST',
+                     'memory_mb_used': 8192.0}
+        call.return_value = host_info
+
+        time = self._hypervisor.get_host_uptime()
+        self.assertEqual('IPL at 11/14/17 10:47:44 EST', time)
+
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.list_names')
+    def test_private_guest_exists_true(self, list_names):
+        instance = fake_instance.fake_instance_obj(self._context)
+        list_names.return_value = [instance.name.upper(), 'TEST0002']
+        res = self._hypervisor.guest_exists(instance)
+        self.assertTrue(res)
+
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.list_names')
+    def test_private_guest_exists_false(self, list_names):
+        list_names.return_value = ['dummy1', 'dummy2']
+        instance = fake_instance.fake_instance_obj(self._context)
+        res = self._hypervisor.guest_exists(instance)
+        self.assertFalse(res)

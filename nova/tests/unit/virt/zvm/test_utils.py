@@ -16,8 +16,10 @@ import mock
 
 from zvmconnector import connector
 
+from nova import context
 from nova import exception
 from nova import test
+from nova.tests.unit import fake_instance
 from nova.virt.zvm import utils as zvmutils
 
 
@@ -79,3 +81,57 @@ class TestZVMUtils(test.NoDBTestCase):
         self.assertEqual(expected['rc'], exc.rc)
         self.assertEqual(expected['rs'], exc.rs)
         self.assertEqual(expected['errmsg'], exc.errmsg)
+
+    @mock.patch('nova.virt.configdrive.required_by')
+    @mock.patch('nova.virt.zvm.utils._create_config_drive')
+    @mock.patch('nova.virt.zvm.utils._get_instance_path')
+    def test_generate_configdrive(self, get, create, required):
+        get.return_value = '/test/tmp/fake_uuid'
+        create.return_value = '/test/cfgdrive.tgz'
+        required.return_value = True
+
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        instance = fake_instance.fake_instance_obj(ctxt)
+
+        file = zvmutils.generate_configdrive('context', instance,
+                                             'injected_files',
+                                             'network_info',
+                                             'admin_password')
+        required.assert_called_once_with(instance)
+        create.assert_called_once_with('context', '/test/tmp/fake_uuid',
+                                       instance, 'injected_files',
+                                       'network_info', 'admin_password')
+        self.assertEqual('/test/cfgdrive.tgz', file)
+
+    @mock.patch('nova.api.metadata.base.InstanceMetadata')
+    @mock.patch('nova.virt.configdrive.ConfigDriveBuilder.make_drive')
+    def test_create_config_drive(self, make_drive, mock_instance_metadata):
+
+        class FakeInstanceMetadata(object):
+            def __init__(self):
+                self.network_metadata = None
+
+            def metadata_for_config_drive(self):
+                return []
+
+        mock_instance_metadata.return_value = FakeInstanceMetadata()
+
+        self.flags(config_drive_format='iso9660')
+        extra_md = {'admin_pass': 'admin_password'}
+        zvmutils._create_config_drive('context', '/instance_path',
+                                      'instance', 'injected_files',
+                                      'network_info', 'admin_password')
+        mock_instance_metadata.assert_called_once_with('instance',
+                                                content='injected_files',
+                                                extra_md=extra_md,
+                                                network_info='network_info',
+                                                request_context='context')
+        make_drive.assert_called_once_with('/instance_path/cfgdrive.iso')
+
+    def test_create_config_drive_invalid_format(self):
+
+        self.flags(config_drive_format='vfat')
+        self.assertRaises(exception.ConfigDriveUnsupportedFormat,
+                          zvmutils._create_config_drive, 'context',
+                          '/instance_path', 'instance', 'injected_files',
+                          'network_info', 'admin_password')
