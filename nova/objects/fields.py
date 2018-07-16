@@ -829,6 +829,7 @@ class NotificationAction(BaseNovaEnum):
     UPDATE_METADATA = 'update_metadata'
     LOCK = 'lock'
     UNLOCK = 'unlock'
+    UPDATE_PROP = 'update_prop'
 
     ALL = (UPDATE, EXCEPTION, DELETE, PAUSE, UNPAUSE, RESIZE, VOLUME_SWAP,
            SUSPEND, POWER_ON, REBOOT, SHUTDOWN, SNAPSHOT, INTERFACE_ATTACH,
@@ -840,7 +841,7 @@ class NotificationAction(BaseNovaEnum):
            RESIZE_CONFIRM, RESIZE_PREP, RESIZE_REVERT, SHELVE_OFFLOAD,
            SOFT_DELETE, TRIGGER_CRASH_DUMP, UNRESCUE, UNSHELVE, ADD_HOST,
            REMOVE_HOST, ADD_MEMBER, UPDATE_METADATA, LOCK, UNLOCK,
-           REBUILD_SCHEDULED)
+           REBUILD_SCHEDULED, UPDATE_PROP)
 
 
 # TODO(rlrossit): These should be changed over to be a StateMachine enum from

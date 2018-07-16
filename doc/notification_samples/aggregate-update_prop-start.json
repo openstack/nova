@@ -1,0 +1,11 @@
+{
+    "priority": "INFO",
+    "payload": {
+        "$ref": "common_payloads/AggregatePayload.json#",
+        "nova_object.data": {
+            "name": "my-new-aggregate"
+        }
+    },
+    "event_type": "aggregate.update_prop.start",
+    "publisher_id": "nova-api:fake-mini"
+}

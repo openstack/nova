@@ -493,3 +493,7 @@ class TestOpenStackClient(object):
     def delete_migration(self, server_id, migration_id):
         return self.api_delete(
             '/servers/%s/migrations/%s' % (server_id, migration_id))
+
+    def put_aggregate(self, aggregate_id, body):
+        return self.api_put(
+            '/os-aggregates/%s' % aggregate_id, body).body['aggregate']
