@@ -427,11 +427,7 @@ tests:
             resources:
                 DISK_GB: 1
                 VCPU: 1
-      # TODO(efried): Due to bug 1758057, this request is actually creating a
-      # *new* consumer; it should actually be replacing the allocations for the
-      # existing consumer with UUID 75d0f5f7-75d9-458c-b204-f90ac91604ec.
-      #      consumer_generation: 3
-      consumer_generation: null
+      consumer_generation: 1
       project_id: 00000000-0000-0000-0000-000000000000
       user_id: 00000000-0000-0000-0000-000000000000
   status: 204
@@ -439,21 +435,12 @@ tests:
 - name: get allocations on existing consumer with dashed UUID
   GET: /allocations/75d0f5f7-75d9-458c-b204-f90ac91604ec
   response_json_paths:
-      # TODO(efried): Due to bug 1758057, these are the allocations from
-      # "put allocations on both those providers two". They *should* be from
-      # "put allocations on existing consumer with dashless UUID" instead.
-      #      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].generation: 0
-      #      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].resources.DISK_GB: 1
-      #      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].resources.VCPU: 1
-      #      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].generation: 0
-      #      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].resources.DISK_GB: 1
-      #      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].resources.VCPU: 1
       $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].generation: 4
-      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].resources.DISK_GB: 5
-      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].resources.VCPU: 4
+      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].resources.DISK_GB: 1
+      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].resources.VCPU: 1
       $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].generation: 4
-      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].resources.DISK_GB: 2
-      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].resources.VCPU: 8
+      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].resources.DISK_GB: 1
+      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].resources.VCPU: 1
 
 - name: put an allocation for a not existing resource provider
   PUT: /allocations/75d0f5f7-75d9-458c-b204-f90ac91604ec
@@ -505,3 +492,18 @@ tests:
   response_forbidden_headers:
       - cache-control
       - last-modified
+
+- name: creating allocation with a non UUID consumer fails
+  PUT: /allocations/not-a-uuid
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: fcfa516a-abbe-45d1-8152-d5225d82e596
+            resources:
+                DISK_GB: 1
+                VCPU: 1
+  status: 400
+  response_strings:
+      - Malformed consumer_uuid
