@@ -209,3 +209,4 @@
     experimental:
       jobs:
         - nova-caching-scheduler
+        - os-vif-ovs
