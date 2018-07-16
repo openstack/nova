@@ -56,7 +56,8 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             self._test_live_migration_rollback,
             self._test_live_migration_abort,
             self._test_live_migration_success,
-            self._test_evacuate_server
+            self._test_evacuate_server,
+            self._test_live_migration_force_complete
         ]
 
         for action in actions:
@@ -252,6 +253,43 @@ class TestInstanceNotificationSampleWithMultipleCompute(
                 'uuid': server['id']},
             actual=notifications[0])
         self.admin_api.put_service(service_id, {'forced_down': False})
+
+    def _test_live_migration_force_complete(self, server):
+        post = {
+            'os-migrateLive': {
+                'host': 'host2',
+                'block_migration': True,
+                'force': True,
+            }
+        }
+        self.admin_api.post_server_action(server['id'], post)
+
+        self._wait_for_state_change(self.api, server, 'MIGRATING')
+
+        migrations = self._wait_and_get_migrations(server)
+        migration_id = migrations[0]['id']
+        self.admin_api.force_complete_migration(server['id'], migration_id)
+
+        self._wait_for_notification(
+            'instance.live_migration_force_complete.end')
+
+        # 0. instance.live_migration_pre.start
+        # 1. instance.live_migration_pre.end
+        # 2. instance.live_migration_force_complete.start
+        # 3. instance.live_migration_force_complete.end
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-live_migration_force_complete-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+        self._verify_notification(
+            'instance-live_migration_force_complete-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
 
 class TestInstanceNotificationSampleWithMultipleComputeOldAttachFlow(

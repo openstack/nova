@@ -63,7 +63,9 @@ class EventType(NotificationObject):
     #               NotificationActionField enum
     # Version 1.14: UPDATE_PROP value is added to the NotificationActionField
     #               enum
-    VERSION = '1.14'
+    # Version 1.15: LIVE_MIGRATION_FORCE_COMPLETE is added to the
+    #               NotificationActionField enum
+    VERSION = '1.15'
 
     fields = {
         'object': fields.StringField(nullable=False),

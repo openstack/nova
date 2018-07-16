@@ -550,6 +550,8 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 @base.notification_sample('instance-resize_confirm-end.json')
 @base.notification_sample('instance-resize_revert-start.json')
 @base.notification_sample('instance-resize_revert-end.json')
+@base.notification_sample('instance-live_migration_force_complete-start.json')
+@base.notification_sample('instance-live_migration_force_complete-end.json')
 @base.notification_sample('instance-shelve_offload-start.json')
 @base.notification_sample('instance-shelve_offload-end.json')
 @base.notification_sample('instance-soft_delete-start.json')

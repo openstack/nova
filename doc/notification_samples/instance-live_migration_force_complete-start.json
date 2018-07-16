@@ -1,0 +1,12 @@
+{
+    "event_type": "instance.live_migration_force_complete.start",
+    "payload": {
+        "$ref": "common_payloads/InstanceActionPayload.json#",
+        "nova_object.data": {
+            "action_initiator_user": "admin",
+            "task_state": "migrating"
+        }
+    },
+    "priority": "INFO",
+    "publisher_id": "nova-compute:compute"
+}
