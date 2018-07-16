@@ -126,6 +126,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         claim resources in the placement API since obviously we need instance
         UUIDs to perform those claims.
         """
+        group = objects.InstanceGroup(hosts=[])
         spec_obj = objects.RequestSpec(
             num_instances=1,
             flavor=objects.Flavor(memory_mb=512,
@@ -134,11 +135,11 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   swap=0,
                                   vcpus=1),
             project_id=uuids.project_id,
-            instance_group=None)
+            instance_group=group)
 
         host_state = mock.Mock(spec=host_manager.HostState,
                 host="fake_host", nodename="fake_node", uuid=uuids.cn1,
-                limits={}, cell_uuid=uuids.cell)
+                limits={}, cell_uuid=uuids.cell, instances={})
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
         mock_get_hosts.return_value = all_host_states
@@ -163,6 +164,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         # And ensure we never called claim_resources()
         self.assertFalse(mock_claim.called)
+        # And that the host is added to the server group but there are no
+        # instances tracked in the host_state.
+        self.assertIn(host_state.host, group.hosts)
+        self.assertEqual(0, len(host_state.instances))
 
     @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -485,10 +490,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         hs1 = mock.Mock(spec=host_manager.HostState, host='host1',
                 nodename="node1", limits={}, uuid=uuids.cn1,
-                cell_uuid=uuids.cell1)
+                cell_uuid=uuids.cell1, instances={})
         hs2 = mock.Mock(spec=host_manager.HostState, host='host2',
                 nodename="node2", limits={}, uuid=uuids.cn2,
-                cell_uuid=uuids.cell2)
+                cell_uuid=uuids.cell2, instances={})
         all_host_states = [hs1, hs2]
         mock_get_all_states.return_value = all_host_states
         mock_claim.return_value = True
@@ -538,6 +543,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # save in the instance group object
         self.assertEqual(['host2', 'host1'], ig.hosts)
         self.assertEqual({}, ig.obj_get_changes())
+        # Assert that we updated HostState.instances for each host.
+        self.assertIn(uuids.instance0, hs2.instances)
+        self.assertIn(uuids.instance1, hs1.instances)
 
     @mock.patch('random.choice', side_effect=lambda x: x[1])
     @mock.patch('nova.scheduler.host_manager.HostManager.get_weighed_hosts')

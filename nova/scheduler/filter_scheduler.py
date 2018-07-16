@@ -174,7 +174,8 @@ class FilterScheduler(driver.Scheduler):
             # the objects without alternates. They will be converted back to
             # the older dict format representing HostState objects.
             return self._legacy_find_hosts(context, num_instances, spec_obj,
-                                           hosts, num_alts)
+                                           hosts, num_alts,
+                                           instance_uuids=instance_uuids)
 
         # A list of the instance UUIDs that were successfully claimed against
         # in the placement API. If we are not able to successfully claim for
@@ -236,7 +237,8 @@ class FilterScheduler(driver.Scheduler):
 
             # Now consume the resources so the filter/weights will change for
             # the next instance.
-            self._consume_selected_host(claimed_host, spec_obj)
+            self._consume_selected_host(claimed_host, spec_obj,
+                                        instance_uuid=instance_uuid)
 
         # Check if we were able to fulfill the request. If not, this call will
         # raise a NoValidHost exception.
@@ -289,7 +291,7 @@ class FilterScheduler(driver.Scheduler):
             self.placement_client.delete_allocation_for_instance(context, uuid)
 
     def _legacy_find_hosts(self, context, num_instances, spec_obj, hosts,
-                           num_alts):
+                           num_alts, instance_uuids=None):
         """Some schedulers do not do claiming, or we can sometimes not be able
         to if the Placement service is not reachable. Additionally, we may be
         working with older conductors that don't pass in instance_uuids.
@@ -310,7 +312,9 @@ class FilterScheduler(driver.Scheduler):
                 break
             selected_host = hosts[0]
             selected_hosts.append(selected_host)
-            self._consume_selected_host(selected_host, spec_obj)
+            instance_uuid = instance_uuids[num] if instance_uuids else None
+            self._consume_selected_host(selected_host, spec_obj,
+                                        instance_uuid=instance_uuid)
 
         # Check if we were able to fulfill the request. If not, this call will
         # raise a NoValidHost exception.
@@ -321,13 +325,24 @@ class FilterScheduler(driver.Scheduler):
         return selections_to_return
 
     @staticmethod
-    def _consume_selected_host(selected_host, spec_obj):
-        LOG.debug("Selected host: %(host)s", {'host': selected_host})
+    def _consume_selected_host(selected_host, spec_obj, instance_uuid=None):
+        LOG.debug("Selected host: %(host)s", {'host': selected_host},
+                  instance_uuid=instance_uuid)
         selected_host.consume_from_request(spec_obj)
+        # If we have a server group, add the selected host to it for the
+        # (anti-)affinity filters to filter out hosts for subsequent instances
+        # in a multi-create request.
         if spec_obj.instance_group is not None:
             spec_obj.instance_group.hosts.append(selected_host.host)
             # hosts has to be not part of the updates when saving
             spec_obj.instance_group.obj_reset_changes(['hosts'])
+            # The ServerGroupAntiAffinityFilter also relies on
+            # HostState.instances being accurate within a multi-create request.
+            if instance_uuid and instance_uuid not in selected_host.instances:
+                # Set a stub since ServerGroupAntiAffinityFilter only cares
+                # about the keys.
+                selected_host.instances[instance_uuid] = (
+                    objects.Instance(uuid=instance_uuid))
 
     def _get_alternate_hosts(self, selected_hosts, spec_obj, hosts, index,
                              num_alts, alloc_reqs_by_rp_uuid=None,
