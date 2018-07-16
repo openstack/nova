@@ -13,10 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import mock
 from oslo_utils import uuidutils
+import six
 import webob
 
+from nova.api.openstack import api_version_request as avr
 from nova.api.openstack.compute import server_groups as sg_v21
 from nova import context
 from nova import exception
@@ -43,13 +46,14 @@ def server_group_template(**kwargs):
 def server_group_resp_template(**kwargs):
     sgroup = kwargs.copy()
     sgroup.setdefault('name', 'test')
-    sgroup.setdefault('policies', [])
+    if 'policy' not in kwargs:
+        sgroup.setdefault('policies', [])
     sgroup.setdefault('members', [])
     return sgroup
 
 
 def server_group_db(sg):
-    attrs = sg.copy()
+    attrs = copy.deepcopy(sg)
     if 'id' in attrs:
         attrs['uuid'] = attrs.pop('id')
     if 'policies' in attrs:
@@ -57,6 +61,8 @@ def server_group_db(sg):
         attrs['policies'] = policies
     else:
         attrs['policies'] = []
+    if 'policy' in attrs:
+        del attrs['policies']
     if 'members' in attrs:
         members = attrs.pop('members')
         attrs['members'] = members
@@ -111,7 +117,8 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.assertRaises(self.validation_error, self.controller.create,
                           self.req, body={'server_group': sgroup})
 
-    def _create_server_group_normal(self, policies):
+    def _create_server_group_normal(self, policies=None, policy=None,
+                                    rules=None):
         sgroup = server_group_template()
         sgroup['policies'] = policies
         res_dict = self.controller.create(self.req,
@@ -120,10 +127,33 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.assertTrue(uuidutils.is_uuid_like(res_dict['server_group']['id']))
         self.assertEqual(res_dict['server_group']['policies'], policies)
 
+    def test_create_server_group_with_new_policy_before_264(self):
+        req = fakes.HTTPRequest.blank('', version='2.63')
+        policy = 'anti-affinity'
+        rules = {'max_server_per_host': 3}
+        # 'policy' isn't an acceptable request key before 2.64
+        sgroup = server_group_template(policy=policy)
+        result = self.assertRaises(
+            self.validation_error, self.controller.create,
+            req, body={'server_group': sgroup})
+        self.assertIn(
+            "Invalid input for field/attribute server_group",
+            six.text_type(result)
+        )
+        # 'rules' isn't an acceptable request key before 2.64
+        sgroup = server_group_template(rules=rules)
+        result = self.assertRaises(
+            self.validation_error, self.controller.create,
+            req, body={'server_group': sgroup})
+        self.assertIn(
+            "Invalid input for field/attribute server_group",
+            six.text_type(result)
+        )
+
     def test_create_server_group(self):
         policies = ['affinity', 'anti-affinity']
         for policy in policies:
-            self._create_server_group_normal([policy])
+            self._create_server_group_normal(policies=[policy])
 
     def test_create_server_group_rbac_default(self):
         sgroup = server_group_template()
@@ -204,12 +234,29 @@ class ServerGroupTestV21(test.NoDBTestCase):
     def _test_list_server_group(self, mock_get_all, mock_get_by_project,
                                 path, api_version='2.1', limited=None):
         policies = ['anti-affinity']
+        policy = "anti-affinity"
         members = []
         metadata = {}  # always empty
         names = ['default-x', 'test']
         p_id = fakes.FAKE_PROJECT_ID
         u_id = fakes.FAKE_USER_ID
-        if api_version >= '2.13':
+        ver = avr.APIVersionRequest(api_version)
+        if ver >= avr.APIVersionRequest("2.64"):
+            sg1 = server_group_resp_template(id=uuidsentinel.sg1_id,
+                                             name=names[0],
+                                             policy=policy,
+                                             rules={},
+                                             members=members,
+                                             project_id=p_id,
+                                             user_id=u_id)
+            sg2 = server_group_resp_template(id=uuidsentinel.sg2_id,
+                                             name=names[1],
+                                             policy=policy,
+                                             rules={},
+                                             members=members,
+                                             project_id=p_id,
+                                             user_id=u_id)
+        elif ver >= avr.APIVersionRequest("2.13"):
             sg1 = server_group_resp_template(id=uuidsentinel.sg1_id,
                                             name=names[0],
                                             policies=policies,
@@ -664,3 +711,140 @@ class ServerGroupTestV213(ServerGroupTestV21):
 
     def test_list_server_group_by_tenant(self):
         self._test_list_server_group_by_tenant(api_version='2.13')
+
+
+class ServerGroupTestV264(ServerGroupTestV213):
+    wsgi_api_version = '2.64'
+
+    def _setup_controller(self):
+        self.controller = sg_v21.ServerGroupController()
+
+    def _create_server_group_normal(self, policies=None, policy=None,
+                                    rules=None):
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        sgroup = server_group_template()
+        sgroup['rules'] = rules or {}
+        sgroup['policy'] = policy
+        res_dict = self.controller.create(req,
+                                          body={'server_group': sgroup})
+        self.assertEqual(res_dict['server_group']['name'], 'test')
+        self.assertTrue(uuidutils.is_uuid_like(res_dict['server_group']['id']))
+        self.assertEqual(res_dict['server_group']['policy'], policy)
+        self.assertEqual(res_dict['server_group']['rules'], rules or {})
+        return res_dict['server_group']['id']
+
+    def test_list_server_group_all(self):
+        self._test_list_server_group_all(api_version=self.wsgi_api_version)
+
+    def test_create_and_show_server_group(self):
+        policies = ['affinity', 'anti-affinity']
+        for policy in policies:
+            g_uuid = self._create_server_group_normal(
+                policy=policy)
+            res_dict = self._display_server_group(g_uuid)
+            self.assertEqual(res_dict['server_group']['policy'], policy)
+            self.assertEqual(res_dict['server_group']['rules'], {})
+
+    def _display_server_group(self, uuid):
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        group = self.controller.show(req, uuid)
+        return group
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=33)
+    def test_create_and_show_server_group_with_rules(self, mock_get_v):
+        policy = 'anti-affinity'
+        rules = {'max_server_per_host': 3}
+        g_uuid = self._create_server_group_normal(
+            policy=policy, rules=rules)
+        res_dict = self._display_server_group(g_uuid)
+        self.assertEqual(res_dict['server_group']['policy'], policy)
+        self.assertEqual(res_dict['server_group']['rules'], rules)
+
+    def test_create_affinity_server_group_with_invalid_policy(self):
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        sgroup = server_group_template(policy='affinity',
+                                       rules={'max_server_per_host': 3})
+        result = self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller.create, req, body={'server_group': sgroup})
+        self.assertIn("Only anti-affinity policy supports rules",
+                      six.text_type(result))
+
+    def test_create_anti_affinity_server_group_with_invalid_rules(self):
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        # A negative test for key is unknown, the value is not positive
+        # and not integer
+        invalid_rules = [{'unknown_key': '3'},
+                         {'max_server_per_host': 0},
+                         {'max_server_per_host': 'foo'}]
+
+        for r in invalid_rules:
+            sgroup = server_group_template(policy='anti-affinity', rules=r)
+            result = self.assertRaises(
+                self.validation_error, self.controller.create,
+                req, body={'server_group': sgroup})
+            self.assertIn(
+                "Invalid input for field/attribute", six.text_type(result)
+            )
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=32)
+    def test_create_server_group_with_low_version_compute_service(self,
+                                                                  mock_get_v):
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        sgroup = server_group_template(policy='anti-affinity',
+                                       rules={'max_server_per_host': 3})
+        result = self.assertRaises(
+            webob.exc.HTTPConflict,
+            self.controller.create, req, body={'server_group': sgroup})
+        self.assertIn("Creating an anti-affinity group with rule "
+                      "max_server_per_host > 1 is not yet supported.",
+                      six.text_type(result))
+
+    def test_create_server_group(self):
+        policies = ['affinity', 'anti-affinity']
+        for policy in policies:
+            self._create_server_group_normal(policy=policy)
+
+    def test_policies_since_264(self):
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        # 'policies' isn't allowed in request >= 2.64
+        sgroup = server_group_template(policies=['anti-affinity'])
+        self.assertRaises(
+            self.validation_error, self.controller.create,
+            req, body={'server_group': sgroup})
+
+    def test_create_server_group_without_policy(self):
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        # 'policy' is required request key in request >= 2.64
+        sgroup = server_group_template()
+        self.assertRaises(self.validation_error, self.controller.create,
+                          req, body={'server_group': sgroup})
+
+    def test_create_server_group_with_illegal_policies(self):
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        # blank policy
+        sgroup = server_group_template(policy='')
+        self.assertRaises(self.validation_error, self.controller.create,
+                          req, body={'server_group': sgroup})
+
+        # policy as integer
+        sgroup = server_group_template(policy=7)
+        self.assertRaises(self.validation_error, self.controller.create,
+                          req, body={'server_group': sgroup})
+
+        # policy as string
+        sgroup = server_group_template(policy='invalid')
+        self.assertRaises(self.validation_error, self.controller.create,
+                          req, body={'server_group': sgroup})
+
+        # policy as None
+        sgroup = server_group_template(policy=None)
+        self.assertRaises(self.validation_error, self.controller.create,
+                          req, body={'server_group': sgroup})
+
+    def test_additional_params(self):
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        sgroup = server_group_template(unknown='unknown')
+        self.assertRaises(self.validation_error, self.controller.create,
+                          req, body={'server_group': sgroup})

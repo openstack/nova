@@ -818,3 +818,21 @@ the following APIs:
 * ``GET /servers/{server_id}``
 * ``PUT /servers/{server_id}``
 * ``POST /servers/{server_id}/action (rebuild)``
+
+2.64
+----
+
+Enable users to define the policy rules on server group policy to meet more
+advanced policy requirement. This microversion brings the following changes
+in server group APIs:
+
+* Add  ``policy`` and ``rules`` fields in the request of POST
+  ``/os-server-groups``. The ``policy`` represents the name of policy. The
+  ``rules`` field, which is a dict, can be applied to the policy, which
+  currently only support ``max_server_per_host`` for ``anti-affinity`` policy.
+* The ``policy`` and ``rules`` fields will be returned in response
+  body of POST, GET ``/os-server-groups`` API and GET
+  ``/os-server-groups/{server_group_id}`` API.
+* The ``policies`` and ``metadata`` fields have been removed from the response
+  body of POST, GET ``/os-server-groups`` API and GET
+  ``/os-server-groups/{server_group_id}`` API.

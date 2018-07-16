@@ -150,6 +150,12 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              responses.
     * 2.63 - Add support for applying trusted certificates when creating or
              rebuilding a server.
+    * 2.64 - Add support for the "max_server_per_host" policy rule for
+             ``anti-affinity`` server group policy, the ``policies`` and
+             ``metadata`` fields are removed and the ``policy`` (required)
+             and ``rules`` (optional) fields are added in response body of
+             GET, POST /os-server-groups APIs and GET
+             /os-server-groups/{group_id} API.
 """
 
 # The minimum and maximum versions of the API supported
@@ -158,7 +164,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.63"
+_MAX_API_VERSION = "2.64"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

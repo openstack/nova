@@ -4299,6 +4299,14 @@ metadata_object:
   in: body
   required: true
   type: object
+metadata_server_group_max_2_63:
+  description: |
+    Metadata key and value pairs. The maximum size for each metadata key and value
+    pair is 255 bytes. It's always empty and only used for keeping compatibility.
+  in: body
+  required: true
+  type: object
+  max_version: 2.63
 migrate:
   description: |
     The action to cold migrate a server.
@@ -5111,6 +5119,50 @@ policies:
   in: body
   required: true
   type: array
+  max_version: 2.63
+policy_name:
+  description: |
+    The ``policy`` field represents the name of the policy. The current
+    valid policy names are:
+
+    - ``anti-affinity`` - servers in this group must be scheduled to
+      different hosts.
+    - ``affinity`` - servers in this group must be scheduled to the same host.
+    - ``soft-anti-affinity`` - servers in this group should be scheduled to
+      different hosts if possible, but if not possible then they should still
+      be scheduled instead of resulting in a build failure.
+    - ``soft-affinity`` - servers in this group should be scheduled to the same
+      host if possible, but if not possible then they should still be scheduled
+      instead of resulting in a build failure.
+  in: body
+  required: true
+  type: object
+  min_version: 2.64
+policy_rules:
+  description: |
+    The ``rules`` field, which is a dict, can be applied to the policy.
+    Currently, only the ``max_server_per_host`` rule is supported for the
+    ``anti-affinity`` policy. The ``max_server_per_host`` rule allows
+    specifying how many members of the anti-affinity group can reside on the
+    same compute host. If not specified, only one member from the same
+    anti-affinity group can reside on a given host.
+  in: body
+  required: true
+  type: object
+  min_version: 2.64
+policy_rules_optional:
+  description: |
+    The ``rules`` field, which is a dict, can be applied to the policy.
+    Currently, only the ``max_server_per_host`` rule is supported for the
+    ``anti-affinity`` policy. The ``max_server_per_host`` rule allows
+    specifying how many members of the anti-affinity group can reside on the
+    same compute host. If not specified, only one member from the same
+    anti-affinity group can reside on a given host. Requesting policy rules
+    with any other policy than ``anti-affinity`` will be 400.
+  in: body
+  required: false
+  type: object
+  min_version: 2.64
 pool:
   description: |
     Pool from which to allocate the IP address. If you omit this parameter, the call

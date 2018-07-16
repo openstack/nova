@@ -31,11 +31,15 @@ from nova import context as nova_context
 import nova.exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import service
 from nova.policies import server_groups as sg_policies
 
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
+
+
+GROUP_POLICY_OBJ_MICROVERSION = "2.64"
 
 
 def _authorize_context(req, action):
@@ -78,6 +82,15 @@ def _get_not_deleted(context, uuids):
     return found_inst_uuids
 
 
+def _should_enable_custom_max_server_rules(context, rules):
+    if rules and int(rules.get('max_server_per_host', 1)) > 1:
+        minver = service.get_minimum_version_all_cells(
+            context, ['nova-compute'])
+        if minver < 33:
+            return False
+    return True
+
+
 class ServerGroupController(wsgi.Controller):
     """The Server group API controller for the OpenStack API."""
 
@@ -89,10 +102,15 @@ class ServerGroupController(wsgi.Controller):
         server_group = {}
         server_group['id'] = group.uuid
         server_group['name'] = group.name
-        server_group['policies'] = group.policies or []
-        # NOTE(danms): This has been exposed to the user, but never used.
-        # Since we can't remove it, just make sure it's always empty.
-        server_group['metadata'] = {}
+        if api_version_request.is_supported(
+                req, min_version=GROUP_POLICY_OBJ_MICROVERSION):
+            server_group['policy'] = group.policy
+            server_group['rules'] = group.rules
+        else:
+            server_group['policies'] = group.policies or []
+            # NOTE(yikun): Before v2.64, a empty metadata is exposed to the
+            # user, and it is removed since v2.64.
+            server_group['metadata'] = {}
         members = []
         if group.members:
             # Display the instances that are not deleted.
@@ -146,9 +164,10 @@ class ServerGroupController(wsgi.Controller):
         return {'server_groups': result}
 
     @wsgi.Controller.api_version("2.1")
-    @wsgi.expected_errors((400, 403))
+    @wsgi.expected_errors((400, 403, 409))
     @validation.schema(schema.create, "2.0", "2.14")
-    @validation.schema(schema.create_v215, "2.15")
+    @validation.schema(schema.create_v215, "2.15", "2.63")
+    @validation.schema(schema.create_v264, GROUP_POLICY_OBJ_MICROVERSION)
     def create(self, req, body):
         """Creates a new server group."""
         context = _authorize_context(req, 'create')
@@ -161,13 +180,28 @@ class ServerGroupController(wsgi.Controller):
             raise exc.HTTPForbidden(explanation=msg)
 
         vals = body['server_group']
-        sg = objects.InstanceGroup(context)
-        sg.project_id = context.project_id
-        sg.user_id = context.user_id
+
+        if api_version_request.is_supported(
+                req, GROUP_POLICY_OBJ_MICROVERSION):
+            policy = vals['policy']
+            rules = vals.get('rules', {})
+            if policy != 'anti-affinity' and rules:
+                msg = _("Only anti-affinity policy supports rules.")
+                raise exc.HTTPBadRequest(explanation=msg)
+            # NOTE(yikun): This should be removed in Stein version.
+            if not _should_enable_custom_max_server_rules(context, rules):
+                msg = _("Creating an anti-affinity group with rule "
+                        "max_server_per_host > 1 is not yet supported.")
+                raise exc.HTTPConflict(explanation=msg)
+            sg = objects.InstanceGroup(context, policy=policy,
+                                       rules=rules)
+        else:
+            policies = vals.get('policies')
+            sg = objects.InstanceGroup(context, policy=policies[0])
         try:
             sg.name = vals.get('name')
-            policies = vals.get('policies')
-            sg.policy = policies[0]
+            sg.project_id = context.project_id
+            sg.user_id = context.user_id
             sg.create()
         except ValueError as e:
             raise exc.HTTPBadRequest(explanation=e)

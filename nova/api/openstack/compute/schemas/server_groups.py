@@ -51,6 +51,25 @@ create_v215 = copy.deepcopy(create)
 policies = create_v215['properties']['server_group']['properties']['policies']
 policies['items'][0]['enum'].extend(['soft-anti-affinity', 'soft-affinity'])
 
+create_v264 = copy.deepcopy(create_v215)
+del create_v264['properties']['server_group']['properties']['policies']
+sg_properties = create_v264['properties']['server_group']
+sg_properties['required'].remove('policies')
+sg_properties['required'].append('policy')
+sg_properties['properties']['policy'] = {
+    'type': 'string',
+    'enum': ['anti-affinity', 'affinity',
+             'soft-anti-affinity', 'soft-affinity'],
+}
+
+sg_properties['properties']['rules'] = {
+    'type': 'object',
+    'properties': {
+        'max_server_per_host':
+            parameter_types.positive_integer,
+    },
+    'additionalProperties': False,
+}
 
 server_groups_query_param = {
     'type': 'object',
