@@ -77,6 +77,7 @@ PCIAddressField = fields.PCIAddressField
 Enum = fields.Enum
 Field = fields.Field
 FieldType = fields.FieldType
+String = fields.String
 Set = fields.Set
 Dict = fields.Dict
 List = fields.List
@@ -87,6 +88,10 @@ IPV6Address = fields.IPV6Address
 IPNetwork = fields.IPNetwork
 IPV4Network = fields.IPV4Network
 IPV6Network = fields.IPV6Network
+
+
+class SetOfStringsField(AutoTypedField):
+    AUTO_TYPE = Set(String())
 
 
 class BaseNovaEnum(Enum):

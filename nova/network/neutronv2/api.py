@@ -1618,26 +1618,43 @@ class API(base_api.NetworkAPI):
                                  pci_requests=None):
         """Retrieve all information for the networks passed at the time of
         creating the server.
+
+        :param context: The request context.
+        :param requested_networks: The networks requested for the server.
+        :type requested_networks: nova.objects.RequestedNetworkList
+        :param pci_requests: The list of PCI requests to which additional PCI
+            requests created here will be added.
+        :type pci_requests: nova.objects.InstancePCIRequests
+
+        :returns: An instance of ``objects.NetworkMetadata`` for use by the
+            scheduler or None.
         """
         if not requested_networks or requested_networks.no_allocate:
-            return
+            return None
+
+        physnets = set()
+        tunneled = False
 
         neutron = get_client(context, admin=True)
         for request_net in requested_networks:
             physnet = None
             trusted = None
             vnic_type = network_model.VNIC_TYPE_NORMAL
+            pci_request_id = None
 
             if request_net.port_id:
                 vnic_type, trusted, network_id = self._get_port_vnic_info(
                     context, neutron, request_net.port_id)
                 physnet = self._get_physnet_info(
                     context, neutron, network_id)
-                LOG.debug("Creating PCI device request for port_id=%s, "
-                          "vnic_type=%s, phynet_name=%s, trusted=%s",
-                          request_net.port_id, vnic_type, physnet,
-                          trusted)
-            pci_request_id = None
+            elif request_net.network_id and not request_net.auto_allocate:
+                network_id = request_net.network_id
+                physnet = self._get_physnet_info(
+                    context, neutron, network_id)
+
+            if physnet:
+                physnets.add(physnet)
+
             if vnic_type in network_model.VNIC_TYPES_SRIOV:
                 # TODO(moshele): To differentiate between the SR-IOV legacy
                 # and SR-IOV ovs hardware offload we will leverage the nic
@@ -1664,6 +1681,8 @@ class API(base_api.NetworkAPI):
 
             # Add pci_request_id into the requested network
             request_net.pci_request_id = pci_request_id
+
+        return objects.NetworkMetadata(physnets=physnets, tunneled=tunneled)
 
     def _can_auto_allocate_network(self, context, neutron):
         """Helper method to determine if we can auto-allocate networks
