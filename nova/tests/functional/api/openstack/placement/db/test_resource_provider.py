@@ -1100,6 +1100,38 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
 
         self.assertEqual(0, len(allocations))
 
+    def test_delete_all_with_multiple_consumers(self):
+        """Tests fix for LP #1781430 where AllocationList.delete_all() when
+        issued for an AllocationList returned by
+        AllocationList.get_by_resource_provider() where the resource provider
+        had multiple consumers allocated against it, left the DB in an
+        inconsistent state.
+        """
+        # Create a single resource provider and allocate resources for two
+        # instances from it. Then grab all the provider's allocations with
+        # AllocationList.get_all_by_resource_provider() and attempt to delete
+        # them all with AllocationList.delete_all(). After which, another call
+        # to AllocationList.get_all_by_resource_provider() should return an
+        # empty list.
+        cn1 = self._create_provider('cn1')
+        tb.add_inventory(cn1, 'VCPU', 8)
+
+        c1_uuid = uuidsentinel.consumer1
+        c2_uuid = uuidsentinel.consumer2
+
+        for c_uuid in (c1_uuid, c2_uuid):
+            self.allocate_from_provider(cn1, 'VCPU', 1, consumer_id=c_uuid)
+
+        allocs = rp_obj.AllocationList.get_all_by_resource_provider(
+            self.ctx, cn1)
+        self.assertEqual(2, len(allocs))
+
+        allocs.delete_all()
+
+        allocs = rp_obj.AllocationList.get_all_by_resource_provider(
+            self.ctx, cn1)
+        self.assertEqual(0, len(allocs))
+
     def test_multi_provider_allocation(self):
         """Tests that an allocation that includes more than one resource
         provider can be created, listed and deleted properly.
@@ -1158,7 +1190,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
                     resource_class=fields.ResourceClass.MEMORY_MB,
                     used=256),
             ])
-        alloc_list.create_all()
+        alloc_list.replace_all()
 
         src_allocs = rp_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, cn_source)
@@ -1196,7 +1228,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
                     resource_class=fields.ResourceClass.MEMORY_MB,
                     used=256),
             ])
-        new_alloc_list.create_all()
+        new_alloc_list.replace_all()
 
         src_allocs = rp_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, cn_source)
@@ -1229,7 +1261,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         """Test that allocation check logic works with 2 resource classes on
         one provider.
 
-        If this fails, we get a KeyError at create_all()
+        If this fails, we get a KeyError at replace_all()
         """
 
         max_unit = 10
@@ -1270,7 +1302,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                                          used=rp2_used)
         allocation_list = rp_obj.AllocationList(
             self.ctx, objects=[allocation_1, allocation_2])
-        allocation_list.create_all()
+        allocation_list.replace_all()
 
         # create the allocations for a second consumer, until we have
         # allocations for more than one consumer in the db, then we
@@ -1287,7 +1319,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         allocation_list = rp_obj.AllocationList(
             self.ctx, objects=[allocation_1, allocation_2])
         # If we are joining wrong, this will be a KeyError
-        allocation_list.create_all()
+        allocation_list.replace_all()
 
     def test_allocation_list_create(self):
         max_unit = 10
@@ -1327,7 +1359,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # There's no inventory, we have a failure.
         error = self.assertRaises(exception.InvalidInventory,
-                                  allocation_list.create_all)
+                                  allocation_list.replace_all)
         # Confirm that the resource class string, not index, is in
         # the exception and resource providers are listed by uuid.
         self.assertIn(rp1_class, str(error))
@@ -1339,14 +1371,14 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # fail, since rp2 has no inventory.
         tb.add_inventory(rp1, rp1_class, 1024, max_unit=1)
         self.assertRaises(exception.InvalidInventory,
-                          allocation_list.create_all)
+                          allocation_list.replace_all)
 
         # Add inventory for the second resource provider
         tb.add_inventory(rp2, rp2_class, 255, reserved=2, max_unit=1)
 
         # Now the allocations will still fail because max_unit 1
         self.assertRaises(exception.InvalidAllocationConstraintsViolated,
-                          allocation_list.create_all)
+                          allocation_list.replace_all)
         inv1 = rp_obj.Inventory(resource_provider=rp1,
                                 resource_class=rp1_class,
                                 total=1024, max_unit=max_unit)
@@ -1359,7 +1391,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         rp2.set_inventory(rp_obj.InventoryList(objects=[inv2]))
 
         # Now we can finally allocate.
-        allocation_list.create_all()
+        allocation_list.replace_all()
 
         # Check that those allocations changed usage on each
         # resource provider.
@@ -1479,7 +1511,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             self.ctx,
             objects=[allocation1, allocation2],
         )
-        allocation_list.create_all()
+        allocation_list.replace_all()
 
         allocations = rp_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, consumer_uuid)
@@ -1501,7 +1533,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             self.ctx,
             objects=[allocation1, allocation2],
         )
-        allocation_list.create_all()
+        allocation_list.replace_all()
 
         allocations = rp_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, consumer_uuid)
@@ -1536,7 +1568,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             self.ctx,
             objects=[allocation1, allocation2],
         )
-        allocation_list.create_all()
+        allocation_list.replace_all()
 
         # Check primary consumer allocations.
         allocations = rp_obj.AllocationList.get_all_by_consumer_id(
@@ -1565,7 +1597,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             self.ctx,
             objects=[allocation1, allocation2],
         )
-        allocation_list.create_all()
+        allocation_list.replace_all()
 
         allocations = rp_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, consumer_uuid)
@@ -1618,7 +1650,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                     resource_class=fields.ResourceClass.MEMORY_MB,
                     used=1024)
             ])
-        alloc_list.create_all()
+        alloc_list.replace_all()
 
         # Create a consumer representing the second instance
         inst2_consumer = consumer_obj.Consumer(
@@ -1657,7 +1689,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             ])
 
         self.assertRaises(exception.InvalidAllocationCapacityExceeded,
-                          alloc_list.create_all)
+                          alloc_list.replace_all)
 
         # Make sure that allocations of both empty_rp and full_rp remain
         # unchanged.

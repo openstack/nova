@@ -17,10 +17,7 @@ import testtools
 
 from nova.api.openstack.placement import context
 from nova.api.openstack.placement import exception
-from nova.api.openstack.placement.objects import consumer as consumer_obj
-from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider
-from nova.api.openstack.placement.objects import user as user_obj
 from nova import rc_fields as fields
 from nova.tests import uuidsentinel as uuids
 
@@ -262,32 +259,6 @@ class TestInventoryList(_TestCase):
 
         # Use an invalid string...
         self.assertIsNone(inv_list.find('HOUSE'))
-
-
-class TestAllocation(_TestCase):
-
-    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
-                '_ensure_rc_cache')
-    def test_create_with_id_fails(self, mock_rc_cache):
-        rp = resource_provider.ResourceProvider(context=self.context,
-                                                uuid=_RESOURCE_PROVIDER_UUID,
-                                                name=_RESOURCE_PROVIDER_NAME)
-        self.project = project_obj.Project(
-            self.context, external_id='fake-project')
-        self.user = user_obj.User(
-            self.context, external_id='fake-user')
-        self.consumer = consumer_obj.Consumer(
-            self.context, uuid=uuids.fake_instance, project=self.project,
-            user=self.user)
-        obj = resource_provider.Allocation(context=self.context,
-                                           id=99,
-                                           resource_provider=rp,
-                                           resource_class=_RESOURCE_CLASS_NAME,
-                                           consumer=self.consumer,
-                                           used=8)
-        alloc_list = resource_provider.AllocationList(self.context,
-                                                      objects=[obj])
-        self.assertRaises(exception.ObjectActionError, alloc_list.create_all)
 
 
 class TestAllocationListNoDB(_TestCase):
