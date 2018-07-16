@@ -22,9 +22,11 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 
+from nova.compute import task_states
 from nova import conf
 from nova import exception
 from nova.i18n import _
+from nova.image import glance
 from nova.objects import fields as obj_fields
 from nova import utils
 from nova.virt import driver
@@ -299,3 +301,68 @@ class ZVMDriver(driver.ComputeDriver):
 
     def get_host_uptime(self):
         return self._hypervisor.get_host_uptime()
+
+    def snapshot(self, context, instance, image_id, update_task_state):
+
+        (image_service, image_id) = glance.get_remote_image_service(
+                                                    context, image_id)
+
+        update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
+
+        try:
+            self._hypervisor.guest_capture(instance.name, image_id)
+        except Exception as err:
+            with excutils.save_and_reraise_exception():
+                LOG.error("Failed to capture the instance "
+                          "to generate an image with reason: %(err)s",
+                          {'err': err}, instance=instance)
+                # Clean up the image from glance
+                image_service.delete(context, image_id)
+
+        # Export the image to nova-compute server temporary
+        image_path = os.path.join(os.path.normpath(
+                            CONF.zvm.image_tmp_path), image_id)
+        dest_path = "file://" + image_path
+        try:
+            resp = self._hypervisor.image_export(image_id, dest_path)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.error("Failed to export image %s from SDK server to "
+                          "nova compute server", image_id)
+                image_service.delete(context, image_id)
+                self._hypervisor.image_delete(image_id)
+
+        # Save image to glance
+        new_image_meta = {
+            'is_public': False,
+            'status': 'active',
+            'properties': {
+                 'image_location': 'snapshot',
+                 'image_state': 'available',
+                 'owner_id': instance['project_id'],
+                 'os_distro': resp['os_version'],
+                 'architecture': obj_fields.Architecture.S390X,
+                 'hypervisor_type': obj_fields.HVType.ZVM,
+            },
+            'disk_format': 'raw',
+            'container_format': 'bare',
+        }
+        update_task_state(task_state=task_states.IMAGE_UPLOADING,
+                          expected_state=task_states.IMAGE_PENDING_UPLOAD)
+
+        # Save the image to glance
+        try:
+            with open(image_path, 'r') as image_file:
+                image_service.update(context,
+                                     image_id,
+                                     new_image_meta,
+                                     image_file,
+                                     purge_props=False)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                image_service.delete(context, image_id)
+        finally:
+            zvmutils.clean_up_file(image_path)
+            self._hypervisor.image_delete(image_id)
+
+        LOG.debug("Snapshot image upload complete", instance=instance)

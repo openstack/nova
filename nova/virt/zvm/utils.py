@@ -119,3 +119,8 @@ def generate_configdrive(context, instance, injected_files,
                                               network_info,
                                               admin_password)
     return transportfiles
+
+
+def clean_up_file(filepath):
+    if os.path.exists(filepath):
+        os.remove(filepath)
