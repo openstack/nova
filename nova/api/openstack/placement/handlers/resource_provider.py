@@ -18,6 +18,7 @@ from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import webob
 
+from nova.api.openstack.placement import errors
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
@@ -98,7 +99,8 @@ def create_resource_provider(req):
                           for column in exc.columns])
         raise webob.exc.HTTPConflict(
             _('Conflicting resource provider %(duplicate)s already exists.') %
-            {'duplicate': duplicate})
+            {'duplicate': duplicate},
+            comment=errors.DUPLICATE_NAME)
     except exception.ObjectActionError as exc:
         raise webob.exc.HTTPBadRequest(
             _('Unable to create resource provider "%(name)s", %(rp_uuid)s: '
@@ -137,14 +139,16 @@ def delete_resource_provider(req):
     except exception.ResourceProviderInUse as exc:
         raise webob.exc.HTTPConflict(
             _('Unable to delete resource provider %(rp_uuid)s: %(error)s') %
-            {'rp_uuid': uuid, 'error': exc})
+            {'rp_uuid': uuid, 'error': exc},
+            comment=errors.PROVIDER_IN_USE)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
             _("No resource provider with uuid %s found for delete") % uuid)
     except exception.CannotDeleteParentResourceProvider as exc:
         raise webob.exc.HTTPConflict(
             _("Unable to delete parent resource provider %(rp_uuid)s: "
-              "It has child resource providers.") % {'rp_uuid': uuid})
+              "It has child resource providers.") % {'rp_uuid': uuid},
+            comment=errors.PROVIDER_CANNOT_DELETE_PARENT)
     req.response.status = 204
     req.response.content_type = None
     return req.response
@@ -275,7 +279,8 @@ def update_resource_provider(req):
     except db_exc.DBDuplicateEntry as exc:
         raise webob.exc.HTTPConflict(
             _('Conflicting resource provider %(name)s already exists.') %
-            {'name': data['name']})
+            {'name': data['name']},
+            comment=errors.DUPLICATE_NAME)
     except exception.ObjectActionError as exc:
         raise webob.exc.HTTPBadRequest(
             _('Unable to save resource provider %(rp_uuid)s: %(error)s') %
