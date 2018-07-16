@@ -14,6 +14,7 @@
 .pydevproject
 .ropeproject
 .testrepository/
+.stestr/
 .tox
 .idea
 .venv
