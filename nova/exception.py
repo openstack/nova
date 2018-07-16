@@ -2312,3 +2312,24 @@ class InstanceUnRescueFailure(NovaException):
 
 class IronicAPIVersionNotAvailable(NovaException):
     msg_fmt = _('Ironic API version %(version)s is not available.')
+
+
+class ZVMDriverException(NovaException):
+    msg_fmt = _("ZVM Driver has error: %(error)s")
+
+
+class ZVMConnectorError(ZVMDriverException):
+    msg_fmt = _("zVM Cloud Connector request failed: %(results)s")
+
+    def __init__(self, message=None, **kwargs):
+        """Exception for zVM ConnectorClient calls.
+
+        :param results: The object returned from ZVMConnector.send_request.
+        """
+        super(ZVMConnectorError, self).__init__(message=message, **kwargs)
+
+        results = kwargs.get('results', {})
+        self.overallRC = results.get('overallRC')
+        self.rc = results.get('rc')
+        self.rs = results.get('rs')
+        self.errmsg = results.get('errmsg')
