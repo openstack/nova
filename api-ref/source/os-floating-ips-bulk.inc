@@ -1,14 +1,14 @@
 .. -*- rst -*-
 
-======================================================
- Floating IPs bulk (os-floating-ips-bulk) (DEPRECATED)
-======================================================
+=========================================
+ Floating IPs bulk (os-floating-ips-bulk)
+=========================================
 
 .. warning::
 
    Since these APIs are only implemented for **nova-network**, they are
    deprecated. These will fail with a 404 starting from microversion 2.36.
-   It was removed in the 18.0.0 Rocky release.
+   They were removed in the 18.0.0 Rocky release.
 
 Bulk-creates, deletes, and lists floating IPs.
 Default pool name is ``nova``.
