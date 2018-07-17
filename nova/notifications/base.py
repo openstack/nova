@@ -173,8 +173,14 @@ def send_instance_update_notification(context, instance, old_vm_state=None,
     """Send 'compute.instance.update' notification to inform observers
     about instance state changes.
     """
-
-    payload = info_from_instance(context, instance, None)
+    # NOTE(gibi): The image_ref_url is only used in unversioned notifications.
+    # Calling the generate_image_url() could be costly as it calls
+    # the Keystone API. So only do the call if the actual value will be
+    # used.
+    populate_image_ref_url = (CONF.notifications.notification_format in
+                              ('both', 'unversioned'))
+    payload = info_from_instance(context, instance, None,
+                                 populate_image_ref_url=populate_image_ref_url)
 
     # determine how we'll report states
     payload.update(
@@ -344,27 +350,39 @@ def null_safe_isotime(s):
         return str(s) if s else ''
 
 
-def info_from_instance(context, instance, network_info, **kw):
+def info_from_instance(context, instance, network_info,
+                       populate_image_ref_url=False, **kw):
     """Get detailed instance information for an instance which is common to all
     notifications.
 
     :param:instance: nova.objects.Instance
     :param:network_info: network_info provided if not None
+    :param:populate_image_ref_url: If True then the full URL of the image of
+                                   the instance is generated and returned.
+                                   This, depending on the configuration, might
+                                   mean a call to Keystone. If false, None
+                                   value is returned in the dict at the
+                                   image_ref_url key.
     """
-    try:
-        # TODO(mriedem): We can eventually drop this when we no longer support
-        # legacy notifications since versioned notifications don't use this.
-        image_ref_url = image_api.API().generate_image_url(instance.image_ref,
-                                                           context)
-    except ks_exc.EndpointNotFound:
-        # We might be running from a periodic task with no auth token and
-        # CONF.glance.api_servers isn't set, so we can't get the image API
-        # endpoint URL from the service catalog, therefore just use the image
-        # id for the URL (yes it's a lie, but it's best effort at this point).
-        with excutils.save_and_reraise_exception() as exc_ctx:
-            if context.auth_token is None:
-                image_ref_url = instance.image_ref
-                exc_ctx.reraise = False
+    image_ref_url = None
+    if populate_image_ref_url:
+        try:
+            # NOTE(mriedem): We can eventually drop this when we no longer
+            # support legacy notifications since versioned notifications don't
+            # use this.
+            image_ref_url = image_api.API().generate_image_url(
+                instance.image_ref, context)
+
+        except ks_exc.EndpointNotFound:
+            # We might be running from a periodic task with no auth token and
+            # CONF.glance.api_servers isn't set, so we can't get the image API
+            # endpoint URL from the service catalog, therefore just use the
+            # image id for the URL (yes it's a lie, but it's best effort at
+            # this point).
+            with excutils.save_and_reraise_exception() as exc_ctx:
+                if context.auth_token is None:
+                    image_ref_url = instance.image_ref
+                    exc_ctx.reraise = False
 
     instance_type = instance.get_flavor()
     instance_type_name = instance_type.get('name', '')
