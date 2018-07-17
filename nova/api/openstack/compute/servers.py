@@ -33,7 +33,6 @@ from nova.api.openstack.compute import config_drive
 from nova.api.openstack.compute import helpers
 from nova.api.openstack.compute import keypairs
 from nova.api.openstack.compute import multiple_create
-from nova.api.openstack.compute import scheduler_hints
 from nova.api.openstack.compute.schemas import servers as schema_servers
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import wsgi
@@ -72,7 +71,6 @@ class ServersController(wsgi.Controller):
         config_drive.server_create,
         keypairs.server_create,
         multiple_create.server_create,
-        scheduler_hints.server_create,
     ]
 
     @staticmethod
@@ -439,6 +437,13 @@ class ServersController(wsgi.Controller):
                 sg['name'] for sg in security_groups if sg.get('name')]
             create_kwargs['security_groups'] = list(
                 set(create_kwargs['security_groups']))
+
+        scheduler_hints = {}
+        if 'os:scheduler_hints' in body:
+            scheduler_hints = body['os:scheduler_hints']
+        elif 'OS-SCH-HNT:scheduler_hints' in body:
+            scheduler_hints = body['OS-SCH-HNT:scheduler_hints']
+        create_kwargs['scheduler_hints'] = scheduler_hints
 
         availability_zone = server_dict.pop("availability_zone", None)
 
