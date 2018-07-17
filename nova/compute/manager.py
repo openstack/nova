@@ -531,7 +531,7 @@ class ComputeManager(manager.Manager):
             # ncpu * 5 which is probably much higher than anyone would sanely
             # use for concurrently running live migrations.
             self._live_migration_executor = futures.ThreadPoolExecutor()
-        # This is a dict, keyed by migration uuid, to a two-item tuple of
+        # This is a dict, keyed by instance uuid, to a two-item tuple of
         # migration object and Future for the queued live migration.
         self._waiting_live_migrations = {}
 
