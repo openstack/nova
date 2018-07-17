@@ -32,7 +32,6 @@ from nova.api.openstack.compute import block_device_mapping_v1
 from nova.api.openstack.compute import config_drive
 from nova.api.openstack.compute import helpers
 from nova.api.openstack.compute import keypairs
-from nova.api.openstack.compute import multiple_create
 from nova.api.openstack.compute.schemas import servers as schema_servers
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import wsgi
@@ -70,7 +69,6 @@ class ServersController(wsgi.Controller):
         block_device_mapping_v1.server_create,
         config_drive.server_create,
         keypairs.server_create,
-        multiple_create.server_create,
     ]
 
     @staticmethod
@@ -444,6 +442,20 @@ class ServersController(wsgi.Controller):
         elif 'OS-SCH-HNT:scheduler_hints' in body:
             scheduler_hints = body['OS-SCH-HNT:scheduler_hints']
         create_kwargs['scheduler_hints'] = scheduler_hints
+
+        # min_count and max_count are optional.  If they exist, they may come
+        # in as strings.  Verify that they are valid integers and > 0.
+        # Also, we want to default 'min_count' to 1, and default
+        # 'max_count' to be 'min_count'.
+        min_count = int(server_dict.get('min_count', 1))
+        max_count = int(server_dict.get('max_count', min_count))
+        return_id = server_dict.get('return_reservation_id', False)
+        if min_count > max_count:
+            msg = _('min_count must be <= max_count')
+            raise exc.HTTPBadRequest(explanation=msg)
+        create_kwargs['min_count'] = min_count
+        create_kwargs['max_count'] = max_count
+        create_kwargs['return_reservation_id'] = return_id
 
         availability_zone = server_dict.pop("availability_zone", None)
 

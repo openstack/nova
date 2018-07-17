@@ -3015,7 +3015,6 @@ class ServersControllerCreateTest(test.TestCase):
 
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
-        self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
         self.stub_out('nova.db.api.project_get_networks',
                       lambda c, u: dict(id='1', host='localhost'))
         self.stub_out('nova.db.api.instance_create', instance_create)
@@ -3060,6 +3059,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertNotIn("adminPass", server_dict)
 
     def _test_create_instance(self, flavor=2):
+        self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
         self.body['server']['imageRef'] = image_uuid
         self.body['server']['flavorRef'] = flavor
@@ -3313,7 +3313,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_pass_disabled(self):
         # test with admin passwords disabled See lp bug 921814
         self.flags(enable_instance_password=False, group='api')
-
+        self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
         self.flags(enable_instance_password=False, group='api')
         self.req.body = jsonutils.dump_as_bytes(self.body)
         res = self.controller.create(self.req, body=self.body).obj
@@ -3385,6 +3385,7 @@ class ServersControllerCreateTest(test.TestCase):
             self.controller.create(self.req, body=self.body)
 
     def test_create_instance(self):
+        self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
         self.req.body = jsonutils.dump_as_bytes(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
@@ -3423,6 +3424,7 @@ class ServersControllerCreateTest(test.TestCase):
             fake_keypair_server_create)
 
     def test_create_instance_pass_disabled(self):
+        self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
         self.flags(enable_instance_password=False, group='api')
         self.req.body = jsonutils.dump_as_bytes(self.body)
         res = self.controller.create(self.req, body=self.body).obj
@@ -3516,6 +3518,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_valid_key_name(self):
+        self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
         self.body['server']['key_name'] = 'key'
         self.req.body = jsonutils.dump_as_bytes(self.body)
         res = self.controller.create(self.req, body=self.body).obj
@@ -3569,6 +3572,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_local_href(self):
+        self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
         self.req.body = jsonutils.dump_as_bytes(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
@@ -3604,6 +3608,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.controller.create(self.req, body=self.body)
 
     def test_create_location(self):
+        self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
         selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
         self.req.body = jsonutils.dump_as_bytes(self.body)
         robj = self.controller.create(self.req, body=self.body)
@@ -3805,6 +3810,381 @@ class ServersControllerCreateTest(test.TestCase):
                                              network_uuid=public_network_uuid)
         self.assertRaises(webob.exc.HTTPForbidden,
                           self._test_create_extra, params)
+
+    def test_multiple_create_with_string_type_min_and_max(self):
+        min_count = '2'
+        max_count = '3'
+        params = {
+            'min_count': min_count,
+            'max_count': max_count,
+        }
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertIsInstance(kwargs['min_count'], int)
+            self.assertIsInstance(kwargs['max_count'], int)
+            self.assertEqual(kwargs['min_count'], 2)
+            self.assertEqual(kwargs['max_count'], 3)
+            return old_create(*args, **kwargs)
+
+        self.stub_out('nova.compute.api.API.create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_multiple_create_enabled(self):
+        min_count = 2
+        max_count = 3
+        params = {
+            'min_count': min_count,
+            'max_count': max_count,
+        }
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['min_count'], 2)
+            self.assertEqual(kwargs['max_count'], 3)
+            return old_create(*args, **kwargs)
+
+        self.stub_out('nova.compute.api.API.create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_invalid_negative_min(self):
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                'min_count': -1,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create,
+                          self.req,
+                          body=body)
+
+    def test_create_instance_invalid_negative_max(self):
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                'max_count': -1,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create,
+                          self.req,
+                          body=body)
+
+    def test_create_instance_with_blank_min(self):
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                'min_count': '',
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create,
+                          self.req,
+                          body=body)
+
+    def test_create_instance_with_blank_max(self):
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                'max_count': '',
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create,
+                          self.req,
+                          body=body)
+
+    def test_create_instance_invalid_min_greater_than_max(self):
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                'min_count': 4,
+                'max_count': 2,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req,
+                          body=body)
+
+    def test_create_instance_invalid_alpha_min(self):
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                'min_count': 'abcd',
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create,
+                          self.req,
+                          body=body)
+
+    def test_create_instance_invalid_alpha_max(self):
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                'max_count': 'abcd',
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create,
+                          self.req,
+                          body=body)
+
+    def test_create_multiple_instances(self):
+        """Test creating multiple instances but not asking for
+        reservation_id
+        """
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'min_count': 2,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {'hello': 'world',
+                             'open': 'stack'},
+            }
+        }
+
+        def create_db_entry_for_new_instance(*args, **kwargs):
+            instance = args[4]
+            self.instance_cache_by_uuid[instance.uuid] = instance
+            return instance
+        self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
+                      create_db_entry_for_new_instance)
+        res = self.controller.create(self.req, body=body).obj
+
+        instance_uuids = self.instance_cache_by_uuid.keys()
+        self.assertIn(res["server"]["id"], instance_uuids)
+        self._check_admin_password_len(res["server"])
+
+    def test_create_multiple_instances_pass_disabled(self):
+        """Test creating multiple instances but not asking for
+        reservation_id
+        """
+        self.flags(enable_instance_password=False, group='api')
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'min_count': 2,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {'hello': 'world',
+                             'open': 'stack'},
+            }
+        }
+
+        def create_db_entry_for_new_instance(*args, **kwargs):
+            instance = args[4]
+            self.instance_cache_by_uuid[instance.uuid] = instance
+            return instance
+        self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
+                      create_db_entry_for_new_instance)
+        res = self.controller.create(self.req, body=body).obj
+
+        instance_uuids = self.instance_cache_by_uuid.keys()
+        self.assertIn(res["server"]["id"], instance_uuids)
+        self._check_admin_password_missing(res["server"])
+
+    def _create_multiple_instances_resv_id_return(self, resv_id_return):
+        """Test creating multiple instances with asking for
+        reservation_id
+        """
+        def create_db_entry_for_new_instance(*args, **kwargs):
+            instance = args[4]
+            self.instance_cache_by_uuid[instance.uuid] = instance
+            return instance
+
+        self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
+                      create_db_entry_for_new_instance)
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'min_count': 2,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {'hello': 'world',
+                             'open': 'stack'},
+                'return_reservation_id': resv_id_return
+            }
+        }
+
+        res = self.controller.create(self.req, body=body)
+        reservation_id = res.obj['reservation_id']
+        self.assertNotEqual(reservation_id, "")
+        self.assertIsNotNone(reservation_id)
+        self.assertGreater(len(reservation_id), 1)
+
+    def test_create_multiple_instances_with_resv_id_return(self):
+        self._create_multiple_instances_resv_id_return(True)
+
+    def test_create_multiple_instances_with_string_resv_id_return(self):
+        self._create_multiple_instances_resv_id_return("True")
+
+    def test_create_multiple_instances_with_multiple_volume_bdm(self):
+        """Test that a BadRequest is raised if multiple instances
+        are requested with a list of block device mappings for volumes.
+        """
+        min_count = 2
+        bdm = [{'source_type': 'volume', 'uuid': 'vol-xxxx'},
+               {'source_type': 'volume', 'uuid': 'vol-yyyy'}
+        ]
+        params = {
+                  'block_device_mapping_v2': bdm,
+                  'min_count': min_count
+        }
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['min_count'], 2)
+            self.assertEqual(len(kwargs['block_device_mapping']), 2)
+            return old_create(*args, **kwargs)
+
+        self.stub_out('nova.compute.api.API.create', create)
+        exc = self.assertRaises(webob.exc.HTTPBadRequest,
+                                self._test_create_extra, params, no_image=True)
+        self.assertEqual("Cannot attach one or more volumes to multiple "
+                         "instances", exc.explanation)
+
+    def test_create_multiple_instances_with_single_volume_bdm(self):
+        """Test that a BadRequest is raised if multiple instances
+        are requested to boot from a single volume.
+        """
+        min_count = 2
+        bdm = [{'source_type': 'volume', 'uuid': 'vol-xxxx'}]
+        params = {
+                 'block_device_mapping_v2': bdm,
+                 'min_count': min_count
+        }
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['min_count'], 2)
+            self.assertEqual(kwargs['block_device_mapping'][0]['volume_id'],
+                            'vol-xxxx')
+            return old_create(*args, **kwargs)
+
+        self.stub_out('nova.compute.api.API.create', create)
+        exc = self.assertRaises(webob.exc.HTTPBadRequest,
+                                self._test_create_extra, params, no_image=True)
+        self.assertEqual("Cannot attach one or more volumes to multiple "
+                         "instances", exc.explanation)
+
+    def test_create_multiple_instance_with_non_integer_max_count(self):
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'max_count': 2.5,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {'hello': 'world',
+                             'open': 'stack'},
+            }
+        }
+
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, self.req, body=body)
+
+    def test_create_multiple_instance_with_non_integer_min_count(self):
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'min_count': 2.5,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {'hello': 'world',
+                             'open': 'stack'},
+            }
+        }
+
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, self.req, body=body)
+
+    def test_create_multiple_instance_max_count_overquota_min_count_ok(self):
+        self.flags(instances=3, group='quota')
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'min_count': 2,
+                'max_count': 5,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+
+        def create_db_entry_for_new_instance(*args, **kwargs):
+            instance = args[4]
+            self.instance_cache_by_uuid[instance.uuid] = instance
+            return instance
+        self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
+                      create_db_entry_for_new_instance)
+        res = self.controller.create(self.req, body=body).obj
+        instance_uuids = self.instance_cache_by_uuid.keys()
+        self.assertIn(res["server"]["id"], instance_uuids)
+
+    def test_create_multiple_instance_max_count_overquota_min_count_over(self):
+        self.flags(instances=3, group='quota')
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'min_count': 4,
+                'max_count': 5,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.create,
+                          self.req, body=body)
 
     @mock.patch.object(compute_api.API, 'create')
     def test_create_multiple_instance_with_specified_ip_neutronv2(self,
