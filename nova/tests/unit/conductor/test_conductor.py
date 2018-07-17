@@ -1047,10 +1047,11 @@ class _BaseTaskTestCase(object):
 
         do_test()
 
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
     @mock.patch.object(image_api.API, 'get',
                        side_effect=exc.ImageNotFound(image_id=uuids.image))
     def test_unshelve_offloaded_instance_glance_image_not_found(
-            self, mock_get):
+            self, mock_get, add_instance_fault_from_exc):
         instance = self._create_fake_instance_obj()
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.task_state = task_states.UNSHELVING
@@ -1061,10 +1062,16 @@ class _BaseTaskTestCase(object):
         system_metadata['shelved_host'] = 'fake-mini'
         system_metadata['shelved_image_id'] = uuids.image
 
+        reason = ('Unshelve attempted but the image %s '
+                  'cannot be found.') % uuids.image
+
         self.assertRaises(
             exc.UnshelveException,
             self.conductor_manager.unshelve_instance,
             self.context, instance)
+        add_instance_fault_from_exc.assert_called_once_with(
+            self.context, instance, mock_get.side_effect, mock.ANY,
+            fault_message=reason)
         self.assertEqual(instance.vm_state, vm_states.ERROR)
         mock_get.assert_called_once_with(self.context, uuids.image,
                                          show_deleted=False)
