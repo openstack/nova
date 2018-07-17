@@ -31,7 +31,6 @@ from nova.api.openstack.compute import block_device_mapping
 from nova.api.openstack.compute import block_device_mapping_v1
 from nova.api.openstack.compute import config_drive
 from nova.api.openstack.compute import helpers
-from nova.api.openstack.compute import keypairs
 from nova.api.openstack.compute.schemas import servers as schema_servers
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import wsgi
@@ -68,7 +67,6 @@ class ServersController(wsgi.Controller):
         block_device_mapping.server_create,
         block_device_mapping_v1.server_create,
         config_drive.server_create,
-        keypairs.server_create,
     ]
 
     @staticmethod
@@ -429,6 +427,11 @@ class ServersController(wsgi.Controller):
         # all of extended code into ServersController.
         self._create_by_func_list(server_dict, create_kwargs, body)
         create_kwargs['user_data'] = server_dict.get('user_data')
+        # NOTE(alex_xu): The v2.1 API compat mode, we strip the spaces for
+        # keypair create. But we didn't strip spaces at here for
+        # backward-compatible some users already created keypair and name with
+        # leading/trailing spaces by legacy v2 API.
+        create_kwargs['key_name'] = server_dict.get('key_name')
         security_groups = server_dict.get('security_groups')
         if security_groups is not None:
             create_kwargs['security_groups'] = [

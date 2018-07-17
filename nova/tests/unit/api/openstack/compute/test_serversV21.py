@@ -3526,6 +3526,26 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertEqual(FAKE_UUID, res["server"]["id"])
         self._check_admin_password_len(res["server"])
 
+    def test_create_server_keypair_name_with_leading_trailing(self):
+        self.body['server']['key_name'] = '  abc  '
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, self.req, body=self.body)
+
+    @mock.patch.object(compute_api.API, 'create')
+    def test_create_server_keypair_name_with_leading_trailing_compat_mode(
+            self, mock_create):
+        params = {'key_name': '  abc  '}
+
+        def fake_create(*args, **kwargs):
+            self.assertEqual('  abc  ', kwargs['key_name'])
+            return (objects.InstanceList(objects=[fakes.stub_instance_obj(
+                self.req.environ['nova.context'])]), None)
+        mock_create.side_effect = fake_create
+
+        self.req.set_legacy_v2()
+        self._test_create_extra(params)
+
     def test_create_instance_invalid_flavor_href(self):
         flavor_ref = 'http://localhost/v2/flavors/asdf'
         self.body['server']['flavorRef'] = flavor_ref

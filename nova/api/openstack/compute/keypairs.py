@@ -317,13 +317,3 @@ class Controller(wsgi.Controller):
                 kp_policies.BASE_POLICY_NAME, fatal=False):
             servers = resp_obj.obj['servers']
             self._add_key_name(req, servers)
-
-
-# NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
-# parameter as this is placed to handle scheduler_hint extension for V2.1.
-def server_create(server_dict, create_kwargs, body_deprecated_param):
-    # NOTE(alex_xu): The v2.1 API compat mode, we strip the spaces for
-    # keypair create. But we didn't strip spaces at here for
-    # backward-compatible some users already created keypair and name with
-    # leading/trailing spaces by legacy v2 API.
-    create_kwargs['key_name'] = server_dict.get('key_name')
