@@ -120,7 +120,7 @@ class _GroupAntiAffinityFilter(filters.BaseHostFilter):
                   {'group_uuid': group_uuid,
                    'host': host_state.host,
                    'max_server': max_server_per_host})
-        # Note(yikun): If the number of servers from same group on this host
+        # NOTE(yikun): If the number of servers from same group on this host
         # is less than the max_server_per_host, this filter will accept the
         # given host. In the default case(max_server_per_host=1), this filter
         # will accept the given host if there are 0 servers from the group
