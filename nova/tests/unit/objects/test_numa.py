@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_versionedobjects import base as ovo_base
 import testtools
 
 from nova import exception
@@ -201,6 +202,23 @@ class _TestNUMA(object):
                                  cpu_usage=10, pinned_cpus=set([3, 4]),
                                  siblings=[set([5, 6])])
         self.assertNotEqual(cell1, cell2)
+
+    def test_obj_make_compatible(self):
+        network_metadata = objects.NetworkMetadata(
+            physnets=set(['foo', 'bar']), tunneled=True)
+        cell = objects.NUMACell(id=1, cpuset=set([1, 2]), memory=32,
+                                cpu_usage=10, pinned_cpus=set([3, 4]),
+                                siblings=[set([5, 6])],
+                                network_metadata=network_metadata)
+
+        versions = ovo_base.obj_tree_get_versions('NUMACell')
+        primitive = cell.obj_to_primitive(target_version='1.3',
+                                          version_manifest=versions)
+        self.assertIn('network_metadata', primitive['nova_object.data'])
+
+        primitive = cell.obj_to_primitive(target_version='1.2',
+                                          version_manifest=versions)
+        self.assertNotIn('network_metadata', primitive['nova_object.data'])
 
     def test_numa_cell_not_equivalent_missing_a(self):
         cell1 = objects.NUMACell(id=1, cpuset=set([1, 2]), memory=32,
