@@ -1202,39 +1202,30 @@ class ResourceTracker(object):
         # UUID and not the instance UUID. The scheduler will
         # allocate the resources for the destination host to the
         # instance UUID.
-        compute_version = objects.Service.get_minimum_version(
-            context, 'nova-compute')
-        has_ocata_computes = compute_version < 22
 
         # Some drivers (ironic) still need the allocations to be
         # fixed up, as they transition the way their inventory is reported.
-        require_allocation_refresh = (
-            has_ocata_computes or
-            self.driver.requires_allocation_refresh)
+        require_allocation_refresh = self.driver.requires_allocation_refresh
 
-        msg_allocation_refresh = (
-            "Compute driver doesn't require allocation refresh and we're on a "
-            "compute host in a deployment that only has compute hosts with "
-            "Nova versions >=16 (Pike). Skipping auto-correction of "
-            "allocations. ")
         if require_allocation_refresh:
-            if self.driver.requires_allocation_refresh:
-                msg_allocation_refresh = (
-                    "Compute driver requires allocation refresh. ")
-            elif has_ocata_computes:
-                msg_allocation_refresh = (
-                    "We're on a compute host from Nova version >=16 (Pike or "
-                    "later) in a deployment with at least one compute host "
-                    "version <16 (Ocata or earlier). ")
-            msg_allocation_refresh += (
+            msg_allocation_refresh = (
+                "Compute driver requires allocation refresh. "
                 "Will auto-correct allocations to handle "
                 "Ocata-style assumptions.")
+        else:
+            msg_allocation_refresh = (
+                "Compute driver doesn't require allocation refresh and we're "
+                "on a compute host in a deployment that only has compute "
+                "hosts with Nova versions >=16 (Pike). Skipping "
+                "auto-correction of allocations.")
+
         instance_by_uuid = {}
         for instance in instances:
             if instance.vm_state not in vm_states.ALLOW_RESOURCE_REMOVAL:
                 if msg_allocation_refresh:
                     LOG.debug(msg_allocation_refresh)
                     msg_allocation_refresh = False
+
                 self._update_usage_from_instance(context, instance, nodename,
                     require_allocation_refresh=require_allocation_refresh)
             instance_by_uuid[instance.uuid] = instance
