@@ -352,8 +352,8 @@ class _BaseTaskTestCase(object):
 
         rebuild_args = {'new_pass': 'admin_password',
                         'injected_files': 'files_to_inject',
-                        'image_ref': 'image_ref',
-                        'orig_image_ref': 'orig_image_ref',
+                        'image_ref': uuids.image_ref,
+                        'orig_image_ref': uuids.orig_image_ref,
                         'orig_sys_metadata': 'orig_sys_meta',
                         'bdms': {},
                         'recreate': False,
