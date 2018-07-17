@@ -85,6 +85,11 @@ class ZVMDriver(driver.ComputeDriver):
     def list_instances(self):
         return self._hypervisor.list_names()
 
+    def instance_exists(self, instance):
+        # z/VM driver returns name in upper case and because userid is
+        # stored instead of uuid, list_instance_uuids is not implemented
+        return self._hypervisor.guest_exists(instance)
+
     def get_available_resource(self, nodename=None):
         host_stats = self._hypervisor.get_available_resource()
 
@@ -366,3 +371,28 @@ class ZVMDriver(driver.ComputeDriver):
             self._hypervisor.image_delete(image_id)
 
         LOG.debug("Snapshot image upload complete", instance=instance)
+
+    def power_off(self, instance, timeout=0, retry_interval=0):
+        if timeout >= 0 and retry_interval > 0:
+            self._hypervisor.guest_softstop(instance.name, timeout=timeout,
+                                            retry_interval=retry_interval)
+        else:
+            self._hypervisor.guest_softstop(instance.name)
+
+    def power_on(self, context, instance, network_info,
+                 block_device_info=None):
+        self._hypervisor.guest_start(instance.name)
+
+    def pause(self, instance):
+        self._hypervisor.guest_pause(instance.name)
+
+    def unpause(self, instance):
+        self._hypervisor.guest_unpause(instance.name)
+
+    def reboot(self, context, instance, network_info, reboot_type,
+               block_device_info=None, bad_volumes_callback=None):
+
+        if reboot_type == 'SOFT':
+            self._hypervisor.guest_reboot(instance.name)
+        else:
+            self._hypervisor.guest_reset(instance.name)

@@ -127,6 +127,22 @@ class Hypervisor(object):
     def guest_capture(self, name, image_id):
         self._reqh.call('guest_capture', name, image_id)
 
+    def guest_softstop(self, name, timeout=0, retry_interval=0):
+        self._reqh.call('guest_softstop', name, timeout=timeout,
+                        poll_interval=retry_interval)
+
+    def guest_pause(self, name):
+        self._reqh.call('guest_pause', name)
+
+    def guest_unpause(self, name):
+        self._reqh.call('guest_unpause', name)
+
+    def guest_reboot(self, name):
+        self._reqh.call('guest_reboot', name)
+
+    def guest_reset(self, name):
+        self._reqh.call('guest_reset', name)
+
     def image_query(self, imagename):
         """Check whether image is there or not
 
