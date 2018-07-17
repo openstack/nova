@@ -396,3 +396,6 @@ class ZVMDriver(driver.ComputeDriver):
             self._hypervisor.guest_reboot(instance.name)
         else:
             self._hypervisor.guest_reset(instance.name)
+
+    def get_console_output(self, context, instance):
+        return self._hypervisor.guest_get_console_output(instance.name)
