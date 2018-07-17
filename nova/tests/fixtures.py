@@ -770,6 +770,11 @@ class WarningsFixture(fixtures.Fixture):
                                 message="Policy .* failed scope check",
                                 category=UserWarning)
 
+        # NOTE(gibi): The UUIDFields emits a warning if the value is not a
+        # valid UUID. Let's escalate that to an exception in the test to
+        # prevent adding violations.
+        warnings.filterwarnings('error', message=".*invalid UUID.*")
+
         self.addCleanup(warnings.resetwarnings)
 
 

@@ -14,12 +14,14 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import copy
 import sys
 
 import fixtures as fx
 import mock
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import sqlalchemy
 import testtools
@@ -32,9 +34,11 @@ from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
+from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 CONF = cfg.CONF
@@ -497,3 +501,43 @@ class TestPlacementFixture(testtools.TestCase):
         placement_fixture.token = None
         resp = placement_fixture._fake_get(None, '/foo')
         self.assertEqual(401, resp.status_code)
+
+
+class TestWarningsFixture(test.TestCase):
+    def test_invalid_uuid_errors(self):
+        """Creating an oslo.versionedobject with an invalid UUID value for a
+        UUIDField should raise an exception.
+        """
+        valid_migration_kwargs = {
+                "created_at": timeutils.utcnow().replace(microsecond=0),
+                "updated_at": None,
+                "deleted_at": None,
+                "deleted": False,
+                "id": 123,
+                "uuid": uuids.migration,
+                "source_compute": "compute-source",
+                "dest_compute": "compute-dest",
+                "source_node": "node-source",
+                "dest_node": "node-dest",
+                "dest_host": "host-dest",
+                "old_instance_type_id": 42,
+                "new_instance_type_id": 84,
+                "instance_uuid": "fake-uuid",
+                "status": "migrating",
+                "migration_type": "resize",
+                "hidden": False,
+                "memory_total": 123456,
+                "memory_processed": 12345,
+                "memory_remaining": 111111,
+                "disk_total": 234567,
+                "disk_processed": 23456,
+                "disk_remaining": 211111,
+                }
+
+        # this shall not throw FutureWarning
+        objects.migration.Migration(**valid_migration_kwargs)
+
+        invalid_migration_kwargs = copy.deepcopy(valid_migration_kwargs)
+        invalid_migration_kwargs["uuid"] = "fake_id"
+        self.assertRaises(FutureWarning, objects.migration.Migration,
+                          **invalid_migration_kwargs)
