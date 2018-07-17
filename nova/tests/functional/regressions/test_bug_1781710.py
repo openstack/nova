@@ -108,14 +108,9 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
                              'anti-affinity group.')
             hosts = set([])
             for selection_list in selections_to_return:
-                # FIXME(mriedem): selection_list should be length 1 when bug
-                # 1781710 is fixed since we shouldn't have alternates with
-                # 2 servers and only 2 hosts.
-                self.assertEqual(2, len(selection_list))
+                self.assertEqual(1, len(selection_list), selection_list)
                 hosts.add(selection_list[0].service_host)
-            # FIXME(mriedem): Similarly, this should be 2 once the bug is
-            # fixed.
-            self.assertEqual(1, len(hosts), hosts)
+            self.assertEqual(2, len(hosts), hosts)
             return selections_to_return
         self.stub_out('nova.scheduler.filter_scheduler.FilterScheduler.'
                       '_get_alternate_hosts', stub_get_alternate_hosts)
@@ -139,8 +134,4 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
             selected_hosts.add(server['OS-EXT-SRV-ATTR:host'])
 
         # Assert that each server is on a separate host.
-        # FIXME(sean-k-mooney): we should be asserting len is 2
-        # however until bug 1781710 is resolved we assert incorrect
-        # behavior to match reality. This assertion and fixme should
-        # be corrected as part of closing the bug.
-        self.assertEqual(1, len(selected_hosts))
+        self.assertEqual(2, len(selected_hosts))

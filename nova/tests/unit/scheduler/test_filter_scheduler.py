@@ -85,14 +85,25 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   swap=0,
                                   vcpus=1),
             project_id=uuids.project_id,
-            instance_group=None)
+            instance_group=None, instance_uuid=uuids.instance)
+        # Reset the RequestSpec changes so they don't interfere with the
+        # assertion at the end of the test.
+        spec_obj.obj_reset_changes(recursive=True)
 
         host_state = mock.Mock(spec=host_manager.HostState, host="fake_host",
                 uuid=uuids.cn1, cell_uuid=uuids.cell, nodename="fake_node",
                 limits={})
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
-        mock_get_hosts.return_value = all_host_states
+
+        visited_instances = set([])
+
+        def fake_get_sorted_hosts(_spec_obj, host_states, index):
+            # Keep track of which instances are passed to the filters.
+            visited_instances.add(_spec_obj.instance_uuid)
+            return all_host_states
+
+        mock_get_hosts.side_effect = fake_get_sorted_hosts
 
         instance_uuids = [uuids.instance]
         ctx = mock.Mock()
@@ -113,6 +124,11 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         # And ensure we never called claim_resources()
         self.assertFalse(mock_claim.called)
+
+        # Make sure that the RequestSpec.instance_uuid is not dirty.
+        self.assertEqual(sorted(instance_uuids), sorted(visited_instances))
+        self.assertEqual(0, len(spec_obj.obj_what_changed()),
+                         spec_obj.obj_what_changed())
 
     @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -486,7 +502,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   swap=0,
                                   vcpus=1),
             project_id=uuids.project_id,
-            instance_group=ig)
+            instance_group=ig, instance_uuid=uuids.instance0)
+        # Reset the RequestSpec changes so they don't interfere with the
+        # assertion at the end of the test.
+        spec_obj.obj_reset_changes(recursive=True)
 
         hs1 = mock.Mock(spec=host_manager.HostState, host='host1',
                 nodename="node1", limits={}, uuid=uuids.cn1,
@@ -506,8 +525,15 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # Simulate host 1 and host 2 being randomly returned first by
         # _get_sorted_hosts() in the two iterations for each instance in
         # num_instances
-        mock_get_hosts.side_effect = ([hs2, hs1], [hs1, hs2],
-                                      [hs2, hs1], [hs1, hs2])
+        visited_instances = set([])
+
+        def fake_get_sorted_hosts(_spec_obj, host_states, index):
+            # Keep track of which instances are passed to the filters.
+            visited_instances.add(_spec_obj.instance_uuid)
+            if index % 2:
+                return [hs1, hs2]
+            return [hs2, hs1]
+        mock_get_hosts.side_effect = fake_get_sorted_hosts
         instance_uuids = [
             getattr(uuids, 'instance%d' % x) for x in range(num_instances)
         ]
@@ -546,6 +572,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # Assert that we updated HostState.instances for each host.
         self.assertIn(uuids.instance0, hs2.instances)
         self.assertIn(uuids.instance1, hs1.instances)
+        # Make sure that the RequestSpec.instance_uuid is not dirty.
+        self.assertEqual(sorted(instance_uuids), sorted(visited_instances))
+        self.assertEqual(0, len(spec_obj.obj_what_changed()),
+                         spec_obj.obj_what_changed())
 
     @mock.patch('random.choice', side_effect=lambda x: x[1])
     @mock.patch('nova.scheduler.host_manager.HostManager.get_weighed_hosts')

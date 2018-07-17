@@ -186,7 +186,18 @@ class FilterScheduler(driver.Scheduler):
         # The list of hosts that have been selected (and claimed).
         claimed_hosts = []
 
-        for num in range(num_instances):
+        for num, instance_uuid in enumerate(instance_uuids):
+            # In a multi-create request, the first request spec from the list
+            # is passed to the scheduler and that request spec's instance_uuid
+            # might not be the same as the instance we're processing, so we
+            # update the instance_uuid in that case before passing the request
+            # spec to filters since at least one filter
+            # (ServerGroupAntiAffinityFilter) depends on that information being
+            # accurate.
+            spec_obj.instance_uuid = instance_uuid
+            # Reset the field so it's not persisted accidentally.
+            spec_obj.obj_reset_changes(['instance_uuid'])
+
             hosts = self._get_sorted_hosts(spec_obj, hosts, num)
             if not hosts:
                 # NOTE(jaypipes): If we get here, that means not all instances
@@ -195,7 +206,6 @@ class FilterScheduler(driver.Scheduler):
                 # _ensure_sufficient_hosts() call.
                 break
 
-            instance_uuid = instance_uuids[num]
             # Attempt to claim the resources against one or more resource
             # providers, looping over the sorted list of possible hosts
             # looking for an allocation_request that contains that host's
@@ -305,6 +315,13 @@ class FilterScheduler(driver.Scheduler):
         selections_to_return = []
 
         for num in range(num_instances):
+            instance_uuid = instance_uuids[num] if instance_uuids else None
+            if instance_uuid:
+                # Update the RequestSpec.instance_uuid before sending it to
+                # the filters in case we're doing a multi-create request, but
+                # don't persist the change.
+                spec_obj.instance_uuid = instance_uuid
+                spec_obj.obj_reset_changes(['instance_uuid'])
             hosts = self._get_sorted_hosts(spec_obj, hosts, num)
             if not hosts:
                 # No hosts left, so break here, and the
@@ -312,7 +329,6 @@ class FilterScheduler(driver.Scheduler):
                 break
             selected_host = hosts[0]
             selected_hosts.append(selected_host)
-            instance_uuid = instance_uuids[num] if instance_uuids else None
             self._consume_selected_host(selected_host, spec_obj,
                                         instance_uuid=instance_uuid)
 
