@@ -388,3 +388,43 @@ class NetworkAPI(base.Base):
                   False otherwise
         """
         return False
+
+    def bind_ports_to_host(self, context, instance, host,
+                           vnic_type=None, profile=None):
+        """Attempts to bind the ports from the instance on the given host
+
+        If the ports are already actively bound to another host, like the
+        source host during live migration, then the new port bindings will
+        be inactive, assuming $host is the destination host for the live
+        migration.
+
+        In the event of an error, any ports which were successfully bound to
+        the host should have those host bindings removed from the ports.
+
+        This method should not be used if "supports_port_binding_extension"
+        returns False.
+
+        :param context: the user request context
+        :type context: nova.context.RequestContext
+        :param instance: the instance with a set of ports
+        :type instance: nova.objects.Instance
+        :param host: the host on which to bind the ports which
+                     are attached to the instance
+        :type host: str
+        :param vnic_type: optional vnic type string for the host
+                          port binding
+        :type vnic_type: str
+        :param profile: optional vif profile dict for the host port
+                        binding; note that the port binding profile is mutable
+                        via the networking "Port Binding" API so callers that
+                        pass in a profile should ensure they have the latest
+                        version from neutron with their changes merged,
+                        which can be determined using the "revision_number"
+                        attribute of the port.
+        :type profile: dict
+        :raises: PortBindingFailed if any of the ports failed to be bound to
+                 the destination host
+        :returns: dict, keyed by port ID, of a new host port
+                  binding dict per port that was bound
+        """
+        raise NotImplementedError()

@@ -52,6 +52,7 @@ from nova import policy
 from nova import service_auth
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests.unit import fake_requests as fake_req
 from nova.tests import uuidsentinel as uuids
 
 CONF = cfg.CONF
@@ -5456,6 +5457,72 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         self.assertRaises(NotImplementedError,
                           api.associate,
                           self.context, 'id')
+
+
+class TestPortBindingWithMock(test.NoDBTestCase):
+    """Tests port-binding related operations."""
+
+    def setUp(self):
+        super(TestPortBindingWithMock, self).setUp()
+        self.api = neutronapi.API()
+
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client',
+                new_callable=mock.NonCallableMock)
+    def test_bind_ports_to_host_no_ports(self, mock_client):
+        self.assertDictEqual({},
+                             self.api.bind_ports_to_host(
+                                 mock.sentinel.context,
+                                 objects.Instance(info_cache=None),
+                                 'fake-host'))
+
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client')
+    def test_bind_ports_to_host(self, mock_client):
+        """Tests a single port happy path where everything is successful."""
+        nwinfo = model.NetworkInfo([model.VIF(uuids.port)])
+        inst = objects.Instance(
+            info_cache=objects.InstanceInfoCache(network_info=nwinfo))
+        ctxt = context.get_context()
+        binding = {'binding': {'host': 'fake-host',
+                               'vnic_type': 'normal',
+                               'profile': {'foo': 'bar'}}}
+        resp = fake_req.FakeResponse(200, content=jsonutils.dumps(binding))
+        mock_client.return_value.post.return_value = resp
+        result = self.api.bind_ports_to_host(
+            ctxt, inst, 'fake-host', 'normal', {'foo': 'bar'})
+        self.assertEqual(1, mock_client.return_value.post.call_count)
+        self.assertDictEqual({uuids.port: binding['binding']}, result)
+
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client')
+    def test_bind_ports_to_host_rollback(self, mock_client):
+        """Tests a scenario where an instance has two ports, and binding the
+        first is successful but binding the second fails, so the code will
+        rollback the binding for the first port.
+        """
+        nwinfo = model.NetworkInfo([
+            model.VIF(uuids.ok), model.VIF(uuids.fail)])
+        inst = objects.Instance(
+            info_cache=objects.InstanceInfoCache(network_info=nwinfo))
+        ctxt = context.get_context()
+
+        def fake_post(url, *args, **kwargs):
+            if uuids.ok in url:
+                mock_response = fake_req.FakeResponse(
+                    200, content='{"binding": {"host": "fake-host"}}')
+            else:
+                mock_response = fake_req.FakeResponse(500, content='error')
+            return mock_response
+
+        mock_client.return_value.post.side_effect = fake_post
+        mock_client.return_value.delete.return_value = (
+            fake_req.FakeResponse(204))
+        self.assertRaises(exception.PortBindingFailed,
+                          self.api.bind_ports_to_host, ctxt, inst, 'fake-host')
+        # assert that post was called twice and delete once
+        self.assertEqual(2, mock_client.return_value.post.call_count)
+        self.assertEqual(1, mock_client.return_value.delete.call_count)
+        # and that delete was called on the first port
+        self.assertIn(uuids.ok,
+                      mock_client.return_value.delete.call_args[0][0])
 
 
 class TestAllocateForInstance(test.NoDBTestCase):
