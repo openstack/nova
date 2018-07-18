@@ -418,6 +418,10 @@ tests:
   response_json_paths:
       $.errors[0].title: Not Found
 
+- name: get missing resource provider inventory
+  GET: /resource_providers/2e1dda56-8b18-4fb9-8c5c-3125891b7143/inventories/VCPU
+  status: 404
+
 - name: create another resource provider
   POST: /resource_providers
   request_headers:
