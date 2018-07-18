@@ -307,7 +307,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         group.name = 'pele'
         group.uuid = uuids.fake
         group.members = [instance.uuid]
-        group.policies = [policy]
+        group.policy = policy
         return group
 
     def _get_group_details(self, group, policy=None):
@@ -324,7 +324,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             group_info = scheduler_utils._get_group_details(
                 self.context, 'fake_uuid', group_hosts)
             self.assertEqual(
-                (set(['hostA', 'hostB']), [policy], group.members),
+                (set(['hostA', 'hostB']), policy, group.members),
                 group_info)
 
     def test_get_group_details(self):
@@ -347,7 +347,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         group = objects.InstanceGroup()
         group.uuid = uuids.fake
         group.members = [instance.uuid]
-        group.policies = [policy]
+        group.policy = policy
 
         with test.nested(
             mock.patch.object(objects.InstanceGroup, 'get_by_instance_uuid',
@@ -370,7 +370,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
     @mock.patch.object(scheduler_utils, '_get_group_details')
     def test_setup_instance_group_in_request_spec(self, mock_ggd):
         mock_ggd.return_value = scheduler_utils.GroupDetails(
-            hosts=set(['hostA', 'hostB']), policies=['policy'],
+            hosts=set(['hostA', 'hostB']), policy='policy',
             members=['instance1'])
         spec = objects.RequestSpec(instance_uuid=uuids.instance)
         spec.instance_group = objects.InstanceGroup(hosts=['hostC'])
@@ -381,7 +381,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                          ['hostC'])
         # Given it returns a list from a set, make sure it's sorted.
         self.assertEqual(['hostA', 'hostB'], sorted(spec.instance_group.hosts))
-        self.assertEqual(['policy'], spec.instance_group.policies)
+        self.assertEqual('policy', spec.instance_group.policy)
         self.assertEqual(['instance1'], spec.instance_group.members)
 
     @mock.patch.object(scheduler_utils, '_get_group_details')

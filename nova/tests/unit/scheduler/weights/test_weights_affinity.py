@@ -32,7 +32,7 @@ class SoftWeigherTestBase(test.NoDBTestCase):
     def _get_weighed_host(self, hosts, policy):
         request_spec = objects.RequestSpec(
             instance_group=objects.InstanceGroup(
-                policies=[policy],
+                policy=policy,
                 members=['member1',
                          'member2',
                          'member3',

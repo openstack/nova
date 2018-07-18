@@ -466,7 +466,7 @@ class _TestRequestSpecObject(object):
                                            disk_gb=10.0,
                                            memory_mb=8192.0),
             instance_group=objects.InstanceGroup(hosts=['fake1'],
-                                                 policies=['affinity'],
+                                                 policy='affinity',
                                                  members=['inst1', 'inst2']),
             scheduler_hints={'foo': ['bar']},
             requested_destination=fake_dest)

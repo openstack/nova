@@ -40,9 +40,9 @@ class _SoftAffinityWeigherBase(weights.BaseHostWeigher):
         if not request_spec.instance_group:
             return 0
 
-        policies = request_spec.instance_group.policies
+        policy = request_spec.instance_group.policy
 
-        if self.policy_name not in policies:
+        if self.policy_name != policy:
             return 0
 
         instances = set(host_state.instances.keys())

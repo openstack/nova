@@ -41,7 +41,7 @@ LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
-GroupDetails = collections.namedtuple('GroupDetails', ['hosts', 'policies',
+GroupDetails = collections.namedtuple('GroupDetails', ['hosts', 'policy',
                                                        'members'])
 
 
@@ -795,29 +795,28 @@ def _get_group_details(context, instance_uuid, user_group_hosts=None):
 
     policies = set(('anti-affinity', 'affinity', 'soft-affinity',
                     'soft-anti-affinity'))
-    if any((policy in policies) for policy in group.policies):
-        if not _SUPPORTS_AFFINITY and 'affinity' in group.policies:
+    if group.policy in policies:
+        if not _SUPPORTS_AFFINITY and 'affinity' == group.policy:
             msg = _("ServerGroupAffinityFilter not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)
-        if not _SUPPORTS_ANTI_AFFINITY and 'anti-affinity' in group.policies:
+        if not _SUPPORTS_ANTI_AFFINITY and 'anti-affinity' == group.policy:
             msg = _("ServerGroupAntiAffinityFilter not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)
-        if (not _SUPPORTS_SOFT_AFFINITY
-                and 'soft-affinity' in group.policies):
+        if (not _SUPPORTS_SOFT_AFFINITY and 'soft-affinity' == group.policy):
             msg = _("ServerGroupSoftAffinityWeigher not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)
         if (not _SUPPORTS_SOFT_ANTI_AFFINITY
-                and 'soft-anti-affinity' in group.policies):
+                and 'soft-anti-affinity' == group.policy):
             msg = _("ServerGroupSoftAntiAffinityWeigher not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)
         group_hosts = set(group.get_hosts())
         user_hosts = set(user_group_hosts) if user_group_hosts else set()
         return GroupDetails(hosts=user_hosts | group_hosts,
-                            policies=group.policies, members=group.members)
+                            policy=group.policy, members=group.members)
 
 
 def setup_instance_group(context, request_spec):
@@ -835,7 +834,7 @@ def setup_instance_group(context, request_spec):
     group_info = _get_group_details(context, instance_uuid, group_hosts)
     if group_info is not None:
         request_spec.instance_group.hosts = list(group_info.hosts)
-        request_spec.instance_group.policies = group_info.policies
+        request_spec.instance_group.policy = group_info.policy
         request_spec.instance_group.members = group_info.members
 
 
