@@ -48,9 +48,3 @@ class ConfigDriveController(wsgi.Controller):
                 cd_policies.BASE_POLICY_NAME, fatal=False):
             servers = resp_obj.obj['servers']
             self._add_config_drive(req, servers)
-
-
-# NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
-# parameter as this is placed to handle scheduler_hint extension for V2.1.
-def server_create(server_dict, create_kwargs, body_deprecated_param):
-    create_kwargs['config_drive'] = server_dict.get(ATTRIBUTE_NAME)
