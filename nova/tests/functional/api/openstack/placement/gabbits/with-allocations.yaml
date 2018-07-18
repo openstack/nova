@@ -68,6 +68,22 @@ tests:
   response_json_paths:
       $.errors[0].code: placement.inventory.inuse
 
+# We can change inventory in a way that makes existing allocations exceed the
+# new capacity. This is allowed.
+- name: change inventory despite capacity exceeded
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      accept: application/json
+      content-type: application/json
+  data:
+      resource_provider_generation: 5
+      inventories:
+        DISK_GB:
+          total: 1019
+        VCPU:
+          total: 97
+  status: 200
+
 - name: get total usages by project
   GET: /usages?project_id=$ENVIRON['PROJECT_ID']
   request_headers:
