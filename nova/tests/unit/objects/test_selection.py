@@ -91,8 +91,11 @@ class _TestSelectionObject(object):
         """Tests that to_dict() method properly converts a Selection object to
         the corresponding dict.
         """
+        fake_network_metadata = objects.NetworkMetadata(
+            physnets=set(['foo', 'bar']), tunneled=True)
         fake_numa_limit = objects.numa.NUMATopologyLimits(
-                cpu_allocation_ratio=1.0, ram_allocation_ratio=1.0)
+            cpu_allocation_ratio=1.0, ram_allocation_ratio=1.0,
+            network_metadata=fake_network_metadata)
         fake_limit = {"memory_mb": 1024, "disk_gb": 100, "vcpus": 2,
                 "numa_topology": fake_numa_limit}
         fake_limit_obj = objects.SchedulerLimits.from_dict(fake_limit)
@@ -100,24 +103,27 @@ class _TestSelectionObject(object):
                 nodename="fakenode", compute_node_uuid=uuids.host,
                 cell_uuid=uuids.cell, limits=fake_limit_obj,
                 allocation_request="fake", allocation_request_version="99.9")
-        expected = {
-                'host': 'fakehost',
-                'nodename': 'fakenode',
-                'limits': {
-                    'disk_gb': 100,
-                    'memory_mb': 1024,
-                    'numa_topology': {
-                    'nova_object.changes': [
-                            'cpu_allocation_ratio',
-                            'ram_allocation_ratio'],
-                    'nova_object.data': {
-                        'cpu_allocation_ratio': 1.0,
-                        'ram_allocation_ratio': 1.0},
-                    'nova_object.name': 'NUMATopologyLimits',
-                    'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.0'}}}
+
         result = sel_obj.to_dict()
-        self.assertDictEqual(expected, result)
+
+        self.assertEqual(['host', 'limits', 'nodename'], sorted(result.keys()))
+        self.assertEqual('fakehost', result['host'])
+        self.assertEqual('fakenode', result['nodename'])
+
+        limits = result['limits']
+        self.assertEqual(['disk_gb', 'memory_mb', 'numa_topology'],
+                         sorted(limits.keys()))
+        self.assertEqual(100, limits['disk_gb'])
+        self.assertEqual(1024, limits['memory_mb'])
+
+        numa_topology = limits['numa_topology']['nova_object.data']
+        self.assertEqual(1.0, numa_topology['cpu_allocation_ratio'])
+        self.assertEqual(1.0, numa_topology['ram_allocation_ratio'])
+
+        network_meta = numa_topology['network_metadata']['nova_object.data']
+        # sets are unordered so we need to convert to a list
+        self.assertEqual(['bar', 'foo'], sorted(network_meta['physnets']))
+        self.assertTrue(network_meta['tunneled'])
 
     def test_selection_obj_to_dict_no_numa(self):
         """Tests that to_dict() method properly converts a

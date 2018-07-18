@@ -254,9 +254,18 @@ class NUMATopology(base.NovaObject):
 @base.NovaObjectRegistry.register
 class NUMATopologyLimits(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add network_metadata field
+    VERSION = '1.1'
 
     fields = {
         'cpu_allocation_ratio': fields.FloatField(),
         'ram_allocation_ratio': fields.FloatField(),
-        }
+        'network_metadata': fields.ObjectField('NetworkMetadata'),
+    }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(NUMATopologyLimits, self).obj_make_compatible(primitive,
+                                                            target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1):
+            primitive.pop('network_metadata', None)
