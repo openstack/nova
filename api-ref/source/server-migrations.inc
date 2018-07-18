@@ -184,6 +184,9 @@ Abort an in-progress live migration.
 
 .. note:: Microversion 2.24 or greater is required for this API.
 
+.. note:: With microversion 2.65 or greater, you can abort live migrations
+    also in ``queued`` and ``preparing`` status.
+
 .. note:: Not all compute back ends support aborting an in-progress live
     migration.
 
@@ -198,7 +201,9 @@ The server OS-EXT-STS:task_state value must be ``migrating``.
 If the server is locked, you must have administrator privileges to force the
 completion of the server migration.
 
-The migration status must be ``running``.
+For microversions from 2.24 to 2.64 the migration status must be ``running``,
+for microversion 2.65 and greater, the migration status can also be ``queued``
+and ``preparing``.
 
 **Asynchronous Postconditions**
 

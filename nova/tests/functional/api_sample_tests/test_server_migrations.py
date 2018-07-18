@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from concurrent import futures
 import datetime
 
 import mock
@@ -226,3 +227,21 @@ class ServerMigrationsSamplesJsonTestV2_59(
         self.fake_migrations[1][
             'uuid'] = '22341d4b-346a-40d0-83c6-5f4f6892b650'
         super(ServerMigrationsSamplesJsonTestV2_59, self).setUp()
+
+
+class ServerMigrationsSampleJsonTestV2_65(ServerMigrationsSampleJsonTestV2_24):
+    ADMIN_API = True
+    microversion = '2.65'
+    scenarios = [('v2_65', {'api_major_version': 'v2.1'})]
+
+    @mock.patch.object(conductor_manager.ComputeTaskManager, '_live_migrate')
+    def test_live_migrate_abort_migration_queued(self, _live_migrate):
+        self.migration.status = 'queued'
+        self.migration.save()
+        self._do_post('servers/%s/action' % self.uuid, 'live-migrate-server',
+                      {'hostname': self.compute.host})
+        self.compute._waiting_live_migrations[self.uuid] = (
+            self.migration, futures.Future())
+        uri = 'servers/%s/migrations/%s' % (self.uuid, self.migration.id)
+        response = self._do_delete(uri)
+        self.assertEqual(202, response.status_code)

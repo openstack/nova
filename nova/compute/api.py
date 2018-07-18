@@ -106,6 +106,7 @@ BFV_RESERVE_MIN_COMPUTE_VERSION = 17
 CINDER_V3_ATTACH_MIN_COMPUTE_VERSION = 24
 MIN_COMPUTE_MULTIATTACH = 27
 MIN_COMPUTE_TRUSTED_CERTS = 31
+MIN_COMPUTE_ABORT_QUEUED_LIVE_MIGRATION = 34
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -4411,12 +4412,15 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_cell
     @check_instance_state(task_state=[task_states.MIGRATING])
-    def live_migrate_abort(self, context, instance, migration_id):
+    def live_migrate_abort(self, context, instance, migration_id,
+                           support_abort_in_queue=False):
         """Abort an in-progress live migration.
 
         :param context: Security context
         :param instance: The instance that is being migrated
         :param migration_id: ID of in-progress live migration
+        :param support_abort_in_queue: Flag indicating whether we can support
+            abort migrations in "queued" or "preparing" status.
 
         """
         migration = objects.Migration.get_by_id_and_instance(context,
@@ -4424,7 +4428,30 @@ class API(base.Base):
         LOG.debug("Going to cancel live migration %s",
                   migration.id, instance=instance)
 
-        if migration.status != 'running':
+        # If the microversion does not support abort migration in queue,
+        # we are only be able to abort migrations with `running` status;
+        # if it is supported, we are able to also abort migrations in
+        # `queued` and `preparing` status.
+        allowed_states = ['running']
+        queued_states = ['queued', 'preparing']
+        if support_abort_in_queue:
+            # The user requested a microversion that supports aborting a queued
+            # or preparing live migration. But we need to check that the
+            # compute service hosting the instance is new enough to support
+            # aborting a queued/preparing live migration, so we check the
+            # service version here.
+            # TODO(Kevin_Zheng): This service version check can be removed in
+            # Stein (at the earliest) when the API only supports Rocky or
+            # newer computes.
+            if migration.status in queued_states:
+                service = objects.Service.get_by_compute_host(
+                    context, instance.host)
+                if service.version < MIN_COMPUTE_ABORT_QUEUED_LIVE_MIGRATION:
+                    raise exception.AbortQueuedLiveMigrationNotYetSupported(
+                        migration_id=migration_id, status=migration.status)
+            allowed_states.extend(queued_states)
+
+        if migration.status not in allowed_states:
             raise exception.InvalidMigrationState(migration_id=migration_id,
                     instance_uuid=instance.uuid,
                     state=migration.status,
