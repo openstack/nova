@@ -61,23 +61,113 @@ Possible values:
   'liberty'.
 """),
     cfg.StrOpt('cells',
-        help='Cells RPC API version cap'),
+        help="""
+Cells RPC API version cap.
+
+Possible values:
+
+* By default send the latest version the client knows about
+* A string representing a version number in the format 'N.N';
+  for example, possible values might be '1.12' or '2.0'.
+* An OpenStack release name, in lower case, such as 'mitaka' or
+  'liberty'.
+"""),
     cfg.StrOpt('intercell',
-        help='Intercell RPC API version cap'),
+        help="""
+Intercell RPC API version cap.
+
+Possible values:
+
+* By default send the latest version the client knows about
+* A string representing a version number in the format 'N.N';
+  for example, possible values might be '1.12' or '2.0'.
+* An OpenStack release name, in lower case, such as 'mitaka' or
+  'liberty'.
+"""),
     cfg.StrOpt("cert",
-        help='Cert RPC API version cap'),
+        help="""
+Cert RPC API version cap.
+
+Possible values:
+
+* By default send the latest version the client knows about
+* A string representing a version number in the format 'N.N';
+  for example, possible values might be '1.12' or '2.0'.
+* An OpenStack release name, in lower case, such as 'mitaka' or
+  'liberty'.
+"""),
     cfg.StrOpt("scheduler",
-        help='Scheduler RPC API version cap'),
+        help="""
+Scheduler RPC API version cap.
+
+Possible values:
+
+* By default send the latest version the client knows about
+* A string representing a version number in the format 'N.N';
+  for example, possible values might be '1.12' or '2.0'.
+* An OpenStack release name, in lower case, such as 'mitaka' or
+  'liberty'.
+"""),
     cfg.StrOpt('conductor',
-        help='Conductor RPC API version cap'),
+        help="""
+Conductor RPC API version cap.
+
+Possible values:
+
+* By default send the latest version the client knows about
+* A string representing a version number in the format 'N.N';
+  for example, possible values might be '1.12' or '2.0'.
+* An OpenStack release name, in lower case, such as 'mitaka' or
+  'liberty'.
+"""),
     cfg.StrOpt('console',
-        help='Console RPC API version cap'),
+        help="""
+Console RPC API version cap.
+
+Possible values:
+
+* By default send the latest version the client knows about
+* A string representing a version number in the format 'N.N';
+  for example, possible values might be '1.12' or '2.0'.
+* An OpenStack release name, in lower case, such as 'mitaka' or
+  'liberty'.
+"""),
     cfg.StrOpt('consoleauth',
-        help='Consoleauth RPC API version cap'),
+        help="""
+Consoleauth RPC API version cap.
+
+Possible values:
+
+* By default send the latest version the client knows about
+* A string representing a version number in the format 'N.N';
+  for example, possible values might be '1.12' or '2.0'.
+* An OpenStack release name, in lower case, such as 'mitaka' or
+  'liberty'.
+"""),
     cfg.StrOpt('network',
-        help='Network RPC API version cap'),
+        help="""
+Network RPC API version cap.
+
+Possible values:
+
+* By default send the latest version the client knows about
+* A string representing a version number in the format 'N.N';
+  for example, possible values might be '1.12' or '2.0'.
+* An OpenStack release name, in lower case, such as 'mitaka' or
+  'liberty'.
+"""),
     cfg.StrOpt('baseapi',
-        help='Base API RPC API version cap')
+        help="""
+Base API RPC API version cap.
+
+Possible values:
+
+* By default send the latest version the client knows about
+* A string representing a version number in the format 'N.N';
+  for example, possible values might be '1.12' or '2.0'.
+* An OpenStack release name, in lower case, such as 'mitaka' or
+  'liberty'.
+""")
 ]
 
 
