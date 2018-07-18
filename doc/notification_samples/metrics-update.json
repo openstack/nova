@@ -1,0 +1,137 @@
+{
+   "event_type": "metrics.update",
+   "payload": {
+      "nova_object.version": "1.0",
+      "nova_object.name": "MetricsPayload",
+      "nova_object.namespace": "nova",
+      "nova_object.data": {
+         "host_ip": "10.0.2.15",
+         "host": "compute",
+         "nodename": "fake-mini",
+         "metrics":[
+            {
+               "nova_object.version": "1.0",
+               "nova_object.name": "MetricPayload",
+               "nova_object.namespace": "nova",
+               "nova_object.data": {
+                  "timestamp": "2012-10-29T13:42:11Z",
+                  "source": "fake.SmallFakeDriver",
+                  "numa_membw_values": null,
+                  "name": "cpu.iowait.percent",
+                  "value": 0
+               }
+            },
+            {
+               "nova_object.version": "1.0",
+               "nova_object.name": "MetricPayload",
+               "nova_object.namespace": "nova",
+               "nova_object.data": {
+                  "timestamp": "2012-10-29T13:42:11Z",
+                  "source": "fake.SmallFakeDriver",
+                  "numa_membw_values": null,
+                  "name": "cpu.frequency",
+                  "value": 800
+               }
+            },
+            {
+               "nova_object.version": "1.0",
+               "nova_object.name": "MetricPayload",
+               "nova_object.namespace": "nova",
+               "nova_object.data": {
+                  "timestamp": "2012-10-29T13:42:11Z",
+                  "source": "fake.SmallFakeDriver",
+                  "numa_membw_values": null,
+                  "name": "cpu.idle.percent",
+                  "value": 97
+               }
+            },
+            {
+               "nova_object.version": "1.0",
+               "nova_object.name": "MetricPayload",
+               "nova_object.namespace": "nova",
+               "nova_object.data": {
+                  "timestamp": "2012-10-29T13:42:11Z",
+                  "source": "fake.SmallFakeDriver",
+                  "numa_membw_values": null,
+                  "name": "cpu.iowait.time",
+                  "value": 6121490000000
+               }
+            },
+            {
+               "nova_object.version": "1.0",
+               "nova_object.name": "MetricPayload",
+               "nova_object.namespace": "nova",
+               "nova_object.data": {
+                  "timestamp": "2012-10-29T13:42:11Z",
+                  "source": "fake.SmallFakeDriver",
+                  "numa_membw_values": null,
+                  "name": "cpu.kernel.percent",
+                  "value": 0
+               }
+            },
+            {
+               "nova_object.version": "1.0",
+               "nova_object.name": "MetricPayload",
+               "nova_object.namespace": "nova",
+               "nova_object.data": {
+                  "timestamp": "2012-10-29T13:42:11Z",
+                  "source": "fake.SmallFakeDriver",
+                  "numa_membw_values": null,
+                  "name": "cpu.kernel.time",
+                  "value": 5664160000000
+               }
+            },
+            {
+               "nova_object.version": "1.0",
+               "nova_object.name": "MetricPayload",
+               "nova_object.namespace": "nova",
+               "nova_object.data": {
+                  "timestamp": "2012-10-29T13:42:11Z",
+                  "source": "fake.SmallFakeDriver",
+                  "numa_membw_values": null,
+                  "name": "cpu.percent",
+                  "value": 2
+               }
+            },
+            {
+               "nova_object.version": "1.0",
+               "nova_object.name": "MetricPayload",
+               "nova_object.namespace": "nova",
+               "nova_object.data": {
+                  "timestamp": "2012-10-29T13:42:11Z",
+                  "source": "fake.SmallFakeDriver",
+                  "numa_membw_values": null,
+                  "name": "cpu.user.percent",
+                  "value": 1
+               }
+            },
+            {
+               "nova_object.version": "1.0",
+               "nova_object.name": "MetricPayload",
+               "nova_object.namespace": "nova",
+               "nova_object.data": {
+                  "timestamp": "2012-10-29T13:42:11Z",
+                  "source": "fake.SmallFakeDriver",
+                  "numa_membw_values": null,
+                  "name": "cpu.user.time",
+                  "value": 26728850000000
+               }
+            },
+            {
+               "nova_object.version": "1.0",
+               "nova_object.name": "MetricPayload",
+               "nova_object.namespace": "nova",
+               "nova_object.data": {
+                  "timestamp": "2012-10-29T13:42:11Z",
+                  "source": "fake.SmallFakeDriver",
+                  "numa_membw_values": null,
+                  "name": "cpu.idle.time",
+                  "value": 1592705190000000
+               }
+            }
+         ]
+      }
+   },
+   "priority": "INFO",
+   "publisher_id": "nova-compute:compute"
+}

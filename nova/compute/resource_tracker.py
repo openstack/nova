@@ -640,15 +640,17 @@ class ResourceTracker(object):
                             {'mon': monitor, 'exc': exc})
         # TODO(jaypipes): Remove this when compute_node.metrics doesn't need
         # to be populated as a JSONified string.
-        metrics = metrics.to_list()
-        if len(metrics):
+        metric_list = metrics.to_list()
+        if len(metric_list):
             metrics_info['nodename'] = nodename
-            metrics_info['metrics'] = metrics
+            metrics_info['metrics'] = metric_list
             metrics_info['host'] = self.host
             metrics_info['host_ip'] = CONF.my_ip
             notifier = rpc.get_notifier(service='compute', host=nodename)
             notifier.info(context, 'compute.metrics.update', metrics_info)
-        return metrics
+            compute_utils.notify_about_metrics_update(
+                context, self.host, CONF.my_ip, nodename, metrics)
+        return metric_list
 
     def update_available_resource(self, context, nodename):
         """Override in-memory calculations of compute node resource usage based
