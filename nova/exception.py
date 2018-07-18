@@ -1827,6 +1827,11 @@ class InvalidWatchdogAction(Invalid):
     msg_fmt = _("Provided watchdog action (%(action)s) is not supported.")
 
 
+class LiveMigrationNotSubmitted(NovaException):
+    msg_fmt = _("Failed to submit live migration %(migration_uuid)s for "
+                "instance %(instance_uuid)s for processing.")
+
+
 class SelectionObjectsWithOldRPCVersionNotSupported(NovaException):
     msg_fmt = _("Requests for Selection objects with alternates are not "
                 "supported in select_destinations() before RPC version 4.5; "

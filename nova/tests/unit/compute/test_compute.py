@@ -1490,6 +1490,7 @@ class ComputeTestCase(BaseTestCase,
     def setUp(self):
         super(ComputeTestCase, self).setUp()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
+        self.useFixture(fixtures.SynchronousThreadPoolExecutorFixture())
 
         self.image_api = image_api.API()
 
@@ -6348,7 +6349,7 @@ class ComputeTestCase(BaseTestCase,
         mock_pre.return_value = migrate_data
 
         # start test
-        migration = objects.Migration()
+        migration = objects.Migration(uuid=uuids.migration)
         with mock.patch.object(self.compute.driver,
                                'cleanup') as mock_cleanup:
             mock_cleanup.side_effect = test.TestingException
