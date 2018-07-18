@@ -3586,7 +3586,6 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
     def setUp(self):
         super(VolumeBackedServerTest, self).setUp()
         self.compute1 = self._start_compute('host1')
-        self.compute2 = self._start_compute('host2')
         self.flavor_id = self._create_flavor()
 
     def _create_flavor(self):
@@ -3646,7 +3645,14 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         resources = list(allocs.values())[0]['resources']
         self.assertIn('MEMORY_MB', resources)
         # 10gb root, 20gb ephemeral, 5gb swap
-        self.assertEqual(35, resources['DISK_GB'])
+        expected_usage = 35
+        self.assertEqual(expected_usage, resources['DISK_GB'])
+        # Ensure the compute node is reporting the correct disk usage
+        self.assertEqual(
+            # TODO(efried): Due to bug #1782386, swap is not being reported.
+            # expected_usage,
+            30,
+            self.admin_api.get_hypervisor_stats()['local_gb_used'])
 
     def test_volume_backed_no_disk_allocation(self):
         server = self._create_volume_backed_server()
@@ -3654,7 +3660,16 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         resources = list(allocs.values())[0]['resources']
         self.assertIn('MEMORY_MB', resources)
         # 0gb root, 20gb ephemeral, 5gb swap
-        self.assertEqual(25, resources['DISK_GB'])
+        expected_usage = 25
+        self.assertEqual(expected_usage, resources['DISK_GB'])
+        # Ensure the compute node is reporting the correct disk usage
+        self.assertEqual(
+            # TODO(efried): Due to bug #1782393 the flavor's root_gb is still
+            # being reported against the compute node's usage.
+            # TODO(efried): Due to bug #1782386, swap is not being reported.
+            # expected_usage,
+            30,
+            self.admin_api.get_hypervisor_stats()['local_gb_used'])
 
 
 class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):

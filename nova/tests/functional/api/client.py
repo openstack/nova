@@ -497,3 +497,7 @@ class TestOpenStackClient(object):
     def put_aggregate(self, aggregate_id, body):
         return self.api_put(
             '/os-aggregates/%s' % aggregate_id, body).body['aggregate']
+
+    def get_hypervisor_stats(self):
+        return self.api_get(
+            '/os-hypervisors/statistics').body['hypervisor_statistics']
