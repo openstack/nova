@@ -15,6 +15,7 @@ import oslo_messaging as messaging
 import six
 
 from nova.compute import power_state
+from nova.compute import utils as compute_utils
 from nova.conductor.tasks import base
 from nova.conductor.tasks import migrate
 import nova.conf
@@ -302,6 +303,8 @@ class LiveMigrationTask(base.TaskBase):
                 cell=cell_mapping)
 
         request_spec.ensure_project_and_user_id(self.instance)
+        compute_utils.heal_reqspec_is_bfv(
+            self.context, request_spec, self.instance)
 
         return request_spec
 

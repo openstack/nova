@@ -224,6 +224,28 @@ def is_volume_backed_instance(context, instance, bdms=None):
     return not instance['image_ref']
 
 
+def heal_reqspec_is_bfv(ctxt, request_spec, instance):
+    """Calculates the is_bfv flag for a RequestSpec created before Rocky.
+
+    Starting in Rocky, new instances have their RequestSpec created with
+    the "is_bfv" flag to indicate if they are volume-backed which is used
+    by the scheduler when determining root disk resource allocations.
+
+    RequestSpecs created before Rocky will not have the is_bfv flag set
+    so we need to calculate it here and update the RequestSpec.
+
+    :param ctxt: nova.context.RequestContext auth context
+    :param request_spec: nova.objects.RequestSpec used for scheduling
+    :param instance: nova.objects.Instance being scheduled
+    """
+    if 'is_bfv' in request_spec:
+        return
+    # Determine if this is a volume-backed instance and set the field
+    # in the request spec accordingly.
+    request_spec.is_bfv = is_volume_backed_instance(ctxt, instance)
+    request_spec.save()
+
+
 def convert_mb_to_ceil_gb(mb_value):
     gb_int = 0
     if mb_value:

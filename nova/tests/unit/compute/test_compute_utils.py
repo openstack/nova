@@ -1145,6 +1145,23 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
                 expected_result, compute_utils.may_have_ports_or_volumes(inst),
                 vm_state)
 
+    def test_heal_reqspec_is_bfv_no_update(self):
+        reqspec = objects.RequestSpec(is_bfv=False)
+        with mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                               new_callable=mock.NonCallableMock):
+            compute_utils.heal_reqspec_is_bfv(
+                self.context, reqspec, mock.sentinel.instance)
+
+    @mock.patch('nova.objects.RequestSpec.save')
+    def test_heal_reqspec_is_bfv_with_update(self, mock_save):
+        reqspec = objects.RequestSpec()
+        with mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                               return_value=True):
+            compute_utils.heal_reqspec_is_bfv(
+                self.context, reqspec, mock.sentinel.instance)
+        self.assertTrue(reqspec.is_bfv)
+        mock_save.assert_called_once_with()
+
 
 class ServerGroupTestCase(test.TestCase):
     def setUp(self):

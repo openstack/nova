@@ -14,6 +14,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova import availability_zones
+from nova.compute import utils as compute_utils
 from nova.conductor.tasks import base
 from nova import exception
 from nova.i18n import _
@@ -220,6 +221,8 @@ class MigrationTask(base.TaskBase):
         migration = self._preallocate_migration()
 
         self.request_spec.ensure_project_and_user_id(self.instance)
+        compute_utils.heal_reqspec_is_bfv(
+            self.context, self.request_spec, self.instance)
         # On an initial call to migrate, 'self.host_list' will be None, so we
         # have to call the scheduler to get a list of acceptable hosts to
         # migrate to. That list will consist of a selected host, along with
