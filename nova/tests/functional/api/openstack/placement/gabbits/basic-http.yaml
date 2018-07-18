@@ -194,3 +194,14 @@ tests:
       content-type: application/json
   response_json_paths:
       $.errors[0].title: Not Found
+
+- name: bad content length not int
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+      content-length: hi mom
+  data:
+      uuid: ce13d7f1-9988-4dfd-8e16-ce071802eb36
+  status: 400
+  response_strings:
+      - content-length header must be an integer
