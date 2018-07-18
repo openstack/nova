@@ -15,7 +15,6 @@
 import copy
 
 from nova.api.validation import parameter_types
-from nova.db import api as db
 
 create = {
     'type': 'object',
@@ -42,7 +41,9 @@ create = {
                     'type': ['number', 'string'],
                     'pattern': '^[0-9]+(\.[0-9]+)?$',
                     'minimum': 0, 'exclusiveMinimum': True,
-                    'maximum': db.SQL_SP_FLOAT_MAX
+                    # maximum's value is limited to db constant's
+                    # SQL_SP_FLOAT_MAX (in nova/db/constants.py)
+                    'maximum': 3.40282e+38
                 },
                 'os-flavor-access:is_public': parameter_types.boolean,
             },
