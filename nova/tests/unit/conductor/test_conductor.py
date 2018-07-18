@@ -999,7 +999,6 @@ class _BaseTaskTestCase(object):
         fake_spec.instance_group = None
 
         filter_properties = fake_spec.to_legacy_filter_properties_dict()
-        request_spec = fake_spec.to_legacy_request_spec_dict()
 
         host = {'host': 'host1', 'nodename': 'node1', 'limits': {}}
 
@@ -1010,24 +1009,18 @@ class _BaseTaskTestCase(object):
         @mock.patch.object(self.conductor_manager.compute_rpcapi,
                            'unshelve_instance')
         @mock.patch.object(scheduler_utils, 'populate_filter_properties')
-        @mock.patch.object(scheduler_utils, 'populate_retry')
         @mock.patch.object(self.conductor_manager, '_schedule_instances')
-        @mock.patch.object(objects.RequestSpec, 'from_primitives')
-        @mock.patch.object(objects.RequestSpec, 'to_legacy_request_spec_dict')
         @mock.patch.object(objects.RequestSpec,
                            'to_legacy_filter_properties_dict')
         @mock.patch.object(objects.RequestSpec, 'reset_forced_destinations')
         def do_test(reset_forced_destinations,
-                    to_filtprops, to_reqspec, from_primitives, sched_instances,
-                    populate_retry, populate_filter_properties,
+                    to_filtprops, sched_instances, populate_filter_properties,
                     unshelve_instance, get_by_instance_uuid):
             cell_mapping = objects.CellMapping.get_by_uuid(self.context,
                                                            uuids.cell1)
             get_by_instance_uuid.return_value = objects.InstanceMapping(
                 cell_mapping=cell_mapping)
             to_filtprops.return_value = filter_properties
-            to_reqspec.return_value = request_spec
-            from_primitives.return_value = fake_spec
             sched_instances.return_value = [[fake_selection1]]
             self.conductor.unshelve_instance(self.context, instance, fake_spec)
             # The fake_spec already has a project_id set which doesn't match
@@ -1035,14 +1028,26 @@ class _BaseTaskTestCase(object):
             # overridden using the instance.project_id.
             self.assertNotEqual(fake_spec.project_id, instance.project_id)
             reset_forced_destinations.assert_called_once_with()
-            from_primitives.assert_called_once_with(self.context, request_spec,
-                    filter_properties)
-            self.heal_reqspec_is_bfv_mock.assert_called_once_with(
-                self.context, fake_spec, test.MatchType(objects.Instance))
-            sched_instances.assert_called_once_with(self.context, fake_spec,
+            # The fake_spec is only going to modified by reference for
+            # ComputeTaskManager.
+            if isinstance(self.conductor,
+                          conductor_manager.ComputeTaskManager):
+                self.heal_reqspec_is_bfv_mock.assert_called_once_with(
+                    self.context, fake_spec, instance)
+                sched_instances.assert_called_once_with(
+                    self.context, fake_spec, [instance.uuid],
+                    return_alternates=False)
+                self.assertEqual(cell_mapping,
+                                 fake_spec.requested_destination.cell)
+            else:
+                # RPC API tests won't have the same request spec or instance
+                # since they go over the wire.
+                self.heal_reqspec_is_bfv_mock.assert_called_once_with(
+                    self.context, test.MatchType(objects.RequestSpec),
+                    test.MatchType(objects.Instance))
+                sched_instances.assert_called_once_with(
+                    self.context, test.MatchType(objects.RequestSpec),
                     [instance.uuid], return_alternates=False)
-            self.assertEqual(cell_mapping,
-                             fake_spec.requested_destination.cell)
             # NOTE(sbauza): Since the instance is dehydrated when passing
             # through the RPC API, we can only assert mock.ANY for it
             unshelve_instance.assert_called_once_with(
@@ -1146,11 +1151,7 @@ class _BaseTaskTestCase(object):
             self.context, fake_spec, [instance.uuid], return_alternates=False)
         mock_unshelve.assert_called_once_with(
             self.context, instance, 'fake_host', image='fake_image',
-            filter_properties={'limits': {},
-                               'retry': {'num_attempts': 1,
-                                         'hosts': [['fake_host',
-                                                    'fake_node']]}},
-            node='fake_node')
+            filter_properties={'limits': {}}, node='fake_node')
 
     def test_unshelve_instance_schedule_and_rebuild_novalid_host(self):
         instance = self._create_fake_instance_obj()
@@ -1242,11 +1243,7 @@ class _BaseTaskTestCase(object):
             self.context, fake_spec, [instance.uuid], return_alternates=False)
         mock_unshelve.assert_called_once_with(
             self.context, instance, 'fake_host', image=None,
-            filter_properties={'limits': {},
-                               'retry': {'num_attempts': 1,
-                                         'hosts': [['fake_host',
-                                                    'fake_node']]}},
-            node='fake_node')
+            filter_properties={'limits': {}}, node='fake_node')
 
     def test_rebuild_instance(self):
         inst_obj = self._create_fake_instance_obj()

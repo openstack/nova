@@ -765,26 +765,17 @@ class ComputeTaskManager(base.Base):
                         filter_properties = {}
                         request_spec = scheduler_utils.build_request_spec(
                             image, [instance])
+                        request_spec = objects.RequestSpec.from_primitives(
+                            context, request_spec, filter_properties)
                     else:
                         # NOTE(sbauza): Force_hosts/nodes needs to be reset
                         # if we want to make sure that the next destination
                         # is not forced to be the original host
                         request_spec.reset_forced_destinations()
                         # TODO(sbauza): Provide directly the RequestSpec object
-                        # when populate_filter_properties and populate_retry()
-                        # accept it
+                        # when populate_filter_properties accepts it
                         filter_properties = request_spec.\
                             to_legacy_filter_properties_dict()
-                        # FIXME(mriedem): This means we'll lose the is_bfv flag
-                        # set on an existing RequestSpec that had it set.
-                        request_spec = request_spec.\
-                            to_legacy_request_spec_dict()
-                    # TODO(mriedem): we don't even need to call populate_retry
-                    # because unshelve failures aren't rescheduled.
-                    scheduler_utils.populate_retry(filter_properties,
-                                                   instance.uuid)
-                    request_spec = objects.RequestSpec.from_primitives(
-                        context, request_spec, filter_properties)
                     # NOTE(cfriesen): Ensure that we restrict the scheduler to
                     # the cell specified by the instance mapping.
                     instance_mapping = \
