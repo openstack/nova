@@ -1242,19 +1242,48 @@ class API(base_api.NetworkAPI):
                           'Error: (%s %s)',
                           port_id, host, resp.status_code, resp.text,
                           instance=instance)
-                # TODO(mriedem): move this cleanup code to a separate method
                 for rollback_port_id in bindings_by_port_id:
-                    url = '/v2.0/ports/%s/bindings/%s' % (
-                        rollback_port_id, host)
-                    resp = client.delete(url, raise_exc=False)
-                    if resp.status_code >= 400 and resp.status_code != 404:
+                    try:
+                        self.delete_port_binding(
+                            context, rollback_port_id, host)
+                    except exception.PortBindingDeletionFailed:
                         LOG.warning('Failed to remove binding for port %s on '
-                                    'host %s: (%s %s)', rollback_port_id,
-                                    host, resp.status_code, resp.text,
+                                    'host %s.', rollback_port_id, host,
                                     instance=instance)
                 raise exception.PortBindingFailed(port_id=port_id)
 
         return bindings_by_port_id
+
+    def delete_port_binding(self, context, port_id, host):
+        """Delete the port binding for the given port ID and host
+
+        This method should not be used if "supports_port_binding_extension"
+        returns False.
+
+        :param context: The request context for the operation.
+        :param port_id: The ID of the port with a binding to the host.
+        :param host: The host from which port bindings should be deleted.
+        :raises: nova.exception.PortBindingDeletionFailed if a non-404 error
+            response is received from neutron.
+        """
+        client = _get_ksa_client(context, admin=True)
+        resp = client.delete(
+            '/v2.0/ports/%s/bindings/%s' % (port_id, host),
+            raise_exc=False)
+        if resp:
+            LOG.debug('Deleted binding for port %s and host %s.',
+                      port_id, host)
+        else:
+            # We can safely ignore 404s since we're trying to delete
+            # the thing that wasn't found anyway.
+            if resp.status_code != 404:
+                # Log the details, raise an exception.
+                LOG.error('Unexpected error trying to delete binding '
+                          'for port %s and host %s. Code: %s. '
+                          'Error: %s', port_id, host,
+                          resp.status_code, resp.text)
+                raise exception.PortBindingDeletionFailed(
+                    port_id=port_id, host=host)
 
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)

@@ -871,6 +871,11 @@ class PortBindingFailed(Invalid):
                 "logs for more information.")
 
 
+class PortBindingDeletionFailed(NovaException):
+    msg_fmt = _("Failed to delete binding for port %(port_id)s and host "
+                "%(host)s.")
+
+
 class PortUpdateFailed(Invalid):
     msg_fmt = _("Port update failed for port %(port_id)s: %(reason)s")
 
