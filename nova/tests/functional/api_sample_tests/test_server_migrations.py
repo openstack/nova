@@ -163,13 +163,13 @@ class ServerMigrationsSamplesJsonTestV2_23(test_servers.ServersSampleBase):
 
 class ServerMigrationsSampleJsonTestV2_24(test_servers.ServersSampleBase):
     ADMIN_API = True
+    microversion = '2.24'
     sample_dir = "server-migrations"
     scenarios = [('v2_24', {'api_major_version': 'v2.1'})]
 
     def setUp(self):
         """setUp method for server usage."""
         super(ServerMigrationsSampleJsonTestV2_24, self).setUp()
-        self.api.microversion = '2.24'
         self.uuid = self._post_server()
         self.context = context.RequestContext('fake', 'fake')
         fake_migration = {
