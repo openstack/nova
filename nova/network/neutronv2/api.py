@@ -1285,6 +1285,44 @@ class API(base_api.NetworkAPI):
                 raise exception.PortBindingDeletionFailed(
                     port_id=port_id, host=host)
 
+    def activate_port_binding(self, context, port_id, host):
+        """Activates an inactive port binding.
+
+        If there are two port bindings to different hosts, activating the
+        inactive binding atomically changes the other binding to inactive.
+
+        :param context: The request context for the operation.
+        :param port_id: The ID of the port with an inactive binding on the
+                        host.
+        :param host: The host on which the inactive port binding should be
+                     activated.
+        :raises: nova.exception.PortBindingActivationFailed if a non-409 error
+            response is received from neutron.
+        """
+        client = _get_ksa_client(context, admin=True)
+        # This is a bit weird in that we don't PUT and update the status
+        # to ACTIVE, it's more like a POST action method in the compute API.
+        resp = client.put(
+            '/v2.0/ports/%s/bindings/%s/activate' % (port_id, host),
+            raise_exc=False)
+        if resp:
+            LOG.debug('Activated binding for port %s and host %s.',
+                      port_id, host)
+        else:
+            # A 409 means the port binding is already active, which shouldn't
+            # happen if the caller is doing things in the correct order.
+            if resp.status_code == 409:
+                LOG.warning('Binding for port %s and host %s is already '
+                            'active.', port_id, host)
+            else:
+                # Log the details, raise an exception.
+                LOG.error('Unexpected error trying to activate binding '
+                          'for port %s and host %s. Code: %s. '
+                          'Error: %s', port_id, host, resp.status_code,
+                          resp.text)
+                raise exception.PortBindingActivationFailed(
+                    port_id=port_id, host=host)
+
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
         if dev_spec:
