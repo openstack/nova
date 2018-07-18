@@ -1536,6 +1536,86 @@ def numa_get_constraints(flavor, image_meta):
     return numa_topology
 
 
+def _numa_cells_support_network_metadata(
+        host_topology,  # type: objects.NUMATopology
+        chosen_host_cells,  # type: List[objects.NUMACell]
+        network_metadata  # type: objects.NetworkMetadata
+        ):
+    # type: (...) -> bool
+    """Determine whether the cells can accept the network requests.
+
+    :param host_topology: The entire host topology, used to find non-chosen
+        host cells.
+    :param chosen_host_cells: List of NUMACells to extract possible network
+        NUMA affinity from.
+    :param network_metadata: The combined summary of physnets and tunneled
+        networks required by this topology or None.
+
+    :return: True if any NUMA affinity constraints for requested networks can
+        be satisfied, else False
+    """
+    if not network_metadata:
+        return True
+
+    required_physnets = None  # type: Set[str]
+    if 'physnets' in network_metadata:
+        # use set() to avoid modifying the original data structure
+        required_physnets = set(network_metadata.physnets)
+
+    required_tunnel = False  # type: bool
+    if 'tunneled' in network_metadata:
+        required_tunnel = network_metadata.tunneled
+
+    if required_physnets:
+        # identify requested physnets that have an affinity to any of our
+        # chosen host NUMA cells
+        for host_cell in chosen_host_cells:
+            if 'network_metadata' not in host_cell:
+                continue
+
+            # if one of these cells provides affinity for one or more physnets,
+            # drop said physnet(s) from the list we're searching for
+            required_physnets -= required_physnets.intersection(
+                host_cell.network_metadata.physnets)
+
+        # however, if we still require some level of NUMA affinity, we need
+        # to make sure one of the other NUMA cells isn't providing that; note
+        # that NUMA affinity might not be provided for all physnets so we are
+        # in effect skipping these
+        for host_cell in host_topology.cells:
+            if 'network_metadata' not in host_cell:
+                continue
+
+            # if one of these cells provides affinity for one or more physnets,
+            # we need to fail because we should be using that node and are not
+            if required_physnets.intersection(
+                    host_cell.network_metadata.physnets):
+                return False
+
+    if required_tunnel:
+        # identify if tunneled networks have an affinity to any of our chosen
+        # host NUMA cells
+        for host_cell in chosen_host_cells:
+            if 'network_metadata' not in host_cell:
+                continue
+
+            if host_cell.network_metadata.tunneled:
+                return True
+
+        # however, if we still require some level of NUMA affinity, we need to
+        # make sure one of the other NUMA cells isn't providing that; note
+        # that, as with physnets, NUMA affinity might not be defined for
+        # tunneled networks and we'll simply continue if this is the case
+        for host_cell in host_topology.cells:
+            if 'network_metadata' not in host_cell:
+                continue
+
+            if host_cell.network_metadata.tunneled:
+                return False
+
+    return True
+
+
 def numa_fit_instance_to_host(
         host_topology, instance_topology, limits=None,
         pci_requests=None, pci_stats=None):
@@ -1573,6 +1653,10 @@ def numa_fit_instance_to_host(
     if 'emulator_threads_policy' in instance_topology:
         emulator_threads_policy = instance_topology.emulator_threads_policy
 
+    network_metadata = None
+    if limits and 'network_metadata' in limits:
+        network_metadata = limits.network_metadata
+
     host_cells = host_topology.cells
 
     # If PCI device(s) are not required, prefer host cells that don't have
@@ -1586,13 +1670,14 @@ def numa_fit_instance_to_host(
     # depending on whether we want packing/spreading over NUMA nodes
     for host_cell_perm in itertools.permutations(
             host_cells, len(instance_topology)):
-        cells = []
+        chosen_instance_cells = []
+        chosen_host_cells = []
         for host_cell, instance_cell in zip(
                 host_cell_perm, instance_topology.cells):
             try:
                 cpuset_reserved = 0
                 if (instance_topology.emulator_threads_isolated
-                    and len(cells) == 0):
+                    and len(chosen_instance_cells) == 0):
                     # For the case of isolate emulator threads, to
                     # make predictable where that CPU overhead is
                     # located we always configure it to be on host
@@ -1608,16 +1693,23 @@ def numa_fit_instance_to_host(
                 break
             if got_cell is None:
                 break
-            cells.append(got_cell)
+            chosen_host_cells.append(host_cell)
+            chosen_instance_cells.append(got_cell)
 
-        if len(cells) != len(host_cell_perm):
+        if len(chosen_instance_cells) != len(host_cell_perm):
             continue
 
-        if not pci_requests or ((pci_stats is not None) and
-                pci_stats.support_requests(pci_requests, cells)):
-            return objects.InstanceNUMATopology(
-                cells=cells,
-                emulator_threads_policy=emulator_threads_policy)
+        if pci_requests and pci_stats and not pci_stats.support_requests(
+                pci_requests, chosen_instance_cells):
+            continue
+
+        if network_metadata and not _numa_cells_support_network_metadata(
+                host_topology, chosen_host_cells, network_metadata):
+            continue
+
+        return objects.InstanceNUMATopology(
+            cells=chosen_instance_cells,
+            emulator_threads_policy=emulator_threads_policy)
 
 
 def numa_get_reserved_huge_pages():
