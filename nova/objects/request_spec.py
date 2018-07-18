@@ -27,7 +27,8 @@ from nova.scheduler import utils as scheduler_utils
 from nova.virt import hardware
 
 REQUEST_SPEC_OPTIONAL_ATTRS = ['requested_destination',
-                               'security_groups']
+                               'security_groups',
+                               'network_metadata']
 
 
 @base.NovaObjectRegistry.register
@@ -42,7 +43,8 @@ class RequestSpec(base.NovaObject):
     # Version 1.7: Added destroy()
     # Version 1.8: Added security_groups
     # Version 1.9: Added user_id
-    VERSION = '1.9'
+    # Version 1.10: Added network_metadata
+    VERSION = '1.10'
 
     fields = {
         'id': fields.IntegerField(),
@@ -79,11 +81,15 @@ class RequestSpec(base.NovaObject):
         'scheduler_hints': fields.DictOfListOfStringsField(nullable=True),
         'instance_uuid': fields.UUIDField(),
         'security_groups': fields.ObjectField('SecurityGroupList'),
+        'network_metadata': fields.ObjectField('NetworkMetadata'),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(RequestSpec, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 10):
+            if 'network_metadata' in primitive:
+                del primitive['network_metadata']
         if target_version < (1, 9):
             if 'user_id' in primitive:
                 del primitive['user_id']
@@ -102,6 +108,11 @@ class RequestSpec(base.NovaObject):
 
         if attrname == 'security_groups':
             self.security_groups = objects.SecurityGroupList(objects=[])
+            return
+
+        if attrname == 'network_metadata':
+            self.network_metadata = objects.NetworkMetadata(
+                physnets=set(), tunneled=False)
             return
 
         # NOTE(sbauza): In case the primitive was not providing that field
@@ -526,6 +537,10 @@ class RequestSpec(base.NovaObject):
             # NOTE(mriedem): Don't persist retries since those are per-request
             if 'retry' in spec and spec.retry:
                 spec.retry = None
+            # NOTE(stephenfin): Don't persist network metadata since we have
+            # no need for it after scheduling
+            if 'network_metadata' in spec and spec.network_metadata:
+                del spec.network_metadata
 
             db_updates = {'spec': jsonutils.dumps(spec.obj_to_primitive())}
             if 'instance_uuid' in updates:
