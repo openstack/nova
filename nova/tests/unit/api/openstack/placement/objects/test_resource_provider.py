@@ -161,10 +161,11 @@ class TestProviderSummaryNoDB(_TestCase):
 class TestInventoryNoDB(_TestCase):
 
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
-                '_ensure_rc_cache', side_effect=_fake_ensure_cache)
+                'ensure_rc_cache', side_effect=_fake_ensure_cache)
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
                 '_get_inventory_by_provider_id')
     def test_get_all_by_resource_provider(self, mock_get, mock_ensure_cache):
+        mock_ensure_cache(self.context)
         expected = [dict(_INVENTORY_DB,
                          resource_provider_id=_RESOURCE_PROVIDER_ID),
                     dict(_INVENTORY_DB,
@@ -266,13 +267,14 @@ class TestAllocationListNoDB(_TestCase):
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
                 '_create_incomplete_consumers_for_provider')
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
-                '_ensure_rc_cache',
+                'ensure_rc_cache',
                 side_effect=_fake_ensure_cache)
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
                 '_get_allocations_by_provider_id',
                 return_value=[_ALLOCATION_DB])
     def test_get_allocations(self, mock_get_allocations_from_db,
             mock_ensure_cache, mock_create_consumers):
+        mock_ensure_cache(self.context)
         rp = resource_provider.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
                                                 uuid=uuids.resource_provider)
         rp_alloc_list = resource_provider.AllocationList

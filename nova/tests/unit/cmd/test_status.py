@@ -486,6 +486,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
         self.useFixture(nova_fixtures.Database(database='api'))
         self.useFixture(nova_fixtures.Database(database='placement'))
         self.cmd = status.UpgradeCommands()
+        rp_obj.ensure_rc_cache(context.get_admin_context())
 
     def test_check_resource_providers_fresh_install_no_mappings(self):
         """Tests the scenario where we don't have any cell mappings (no cells

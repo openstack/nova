@@ -68,7 +68,7 @@ LOG = logging.getLogger(__name__)
 
 
 @db_api.placement_context_manager.reader
-def _ensure_rc_cache(ctx):
+def ensure_rc_cache(ctx):
     """Ensures that a singleton resource class cache has been created in the
     module's scope.
 
@@ -289,7 +289,6 @@ def _add_inventory(context, rp, inventory):
     :raises `exception.ResourceClassNotFound` if inventory.resource_class
             cannot be found in either the standard classes or the DB.
     """
-    _ensure_rc_cache(context)
     rc_id = _RC_CACHE.id_from_string(inventory.resource_class)
     inv_list = InventoryList(objects=[inventory])
     _add_inventory_to_provider(
@@ -304,7 +303,6 @@ def _update_inventory(context, rp, inventory):
     :raises `exception.ResourceClassNotFound` if inventory.resource_class
             cannot be found in either the standard classes or the DB.
     """
-    _ensure_rc_cache(context)
     rc_id = _RC_CACHE.id_from_string(inventory.resource_class)
     inv_list = InventoryList(objects=[inventory])
     exceeded = _update_inventory_for_provider(
@@ -320,7 +318,6 @@ def _delete_inventory(context, rp, resource_class):
     :raises `exception.ResourceClassNotFound` if resource_class
             cannot be found in either the standard classes or the DB.
     """
-    _ensure_rc_cache(context)
     rc_id = _RC_CACHE.id_from_string(resource_class)
     if not _delete_inventory_from_provider(context, rp, [rc_id]):
         raise exception.NotFound(
@@ -350,8 +347,6 @@ def _set_inventory(context, rp, inv_list):
     :raises `exception.InventoryInUse` if we attempt to delete inventory
             from a provider that has allocations for that resource class.
     """
-    _ensure_rc_cache(context)
-
     existing_resources = _get_current_inventory_resources(context, rp)
     these_resources = set([_RC_CACHE.id_from_string(r.resource_class)
                            for r in inv_list.objects])
@@ -1487,7 +1482,6 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
                         classes.
         :type filters: dict
         """
-        _ensure_rc_cache(context)
         resource_providers = cls._get_all_by_filters_from_db(context, filters)
         return base.obj_make_list(context, cls(context),
                                   ResourceProvider, resource_providers)
@@ -1559,7 +1553,6 @@ class InventoryList(base.ObjectListBase, base.VersionedObject):
 
     @classmethod
     def get_all_by_resource_provider(cls, context, rp):
-        _ensure_rc_cache(context)
         db_inv = _get_inventory_by_provider_id(context, rp.id)
         # Build up a list of Inventory objects, setting the Inventory object
         # fields to the same-named database record field we got from
@@ -1955,8 +1948,6 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
         :raises `ConcurrentUpdateDetected` if a generation for a resource
                 provider or consumer failed its increment check.
         """
-        _ensure_rc_cache(context)
-
         # First delete any existing allocations for any consumers. This
         # provides a clean slate for the consumers mentioned in the list of
         # allocations being manipulated.
@@ -2028,7 +2019,6 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
 
     @classmethod
     def get_all_by_resource_provider(cls, context, rp):
-        _ensure_rc_cache(context)
         _create_incomplete_consumers_for_provider(context, rp.id)
         db_allocs = _get_allocations_by_provider_id(context, rp.id)
         # Build up a list of Allocation objects, setting the Allocation object
@@ -2060,7 +2050,6 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
 
     @classmethod
     def get_all_by_consumer_id(cls, context, consumer_id):
-        _ensure_rc_cache(context)
         _create_incomplete_consumer(context, consumer_id)
         db_allocs = _get_allocations_by_consumer_uuid(context, consumer_id)
 
@@ -2232,13 +2221,11 @@ class UsageList(base.ObjectListBase, base.VersionedObject):
 
     @classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
-        _ensure_rc_cache(context)
         usage_list = cls._get_all_by_resource_provider_uuid(context, rp_uuid)
         return base.obj_make_list(context, cls(context), Usage, usage_list)
 
     @classmethod
     def get_all_by_project_user(cls, context, project_id, user_id=None):
-        _ensure_rc_cache(context)
         usage_list = cls._get_all_by_project_user(context, project_id,
                                                   user_id=user_id)
         return base.obj_make_list(context, cls(context), Usage, usage_list)
@@ -2284,7 +2271,6 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
 
         :raises: ResourceClassNotFound if no such resource class was found
         """
-        _ensure_rc_cache(context)
         rc = _RC_CACHE.all_from_string(name)
         obj = cls(context, id=rc['id'], name=rc['name'],
                   updated_at=rc['updated_at'], created_at=rc['created_at'])
@@ -2366,7 +2352,6 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
                                               reason='ID attribute not found')
         # Never delete any standard resource class, since the standard resource
         # classes don't even exist in the database table anyway.
-        _ensure_rc_cache(self._context)
         if self.id in (rc['id'] for rc in _RC_CACHE.STANDARDS):
             raise exception.ResourceClassCannotDeleteStandard(
                     resource_class=self.name)
@@ -2396,7 +2381,6 @@ class ResourceClass(base.VersionedObject, base.TimestampedObject):
         updates = self.obj_get_changes()
         # Never update any standard resource class, since the standard resource
         # classes don't even exist in the database table anyway.
-        _ensure_rc_cache(self._context)
         if self.id in (rc['id'] for rc in _RC_CACHE.STANDARDS):
             raise exception.ResourceClassCannotUpdateStandard(
                     resource_class=self.name)
@@ -2425,7 +2409,6 @@ class ResourceClassList(base.ObjectListBase, base.VersionedObject):
     @staticmethod
     @db_api.placement_context_manager.reader
     def _get_all(context):
-        _ensure_rc_cache(context)
         customs = list(context.session.query(models.ResourceClass).all())
         return _RC_CACHE.STANDARDS + customs
 
@@ -3937,7 +3920,6 @@ class AllocationCandidates(base.VersionedObject):
                  and provider_summaries satisfying `requests`, limited
                  according to `limit`.
         """
-        _ensure_rc_cache(context)
         alloc_reqs, provider_summaries = cls._get_by_requests(
             context, requests, limit=limit, group_policy=group_policy)
         return cls(
