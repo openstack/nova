@@ -750,6 +750,14 @@ Possible values:
 
 * Any positive integer representing greenthreads count.
 """),
+    cfg.IntOpt('instance_running_pool_size',
+        default=1000,
+        help="""
+Number of greenthreads available for spawning virtual machines.
+
+Possible values:
+* Any positive integer representing greenthreads count.
+"""),
 ]
 
 compute_group_opts = [

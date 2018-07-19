@@ -104,6 +104,17 @@ def get_root_helper():
     return cmd
 
 
+class PoolProxy(object):
+    def __init__(self, pool):
+        self.pool = pool
+
+    def __getattr__(self, name):
+        try:
+            return object.__getattr__(self, name)
+        except AttributeError:
+            return getattr(self.pool, name)
+
+
 def ssh_execute(dest, *cmd, **kwargs):
     """Convenience wrapper to execute ssh command."""
     ssh_cmd = ['ssh', '-o', 'BatchMode=yes']

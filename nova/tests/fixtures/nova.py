@@ -1229,6 +1229,8 @@ class SpawnIsSynchronousFixture(fixtures.Fixture):
             'nova.utils.spawn_n', _FakeGreenThread))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.utils.spawn', _FakeGreenThread))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.utils.PoolProxy.spawn_n', _FakeGreenThread))
 
 
 class _FakeExecutor(futurist.SynchronousExecutor):
