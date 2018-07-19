@@ -141,6 +141,64 @@ class NUMAServersTest(NUMAServersTestBase):
 
         self._run_build_test(flavor_id, end_status='ERROR')
 
+    def test_create_server_with_hugepages(self):
+        """Create a server with huge pages.
+
+        Configuring huge pages against a server also necessitates configuring a
+        NUMA topology.
+        """
+        host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=2,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=(1024 * 1024 * 16))  # GB
+        self.mock_conn.return_value = self._get_connection(host_info=host_info)
+
+        # create 1024 * 2 MB huge pages, and allocate the rest of the 16 GB as
+        # small pages
+        for cell in host_info.numa_topology.cells:
+            huge_pages = 1024
+            small_pages = (host_info.kB_mem - (2048 * huge_pages)) // 4
+            cell.mempages = fakelibvirt.create_mempages([
+                (4, small_pages),
+                (2048, huge_pages),
+            ])
+
+        extra_spec = {'hw:mem_page_size': 'large'}
+        flavor_id = self._create_flavor(memory_mb=2048, extra_spec=extra_spec)
+        expected_usage = {'DISK_GB': 20, 'MEMORY_MB': 2048, 'VCPU': 2}
+
+        server = self._run_build_test(flavor_id, expected_usage=expected_usage)
+
+        ctx = nova_context.get_admin_context()
+        inst = objects.Instance.get_by_uuid(ctx, server['id'])
+        self.assertEqual(1, len(inst.numa_topology.cells))
+        self.assertEqual(2048, inst.numa_topology.cells[0].pagesize)  # kB
+        self.assertEqual(2048, inst.numa_topology.cells[0].memory)  # MB
+
+    def test_create_server_with_hugepages_fails(self):
+        """Create a server with huge pages on a host that doesn't support them.
+
+        This should fail because there are hugepages but not enough of them.
+        """
+        host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=2,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=(1024 * 1024 * 16))  # GB
+        self.mock_conn.return_value = self._get_connection(host_info=host_info)
+
+        # create 512 * 2 MB huge pages, and allocate the rest of the 16 GB as
+        # small pages
+        for cell in host_info.numa_topology.cells:
+            huge_pages = 512
+            small_pages = (host_info.kB_mem - (2048 * huge_pages)) // 4
+            cell.mempages = fakelibvirt.create_mempages([
+                (4, small_pages),
+                (2048, huge_pages),
+            ])
+
+        extra_spec = {'hw:mem_page_size': 'large'}
+        flavor_id = self._create_flavor(memory_mb=2048, extra_spec=extra_spec)
+
+        self._run_build_test(flavor_id, end_status='ERROR')
+
     def test_create_server_with_legacy_pinning_policy(self):
         """Create a server using the legacy 'hw:cpu_policy' extra spec.
 
