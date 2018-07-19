@@ -55,6 +55,8 @@ r="$r|(?:.*id\-1499262a\-9328\-4eda\-9068\-db1ac57498d2.*)"
 r="$r|(?:.*id\-138b131d\-66df\-48c9\-a171\-64f45eb92962.*)"
 # tempest.api.compute.servers.test_server_actions.ServerActionsTestJSON.test_resize_server_revert
 r="$r|(?:.*id\-c03aab19\-adb1\-44f5\-917d\-c419577e9e68.*)"
+# tempest.api.compute.servers.test_server_actions.ServerActionsTestJSON.test_resize_server_revert_with_volume_attached
+r="$r|(?:.*id\-fbbf075f\-a812\-4022\-bc5c\-ccb8047eef12.*)"
 r="$r).*$"
 
 export DEVSTACK_GATE_TEMPEST_REGEX="$r"
