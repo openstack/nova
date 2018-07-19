@@ -767,6 +767,14 @@ If the hypervisor supports automatic HA, it will bring up the instance again on
 another host, so calling stop might actually be harmful, because nova will
 enforce the shutdown when the host is brought up by HA.
 """),
+    cfg.IntOpt('instance_running_pool_size',
+        default=1000,
+        help="""
+Number of greenthreads available for spawning virtual machines.
+
+Possible values:
+* Any positive integer representing greenthreads count.
+"""),
 ]
 
 compute_group_opts = [
