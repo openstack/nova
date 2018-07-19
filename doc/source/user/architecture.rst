@@ -48,7 +48,7 @@ Components
 ----------
 
 Below you will find a helpful explanation of the key components
-of a typical (non-cells v1) Nova deployment.
+of a typical Nova deployment.
 
 .. image:: /_static/images/architecture.svg
    :width: 100%
@@ -56,9 +56,9 @@ of a typical (non-cells v1) Nova deployment.
 * DB: sql database for data storage.
 * API: component that receives HTTP requests, converts commands and communicates with other components via the **oslo.messaging** queue or HTTP.
 * Scheduler: decides which host gets each instance.
-* Network: manages ip forwarding, bridges, and vlans.
 * Compute: manages communication with hypervisor and virtual machines.
 * Conductor: handles requests that need coordination (build/resize), acts as a
   database proxy, or handles object conversions.
+* `Placement <https://docs.openstack.org/nova/latest/user/placement.html>`__: tracks resource provider inventories and usages.
 
 While all services are designed to be horizontally scalable, you should have significantly more computes than anything else.
