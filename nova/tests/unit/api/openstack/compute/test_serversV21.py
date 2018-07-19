@@ -3407,36 +3407,6 @@ class ServersControllerCreateTest(test.TestCase):
         self._check_admin_password_len(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
-    def test_create_instance_extension_create_exception(self):
-        def fake_keypair_server_create(server_dict,
-                                       create_kwargs, body_deprecated_param):
-            raise KeyError
-
-        self.controller.server_create_func_list.append(
-            fake_keypair_server_create)
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/123/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_uuid,
-                'flavorRef': flavor_ref,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-            },
-        }
-
-        req = fakes.HTTPRequestV21.blank('/fake/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes(body)
-        req.headers["content-type"] = "application/json"
-        self.assertRaises(webob.exc.HTTPInternalServerError,
-                          self.controller.create, req, body=body)
-        self.controller.server_create_func_list.remove(
-            fake_keypair_server_create)
-
     def test_create_instance_pass_disabled(self):
         self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
         self.flags(enable_instance_password=False, group='api')

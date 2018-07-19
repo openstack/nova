@@ -59,10 +59,6 @@ class ServersController(wsgi.Controller):
 
     _view_builder_class = views_servers.ViewBuilder
 
-    # NOTE(alex_xu): Please do not add more items into this list. This list
-    # should be removed in the future.
-    server_create_func_list = []
-
     @staticmethod
     def _add_location(robj):
         # Just in case...
@@ -416,10 +412,6 @@ class ServersController(wsgi.Controller):
         # Arguments to be passed to instance create function
         create_kwargs = {}
 
-        # TODO(alex_xu): This is for back-compatible with stevedore
-        # extension interface. But the final goal is that merging
-        # all of extended code into ServersController.
-        self._create_by_func_list(server_dict, create_kwargs, body)
         create_kwargs['user_data'] = server_dict.get('user_data')
         # NOTE(alex_xu): The v2.1 API compat mode, we strip the spaces for
         # keypair create. But we didn't strip spaces at here for
@@ -678,14 +670,6 @@ class ServersController(wsgi.Controller):
         robj = wsgi.ResponseObject(server)
 
         return self._add_location(robj)
-
-    # NOTE(gmann): Parameter 'req_body' is placed to handle scheduler_hint
-    # extension for V2.1. No other extension supposed to use this as
-    # it will be removed soon.
-    def _create_by_func_list(self, server_dict,
-                             create_kwargs, req_body):
-        for func in self.server_create_func_list:
-            func(server_dict, create_kwargs, req_body)
 
     def _delete(self, context, req, instance_uuid):
         instance = self._get_server(context, req, instance_uuid)
