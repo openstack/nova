@@ -545,6 +545,8 @@ class ComputeManager(manager.Manager):
         self.instance_events = InstanceEvents()
         self._sync_power_pool = eventlet.GreenPool(
             size=CONF.sync_power_state_pool_size)
+        self.instance_running_pool = eventlet.GreenPool(
+            size=CONF.instance_running_pool_size)
         self._syncs_in_progress = {}
         self.send_instance_updates = (
             CONF.filter_scheduler.track_instance_changes)
@@ -1541,6 +1543,9 @@ class ComputeManager(manager.Manager):
                     instance, clean_task_state=True)
 
     def cleanup_host(self):
+        if self.instance_running_pool.running() > 0:
+            self.instance_running_pool.waitall()
+
         self.driver.register_event_listener(None)
         self.instance_events.cancel_all_events()
         self.driver.cleanup_host(host=self.host)
@@ -2171,12 +2176,13 @@ class ComputeManager(manager.Manager):
         # NOTE(danms): We spawn here to return the RPC worker thread back to
         # the pool. Since what follows could take a really long time, we don't
         # want to tie up RPC workers.
-        utils.spawn_n(_locked_do_build_and_run_instance,
-                      context, instance, image, request_spec,
-                      filter_properties, admin_password, injected_files,
-                      requested_networks, security_groups,
-                      block_device_mapping, node, limits, host_list,
-                      accel_uuids)
+
+        self.instance_running_pool.spawn_n(_locked_do_build_and_run_instance,
+              context, instance, image, request_spec,
+              filter_properties, admin_password, injected_files,
+              requested_networks, security_groups,
+              block_device_mapping, node, limits, host_list,
+              accel_uuids)
 
     def _check_device_tagging(self, requested_networks, block_device_mapping):
         tagging_requested = False
