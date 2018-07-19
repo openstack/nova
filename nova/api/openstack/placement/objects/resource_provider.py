@@ -42,8 +42,8 @@ from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import consumer as consumer_obj
 from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import user as user_obj
+from nova.api.openstack.placement import resource_class_cache as rc_cache
 from nova.db.sqlalchemy import api_models as models
-from nova.db.sqlalchemy import resource_class_cache as rc_cache
 from nova.i18n import _
 from nova import rc_fields
 
