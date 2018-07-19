@@ -65,6 +65,21 @@ tests:
       - JSON does not validate
       - does not have enough properties
 
+- name: put unused field
+  PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                VCPU: 1
+                DISK_GB: 20
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+      bad_field: moo
+  status: 400
+  response_strings:
+      - JSON does not validate
+
 - name: create the resource provider
   POST: /resource_providers
   request_headers:
