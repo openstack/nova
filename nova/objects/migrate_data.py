@@ -55,6 +55,7 @@ class VIFMigrateData(obj_base.NovaObject):
         # NOTE(mriedem): This might not be sufficient based on how the
         # destination host is configured for all vif types. See the note in
         # the libvirt driver here: https://review.openstack.org/#/c/551370/
+        # 29/nova/virt/libvirt/driver.py@7036
         'source_vif': fields.Field(fields.NetworkVIFModel()),
     }
 

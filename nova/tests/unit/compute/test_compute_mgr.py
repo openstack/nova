@@ -107,10 +107,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_get_power_state.return_value = current_pwr_state
 
         self.compute.handle_lifecycle_event(event)
+
+        expected_attrs = []
+        if transition in [virtevent.EVENT_LIFECYCLE_POSTCOPY_STARTED,
+                          virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED]:
+            expected_attrs.append('info_cache')
+
         mock_get.assert_called_once_with(
             test.MatchType(context.RequestContext),
             event.get_instance_uuid.return_value,
-            expected_attrs=['info_cache'])
+            expected_attrs=expected_attrs)
 
         if event_pwr_state == current_pwr_state:
             mock_sync.assert_called_with(mock.ANY, mock_get.return_value,
@@ -179,11 +185,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         with mock.patch.object(self.compute, '_get_power_state',
                                return_value=power_state.PAUSED):
             with mock.patch.object(self.compute.network_api,
-                                   'migrate_instance_finish') as mig_finish:
+                                   'migrate_instance_start') as mig_start:
                 self.compute.handle_lifecycle_event(event)
         # Since we failed to find the migration record, we shouldn't call
-        # migrate_instance_finish.
-        mig_finish.assert_not_called()
+        # migrate_instance_start.
+        mig_start.assert_not_called()
         mock_get_migration.assert_called_once_with(
             test.MatchType(context.RequestContext), uuids.instance,
             'running (post-copy)')
