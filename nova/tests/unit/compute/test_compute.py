@@ -5492,10 +5492,13 @@ class ComputeTestCase(BaseTestCase,
                 return_value='fake_bdinfo'),
             mock.patch.object(self.compute, '_terminate_volume_connections'),
             mock.patch.object(self.compute, '_get_power_off_values',
-                return_value=(1, 2))
+                return_value=(1, 2)),
+            mock.patch.object(nova.compute.utils, 'is_volume_backed_instance',
+                return_value=False)
         ) as (mock_notify_action, mock_get_by_inst_uuid,
                 mock_get_instance_vol_bdinfo,
-                mock_terminate_vol_conn, mock_get_power_off_values):
+                mock_terminate_vol_conn, mock_get_power_off_values,
+                mock_check_is_bfv):
             self.compute.resize_instance(self.context, instance=instance,
                     migration=migration, image={},
                     instance_type=jsonutils.to_primitive(instance_type),

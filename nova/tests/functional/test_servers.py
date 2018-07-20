@@ -3664,11 +3664,9 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual(expected_usage, resources['DISK_GB'])
         # Ensure the compute node is reporting the correct disk usage
         self.assertEqual(
-            # TODO(efried): Due to bug #1782393 the flavor's root_gb is still
-            # being reported against the compute node's usage.
             # TODO(efried): Due to bug #1782386, swap is not being reported.
             # expected_usage,
-            30,
+            20,
             self.admin_api.get_hypervisor_stats()['local_gb_used'])
 
 

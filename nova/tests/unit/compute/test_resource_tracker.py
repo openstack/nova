@@ -614,6 +614,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
@@ -623,7 +624,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_some_instances_no_migrations(self, get_mock, migr_mock,
                                           get_cn_mock, pci_mock,
-                                          instance_pci_mock):
+                                          instance_pci_mock, bfv_check_mock):
         # Setup virt resources to match used resources to number
         # of defined instances on the hypervisor
         # Note that the usage numbers here correspond to only the first
@@ -639,6 +640,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_mock.return_value = _INSTANCE_FIXTURES
         migr_mock.return_value = []
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
+        bfv_check_mock.return_value = False
 
         update_mock = self._update_available_resources()
 
@@ -901,6 +903,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
@@ -916,7 +919,8 @@ class TestUpdateAvailableResources(BaseTestCase):
                                                       get_cn_mock,
                                                       get_mig_ctxt_mock,
                                                       pci_mock,
-                                                      instance_pci_mock):
+                                                      instance_pci_mock,
+                                                      bfv_check_mock):
         # We test the behavior of update_available_resource() when
         # there is an active migration that involves this compute node
         # as the destination host AND the source host, and the resource
@@ -945,6 +949,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_mock.return_value = all_instances
         get_inst_mock.return_value = resizing_instance
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
+        bfv_check_mock.return_value = False
 
         update_mock = self._update_available_resources()
 
@@ -1621,12 +1626,15 @@ class TestInstanceClaim(BaseTestCase):
         self.assertEqual(_NODENAME, self.instance.node)
         self.assertIsInstance(claim, claims.NopClaim)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
-    def test_update_usage_with_claim(self, migr_mock, pci_mock):
+    def test_update_usage_with_claim(self, migr_mock, pci_mock,
+                                     check_bfv_mock):
         # Test that RT.update_usage() only changes the compute node
         # resources if there has been a claim first.
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
+        check_bfv_mock.return_value = False
 
         expected = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         self.rt.update_usage(self.ctx, self.instance, _NODENAME)
@@ -1660,12 +1668,14 @@ class TestInstanceClaim(BaseTestCase):
             update_mock.assert_called_once_with(self.elevated, cn)
             self.assertTrue(obj_base.obj_equal_prims(expected, cn))
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
-    def test_update_usage_removed(self, migr_mock, pci_mock):
+    def test_update_usage_removed(self, migr_mock, pci_mock, check_bfv_mock):
         # Test that RT.update_usage() removes the instance when update is
         # called in a removed state
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
+        check_bfv_mock.return_value = False
 
         expected = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         disk_used = self.instance.root_gb + self.instance.ephemeral_gb
@@ -1715,10 +1725,12 @@ class TestInstanceClaim(BaseTestCase):
         cn = self.rt.compute_nodes[_NODENAME]
         self.assertTrue(obj_base.obj_equal_prims(expected_updated, cn))
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
-    def test_claim(self, migr_mock, pci_mock):
+    def test_claim(self, migr_mock, pci_mock, check_bfv_mock):
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
+        check_bfv_mock.return_value = False
 
         disk_used = self.instance.root_gb + self.instance.ephemeral_gb
         expected = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
@@ -1752,11 +1764,13 @@ class TestInstanceClaim(BaseTestCase):
         self.assertEqual(self.rt.host, self.instance.launched_on)
         self.assertEqual(_NODENAME, self.instance.node)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
                 return_value=True)
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
-    def test_claim_with_pci(self, migr_mock, pci_mock, pci_stats_mock):
+    def test_claim_with_pci(self, migr_mock, pci_mock, pci_stats_mock,
+                            check_bfv_mock):
         # Test that a claim involving PCI requests correctly claims
         # PCI devices on the host and sends an updated pci_device_pools
         # attribute of the ComputeNode object.
@@ -1776,6 +1790,7 @@ class TestInstanceClaim(BaseTestCase):
                 requests=[request],
                 instance_uuid=self.instance.uuid)
         pci_mock.return_value = pci_requests
+        check_bfv_mock.return_value = False
 
         disk_used = self.instance.root_gb + self.instance.ephemeral_gb
         expected = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
@@ -1806,11 +1821,14 @@ class TestInstanceClaim(BaseTestCase):
             pci_stats_mock.assert_called_once_with([request])
             self.assertTrue(obj_base.obj_equal_prims(expected, cn))
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
-    def test_claim_abort_context_manager(self, save_mock, migr_mock, pci_mock):
+    def test_claim_abort_context_manager(self, save_mock, migr_mock, pci_mock,
+                                         check_bfv_mock):
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
+        check_bfv_mock.return_value = False
 
         cn = self.rt.compute_nodes[_NODENAME]
         self.assertEqual(0, cn.local_gb_used)
@@ -1846,11 +1864,13 @@ class TestInstanceClaim(BaseTestCase):
         self.assertEqual(0, cn.memory_mb_used)
         self.assertEqual(0, cn.running_vms)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
-    def test_claim_abort(self, save_mock, migr_mock, pci_mock):
+    def test_claim_abort(self, save_mock, migr_mock, pci_mock, check_bfv_mock):
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
+        check_bfv_mock.return_value = False
         disk_used = self.instance.root_gb + self.instance.ephemeral_gb
 
         @mock.patch.object(objects.Instance, 'obj_clone',
@@ -1906,11 +1926,13 @@ class TestInstanceClaim(BaseTestCase):
                     self.rt.instance_claim,
                     self.ctx, self.instance, _NODENAME, bad_limits)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
-    def test_claim_numa(self, save_mock, migr_mock, pci_mock):
+    def test_claim_numa(self, save_mock, migr_mock, pci_mock, check_bfv_mock):
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
+        check_bfv_mock.return_value = False
         cn = self.rt.compute_nodes[_NODENAME]
 
         self.instance.numa_topology = _INSTANCE_NUMA_TOPOLOGIES['2mb']
@@ -2420,6 +2442,7 @@ class TestResize(BaseTestCase):
 
 
 class TestRebuild(BaseTestCase):
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.Service.get_minimum_version',
                 return_value=22)
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
@@ -2431,7 +2454,7 @@ class TestRebuild(BaseTestCase):
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_rebuild_claim(self, save_mock, get_mock, migr_mock, get_cn_mock,
-            pci_mock, instance_pci_mock, version_mock):
+            pci_mock, instance_pci_mock, version_mock, bfv_check_mock):
         # Rebuild an instance, emulating an evacuate command issued against the
         # original instance. The rebuild operation uses the resource tracker's
         # _move_claim() method, but unlike with resize_claim(), rebuild_claim()
@@ -2452,6 +2475,7 @@ class TestRebuild(BaseTestCase):
         get_mock.return_value = _INSTANCE_FIXTURES
         migr_mock.return_value = []
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        bfv_check_mock.return_value = False
 
         ctx = mock.MagicMock()
         self.rt.update_available_resource(ctx, _NODENAME)
@@ -2653,9 +2677,18 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         self.rt.compute_nodes[_NODENAME] = cn
         self.instance = _INSTANCE_FIXTURES[0].obj_clone()
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
+    def test_get_usage_dict_return_0_root_gb_for_bfv_instance(
+            self, mock_check_bfv):
+        mock_check_bfv.retur_value = True
+        result = self.rt._get_usage_dict(self.instance)
+        self.assertEqual(0, result['root_gb'])
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update_usage')
-    def test_building(self, mock_update_usage):
+    def test_building(self, mock_update_usage, mock_check_bfv):
+        mock_check_bfv.return_value = False
         self.instance.vm_state = vm_states.BUILDING
         self.rt._update_usage_from_instance(mock.sentinel.ctx, self.instance,
                                             _NODENAME)
@@ -2663,9 +2696,11 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         mock_update_usage.assert_called_once_with(
             self.rt._get_usage_dict(self.instance), _NODENAME, sign=1)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update_usage')
-    def test_shelve_offloading(self, mock_update_usage):
+    def test_shelve_offloading(self, mock_update_usage, mock_check_bfv):
+        mock_check_bfv.return_value = False
         self.instance.vm_state = vm_states.SHELVED_OFFLOADED
         self.rt.tracked_instances = {
             self.instance.uuid: obj_base.obj_to_primitive(self.instance)
@@ -2676,9 +2711,11 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         mock_update_usage.assert_called_once_with(
             self.rt._get_usage_dict(self.instance), _NODENAME, sign=-1)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update_usage')
-    def test_unshelving(self, mock_update_usage):
+    def test_unshelving(self, mock_update_usage, mock_check_bfv):
+        mock_check_bfv.return_value = False
         self.instance.vm_state = vm_states.SHELVED_OFFLOADED
         self.rt._update_usage_from_instance(mock.sentinel.ctx, self.instance,
                                             _NODENAME)
@@ -2686,9 +2723,11 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         mock_update_usage.assert_called_once_with(
             self.rt._get_usage_dict(self.instance), _NODENAME, sign=1)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update_usage')
-    def test_deleted(self, mock_update_usage):
+    def test_deleted(self, mock_update_usage, mock_check_bfv):
+        mock_check_bfv.return_value = False
         self.instance.vm_state = vm_states.DELETED
         self.rt.tracked_instances = {
                 self.instance.uuid: obj_base.obj_to_primitive(self.instance)

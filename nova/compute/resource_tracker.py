@@ -1454,9 +1454,12 @@ class ResourceTracker(object):
         """
         usage = {}
         if isinstance(object_or_dict, objects.Instance):
+            is_bfv = compute_utils.is_volume_backed_instance(
+                object_or_dict._context, object_or_dict)
             usage = {'memory_mb': object_or_dict.flavor.memory_mb,
                      'vcpus': object_or_dict.flavor.vcpus,
-                     'root_gb': object_or_dict.flavor.root_gb,
+                     'root_gb': (0 if is_bfv else
+                                 object_or_dict.flavor.root_gb),
                      'ephemeral_gb': object_or_dict.flavor.ephemeral_gb,
                      'numa_topology': object_or_dict.numa_topology}
         elif isinstance(object_or_dict, objects.Flavor):
