@@ -398,9 +398,11 @@ class Guest(object):
             # Raise DeviceNotFound if the device isn't found during detach
             try:
                 self.detach_device(conf, persistent=persistent, live=live)
-                LOG.debug('Successfully detached device %s from guest. '
-                          'Persistent? %s. Live? %s',
-                          device, persistent, live)
+                if get_device_conf_func(device) is None:
+                    LOG.debug('Successfully detached device %s from guest. '
+                              'Persistent? %s. Live? %s',
+                              device, persistent, live)
+
             except libvirt.libvirtError as ex:
                 with excutils.save_and_reraise_exception():
                     errcode = ex.get_error_code()
@@ -452,11 +454,11 @@ class Guest(object):
         def _do_wait_and_retry_detach():
             config = get_device_conf_func(device)
             if config is not None:
-                # Device is already detached from persistent domain
-                # and only transient domain needs update
+                # Device is already detached from persistent config
+                # and only the live config needs to be updated.
                 _try_detach_device(config, persistent=False, live=live)
 
-                reason = _("Unable to detach from guest transient domain.")
+                reason = _("Unable to detach the device from the live config.")
                 raise exception.DeviceDetachFailed(
                     device=alternative_device_name, reason=reason)
 

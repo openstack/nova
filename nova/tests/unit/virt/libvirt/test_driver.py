@@ -7450,7 +7450,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_dom = mock.MagicMock()
 
         # Second time don't return anything about disk vdc so it looks removed
-        return_list = [mock_xml_with_disk, mock_xml_without_disk]
+        return_list = [mock_xml_with_disk, mock_xml_without_disk,
+                       mock_xml_without_disk]
         # Doubling the size of return list because we test with two guest power
         # states
         mock_dom.XMLDesc.side_effect = return_list + return_list
@@ -18950,7 +18951,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             # DeviceNotFound
             get_interface_calls = [expected_cfg, None]
         else:
-            get_interface_calls = [expected_cfg, expected_cfg, None]
+            get_interface_calls = [expected_cfg, expected_cfg, None, None]
 
         with test.nested(
             mock.patch.object(host.Host, 'get_guest', return_value=guest),
@@ -19087,7 +19088,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         domain.detachDeviceFlags(expected.to_xml(), flags=expected_flags)
         self.mox.ReplayAll()
         with mock.patch.object(libvirt_guest.Guest, 'get_interface_by_cfg',
-                               side_effect=[expected, expected, None]):
+                               side_effect=[expected, expected, None, None]):
             self.drvr.detach_interface(self.context, instance, network_info[0])
         self.mox.VerifyAll()
 

@@ -228,7 +228,7 @@ class GuestTestCase(test.NoDBTestCase):
         conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
         conf.to_xml.return_value = "</xml>"
         get_config = mock.Mock()
-        get_config.side_effect = [conf, conf, None]
+        get_config.side_effect = [conf, conf, conf, None, None]
         dev_path = "/dev/vdb"
         self.domain.isPersistent.return_value = False
         retry_detach = self.guest.detach_device_with_retry(
@@ -244,7 +244,7 @@ class GuestTestCase(test.NoDBTestCase):
         conf.to_xml.return_value = "</xml>"
         get_config = mock.Mock()
         # Force multiple retries of detach
-        get_config.side_effect = [conf, conf, conf, None]
+        get_config.side_effect = [conf, conf, conf, conf, conf, None, None]
         dev_path = "/dev/vdb"
         self.domain.isPersistent.return_value = True
 
@@ -356,7 +356,7 @@ class GuestTestCase(test.NoDBTestCase):
         get_config = mock.Mock()
         # Simulate the persistent domain attach attempt followed by the live
         # domain attach attempt and success
-        get_config.side_effect = [conf, conf, None]
+        get_config.side_effect = [conf, conf, conf, None, None]
         fake_device = "vdb"
         fake_exc = fakelibvirt.make_libvirtError(
             fakelibvirt.libvirtError, "",
