@@ -4311,7 +4311,7 @@ class API(base.Base):
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED])
     def live_migrate(self, context, instance, block_migration,
-                     disk_over_commit, host_name, force=None, async=False):
+                     disk_over_commit, host_name, force=None, async_=False):
         """Migrate a server lively to a new host."""
         LOG.debug("Going to try to live migrate instance to %s",
                   host_name or "another host", instance=instance)
@@ -4367,7 +4367,7 @@ class API(base.Base):
             self.compute_task_api.live_migrate_instance(context, instance,
                 host_name, block_migration=block_migration,
                 disk_over_commit=disk_over_commit,
-                request_spec=request_spec, async=async)
+                request_spec=request_spec, async_=async_)
         except oslo_exceptions.MessagingTimeout as messaging_timeout:
             with excutils.save_and_reraise_exception():
                 # NOTE(pkoniszewski): It is possible that MessagingTimeout

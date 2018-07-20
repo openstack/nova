@@ -11162,7 +11162,7 @@ class ComputeAPITestCase(BaseTestCase):
                                           block_migration=True,
                                           disk_over_commit=True,
                                           host_name='fake_dest_host',
-                                          force=force, async=False)
+                                          force=force, async_=False)
 
             record_action_start.assert_called_once_with(self.context, instance,
                                                         'live-migration')
@@ -11174,7 +11174,7 @@ class ComputeAPITestCase(BaseTestCase):
                 self.context, instance, host,
                 block_migration=True,
                 disk_over_commit=True,
-                request_spec=fake_spec, async=False)
+                request_spec=fake_spec, async_=False)
 
             delete_tokens_for_instance.assert_called_once_with(
                 self.context, instance.uuid)

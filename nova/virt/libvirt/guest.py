@@ -743,18 +743,18 @@ class BlockDevice(object):
         self._guest = guest
         self._disk = disk
 
-    def abort_job(self, async=False, pivot=False):
+    def abort_job(self, async_=False, pivot=False):
         """Request to cancel a live block device job
 
-        :param async: Cancel the block device job (e.g. 'copy' or
-                      'commit'), and return as soon as possible, without
-                      waiting for job completion
+        :param async_: Cancel the block device job (e.g. 'copy' or
+                       'commit'), and return as soon as possible, without
+                       waiting for job completion
         :param pivot: Pivot to the destination image when ending a
                       'copy' or "active commit" (meaning: merging the
                       contents of current active disk into its backing
                       file) job
         """
-        flags = async and libvirt.VIR_DOMAIN_BLOCK_JOB_ABORT_ASYNC or 0
+        flags = async_ and libvirt.VIR_DOMAIN_BLOCK_JOB_ABORT_ASYNC or 0
         flags |= pivot and libvirt.VIR_DOMAIN_BLOCK_JOB_ABORT_PIVOT or 0
         self._guest._domain.blockJobAbort(self._disk, flags=flags)
 
