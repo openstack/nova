@@ -41,7 +41,7 @@ class ConnectorClient(object):
         if _url.scheme == 'https':
             _ssl_enabled = True
         elif ca_file:
-            LOG.warning("url is %(url) which is not https "
+            LOG.warning("url is %(url)s which is not https "
                         "but ca_file is configured to %(ca_file)s",
                         {'url': zcc_url, 'ca_file': ca_file})
 
