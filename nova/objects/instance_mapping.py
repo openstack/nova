@@ -13,6 +13,7 @@
 from oslo_utils import versionutils
 from sqlalchemy.orm import joinedload
 
+from nova import context as nova_context
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
@@ -141,6 +142,48 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
     @base.remotable
     def destroy(self):
         self._destroy_in_db(self._context, self.instance_uuid)
+
+
+@db_api.api_context_manager.writer
+def populate_queued_for_delete(context, max_count):
+    cells = objects.CellMappingList.get_all(context)
+    processed = 0
+    for cell in cells:
+        ims = (
+            # Get a direct list of instance mappings for this cell which
+            # have not yet received a defined value decision for
+            # queued_for_delete
+            context.session.query(api_models.InstanceMapping)
+            .options(joinedload('cell_mapping'))
+            .filter(
+                api_models.InstanceMapping.queued_for_delete == None)  # noqa
+            .filter(api_models.InstanceMapping.cell_id == cell.id)
+            .limit(max_count).all())
+        ims_by_inst = {im.instance_uuid: im for im in ims}
+        with nova_context.target_cell(context, cell) as cctxt:
+            filters = {'uuid': list(ims_by_inst.keys()),
+                       'deleted': True,
+                       'soft_deleted': True}
+            instances = objects.InstanceList.get_by_filters(
+                cctxt, filters, expected_attrs=[])
+        # Walk through every deleted instance that has a mapping needing
+        # to be updated and update it
+        for instance in instances:
+            im = ims_by_inst.pop(instance.uuid)
+            im.queued_for_delete = True
+            context.session.add(im)
+            processed += 1
+        # Any instances we did not just hit must be not-deleted, so
+        # update the remaining mappings
+        for non_deleted_im in ims_by_inst.values():
+            non_deleted_im.queued_for_delete = False
+            context.session.add(non_deleted_im)
+            processed += 1
+        max_count -= len(ims)
+        if max_count <= 0:
+            break
+
+    return processed, processed
 
 
 @base.NovaObjectRegistry.register
