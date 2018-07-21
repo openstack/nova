@@ -1,0 +1,13 @@
+---
+fixes:
+  - |
+    Booting volume-backed instances no longer includes an incorrect allocation
+    against the compute node for the root disk. Historically, this has been
+    quite broken behavior in Nova, where volume-backed instances would count
+    against available space on the compute node, even though their storage
+    was provided by the volume service. Now, newly-booted volume-backed
+    instances will not create allocations of ``DISK_GB`` against the compute
+    node for the ``root_gb`` quantity in the flavor. Note that if you are
+    still using a scheduler configured with the (now deprecated)
+    DiskFilter (including deployments using CachingScheduler), the
+    above change will not apply to you.
