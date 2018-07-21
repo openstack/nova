@@ -22,6 +22,7 @@ import collections
 import copy
 import retrying
 
+from keystoneauth1 import exceptions as ks_exc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
@@ -1271,8 +1272,20 @@ class ResourceTracker(object):
         # happen according to the normal flow of events where the scheduler
         # always creates allocations for an instance
         known_instances = set(self.tracked_instances.keys())
-        allocations = self.reportclient.get_allocations_for_resource_provider(
-                context, cn.uuid) or {}
+        try:
+            # pai: report.ProviderAllocInfo namedtuple
+            pai = self.reportclient.get_allocations_for_resource_provider(
+                context, cn.uuid)
+        except (exception.ResourceProviderAllocationRetrievalFailed,
+                ks_exc.ClientException) as e:
+            LOG.error("Skipping removal of allocations for deleted instances: "
+                      "%s", e)
+            return
+        allocations = pai.allocations
+        if not allocations:
+            # The main loop below would short-circuit anyway, but this saves us
+            # the (potentially expensive) context.elevated construction below.
+            return
         read_deleted_context = context.elevated(read_deleted='yes')
         for consumer_uuid, alloc in allocations.items():
             if consumer_uuid in known_instances:

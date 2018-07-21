@@ -57,6 +57,8 @@ POST_ALLOCATIONS_API_VERSION = '1.13'
 
 AggInfo = collections.namedtuple('AggInfo', ['aggregates', 'generation'])
 TraitInfo = collections.namedtuple('TraitInfo', ['traits', 'generation'])
+ProviderAllocInfo = collections.namedtuple(
+    'ProviderAllocInfo', ['allocations'])
 
 
 def warn_limit(self, msg):
@@ -1933,14 +1935,25 @@ class SchedulerReportClient(object):
         else:
             self.delete_allocation_for_instance(context, instance.uuid)
 
-    @safe_connect
     def get_allocations_for_resource_provider(self, context, rp_uuid):
+        """Retrieves the allocations for a specific provider.
+
+        :param context: The nova.context.RequestContext auth context
+        :param rp_uuid: The UUID of the provider.
+        :return: ProviderAllocInfo namedtuple.
+        :raises: keystoneauth1.exceptions.base.ClientException on failure to
+                 communicate with the placement API
+        :raises: ResourceProviderAllocationRetrievalFailed if the placement API
+                 call fails.
+        """
         url = '/resource_providers/%s/allocations' % rp_uuid
         resp = self.get(url, global_request_id=context.global_id)
         if not resp:
-            return {}
-        else:
-            return resp.json()['allocations']
+            raise exception.ResourceProviderAllocationRetrievalFailed(
+                rp_uuid=rp_uuid, error=resp.text)
+
+        data = resp.json()
+        return ProviderAllocInfo(allocations=data['allocations'])
 
     def delete_resource_provider(self, context, compute_node, cascade=False):
         """Deletes the ResourceProvider record for the compute_node.
