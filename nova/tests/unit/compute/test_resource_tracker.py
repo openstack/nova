@@ -1386,6 +1386,53 @@ class TestUpdateComputeNode(BaseTestCase):
         exp_inv[rc_fields.ResourceClass.DISK_GB]['reserved'] = 1
         self.assertEqual(exp_inv, ptree.data(new_compute.uuid).inventory)
 
+    @mock.patch('nova.objects.ComputeNode.save', new=mock.Mock())
+    def test_update_retry_success(self):
+        self._setup_rt()
+        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self.rt.compute_nodes[_NODENAME] = orig_compute
+        self.rt.old_resources[_NODENAME] = orig_compute
+        # Deliberately changing local_gb to trigger updating inventory
+        new_compute = orig_compute.obj_clone()
+        new_compute.local_gb = 210000
+
+        # Emulate a driver that has implemented the update_from_provider_tree()
+        # virt driver method, so we hit the update_from_provider_tree path.
+        self.driver_mock.update_provider_tree.side_effect = lambda *a: None
+
+        ufpt_mock = self.rt.reportclient.update_from_provider_tree
+        ufpt_mock.side_effect = (
+            exc.ResourceProviderUpdateConflict(
+                uuid='uuid', generation=42, error='error'), None)
+
+        self.rt._update(mock.sentinel.ctx, new_compute)
+
+        self.assertEqual(2, ufpt_mock.call_count)
+
+    @mock.patch('nova.objects.ComputeNode.save', new=mock.Mock())
+    def test_update_retry_raises(self):
+        self._setup_rt()
+        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self.rt.compute_nodes[_NODENAME] = orig_compute
+        self.rt.old_resources[_NODENAME] = orig_compute
+        # Deliberately changing local_gb to trigger updating inventory
+        new_compute = orig_compute.obj_clone()
+        new_compute.local_gb = 210000
+
+        # Emulate a driver that has implemented the update_from_provider_tree()
+        # virt driver method, so we hit the update_from_provider_tree path.
+        self.driver_mock.update_provider_tree.side_effect = lambda *a: None
+
+        ufpt_mock = self.rt.reportclient.update_from_provider_tree
+        ufpt_mock.side_effect = (
+            exc.ResourceProviderUpdateConflict(
+                uuid='uuid', generation=42, error='error'))
+
+        self.assertRaises(exc.ResourceProviderUpdateConflict,
+                          self.rt._update, mock.sentinel.ctx, new_compute)
+
+        self.assertEqual(4, ufpt_mock.call_count)
+
     def test_get_node_uuid(self):
         self._setup_rt()
         orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()

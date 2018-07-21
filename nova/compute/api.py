@@ -5315,7 +5315,8 @@ class AggregateAPI(base.Base):
                         host_name, aggregate.uuid)
         except (exception.ResourceProviderNotFound,
                 exception.ResourceProviderAggregateRetrievalFailed,
-                exception.ResourceProviderUpdateFailed) as err:
+                exception.ResourceProviderUpdateFailed,
+                exception.ResourceProviderUpdateConflict) as err:
             # NOTE(jaypipes): We don't want a failure perform the mirroring
             # action in the placement service to be returned to the user (they
             # probably don't know anything about the placement service and
@@ -5380,7 +5381,8 @@ class AggregateAPI(base.Base):
                         host_name, aggregate.uuid)
         except (exception.ResourceProviderNotFound,
                 exception.ResourceProviderAggregateRetrievalFailed,
-                exception.ResourceProviderUpdateFailed) as err:
+                exception.ResourceProviderUpdateFailed,
+                exception.ResourceProviderUpdateConflict) as err:
             # NOTE(jaypipes): We don't want a failure perform the mirroring
             # action in the placement service to be returned to the user (they
             # probably don't know anything about the placement service and

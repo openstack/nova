@@ -881,8 +881,8 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 self.client.update_from_provider_tree, self.context, new_tree)
             # Placement didn't get updated
             self.assertEqual(set(['HW_CPU_X86_AVX', 'HW_CPU_X86_AVX2']),
-                             self.client._get_provider_traits(self.context,
-                                                              uuids.root))
+                             self.client._get_provider_traits(
+                                 self.context, uuids.root).traits)
             # ...and the root was removed from the cache
             self.assertFalse(self.client._provider_tree.exists(uuids.root))
 
@@ -940,13 +940,14 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 resp = self.client.get('/resource_providers/%s' % uuid)
                 self.assertEqual(404, resp.status_code)
 
-    @mock.patch('nova.compute.provider_tree.ProviderTree.update_aggregates')
-    def test_non_tree_aggregate_membership(self, upd_aggs_mock):
-        """There are some methods of the reportclient that do NOT interact with
-        the reportclient's provider_tree cache of information. These methods
-        are called to add and remove members from a nova host aggregate and
-        ensure that the placement API has a mirrored record of the resource
-        provider's aggregate associations.
+    def test_non_tree_aggregate_membership(self):
+        """There are some methods of the reportclient that interact with the
+        reportclient's provider_tree cache of information on a best-effort
+        basis. These methods are called to add and remove members from a nova
+        host aggregate and ensure that the placement API has a mirrored record
+        of the resource provider's aggregate associations. We want to simulate
+        this use case by invoking these methods with an empty cache and making
+        sure it never gets populated (and we don't raise ValueError).
         """
         agg_uuid = uuids.agg
         with self._interceptor():
@@ -955,11 +956,17 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             ptree = self.client.get_provider_tree_and_ensure_root(
                 self.context, self.compute_uuid, name=self.compute_name)
             self.assertEqual([self.compute_uuid], ptree.get_provider_uuids())
+            # Now blow away the cache so we can ensure the use_cache=False
+            # behavior of aggregate_{add|remove}_host correctly ignores and/or
+            # doesn't attempt to populate/update it.
+            self.client._provider_tree.remove(self.compute_uuid)
+            self.assertEqual(
+                [], self.client._provider_tree.get_provider_uuids())
 
             # Use the reportclient's _get_provider_aggregates() private method
             # to verify no aggregates are yet associated with this provider
             aggs = self.client._get_provider_aggregates(
-                self.context, self.compute_uuid)
+                self.context, self.compute_uuid).aggregates
             self.assertEqual(set(), aggs)
 
             # Now associate the compute **host name** with an aggregate and
@@ -967,30 +974,30 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             self.client.aggregate_add_host(
                 self.context, agg_uuid, self.compute_name)
 
-            # Check that the ProviderTree cache that was populated above during
-            # get_provider_tree_and_ensure_root() hasn't been modified (since
+            # Check that the ProviderTree cache hasn't been modified (since
             # the aggregate_add_host() method is only called from nova-api and
             # we don't want to have a ProviderTree cache at that layer.
-            cache_data = self.client._provider_tree.data(self.compute_uuid)
-            self.assertNotIn(agg_uuid, cache_data.aggregates)
+            self.assertEqual(
+                [], self.client._provider_tree.get_provider_uuids())
             aggs = self.client._get_provider_aggregates(
-                self.context, self.compute_uuid)
+                self.context, self.compute_uuid).aggregates
             self.assertEqual(set([agg_uuid]), aggs)
 
             # Finally, remove the association and verify it's removed in
             # placement
             self.client.aggregate_remove_host(
                 self.context, agg_uuid, self.compute_name)
-            cache_data = self.client._provider_tree.data(self.compute_uuid)
-            self.assertNotIn(agg_uuid, cache_data.aggregates)
+            self.assertEqual(
+                [], self.client._provider_tree.get_provider_uuids())
             aggs = self.client._get_provider_aggregates(
-                self.context, self.compute_uuid)
+                self.context, self.compute_uuid).aggregates
             self.assertEqual(set(), aggs)
 
             #  Try removing the same host and verify no error
             self.client.aggregate_remove_host(
                 self.context, agg_uuid, self.compute_name)
-        upd_aggs_mock.assert_not_called()
+            self.assertEqual(
+                [], self.client._provider_tree.get_provider_uuids())
 
     def test_alloc_cands_smoke(self):
         """Simple call to get_allocation_candidates for version checking."""

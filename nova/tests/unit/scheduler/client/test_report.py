@@ -15,6 +15,7 @@ import time
 import fixtures
 from keystoneauth1 import exceptions as ks_exc
 import mock
+from oslo_serialization import jsonutils
 from six.moves.urllib import parse
 
 import nova.conf
@@ -1192,8 +1193,10 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         }]
 
         get_inv_mock.return_value = None
-        get_agg_mock.return_value = set([uuids.agg1])
-        get_trait_mock.return_value = set(['CUSTOM_GOLD'])
+        get_agg_mock.return_value = report.AggInfo(
+            aggregates=set([uuids.agg1]), generation=42)
+        get_trait_mock.return_value = report.TraitInfo(
+            traits=set(['CUSTOM_GOLD']), generation=43)
         get_shr_mock.return_value = []
 
         self.client._ensure_resource_provider(self.context, uuids.compute_node)
@@ -1216,7 +1219,9 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             self.client._provider_tree.has_traits(uuids.compute_node,
                                                   ['CUSTOM_SILVER']))
         get_shr_mock.assert_called_once_with(self.context, set([uuids.agg1]))
-        self.assertTrue(self.client._provider_tree.exists(uuids.compute_node))
+        self.assertEqual(
+            43,
+            self.client._provider_tree.data(uuids.compute_node).generation)
         self.assertFalse(create_rp_mock.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -1409,7 +1414,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         mock_ref_inv.assert_has_calls([mock.call(self.context, uuid)
                                        for uuid in tree_uuids])
         mock_ref_assoc.assert_has_calls(
-            [mock.call(self.context, uuid, generation=42, force=True)
+            [mock.call(self.context, uuid, force=True)
              for uuid in tree_uuids])
         self.assertEqual(tree_uuids,
                          set(self.client._provider_tree.get_provider_uuids()))
@@ -1931,11 +1936,10 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
     def test_set_aggregates_for_provider(self):
         aggs = [uuids.agg1, uuids.agg2]
-        resp_mock = mock.Mock(status_code=200)
-        resp_mock.json.return_value = {
-            'aggregates': aggs,
-        }
-        self.ks_adap_mock.put.return_value = resp_mock
+        self.ks_adap_mock.put.return_value = fake_requests.FakeResponse(
+            200, content=jsonutils.dumps({
+                'aggregates': aggs,
+                'resource_provider_generation': 1}))
 
         # Prime the provider tree cache
         self.client._provider_tree.new_root('rp', uuids.rp, generation=0)
@@ -1944,16 +1948,26 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         self.client.set_aggregates_for_provider(self.context, uuids.rp, aggs)
 
+        exp_payload = {'aggregates': aggs,
+                       'resource_provider_generation': 0}
         self.ks_adap_mock.put.assert_called_once_with(
-            '/resource_providers/%s/aggregates' % uuids.rp, json=aggs,
-            microversion='1.1',
+            '/resource_providers/%s/aggregates' % uuids.rp, json=exp_payload,
+            microversion='1.19',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         # Cache was updated
-        self.assertEqual(set(aggs),
-                         self.client._provider_tree.data(uuids.rp).aggregates)
+        ptree_data = self.client._provider_tree.data(uuids.rp)
+        self.assertEqual(set(aggs), ptree_data.aggregates)
+        self.assertEqual(1, ptree_data.generation)
+
+    def test_set_aggregates_for_provider_bad_args(self):
+        self.assertRaises(ValueError, self.client.set_aggregates_for_provider,
+                          self.context, uuids.rp, {}, use_cache=False)
+        self.assertRaises(ValueError, self.client.set_aggregates_for_provider,
+                          self.context, uuids.rp, {}, use_cache=False,
+                          generation=None)
 
     def test_set_aggregates_for_provider_fail(self):
-        self.ks_adap_mock.put.return_value = mock.Mock(status_code=503)
+        self.ks_adap_mock.put.return_value = fake_requests.FakeResponse(503)
         # Prime the provider tree cache
         self.client._provider_tree.new_root('rp', uuids.rp, generation=0)
         self.assertRaises(
@@ -1964,6 +1978,49 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertEqual(set(),
                          self.client._provider_tree.data(uuids.rp).aggregates)
 
+    def test_set_aggregates_for_provider_conflict(self):
+        # Prime the provider tree cache
+        self.client._provider_tree.new_root('rp', uuids.rp, generation=0)
+        self.ks_adap_mock.put.return_value = fake_requests.FakeResponse(409)
+        self.assertRaises(
+            exception.ResourceProviderUpdateConflict,
+            self.client.set_aggregates_for_provider,
+            self.context, uuids.rp, [uuids.agg])
+        # The cache was invalidated
+        self.assertNotIn(uuids.rp,
+                         self.client._provider_tree.get_provider_uuids())
+        self.assertNotIn(uuids.rp, self.client._association_refresh_time)
+
+    def test_set_aggregates_for_provider_short_circuit(self):
+        """No-op when aggregates have not changed."""
+        # Prime the provider tree cache
+        self.client._provider_tree.new_root('rp', uuids.rp, generation=7)
+        self.client.set_aggregates_for_provider(self.context, uuids.rp, [])
+        self.ks_adap_mock.put.assert_not_called()
+
+    def test_set_aggregates_for_provider_no_short_circuit(self):
+        """Don't short-circuit if generation doesn't match, even if aggs have
+        not changed.
+        """
+        # Prime the provider tree cache
+        self.client._provider_tree.new_root('rp', uuids.rp, generation=2)
+        self.ks_adap_mock.put.return_value = fake_requests.FakeResponse(
+            200, content=jsonutils.dumps({
+                'aggregates': [],
+                'resource_provider_generation': 5}))
+        self.client.set_aggregates_for_provider(self.context, uuids.rp, [],
+                                                generation=4)
+        exp_payload = {'aggregates': [],
+                       'resource_provider_generation': 4}
+        self.ks_adap_mock.put.assert_called_once_with(
+            '/resource_providers/%s/aggregates' % uuids.rp, json=exp_payload,
+            microversion='1.19',
+            headers={'X-Openstack-Request-Id': self.context.global_id})
+        # Cache was updated
+        ptree_data = self.client._provider_tree.data(uuids.rp)
+        self.assertEqual(set(), ptree_data.aggregates)
+        self.assertEqual(5, ptree_data.generation)
+
 
 class TestAggregates(SchedulerReportClientTestCase):
     def test_get_provider_aggregates_found(self):
@@ -1973,16 +2030,18 @@ class TestAggregates(SchedulerReportClientTestCase):
             uuids.agg1,
             uuids.agg2,
         ]
-        resp_mock.json.return_value = {'aggregates': aggs}
+        resp_mock.json.return_value = {'aggregates': aggs,
+                                       'resource_provider_generation': 42}
         self.ks_adap_mock.get.return_value = resp_mock
 
-        result = self.client._get_provider_aggregates(self.context, uuid)
+        result, gen = self.client._get_provider_aggregates(self.context, uuid)
 
         expected_url = '/resource_providers/' + uuid + '/aggregates'
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, microversion='1.1',
+            expected_url, microversion='1.19',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         self.assertEqual(set(aggs), result)
+        self.assertEqual(42, gen)
 
     @mock.patch.object(report.LOG, 'error')
     def test_get_provider_aggregates_error(self, log_mock):
@@ -2002,7 +2061,7 @@ class TestAggregates(SchedulerReportClientTestCase):
 
             expected_url = '/resource_providers/' + uuid + '/aggregates'
             self.ks_adap_mock.get.assert_called_once_with(
-                expected_url, microversion='1.1',
+                expected_url, microversion='1.19',
                 headers={'X-Openstack-Request-Id': self.context.global_id})
             self.assertTrue(log_mock.called)
             self.assertEqual(uuids.request_id,
@@ -2021,10 +2080,11 @@ class TestTraits(SchedulerReportClientTestCase):
             'CUSTOM_GOLD',
             'CUSTOM_SILVER',
         ]
-        resp_mock.json.return_value = {'traits': traits}
+        resp_mock.json.return_value = {'traits': traits,
+                                       'resource_provider_generation': 42}
         self.ks_adap_mock.get.return_value = resp_mock
 
-        result = self.client._get_provider_traits(self.context, uuid)
+        result, gen = self.client._get_provider_traits(self.context, uuid)
 
         expected_url = '/resource_providers/' + uuid + '/traits'
         self.ks_adap_mock.get.assert_called_once_with(
@@ -2032,6 +2092,7 @@ class TestTraits(SchedulerReportClientTestCase):
             headers={'X-Openstack-Request-Id': self.context.global_id},
             **self.trait_api_kwargs)
         self.assertEqual(set(traits), result)
+        self.assertEqual(42, gen)
 
     @mock.patch.object(report.LOG, 'error')
     def test_get_provider_traits_error(self, log_mock):
@@ -2220,13 +2281,15 @@ class TestAssociations(SchedulerReportClientTestCase):
         uuid = uuids.compute_node
         # Seed the provider tree so _refresh_associations finds the provider
         self.client._provider_tree.new_root('compute', uuid, generation=1)
-        mock_agg_get.return_value = set([uuids.agg1])
-        mock_trait_get.return_value = set(['CUSTOM_GOLD'])
+        mock_agg_get.return_value = report.AggInfo(
+            aggregates=set([uuids.agg1]), generation=42)
+        mock_trait_get.return_value = report.TraitInfo(
+            traits=set(['CUSTOM_GOLD']), generation=43)
         self.client._refresh_associations(self.context, uuid)
         mock_agg_get.assert_called_once_with(self.context, uuid)
         mock_trait_get.assert_called_once_with(self.context, uuid)
         mock_shr_get.assert_called_once_with(
-            self.context, mock_agg_get.return_value)
+            self.context, mock_agg_get.return_value[0])
         self.assertIn(uuid, self.client._association_refresh_time)
         self.assertTrue(
             self.client._provider_tree.in_aggregates(uuid, [uuids.agg1]))
@@ -2236,6 +2299,7 @@ class TestAssociations(SchedulerReportClientTestCase):
             self.client._provider_tree.has_traits(uuid, ['CUSTOM_GOLD']))
         self.assertFalse(
             self.client._provider_tree.has_traits(uuid, ['CUSTOM_SILVER']))
+        self.assertEqual(43, self.client._provider_tree.data(uuid).generation)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
@@ -2250,8 +2314,10 @@ class TestAssociations(SchedulerReportClientTestCase):
         uuid = uuids.compute_node
         # Seed the provider tree so _refresh_associations finds the provider
         self.client._provider_tree.new_root('compute', uuid, generation=1)
-        mock_agg_get.return_value = set([uuids.agg1])
-        mock_trait_get.return_value = set(['CUSTOM_GOLD'])
+        mock_agg_get.return_value = report.AggInfo(
+            aggregates=set([uuids.agg1]), generation=42)
+        mock_trait_get.return_value = report.TraitInfo(
+            traits=set(['CUSTOM_GOLD']), generation=43)
         self.client._refresh_associations(self.context, uuid,
                                           refresh_sharing=False)
         mock_agg_get.assert_called_once_with(self.context, uuid)
@@ -2266,6 +2332,7 @@ class TestAssociations(SchedulerReportClientTestCase):
             self.client._provider_tree.has_traits(uuid, ['CUSTOM_GOLD']))
         self.assertFalse(
             self.client._provider_tree.has_traits(uuid, ['CUSTOM_SILVER']))
+        self.assertEqual(43, self.client._provider_tree.data(uuid).generation)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
@@ -2301,8 +2368,10 @@ class TestAssociations(SchedulerReportClientTestCase):
         uuid = uuids.compute_node
         # Seed the provider tree so _refresh_associations finds the provider
         self.client._provider_tree.new_root('compute', uuid, generation=1)
-        mock_agg_get.return_value = set([])
-        mock_trait_get.return_value = set([])
+        mock_agg_get.return_value = report.AggInfo(aggregates=set([]),
+                                                   generation=42)
+        mock_trait_get.return_value = report.TraitInfo(traits=set([]),
+                                                       generation=43)
         mock_shr_get.return_value = []
 
         # Called a first time because association_refresh_time is empty.
@@ -3455,13 +3524,16 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
             self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
         mock_get_by_name.return_value = {
             'uuid': uuids.cn1,
+            'generation': 1,
         }
         agg_uuid = uuids.agg1
-        mock_get_aggs.return_value = set([])
+        mock_get_aggs.return_value = report.AggInfo(aggregates=set([]),
+                                                    generation=42)
         name = 'cn1'
         self.client.aggregate_add_host(self.context, agg_uuid, name)
         mock_set_aggs.assert_called_once_with(
-            self.context, uuids.cn1, set([agg_uuid]), use_cache=False)
+            self.context, uuids.cn1, set([agg_uuid]), use_cache=False,
+            generation=42)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'set_aggregates_for_provider')
@@ -3473,21 +3545,24 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
             self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
         mock_get_by_name.return_value = {
             'uuid': uuids.cn1,
+            'generation': 1,
         }
         agg1_uuid = uuids.agg1
         agg2_uuid = uuids.agg2
         agg3_uuid = uuids.agg3
-        mock_get_aggs.return_value = set([agg1_uuid])
+        mock_get_aggs.return_value = report.AggInfo(
+            aggregates=set([agg1_uuid]), generation=42)
         name = 'cn1'
         self.client.aggregate_add_host(self.context, agg1_uuid, name)
         mock_set_aggs.assert_not_called()
         mock_get_aggs.reset_mock()
         mock_set_aggs.reset_mock()
-        mock_get_aggs.return_value = set([agg1_uuid, agg3_uuid])
+        mock_get_aggs.return_value = report.AggInfo(
+            aggregates=set([agg1_uuid, agg3_uuid]), generation=43)
         self.client.aggregate_add_host(self.context, agg2_uuid, name)
         mock_set_aggs.assert_called_once_with(
             self.context, uuids.cn1, set([agg1_uuid, agg2_uuid, agg3_uuid]),
-            use_cache=False)
+            use_cache=False, generation=43)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_by_name')
@@ -3504,6 +3579,58 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
             exception.PlacementAPIConnectFailure,
             self.client.aggregate_add_host, self.context, agg_uuid, name)
         self.mock_get.assert_not_called()
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'set_aggregates_for_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_by_name')
+    def test_aggregate_add_host_retry_success(
+            self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
+        mock_get_by_name.return_value = {
+            'uuid': uuids.cn1,
+            'generation': 1,
+        }
+        gens = (42, 43, 44)
+        mock_get_aggs.side_effect = (
+            report.AggInfo(aggregates=set([]), generation=gen) for gen in gens)
+        mock_set_aggs.side_effect = (
+            exception.ResourceProviderUpdateConflict(
+                uuid='uuid', generation=42, error='error'),
+            exception.ResourceProviderUpdateConflict(
+                uuid='uuid', generation=43, error='error'),
+            None,
+        )
+        self.client.aggregate_add_host(self.context, uuids.agg1, 'cn1')
+        mock_set_aggs.assert_has_calls([mock.call(
+            self.context, uuids.cn1, set([uuids.agg1]), use_cache=False,
+            generation=gen) for gen in gens])
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'set_aggregates_for_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_by_name')
+    def test_aggregate_add_host_retry_raises(
+            self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
+        mock_get_by_name.return_value = {
+            'uuid': uuids.cn1,
+            'generation': 1,
+        }
+        gens = (42, 43, 44, 45)
+        mock_get_aggs.side_effect = (
+            report.AggInfo(aggregates=set([]), generation=gen) for gen in gens)
+        mock_set_aggs.side_effect = (
+            exception.ResourceProviderUpdateConflict(
+                uuid='uuid', generation=gen, error='error') for gen in gens)
+        self.assertRaises(
+            exception.ResourceProviderUpdateConflict,
+            self.client.aggregate_add_host, self.context, uuids.agg1, 'cn1')
+        mock_set_aggs.assert_has_calls([mock.call(
+            self.context, uuids.cn1, set([uuids.agg1]), use_cache=False,
+            generation=gen) for gen in gens])
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_by_name')
@@ -3531,13 +3658,15 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
             self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
         mock_get_by_name.return_value = {
             'uuid': uuids.cn1,
+            'generation': 1,
         }
         agg_uuid = uuids.agg1
-        mock_get_aggs.return_value = set([agg_uuid])
+        mock_get_aggs.return_value = report.AggInfo(aggregates=set([agg_uuid]),
+                                                    generation=42)
         name = 'cn1'
         self.client.aggregate_remove_host(self.context, agg_uuid, name)
         mock_set_aggs.assert_called_once_with(
-            self.context, uuids.cn1, set([]), use_cache=False)
+            self.context, uuids.cn1, set([]), use_cache=False, generation=42)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'set_aggregates_for_provider')
@@ -3549,18 +3678,75 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
             self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
         mock_get_by_name.return_value = {
             'uuid': uuids.cn1,
+            'generation': 1,
         }
         agg1_uuid = uuids.agg1
         agg2_uuid = uuids.agg2
         agg3_uuid = uuids.agg3
-        mock_get_aggs.return_value = set([])
+        mock_get_aggs.return_value = report.AggInfo(aggregates=set([]),
+                                                    generation=42)
         name = 'cn1'
         self.client.aggregate_remove_host(self.context, agg2_uuid, name)
         mock_set_aggs.assert_not_called()
         mock_get_aggs.reset_mock()
         mock_set_aggs.reset_mock()
-        mock_get_aggs.return_value = set([agg1_uuid, agg2_uuid, agg3_uuid])
+        mock_get_aggs.return_value = report.AggInfo(
+            aggregates=set([agg1_uuid, agg2_uuid, agg3_uuid]), generation=43)
         self.client.aggregate_remove_host(self.context, agg2_uuid, name)
         mock_set_aggs.assert_called_once_with(
             self.context, uuids.cn1, set([agg1_uuid, agg3_uuid]),
-            use_cache=False)
+            use_cache=False, generation=43)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'set_aggregates_for_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_by_name')
+    def test_aggregate_remove_host_retry_success(
+            self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
+        mock_get_by_name.return_value = {
+            'uuid': uuids.cn1,
+            'generation': 1,
+        }
+        gens = (42, 43, 44)
+        mock_get_aggs.side_effect = (
+            report.AggInfo(aggregates=set([uuids.agg1]), generation=gen)
+            for gen in gens)
+        mock_set_aggs.side_effect = (
+            exception.ResourceProviderUpdateConflict(
+                uuid='uuid', generation=42, error='error'),
+            exception.ResourceProviderUpdateConflict(
+                uuid='uuid', generation=43, error='error'),
+            None,
+        )
+        self.client.aggregate_remove_host(self.context, uuids.agg1, 'cn1')
+        mock_set_aggs.assert_has_calls([mock.call(
+            self.context, uuids.cn1, set([]), use_cache=False,
+            generation=gen) for gen in gens])
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'set_aggregates_for_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_by_name')
+    def test_aggregate_remove_host_retry_raises(
+            self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
+        mock_get_by_name.return_value = {
+            'uuid': uuids.cn1,
+            'generation': 1,
+        }
+        gens = (42, 43, 44, 45)
+        mock_get_aggs.side_effect = (
+            report.AggInfo(aggregates=set([uuids.agg1]), generation=gen)
+            for gen in gens)
+        mock_set_aggs.side_effect = (
+            exception.ResourceProviderUpdateConflict(
+                uuid='uuid', generation=gen, error='error') for gen in gens)
+        self.assertRaises(
+            exception.ResourceProviderUpdateConflict,
+            self.client.aggregate_remove_host, self.context, uuids.agg1, 'cn1')
+        mock_set_aggs.assert_has_calls([mock.call(
+            self.context, uuids.cn1, set([]), use_cache=False,
+            generation=gen) for gen in gens])
