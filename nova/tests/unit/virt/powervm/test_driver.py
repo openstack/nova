@@ -67,7 +67,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
                          set(self.drv.capabilities))
         # check the values for each capability
         self.assertFalse(self.drv.capabilities['has_imagecache'])
-        self.assertFalse(self.drv.capabilities['supports_recreate'])
+        self.assertFalse(self.drv.capabilities['supports_evacuate'])
         self.assertFalse(
             self.drv.capabilities['supports_migrate_to_same_host'])
         self.assertTrue(self.drv.capabilities['supports_attach_interface'])

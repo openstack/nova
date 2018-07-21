@@ -4236,7 +4236,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                detach_block_devices=_detach,
                                                attach_block_devices=_attach,
                                                network_info=None,
-                                               recreate=False,
+                                               evacuate=False,
                                                block_device_info=None,
                                                preserve_ephemeral=False)
 

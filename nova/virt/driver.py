@@ -123,7 +123,7 @@ class ComputeDriver(object):
 
     capabilities = {
         "has_imagecache": False,
-        "supports_recreate": False,
+        "supports_evacuate": False,
         "supports_migrate_to_same_host": False,
         "supports_attach_interface": False,
         "supports_device_tagging": False,
@@ -232,7 +232,7 @@ class ComputeDriver(object):
     def rebuild(self, context, instance, image_meta, injected_files,
                 admin_password, allocations, bdms, detach_block_devices,
                 attach_block_devices, network_info=None,
-                recreate=False, block_device_info=None,
+                evacuate=False, block_device_info=None,
                 preserve_ephemeral=False):
         """Destroy and re-make this instance.
 
@@ -264,7 +264,7 @@ class ComputeDriver(object):
             nova.compute.manager.ComputeManager:_rebuild_default_impl for
             usage.
         :param network_info: instance network information
-        :param recreate: True if the instance is being recreated on a new
+        :param evacuate: True if the instance is being recreated on a new
             hypervisor - all the cleanup of old state is skipped.
         :param block_device_info: Information about block devices to be
                                   attached to the instance.

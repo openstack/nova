@@ -1627,8 +1627,8 @@ class CryptoCRLFileNotFound(FileNotFound):
     msg_fmt = _("The CRL file for %(project)s could not be found")
 
 
-class InstanceRecreateNotSupported(Invalid):
-    msg_fmt = _('Instance recreate is not supported.')
+class InstanceEvacuateNotSupported(Invalid):
+    msg_fmt = _('Instance evacuate is not supported.')
 
 
 class DBNotAllowed(NovaException):

@@ -69,7 +69,7 @@ class XenAPIDriver(driver.ComputeDriver):
     """A connection to XenServer or Xen Cloud Platform."""
     capabilities = {
         "has_imagecache": False,
-        "supports_recreate": False,
+        "supports_evacuate": False,
         "supports_migrate_to_same_host": False,
         "supports_attach_interface": True,
         "supports_device_tagging": True,

@@ -12897,10 +12897,10 @@ class EvacuateHostTestCase(BaseTestCase):
 
     def test_driver_does_not_support_recreate(self):
         with mock.patch.dict(self.compute.driver.capabilities,
-                             supports_recreate=False):
+                             supports_evacuate=False):
             self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
                            lambda *a, **kw: True)
-            self.assertRaises(exception.InstanceRecreateNotSupported,
+            self.assertRaises(exception.InstanceEvacuateNotSupported,
                               lambda: self._rebuild(on_shared_storage=True))
 
     @mock.patch.object(fake.FakeDriver, 'spawn')
