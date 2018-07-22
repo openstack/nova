@@ -1032,3 +1032,128 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
         with self._interceptor():
             self.client.get_allocation_candidates(
                 self.context, utils.ResourceRequest())
+
+    def test_get_allocations_for_provider_tree(self):
+        with self._interceptor():
+            # When the provider tree cache is empty (or we otherwise supply a
+            # bogus node name), we get ValueError.
+            self.assertRaises(ValueError,
+                              self.client.get_allocations_for_provider_tree,
+                              self.context, 'bogus')
+
+            # get_provider_tree_and_ensure_root creates a resource provider
+            # record for us
+            ptree = self.client.get_provider_tree_and_ensure_root(
+                self.context, self.compute_uuid, name=self.compute_name)
+            ptree.update_inventory(self.compute_uuid,
+                                   {'MEMORY_MB': {'total': 2048}})
+            ptree.update_aggregates(self.compute_uuid, [uuids.agg1])
+
+            # These are part of the compute node's tree
+            ptree.new_child('numa1', self.compute_uuid, uuid=uuids.numa1)
+            ptree.update_inventory('numa1', {'VCPU': {'total': 8},
+                                             'CUSTOM_PCPU': {'total': 8}})
+            ptree.new_child('numa2', self.compute_uuid, uuid=uuids.numa2)
+            ptree.update_inventory('numa2', {'VCPU': {'total': 8},
+                                             'CUSTOM_PCPU': {'total': 8}})
+
+            # A sharing provider that's not part of the compute node's tree.
+            # We avoid the report client's convenience methods to get bonus
+            # coverage of the subsequent update_from_provider_tree pulling it
+            # into the cache for us.
+            resp = self.client.post(
+                '/resource_providers',
+                {'uuid': uuids.ssp, 'name': 'ssp'}, version='1.20')
+            resp = self.client.put(
+                '/resource_providers/%s/inventories' % uuids.ssp,
+                {'inventories': {'DISK_GB': {'total': 500}},
+                 'resource_provider_generation': resp.json()['generation']})
+            # Part of the shared storage aggregate
+            resp = self.client.put(
+                '/resource_providers/%s/aggregates' % uuids.ssp,
+                {'aggregates': [uuids.agg1],
+                 'resource_provider_generation':
+                     resp.json()['resource_provider_generation']},
+                version='1.19')
+            self.client.put(
+                '/resource_providers/%s/traits' % uuids.ssp,
+                {'traits': ['MISC_SHARES_VIA_AGGREGATE'],
+                 'resource_provider_generation':
+                     resp.json()['resource_provider_generation']})
+
+            self.client.update_from_provider_tree(self.context, ptree)
+
+            # Another unrelated compute node. We don't use the report client's
+            # convenience methods because we don't want this guy in the cache.
+            resp = self.client.post(
+                '/resource_providers',
+                {'uuid': uuids.othercn, 'name': 'othercn'}, version='1.20')
+            resp = self.client.put(
+                '/resource_providers/%s/inventories' % uuids.othercn,
+                {'inventories': {'VCPU': {'total': 8},
+                                 'MEMORY_MB': {'total': 1024}},
+                 'resource_provider_generation': resp.json()['generation']})
+            # Part of the shared storage aggregate
+            self.client.put(
+                '/resource_providers/%s/aggregates' % uuids.othercn,
+                {'aggregates': [uuids.agg1],
+                 'resource_provider_generation':
+                     resp.json()['resource_provider_generation']},
+                version='1.19')
+
+            # At this point, there are no allocations
+            self.assertEqual({}, self.client.get_allocations_for_provider_tree(
+                self.context, self.compute_name))
+
+            # Create some allocations on our compute (with sharing)
+            cn_inst1_allocs = {
+                'allocations': {
+                    self.compute_uuid: {'resources': {'MEMORY_MB': 512}},
+                    uuids.numa1: {'resources': {'VCPU': 2, 'CUSTOM_PCPU': 2}},
+                    uuids.ssp: {'resources': {'DISK_GB': 100}}
+                },
+                'consumer_generation': None,
+                'project_id': uuids.proj,
+                'user_id': uuids.user,
+            }
+            self.client.put('/allocations/' + uuids.cn_inst1, cn_inst1_allocs)
+            cn_inst2_allocs = {
+                'allocations': {
+                    self.compute_uuid: {'resources': {'MEMORY_MB': 256}},
+                    uuids.numa2: {'resources': {'CUSTOM_PCPU': 1}},
+                    uuids.ssp: {'resources': {'DISK_GB': 50}}
+                },
+                'consumer_generation': None,
+                'project_id': uuids.proj,
+                'user_id': uuids.user,
+            }
+            self.client.put('/allocations/' + uuids.cn_inst2, cn_inst2_allocs)
+            # And on the other compute (with sharing)
+            self.client.put(
+                '/allocations/' + uuids.othercn_inst,
+                {'allocations': {
+                    uuids.othercn: {'resources': {'VCPU': 2, 'MEMORY_MB': 64}},
+                    uuids.ssp: {'resources': {'DISK_GB': 30}}
+                 },
+                 'consumer_generation': None,
+                 'project_id': uuids.proj,
+                 'user_id': uuids.user,
+                })
+
+            # And now we should get all the right allocations. Note that we see
+            # nothing from othercn_inst.
+            expected = {
+                uuids.cn_inst1: cn_inst1_allocs,
+                uuids.cn_inst2: cn_inst2_allocs,
+            }
+            actual = self.client.get_allocations_for_provider_tree(
+                self.context, self.compute_name)
+            # We don't care about the generations, and don't want to bother
+            # figuring out the right ones, so just remove those fields before
+            # checking equality
+            for allocs in list(expected.values()) + list(actual.values()):
+                del allocs['consumer_generation']
+                for alloc in allocs['allocations'].values():
+                    if 'generation' in alloc:
+                        del alloc['generation']
+            self.assertEqual(expected, actual)

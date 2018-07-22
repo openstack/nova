@@ -1997,6 +1997,75 @@ class SchedulerReportClient(object):
         data = resp.json()
         return ProviderAllocInfo(allocations=data['allocations'])
 
+    def get_allocations_for_provider_tree(self, context, nodename):
+        """Retrieve allocation records associated with all providers in the
+        provider tree.
+
+        This method uses the cache exclusively to discover providers. The
+        caller must ensure that the cache is populated.
+
+        This method is (and should remain) used exclusively in the reshaper
+        flow by the resource tracker.
+
+        :param context: The security context
+        :param nodename: The name of a node for whose tree we are getting
+                allocations.
+        :returns: A dict, keyed by consumer UUID, of allocation records:
+                { $CONSUMER_UUID: {
+                      # The shape of each "allocations" dict below is identical
+                      # to the return from GET /allocations/{consumer_uuid}
+                      "allocations": {
+                          $RP_UUID: {
+                              "generation": $RP_GEN,
+                              "resources": {
+                                  $RESOURCE_CLASS: $AMOUNT,
+                                  ...
+                              },
+                          },
+                          ...
+                      },
+                      "project_id": $PROJ_ID,
+                      "user_id": $USER_ID,
+                      "consumer_generation": $CONSUMER_GEN,
+                  },
+                  ...
+                }
+        :raises: keystoneauth1.exceptions.ClientException if placement API
+                 communication fails.
+        :raises: ResourceProviderAllocationRetrievalFailed if a placement API
+                 call fails.
+        :raises: ValueError if there's no provider with the specified nodename.
+        """
+        # NOTE(efried): Despite our best efforts, there are some scenarios
+        # (e.g. mid-evacuate) where we can still wind up returning allocations
+        # against providers belonging to other hosts. We count on the consumer
+        # of this information (i.e. the reshaper flow of a virt driver's
+        # update_provider_tree) to ignore allocations associated with any
+        # provider it is not reshaping - and it should never be reshaping
+        # providers belonging to other hosts.
+
+        # We can't get *all* allocations for associated sharing providers
+        # because some of those will belong to consumers on other hosts. So we
+        # have to discover all the consumers associated with the providers in
+        # the "local" tree (we use the nodename to figure out which providers
+        # are "local").
+        # All we want to do at this point is accumulate the set of consumers we
+        # care about.
+        consumers = set()
+        # TODO(efried): This could be more efficient if placement offered an
+        # operation like GET /allocations?rp_uuid=in:<list>
+        for u in self._provider_tree.get_provider_uuids(name_or_uuid=nodename):
+            alloc_info = self.get_allocations_for_resource_provider(context, u)
+            # The allocations dict is keyed by consumer UUID
+            consumers.update(alloc_info.allocations)
+
+        # Now get all the allocations (which will include allocations on
+        # sharing providers) for each of these consumers to build the result.
+        # TODO(efried): This could be more efficient if placement offered an
+        # operation like GET /allocations?consumer_uuid=in:<list>
+        return {consumer: self.get_allocs_for_consumer(context, consumer)
+                for consumer in consumers}
+
     def delete_resource_provider(self, context, compute_node, cascade=False):
         """Deletes the ResourceProvider record for the compute_node.
 
