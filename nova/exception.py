@@ -2378,3 +2378,8 @@ class ResourceProviderAllocationRetrievalFailed(NovaException):
 class ConsumerAllocationRetrievalFailed(NovaException):
     msg_fmt = _("Failed to retrieve allocations for consumer "
                 "%(consumer_uuid)s: %(error)s")
+
+
+class ReshapeFailed(NovaException):
+    msg_fmt = _("Resource provider inventory and allocation data migration "
+                "failed: %(error)s")

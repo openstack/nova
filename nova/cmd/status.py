@@ -52,12 +52,11 @@ CONF = nova.conf.CONF
 PLACEMENT_DOCS_LINK = 'https://docs.openstack.org/nova/latest' \
                       '/user/placement.html'
 
-# NOTE(efried): 1.28 is required by "nova-manage placement heal_allocations"
-# to get the consumer generation when updating incomplete allocations with
-# instance consumer project_id and user_id values.
+# NOTE(efried): 1.30 is required by nova-compute to support resource provider
+# reshaping (inventory and allocation data migration).
 # NOTE: If you bump this version, remember to update the history
 # section in the nova-status man page (doc/source/cli/nova-status).
-MIN_PLACEMENT_MICROVERSION = "1.28"
+MIN_PLACEMENT_MICROVERSION = "1.30"
 
 
 class UpgradeCheckCode(enum.IntEnum):
