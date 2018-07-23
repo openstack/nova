@@ -140,6 +140,7 @@ class ResourceTracker(object):
         self.stats = stats.Stats()
         self.tracked_instances = {}
         self.tracked_migrations = {}
+        self.is_bfv = {}  # dict, keyed by instance uuid, to is_bfv boolean
         monitor_handler = monitors.MonitorHandler(self)
         self.monitors = monitor_handler.monitors
         self.old_resources = collections.defaultdict(objects.ComputeNode)
@@ -1137,6 +1138,12 @@ class ResourceTracker(object):
             self._update_usage(self._get_usage_dict(instance), nodename,
                                sign=sign)
 
+        # Stop tracking removed instances in the is_bfv cache. This needs to
+        # happen *after* calling _get_usage_dict() since that relies on the
+        # is_bfv cache.
+        if is_removed_instance and uuid in self.is_bfv:
+            del self.is_bfv[uuid]
+
         cn.current_workload = self.stats.calculate_workload()
         if self.pci_tracker:
             obj = self.pci_tracker.stats.to_device_pools_obj()
@@ -1454,8 +1461,13 @@ class ResourceTracker(object):
         """
         usage = {}
         if isinstance(object_or_dict, objects.Instance):
-            is_bfv = compute_utils.is_volume_backed_instance(
-                object_or_dict._context, object_or_dict)
+            # Check to see if we have the is_bfv value cached.
+            if object_or_dict.uuid in self.is_bfv:
+                is_bfv = self.is_bfv[object_or_dict.uuid]
+            else:
+                is_bfv = compute_utils.is_volume_backed_instance(
+                    object_or_dict._context, object_or_dict)
+                self.is_bfv[object_or_dict.uuid] = is_bfv
             usage = {'memory_mb': object_or_dict.flavor.memory_mb,
                      'vcpus': object_or_dict.flavor.vcpus,
                      'root_gb': (0 if is_bfv else
