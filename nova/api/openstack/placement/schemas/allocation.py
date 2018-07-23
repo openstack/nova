@@ -115,6 +115,7 @@ ALLOCATION_SCHEMA_V1_12 = {
             "maxLength": 255
         }
     },
+    "additionalProperties": False,
     "required": [
         "allocations",
         "project_id",
