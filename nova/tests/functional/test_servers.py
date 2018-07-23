@@ -3693,9 +3693,29 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
         # Confirm the cold migration and check usage and the request spec.
         self.api.post_server_action(server['id'], {'confirmResize': None})
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
         reqspec = objects.RequestSpec.get_by_instance_uuid(ctxt, server['id'])
         # Make sure it's set.
         self.assertTrue(reqspec.is_bfv)
+        allocs = self._get_allocations_by_server_uuid(server['id'])
+        resources = list(allocs.values())[0]['resources']
+        self.assertEqual(expected_usage, resources['DISK_GB'])
+
+        # Now shelve and unshelve the server to make sure root_gb DISK_GB
+        # isn't reported for allocations after we unshelve the server.
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
+        self.api.post_server_action(server['id'], {'shelve': None})
+        self._wait_for_state_change(self.api, server, 'SHELVED_OFFLOADED')
+        fake_notifier.wait_for_versioned_notifications('shelve_offload.end')
+        # The server should not have any allocations since it's not currently
+        # hosted on any compute service.
+        allocs = self._get_allocations_by_server_uuid(server['id'])
+        self.assertDictEqual({}, allocs)
+        # Now unshelve the server and make sure there are still no DISK_GB
+        # allocations for the root disk.
+        self.api.post_server_action(server['id'], {'unshelve': None})
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
         allocs = self._get_allocations_by_server_uuid(server['id'])
         resources = list(allocs.values())[0]['resources']
         self.assertEqual(expected_usage, resources['DISK_GB'])
