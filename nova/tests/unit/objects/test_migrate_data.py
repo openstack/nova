@@ -12,6 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_serialization import jsonutils
+from oslo_versionedobjects import base as ovo_base
+
+from nova.network import model as network_model
 from nova import objects
 from nova.objects import migrate_data
 from nova.tests.unit.objects import test_objects
@@ -267,6 +271,40 @@ class _TestLibvirtLiveMigrateData(object):
             encryption_secret_uuid=uuids.encryption_secret_uuid)
         primitive = obj.obj_to_primitive(target_version='1.0')
         self.assertNotIn('encryption_secret_uuid', primitive)
+
+    def test_vif_migrate_data(self):
+        source_vif = network_model.VIF(
+            id=uuids.port_id,
+            network=network_model.Network(id=uuids.network_id),
+            type=network_model.VIF_TYPE_OVS,
+            vnic_type=network_model.VNIC_TYPE_NORMAL,
+            active=True,
+            profile={'migrating_to': 'dest-host'})
+        vif_details_dict = {'port_filter': True}
+        profile_dict = {'trusted': False}
+        vif_data = objects.VIFMigrateData(
+            port_id=uuids.port_id,
+            vnic_type=network_model.VNIC_TYPE_NORMAL,
+            vif_type=network_model.VIF_TYPE_BRIDGE,
+            vif_details=vif_details_dict, profile=profile_dict,
+            host='dest-host', source_vif=source_vif)
+        # Make sure the vif_details and profile fields are converted and
+        # stored properly.
+        self.assertEqual(
+            jsonutils.dumps(vif_details_dict), vif_data.vif_details_json)
+        self.assertEqual(
+            jsonutils.dumps(profile_dict), vif_data.profile_json)
+        self.assertDictEqual(vif_details_dict, vif_data.vif_details)
+        self.assertDictEqual(profile_dict, vif_data.profile)
+        obj = migrate_data.LibvirtLiveMigrateData(
+            file_backed_memory_discard=False)
+        obj.vifs = [vif_data]
+        manifest = ovo_base.obj_tree_get_versions(obj.obj_name())
+        primitive = obj.obj_to_primitive(target_version='1.8',
+                                         version_manifest=manifest)
+        self.assertIn(
+            'file_backed_memory_discard', primitive['nova_object.data'])
+        self.assertNotIn('vifs', primitive['nova_object.data'])
 
 
 class TestLibvirtLiveMigrateData(test_objects._LocalTest,

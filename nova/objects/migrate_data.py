@@ -24,8 +24,62 @@ from nova.objects import fields
 LOG = log.getLogger(__name__)
 
 
+@obj_base.NovaObjectRegistry.register
+class VIFMigrateData(obj_base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    # The majority of the fields here represent a port binding on the
+    # **destination** host during a live migration. The vif_type, among
+    # other fields, could be different from the existing binding on the
+    # source host, which is represented by the "source_vif" field.
+    fields = {
+        'port_id': fields.StringField(),
+        'vnic_type': fields.StringField(),  # TODO(sean-k-mooney): make enum?
+        'vif_type': fields.StringField(),
+        # vif_details is a dict whose contents are dependent on the vif_type
+        # and can be any number of types for the values, so we just store it
+        # as a serialized dict
+        'vif_details_json': fields.StringField(),
+        # profile is in the same random dict of terrible boat as vif_details
+        # so it's stored as a serialized json string
+        'profile_json': fields.StringField(),
+        'host': fields.StringField(),
+        # The source_vif attribute is a copy of the VIF network model
+        # representation of the port on the source host which can be used
+        # for filling in blanks about the VIF (port) when building a
+        # configuration reference for the destination host.
+        # NOTE(mriedem): This might not be sufficient based on how the
+        # destination host is configured for all vif types. See the note in
+        # the libvirt driver here: https://review.openstack.org/#/c/551370/
+        'source_vif': fields.Field(fields.NetworkVIFModel()),
+    }
+
+    @property
+    def vif_details(self):
+        return jsonutils.loads(self.vif_details_json)
+
+    @vif_details.setter
+    def vif_details(self, vif_details_dict):
+        self.vif_details_json = jsonutils.dumps(vif_details_dict)
+
+    @property
+    def profile(self):
+        return jsonutils.loads(self.profile_json)
+
+    @profile.setter
+    def profile(self, profile_dict):
+        self.profile_json = jsonutils.dumps(profile_dict)
+
+
 @obj_base.NovaObjectRegistry.register_if(False)
 class LiveMigrateData(obj_base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: Added old_vol_attachment_ids field.
+    # Version 1.2: Added wait_for_vif_plugged
+    # Version 1.3: Added vifs field.
+    VERSION = '1.3'
+
     fields = {
         'is_volume_backed': fields.BooleanField(),
         'migration': fields.ObjectField('Migration'),
@@ -37,7 +91,8 @@ class LiveMigrateData(obj_base.NovaObject):
         # compute host based on the [compute]/live_migration_wait_for_vif_plug
         # config option value; a default value is not set here since the
         # default for the config option may change in the future
-        'wait_for_vif_plugged': fields.BooleanField()
+        'wait_for_vif_plugged': fields.BooleanField(),
+        'vifs': fields.ListOfObjectsField('VIFMigrateData'),
     }
 
     def to_legacy_dict(self, pre_migration_result=False):
@@ -135,7 +190,8 @@ class LibvirtLiveMigrateData(LiveMigrateData):
     # Version 1.6: Added wait_for_vif_plugged
     # Version 1.7: Added dst_wants_file_backed_memory
     # Version 1.8: Added file_backed_memory_discard
-    VERSION = '1.8'
+    # Version 1.9: Inherited vifs from LiveMigrateData
+    VERSION = '1.9'
 
     fields = {
         'filename': fields.StringField(),
@@ -165,6 +221,8 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         super(LibvirtLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 9) and 'vifs' in primitive:
+            del primitive['vifs']
         if target_version < (1, 8):
             if 'file_backed_memory_discard' in primitive:
                 del primitive['file_backed_memory_discard']
@@ -269,7 +327,8 @@ class XenapiLiveMigrateData(LiveMigrateData):
     # Version 1.1: Added vif_uuid_map
     # Version 1.2: Added old_vol_attachment_ids
     # Version 1.3: Added wait_for_vif_plugged
-    VERSION = '1.3'
+    # Version 1.4: Inherited vifs from LiveMigrateData
+    VERSION = '1.4'
 
     fields = {
         'block_migration': fields.BooleanField(nullable=True),
@@ -321,6 +380,8 @@ class XenapiLiveMigrateData(LiveMigrateData):
         super(XenapiLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 4) and 'vifs' in primitive:
+            del primitive['vifs']
         if target_version < (1, 3) and 'wait_for_vif_plugged' in primitive:
             del primitive['wait_for_vif_plugged']
         if target_version < (1, 2):
@@ -337,7 +398,8 @@ class HyperVLiveMigrateData(LiveMigrateData):
     # Version 1.1: Added is_shared_instance_path
     # Version 1.2: Added old_vol_attachment_ids
     # Version 1.3: Added wait_for_vif_plugged
-    VERSION = '1.3'
+    # Version 1.4: Inherited vifs from LiveMigrateData
+    VERSION = '1.4'
 
     fields = {'is_shared_instance_path': fields.BooleanField()}
 
@@ -345,6 +407,8 @@ class HyperVLiveMigrateData(LiveMigrateData):
         super(HyperVLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 4) and 'vifs' in primitive:
+            del primitive['vifs']
         if target_version < (1, 3) and 'wait_for_vif_plugged' in primitive:
             del primitive['wait_for_vif_plugged']
         if target_version < (1, 2):
@@ -373,7 +437,8 @@ class PowerVMLiveMigrateData(LiveMigrateData):
     # Version 1.1: Added the Virtual Ethernet Adapter VLAN mappings.
     # Version 1.2: Added old_vol_attachment_ids
     # Version 1.3: Added wait_for_vif_plugged
-    VERSION = '1.3'
+    # Version 1.4: Inherited vifs from LiveMigrateData
+    VERSION = '1.4'
 
     fields = {
         'host_mig_data': fields.DictOfNullableStringsField(),
@@ -390,6 +455,8 @@ class PowerVMLiveMigrateData(LiveMigrateData):
         super(PowerVMLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 4) and 'vifs' in primitive:
+            del primitive['vifs']
         if target_version < (1, 3) and 'wait_for_vif_plugged' in primitive:
             del primitive['wait_for_vif_plugged']
         if target_version < (1, 2):

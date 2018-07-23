@@ -16,6 +16,7 @@ import os
 import re
 
 from cursive import signature_utils
+from oslo_serialization import jsonutils
 from oslo_versionedobjects import fields
 import six
 
@@ -993,6 +994,31 @@ class NetworkModel(FieldType):
     def stringify(self, value):
         return 'NetworkModel(%s)' % (
             ','.join([str(vif['id']) for vif in value]))
+
+    def get_schema(self):
+        return {'type': ['string']}
+
+
+class NetworkVIFModel(FieldType):
+    """Represents a nova.network.model.VIF object, which is a dict of stuff."""
+
+    @staticmethod
+    def coerce(obj, attr, value):
+        if isinstance(value, network_model.VIF):
+            return value
+        elif isinstance(value, six.string_types):
+            return NetworkVIFModel.from_primitive(obj, attr, value)
+        else:
+            raise ValueError(_('A nova.network.model.VIF object is required '
+                               'in field %s') % attr)
+
+    @staticmethod
+    def to_primitive(obj, attr, value):
+        return jsonutils.dumps(value)
+
+    @staticmethod
+    def from_primitive(obj, attr, value):
+        return network_model.VIF.hydrate(jsonutils.loads(value))
 
     def get_schema(self):
         return {'type': ['string']}
