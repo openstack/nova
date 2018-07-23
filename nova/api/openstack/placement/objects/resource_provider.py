@@ -4160,8 +4160,11 @@ def reshape(ctx, inventories, allocations):
     # in this transaction. We keep a cache of these because as we perform the
     # various operations on the providers, their generations increment and we
     # want to "inject" the changed resource provider objects into the
-    # AllocationList's objects before calling AllocationList.replace_all()
-    affected_providers = {}
+    # AllocationList's objects before calling AllocationList.replace_all().
+    # We start with the providers in the allocation objects, but only use one
+    # if we don't find it in the inventories.
+    affected_providers = {alloc.resource_provider.uuid: alloc.resource_provider
+                          for alloc in allocations}
     # We have to do the inventory changes in two steps because:
     # - we can't delete inventories with allocations; and
     # - we can't create allocations on nonexistent inventories.
@@ -4177,7 +4180,29 @@ def reshape(ctx, inventories, allocations):
     for rp_uuid, new_inv_list in inventories.items():
         LOG.debug("reshaping: *interim* inventory replacement for provider %s",
                   rp_uuid)
-        rp = new_inv_list[0].resource_provider
+        # We need the resource provider object.
+        if new_inv_list:
+            # If the inventory list is nonempty, grab it from the first entry.
+            # This overrides (and will replace, below) an object that was
+            # prepopulated from the allocations.
+            rp = new_inv_list[0].resource_provider
+        elif rp_uuid in affected_providers:
+            # No inventory object; second choice is from an allocation object.
+            rp = affected_providers[rp_uuid]
+        else:
+            # No inventory or allocations for this provider - which makes sense
+            # when we're "clearing out" a provider. Look it up.
+            rp = ResourceProvider.get_by_uuid(ctx, rp_uuid)
+        # Update the cache. This may be replacing an entry that came from
+        # allocations, or adding a new entry from inventories and/or db lookup.
+        affected_providers[rp_uuid] = rp
+
+        # Optimization: If the new inventory is empty, the below would be
+        # replacing it with itself (and incrementing the generation)
+        # unnecessarily.
+        if not new_inv_list:
+            continue
+
         # A dict, keyed by resource class, of the Inventory objects. We start
         # with the original inventory list.
         inv_by_rc = {inv.resource_class: inv for inv in
@@ -4189,7 +4214,6 @@ def reshape(ctx, inventories, allocations):
             inv_by_rc[inv.resource_class] = inv
         # Set the interim inventory structure.
         rp.set_inventory(InventoryList(objects=list(inv_by_rc.values())))
-        affected_providers[rp_uuid] = rp
 
     # NOTE(jaypipes): The above inventory replacements will have
     # incremented the resource provider generations, so we need to look in
@@ -4208,8 +4232,4 @@ def reshape(ctx, inventories, allocations):
     for rp_uuid, new_inv_list in inventories.items():
         LOG.debug("reshaping: *final* inventory replacement for provider %s",
                   rp_uuid)
-        # TODO(efried): If we wanted this to be more efficient, we could keep
-        # track of providers for which all inventories are being deleted in the
-        # above loop and just do those and skip the rest, since they're already
-        # in their final form.
-        new_inv_list[0].resource_provider.set_inventory(new_inv_list)
+        affected_providers[rp_uuid].set_inventory(new_inv_list)

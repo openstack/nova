@@ -529,8 +529,6 @@ tests:
 # the allocations under two new consumers. This is an artificial test to
 # exercise new consumer creation.
 - name: consolidate inventory and allocations
-  # TODO(efried): bug https://bugs.launchpad.net/nova/+bug/1783130
-  xfail: true
   POST: /reshaper
   data:
       inventories:
@@ -547,8 +545,6 @@ tests:
                       max_unit: 8
           $ENVIRON['ALT_RP_UUID']:
               resource_provider_generation: 3
-              # bug https://bugs.launchpad.net/nova/+bug/1783130
-              # means that this will cause an IndexError.
               inventories: {}
       allocations:
           $ENVIRON['CONSUMER_0']:
@@ -576,12 +572,22 @@ tests:
               project_id: $ENVIRON['PROJECT_ID']
               user_id: $ENVIRON['ALT_USER_ID']
               consumer_generation: null
+          $ENVIRON['CONSUMER_ID']:
+              allocations: {}
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['USER_ID']
+              consumer_generation: 2
+          $ENVIRON['ALT_CONSUMER_ID']:
+              allocations:
+                  $ENVIRON['RP_UUID']:
+                      resources:
+                          DISK_GB: 20
+              project_id: $ENVIRON['PROJECT_ID']
+              user_id: $ENVIRON['ALT_USER_ID']
+              consumer_generation: 2
   status: 204
 
 - name: get usages on parent after move back
-  # TODO(efried): bug https://bugs.launchpad.net/nova/+bug/1783130
-  # Fails because 'consolidate inventory and allocations' above fails.
-  xfail: true
   GET: /resource_providers/$ENVIRON['RP_UUID']/usages
   response_json_paths:
     $.usages:
@@ -590,9 +596,6 @@ tests:
     $.resource_provider_generation: 11
 
 - name: get usages on child after move back
-  # TODO(efried): bug https://bugs.launchpad.net/nova/+bug/1783130
-  # Fails because 'consolidate inventory and allocations' above fails.
-  xfail: true
   GET: /resource_providers/$ENVIRON['ALT_RP_UUID']/usages
   response_json_paths:
     $.usages: {}
