@@ -69,6 +69,9 @@ between aggregates and availability zones:
   users to specify hosts where instances are launched in server creation.
   See :doc:`Select hosts where instances are launched </admin/availability-zones>` for more detail.
 
+There is a nice educational video about availability zones from the Rocky
+summit which can be found here: https://www.openstack.org/videos/vancouver-2018/curse-your-bones-availability-zones-1
+
 Design
 ------
 
