@@ -29,8 +29,9 @@ class DeployTest(testtools.TestCase):
         """Make sure that configuration settings make their way to
         the keystone middleware correctly.
         """
-        auth_uri = 'http://example.com/identity'
-        CONF.set_override('auth_uri', auth_uri, group='keystone_authtoken')
+        www_authenticate_uri = 'http://example.com/identity'
+        CONF.set_override('www_authenticate_uri', www_authenticate_uri,
+                          group='keystone_authtoken')
         # ensure that the auth_token middleware is chosen
         CONF.set_override('auth_strategy', 'keystone', group='api')
         app = deploy.deploy(CONF)
@@ -39,5 +40,5 @@ class DeployTest(testtools.TestCase):
         response = req.get_response(app)
 
         auth_header = response.headers['www-authenticate']
-        self.assertIn(auth_uri, auth_header)
+        self.assertIn(www_authenticate_uri, auth_header)
         self.assertIn('keystone uri=', auth_header.lower())
