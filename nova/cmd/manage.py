@@ -1765,6 +1765,98 @@ class PlacementCommands(object):
         node_cache[instance.node] = node_uuid
         return node_uuid
 
+    def _heal_allocations_for_instance(self, ctxt, instance, node_cache,
+                                       output, placement):
+        """Checks the given instance to see if it needs allocation healing
+
+        :param ctxt: cell-targeted nova.context.RequestContext
+        :param instance: the instance to check for allocation healing
+        :param node_cache: dict of Instance.node keys to ComputeNode.uuid
+            values; this cache is updated if a new node is processed.
+        :param outout: function that takes a single message for verbose output
+        :param placement: nova.scheduler.client.report.SchedulerReportClient
+            to communicate with the Placement service API.
+        :return: True if allocations were created or updated for the instance,
+            None if nothing needed to be done
+        :raises: nova.exception.ComputeHostNotFound if a compute node for a
+            given instance cannot be found
+        :raises: AllocationCreateFailed if unable to create allocations for
+            a given instance against a given compute node resource provider
+        :raises: AllocationUpdateFailed if unable to update allocations for
+            a given instance with consumer project/user information
+        """
+        if instance.task_state is not None:
+            output(_('Instance %(instance)s is undergoing a task '
+                     'state transition: %(task_state)s') %
+                   {'instance': instance.uuid,
+                    'task_state': instance.task_state})
+            return
+
+        if instance.node is None:
+            output(_('Instance %s is not on a host.') % instance.uuid)
+            return
+
+        allocations = placement.get_allocations_for_consumer(
+            ctxt, instance.uuid, include_project_user=True)
+        # get_allocations_for_consumer uses safe_connect which will
+        # return None if we can't communicate with Placement, and the
+        # response can have an empty {'allocations': {}} response if
+        # there are no allocations for the instance so handle both
+        if allocations and allocations.get('allocations'):
+            # Check to see if the allocation project_id
+            # and user_id matches the instance project and user and
+            # fix the allocation project/user if they don't match.
+            # Allocations created before Placement API version 1.8
+            # did not have a project_id/user_id, and migrated records
+            # could have sentinel values from config.
+            if (allocations.get('project_id') ==
+                    instance.project_id and
+                    allocations.get('user_id') == instance.user_id):
+                output(_('Instance %s already has allocations with '
+                         'matching consumer project/user.') %
+                       instance.uuid)
+                return
+            # We have an instance with allocations but not the correct
+            # project_id/user_id, so we want to update the allocations
+            # and re-put them. We don't use put_allocations here
+            # because we don't want to mess up shared or nested
+            # provider allocations.
+            allocations['project_id'] = instance.project_id
+            allocations['user_id'] = instance.user_id
+            # We use 1.12 for PUT /allocations/{consumer_id} to mirror
+            # the body structure from get_allocations_for_consumer.
+            # TODO(mriedem): Pass a consumer generation using 1.28.
+            resp = placement.put('/allocations/%s' % instance.uuid,
+                                 allocations, version='1.12')
+            if resp:
+                output(_('Successfully updated allocations for '
+                         'instance %s.') % instance.uuid)
+                return True
+            else:
+                raise exception.AllocationUpdateFailed(
+                    instance=instance.uuid, error=resp.text)
+
+        # This instance doesn't have allocations so we need to find
+        # its compute node resource provider.
+        node_uuid = self._get_compute_node_uuid(
+            ctxt, instance, node_cache)
+
+        # Now get the resource allocations for the instance based
+        # on its embedded flavor.
+        resources = scheduler_utils.resources_from_flavor(
+            instance, instance.flavor)
+        if placement.put_allocations(
+                ctxt, node_uuid, instance.uuid, resources,
+                instance.project_id, instance.user_id):
+            output(_('Successfully created allocations for '
+                     'instance %(instance)s against resource '
+                     'provider %(provider)s.') %
+                   {'instance': instance.uuid, 'provider': node_uuid})
+            return True
+        else:
+            raise exception.AllocationCreateFailed(
+                instance=instance.uuid, provider=node_uuid)
+
     def _heal_instances_in_cell(self, ctxt, max_count, unlimited, output,
                                 placement):
         """Checks for instances to heal in a given cell.
@@ -1810,78 +1902,9 @@ class PlacementCommands(object):
             # allocations in placement and if so, assume it's correct and
             # continue.
             for instance in instances:
-                if instance.task_state is not None:
-                    output(_('Instance %(instance)s is undergoing a task '
-                             'state transition: %(task_state)s') %
-                           {'instance': instance.uuid,
-                            'task_state': instance.task_state})
-                    continue
-
-                if instance.node is None:
-                    output(_('Instance %s is not on a host.') % instance.uuid)
-                    continue
-
-                allocations = placement.get_allocations_for_consumer(
-                    ctxt, instance.uuid, include_project_user=True)
-                # get_allocations_for_consumer uses safe_connect which will
-                # return None if we can't communicate with Placement, and the
-                # response can have an empty {'allocations': {}} response if
-                # there are no allocations for the instance so handle both
-                if allocations and allocations.get('allocations'):
-                    # Check to see if the allocation project_id
-                    # and user_id matches the instance project and user and
-                    # fix the allocation project/user if they don't match.
-                    # Allocations created before Placement API version 1.8
-                    # did not have a project_id/user_id, and migrated records
-                    # could have sentinel values from config.
-                    if (allocations.get('project_id') ==
-                            instance.project_id and
-                            allocations.get('user_id') == instance.user_id):
-                        output(_('Instance %s already has allocations with '
-                                 'matching consumer project/user.') %
-                               instance.uuid)
-                        continue
-                    # We have an instance with allocations but not the correct
-                    # project_id/user_id, so we want to update the allocations
-                    # and re-put them. We don't use put_allocations here
-                    # because we don't want to mess up shared or nested
-                    # provider allocations.
-                    allocations['project_id'] = instance.project_id
-                    allocations['user_id'] = instance.user_id
-                    # We use 1.12 for PUT /allocations/{consumer_id} to mirror
-                    # the body structure from get_allocations_for_consumer.
-                    # TODO(mriedem): Pass a consumer generation using 1.28.
-                    resp = placement.put('/allocations/%s' % instance.uuid,
-                                         allocations, version='1.12')
-                    if resp:
-                        num_processed += 1
-                        output(_('Successfully updated allocations for '
-                                 'instance %s.') % instance.uuid)
-                        continue
-                    else:
-                        raise exception.AllocationUpdateFailed(
-                            instance=instance.uuid, error=resp.text)
-
-                # This instance doesn't have allocations so we need to find
-                # its compute node resource provider.
-                node_uuid = self._get_compute_node_uuid(
-                    ctxt, instance, node_cache)
-
-                # Now get the resource allocations for the instance based
-                # on its embedded flavor.
-                resources = scheduler_utils.resources_from_flavor(
-                    instance, instance.flavor)
-                if placement.put_allocations(
-                        ctxt, node_uuid, instance.uuid, resources,
-                        instance.project_id, instance.user_id):
+                if self._heal_allocations_for_instance(
+                        ctxt, instance, node_cache, output, placement):
                     num_processed += 1
-                    output(_('Successfully created allocations for '
-                             'instance %(instance)s against resource '
-                             'provider %(provider)s.') %
-                           {'instance': instance.uuid, 'provider': node_uuid})
-                else:
-                    raise exception.AllocationCreateFailed(
-                        instance=instance.uuid, provider=node_uuid)
 
             # Make sure we don't go over the max count. Note that we
             # don't include instances that already have allocations in the
