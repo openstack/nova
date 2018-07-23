@@ -469,6 +469,26 @@ class RequestSpec(base.NovaObject):
         if 'user_id' not in self or self.user_id is None:
             self.user_id = instance.user_id
 
+    def ensure_network_metadata(self, instance):
+        if not (instance.info_cache and instance.info_cache.network_info):
+            return
+
+        physnets = set([])
+        tunneled = True
+
+        # physical_network and tunneled might not be in the cache for old
+        # instances that haven't had their info_cache healed yet
+        for vif in instance.info_cache.network_info:
+            physnet = vif.get('network', {}).get('meta', {}).get(
+                'physical_network', None)
+            if physnet:
+                physnets.add(physnet)
+            tunneled |= vif.get('network', {}).get('meta', {}).get(
+                'tunneled', False)
+
+        self.network_metadata = objects.NetworkMetadata(
+            physnets=physnets, tunneled=tunneled)
+
     @staticmethod
     def _from_db_object(context, spec, db_spec):
         spec_obj = spec.obj_from_primitive(jsonutils.loads(db_spec['spec']))

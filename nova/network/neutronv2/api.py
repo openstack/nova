@@ -2589,7 +2589,9 @@ class API(base_api.NetworkAPI):
                              if fixed_ip.is_in_subnet(subnet)]
         return subnets
 
-    def _nw_info_build_network(self, port, networks, subnets):
+    def _nw_info_build_network(self, context, port, networks, subnets):
+        # TODO(stephenfin): Pass in an existing admin client if available.
+        neutron = get_client(context, admin=True)
         network_name = None
         network_mtu = None
         for net in networks:
@@ -2641,20 +2643,19 @@ class API(base_api.NetworkAPI):
         if bridge is not None and vif_type != network_model.VIF_TYPE_DVS:
             bridge = bridge[:network_model.NIC_NAME_LEN]
 
+        physnet, tunneled = self._get_physnet_tunneled_info(
+            context, neutron, port['network_id'])
         network = network_model.Network(
             id=port['network_id'],
             bridge=bridge,
             injected=CONF.flat_injected,
             label=network_name,
             tenant_id=tenant_id,
-            mtu=network_mtu
+            mtu=network_mtu,
+            physical_network=physnet,
+            tunneled=tunneled
             )
         network['subnets'] = subnets
-        port_profile = _get_binding_profile(port)
-        if port_profile:
-            physical_network = port_profile.get('physical_network')
-            if physical_network:
-                network['physical_network'] = physical_network
 
         if should_create_bridge is not None:
             network['should_create_bridge'] = should_create_bridge
@@ -2705,7 +2706,7 @@ class API(base_api.NetworkAPI):
         devname = devname[:network_model.NIC_NAME_LEN]
 
         network, ovs_interfaceid = (
-            self._nw_info_build_network(current_neutron_port,
+            self._nw_info_build_network(context, current_neutron_port,
                                         networks, subnets))
         preserve_on_delete = (current_neutron_port['id'] in
                               preexisting_port_ids)
