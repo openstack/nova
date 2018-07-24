@@ -1,0 +1,21 @@
+---
+upgrade:
+  - |
+    Deployments with custom scheduler filters (or weighers) that rely on
+    the ``HostState.instances`` dict to contain full Instance objects will
+    now hit a performance penalty because the Instance values in that dict
+    are no longer fully populated objects. The in-tree filters that do rely
+    on ``HostState.instances`` only care about the (1) uuids of the instances
+    per host, which is the keys in the dict and (2) the number of instances
+    per host, which can be determined via ``len(host_state.instances)``.
+
+    Custom scheduler filters and weighers should continue to function since
+    the Instance objects will lazy-load any accessed fields, but this means
+    a round-trip to the database to re-load the object per instance, per host.
+
+    If this is an issue for you, you have three options:
+
+    * Accept this change along with the performance penalty
+    * Revert change I766bb5645e3b598468d092fb9e4f18e720617c52 and carry
+      the fork in the scheduler code
+    * Contribute your custom filter/weigher upstream (this is the best option)
