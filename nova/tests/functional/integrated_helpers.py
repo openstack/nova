@@ -251,7 +251,8 @@ class InstanceHelperMixin(object):
             admin_api, server, {'status': expected_status}, max_retries)
 
     def _build_minimal_create_server_request(self, api, name, image_uuid=None,
-                                             flavor_id=None, networks=None):
+                                             flavor_id=None, networks=None,
+                                             az=None):
         server = {}
 
         # We now have a valid imageId
@@ -264,6 +265,8 @@ class InstanceHelperMixin(object):
         server['name'] = name
         if networks is not None:
             server['networks'] = networks
+        if az is not None:
+            server['availability_zone'] = az
         return server
 
     def _wait_until_deleted(self, server):
