@@ -12,7 +12,9 @@ lxml!=3.7.0,>=3.4.1 # BSD
 Routes>=2.3.1 # MIT
 cryptography>=2.1 # BSD/Apache-2.0
 WebOb>=1.8.2 # MIT
-greenlet>=0.4.10 # MIT
+# NOTE(mriedem): greenlet 0.4.14 does not work with older versions of gcc on
+# ppc64le systems, see https://github.com/python-greenlet/greenlet/issues/136.
+greenlet>=0.4.10,!=0.4.14 # MIT
 PasteDeploy>=1.5.0 # MIT
 Paste>=2.0.2 # MIT
 PrettyTable<0.8,>=0.7.1 # BSD
