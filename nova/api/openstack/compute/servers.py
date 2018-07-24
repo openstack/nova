@@ -27,13 +27,12 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute import block_device_mapping
-from nova.api.openstack.compute import block_device_mapping_v1
 from nova.api.openstack.compute import helpers
 from nova.api.openstack.compute.schemas import servers as schema_servers
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import wsgi
 from nova.api import validation
+from nova import block_device
 from nova import compute
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
@@ -62,10 +61,7 @@ class ServersController(wsgi.Controller):
 
     # NOTE(alex_xu): Please do not add more items into this list. This list
     # should be removed in the future.
-    server_create_func_list = [
-        block_device_mapping.server_create,
-        block_device_mapping_v1.server_create,
-    ]
+    server_create_func_list = []
 
     @staticmethod
     def _add_location(robj):
@@ -500,9 +496,40 @@ class ServersController(wsgi.Controller):
         supports_device_tagging = (min_compute_version >=
                                    DEVICE_TAGGING_MIN_COMPUTE_VERSION)
 
+        block_device_mapping_legacy = server_dict.get('block_device_mapping',
+                                                      [])
+        block_device_mapping_v2 = server_dict.get('block_device_mapping_v2',
+                                                  [])
+
+        if block_device_mapping_legacy and block_device_mapping_v2:
+            expl = _('Using different block_device_mapping syntaxes '
+                     'is not allowed in the same request.')
+            raise exc.HTTPBadRequest(explanation=expl)
+
+        if block_device_mapping_legacy:
+            for bdm in block_device_mapping_legacy:
+                if 'delete_on_termination' in bdm:
+                    bdm['delete_on_termination'] = strutils.bool_from_string(
+                        bdm['delete_on_termination'])
+            create_kwargs[
+                'block_device_mapping'] = block_device_mapping_legacy
+            # Sets the legacy_bdm flag if we got a legacy block device mapping.
+            create_kwargs['legacy_bdm'] = True
+        elif block_device_mapping_v2:
+            image_href = server_dict.get('imageRef')
+            image_uuid_specified = image_href is not None
+            try:
+                block_device_mapping = [
+                    block_device.BlockDeviceDict.from_api(bdm_dict,
+                        image_uuid_specified)
+                    for bdm_dict in block_device_mapping_v2]
+            except exception.InvalidBDMFormat as e:
+                raise exc.HTTPBadRequest(explanation=e.format_message())
+            create_kwargs['block_device_mapping'] = block_device_mapping
+            # Unset the legacy_bdm flag if we got a block device mapping.
+            create_kwargs['legacy_bdm'] = False
+
         block_device_mapping = create_kwargs.get("block_device_mapping")
-        # TODO(Shao He, Feng) move this policy check to os-block-device-mapping
-        # extension after refactor it.
         if block_device_mapping:
             context.can(server_policies.SERVERS % 'create:attach_volume',
                         target)
