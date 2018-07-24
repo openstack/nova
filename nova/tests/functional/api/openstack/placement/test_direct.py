@@ -12,9 +12,9 @@
 
 from oslo_config import cfg
 
+from nova.api.openstack.placement import context
 from nova.api.openstack.placement import direct
 from nova.api.openstack.placement.objects import resource_provider
-from nova import context
 from nova import test
 from nova.tests import fixtures
 from nova.tests import uuidsentinel
@@ -31,7 +31,7 @@ class TestDirect(test.NoDBTestCase):
         super(TestDirect, self).setUp()
         self.api_db = self.useFixture(fixtures.Database(database='placement'))
         self._reset_traits_synced()
-        self.context = context.get_admin_context()
+        self.context = context.RequestContext()
         self.addCleanup(self._reset_traits_synced)
 
     @staticmethod

@@ -16,6 +16,7 @@ from gabbi import fixture
 from oslo_middleware import cors
 from oslo_utils import uuidutils
 
+from nova.api.openstack.placement import context
 from nova.api.openstack.placement import deploy
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import consumer as consumer_obj
@@ -25,7 +26,6 @@ from nova.api.openstack.placement.objects import user as user_obj
 from nova.api.openstack.placement import policies
 from nova import conf
 from nova import config
-from nova import context
 from nova import rc_fields as fields
 from nova.tests import fixtures
 from nova.tests.functional.api.openstack.placement.db import test_base as tb
@@ -68,6 +68,8 @@ class APIFixture(fixture.GabbiFixture):
                                group='api_database')
         self.conf.set_override('connection', "sqlite://",
                                group='placement_database')
+
+        self.context = context.RequestContext()
 
         # Register CORS opts, but do not set config. This has the
         # effect of exercising the "don't use cors" path in
@@ -136,7 +138,6 @@ class AllocationFixture(APIFixture):
     # TODO(jaypipes): Simplify and restructure this fixture
     def start_fixture(self):
         super(AllocationFixture, self).start_fixture()
-        self.context = context.get_admin_context()
 
         # For use creating and querying allocations/usages
         os.environ['ALT_USER_ID'] = uuidutils.generate_uuid()
@@ -279,7 +280,6 @@ class SharedStorageFixture(APIFixture):
 
     def start_fixture(self):
         super(SharedStorageFixture, self).start_fixture()
-        self.context = context.get_admin_context()
 
         agg_uuid = uuidutils.generate_uuid()
 
@@ -339,7 +339,6 @@ class NonSharedStorageFixture(APIFixture):
     """
     def start_fixture(self):
         super(NonSharedStorageFixture, self).start_fixture()
-        self.context = context.get_admin_context()
 
         cn1_uuid = uuidutils.generate_uuid()
         cn2_uuid = uuidutils.generate_uuid()
@@ -472,7 +471,7 @@ class GranularFixture(APIFixture):
     def _create_provider(self, name, *aggs, **kwargs):
         # TODO(efried): Common with test_allocation_candidates.ProviderDBBase
         parent = kwargs.get('parent')
-        rp = rp_obj.ResourceProvider(self.ctx, name=name,
+        rp = rp_obj.ResourceProvider(self.context, name=name,
                                      uuid=getattr(uuids, name))
         if parent:
             rp.parent_provider_uuid = parent
@@ -483,9 +482,9 @@ class GranularFixture(APIFixture):
 
     def start_fixture(self):
         super(GranularFixture, self).start_fixture()
-        self.ctx = context.get_admin_context()
 
-        rp_obj.ResourceClass(context=self.ctx, name='CUSTOM_NET_MBPS').create()
+        rp_obj.ResourceClass(
+            context=self.context, name='CUSTOM_NET_MBPS').create()
 
         os.environ['AGGA'] = uuids.aggA
         os.environ['AGGB'] = uuids.aggB
