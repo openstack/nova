@@ -309,7 +309,8 @@ Placement
     Specify ``--verbose`` to get detailed progress output during execution.
 
     This command requires that the ``[api_database]/connection`` and
-    ``[placement]`` configuration options are set.
+    ``[placement]`` configuration options are set. Placement API >= 1.28 is
+    required.
 
     Return codes:
 

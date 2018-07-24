@@ -47,12 +47,12 @@ _RE_INV_IN_USE = re.compile("Inventory for (.+) on resource provider "
                             "(.+) in use")
 WARN_EVERY = 10
 PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
+CONSUMER_GENERATION_VERSION = '1.28'
 GRANULAR_AC_VERSION = '1.25'
 POST_RPS_RETURNS_PAYLOAD_API_VERSION = '1.20'
 AGGREGATE_GENERATION_VERSION = '1.19'
 NESTED_PROVIDER_API_VERSION = '1.14'
 POST_ALLOCATIONS_API_VERSION = '1.13'
-ALLOCATION_PROJECT_USER = '1.12'
 
 AggInfo = collections.namedtuple('AggInfo', ['aggregates', 'generation'])
 TraitInfo = collections.namedtuple('TraitInfo', ['traits', 'generation'])
@@ -1527,25 +1527,28 @@ class SchedulerReportClient(object):
 
     @safe_connect
     def get_allocations_for_consumer(self, context, consumer,
-                                     include_project_user=False):
+                                     include_generation=False):
         """Makes a GET /allocations/{consumer} call to Placement.
 
         :param context: The nova.context.RequestContext auth context
         :param consumer: UUID of the consumer resource
-        :param include_project_user: True if the response should be the
-            full allocations response including project_id and user_id (new
-            in microversion 1.12), False if only the "allocations" dict from
+        :param include_generation: True if the response should be the
+            full allocations response including ``consumer_generation`` (new
+            in microversion 1.28), False if only the "allocations" dict from
             the response body should be returned.
-        :returns: dict, see ``include_project_user`` for details on format;
+        :returns: dict, see ``include_generation`` for details on format;
             returns None if unable to connect to Placement (see safe_connect)
         """
         url = '/allocations/%s' % consumer
-        resp = self.get(url, version=ALLOCATION_PROJECT_USER,
-                        global_request_id=context.global_id)
+        resp = self.get(
+            url, version=CONSUMER_GENERATION_VERSION,
+            global_request_id=context.global_id)
         if not resp:
             return {}
         else:
-            if include_project_user:
+            # TODO(efried): refactor all callers to accept the whole response
+            # so we can get rid of this condition
+            if include_generation:
                 return resp.json()
             return resp.json()['allocations']
 

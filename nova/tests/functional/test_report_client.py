@@ -229,6 +229,12 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             vcpu_data = usage_data[res_class]
             self.assertEqual(2, vcpu_data)
 
+            # Check that we can get allocations for the consumer with
+            # the generation.
+            allocations = self.client.get_allocations_for_consumer(
+                self.context, self.instance.uuid, include_generation=True)
+            self.assertIn('consumer_generation', allocations)
+
             # Delete allocations with our instance
             self.client.update_instance_allocation(
                 self.context, self.compute_node, self.instance, -1)
