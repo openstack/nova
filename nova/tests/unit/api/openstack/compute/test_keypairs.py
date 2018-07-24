@@ -358,36 +358,6 @@ class KeypairsTestV21(test.TestCase):
     def _assert_keypair_type(self, res_dict):
         self.assertNotIn('type', res_dict['keypair'])
 
-    def test_create_server_keypair_name_with_leading_trailing(self):
-        req = fakes.HTTPRequest.blank(self.base_url + '/servers')
-        req.method = 'POST'
-        req.headers["content-type"] = "application/json"
-        req.body = jsonutils.dump_as_bytes({'server': {'name': 'test',
-                                               'flavorRef': 1,
-                                               'keypair_name': '  abc  ',
-                                               'imageRef': FAKE_UUID}})
-        res = req.get_response(self.app_server)
-        self.assertEqual(400, res.status_code)
-        self.assertIn(b'keypair_name', res.body)
-
-    @mock.patch.object(compute_api.API, 'create')
-    def test_create_server_keypair_name_with_leading_trailing_compat_mode(
-            self, mock_create):
-        mock_create.return_value = (
-            objects.InstanceList(objects=[
-                fakes.stub_instance_obj(ctxt=None, id=1)]),
-            None)
-        req = fakes.HTTPRequest.blank(self.base_url + '/servers')
-        req.method = 'POST'
-        req.headers["content-type"] = "application/json"
-        req.body = jsonutils.dump_as_bytes({'server': {'name': 'test',
-                                               'flavorRef': 1,
-                                               'keypair_name': '  abc  ',
-                                               'imageRef': FAKE_UUID}})
-        req.set_legacy_v2()
-        res = req.get_response(self.app_server)
-        self.assertEqual(202, res.status_code)
-
 
 class KeypairPolicyTestV21(test.NoDBTestCase):
     KeyPairController = keypairs_v21.KeypairController()
