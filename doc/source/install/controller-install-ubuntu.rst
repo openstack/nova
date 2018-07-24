@@ -451,7 +451,7 @@ Install and configure components
 
    .. code-block:: console
 
-      # nova-manage cell_v2 list_cells
+      # su -s /bin/sh -c "nova-manage cell_v2 list_cells" nova
       +-------+--------------------------------------+
       | Name  | UUID                                 |
       +-------+--------------------------------------+
