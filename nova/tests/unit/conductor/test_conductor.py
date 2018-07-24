@@ -343,6 +343,9 @@ class _BaseTaskTestCase(object):
                       fake_deserialize_context)
 
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
+        _p = mock.patch('nova.compute.utils.heal_reqspec_is_bfv')
+        self.heal_reqspec_is_bfv_mock = _p.start()
+        self.addCleanup(_p.stop)
 
     def _prepare_rebuild_args(self, update_args=None):
         # Args that don't get passed in to the method but do get passed to RPC
@@ -1034,6 +1037,8 @@ class _BaseTaskTestCase(object):
             reset_forced_destinations.assert_called_once_with()
             from_primitives.assert_called_once_with(self.context, request_spec,
                     filter_properties)
+            self.heal_reqspec_is_bfv_mock.assert_called_once_with(
+                self.context, fake_spec, test.MatchType(objects.Instance))
             sched_instances.assert_called_once_with(self.context, fake_spec,
                     [instance.uuid], return_alternates=False)
             self.assertEqual(cell_mapping,
@@ -1297,6 +1302,8 @@ class _BaseTaskTestCase(object):
                 obj_base.obj_to_primitive(inst_obj.image_meta), [inst_obj])
             fp_mock.assert_called_once_with(self.context, request_spec,
                                             filter_properties)
+            self.heal_reqspec_is_bfv_mock.assert_called_once_with(
+                self.context, fake_spec, inst_obj)
             select_dest_mock.assert_called_once_with(self.context, fake_spec,
                     inst_uuids, return_objects=True, return_alternates=False)
             compute_args['host'] = expected_host

@@ -775,8 +775,12 @@ class ComputeTaskManager(base.Base):
                         # accept it
                         filter_properties = request_spec.\
                             to_legacy_filter_properties_dict()
+                        # FIXME(mriedem): This means we'll lose the is_bfv flag
+                        # set on an existing RequestSpec that had it set.
                         request_spec = request_spec.\
                             to_legacy_request_spec_dict()
+                    # TODO(mriedem): we don't even need to call populate_retry
+                    # because unshelve failures aren't rescheduled.
                     scheduler_utils.populate_retry(filter_properties,
                                                    instance.uuid)
                     request_spec = objects.RequestSpec.from_primitives(
@@ -799,6 +803,8 @@ class ComputeTaskManager(base.Base):
                                 cell=instance_mapping.cell_mapping))
 
                     request_spec.ensure_project_and_user_id(instance)
+                    compute_utils.heal_reqspec_is_bfv(
+                        context, request_spec, instance)
                     host_lists = self._schedule_instances(context,
                             request_spec, [instance.uuid],
                             return_alternates=False)
@@ -953,6 +959,8 @@ class ComputeTaskManager(base.Base):
                                                                 instance,
                                                                 image_ref)
                     request_spec.ensure_project_and_user_id(instance)
+                    compute_utils.heal_reqspec_is_bfv(
+                        context, request_spec, instance)
                     host_lists = self._schedule_instances(context,
                             request_spec, [instance.uuid],
                             return_alternates=False)

@@ -3669,6 +3669,37 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
             20,
             self.admin_api.get_hypervisor_stats()['local_gb_used'])
 
+        # Now let's hack the RequestSpec.is_bfv field to mimic migrating an
+        # old instance created before RequestSpec.is_bfv was set in the API,
+        # move the instance and verify that the RequestSpec.is_bfv is set
+        # and the instance still reports the same DISK_GB allocations as during
+        # the initial create.
+        ctxt = context.get_admin_context()
+        reqspec = objects.RequestSpec.get_by_instance_uuid(ctxt, server['id'])
+        # Make sure it's set.
+        self.assertTrue(reqspec.is_bfv)
+        del reqspec.is_bfv
+        reqspec.save()
+        reqspec = objects.RequestSpec.get_by_instance_uuid(ctxt, server['id'])
+        # Make sure it's not set.
+        self.assertNotIn('is_bfv', reqspec)
+        # Now migrate the instance to another host and check the request spec
+        # and allocations after the migration.
+        self._start_compute('host2')
+        self.admin_api.post_server_action(server['id'], {'migrate': None})
+        # Wait for the server to complete the cold migration.
+        server = self._wait_for_state_change(
+            self.admin_api, server, 'VERIFY_RESIZE')
+        self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
+        # Confirm the cold migration and check usage and the request spec.
+        self.api.post_server_action(server['id'], {'confirmResize': None})
+        reqspec = objects.RequestSpec.get_by_instance_uuid(ctxt, server['id'])
+        # Make sure it's set.
+        self.assertTrue(reqspec.is_bfv)
+        allocs = self._get_allocations_by_server_uuid(server['id'])
+        resources = list(allocs.values())[0]['resources']
+        self.assertEqual(expected_usage, resources['DISK_GB'])
+
 
 class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
     """Tests for requesting a server with required traits in Placement"""

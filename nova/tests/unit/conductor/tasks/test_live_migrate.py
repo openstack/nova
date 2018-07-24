@@ -58,6 +58,9 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.migration = objects.Migration()
         self.fake_spec = objects.RequestSpec()
         self._generate_task()
+        _p = mock.patch('nova.compute.utils.heal_reqspec_is_bfv')
+        self.heal_reqspec_is_bfv_mock = _p.start()
+        self.addCleanup(_p.stop)
 
     def _generate_task(self):
         self.task = live_migrate.LiveMigrationTask(self.context,
@@ -119,6 +122,10 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                                                 self.migration)
             else:
                 m_alloc.assert_not_called()
+        # When the task is executed with a destination it means the host is
+        # being forced and we don't call the scheduler, so we don't need to
+        # heal the request spec.
+        self.heal_reqspec_is_bfv_mock.assert_not_called()
 
     def test_execute_with_destination_old_school(self):
         self.test_execute_with_destination(new_mode=False)
@@ -342,6 +349,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_reset.assert_called_once_with()
+        self.heal_reqspec_is_bfv_mock.assert_called_once_with(
+            self.context, self.fake_spec, self.instance)
         mock_select.assert_called_once_with(self.context, self.fake_spec,
             [self.instance.uuid], return_objects=True, return_alternates=False)
         mock_check.assert_called_once_with('host1')
@@ -374,6 +383,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
             get_image.assert_called_once_with(self.instance.system_metadata)
             setup_ig.assert_called_once_with(self.context, another_spec)
+            self.heal_reqspec_is_bfv_mock.assert_called_once_with(
+                self.context, another_spec, self.instance)
             select_dest.assert_called_once_with(self.context, another_spec,
                     [self.instance.uuid], return_objects=True,
                     return_alternates=False)
