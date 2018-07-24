@@ -12039,6 +12039,31 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_sleep.assert_has_calls([mock.call(1)] * 2)
         self.assertEqual(2, mock_sleep.call_count)
 
+    def test_pre_live_migration_plug_vifs_with_dest_port_bindings(self):
+        """Tests that we use the LibvirtLiveMigrateData.vifs destination host
+        port binding details when plugging VIFs during pre_live_migration.
+        """
+        source_vif = network_model.VIF(
+            id=uuids.port_id, type=network_model.VIF_TYPE_OVS,
+            vnic_type=network_model.VNIC_TYPE_NORMAL, details={'foo': 'bar'},
+            profile={'binding:host_id': 'fake-source-host'})
+        migrate_vifs = [objects.VIFMigrateData(
+            port_id=uuids.port_id, vnic_type=network_model.VNIC_TYPE_NORMAL,
+            vif_type=network_model.VIF_TYPE_OVS, vif_details={'bar': 'baz'},
+            profile={'binding:host_id': 'fake-dest-host'},
+            host='fake-dest-host', source_vif=source_vif)]
+        migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+            vifs=migrate_vifs)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance()
+        network_info = mock.NonCallableMock()
+        with mock.patch.object(drvr, 'plug_vifs') as plug_vifs:
+            drvr._pre_live_migration_plug_vifs(
+                instance, network_info, migrate_data)
+        expected_network_info = network_model.NetworkInfo([
+            migrate_vifs[0].get_dest_vif()])
+        plug_vifs.assert_called_once_with(instance, expected_network_info)
+
     def test_pre_live_migration_image_not_created_with_shared_storage(self):
         migrate_data_set = [{'is_shared_block_storage': False,
                              'is_shared_instance_path': True,
