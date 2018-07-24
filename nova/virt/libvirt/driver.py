@@ -43,6 +43,7 @@ import time
 import uuid
 
 from castellan import key_manager
+from copy import deepcopy
 import eventlet
 from eventlet import greenthread
 from eventlet import tpool
@@ -6379,8 +6380,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self.firewall_driver.refresh_instance_security_rules(instance)
 
     def update_provider_tree(self, provider_tree, nodename):
-        """Update a ProviderTree object with current resource provider and
-        inventory information.
+        """Update a ProviderTree object with current resource provider,
+        inventory information and CPU traits.
 
         :param nova.compute.provider_tree.ProviderTree provider_tree:
             A nova.compute.provider_tree.ProviderTree object representing all
@@ -6452,6 +6453,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 }
 
         provider_tree.update_inventory(nodename, result)
+
+        traits = self._get_cpu_traits()
+        if traits is not None:
+            # _get_cpu_traits returns a dict of trait names mapped to boolean
+            # values. Add traits equal to True to provider tree, remove
+            # those False traits from provider tree.
+            traits_to_add = [t for t in traits if traits[t]]
+            traits_to_remove = set(traits) - set(traits_to_add)
+            provider_tree.add_traits(nodename, *traits_to_add)
+            provider_tree.remove_traits(nodename, *traits_to_remove)
 
     def get_available_resource(self, nodename):
         """Retrieve resource information.
@@ -8926,3 +8937,70 @@ class LibvirtDriver(driver.ComputeDriver):
                            nova.privsep.fs.FS_FORMAT_EXT3,
                            nova.privsep.fs.FS_FORMAT_EXT4,
                            nova.privsep.fs.FS_FORMAT_XFS]
+
+    def _get_cpu_traits(self):
+        """Get CPU traits of VMs based on guest CPU model config:
+        1. if mode is 'host-model' or 'host-passthrough', use host's
+        CPU features.
+        2. if mode is None, choose a default CPU model based on CPU
+        architecture.
+        3. if mode is 'custom', use cpu_model to generate CPU features.
+        The code also accounts for cpu_model_extra_flags configuration when
+        cpu_mode is 'host-model', 'host-passthrough' or 'custom', this
+        ensures user specified CPU feature flags to be included.
+        :return: A dict of trait names mapped to boolean values or None.
+        """
+        cpu = self._get_guest_cpu_model_config()
+        if not cpu:
+            LOG.info('The current libvirt hypervisor %(virt_type)s '
+                     'does not support reporting CPU traits.',
+                     {'virt_type': CONF.libvirt.virt_type})
+            return
+
+        caps = deepcopy(self._host.get_capabilities())
+        if cpu.mode in ('host-model', 'host-passthrough'):
+            # Account for features in cpu_model_extra_flags conf
+            host_features = [f.name for f in
+                             caps.host.cpu.features | cpu.features]
+            return libvirt_utils.cpu_features_to_traits(host_features)
+
+        # Choose a default CPU model when cpu_mode is not specified
+        if cpu.mode is None:
+            caps.host.cpu.model = libvirt_utils.get_cpu_model_from_arch(
+                caps.host.cpu.arch)
+            caps.host.cpu.features = set()
+        else:
+            # For custom mode, set model to guest CPU model
+            caps.host.cpu.model = cpu.model
+            caps.host.cpu.features = set()
+            # Account for features in cpu_model_extra_flags conf
+            for f in cpu.features:
+                caps.host.cpu.add_feature(
+                    vconfig.LibvirtConfigCPUFeature(name=f.name))
+
+        xml_str = caps.host.cpu.to_xml()
+        LOG.info("Libvirt baseline CPU %s", xml_str)
+        # TODO(lei-zh): baselineCPU is not supported on all platforms.
+        # There is some work going on in the libvirt community to replace the
+        # baseline call. Consider using the new apis when they are ready. See
+        # https://www.redhat.com/archives/libvir-list/2018-May/msg01204.html.
+        try:
+            if hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'):
+                features = self._host.get_connection().baselineCPU(
+                    [xml_str],
+                    libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
+            else:
+                features = self._host.get_connection().baselineCPU([xml_str])
+        except libvirt.libvirtError as ex:
+            with excutils.save_and_reraise_exception() as ctxt:
+                error_code = ex.get_error_code()
+                if error_code == libvirt.VIR_ERR_NO_SUPPORT:
+                    ctxt.reraise = False
+                    LOG.info('URI %(uri)s does not support full set'
+                             ' of host capabilities: %(error)s',
+                             {'uri': self._host._uri, 'error': ex})
+                    return libvirt_utils.cpu_features_to_traits([])
+
+        cpu.parse_str(features)
+        return libvirt_utils.cpu_features_to_traits(
+            [f.name for f in cpu.features])

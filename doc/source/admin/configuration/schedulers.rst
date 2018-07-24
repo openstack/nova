@@ -274,6 +274,15 @@ extra specs key as the key to be matched if no namespace is present; this
 action is highly discouraged because it conflicts with
 :ref:`AggregateInstanceExtraSpecsFilter` filter when you enable both filters.
 
+Some virt drivers support reporting CPU traits to the Placement service. With that
+feature available, you should consider using traits in flavors instead of
+ComputeCapabilitiesFilter, because traits provide consistent naming for CPU
+features in some virt drivers and querying traits is efficient. For more detail, please see
+`Support Matrix <https://docs.openstack.org/nova/latest/user/support-matrix.html>`_,
+:ref:`Required traits <extra-specs-required-traits>`,
+:ref:`Forbidden traits <extra-specs-forbidden-traits>` and
+`Report CPU features to the Placement service <https://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/report-cpu-features-as-traits.html>`_.
+
 .. _ComputeFilter:
 
 ComputeFilter

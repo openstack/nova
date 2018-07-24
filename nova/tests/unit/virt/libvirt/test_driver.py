@@ -351,6 +351,98 @@ _fake_cpu_info = {
 
 eph_default_ext = utils.get_hash_str(nova.privsep.fs._DEFAULT_FILE_SYSTEM)[:7]
 
+_fake_qemu64_cpu_feature = """
+<cpu mode='custom' match='exact'>
+  <model fallback='forbid'>qemu64</model>
+  <feature policy='require' name='svm'/>
+  <feature policy='require' name='lm'/>
+  <feature policy='require' name='nx'/>
+  <feature policy='require' name='syscall'/>
+  <feature policy='require' name='cx16'/>
+  <feature policy='require' name='pni'/>
+  <feature policy='require' name='sse2'/>
+  <feature policy='require' name='sse'/>
+  <feature policy='require' name='fxsr'/>
+  <feature policy='require' name='mmx'/>
+  <feature policy='require' name='clflush'/>
+  <feature policy='require' name='pse36'/>
+  <feature policy='require' name='pat'/>
+  <feature policy='require' name='cmov'/>
+  <feature policy='require' name='mca'/>
+  <feature policy='require' name='pge'/>
+  <feature policy='require' name='mtrr'/>
+  <feature policy='require' name='sep'/>
+  <feature policy='require' name='apic'/>
+  <feature policy='require' name='cx8'/>
+  <feature policy='require' name='mce'/>
+  <feature policy='require' name='pae'/>
+  <feature policy='require' name='msr'/>
+  <feature policy='require' name='tsc'/>
+  <feature policy='require' name='pse'/>
+  <feature policy='require' name='de'/>
+  <feature policy='require' name='fpu'/>
+</cpu>
+"""
+
+_fake_broadwell_cpu_feature = """
+<cpu mode='custom' match='exact'>
+  <model fallback='forbid'>Broadwell-noTSX</model>
+  <vendor>Intel</vendor>
+  <feature policy='require' name='smap'/>
+  <feature policy='require' name='adx'/>
+  <feature policy='require' name='rdseed'/>
+  <feature policy='require' name='invpcid'/>
+  <feature policy='require' name='erms'/>
+  <feature policy='require' name='bmi2'/>
+  <feature policy='require' name='smep'/>
+  <feature policy='require' name='avx2'/>
+  <feature policy='require' name='bmi1'/>
+  <feature policy='require' name='fsgsbase'/>
+  <feature policy='require' name='3dnowprefetch'/>
+  <feature policy='require' name='lahf_lm'/>
+  <feature policy='require' name='lm'/>
+  <feature policy='require' name='rdtscp'/>
+  <feature policy='require' name='nx'/>
+  <feature policy='require' name='syscall'/>
+  <feature policy='require' name='avx'/>
+  <feature policy='require' name='xsave'/>
+  <feature policy='require' name='aes'/>
+  <feature policy='require' name='tsc-deadline'/>
+  <feature policy='require' name='popcnt'/>
+  <feature policy='require' name='movbe'/>
+  <feature policy='require' name='x2apic'/>
+  <feature policy='require' name='sse4.2'/>
+  <feature policy='require' name='sse4.1'/>
+  <feature policy='require' name='pcid'/>
+  <feature policy='require' name='cx16'/>
+  <feature policy='require' name='fma'/>
+  <feature policy='require' name='ssse3'/>
+  <feature policy='require' name='pclmuldq'/>
+  <feature policy='require' name='pni'/>
+  <feature policy='require' name='sse2'/>
+  <feature policy='require' name='sse'/>
+  <feature policy='require' name='fxsr'/>
+  <feature policy='require' name='mmx'/>
+  <feature policy='require' name='clflush'/>
+  <feature policy='require' name='pse36'/>
+  <feature policy='require' name='pat'/>
+  <feature policy='require' name='cmov'/>
+  <feature policy='require' name='mca'/>
+  <feature policy='require' name='pge'/>
+  <feature policy='require' name='mtrr'/>
+  <feature policy='require' name='sep'/>
+  <feature policy='require' name='apic'/>
+  <feature policy='require' name='cx8'/>
+  <feature policy='require' name='mce'/>
+  <feature policy='require' name='pae'/>
+  <feature policy='require' name='msr'/>
+  <feature policy='require' name='tsc'/>
+  <feature policy='require' name='pse'/>
+  <feature policy='require' name='de'/>
+  <feature policy='require' name='fpu'/>
+</cpu>
+"""
+
 
 def eph_name(size):
     return ('ephemeral_%(size)s_%(ext)s' %
@@ -17796,6 +17888,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
     vcpus = 24
     memory_mb = 1024
     disk_gb = 200
+    cpu_traits = {t: False for t in libvirt_utils.CPU_TRAITS_MAPPING.values()}
 
     def setUp(self):
         super(TestUpdateProviderTree, self).setUp()
@@ -17827,6 +17920,8 @@ class TestUpdateProviderTree(test.NoDBTestCase):
             return pt
 
         self.pt = _pt_with_cn_rp_and_shared_rp()
+        self.cpu_traits['HW_CPU_X86_AVX512F'] = True
+        self.cpu_traits['HW_CPU_X86_BMI'] = True
 
     def _get_inventory(self):
         return {
@@ -17850,6 +17945,8 @@ class TestUpdateProviderTree(test.NoDBTestCase):
             },
         }
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_cpu_traits',
+                new=mock.Mock(return_value=cpu_traits))
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vgpu_total')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_local_gb_info',
                 return_value={'total': disk_gb})
@@ -17867,6 +17964,8 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         self._test_update_provider_tree()
         self.assertEqual(self._get_inventory(),
                          (self.pt.data(self.cn_rp.uuid)).inventory)
+        self.assertEqual(set(['HW_CPU_X86_AVX512F', 'HW_CPU_X86_BMI']),
+                         self.pt.data(self.cn_rp.uuid).traits)
 
     def test_update_provider_tree_with_vgpus(self):
         self._test_update_provider_tree(total_vgpus=8)
@@ -17928,8 +18027,23 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         self.assertEqual(self._get_inventory(),
                          (self.pt.data(self.cn_rp.uuid)).inventory)
 
+    def test_update_provider_tree_with_cpu_traits(self):
+        # These two traits should be unset when update_provider_tree is called
+        self.pt.add_traits(self.cn_rp.uuid, 'HW_CPU_X86_VMX', 'HW_CPU_X86_XOP')
+        self._test_update_provider_tree()
+        self.assertEqual(set(['HW_CPU_X86_AVX512F', 'HW_CPU_X86_BMI']),
+                         self.pt.data(self.cn_rp.uuid).traits)
 
-class LibvirtDriverTestCase(test.NoDBTestCase):
+
+class TraitsComparisonMixin(object):
+
+    def assertTraitsEqual(self, expected, actual):
+        exp = {t: t in expected
+               for t in libvirt_utils.CPU_TRAITS_MAPPING.values()}
+        self.assertEqual(exp, actual)
+
+
+class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     """Test for nova.virt.libvirt.libvirt_driver.LibvirtDriver."""
     def setUp(self):
         super(LibvirtDriverTestCase, self).setUp()
@@ -20494,6 +20608,254 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         self.assertRaises(test.TestingException,
                           self._test_detach_mediated_devices, exc)
+
+    def test_cpu_traits_with_passthrough_mode(self):
+        """Test getting CPU traits when cpu_mmode is 'host-passthrough', traits
+        are calculated from fakelibvirt's baseline CPU features.
+        """
+        self.flags(cpu_mode='host-passthrough', group='libvirt')
+        self.assertTraitsEqual(['HW_CPU_X86_AESNI', 'HW_CPU_X86_VMX'],
+                               self.drvr._get_cpu_traits())
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    def test_cpu_traits_with_mode_none(self, mock_baseline):
+        """Test getting CPU traits when cpu_mode is 'none', traits are
+        calculated from _fake_qemu64_cpu_features.
+        """
+        self.flags(cpu_mode='none', group='libvirt')
+        mock_baseline.return_value = _fake_qemu64_cpu_feature
+        self.assertTraitsEqual(['HW_CPU_X86_SSE', 'HW_CPU_X86_SVM',
+                                'HW_CPU_X86_MMX', 'HW_CPU_X86_SSE2'],
+                               self.drvr._get_cpu_traits())
+
+        mock_baseline.assert_called_with([u'''<cpu>
+  <arch>x86_64</arch>
+  <model>qemu64</model>
+  <vendor>Intel</vendor>
+  <topology sockets="1" cores="2" threads="1"/>
+</cpu>
+'''], 1)
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    def test_cpu_traits_with_mode_custom(self, mock_baseline):
+        """Test getting CPU traits when cpu_mode is 'custom' and cpu_model is
+        'Broadwell-noTSX', traits are calculated from
+        _fake_broadwell_cpu_features.
+        """
+        self.flags(cpu_mode='custom',
+                   cpu_model='Broadwell-noTSX',
+                   group='libvirt')
+        mock_baseline.return_value = _fake_broadwell_cpu_feature
+
+        self.assertTraitsEqual(
+            [
+                'HW_CPU_X86_BMI2',
+                'HW_CPU_X86_AVX2',
+                'HW_CPU_X86_BMI',
+                'HW_CPU_X86_AVX',
+                'HW_CPU_X86_AESNI',
+                'HW_CPU_X86_SSE42',
+                'HW_CPU_X86_SSE41',
+                'HW_CPU_X86_FMA3',
+                'HW_CPU_X86_SSSE3',
+                'HW_CPU_X86_CLMUL',
+                'HW_CPU_X86_SSE2',
+                'HW_CPU_X86_SSE',
+                'HW_CPU_X86_MMX'
+            ], self.drvr._get_cpu_traits()
+        )
+        mock_baseline.assert_called_with([u'''<cpu>
+  <arch>x86_64</arch>
+  <model>Broadwell-noTSX</model>
+  <vendor>Intel</vendor>
+  <topology sockets="1" cores="2" threads="1"/>
+</cpu>
+'''], 1)
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    def test_cpu_traits_with_no_baseline_support(self, mock_baseline):
+        """Test getting CPU traits when baseline call is not supported."""
+        self.flags(cpu_mode='none', group='libvirt')
+        not_supported_exc = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            'this function is not supported by the connection driver',
+            error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
+        mock_baseline.side_effect = not_supported_exc
+        self.assertTraitsEqual([], self.drvr._get_cpu_traits())
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    def test_cpu_traits_on_s390x(self, mock_baseline, mock_cap):
+        """Test getting CPU traits on s390x, baseline call is not supported on
+        the platform.
+        """
+        self.flags(cpu_mode='none', group='libvirt')
+
+        mock_cap.return_value = """
+            <capabilities>
+                <host>
+                    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                    <cpu>
+                      <arch>s390x</arch>
+                      <topology sockets='1' cores='6' threads='1'/>
+                      <pages unit='KiB' size='4' />
+                      <pages unit='KiB' size='1024' />
+                    </cpu>
+                </host>
+            </capabilities>
+            """
+
+        not_supported_exc = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            'this function is not supported by the connection driver: cannot'
+            ' compute baseline CPU',
+            error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
+        missing_model_exc = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            'XML error: Missing CPU model name',
+            error_code=fakelibvirt.VIR_ERR_XML_ERROR)
+
+        # model the libvirt behavior on s390x
+        def mocked_baseline(cpu_xml, *args):
+            xml = cpu_xml[0]
+            if "<model>" in xml:
+                raise not_supported_exc
+            else:
+                raise missing_model_exc
+        mock_baseline.side_effect = mocked_baseline
+
+        self.assertTraitsEqual([], self.drvr._get_cpu_traits())
+
+    def test_cpu_traits_with_invalid_virt_type(self):
+        """Test getting CPU traits when using a virt_type that doesn't support
+        the feature, only kvm and qemu supports reporting CPU traits.
+        """
+        self.flags(cpu_mode='custom',
+                   cpu_model='IvyBridge',
+                   virt_type='lxc',
+                   group='libvirt'
+                   )
+        self.assertRaises(exception.Invalid, self.drvr._get_cpu_traits)
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
+    @mock.patch('nova.virt.libvirt.utils.cpu_features_to_traits')
+    def test_cpu_traits_with_mode_passthrough_and_extra_flags(
+            self, mock_to_traits, mock_cap):
+        """Test if extra flags are accounted when cpu_mode is set to
+        host-passthrough.
+        """
+        self.flags(cpu_mode='host-passthrough',
+                   cpu_model_extra_flags='PCID',
+                   group='libvirt')
+        mock_cap.return_value = """
+            <capabilities>
+                <host>
+                    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                    <cpu>
+                      <arch>IvyBridge</arch>
+                      <topology sockets='1' cores='2' threads='2'/>
+                      <feature policy='require' name='erms'/>
+                      <pages unit='KiB' size='4' />
+                      <pages unit='KiB' size='1024' />
+                    </cpu>
+                </host>
+            </capabilities>
+            """
+        self.drvr._get_cpu_traits()
+        self.assertItemsEqual(['pcid', 'erms'], mock_to_traits.call_args[0][0])
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    @mock.patch('nova.virt.libvirt.utils.cpu_features_to_traits')
+    def test_cpu_traits_with_mode_custom_and_extra_flags(self, mock_to_traits,
+                                                         mock_baseline):
+        """Test if extra flags are accounted when cpu_mode is set to custom.
+        """
+        self.flags(cpu_mode='custom',
+                   cpu_model='IvyBridge',
+                   cpu_model_extra_flags='PCID',
+                   group='libvirt')
+
+        mock_baseline.return_value = """
+            <cpu mode='custom' match='exact'>
+                <model fallback='forbid'>IvyBridge</model>
+                <vendor>Intel</vendor>
+                <feature policy='require' name='erms'/>
+                <feature policy='require' name='pcid'/>
+            </cpu>
+            """
+        self.drvr._get_cpu_traits()
+        mock_baseline.assert_called_with([u'''<cpu>
+  <arch>x86_64</arch>
+  <model>IvyBridge</model>
+  <vendor>Intel</vendor>
+  <topology sockets="1" cores="2" threads="1"/>
+  <feature name="pcid"/>
+</cpu>
+'''], 1)
+        self.assertItemsEqual(['pcid', 'erms'], mock_to_traits.call_args[0][0])
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    @mock.patch('nova.virt.libvirt.utils.cpu_features_to_traits')
+    def test_cpu_traits_with_mode_not_set_and_extra_flags(self, mock_to_traits,
+                                                       mock_baseline):
+        """Test if extra flags are accounted when cpu_mode is not set."""
+        self.flags(cpu_mode=None,
+                   cpu_model_extra_flags='PCID',
+                   virt_type='kvm',
+                   group='libvirt'
+                   )
+        mock_baseline.return_value = """
+            <cpu mode='custom' match='exact'>
+                <model fallback='forbid'>IvyBridge</model>
+                <vendor>Intel</vendor>
+                <feature policy='require' name='erms'/>
+            </cpu>
+            """
+        self.drvr._get_cpu_traits()
+        self.assertItemsEqual(['pcid', 'erms'], mock_to_traits.call_args[0][0])
+
+    def test_cpu_traits_with_mode_none_and_invalid_virt_type(self):
+        """Test case that cpu mode is none and virt_type is neither kvm nor
+           qemu.
+        """
+        self.flags(cpu_mode='none',
+                   virt_type='lxc',
+                   group='libvirt')
+        self.assertIsNone(self.drvr._get_cpu_traits())
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    def test_cpu_traits_with_mode_none_on_power(self, mock_baseline, mock_cap):
+        """Test case that cpu mode is none on Power machines."""
+        self.flags(cpu_mode='none', virt_type='kvm', group='libvirt')
+        mock_cap.return_value = '''
+        <capabilities>
+            <host>
+                <uuid>1f71d34a-7c89-45cf-95ce-3df20fc6b936</uuid>
+                <cpu>
+                    <model>POWER8</model>
+                    <vendor>IBM</vendor>
+                    <arch>ppc64le</arch>
+                    <topology sockets='1' cores='5' threads='1'/>
+                    <pages unit='KiB' size='64'/>
+                </cpu>
+            </host>
+        </capabilities>
+        '''
+        mock_baseline.return_value = '''
+        <cpu>
+           <model>POWER8</model>
+           <vendor>IBM</vendor>
+        </cpu>
+        '''
+        self.drvr._get_cpu_traits()
+        mock_baseline.assert_called_with([u'''<cpu>
+  <arch>ppc64le</arch>
+  <model>POWER8</model>
+  <vendor>IBM</vendor>
+  <topology sockets="1" cores="5" threads="1"/>
+</cpu>
+'''], 1)
 
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):

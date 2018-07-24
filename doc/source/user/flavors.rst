@@ -650,6 +650,8 @@ Secure Boot
   - ``disabled`` or ``optional``: (default) Disable Secure Boot for instances
     running with this flavor.
 
+.. _extra-specs-required-traits:
+
 Required traits
     Added in the 17.0.0 Queens release.
 
@@ -676,6 +678,8 @@ Required traits
     this feature.
 
     Traits can be managed using the `osc-placement plugin`_.
+
+.. _extra-specs-forbidden-traits:
 
 Forbidden traits
     Added in the 18.0.0 Rocky release.

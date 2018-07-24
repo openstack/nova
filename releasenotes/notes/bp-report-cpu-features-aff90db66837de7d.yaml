@@ -1,0 +1,7 @@
+---
+
+features:
+  - Add support for reporting CPU traits to Placement
+    in libvirt driver. For more detail, see
+    https://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/report-cpu-features-as-traits.html
+    and https://docs.openstack.org/nova/latest/user/support-matrix.html.

@@ -562,6 +562,12 @@ class TestProviderTree(test.NoDBTestCase):
         cn = self.compute_node1
         pt = self._pt_with_cns()
         self.assertEqual(set([]), pt.data(cn.uuid).traits)
+        # Test adding with no trait provided for a bogus provider
+        pt.add_traits('bogus-uuid')
+        self.assertEqual(
+            set([]),
+            pt.data(cn.uuid).traits
+        )
         # Add a couple of traits
         pt.add_traits(cn.uuid, "HW_GPU_API_DIRECT3D_V7_0", "HW_NIC_OFFLOAD_SG")
         self.assertEqual(
@@ -570,6 +576,12 @@ class TestProviderTree(test.NoDBTestCase):
         # set() behavior: add a trait that's already there, and one that's not.
         # The unrelated one is unaffected.
         pt.add_traits(cn.uuid, "HW_GPU_API_DIRECT3D_V7_0", "HW_CPU_X86_AVX")
+        self.assertEqual(
+            set(["HW_GPU_API_DIRECT3D_V7_0", "HW_NIC_OFFLOAD_SG",
+                 "HW_CPU_X86_AVX"]),
+            pt.data(cn.uuid).traits)
+        # Test removing with no trait provided for a bogus provider
+        pt.remove_traits('bogus-uuid')
         self.assertEqual(
             set(["HW_GPU_API_DIRECT3D_V7_0", "HW_NIC_OFFLOAD_SG",
                  "HW_CPU_X86_AVX"]),

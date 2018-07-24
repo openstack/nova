@@ -25,6 +25,7 @@ disk_backing_files = {}
 disk_type = "qcow2"
 
 RESIZE_SNAPSHOT_NAME = libvirt_utils.RESIZE_SNAPSHOT_NAME
+CPU_TRAITS_MAPPING = libvirt_utils.CPU_TRAITS_MAPPING
 
 
 def create_image(disk_format, path, size):
@@ -172,3 +173,7 @@ def get_arch(image_meta):
 
 def version_to_string(version):
     return libvirt_utils.version_to_string(version)
+
+
+def cpu_features_to_traits(features):
+    return libvirt_utils.cpu_features_to_traits(features)
