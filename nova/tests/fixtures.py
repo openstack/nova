@@ -1299,7 +1299,10 @@ class NeutronFixture(fixtures.Fixture):
         return {'network': network}
 
     def list_networks(self, retrieve_all=True, **_params):
-        return copy.deepcopy({'networks': self._networks})
+        networks = copy.deepcopy(self._networks)
+        if 'id' in _params:
+            networks = [x for x in networks if x['id'] in _params['id']]
+        return {'networks': networks}
 
     def list_ports(self, retrieve_all=True, **_params):
         return self._filter_ports(**_params)
@@ -1310,7 +1313,7 @@ class NeutronFixture(fixtures.Fixture):
     def list_floatingips(self, retrieve_all=True, **_params):
         return copy.deepcopy({'floatingips': self._floatingips})
 
-    def create_port(self, *args, **kwargs):
+    def create_port(self, body=None):
         self._ports.append(copy.deepcopy(NeutronFixture.port_2))
         return copy.deepcopy({'port': NeutronFixture.port_2})
 

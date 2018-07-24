@@ -441,6 +441,25 @@ def _parse_disk_info(element):
     return disk_info
 
 
+def _parse_nic_info(element):
+    nic_info = {}
+    nic_info['type'] = element.get('type', 'bridge')
+
+    driver = element.find('./mac')
+    if driver is not None:
+        nic_info['mac'] = driver.get('address')
+
+    source = element.find('./source')
+    if source is not None:
+        nic_info['source'] = source.get('bridge')
+
+    target = element.find('./target')
+    if target is not None:
+        nic_info['target_dev'] = target.get('dev')
+
+    return nic_info
+
+
 def disable_event_thread(self):
     """Disable nova libvirt driver event thread.
 
@@ -781,10 +800,19 @@ class Domain(object):
         pass
 
     def attachDevice(self, xml):
-        disk_info = _parse_disk_info(etree.fromstring(xml))
-        disk_info['_attached'] = True
-        self._def['devices']['disks'] += [disk_info]
-        return True
+        result = False
+        if xml.startswith("<disk"):
+            disk_info = _parse_disk_info(etree.fromstring(xml))
+            disk_info['_attached'] = True
+            self._def['devices']['disks'] += [disk_info]
+            result = True
+        elif xml.startswith("<interface"):
+            nic_info = _parse_nic_info(etree.fromstring(xml))
+            nic_info['_attached'] = True
+            self._def['devices']['nics'] += [nic_info]
+            result = True
+
+        return result
 
     def attachDeviceFlags(self, xml, flags):
         if (flags & VIR_DOMAIN_AFFECT_LIVE and
