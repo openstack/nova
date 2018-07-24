@@ -29,7 +29,6 @@ from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute import block_device_mapping
 from nova.api.openstack.compute import block_device_mapping_v1
-from nova.api.openstack.compute import config_drive
 from nova.api.openstack.compute import helpers
 from nova.api.openstack.compute.schemas import servers as schema_servers
 from nova.api.openstack.compute.views import servers as views_servers
@@ -66,7 +65,6 @@ class ServersController(wsgi.Controller):
     server_create_func_list = [
         block_device_mapping.server_create,
         block_device_mapping_v1.server_create,
-        config_drive.server_create,
     ]
 
     @staticmethod
@@ -432,6 +430,7 @@ class ServersController(wsgi.Controller):
         # backward-compatible some users already created keypair and name with
         # leading/trailing spaces by legacy v2 API.
         create_kwargs['key_name'] = server_dict.get('key_name')
+        create_kwargs['config_drive'] = server_dict.get('config_drive')
         security_groups = server_dict.get('security_groups')
         if security_groups is not None:
             create_kwargs['security_groups'] = [

@@ -3511,6 +3511,48 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(exception.ValidationError,
                           self._test_create_extra, params)
 
+    def _create_instance_body_of_config_drive(self, param):
+        def create(*args, **kwargs):
+            self.assertIn('config_drive', kwargs)
+            return old_create(*args, **kwargs)
+
+        old_create = compute_api.API.create
+        self.stub_out('nova.compute.api.API.create', create)
+        self.body['server']['config_drive'] = param
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+
+    def test_create_instance_with_config_drive(self):
+        param = True
+        self._create_instance_body_of_config_drive(param)
+        self.controller.create(self.req, body=self.body).obj
+
+    def test_create_instance_with_config_drive_as_boolean_string(self):
+        param = 'false'
+        self._create_instance_body_of_config_drive(param)
+        self.controller.create(self.req, body=self.body).obj
+
+    def test_create_instance_with_bad_config_drive(self):
+        param = 12345
+        self._create_instance_body_of_config_drive(param)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, self.req, body=self.body)
+
+    def test_create_instance_without_config_drive(self):
+        def create(*args, **kwargs):
+            self.assertIsNone(kwargs['config_drive'])
+            return old_create(*args, **kwargs)
+
+        old_create = compute_api.API.create
+        self.stub_out('nova.compute.api.API.create', create)
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.controller.create(self.req, body=self.body).obj
+
+    def test_create_instance_with_empty_config_drive(self):
+        param = ''
+        self._create_instance_body_of_config_drive(param)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, self.req, body=self.body)
+
     def test_create_instance_invalid_key_name(self):
         self.body['server']['key_name'] = 'nonexistentkey'
         self.req.body = jsonutils.dump_as_bytes(self.body)
