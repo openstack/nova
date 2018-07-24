@@ -468,6 +468,10 @@ class TestOpenStackClient(object):
     def post_keypair(self, keypair):
         return self.api_post('/os-keypairs', keypair).body['keypair']
 
+    def post_aggregate_action(self, aggregate_id, body):
+        return self.api_post(
+            '/os-aggregates/%s/action' % aggregate_id, body).body['aggregate']
+
     def get_active_migrations(self, server_id):
         return self.api_get('/servers/%s/migrations' %
                             server_id).body['migrations']
