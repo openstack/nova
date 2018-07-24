@@ -292,11 +292,6 @@ Queens (17.0.0)
 Rocky (18.0.0)
 ~~~~~~~~~~~~~~
 
-* The minimum Placement API microversion required by the *nova-scheduler*
-  service is ``1.25`` in order to
-  `perform granular allocation candidate requests`_.
-  This means you must upgrade the placement service before upgrading any
-  *nova-scheduler* services to Rocky.
 * The ``nova-api`` service now requires the ``[placement]`` section to be
   configured in nova.conf if you are using a separate config file just for
   that service. This is because the ``nova-api`` service now needs to talk
