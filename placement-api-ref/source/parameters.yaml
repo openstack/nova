@@ -320,8 +320,8 @@ consumer_generation:
   required: true
   min_version: 1.28
   description: >
-    The generation of the consumer. Should be set to ``None`` when indicating
-    the the caller expects the consumer does not yet exist.
+    The generation of the consumer. Should be set to ``null`` when indicating
+    that the caller expects the consumer does not yet exist.
 consumer_uuid_body:
   <<: *consumer_uuid
   in: body
