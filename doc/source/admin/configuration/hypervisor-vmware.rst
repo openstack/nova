@@ -385,6 +385,14 @@ and select the :guilabel:`Propagate to Child Objects` option.
      -
      - Remove snapshot
    * -
+     - Profile-driven storage
+     -
+     -
+   * -
+     -
+     - Profile-driven storage view
+     -
+   * -
      - Sessions
      -
      -
