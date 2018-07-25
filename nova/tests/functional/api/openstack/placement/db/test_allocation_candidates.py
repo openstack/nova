@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import os_traits
+from oslo_config import cfg
 import six
 import sqlalchemy as sa
 
@@ -19,6 +20,9 @@ from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova import rc_fields as fields
 from nova.tests.functional.api.openstack.placement.db import test_base as tb
 from nova.tests import uuidsentinel as uuids
+
+
+CONF = cfg.CONF
 
 
 class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
@@ -554,7 +558,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # Do it again, with conf set to randomize. We can't confirm the
         # random-ness but we can be sure the code path doesn't explode.
-        self.flags(randomize_allocation_candidates=True, group='placement')
+        CONF.set_override('randomize_allocation_candidates', True,
+                          group='placement')
 
         # Ask for two candidates.
         limit = 2

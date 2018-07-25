@@ -14,9 +14,9 @@ from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 import testtools
 
+from nova.api.openstack.placement import context
+from nova.api.openstack.placement import deploy
 from nova.api.openstack.placement.objects import resource_provider
-from nova import config
-from nova import context
 from nova.tests import fixtures
 from nova.tests.unit import policy_fixture
 
@@ -36,21 +36,32 @@ class TestCase(testtools.TestCase):
 
         # Manage required configuration
         conf_fixture = self.useFixture(config_fixture.Config(CONF))
-        conf_fixture.conf.set_default(
-            'connection', "sqlite://", group='placement_database')
-        conf_fixture.conf.set_default(
-            'sqlite_synchronous', False, group='placement_database')
-        config.parse_args([], default_config_files=[], configure_db=False,
-            init_rpc=False)
+        # The Database fixture will get confused if only one of the databases
+        # is configured.
+        for group in ('placement_database', 'api_database', 'database'):
+            conf_fixture.config(
+                group=group,
+                connection='sqlite://',
+                sqlite_synchronous=False)
+        CONF([], default_config_files=[])
 
         self.useFixture(policy_fixture.PlacementPolicyFixture())
+
+        self.useFixture(fixtures.StandardLogging())
+        self.useFixture(fixtures.OutputStreamCapture())
+        # Filter ignorable warnings during test runs.
+        self.useFixture(fixtures.WarningsFixture())
+
         self.placement_db = self.useFixture(
             fixtures.Database(database='placement'))
-        self._reset_traits_synced()
-        self.context = context.get_admin_context()
-        self.addCleanup(self._reset_traits_synced)
+        self._reset_database()
+        self.context = context.RequestContext()
+        # Do database syncs, such as traits sync.
+        deploy.update_database()
+        self.addCleanup(self._reset_database)
 
     @staticmethod
-    def _reset_traits_synced():
-        """Reset the _TRAITS_SYNCED boolean to base state."""
+    def _reset_database():
+        """Reset database sync flags to base state."""
         resource_provider._TRAITS_SYNCED = False
+        resource_provider._RC_CACHE = None
