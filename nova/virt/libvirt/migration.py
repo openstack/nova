@@ -24,6 +24,7 @@ from oslo_log import log as logging
 
 from nova.compute import power_state
 import nova.conf
+from nova import exception
 from nova.virt.libvirt import config as vconfig
 
 LOG = logging.getLogger(__name__)
@@ -77,13 +78,16 @@ def serial_listen_ports(migrate_data):
     return ports
 
 
-def get_updated_guest_xml(guest, migrate_data, get_volume_config):
+def get_updated_guest_xml(guest, migrate_data, get_volume_config,
+                          get_vif_config=None):
     xml_doc = etree.fromstring(guest.get_xml_desc(dump_migratable=True))
     xml_doc = _update_graphics_xml(xml_doc, migrate_data)
     xml_doc = _update_serial_xml(xml_doc, migrate_data)
     xml_doc = _update_volume_xml(xml_doc, migrate_data, get_volume_config)
     xml_doc = _update_perf_events_xml(xml_doc, migrate_data)
     xml_doc = _update_memory_backing_xml(xml_doc, migrate_data)
+    if get_vif_config is not None:
+        xml_doc = _update_vif_xml(xml_doc, migrate_data, get_vif_config)
     return etree.tostring(xml_doc, encoding='unicode')
 
 
@@ -272,6 +276,61 @@ def _update_memory_backing_xml(xml_doc, migrate_data):
 
     if not old_xml_has_memory_backing:
         xml_doc.append(memory_backing)
+
+    return xml_doc
+
+
+def _update_vif_xml(xml_doc, migrate_data, get_vif_config):
+    # Loop over each interface element in the original xml and find the
+    # corresponding vif based on mac and then overwrite the xml with the new
+    # attributes but maintain the order of the interfaces and maintain the
+    # guest pci address.
+    instance_uuid = xml_doc.findtext('uuid')
+    parser = etree.XMLParser(remove_blank_text=True)
+    interface_nodes = xml_doc.findall('./devices/interface')
+    migrate_vif_by_mac = {vif.source_vif['address']: vif
+                          for vif in migrate_data.vifs}
+    for interface_dev in interface_nodes:
+        mac = interface_dev.find('mac')
+        mac = mac if mac is not None else {}
+        mac_addr = mac.get('address')
+        if mac_addr:
+            migrate_vif = migrate_vif_by_mac[mac_addr]
+            vif = migrate_vif.get_dest_vif()
+            # get_vif_config is a partial function of
+            # nova.virt.libvirt.vif.LibvirtGenericVIFDriver.get_config
+            # with all but the 'vif' kwarg set already and returns a
+            # LibvirtConfigGuestInterface object.
+            vif_config = get_vif_config(vif=vif)
+        else:
+            # This shouldn't happen but if it does, we need to abort the
+            # migration.
+            raise exception.NovaException(
+                'Unable to find MAC address in interface XML for '
+                'instance %s: %s' % (
+                    instance_uuid,
+                    etree.tostring(interface_dev, encoding='unicode')))
+
+        # At this point we want to replace the interface elements with the
+        # destination vif config xml *except* for the guest PCI address.
+        conf_xml = vif_config.to_xml()
+        LOG.debug('Updating guest XML with vif config: %s', conf_xml,
+                  instance_uuid=instance_uuid)
+        dest_interface_elem = etree.XML(conf_xml, parser)
+        # Save off the hw address presented to the guest since that can't
+        # change during live migration.
+        address = interface_dev.find('address')
+        # Now clear the interface's current elements and insert everything
+        # from the destination vif config xml.
+        interface_dev.clear()
+        # Insert attributes.
+        for attr_name, attr_value in dest_interface_elem.items():
+            interface_dev.set(attr_name, attr_value)
+        # Insert sub-elements.
+        for index, dest_interface_subelem in enumerate(dest_interface_elem):
+            interface_dev.insert(index, dest_interface_subelem)
+        # And finally re-insert the hw address.
+        interface_dev.insert(index + 1, address)
 
     return xml_doc
 

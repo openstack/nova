@@ -7034,11 +7034,38 @@ class LibvirtDriver(driver.ComputeDriver):
 
             new_xml_str = None
             if CONF.libvirt.virt_type != "parallels":
+                # If the migrate_data has port binding information for the
+                # destination host, we need to prepare the guest vif config
+                # for the destination before we start migrating the guest.
+                get_vif_config = None
+                if 'vifs' in migrate_data and migrate_data.vifs:
+                    # NOTE(mriedem): The vif kwarg must be built on the fly
+                    # within get_updated_guest_xml based on migrate_data.vifs.
+                    # We could stash the virt_type from the destination host
+                    # into LibvirtLiveMigrateData but the host kwarg is a
+                    # nova.virt.libvirt.host.Host object and is used to check
+                    # information like libvirt version on the destination.
+                    # If this becomes a problem, what we could do is get the
+                    # VIF configs while on the destination host during
+                    # pre_live_migration() and store those in the
+                    # LibvirtLiveMigrateData object. For now we just use the
+                    # source host information for virt_type and
+                    # host (version) since the conductor live_migrate method
+                    # _check_compatible_with_source_hypervisor() ensures that
+                    # the hypervisor types and versions are compatible.
+                    get_vif_config = functools.partial(
+                        self.vif_driver.get_config,
+                        instance=instance,
+                        image_meta=instance.image_meta,
+                        inst_type=instance.flavor,
+                        virt_type=CONF.libvirt.virt_type,
+                        host=self._host)
                 new_xml_str = libvirt_migrate.get_updated_guest_xml(
                     # TODO(sahid): It's not a really good idea to pass
                     # the method _get_volume_config and we should to find
                     # a way to avoid this in future.
-                    guest, migrate_data, self._get_volume_config)
+                    guest, migrate_data, self._get_volume_config,
+                    get_vif_config=get_vif_config)
             params = {
                'destination_xml': new_xml_str,
                'migrate_disks': device_names,

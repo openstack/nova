@@ -17,9 +17,11 @@ from collections import deque
 from lxml import etree
 import mock
 from oslo_utils import units
-
+import six
 
 from nova.compute import power_state
+from nova import exception
+from nova.network import model as network_model
 from nova import objects
 from nova import test
 from nova.tests.unit import matchers
@@ -668,6 +670,129 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
     <discard />
   </memoryBacking>
 </domain>"""))
+
+    def test_update_vif_xml(self):
+        """Simulates updating the guest xml for live migrating from a host
+        using OVS to a host using vhostuser as the networking backend.
+        """
+        vif_ovs = network_model.VIF(id=uuids.vif,
+                                    address='DE:AD:BE:EF:CA:FE',
+                                    details={'port_filter': False},
+                                    devname='tap-xxx-yyy-zzz',
+                                    ovs_interfaceid=uuids.ovs)
+        source_vif = vif_ovs
+        migrate_vifs = [
+            objects.VIFMigrateData(
+                port_id=uuids.port_id,
+                vnic_type=network_model.VNIC_TYPE_NORMAL,
+                vif_type=network_model.VIF_TYPE_VHOSTUSER,
+                vif_details={
+                    'vhostuser_socket': '/vhost-user/test.sock'
+                },
+                profile={},
+                host='dest.host',
+                source_vif=source_vif)
+        ]
+        data = objects.LibvirtLiveMigrateData(vifs=migrate_vifs)
+
+        original_xml = """<domain>
+ <uuid>3de6550a-8596-4937-8046-9d862036bca5</uuid>
+ <devices>
+    <interface type="bridge">
+        <mac address="DE:AD:BE:EF:CA:FE"/>
+        <model type="virtio"/>
+        <source bridge="qbra188171c-ea"/>
+        <target dev="tapa188171c-ea"/>
+        <virtualport type="openvswitch">
+            <parameters interfaceid="%s"/>
+        </virtualport>
+        <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
+                 function='0x0'/>
+    </interface>
+ </devices>
+</domain>""" % uuids.ovs
+
+        conf = vconfig.LibvirtConfigGuestInterface()
+        conf.net_type = "vhostuser"
+        conf.vhostuser_type = "unix"
+        conf.vhostuser_mode = "server"
+        conf.mac_addr = "DE:AD:BE:EF:CA:FE"
+        conf.vhostuser_path = "/vhost-user/test.sock"
+        conf.model = "virtio"
+
+        get_vif_config = mock.MagicMock(return_value=conf)
+        doc = etree.fromstring(original_xml)
+        updated_xml = etree.tostring(
+            migration._update_vif_xml(doc, data, get_vif_config),
+            encoding='unicode')
+
+        # Note that <target> and <virtualport> are dropped from the ovs source
+        # interface xml since they aren't applicable to the vhostuser
+        # destination interface xml. The type attribute value changes and the
+        # hardware address element is retained.
+        expected_xml = """<domain>
+ <uuid>3de6550a-8596-4937-8046-9d862036bca5</uuid>
+ <devices>
+    <interface type="vhostuser">
+        <mac address="DE:AD:BE:EF:CA:FE"/>
+        <model type="virtio"/>
+        <source mode="server" path="/vhost-user/test.sock" type="unix"/>
+        <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
+                 function='0x0'/>
+    </interface>
+ </devices>
+</domain>"""
+        self.assertThat(updated_xml, matchers.XMLMatches(expected_xml))
+
+    def test_update_vif_xml_no_mac_address_in_xml(self):
+        """Tests that the <mac address> is not found in the <interface> XML
+        which results in an error.
+        """
+        data = objects.LibvirtLiveMigrateData(vifs=[
+            objects.VIFMigrateData(source_vif=network_model.VIF(
+                address="DE:AD:BE:EF:CA:FE"))])
+        original_xml = """<domain>
+         <uuid>3de6550a-8596-4937-8046-9d862036bca5</uuid>
+         <devices>
+            <interface type='direct'>
+                <source dev='eth0' mode='private'/>
+                <virtualport type='802.1Qbh'>
+                  <parameters profileid='finance'/>
+                </virtualport>
+            </interface>
+         </devices>
+        </domain>"""
+        get_vif_config = mock.MagicMock(new_callable=mock.NonCallableMock)
+        doc = etree.fromstring(original_xml)
+        ex = self.assertRaises(exception.NovaException,
+                               migration._update_vif_xml,
+                               doc, data, get_vif_config)
+        self.assertIn('Unable to find MAC address in interface XML',
+                      six.text_type(ex))
+
+    def test_update_vif_xml_no_matching_vif(self):
+        """Tests that the vif in the migrate data is not found in the existing
+        guest interfaces.
+        """
+        data = objects.LibvirtLiveMigrateData(vifs=[
+            objects.VIFMigrateData(source_vif=network_model.VIF(
+                address="DE:AD:BE:EF:CA:FE"))])
+        original_xml = """<domain>
+         <uuid>3de6550a-8596-4937-8046-9d862036bca5</uuid>
+         <devices>
+            <interface type="bridge">
+                <mac address="CA:FE:DE:AD:BE:EF"/>
+                <model type="virtio"/>
+                <source bridge="qbra188171c-ea"/>
+                <target dev="tapa188171c-ea"/>
+            </interface>
+         </devices>
+        </domain>"""
+        get_vif_config = mock.MagicMock(new_callable=mock.NonCallableMock)
+        doc = etree.fromstring(original_xml)
+        ex = self.assertRaises(KeyError, migration._update_vif_xml,
+                               doc, data, get_vif_config)
+        self.assertIn("CA:FE:DE:AD:BE:EF", six.text_type(ex))
 
 
 class MigrationMonitorTestCase(test.NoDBTestCase):
