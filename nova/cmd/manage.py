@@ -47,6 +47,7 @@ from sqlalchemy.engine import url as sqla_url
 from nova.api.openstack.placement import db_api as placement_db
 from nova.api.openstack.placement.objects import consumer as consumer_obj
 from nova.cmd import common as cmd_common
+from nova.compute import api as compute_api
 import nova.conf
 from nova import config
 from nova import context
@@ -2038,6 +2039,213 @@ class PlacementCommands(object):
         if not num_processed:
             return 4
         return 0
+
+    @staticmethod
+    def _get_rp_uuid_for_host(ctxt, host):
+        """Finds the resource provider (compute node) UUID for the given host.
+
+        :param ctxt: cell-targeted nova RequestContext
+        :param host: name of the compute host
+        :returns: The UUID of the resource provider (compute node) for the host
+        :raises: nova.exception.HostMappingNotFound if no host_mappings record
+            is found for the host; indicates
+            "nova-manage cell_v2 discover_hosts" needs to be run on the cell.
+        :raises: nova.exception.ComputeHostNotFound if no compute_nodes record
+            is found in the cell database for the host; indicates the
+            nova-compute service on that host might need to be restarted.
+        :raises: nova.exception.TooManyComputesForHost if there are more than
+            one compute_nodes records in the cell database for the host which
+            is only possible (under normal circumstances) for ironic hosts but
+            ironic hosts are not currently supported with host aggregates so
+            if more than one compute node is found for the host, it is
+            considered an error which the operator will need to resolve
+            manually.
+        """
+        # Get the host mapping to determine which cell it's in.
+        hm = objects.HostMapping.get_by_host(ctxt, host)
+        # Now get the compute node record for the host from the cell.
+        with context.target_cell(ctxt, hm.cell_mapping) as cctxt:
+            # There should really only be one, since only ironic
+            # hosts can have multiple nodes, and you can't have
+            # ironic hosts in aggregates for that reason. If we
+            # find more than one, it's an error.
+            nodes = objects.ComputeNodeList.get_all_by_host(
+                cctxt, host)
+
+            if len(nodes) > 1:
+                # This shouldn't happen, so we need to bail since we
+                # won't know which node to use.
+                raise exception.TooManyComputesForHost(
+                    num_computes=len(nodes), host=host)
+            return nodes[0].uuid
+
+    @action_description(
+        _("Mirrors compute host aggregates to resource provider aggregates "
+          "in the Placement service. Requires the [api_database] and "
+          "[placement] sections of the nova configuration file to be "
+          "populated."))
+    @args('--verbose', action='store_true', dest='verbose', default=False,
+          help='Provide verbose output during execution.')
+    # TODO(mriedem): Add an option for the 'remove aggregate' behavior.
+    # We know that we want to mirror hosts aggregate membership to
+    # placement, but regarding removal, what if the operator or some external
+    # tool added the resource provider to an aggregate but there is no matching
+    # host aggregate, e.g. ironic nodes or shared storage provider
+    # relationships?
+    # TODO(mriedem): Probably want an option to pass a specific host instead of
+    # doing all of them.
+    def sync_aggregates(self, verbose=False):
+        """Synchronizes nova host aggregates with resource provider aggregates
+
+        Adds nodes to missing provider aggregates in Placement.
+
+        NOTE: Depending on the size of your deployment and the number of
+        compute hosts in aggregates, this command could cause a non-negligible
+        amount of traffic to the placement service and therefore is
+        recommended to be run during maintenance windows.
+
+        Return codes:
+
+        * 0: Successful run
+        * 1: A host was found with more than one matching compute node record
+        * 2: An unexpected error occurred while working with the placement API
+        * 3: Failed updating provider aggregates in placement
+        * 4: Host mappings not found for one or more host aggregate members
+        * 5: Compute node records not found for one or more hosts
+        * 6: Resource provider not found by uuid for a given host
+        """
+        # Start by getting all host aggregates.
+        ctxt = context.get_admin_context()
+        aggregate_api = compute_api.AggregateAPI()
+        placement = aggregate_api.placement_client
+        aggregates = aggregate_api.get_aggregate_list(ctxt)
+        # Now we're going to loop over the existing compute hosts in aggregates
+        # and check to see if their corresponding resource provider, found via
+        # the host's compute node uuid, are in the same aggregate. If not, we
+        # add the resource provider to the aggregate in Placement.
+        output = lambda msg: None
+        if verbose:
+            output = lambda msg: print(msg)
+        output(_('Filling in missing placement aggregates'))
+        # Since hosts can be in more than one aggregate, keep track of the host
+        # to its corresponding resource provider uuid to avoid redundant
+        # lookups.
+        host_to_rp_uuid = {}
+        unmapped_hosts = set()  # keep track of any missing host mappings
+        computes_not_found = set()  # keep track of missing nodes
+        providers_not_found = {}  # map of hostname to missing provider uuid
+        for aggregate in aggregates:
+            output(_('Processing aggregate: %s') % aggregate.name)
+            for host in aggregate.hosts:
+                output(_('Processing host: %s') % host)
+                rp_uuid = host_to_rp_uuid.get(host)
+                if not rp_uuid:
+                    try:
+                        rp_uuid = self._get_rp_uuid_for_host(ctxt, host)
+                        host_to_rp_uuid[host] = rp_uuid
+                    except exception.HostMappingNotFound:
+                        # Don't fail on this now, we can dump it at the end.
+                        unmapped_hosts.add(host)
+                        continue
+                    except exception.ComputeHostNotFound:
+                        # Don't fail on this now, we can dump it at the end.
+                        computes_not_found.add(host)
+                        continue
+                    except exception.TooManyComputesForHost as e:
+                        # TODO(mriedem): Should we treat this like the other
+                        # errors and not fail immediately but dump at the end?
+                        print(e.format_message())
+                        return 1
+
+                # We've got our compute node record, so now we can look to
+                # see if the matching resource provider, found via compute
+                # node uuid, is in the same aggregate in placement, found via
+                # aggregate uuid.
+                # NOTE(mriedem): We could re-use placement.aggregate_add_host
+                # here although that has to do the provider lookup by host as
+                # well, but it does handle generation conflicts.
+                resp = placement.get(  # use 1.19 to get the generation
+                    '/resource_providers/%s/aggregates' % rp_uuid,
+                    version='1.19')
+                if resp:
+                    body = resp.json()
+                    provider_aggregate_uuids = body['aggregates']
+                    # The moment of truth: is the provider in the same host
+                    # aggregate relationship?
+                    aggregate_uuid = aggregate.uuid
+                    if aggregate_uuid not in provider_aggregate_uuids:
+                        # Add the resource provider to this aggregate.
+                        provider_aggregate_uuids.append(aggregate_uuid)
+                        # Now update the provider aggregates using the
+                        # generation to ensure we're conflict-free.
+                        aggregate_update_body = {
+                            'aggregates': provider_aggregate_uuids,
+                            'resource_provider_generation':
+                                body['resource_provider_generation']
+                        }
+                        put_resp = placement.put(
+                            '/resource_providers/%s/aggregates' % rp_uuid,
+                            aggregate_update_body, version='1.19')
+                        if put_resp:
+                            output(_('Successfully added host (%(host)s) and '
+                                     'provider (%(provider)s) to aggregate '
+                                     '(%(aggregate)s).') %
+                                   {'host': host, 'provider': rp_uuid,
+                                    'aggregate': aggregate_uuid})
+                        elif put_resp.status_code == 404:
+                            # We must have raced with a delete on the resource
+                            # provider.
+                            providers_not_found[host] = rp_uuid
+                        else:
+                            # TODO(mriedem): Handle 409 conflicts by retrying
+                            # the operation.
+                            print(_('Failed updating provider aggregates for '
+                                    'host (%(host)s), provider (%(provider)s) '
+                                    'and aggregate (%(aggregate)s). Error: '
+                                    '%(error)s') %
+                                  {'host': host, 'provider': rp_uuid,
+                                   'aggregate': aggregate_uuid,
+                                   'error': put_resp.text})
+                            return 3
+                elif resp.status_code == 404:
+                    # The resource provider wasn't found. Store this for later.
+                    providers_not_found[host] = rp_uuid
+                else:
+                    print(_('An error occurred getting resource provider '
+                            'aggregates from placement for provider '
+                            '%(provider)s. Error: %(error)s') %
+                          {'provider': rp_uuid, 'error': resp.text})
+                    return 2
+
+        # Now do our error handling. Note that there is no real priority on
+        # the error code we return. We want to dump all of the issues we hit
+        # so the operator can fix them before re-running the command, but
+        # whether we return 4 or 5 or 6 doesn't matter.
+        return_code = 0
+        if unmapped_hosts:
+            print(_('The following hosts were found in nova host aggregates '
+                    'but no host mappings were found in the nova API DB. Run '
+                    '"nova-manage cell_v2 discover_hosts" and then retry. '
+                    'Missing: %s') % ','.join(unmapped_hosts))
+            return_code = 4
+
+        if computes_not_found:
+            print(_('Unable to find matching compute_nodes record entries in '
+                    'the cell database for the following hosts; does the '
+                    'nova-compute service on each host need to be restarted? '
+                    'Missing: %s') % ','.join(computes_not_found))
+            return_code = 5
+
+        if providers_not_found:
+            print(_('Unable to find matching resource provider record in '
+                    'placement with uuid for the following hosts: %s. Try '
+                    'restarting the nova-compute service on each host and '
+                    'then retry.') %
+                  ','.join('(%s=%s)' % (host, providers_not_found[host])
+                           for host in sorted(providers_not_found.keys())))
+            return_code = 6
+
+        return return_code
 
 
 CATEGORIES = {

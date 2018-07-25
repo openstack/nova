@@ -2312,6 +2312,12 @@ class AllocationUpdateFailed(NovaException):
                 'Error: %(error)s')
 
 
+class TooManyComputesForHost(NovaException):
+    msg_fmt = _('Unexpected number of compute node records '
+                '(%(num_computes)d) found for host %(host)s. There should '
+                'only be a one-to-one mapping.')
+
+
 class CertificateValidationFailed(NovaException):
     msg_fmt = _("Image signature certificate validation failed for "
                 "certificate: %(cert_uuid)s. %(reason)s")
