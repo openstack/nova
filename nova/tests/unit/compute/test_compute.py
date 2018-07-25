@@ -7524,7 +7524,10 @@ class ComputeTestCase(BaseTestCase,
 
         mock_get_filter.assert_called_once_with(fake_context,
                                          {'source_compute': self.compute.host,
-                                          'status': ['accepted', 'done'],
+                                          'status': [
+                                              'accepted',
+                                              'pre-migrating',
+                                              'done'],
                                           'migration_type': 'evacuation'})
         mock_get_inst.assert_called_once_with(fake_context)
         mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
