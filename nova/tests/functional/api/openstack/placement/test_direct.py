@@ -12,32 +12,15 @@
 
 from oslo_config import cfg
 
-from nova.api.openstack.placement import context
 from nova.api.openstack.placement import direct
-from nova.api.openstack.placement.objects import resource_provider
-from nova import test
-from nova.tests import fixtures
+from nova.tests.functional.api.openstack.placement import base
 from nova.tests import uuidsentinel
 
 
 CONF = cfg.CONF
 
 
-# FIXME(cdent): some dupes with db/test_base.py
-class TestDirect(test.NoDBTestCase):
-    USES_DB_SELF = True
-
-    def setUp(self):
-        super(TestDirect, self).setUp()
-        self.api_db = self.useFixture(fixtures.Database(database='placement'))
-        self._reset_traits_synced()
-        self.context = context.RequestContext()
-        self.addCleanup(self._reset_traits_synced)
-
-    @staticmethod
-    def _reset_traits_synced():
-        """Reset the _TRAITS_SYNCED boolean to base state."""
-        resource_provider._TRAITS_SYNCED = False
+class TestDirect(base.TestCase):
 
     def test_direct_is_there(self):
         with direct.PlacementDirect(CONF) as client:
