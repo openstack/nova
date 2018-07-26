@@ -16,6 +16,13 @@ upgrade:
     * ``GET /os-floating-ips-bulk/{host_name}``
     * ``POST /os-floating-ips-bulk``
     * ``PUT /os-floating-ips-bulk/delete``
+    * ``GET /os-floating-ip-dns``
+    * ``PUT /os-floating-ip-dns/{domain}``
+    * ``DELETE /os-floating-ip-dns/{domain}``
+    * ``GET /os-floating-ip-dns/{domain}/entries/{ip}``
+    * ``GET /os-floating-ip-dns/{domain}/entries/{name}``
+    * ``PUT /os-floating-ip-dns/{domain}/entries/{name}``
+    * ``DELETE /os-floating-ip-dns/{domain}/entries/{name}``
 
     In addition, the following configuration options have been removed.
 

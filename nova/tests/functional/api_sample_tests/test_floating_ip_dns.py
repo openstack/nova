@@ -12,81 +12,59 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.tests.functional.api import client as api_client
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 
 class FloatingIpDNSTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    sample_dir = "os-floating-ip-dns"
-
-    domain = 'domain1.example.org'
-    name = 'instance1'
-    scope = 'public'
-    project = 'project1'
-    dns_type = 'A'
-    ip = '192.168.1.1'
-
-    def _create_or_update(self):
-        subs = {'project': self.project,
-                'scope': self.scope}
-        response = self._do_put('os-floating-ip-dns/%s' % self.domain,
-                                'floating-ip-dns-create-or-update-req', subs)
-        subs.update({'domain': self.domain})
-        self._verify_response('floating-ip-dns-create-or-update-resp', subs,
-                              response, 200)
-
-    def _create_or_update_entry(self):
-        subs = {'ip': self.ip, 'dns_type': self.dns_type}
-        response = self._do_put('os-floating-ip-dns/%s/entries/%s'
-                                % (self.domain, self.name),
-                                'floating-ip-dns-create-or-update-entry-req',
-                                subs)
-        subs.update({'name': self.name, 'domain': self.domain})
-        self._verify_response('floating-ip-dns-create-or-update-entry-resp',
-                              subs, response, 200)
 
     def test_floating_ip_dns_list(self):
-        self._create_or_update()
-        response = self._do_get('os-floating-ip-dns')
-        subs = {'domain': self.domain,
-                'project': self.project,
-                'scope': self.scope}
-        self._verify_response('floating-ip-dns-list-resp', subs,
-                              response, 200)
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_get,
+                               'os-floating-ip-dns')
+        self.assertEqual(410, ex.response.status_code)
 
     def test_floating_ip_dns_create_or_update(self):
-        self._create_or_update()
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_put,
+                               'os-floating-ip-dns/domain1.example.org',
+                               {'project': 'project1',
+                                'scope': 'public'})
+        self.assertEqual(410, ex.response.status_code)
 
     def test_floating_ip_dns_delete(self):
-        self._create_or_update()
-        response = self._do_delete('os-floating-ip-dns/%s' % self.domain)
-        self.assertEqual(202, response.status_code)
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_delete,
+                               'os-floating-ip-dns/domain1.example.org')
+        self.assertEqual(410, ex.response.status_code)
 
     def test_floating_ip_dns_create_or_update_entry(self):
-        self._create_or_update_entry()
+        url = 'os-floating-ip-dns/domain1.example.org/entries/instance1'
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_put,
+                               url,
+                               {'ip': '192.168.1.1',
+                                'dns_type': 'A'})
+        self.assertEqual(410, ex.response.status_code)
 
     def test_floating_ip_dns_entry_get(self):
-        self._create_or_update_entry()
-        response = self._do_get('os-floating-ip-dns/%s/entries/%s'
-                                % (self.domain, self.name))
-        subs = {'domain': self.domain,
-                'ip': self.ip,
-                'name': self.name}
-        self._verify_response('floating-ip-dns-entry-get-resp', subs,
-                              response, 200)
+        url = 'os-floating-ip-dns/domain1.example.org/entries/instance1'
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_get,
+                               url)
+        self.assertEqual(410, ex.response.status_code)
 
     def test_floating_ip_dns_entry_delete(self):
-        self._create_or_update_entry()
-        response = self._do_delete('os-floating-ip-dns/%s/entries/%s'
-                                   % (self.domain, self.name))
-        self.assertEqual(202, response.status_code)
+        url = 'os-floating-ip-dns/domain1.example.org/entries/instance1'
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_delete,
+                               url)
+        self.assertEqual(410, ex.response.status_code)
 
     def test_floating_ip_dns_entry_list(self):
-        self._create_or_update_entry()
-        response = self._do_get('os-floating-ip-dns/%s/entries/%s'
-                                % (self.domain, self.ip))
-        subs = {'domain': self.domain,
-                'ip': self.ip,
-                'name': self.name}
-        self._verify_response('floating-ip-dns-entry-list-resp', subs,
-                              response, 200)
+        url = 'os-floating-ip-dns/domain1.example.org/entries/192.168.1.1'
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_get,
+                               url)
+        self.assertEqual(410, ex.response.status_code)
