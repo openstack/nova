@@ -2122,6 +2122,11 @@ class ConcurrentUpdateDetected(NovaException):
                 "Please retry your update")
 
 
+class ResourceProviderConcurrentUpdateDetected(ConcurrentUpdateDetected):
+    msg_fmt = _("Another thread concurrently updated the resource provider "
+                "data. Please retry your update")
+
+
 class ResourceClassNotFound(NotFound):
     msg_fmt = _("No such resource class %(resource_class)s.")
 
