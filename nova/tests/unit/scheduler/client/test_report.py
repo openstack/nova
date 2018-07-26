@@ -2605,7 +2605,8 @@ class TestInventory(SchedulerReportClientTestCase):
             }
         }
         mock_put.assert_called_once_with(
-            exp_url, expected, global_request_id=self.context.global_id)
+            exp_url, expected, version='1.26',
+            global_request_id=self.context.global_id)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
@@ -2685,7 +2686,8 @@ class TestInventory(SchedulerReportClientTestCase):
             }
         }
         mock_put.assert_called_once_with(
-            exp_url, expected, global_request_id=self.context.global_id)
+            exp_url, expected, version='1.26',
+            global_request_id=self.context.global_id)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')

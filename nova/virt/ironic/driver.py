@@ -300,22 +300,13 @@ class IronicDriver(virt_driver.ComputeDriver):
         memory_mb_used = 0
         local_gb_used = 0
 
-        if self._node_resources_used(node):
-            # Node is in the process of deploying, is deployed, or is in
-            # the process of cleaning up from a deploy. Report all of its
-            # resources as in use.
+        if (self._node_resources_used(node)
+                or self._node_resources_unavailable(node)):
+            # Node is deployed, or is in a state when deployment can not start.
+            # Report all of its resources as in use.
             vcpus_used = vcpus
             memory_mb_used = memory_mb
             local_gb_used = local_gb
-        # Always checking allows us to catch the case where Nova thinks there
-        # are available resources on the Node, but Ironic does not (because it
-        # is not in a usable state): https://launchpad.net/bugs/1503453
-        elif self._node_resources_unavailable(node):
-            # The node's current state is such that it should not present any
-            # of its resources to Nova
-            vcpus = 0
-            memory_mb = 0
-            local_gb = 0
 
         dic = {
             'uuid': str(node.uuid),
@@ -796,21 +787,20 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         # nodename is the ironic node's UUID.
         node = self._node_from_cache(nodename)
+        reserved = False
         # TODO(jaypipes): Completely remove the reporting of VCPU, MEMORY_MB,
         # and DISK_GB resource classes in early Queens when Ironic nodes will
         # *always* return the custom resource class that represents the
         # baremetal node class in an atomic, singular unit.
         if (not self._node_resources_used(node) and
-            self._node_resources_unavailable(node)):
-            # TODO(dtantsur): report resources as reserved instead of reporting
-            # an empty inventory
+                self._node_resources_unavailable(node)):
             LOG.debug('Node %(node)s is not ready for a deployment, '
-                      'reporting an empty inventory for it. Node\'s '
+                      'reporting resources as reserved for it. Node\'s '
                       'provision state is %(prov)s, power state is '
                       '%(power)s and maintenance is %(maint)s.',
                       {'node': node.uuid, 'prov': node.provision_state,
                        'power': node.power_state, 'maint': node.maintenance})
-            return {}
+            reserved = True
 
         info = self._node_resource(node)
         result = {}
@@ -822,7 +812,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             if info[field]:
                 result[rc] = {
                     'total': info[field],
-                    'reserved': 0,
+                    'reserved': info[field] if reserved else 0,
                     'min_unit': 1,
                     'max_unit': info[field],
                     'step_size': 1,
@@ -837,7 +827,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             if norm_name is not None:
                 result[norm_name] = {
                     'total': 1,
-                    'reserved': 0,
+                    'reserved': int(reserved),
                     'min_unit': 1,
                     'max_unit': 1,
                     'step_size': 1,
@@ -876,17 +866,22 @@ class IronicDriver(virt_driver.ComputeDriver):
         """Returns a node from the cache, retrieving the node from Ironic API
         if the node doesn't yet exist in the cache.
         """
-        cache_age = time.time() - self.node_cache_time
-        if node_uuid in self.node_cache:
-            LOG.debug("Using cache for node %(node)s, age: %(age)s",
-                      {'node': node_uuid, 'age': cache_age})
-            return self.node_cache[node_uuid]
-        else:
-            LOG.debug("Node %(node)s not found in cache, age: %(age)s",
-                      {'node': node_uuid, 'age': cache_age})
-            node = self._get_node(node_uuid)
-            self.node_cache[node_uuid] = node
-            return node
+        # NOTE(vdrok): node_cache might also be modified during instance
+        # _unprovision call, hence this function is synchronized
+        @utils.synchronized('ironic-node-%s' % node_uuid)
+        def _sync_node_from_cache():
+            cache_age = time.time() - self.node_cache_time
+            if node_uuid in self.node_cache:
+                LOG.debug("Using cache for node %(node)s, age: %(age)s",
+                          {'node': node_uuid, 'age': cache_age})
+                return self.node_cache[node_uuid]
+            else:
+                LOG.debug("Node %(node)s not found in cache, age: %(age)s",
+                          {'node': node_uuid, 'age': cache_age})
+                node = self._get_node(node_uuid)
+                self.node_cache[node_uuid] = node
+                return node
+        return _sync_node_from_cache()
 
     def get_info(self, instance):
         """Get the current state and resource usage for this instance.
@@ -1212,6 +1207,18 @@ class IronicDriver(virt_driver.ComputeDriver):
         # wait for the state transition to finish
         timer = loopingcall.FixedIntervalLoopingCall(_wait_for_provision_state)
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
+
+        # NOTE(vdrok): synchronize this function so that get_available_resource
+        # has up-to-date view of node_cache.
+        @utils.synchronized('ironic-node-%s' % node.uuid)
+        def _sync_remove_cache_entry():
+            # NOTE(vdrok): Force the cache update, so that
+            # update_usages resource tracker call that will happen next
+            # has the up-to-date node view.
+            self.node_cache.pop(node.uuid, None)
+            LOG.debug('Removed node %(uuid)s from node cache.',
+                      {'uuid': node.uuid})
+        _sync_remove_cache_entry()
 
     def destroy(self, context, instance, network_info,
                 block_device_info=None, destroy_disks=True):

@@ -49,6 +49,7 @@ WARN_EVERY = 10
 PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
 CONSUMER_GENERATION_VERSION = '1.28'
 GRANULAR_AC_VERSION = '1.25'
+ALLOW_RESERVED_EQUAL_TOTAL_INVENTORY_VERSION = '1.26'
 POST_RPS_RETURNS_PAYLOAD_API_VERSION = '1.20'
 AGGREGATE_GENERATION_VERSION = '1.19'
 NESTED_PROVIDER_API_VERSION = '1.14'
@@ -868,7 +869,11 @@ class SchedulerReportClient(object):
             'inventories': inv_data,
         }
         url = '/resource_providers/%s/inventories' % rp_uuid
-        result = self.put(url, payload, global_request_id=context.global_id)
+        # NOTE(vdrok): in microversion 1.26 it is allowed to have inventory
+        # records with reserved value equal to total
+        version = ALLOW_RESERVED_EQUAL_TOTAL_INVENTORY_VERSION
+        result = self.put(url, payload, version=version,
+                          global_request_id=context.global_id)
         if result.status_code == 409:
             LOG.info('[%(placement_req_id)s] Inventory update conflict for '
                      '%(resource_provider_uuid)s with generation ID '
