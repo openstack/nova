@@ -91,7 +91,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         self.assertTrue(len(instance.system_metadata),
                         'No system_metadata for instance: %s' % server_id)
         # Now try and archive the soft deleted records.
-        results = db.archive_deleted_rows(max_rows=100)
+        results, deleted_instance_uuids = db.archive_deleted_rows(max_rows=100)
         # verify system_metadata was dropped
         self.assertIn('instance_system_metadata', results)
         self.assertEqual(len(instance.system_metadata),
@@ -133,7 +133,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         self.assertTrue(len(instance.system_metadata),
                         'No system_metadata for instance: %s' % server_id)
         # Now try and archive the soft deleted records.
-        results = db.archive_deleted_rows(max_rows=100)
+        results, deleted_instance_uuids = db.archive_deleted_rows(max_rows=100)
         # verify system_metadata was dropped
         self.assertIn('instance_system_metadata', results)
         self.assertEqual(len(instance.system_metadata),
