@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 34
+SERVICE_VERSION = 35
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -142,6 +142,9 @@ SERVICE_VERSION_HISTORY = (
     # 'max_server_per_host' rules
     {'compute_rpc': '5.0'},
     # Version 34: Adds support to abort queued/preparing live migrations.
+    {'compute_rpc': '5.0'},
+    # Version 35: Indicates that nova-compute supports live migration with
+    # ports bound early on the destination host using VIFMigrateData.
     {'compute_rpc': '5.0'},
 )
 

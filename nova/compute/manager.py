@@ -6532,6 +6532,9 @@ class ComputeManager(manager.Manager):
 
         migration = {'source_compute': self.host,
                      'dest_compute': dest, }
+        # For neutron, migrate_instance_start will activate the destination
+        # host port bindings, if there are any created by conductor before live
+        # migration started.
         self.network_api.migrate_instance_start(ctxt,
                                                 instance,
                                                 migration)
@@ -6661,6 +6664,7 @@ class ComputeManager(manager.Manager):
         #                  this is called a second time because
         #                  multi_host does not create the bridge in
         #                  plug_vifs
+        # NOTE(mriedem): This is a no-op for neutron.
         self.network_api.setup_networks_on_host(context, instance,
                                                          self.host)
         migration = {'source_compute': instance.host,
@@ -6707,10 +6711,21 @@ class ComputeManager(manager.Manager):
                 instance.progress = 0
                 instance.save(expected_task_state=task_states.MIGRATING)
 
-        # NOTE(tr3buchet): tear down networks on source host
-        self.network_api.setup_networks_on_host(context, instance,
-                                                prev_host, teardown=True)
-        # NOTE(vish): this is necessary to update dhcp
+        # NOTE(tr3buchet): tear down networks on source host (nova-net)
+        # NOTE(mriedem): For neutron, this will delete any inactive source
+        # host port bindings.
+        try:
+            self.network_api.setup_networks_on_host(context, instance,
+                                                    prev_host, teardown=True)
+        except exception.PortBindingDeletionFailed as e:
+            # Removing the inactive port bindings from the source host is not
+            # critical so just log an error but don't fail.
+            LOG.error('Network cleanup failed for source host %s during post '
+                      'live migration. You may need to manually clean up '
+                      'resources in the network service. Error: %s',
+                      prev_host, six.text_type(e))
+        # NOTE(vish): this is necessary to update dhcp for nova-network
+        # NOTE(mriedem): This is a no-op for neutron.
         self.network_api.setup_networks_on_host(context, instance, self.host)
         self._notify_about_instance_usage(
                      context, instance, "live_migration.post.dest.end",
@@ -6758,7 +6773,9 @@ class ComputeManager(manager.Manager):
         instance.progress = 0
         instance.save(expected_task_state=[task_states.MIGRATING])
 
-        # NOTE(tr3buchet): setup networks on source host (really it's re-setup)
+        # NOTE(tr3buchet): setup networks on source host (really it's re-setup
+        #                  for nova-network)
+        # NOTE(mriedem): This is a no-op for neutron.
         self.network_api.setup_networks_on_host(context, instance, self.host)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -6801,8 +6818,18 @@ class ComputeManager(manager.Manager):
             # The port binding profiles need to be cleaned up.
             with errors_out_migration_ctxt(migration):
                 try:
+                    # This call will delete any inactive destination host
+                    # port bindings.
                     self.network_api.setup_networks_on_host(
-                        context, instance, teardown=True)
+                        context, instance, host=dest, teardown=True)
+                except exception.PortBindingDeletionFailed as e:
+                    # Removing the inactive port bindings from the destination
+                    # host is not critical so just log an error but don't fail.
+                    LOG.error(
+                        'Network cleanup failed for destination host %s '
+                        'during live migration rollback. You may need to '
+                        'manually clean up resources in the network service. '
+                        'Error: %s', dest, six.text_type(e))
                 except Exception:
                     with excutils.save_and_reraise_exception():
                         LOG.exception(
@@ -6842,9 +6869,25 @@ class ComputeManager(manager.Manager):
             action=fields.NotificationAction.LIVE_MIGRATION_ROLLBACK_DEST,
             phase=fields.NotificationPhase.START)
         try:
-            # NOTE(tr3buchet): tear down networks on destination host
+            # NOTE(tr3buchet): tear down networks on dest host (nova-net)
+            # NOTE(mriedem): For neutron, this call will delete any
+            # destination host port bindings.
+            # TODO(mriedem): We should eventually remove this call from
+            # this method (rollback_live_migration_at_destination) since this
+            # method is only called conditionally based on whether or not the
+            # instance is running on shared storage. _rollback_live_migration
+            # already calls this method for neutron if we are running on
+            # shared storage.
             self.network_api.setup_networks_on_host(context, instance,
                                                     self.host, teardown=True)
+        except exception.PortBindingDeletionFailed as e:
+            # Removing the inactive port bindings from the destination
+            # host is not critical so just log an error but don't fail.
+            LOG.error(
+                'Network cleanup failed for destination host %s '
+                'during live migration rollback. You may need to '
+                'manually clean up resources in the network service. '
+                'Error: %s', self.host, six.text_type(e))
         except Exception:
             with excutils.save_and_reraise_exception():
                 # NOTE(tdurakov): even if teardown networks fails driver

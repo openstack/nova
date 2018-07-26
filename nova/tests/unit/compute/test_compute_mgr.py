@@ -7585,6 +7585,41 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         _do_test()
 
+    @mock.patch('nova.compute.manager.LOG.error')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_post_live_migration_at_destination_port_binding_delete_fails(
+            self, mock_notify, mock_log_error):
+        """Tests that neutron fails to delete the source host port bindings
+        but we handle the error and just log it.
+        """
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch.object(self.compute, 'network_api')
+        @mock.patch.object(self.compute, '_get_instance_block_device_info')
+        @mock.patch.object(self.compute, '_get_power_state',
+                           return_value=power_state.RUNNING)
+        @mock.patch.object(self.compute, '_get_compute_info',
+                           return_value=objects.ComputeNode(
+                               hypervisor_hostname='fake-dest-host'))
+        @mock.patch.object(self.instance, 'save')
+        def _do_test(instance_save, get_compute_node, get_power_state,
+                     get_bdms, network_api, legacy_notify):
+            # setup_networks_on_host is called three times:
+            # 1. set the migrating_to port binding profile value (no-op)
+            # 2. delete the source host port bindings - we make this raise
+            # 3. once more to update dhcp for nova-network (no-op for neutron)
+            network_api.setup_networks_on_host.side_effect = [
+                None,
+                exception.PortBindingDeletionFailed(
+                    port_id=uuids.port_id, host='fake-source-host'),
+                None]
+            self.compute.post_live_migration_at_destination(
+                self.context, self.instance, block_migration=False)
+            self.assertEqual(1, mock_log_error.call_count)
+            self.assertIn('Network cleanup failed for source host',
+                          mock_log_error.call_args[0][0])
+
+        _do_test()
+
     @mock.patch('nova.objects.ConsoleAuthToken.'
                 'clean_console_auths_for_instance')
     def _call_post_live_migration(self, mock_clean, *args, **kwargs):
@@ -7805,6 +7840,70 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock_save.assert_called_once_with()
 
         _test()
+
+    @mock.patch('nova.compute.manager.LOG.error')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid',
+                return_value=objects.BlockDeviceMappingList())
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_rollback_live_migration_port_binding_delete_fails(
+            self, mock_notify, mock_get_bdms, mock_log_error):
+        """Tests that neutron fails to delete the destination host port
+        bindings but we handle the error and just log it.
+        """
+        migrate_data = objects.LibvirtLiveMigrateData(
+            migration=self.migration, is_shared_instance_path=True,
+            is_shared_block_storage=True)
+
+        @mock.patch.object(self.compute, '_revert_allocation')
+        @mock.patch.object(self.instance, 'save')
+        @mock.patch.object(self.compute, 'network_api')
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        def _do_test(legacy_notify, network_api, instance_save,
+                     _revert_allocation):
+            # setup_networks_on_host is called two times:
+            # 1. set the migrating_to attribute in the port binding profile,
+            #    which is a no-op in this case for neutron
+            # 2. delete the dest host port bindings - we make this raise
+            network_api.setup_networks_on_host.side_effect = [
+                None,
+                exception.PortBindingDeletionFailed(
+                    port_id=uuids.port_id, host='fake-dest-host')]
+            self.compute._rollback_live_migration(
+                self.context, self.instance, 'fake-dest-host', migrate_data)
+            self.assertEqual(1, mock_log_error.call_count)
+            self.assertIn('Network cleanup failed for destination host',
+                          mock_log_error.call_args[0][0])
+
+        _do_test()
+
+    @mock.patch('nova.compute.manager.LOG.error')
+    def test_rollback_live_migration_at_destination_port_binding_delete_fails(
+            self, mock_log_error):
+        """Tests that neutron fails to delete the destination host port
+        bindings but we handle the error and just log it.
+        """
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch.object(self.compute, 'network_api')
+        @mock.patch.object(self.compute, '_get_instance_block_device_info')
+        @mock.patch.object(self.compute.driver,
+                           'rollback_live_migration_at_destination')
+        def _do_test(driver_rollback, get_bdms, network_api, legacy_notify):
+            self.compute.network_api.setup_networks_on_host.side_effect = (
+                exception.PortBindingDeletionFailed(
+                    port_id=uuids.port_id, host='fake-dest-host'))
+            self.compute.rollback_live_migration_at_destination(
+                self.context, self.instance, destroy_disks=False,
+                migrate_data=mock.sentinel.migrate_data)
+            self.assertEqual(1, mock_log_error.call_count)
+            self.assertIn('Network cleanup failed for destination host',
+                          mock_log_error.call_args[0][0])
+            driver_rollback.assert_called_once_with(
+                self.context, self.instance,
+                network_api.get_instance_nw_info.return_value,
+                get_bdms.return_value, destroy_disks=False,
+                migrate_data=mock.sentinel.migrate_data)
+
+        _do_test()
 
     def _get_migration(self, migration_id, status, migration_type):
         migration = objects.Migration()

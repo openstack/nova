@@ -6661,7 +6661,7 @@ class ComputeTestCase(BaseTestCase,
                           bdms=bdms)])
             mock_nw_api.setup_networks_on_host.assert_has_calls([
                 mock.call(c, instance, self.compute.host),
-                mock.call(c, instance, teardown=True)
+                mock.call(c, instance, host='foo', teardown=True)
             ])
             mock_ra.assert_called_once_with(mock.ANY, instance, migration)
             mock_mig_save.assert_called_once_with()
@@ -6717,7 +6717,7 @@ class ComputeTestCase(BaseTestCase,
             #   'do_cleanup'.
             mock_nw_setup.assert_has_calls([
                 mock.call(ctxt, instance, self.compute.host),
-                mock.call(ctxt, instance, teardown=True)
+                mock.call(ctxt, instance, host='dest-host', teardown=True)
             ])
             mock_ra.assert_called_once_with(ctxt, instance, migration)
             mock_mig_save.assert_called_once_with()
