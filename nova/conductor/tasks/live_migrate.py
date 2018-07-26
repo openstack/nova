@@ -21,6 +21,7 @@ from nova.conductor.tasks import migrate
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova import network
 from nova import objects
 from nova.scheduler import utils as scheduler_utils
 from nova import utils
@@ -33,6 +34,19 @@ def should_do_migration_allocation(context):
     minver = objects.Service.get_minimum_version_multi(context,
                                                        ['nova-compute'])
     return minver >= 25
+
+
+def supports_extended_port_binding(context, host):
+    """Checks if the compute host service is new enough to support the neutron
+    port binding-extended details.
+
+    :param context: The user request context.
+    :param host: The nova-compute host to check.
+    :returns: True if the compute host is new enough to support extended
+              port binding information, False otherwise.
+    """
+    svc = objects.Service.get_by_host_and_binary(context, host, 'nova-compute')
+    return svc.version >= 35
 
 
 class LiveMigrationTask(base.TaskBase):
@@ -53,6 +67,7 @@ class LiveMigrationTask(base.TaskBase):
         self.request_spec = request_spec
         self._source_cn = None
         self._held_allocations = None
+        self.network_api = network.API()
 
     def _execute(self):
         self._check_instance_is_active()
@@ -226,6 +241,46 @@ class LiveMigrationTask(base.TaskBase):
             msg = _("Timeout while checking if we can live migrate to host: "
                     "%s") % destination
             raise exception.MigrationPreCheckError(msg)
+
+        if not self.network_api.supports_port_binding_extension(self.context):
+            LOG.debug('Extended port binding is not available.',
+                      instance=self.instance)
+            # Neutron doesn't support the binding-extended API so we can't
+            # attempt port binding on the destination host.
+            return
+
+        # Check to see that both the source and destination compute hosts
+        # are new enough to support the new port binding flow.
+        if (supports_extended_port_binding(self.context, self.source) and
+                supports_extended_port_binding(self.context, destination)):
+            self.migrate_data.vifs = (
+                self._bind_ports_on_destination(destination))
+
+    def _bind_ports_on_destination(self, destination):
+        LOG.debug('Start binding ports on destination host: %s', destination,
+                  instance=self.instance)
+        # Bind ports on the destination host; returns a dict, keyed by
+        # port ID, of a new destination host port binding dict per port
+        # that was bound. This information is then stuffed into the
+        # migrate_data.
+        try:
+            bindings = self.network_api.bind_ports_to_host(
+                self.context, self.instance, destination)
+        except exception.PortBindingFailed as e:
+            # Port binding failed for that host, try another one.
+            raise exception.MigrationPreCheckError(
+                reason=e.format_message())
+
+        source_vif_map = {
+            vif['id']: vif for vif in self.instance.get_network_info()
+        }
+        migrate_vifs = []
+        for port_id, binding in bindings.items():
+            migrate_vif = objects.VIFMigrateData(
+                port_id=port_id, **binding)
+            migrate_vif.source_vif = source_vif_map[port_id]
+            migrate_vifs.append(migrate_vif)
+        return migrate_vifs
 
     def _get_source_cell_mapping(self):
         """Returns the CellMapping for the cell in which the instance lives

@@ -19,6 +19,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 from nova.conductor.tasks import live_migrate
 from nova import exception
+from nova.network import model as network_model
 from nova import objects
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
@@ -222,8 +223,11 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         mock_get_info.return_value = hypervisor_details
         mock_check.return_value = "migrate_data"
 
-        self.assertEqual((hypervisor_details, hypervisor_details),
-                         self.task._check_requested_destination())
+        with mock.patch.object(self.task.network_api,
+                               'supports_port_binding_extension',
+                               return_value=False):
+            self.assertEqual((hypervisor_details, hypervisor_details),
+                             self.task._check_requested_destination())
         self.assertEqual("migrate_data", self.task.migrate_data)
         mock_get_host.assert_called_once_with(self.context, self.destination)
         mock_is_up.assert_called_once_with("service")
@@ -325,8 +329,11 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         mock_get_info.return_value = hypervisor_details
         mock_check.return_value = "migrate_data"
 
-        ex = self.assertRaises(exception.MigrationPreCheckError,
-                               self.task._check_requested_destination)
+        with mock.patch.object(self.task.network_api,
+                               'supports_port_binding_extension',
+                               return_value=False):
+            ex = self.assertRaises(exception.MigrationPreCheckError,
+                                   self.task._check_requested_destination)
         self.assertIn('across cells', six.text_type(ex))
 
     @mock.patch.object(live_migrate.LiveMigrationTask,
@@ -562,6 +569,42 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             side_effect=messaging.MessagingTimeout):
             self.assertRaises(exception.MigrationPreCheckError,
                 self.task._call_livem_checks_on_host, {})
+
+    @mock.patch('nova.conductor.tasks.live_migrate.'
+                'supports_extended_port_binding', return_value=True)
+    def test_call_livem_checks_on_host_bind_ports(self, mock_supports_ext):
+        data = objects.LibvirtLiveMigrateData()
+        bindings = {
+            uuids.port1: {'host': 'dest-host'},
+            uuids.port2: {'host': 'dest-host'}
+        }
+
+        @mock.patch.object(self.task.compute_rpcapi,
+                           'check_can_live_migrate_destination',
+                           return_value=data)
+        @mock.patch.object(self.task.network_api,
+                           'supports_port_binding_extension',
+                           return_value=True)
+        @mock.patch.object(self.task.network_api,
+                           'bind_ports_to_host', return_value=bindings)
+        def _test(mock_bind_ports_to_host, mock_supports_port_binding,
+                  mock_check_can_live_migrate_dest):
+            nwinfo = network_model.NetworkInfo([
+                network_model.VIF(uuids.port1),
+                network_model.VIF(uuids.port2)])
+            self.instance.info_cache = objects.InstanceInfoCache(
+                network_info=nwinfo)
+            self.task._call_livem_checks_on_host('dest-host')
+            # Assert the migrate_data set on the task based on the port
+            # bindings created.
+            self.assertIn('vifs', data)
+            self.assertEqual(2, len(data.vifs))
+            for vif in data.vifs:
+                self.assertIn('source_vif', vif)
+                self.assertEqual('dest-host', vif.host)
+                self.assertEqual(vif.port_id, vif.source_vif['id'])
+
+        _test()
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
                        side_effect=exception.InstanceMappingNotFound(
