@@ -85,6 +85,11 @@ class ConcurrentUpdateDetected(_BaseException):
                 "Please retry your update")
 
 
+class ResourceProviderConcurrentUpdateDetected(ConcurrentUpdateDetected):
+    msg_fmt = _("Another thread concurrently updated the resource provider "
+                "data. Please retry your update")
+
+
 class InvalidAllocationCapacityExceeded(InvalidInventory):
     msg_fmt = _("Unable to create allocation for '%(resource_class)s' on "
                 "resource provider '%(resource_provider)s'. The requested "

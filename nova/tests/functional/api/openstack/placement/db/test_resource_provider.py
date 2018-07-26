@@ -11,6 +11,7 @@
 #    under the License.
 
 
+import functools
 import mock
 import os_traits
 from oslo_db import exception as db_exc
@@ -1700,6 +1701,91 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         allocations = rp_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, empty_rp)
         self.assertEqual(0, len(allocations))
+
+    @mock.patch('nova.api.openstack.placement.objects.resource_provider.LOG')
+    def test_set_allocations_retry(self, mock_log):
+        """Test server side allocation write retry handling."""
+
+        # Create a single resource provider and give it some inventory.
+        rp1 = self._create_provider('rp1')
+        tb.add_inventory(rp1, fields.ResourceClass.VCPU, 24,
+                         allocation_ratio=16.0)
+        tb.add_inventory(rp1, fields.ResourceClass.MEMORY_MB, 1024,
+                         min_unit=64,
+                         max_unit=1024,
+                         step_size=64)
+        original_generation = rp1.generation
+        # Verify the generation is what we expect (we'll be checking again
+        # later).
+        self.assertEqual(2, original_generation)
+
+        # Create a consumer and have it make an allocation.
+        inst_consumer = consumer_obj.Consumer(
+            self.ctx, uuid=uuidsentinel.instance, user=self.user_obj,
+            project=self.project_obj)
+        inst_consumer.create()
+
+        alloc_list = rp_obj.AllocationList(context=self.ctx,
+            objects=[
+                rp_obj.Allocation(
+                    context=self.ctx,
+                    consumer=inst_consumer,
+                    resource_provider=rp1,
+                    resource_class=fields.ResourceClass.VCPU,
+                    used=12),
+                rp_obj.Allocation(
+                    context=self.ctx,
+                    consumer=inst_consumer,
+                    resource_provider=rp1,
+                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    used=1024)
+            ])
+
+        # Make sure the right exception happens when the retry loop expires.
+        with mock.patch.object(rp_obj.AllocationList,
+                               'RP_CONFLICT_RETRY_COUNT', 0):
+            self.assertRaises(
+                exception.ResourceProviderConcurrentUpdateDetected,
+                alloc_list.replace_all)
+            mock_log.warning.assert_called_with(
+                'Exceeded retry limit of %d on allocations write', 0)
+
+        # Make sure the right thing happens after a small number of failures.
+        # There's a bit of mock magic going on here to enusre that we can
+        # both do some side effects on _set_allocations as well as have the
+        # real behavior. Two generation conflicts and then a success.
+        mock_log.reset_mock()
+        with mock.patch.object(rp_obj.AllocationList,
+                               'RP_CONFLICT_RETRY_COUNT', 3):
+            unmocked_set = functools.partial(
+                rp_obj.AllocationList._set_allocations, alloc_list)
+            with mock.patch(
+                'nova.api.openstack.placement.objects.resource_provider.'
+                'AllocationList._set_allocations') as mock_set:
+                exceptions = iter([
+                    exception.ResourceProviderConcurrentUpdateDetected(),
+                    exception.ResourceProviderConcurrentUpdateDetected(),
+                ])
+
+                def side_effect(*args, **kwargs):
+                    try:
+                        raise next(exceptions)
+                    except StopIteration:
+                        return unmocked_set(*args, **kwargs)
+
+                mock_set.side_effect = side_effect
+                alloc_list.replace_all()
+                self.assertEqual(2, mock_log.debug.call_count)
+                mock_log.debug.called_with(
+                    'Retrying allocations write on resource provider '
+                    'generation conflict')
+                self.assertEqual(3, mock_set.call_count)
+
+        # Confirm we're using a different rp object after the change
+        # and that it has a higher generation.
+        new_rp = alloc_list[0].resource_provider
+        self.assertEqual(original_generation, rp1.generation)
+        self.assertEqual(original_generation + 1, new_rp.generation)
 
 
 class UsageListTestCase(tb.PlacementDbBaseTestCase):
