@@ -3,9 +3,9 @@
 .. needs:example_verification
 .. needs:body_verification
 
-==========================================================
- Floating IP DNS records (os-floating-ip-dns) (DEPRECATED)
-==========================================================
+=============================================
+ Floating IP DNS records (os-floating-ip-dns)
+=============================================
 
 .. warning::
 

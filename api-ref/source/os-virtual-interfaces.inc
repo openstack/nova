@@ -1,8 +1,8 @@
 .. -*- rst -*-
 
-=========================================================================
- Servers virtual interfaces (servers, os-virtual-interfaces) (DEPRECATED)
-=========================================================================
+============================================================
+ Servers virtual interfaces (servers, os-virtual-interfaces)
+============================================================
 
 Lists virtual interfaces for a server.
 
