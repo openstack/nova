@@ -936,6 +936,7 @@ class ResourceTracker(object):
         cn.memory_mb_used += sign * mem_usage
         cn.local_gb_used += sign * disk_usage
         cn.local_gb_used += sign * usage.get('ephemeral_gb', 0)
+        cn.local_gb_used += sign * usage.get('swap', 0) / 1024
         cn.vcpus_used += sign * vcpus_usage
 
         # free ram and disk may be negative, depending on policy:
@@ -1457,6 +1458,7 @@ class ResourceTracker(object):
             is_bfv = compute_utils.is_volume_backed_instance(
                 object_or_dict._context, object_or_dict)
             usage = {'memory_mb': object_or_dict.flavor.memory_mb,
+                     'swap': object_or_dict.flavor.swap,
                      'vcpus': object_or_dict.flavor.vcpus,
                      'root_gb': (0 if is_bfv else
                                  object_or_dict.flavor.root_gb),

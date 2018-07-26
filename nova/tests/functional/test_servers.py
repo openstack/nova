@@ -3649,9 +3649,7 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual(expected_usage, resources['DISK_GB'])
         # Ensure the compute node is reporting the correct disk usage
         self.assertEqual(
-            # TODO(efried): Due to bug #1782386, swap is not being reported.
-            # expected_usage,
-            30,
+            expected_usage,
             self.admin_api.get_hypervisor_stats()['local_gb_used'])
 
     def test_volume_backed_no_disk_allocation(self):
@@ -3664,9 +3662,7 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual(expected_usage, resources['DISK_GB'])
         # Ensure the compute node is reporting the correct disk usage
         self.assertEqual(
-            # TODO(efried): Due to bug #1782386, swap is not being reported.
-            # expected_usage,
-            20,
+            expected_usage,
             self.admin_api.get_hypervisor_stats()['local_gb_used'])
 
         # Now let's hack the RequestSpec.is_bfv field to mimic migrating an
