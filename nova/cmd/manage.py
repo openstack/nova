@@ -61,6 +61,7 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import build_request as build_request_obj
 from nova.objects import host_mapping as host_mapping_obj
 from nova.objects import instance as instance_obj
+from nova.objects import instance_mapping as instance_mapping_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import request_spec
@@ -409,6 +410,8 @@ class DbCommands(object):
         instance_obj.populate_missing_availability_zones,
         # Added in Rocky
         consumer_obj.create_incomplete_consumers,
+        # Added in Rocky
+        instance_mapping_obj.populate_queued_for_delete,
     )
 
     def __init__(self):
