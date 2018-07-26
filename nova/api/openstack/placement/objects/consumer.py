@@ -229,7 +229,7 @@ class Consumer(base.VersionedObject, base.TimestampedObject):
             # above just for safety. We don't need to check that the statement
             # actually updated a single row. If it did not, then the
             # consumer.increment_generation() call that happens in
-            # AllocationList.create_all() will end up raising
+            # AllocationList.replace_all() will end up raising
             # ConcurrentUpdateDetected anyway
             upd_stmt = upd_stmt.where(sa.and_(
                 CONSUMER_TBL.c.id == self.id,
