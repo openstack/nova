@@ -8,6 +8,7 @@
 
    Since these APIs are only implemented for **nova-network**, they are
    deprecated. These will fail with a 404 starting from microversion 2.36.
+   It was removed in the 18.0.0 Rocky release.
 
 Bulk-creates, deletes, and lists floating IPs.
 Default pool name is ``nova``.
@@ -24,7 +25,8 @@ Lists all floating IPs.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+gone(410)
 
 Response
 --------
@@ -54,7 +56,7 @@ Bulk-creates floating IPs.
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-conflict(409)
+conflict(409), gone(410)
 
 Request
 -------
@@ -96,7 +98,8 @@ Bulk-deletes floating IPs.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), gone(410)
 
 Request
 -------
@@ -131,7 +134,8 @@ Lists all floating IPs for a host.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+gone(410)
 
 Request
 -------

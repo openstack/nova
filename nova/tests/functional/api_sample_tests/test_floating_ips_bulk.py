@@ -14,7 +14,7 @@
 #    under the License.
 
 import nova.conf
-from nova import context
+from nova.tests.functional.api import client as api_client
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 CONF = nova.conf.CONF
@@ -22,61 +22,30 @@ CONF = nova.conf.CONF
 
 class FloatingIpsBulkTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    sample_dir = "os-floating-ips-bulk"
-
-    def setUp(self):
-        super(FloatingIpsBulkTest, self).setUp()
-        pool = CONF.default_floating_pool
-        interface = CONF.public_interface
-
-        self.ip_pool = [
-            {
-                'address': "10.10.10.1",
-                'pool': pool,
-                'interface': interface,
-                'host': None
-                },
-            {
-                'address': "10.10.10.2",
-                'pool': pool,
-                'interface': interface,
-                'host': None
-                },
-            {
-                'address': "10.10.10.3",
-                'pool': pool,
-                'interface': interface,
-                'host': "testHost"
-                },
-            ]
-        self.compute.db.floating_ip_bulk_create(
-            context.get_admin_context(), self.ip_pool)
-
-        self.addCleanup(self.compute.db.floating_ip_bulk_destroy,
-            context.get_admin_context(), self.ip_pool)
 
     def test_floating_ips_bulk_list(self):
-        response = self._do_get('os-floating-ips-bulk')
-        self._verify_response('floating-ips-bulk-list-resp',
-                              {}, response, 200)
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_get, 'os-floating-ips-bulk')
+        self.assertEqual(410, ex.response.status_code)
 
     def test_floating_ips_bulk_list_by_host(self):
-        response = self._do_get('os-floating-ips-bulk/testHost')
-        self._verify_response('floating-ips-bulk-list-by-host-resp',
-                              {}, response, 200)
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_get,
+                               'os-floating-ips-bulk/testHost')
+        self.assertEqual(410, ex.response.status_code)
 
     def test_floating_ips_bulk_create(self):
-        response = self._do_post('os-floating-ips-bulk',
-                                 'floating-ips-bulk-create-req',
-                                 {"ip_range": "192.168.1.0/24",
-                                  "pool": CONF.default_floating_pool,
-                                  "interface": CONF.public_interface})
-        self._verify_response('floating-ips-bulk-create-resp', {},
-                              response, 200)
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_post,
+                               '/os-floating-ips-bulk',
+                               {"ip_range": "192.168.1.0/24",
+                                "pool": CONF.default_floating_pool,
+                                "interface": CONF.public_interface})
+        self.assertEqual(410, ex.response.status_code)
 
     def test_floating_ips_bulk_delete(self):
-        response = self._do_put('os-floating-ips-bulk/delete',
-                                'floating-ips-bulk-delete-req',
-                                {"ip_range": "192.168.1.0/24"})
-        self._verify_response('floating-ips-bulk-delete-resp', {},
-                              response, 200)
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.api_put,
+                               'os-floating-ips-bulk/delete',
+                               {"ip_range": "192.168.1.0/24"})
+        self.assertEqual(410, ex.response.status_code)
