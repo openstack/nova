@@ -92,23 +92,48 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_get_power_state')
     @mock.patch.object(manager.ComputeManager, '_sync_instance_power_state')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
-    def _test_handle_lifecycle_event(self, mock_get, mock_sync,
-                                     mock_get_power_state, transition,
-                                     event_pwr_state, current_pwr_state):
+    @mock.patch.object(objects.Migration, 'get_by_instance_and_status')
+    @mock.patch.object(nova.network.neutronv2.api.API,
+                       'migrate_instance_start')
+    def _test_handle_lifecycle_event(self, migrate_instance_start,
+                                     mock_get_migration, mock_get,
+                                     mock_sync, mock_get_power_state,
+                                     transition, event_pwr_state,
+                                     current_pwr_state):
         event = mock.Mock()
-        event.get_instance_uuid.return_value = mock.sentinel.uuid
+        mock_get.return_value = fake_instance.fake_instance_obj(self.context,
+                                    task_state=task_states.MIGRATING)
         event.get_transition.return_value = transition
         mock_get_power_state.return_value = current_pwr_state
 
         self.compute.handle_lifecycle_event(event)
+        mock_get.assert_called_once_with(
+            test.MatchType(context.RequestContext),
+            event.get_instance_uuid.return_value,
+            expected_attrs=['info_cache'])
 
-        mock_get.assert_called_with(mock.ANY, mock.sentinel.uuid,
-                                    expected_attrs=[])
         if event_pwr_state == current_pwr_state:
             mock_sync.assert_called_with(mock.ANY, mock_get.return_value,
                                          event_pwr_state)
         else:
             self.assertFalse(mock_sync.called)
+
+        migrate_finish_statuses = {
+            virtevent.EVENT_LIFECYCLE_POSTCOPY_STARTED: 'running (post-copy)',
+            virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED: 'running'
+        }
+        if transition in migrate_finish_statuses:
+            mock_get_migration.assert_called_with(
+                test.MatchType(context.RequestContext),
+                mock_get.return_value.uuid,
+                migrate_finish_statuses[transition])
+            migrate_instance_start.assert_called_once_with(
+                test.MatchType(context.RequestContext),
+                mock_get.return_value,
+                mock_get_migration.return_value)
+        else:
+            mock_get_migration.assert_not_called()
+            migrate_instance_start.assert_not_called()
 
     def test_handle_lifecycle_event(self):
         event_map = {virtevent.EVENT_LIFECYCLE_STOPPED: power_state.SHUTDOWN,
@@ -117,6 +142,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                      virtevent.EVENT_LIFECYCLE_RESUMED: power_state.RUNNING,
                      virtevent.EVENT_LIFECYCLE_SUSPENDED:
                          power_state.SUSPENDED,
+                     virtevent.EVENT_LIFECYCLE_POSTCOPY_STARTED:
+                         power_state.PAUSED,
+                     virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED:
+                         power_state.PAUSED,
         }
 
         for transition, pwr_state in event_map.items():
@@ -129,6 +158,35 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             transition=virtevent.EVENT_LIFECYCLE_STOPPED,
             event_pwr_state=power_state.SHUTDOWN,
             current_pwr_state=power_state.RUNNING)
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_sync_instance_power_state')
+    @mock.patch('nova.objects.Migration.get_by_instance_and_status',
+                side_effect=exception.MigrationNotFoundByStatus(
+                    instance_id=uuids.instance, status='running (post-copy)'))
+    def test_handle_lifecycle_event_postcopy_migration_not_found(
+            self, mock_get_migration, mock_sync, mock_get_instance):
+        """Tests a EVENT_LIFECYCLE_POSTCOPY_STARTED scenario where the
+        migration record is not found by the expected status.
+        """
+        inst = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance,
+            task_state=task_states.MIGRATING)
+        mock_get_instance.return_value = inst
+        event = virtevent.LifecycleEvent(
+            uuids.instance, virtevent.EVENT_LIFECYCLE_POSTCOPY_STARTED)
+        with mock.patch.object(self.compute, '_get_power_state',
+                               return_value=power_state.PAUSED):
+            with mock.patch.object(self.compute.network_api,
+                                   'migrate_instance_finish') as mig_finish:
+                self.compute.handle_lifecycle_event(event)
+        # Since we failed to find the migration record, we shouldn't call
+        # migrate_instance_finish.
+        mig_finish.assert_not_called()
+        mock_get_migration.assert_called_once_with(
+            test.MatchType(context.RequestContext), uuids.instance,
+            'running (post-copy)')
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def test_delete_instance_info_cache_delete_ordering(self, mock_notify):

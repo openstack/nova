@@ -170,7 +170,20 @@ class Host(object):
         elif event == libvirt.VIR_DOMAIN_EVENT_STARTED:
             transition = virtevent.EVENT_LIFECYCLE_STARTED
         elif event == libvirt.VIR_DOMAIN_EVENT_SUSPENDED:
-            transition = virtevent.EVENT_LIFECYCLE_PAUSED
+            # NOTE(siva_krishnan): We have to check if
+            # VIR_DOMAIN_EVENT_SUSPENDED_POSTCOPY and
+            # VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED exist since the current
+            # minimum version of libvirt (1.2.9) don't have those attributes.
+            # This check can be removed once MIN_LIBVIRT_VERSION is bumped to
+            # at least 1.3.3.
+            if (hasattr(libvirt, 'VIR_DOMAIN_EVENT_SUSPENDED_POSTCOPY') and
+                    detail == libvirt.VIR_DOMAIN_EVENT_SUSPENDED_POSTCOPY):
+                transition = virtevent.EVENT_LIFECYCLE_POSTCOPY_STARTED
+            elif (hasattr(libvirt, 'VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED') and
+                    detail == libvirt.VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED):
+                transition = virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED
+            else:
+                transition = virtevent.EVENT_LIFECYCLE_PAUSED
         elif event == libvirt.VIR_DOMAIN_EVENT_RESUMED:
             transition = virtevent.EVENT_LIFECYCLE_RESUMED
 

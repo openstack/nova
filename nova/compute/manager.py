@@ -1059,22 +1059,27 @@ class ComputeManager(manager.Manager):
                  {'state': event.get_name()},
                  instance_uuid=event.get_instance_uuid())
         context = nova.context.get_admin_context(read_deleted='yes')
+        # Join on info_cache since that's needed in migrate_instance_start.
         instance = objects.Instance.get_by_uuid(context,
                                                 event.get_instance_uuid(),
-                                                expected_attrs=[])
+                                                expected_attrs=['info_cache'])
         vm_power_state = None
-        if event.get_transition() == virtevent.EVENT_LIFECYCLE_STOPPED:
+        event_transition = event.get_transition()
+        if event_transition == virtevent.EVENT_LIFECYCLE_STOPPED:
             vm_power_state = power_state.SHUTDOWN
-        elif event.get_transition() == virtevent.EVENT_LIFECYCLE_STARTED:
+        elif event_transition == virtevent.EVENT_LIFECYCLE_STARTED:
             vm_power_state = power_state.RUNNING
-        elif event.get_transition() == virtevent.EVENT_LIFECYCLE_PAUSED:
+        elif event_transition in (
+                virtevent.EVENT_LIFECYCLE_PAUSED,
+                virtevent.EVENT_LIFECYCLE_POSTCOPY_STARTED,
+                virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED):
             vm_power_state = power_state.PAUSED
-        elif event.get_transition() == virtevent.EVENT_LIFECYCLE_RESUMED:
+        elif event_transition == virtevent.EVENT_LIFECYCLE_RESUMED:
             vm_power_state = power_state.RUNNING
-        elif event.get_transition() == virtevent.EVENT_LIFECYCLE_SUSPENDED:
+        elif event_transition == virtevent.EVENT_LIFECYCLE_SUSPENDED:
             vm_power_state = power_state.SUSPENDED
         else:
-            LOG.warning("Unexpected power state %d", event.get_transition())
+            LOG.warning("Unexpected lifecycle event: %d", event_transition)
 
         # Note(lpetrut): The event may be delayed, thus not reflecting
         # the current instance power state. In that case, ignore the event.
@@ -1094,6 +1099,36 @@ class ComputeManager(manager.Manager):
             self._sync_instance_power_state(context,
                                             instance,
                                             vm_power_state)
+
+        # The following checks are for live migration. We want to activate
+        # the port binding for the destination host before the live migration
+        # is resumed on the destination host in order to reduce network
+        # downtime. Otherwise the ports are bound to the destination host
+        # in post_live_migration_at_destination.
+        migrate_finish_statuses = {
+            # This happens on the source node and indicates live migration
+            # entered post-copy mode.
+            virtevent.EVENT_LIFECYCLE_POSTCOPY_STARTED: 'running (post-copy)',
+            # Suspended for offline migration.
+            virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED: 'running'
+        }
+        if (instance.task_state == task_states.MIGRATING and
+                event_transition in migrate_finish_statuses):
+            status = migrate_finish_statuses[event_transition]
+            try:
+                migration = objects.Migration.get_by_instance_and_status(
+                            context, instance.uuid, status)
+                LOG.debug('Binding ports to destination host: %s',
+                          migration.dest_compute, instance=instance)
+                # For neutron, migrate_instance_start will activate the
+                # destination host port bindings, if there are any created by
+                # conductor before live migration started.
+                self.network_api.migrate_instance_start(
+                    context, instance, migration)
+            except exception.MigrationNotFoundByStatus:
+                LOG.warning("Unable to find migration record with status "
+                            "'%s' for instance. Port binding will happen in "
+                            "post live migration.", status, instance=instance)
 
     def handle_events(self, event):
         if isinstance(event, virtevent.LifecycleEvent):
