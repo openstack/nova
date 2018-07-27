@@ -7863,12 +7863,17 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         def fake_post_live_migration_at_source(
                 _context, _instance, network_info):
-            # Make sure we got the source_vif and then error out so we can
-            # exit the test early.
+            # Make sure we got the source_vif for unplug.
             self.assertEqual(1, len(network_info))
             self.assertEqual(source_vif, network_info[0])
-            raise test.TestingException('all done!')
 
+        def fake_driver_cleanup(_context, _instance, network_info, *a, **kw):
+            # Make sure we got the source_vif for unplug.
+            self.assertEqual(1, len(network_info))
+            self.assertEqual(source_vif, network_info[0])
+
+        # Based on the number of mocks here, clearly _post_live_migration is
+        # too big at this point...
         @mock.patch.object(self.compute, '_get_instance_block_device_info')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
                            return_value=nw_info)
@@ -7877,16 +7882,33 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute.driver,
                            'post_live_migration_at_source',
                            side_effect=fake_post_live_migration_at_source)
-        def _test(post_live_migration_at_source, migrate_instance_start,
+        @mock.patch.object(self.compute.compute_rpcapi,
+                           'post_live_migration_at_destination')
+        @mock.patch.object(self.compute, '_live_migration_cleanup_flags',
+                           return_value=(True, False))
+        @mock.patch.object(self.compute.driver, 'cleanup',
+                           side_effect=fake_driver_cleanup)
+        @mock.patch.object(self.compute, 'update_available_resource')
+        @mock.patch.object(self.compute, '_update_scheduler_instance_info')
+        @mock.patch.object(self.compute, '_clean_instance_console_tokens')
+        @mock.patch.object(self.compute, '_get_resource_tracker')
+        def _test(_get_resource_tracker, _clean_instance_console_tokens,
+                  _update_scheduler_instance_info, update_available_resource,
+                  driver_cleanup, _live_migration_cleanup_flags,
+                  post_live_migration_at_destination,
+                  post_live_migration_at_source, migrate_instance_start,
                   _notify_about_instance_usage, get_instance_nw_info,
                   _get_instance_block_device_info):
-            self.assertRaises(test.TestingException,
-                              self.compute._post_live_migration,
-                              self.context, self.instance, 'fake-dest',
-                              migrate_data=migrate_data)
+            self.compute._post_live_migration(
+                self.context, self.instance, 'fake-dest',
+                migrate_data=migrate_data)
             post_live_migration_at_source.assert_called_once_with(
                 self.context, self.instance,
                 test.MatchType(network_model.NetworkInfo))
+            driver_cleanup.assert_called_once_with(
+                self.context, self.instance,
+                test.MatchType(network_model.NetworkInfo), destroy_disks=False,
+                migrate_data=migrate_data, destroy_vifs=False)
 
         _test()
 

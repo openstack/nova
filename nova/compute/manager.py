@@ -6624,7 +6624,7 @@ class ComputeManager(manager.Manager):
         if do_cleanup:
             LOG.debug('Calling driver.cleanup from _post_live_migration',
                       instance=instance)
-            self.driver.cleanup(ctxt, instance, network_info,
+            self.driver.cleanup(ctxt, instance, unplug_nw_info,
                                 destroy_disks=destroy_disks,
                                 migrate_data=migrate_data,
                                 destroy_vifs=destroy_vifs)
