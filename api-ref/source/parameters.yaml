@@ -6452,7 +6452,8 @@ usage_links:
   min_version: 2.40
 user_data:
   description: |
-    Configuration information or scripts to use upon launch. Must be Base64 encoded.
+    Configuration information or scripts to use upon launch.
+    Must be Base64 encoded. Restricted to 65535 bytes.
 
     .. note::
 
@@ -6464,8 +6465,8 @@ user_data:
 user_data_rebuild_req:
   description: |
     Configuration information or scripts to use upon rebuild.
-    Must be Base64 encoded. If ``null`` is specified, the existing user_data
-    is unset.
+    Must be Base64 encoded. Restricted to 65535 bytes.
+    If ``null`` is specified, the existing user_data is unset.
   in: body
   required: false
   type: string
