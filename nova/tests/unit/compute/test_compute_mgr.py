@@ -7844,6 +7844,52 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         _test()
 
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid',
+                return_value=objects.BlockDeviceMappingList())
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    def test_post_live_migration_unplug_with_stashed_source_vifs(
+            self, mock_add_fault, mock_notify, mock_get_bdms):
+        """Tests the scenario that migrate_data.vifs is set so we unplug
+        using the stashed source vifs from that rather than the current
+        instance network info cache.
+        """
+        migrate_data = objects.LibvirtLiveMigrateData()
+        source_vif = network_model.VIF(uuids.port_id, type='ovs')
+        migrate_data.vifs = [objects.VIFMigrateData(source_vif=source_vif)]
+
+        nw_info = network_model.NetworkInfo(
+            [network_model.VIF(uuids.port_id, type='ovn')])
+
+        def fake_post_live_migration_at_source(
+                _context, _instance, network_info):
+            # Make sure we got the source_vif and then error out so we can
+            # exit the test early.
+            self.assertEqual(1, len(network_info))
+            self.assertEqual(source_vif, network_info[0])
+            raise test.TestingException('all done!')
+
+        @mock.patch.object(self.compute, '_get_instance_block_device_info')
+        @mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
+                           return_value=nw_info)
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch.object(self.compute.network_api, 'migrate_instance_start')
+        @mock.patch.object(self.compute.driver,
+                           'post_live_migration_at_source',
+                           side_effect=fake_post_live_migration_at_source)
+        def _test(post_live_migration_at_source, migrate_instance_start,
+                  _notify_about_instance_usage, get_instance_nw_info,
+                  _get_instance_block_device_info):
+            self.assertRaises(test.TestingException,
+                              self.compute._post_live_migration,
+                              self.context, self.instance, 'fake-dest',
+                              migrate_data=migrate_data)
+            post_live_migration_at_source.assert_called_once_with(
+                self.context, self.instance,
+                test.MatchType(network_model.NetworkInfo))
+
+        _test()
+
     @mock.patch.object(objects.ComputeNode,
                        'get_first_node_by_host_for_old_compat')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
