@@ -1018,6 +1018,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(objects.Migration, 'get_by_instance_and_status')
     @mock.patch.object(image_api.API, 'delete')
+    @mock.patch.object(objects.InstanceMapping, 'save')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(consoleauth_rpcapi.ConsoleAuthAPI,
                        'delete_tokens_for_instance')
@@ -1037,7 +1038,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def _test_delete(self, delete_type, mock_save, mock_bdm_get, mock_elevated,
                      mock_get_cn, mock_up, mock_record, mock_inst_update,
                      mock_deallocate, mock_inst_meta, mock_inst_destroy,
-                     mock_notify, mock_del_token, mock_get_inst,
+                     mock_notify, mock_del_token, mock_get_inst, mock_save_im,
                      mock_image_delete, mock_mig_get, **attrs):
         expected_save_calls = [mock.call()]
         expected_record_calls = []
@@ -1177,8 +1178,10 @@ class _ComputeAPIUnitTestMixIn(object):
                 mock_deallocate.assert_called_once_with(self.context, inst)
                 mock_inst_destroy.assert_called_once_with(
                     self.context, instance_uuid, constraint=None)
-                mock_get_inst.assert_called_once_with(self.context,
-                                                      instance_uuid)
+                mock_get_inst.assert_called_with(self.context, instance_uuid)
+                self.assertEqual(2, mock_get_inst.call_count)
+                self.assertTrue(mock_get_inst.return_value.queued_for_delete)
+                mock_save_im.assert_called_once_with()
 
         if cast:
             if delete_type == 'soft_delete':
@@ -4036,7 +4039,8 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.objects.InstanceAction.action_start')
-    def test_restore_by_admin(self, action_start, instance_save,
+    @mock.patch('nova.compute.api.API._update_queued_for_deletion')
+    def test_restore_by_admin(self, update_qfd, action_start, instance_save,
                               quota_check, quota_count):
         admin_context = context.RequestContext('admin_user',
                                                'admin_project',
@@ -4067,12 +4071,15 @@ class _ComputeAPIUnitTestMixIn(object):
                             'cores': 1 + instance.flavor.vcpus,
                             'ram': 512 + instance.flavor.memory_mb},
             project_id=instance.project_id, user_id=instance.user_id)
+        update_qfd.assert_called_once_with(admin_context, instance, False)
 
     @mock.patch('nova.objects.Quotas.count_as_dict')
     @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.objects.InstanceAction.action_start')
-    def test_restore_by_instance_owner(self, action_start, instance_save,
+    @mock.patch('nova.compute.api.API._update_queued_for_deletion')
+    def test_restore_by_instance_owner(self, update_qfd, action_start,
+                                       instance_save,
                                        quota_check, quota_count):
         proj_count = {'instances': 1, 'cores': 1, 'ram': 512}
         user_count = proj_count.copy()
@@ -4101,6 +4108,7 @@ class _ComputeAPIUnitTestMixIn(object):
                             'cores': 1 + instance.flavor.vcpus,
                             'ram': 512 + instance.flavor.memory_mb},
             project_id=instance.project_id, user_id=instance.user_id)
+        update_qfd.assert_called_once_with(self.context, instance, False)
 
     @mock.patch.object(objects.InstanceAction, 'action_start')
     def test_external_instance_event(self, mock_action_start):
@@ -5471,6 +5479,18 @@ class _ComputeAPIUnitTestMixIn(object):
             count = self.compute_api._check_requested_networks(
                 self.context, requested_networks, 5)
         self.assertEqual(4, count)
+
+    @mock.patch.object(objects.InstanceMapping, 'save')
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    def test_update_queued_for_deletion(self, mock_get, mock_save):
+        uuid = uuids.inst
+        inst = objects.Instance(uuid=uuid)
+        im = objects.InstanceMapping(instance_uuid=uuid)
+        mock_get.return_value = im
+        self.compute_api._update_queued_for_deletion(self.context, inst, True)
+        self.assertTrue(im.queued_for_delete)
+        mock_get.assert_called_once_with(self.context, inst.uuid)
+        mock_save.assert_called_once_with()
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
             side_effect=exception.InstanceMappingNotFound(uuid='fake'))
