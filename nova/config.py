@@ -39,6 +39,11 @@ def parse_args(argv, default_config_files=None, configure_db=True,
         extra_default_log_levels = ['glanceclient=DEBUG']
     else:
         extra_default_log_levels = ['glanceclient=WARN']
+
+    # NOTE(danms): DEBUG logging in privsep will result in some large
+    # and potentially sensitive things being logged.
+    extra_default_log_levels.append('oslo.privsep.daemon=INFO')
+
     log.set_defaults(default_log_levels=log.get_default_log_levels() +
                      extra_default_log_levels)
     rpc.set_defaults(control_exchange='nova')
