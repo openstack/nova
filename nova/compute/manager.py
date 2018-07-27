@@ -6578,8 +6578,21 @@ class ComputeManager(manager.Manager):
 
         destroy_vifs = False
         try:
+            # It's possible that the vif type changed on the destination
+            # host and is already bound and active, so we need to use the
+            # stashed source vifs in migrate_data.vifs (if present) to unplug
+            # on the source host.
+            unplug_nw_info = network_info
+            if migrate_data and 'vifs' in migrate_data:
+                nw_info = []
+                for migrate_vif in migrate_data.vifs:
+                    nw_info.append(migrate_vif.source_vif)
+                unplug_nw_info = network_model.NetworkInfo.hydrate(nw_info)
+                LOG.debug('Calling driver.post_live_migration_at_source '
+                          'with original source VIFs from migrate_data: %s',
+                          unplug_nw_info, instance=instance)
             self.driver.post_live_migration_at_source(ctxt, instance,
-                                                      network_info)
+                                                      unplug_nw_info)
         except NotImplementedError as ex:
             LOG.debug(ex, instance=instance)
             # For all hypervisors other than libvirt, there is a possibility
