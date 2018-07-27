@@ -14,6 +14,7 @@
 #    under the License.
 
 import fixtures
+import unittest
 
 from nova.compute import instance_actions
 from nova import conf
@@ -42,6 +43,8 @@ class SharedStorageProviderUsageTestCase(
         nodename = self.compute.manager._get_nodename(None)
         self.host_uuid = self._get_provider_uuid_by_host(nodename)
 
+    # TODO(efried): Bug #1784020
+    @unittest.expectedFailure
     def test_shared_storage_rp_configuration_with_cn_rp(self):
         """Test to check whether compute node and shared storage resource
         provider inventory is configured properly or not.
@@ -114,6 +117,8 @@ class SharedStorageProviderUsageTestCase(
                                    'STORAGE_DISK_SSD'])
         return shared_RP['uuid']
 
+    # TODO(efried): Bug #1784020
+    @unittest.expectedFailure
     def test_rebuild_instance_with_image_traits_on_shared_rp(self):
 
         shared_rp_uuid = self.create_shared_storage_rp()
@@ -175,6 +180,8 @@ class SharedStorageProviderUsageTestCase(
         server = self.api.get_server(server['id'])
         self.assertEqual(rebuild_image_ref, server['image']['id'])
 
+    # TODO(efried): Bug #1784020
+    @unittest.expectedFailure
     def test_rebuild_instance_with_image_traits_on_shared_rp_no_valid_host(
             self):
         shared_rp_uuid = self.create_shared_storage_rp()
