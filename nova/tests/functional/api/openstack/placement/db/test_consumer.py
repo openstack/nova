@@ -13,7 +13,6 @@
 from oslo_config import cfg
 import sqlalchemy as sa
 
-from nova.api.openstack.placement import context
 from nova.api.openstack.placement import db_api
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import consumer as consumer_obj
@@ -21,8 +20,7 @@ from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.objects import user as user_obj
 from nova import rc_fields as fields
-from nova import test
-from nova.tests import fixtures
+from nova.tests.functional.api.openstack.placement import base
 from nova.tests.functional.api.openstack.placement.db import test_base as tb
 from nova.tests import uuidsentinel as uuids
 
@@ -99,14 +97,11 @@ def _get_allocs_with_no_consumer_relationship(ctx):
 # NOTE(jaypipes): The tb.PlacementDbBaseTestCase creates a project and user
 # which is why we don't base off that. We want a completely bare DB for this
 # test.
-class CreateIncompleteConsumersTestCase(test.NoDBTestCase):
-    USES_DB_SELF = True
+class CreateIncompleteConsumersTestCase(base.TestCase):
 
     def setUp(self):
         super(CreateIncompleteConsumersTestCase, self).setUp()
-        self.useFixture(fixtures.Database())
-        self.api_db = self.useFixture(fixtures.Database(database='placement'))
-        self.ctx = context.RequestContext('fake-user', 'fake-project')
+        self.ctx = self.context
 
     @db_api.placement_context_manager.writer
     def _create_incomplete_allocations(self, ctx):

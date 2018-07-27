@@ -14,15 +14,12 @@
 
 from oslo_utils import uuidutils
 
-from nova.api.openstack.placement import context
-from nova.api.openstack.placement import deploy
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import consumer as consumer_obj
 from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.objects import user as user_obj
-from nova import test
-from nova.tests import fixtures
+from nova.tests.functional.api.openstack.placement import base
 from nova.tests import uuidsentinel as uuids
 
 
@@ -63,22 +60,18 @@ def set_traits(rp, *traits):
     return tlist
 
 
-class PlacementDbBaseTestCase(test.NoDBTestCase):
-    USES_DB_SELF = True
+class PlacementDbBaseTestCase(base.TestCase):
 
     def setUp(self):
         super(PlacementDbBaseTestCase, self).setUp()
-        self.useFixture(fixtures.Database())
-        self.placement_db = self.useFixture(
-                fixtures.Database(database='placement'))
-        self.ctx = context.RequestContext('fake-user', 'fake-project')
+        # we use context in some places and ctx in other. We should only use
+        # context, but let's paper over that for now.
+        self.ctx = self.context
         self.user_obj = user_obj.User(self.ctx, external_id='fake-user')
         self.user_obj.create()
         self.project_obj = project_obj.Project(
             self.ctx, external_id='fake-project')
         self.project_obj.create()
-        # Do database syncs, such as traits sync.
-        deploy.update_database()
         # For debugging purposes, populated by _create_provider and used by
         # _validate_allocation_requests to make failure results more readable.
         self.rp_uuid_to_name = {}

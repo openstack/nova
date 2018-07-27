@@ -12,6 +12,7 @@
 
 import fixtures
 from oslo_config import cfg
+from oslo_config import fixture as config_fixture
 from oslo_utils import uuidutils
 from wsgi_intercept import interceptor
 
@@ -19,35 +20,6 @@ from nova.api.openstack.placement import deploy
 
 
 CONF = cfg.CONF
-
-
-class ConfPatcher(fixtures.Fixture):
-    """Fixture to patch and restore global CONF.
-
-    This also resets overrides for everything that is patched during
-    its teardown.
-    """
-    # TODO(cdent): This is intentionally duplicated from nova's fixtures.
-    # This comment becomes redundant once placement is extracted.
-
-    def __init__(self, **kwargs):
-        """Constructor
-
-        :params group: if specified all config options apply to that group.
-
-        :params **kwargs: the rest of the kwargs are processed as a
-        set of key/value pairs to be set as configuration override.
-
-        """
-        super(ConfPatcher, self).__init__()
-        self.group = kwargs.pop('group', None)
-        self.args = kwargs
-
-    def setUp(self):
-        super(ConfPatcher, self).setUp()
-        for k, v in self.args.items():
-            self.addCleanup(CONF.clear_override, k, self.group)
-            CONF.set_override(k, v, self.group)
 
 
 class PlacementFixture(fixtures.Fixture):
@@ -67,7 +39,8 @@ class PlacementFixture(fixtures.Fixture):
     def setUp(self):
         super(PlacementFixture, self).setUp()
 
-        self.useFixture(ConfPatcher(group='api', auth_strategy='noauth2'))
+        conf_fixture = config_fixture.Config(CONF)
+        conf_fixture.config(group='api', auth_strategy='noauth2')
         loader = deploy.loadapp(CONF)
         app = lambda: loader
         self.endpoint = 'http://%s/placement' % uuidutils.generate_uuid()

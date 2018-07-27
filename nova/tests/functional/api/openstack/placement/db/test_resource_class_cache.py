@@ -18,18 +18,17 @@ from oslo_utils import timeutils
 from nova.api.openstack.placement import exception
 from nova.db.sqlalchemy import resource_class_cache as rc_cache
 from nova import rc_fields as fields
-from nova import test
-from nova.tests import fixtures
+from nova.tests.functional.api.openstack.placement import base
 
 
-class TestResourceClassCache(test.TestCase):
+class TestResourceClassCache(base.TestCase):
 
     def setUp(self):
         super(TestResourceClassCache, self).setUp()
-        self.db = self.useFixture(fixtures.Database(database='placement'))
+        db = self.placement_db
         self.context = mock.Mock()
         sess_mock = mock.Mock()
-        sess_mock.connection.side_effect = self.db.get_engine().connect
+        sess_mock.connection.side_effect = db.get_engine().connect
         self.context.session = sess_mock
 
     @mock.patch('sqlalchemy.select')

@@ -13,6 +13,8 @@
 import os
 
 from gabbi import fixture
+from oslo_config import cfg
+from oslo_config import fixture as config_fixture
 from oslo_middleware import cors
 from oslo_utils import uuidutils
 
@@ -24,8 +26,6 @@ from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.objects import user as user_obj
 from nova.api.openstack.placement import policies
-from nova import conf
-from nova import config
 from nova import rc_fields as fields
 from nova.tests import fixtures
 from nova.tests.functional.api.openstack.placement.db import test_base as tb
@@ -33,7 +33,7 @@ from nova.tests.unit import policy_fixture
 from nova.tests import uuidsentinel as uuids
 
 
-CONF = conf.CONF
+CONF = cfg.CONF
 
 
 def setup_app():
@@ -42,9 +42,6 @@ def setup_app():
 
 class APIFixture(fixture.GabbiFixture):
     """Setup the required backend fixtures for a basic placement service."""
-
-    def __init__(self):
-        self.conf = None
 
     def start_fixture(self):
         # Set up stderr and stdout captures by directly driving the
@@ -59,15 +56,17 @@ class APIFixture(fixture.GabbiFixture):
         self.warnings_fixture = fixtures.WarningsFixture()
         self.warnings_fixture.setUp()
 
-        self.conf = CONF
-        self.conf.set_override('auth_strategy', 'noauth2', group='api')
-        # Be explicit about all three database connections to avoid
-        # potential conflicts with config on disk.
-        self.conf.set_override('connection', "sqlite://", group='database')
-        self.conf.set_override('connection', "sqlite://",
-                               group='api_database')
-        self.conf.set_override('connection', "sqlite://",
-                               group='placement_database')
+        self.conf_fixture = config_fixture.Config(CONF)
+        self.conf_fixture.setUp()
+        # The Database fixture will get confused if only one of the databases
+        # is configured.
+        for group in ('placement_database', 'api_database', 'database'):
+            self.conf_fixture.config(
+                group=group,
+                connection='sqlite://',
+                sqlite_synchronous=False)
+        self.conf_fixture.config(
+            group='api', auth_strategy='noauth2')
 
         self.context = context.RequestContext()
 
@@ -75,23 +74,15 @@ class APIFixture(fixture.GabbiFixture):
         # effect of exercising the "don't use cors" path in
         # deploy.py. Without setting some config the group will not
         # be present.
-        self.conf.register_opts(cors.CORS_OPTS, 'cors')
+        CONF.register_opts(cors.CORS_OPTS, 'cors')
 
         # Make sure default_config_files is an empty list, not None.
         # If None /etc/nova/nova.conf is read and confuses results.
-        config.parse_args([], default_config_files=[], configure_db=False,
-                          init_rpc=False)
+        CONF([], default_config_files=[])
 
-        # NOTE(cdent): All three database fixtures need to be
-        # managed for database handling to work and not cause
-        # conflicts with other tests in the same process.
         self._reset_db_flags()
         self.placement_db_fixture = fixtures.Database('placement')
-        self.api_db_fixture = fixtures.Database('api')
-        self.main_db_fixture = fixtures.Database('main')
-        self.placement_db_fixture.reset()
-        self.api_db_fixture.reset()
-        self.main_db_fixture.reset()
+        self.placement_db_fixture.setUp()
         # Do this now instead of waiting for the WSGI app to start so that
         # fixtures can have traits.
         deploy.update_database()
@@ -110,9 +101,7 @@ class APIFixture(fixture.GabbiFixture):
         os.environ['ALT_PARENT_PROVIDER_UUID'] = uuidutils.generate_uuid()
 
     def stop_fixture(self):
-        self.placement_db_fixture.cleanup()
-        self.api_db_fixture.cleanup()
-        self.main_db_fixture.cleanup()
+        self.placement_db_fixture.cleanUp()
 
         # Since we clean up the DB, we need to reset the traits sync
         # flag to make sure the next run will recreate the traits and
@@ -123,8 +112,7 @@ class APIFixture(fixture.GabbiFixture):
         self.warnings_fixture.cleanUp()
         self.output_stream_fixture.cleanUp()
         self.standard_logging_fixture.cleanUp()
-        if self.conf:
-            self.conf.reset()
+        self.conf_fixture.cleanUp()
 
     @staticmethod
     def _reset_db_flags():
@@ -411,8 +399,9 @@ class CORSFixture(APIFixture):
         # NOTE(cdent): If we remove this override, then the cors
         # group ends up not existing in the conf, so when deploy.py
         # wants to load the CORS middleware, it will not.
-        self.conf.set_override('allowed_origin', 'http://valid.example.com',
-                               group='cors')
+        self.conf_fixture.config(
+            group='cors',
+            allowed_origin='http://valid.example.com')
 
 
 # TODO(efried): Common with test_allocation_candidates
