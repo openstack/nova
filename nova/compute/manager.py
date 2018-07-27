@@ -1173,6 +1173,8 @@ class ComputeManager(manager.Manager):
             # if the configuration is wrong.
             whitelist.Whitelist(CONF.pci.passthrough_whitelist)
 
+        nova.conf.neutron.register_dynamic_opts(CONF)
+
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
         instances = objects.InstanceList.get_by_host(
