@@ -15285,7 +15285,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 if key not in ['phys_function', 'virt_functions', 'label']:
                     self.assertEqual(expectvfs[dev][key], actualvfs[dev][key])
 
+    # TODO(stephenfin): This only has one caller. Flatten it and remove the
+    # 'mempages=False' branches or add the missing test
     def _test_get_host_numa_topology(self, mempages):
+        self.flags(physnets=['foo', 'bar', 'baz'], group='neutron')
+        # we need to call the below again to ensure the updated 'physnets'
+        # value is read and the new groups created
+        nova.conf.neutron.register_dynamic_opts(CONF)
+        self.flags(numa_nodes=[0, 2], group='neutron_tunnel')
+        self.flags(numa_nodes=[1], group='neutron_physnet_foo')
+        self.flags(numa_nodes=[3], group='neutron_physnet_bar')
+        self.flags(numa_nodes=[1, 2, 3], group='neutron_physnet_baz')
+
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
@@ -15331,6 +15342,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual([set([0, 1])], got_topo.cells[0].siblings)
             self.assertEqual([set([3])], got_topo.cells[1].siblings)
 
+            self.assertEqual(set(),
+                             got_topo.cells[0].network_metadata.physnets)
+            self.assertEqual(set(['foo', 'baz']),
+                             got_topo.cells[1].network_metadata.physnets)
+            self.assertEqual(set(['baz']),
+                             got_topo.cells[2].network_metadata.physnets)
+            self.assertEqual(set(['bar', 'baz']),
+                             got_topo.cells[3].network_metadata.physnets)
+
+            self.assertTrue(got_topo.cells[0].network_metadata.tunneled)
+            self.assertFalse(got_topo.cells[1].network_metadata.tunneled)
+            self.assertTrue(got_topo.cells[2].network_metadata.tunneled)
+            self.assertFalse(got_topo.cells[3].network_metadata.tunneled)
+
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     def test_get_host_numa_topology(self, mock_version):
         self._test_get_host_numa_topology(mempages=True)
@@ -15365,6 +15390,93 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 libvirt_driver.MIN_QEMU_VERSION)
         mock_type.return_value = host.HV_DRIVER_XEN
         self.assertIsNone(drvr._get_host_numa_topology())
+
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    def test_get_host_numa_topology_missing_network_metadata(self,
+            mock_version):
+        self.flags(physnets=['bar'], group='neutron')
+        # we need to call the below again to ensure the updated 'physnets'
+        # value is read and the new groups created
+        nova.conf.neutron.register_dynamic_opts(CONF)
+
+        # we explicitly avoid registering a '[neutron_physnets_bar] numa_nodes'
+        # option here
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = fields.Architecture.X86_64
+        caps.host.topology = fakelibvirt.NUMATopology()
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with test.nested(
+                mock.patch.object(host.Host, "get_capabilities",
+                                  return_value=caps),
+                mock.patch.object(hardware, 'get_vcpu_pin_set',
+                                  return_value=set([0, 1, 3, 4, 5])),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set([0, 1, 2, 3, 6])),
+                ):
+            self.assertRaisesRegex(
+                exception.InvalidNetworkNUMAAffinity,
+                "Invalid NUMA network affinity configured: the physnet 'bar' "
+                "was listed in '\[neutron\] physnets' but no corresponding "
+                "'\[neutron_physnet_bar\] numa_nodes' option was defined.",
+                drvr._get_host_numa_topology)
+
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    def _test_get_host_numa_topology_invalid_network_affinity(self,
+            group_name, mock_version):
+        self.flags(physnets=['foo', 'bar'], group='neutron')
+        # we need to call the below again to ensure the updated 'physnets'
+        # value is read and the new groups created
+        nova.conf.neutron.register_dynamic_opts(CONF)
+
+        # set defaults...
+        for group_ in ['neutron_physnet_foo', 'neutron_physnet_bar',
+                       'neutron_tunnel']:
+            self.flags(numa_nodes=[0], group=group_)
+
+        # but override them for the error case
+        self.flags(numa_nodes=[4], group=group_name)
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = fields.Architecture.X86_64
+        caps.host.topology = fakelibvirt.NUMATopology()
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with test.nested(
+                mock.patch.object(host.Host, "get_capabilities",
+                                  return_value=caps),
+                mock.patch.object(hardware, 'get_vcpu_pin_set',
+                                  return_value=set([0, 1, 3, 4, 5])),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set([0, 1, 2, 3, 6])),
+                ):
+            self.assertRaisesRegex(
+                exception.InvalidNetworkNUMAAffinity,
+                r'node 4 for \w+ \w+ is not present',
+                drvr._get_host_numa_topology)
+
+    def test_get_host_numa_topology_invalid_physical_network_affinity(self):
+        """Ensure errors are raised for non-existent NUMA nodes.
+
+        If a physical network is affined to a non-existent NUMA node, an
+        exception should be raised. Prove this to be the case.
+        """
+        self._test_get_host_numa_topology_invalid_network_affinity(
+            'neutron_physnet_bar')
+
+    def test_get_host_numa_topology_invalid_tunnel_network_affinity(self):
+        """Ensure errors are raised for non-existent NUMA nodes.
+
+        If a tunneled network is affined to a non-existent NUMA node, an
+        exception should be raised. Prove this to be the case.
+        """
+        self._test_get_host_numa_topology_invalid_network_affinity(
+            'neutron_tunnel')
 
     def test_diagnostic_vcpus_exception(self):
         xml = """

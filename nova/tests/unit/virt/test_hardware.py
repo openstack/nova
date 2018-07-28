@@ -1638,6 +1638,30 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[1].cpu_usage, 1)
         self.assertEqual(hostusage.cells[1].memory_usage, 128)
 
+    def test_topo_usage_with_network_metadata(self):
+        """Validate behavior with network_metadata.
+
+        Ensure we handle ``NUMACell``\s that have ``network_metadata`` set
+        along with those where this is unset.
+        """
+
+        topo = objects.NUMATopology(cells=[
+            objects.NUMACell(
+                id=0, cpuset=set([0, 1, 2, 3]), memory=4096, cpu_usage=0,
+                memory_usage=0, siblings=[set([0, 2]), set([1, 3])],
+                mempages=[], pinned_cpus=set([]),
+                network_metadata=objects.NetworkMetadata(
+                    physnets=set(['foo', 'bar']), tunneled=True)),
+            objects.NUMACell(
+                id=0, cpuset=set([0, 1, 2, 3]), memory=4096, cpu_usage=0,
+                memory_usage=0, siblings=[set([0, 2]), set([1, 3])],
+                mempages=[], pinned_cpus=set([])),
+            ])
+
+        new_topo = hw.numa_usage_from_instances(topo, [])
+        self.assertIn('network_metadata', new_topo.cells[0])
+        self.assertNotIn('network_metadata', new_topo.cells[1])
+
     def assertNUMACellMatches(self, expected_cell, got_cell):
         attrs = ('cpuset', 'memory', 'id')
         if isinstance(expected_cell, objects.NUMATopology):
