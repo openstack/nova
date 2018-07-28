@@ -645,7 +645,7 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
         # is the case, go ahead and modify the consumer record with the
         # newly-supplied project/user information, but do not bump the consumer
         # generation (since it will be bumped in the
-        # AllocationList.create_all() method).
+        # AllocationList.replace_all() method).
         #
         # TODO(jaypipes): This means that there may be a partial update.
         # Imagine a scenario where a user calls POST /allocations, and the
@@ -653,16 +653,16 @@ def ensure_consumer(ctx, consumer_uuid, project_id, user_id,
         # consumer and is auto-created. The second consumer is an existing
         # consumer, but contains a different project or user ID than the
         # existing consumer's record. If the eventual call to
-        # AllocationList.create_all() fails for whatever reason (say, a
+        # AllocationList.replace_all() fails for whatever reason (say, a
         # resource provider generation conflict or out of resources failure),
         # we will end up deleting the auto-created consumer but we MAY not undo
         # the changes to the second consumer's project and user ID. I say MAY
         # and not WILL NOT because I'm not sure that the exception that gets
-        # raised from AllocationList.create_all() will cause the context
+        # raised from AllocationList.replace_all() will cause the context
         # manager's transaction to rollback automatically. I believe that the
         # same transaction context is used for both util.ensure_consumer() and
-        # AllocationList.create_all() within the same HTTP request, but need to
-        # test this to be 100% certain...
+        # AllocationList.replace_all() within the same HTTP request, but need
+        # to test this to be 100% certain...
         if (project_id != consumer.project.external_id or
                 user_id != consumer.user.external_id):
             LOG.debug("Supplied project or user ID for consumer %s was "
