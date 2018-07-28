@@ -56,6 +56,7 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context as nova_context
 from nova import crypto
 from nova.db import base
+from nova.db.sqlalchemy import api as db_api
 from nova import exception
 from nova import exception_wrapper
 from nova import hooks
@@ -858,6 +859,20 @@ class API(base.Base):
         return (base_options, max_network_count, key_pair, security_groups,
                 network_metadata)
 
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _create_reqspec_buildreq_instmapping(context, rs, br, im):
+        """Create the request spec, build request, and instance mapping in a
+        single database transaction.
+
+        The RequestContext must be passed in to this method so that the
+        database transaction context manager decorator will nest properly and
+        include each create() into the same transaction context.
+        """
+        rs.create()
+        br.create()
+        im.create()
+
     def _provision_instances(self, context, instance_type, min_count,
             max_count, base_options, boot_meta, security_groups,
             block_device_mapping, shutdown_terminate,
@@ -897,7 +912,6 @@ class API(base.Base):
                 # spec as this is how the conductor knows how many were in this
                 # batch.
                 req_spec.num_instances = num_instances
-                req_spec.create()
 
                 # NOTE(stephenfin): The network_metadata field is not persisted
                 # and is therefore set after 'create' is called.
@@ -930,7 +944,6 @@ class API(base.Base):
                         project_id=instance.project_id,
                         block_device_mappings=block_device_mapping,
                         tags=instance_tags)
-                build_request.create()
 
                 # Create an instance_mapping.  The null cell_mapping indicates
                 # that the instance doesn't yet exist in a cell, and lookups
@@ -942,7 +955,14 @@ class API(base.Base):
                 inst_mapping.instance_uuid = instance_uuid
                 inst_mapping.project_id = context.project_id
                 inst_mapping.cell_mapping = None
-                inst_mapping.create()
+
+                # Create the request spec, build request, and instance mapping
+                # records in a single transaction so that if a DBError is
+                # raised from any of them, all INSERTs will be rolled back and
+                # no orphaned records will be left behind.
+                self._create_reqspec_buildreq_instmapping(context, req_spec,
+                                                          build_request,
+                                                          inst_mapping)
 
                 instances_to_build.append(
                     (req_spec, build_request, inst_mapping))
