@@ -28,6 +28,7 @@ import fixtures
 from keystoneauth1 import adapter as ka
 from keystoneauth1 import session as ks
 import mock
+from neutronclient.common import exceptions as neutron_client_exc
 from oslo_concurrency import lockutils
 from oslo_config import cfg
 import oslo_messaging as messaging
@@ -1239,10 +1240,6 @@ class NeutronFixture(fixtures.Fixture):
             'validate_networks',
             lambda *args, **kwargs: 1)
         self.test.stub_out(
-            'nova.network.neutronv2.api.API.'
-            'create_resource_requests',
-            lambda *args, **kwargs: None)
-        self.test.stub_out(
             'nova.network.neutronv2.api.API.setup_networks_on_host',
             lambda *args, **kwargs: None)
         self.test.stub_out(
@@ -1294,6 +1291,12 @@ class NeutronFixture(fixtures.Fixture):
         for current_port in self._ports:
             if current_port['id'] == port:
                 self._ports.remove(current_port)
+
+    def show_network(self, network, **_params):
+        network = self._get_first_id_match(network, self._networks)
+        if network is None:
+            raise neutron_client_exc.NetworkNotFoundClient()
+        return {'network': network}
 
     def list_networks(self, retrieve_all=True, **_params):
         return copy.deepcopy({'networks': self._networks})

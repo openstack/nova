@@ -18,6 +18,7 @@ import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 
+from nova.conf import neutron as neutron_conf
 from nova import context as nova_context
 from nova import objects
 from nova import test
@@ -33,10 +34,10 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class NUMAServersTest(ServersTestBase):
+class NUMAServersTestBase(ServersTestBase):
 
     def setUp(self):
-        super(NUMAServersTest, self).setUp()
+        super(NUMAServersTestBase, self).setUp()
 
         # Replace libvirt with fakelibvirt
         self.useFixture(fake_imagebackend.ImageBackendFixture())
@@ -56,6 +57,8 @@ class NUMAServersTest(ServersTestBase):
         self.useFixture(nova_fixtures.PlacementFixture())
 
     def _setup_compute_service(self):
+        # we need to mock some libvirt stuff so we start this service in the
+        # test instead
         pass
 
     def _setup_scheduler_service(self):
@@ -66,6 +69,22 @@ class NUMAServersTest(ServersTestBase):
                                    + ['NUMATopologyFilter'],
                    group='filter_scheduler')
         return self.start_service('scheduler')
+
+    def _get_connection(self, host_info):
+        fake_connection = fakelibvirt.Connection('qemu:///system',
+                                version=fakelibvirt.FAKE_LIBVIRT_VERSION,
+                                hv_version=fakelibvirt.FAKE_QEMU_VERSION,
+                                host_info=host_info)
+        return fake_connection
+
+    def _get_topology_filter_spy(self):
+        host_manager = self.scheduler.manager.driver.host_manager
+        numa_filter_class = host_manager.filter_cls_map['NUMATopologyFilter']
+        host_pass_mock = mock.Mock(wraps=numa_filter_class().host_passes)
+        return host_pass_mock
+
+
+class NUMAServersTest(NUMAServersTestBase):
 
     def _run_build_test(self, flavor_id, filter_mock, end_status='ACTIVE'):
 
@@ -99,19 +118,6 @@ class NUMAServersTest(ServersTestBase):
         self.assertEqual(end_status, found_server['status'])
         self.addCleanup(self._delete_server, created_server_id)
         return created_server
-
-    def _get_connection(self, host_info):
-        fake_connection = fakelibvirt.Connection('qemu:///system',
-                                version=fakelibvirt.FAKE_LIBVIRT_VERSION,
-                                hv_version=fakelibvirt.FAKE_QEMU_VERSION,
-                                host_info=host_info)
-        return fake_connection
-
-    def _get_topology_filter_spy(self):
-        host_manager = self.scheduler.manager.driver.host_manager
-        numa_filter_class = host_manager.filter_cls_map['NUMATopologyFilter']
-        host_pass_mock = mock.Mock(wraps=numa_filter_class().host_passes)
-        return host_pass_mock
 
     def test_create_server_with_numa_topology(self):
 
@@ -180,3 +186,169 @@ class NUMAServersTest(ServersTestBase):
                        side_effect=host_pass_mock)) as (conn_mock,
                                                        filter_mock):
             self._run_build_test(flavor_id, filter_mock, end_status='ERROR')
+
+
+class NUMAAffinityNeutronFixture(nova_fixtures.NeutronFixture):
+    """A custom variant of the stock neutron fixture with more networks.
+
+    There are three networks available: two l2 networks (one flat and one VLAN)
+    and one l3 network (VXLAN).
+    """
+    network_1 = {
+        'id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
+        'status': 'ACTIVE',
+        'subnets': [],
+        'name': 'private-network',
+        'admin_state_up': True,
+        'tenant_id': nova_fixtures.NeutronFixture.tenant_id,
+        'provider:physical_network': 'foo',
+        'provider:network_type': 'flat',
+        'provider:segmentation_id': None,
+    }
+    network_2 = network_1.copy()
+    network_2.update({
+        'id': 'a252b8cd-2d99-4e82-9a97-ec1217c496f5',
+        'provider:physical_network': 'bar',
+        'provider:network_type': 'vlan',
+        'provider:segmentation_id': 123,
+    })
+    network_3 = network_1.copy()
+    network_3.update({
+        'id': '877a79cc-295b-4b80-9606-092bf132931e',
+        'provider:physical_network': None,
+        'provider:network_type': 'vxlan',
+        'provider:segmentation_id': 69,
+    })
+
+    def __init__(self, test):
+        super(NUMAAffinityNeutronFixture, self).__init__(test)
+        self._networks = [self.network_1, self.network_2, self.network_3]
+
+
+class NUMAServersWithNetworksTest(NUMAServersTestBase):
+
+    USE_NEUTRON = True
+
+    def setUp(self):
+        # We need to enable neutron in this one
+        self.flags(physnets=['foo', 'bar'], group='neutron')
+        neutron_conf.register_dynamic_opts(CONF)
+        self.flags(numa_nodes=[1], group='neutron_physnet_foo')
+        self.flags(numa_nodes=[0], group='neutron_physnet_bar')
+        self.flags(numa_nodes=[0, 1], group='neutron_tunnel')
+
+        super(NUMAServersWithNetworksTest, self).setUp()
+
+        self.useFixture(NUMAAffinityNeutronFixture(self))
+
+    @mock.patch('nova.virt.libvirt.host.Host.get_connection')
+    def _test_create_server_with_networks(self, flavor_id, networks,
+                                          mock_conn):
+        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
+                                             cpu_cores=2, cpu_threads=2,
+                                             kB_mem=15740000)
+        fake_connection = self._get_connection(host_info=host_info)
+        mock_conn.return_value = fake_connection
+
+        self.compute = self.start_service('compute', host='test_compute0')
+
+        # Create server
+        good_server = self._build_server(flavor_id)
+        good_server['networks'] = networks
+        post = {'server': good_server}
+
+        created_server = self.api.post_server(post)
+        LOG.debug("created_server: %s", created_server)
+
+        found_server = self.api.get_server(created_server['id'])
+
+        return self._wait_for_state_change(found_server, 'BUILD')['status']
+
+    def test_create_server_with_single_physnet(self):
+        extra_spec = {'hw:numa_nodes': '1'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        networks = [
+            {'uuid': NUMAAffinityNeutronFixture.network_1['id']},
+        ]
+
+        host_pass_mock = self._get_topology_filter_spy()
+        with mock.patch('nova.scheduler.filters'
+                       '.numa_topology_filter.NUMATopologyFilter.host_passes',
+                       side_effect=host_pass_mock) as filter_mock:
+            status = self._test_create_server_with_networks(
+                flavor_id, networks)
+
+        self.assertTrue(filter_mock.called)
+        self.assertEqual('ACTIVE', status)
+
+    def test_create_server_with_multiple_physnets(self):
+        """Test multiple networks split across host NUMA nodes.
+
+        This should pass because the networks requested are split across
+        multiple host NUMA nodes but the guest explicitly allows multiple NUMA
+        nodes.
+        """
+        extra_spec = {'hw:numa_nodes': '2'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        networks = [
+            {'uuid': NUMAAffinityNeutronFixture.network_1['id']},
+            {'uuid': NUMAAffinityNeutronFixture.network_2['id']},
+        ]
+
+        host_pass_mock = self._get_topology_filter_spy()
+        with mock.patch('nova.scheduler.filters'
+                       '.numa_topology_filter.NUMATopologyFilter.host_passes',
+                       side_effect=host_pass_mock) as filter_mock:
+            status = self._test_create_server_with_networks(
+                flavor_id, networks)
+
+        self.assertTrue(filter_mock.called)
+        self.assertEqual('ACTIVE', status)
+
+    def test_create_server_with_multiple_physnets_fail(self):
+        """Test multiple networks split across host NUMA nodes.
+
+        This should fail because we've requested a single-node instance but the
+        networks requested are split across multiple host NUMA nodes.
+        """
+        extra_spec = {'hw:numa_nodes': '1'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        networks = [
+            {'uuid': NUMAAffinityNeutronFixture.network_1['id']},
+            {'uuid': NUMAAffinityNeutronFixture.network_2['id']},
+        ]
+
+        host_pass_mock = self._get_topology_filter_spy()
+        with mock.patch('nova.scheduler.filters'
+                       '.numa_topology_filter.NUMATopologyFilter.host_passes',
+                       side_effect=host_pass_mock) as filter_mock:
+            status = self._test_create_server_with_networks(
+                flavor_id, networks)
+
+        self.assertTrue(filter_mock.called)
+        # TODO(stephenfin): Switch this to 'ERROR' once the final patch is
+        # merged
+        self.assertEqual('ACTIVE', status)
+
+    def test_create_server_with_physnet_and_tunneled_net(self):
+        """Test combination of physnet and tunneled network.
+
+        This should pass because we've requested a single-node instance and the
+        requested networks share at least one NUMA node.
+        """
+        extra_spec = {'hw:numa_nodes': '1'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        networks = [
+            {'uuid': NUMAAffinityNeutronFixture.network_1['id']},
+            {'uuid': NUMAAffinityNeutronFixture.network_3['id']},
+        ]
+
+        host_pass_mock = self._get_topology_filter_spy()
+        with mock.patch('nova.scheduler.filters'
+                       '.numa_topology_filter.NUMATopologyFilter.host_passes',
+                       side_effect=host_pass_mock) as filter_mock:
+            status = self._test_create_server_with_networks(
+                flavor_id, networks)
+
+        self.assertTrue(filter_mock.called)
+        self.assertEqual('ACTIVE', status)
