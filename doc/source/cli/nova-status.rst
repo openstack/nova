@@ -115,6 +115,8 @@ Upgrade
     across all cell mappings which might cause issues when querying instances
     depending on how the **nova-api** service is configured.
     See https://bugs.launchpad.net/nova/+bug/1759316 for details.
+  * Checks that existing instances have been migrated to have a matching
+    request spec in the API DB.
 
 See Also
 ========

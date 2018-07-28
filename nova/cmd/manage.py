@@ -386,6 +386,10 @@ class DbCommands(object):
     # finished.
     online_migrations = (
         # Added in Newton
+        # TODO(mriedem): Remove this in Stein along with the compatibility
+        # code in the api and conductor services; the nova-status upgrade check
+        # added in Rocky is the tool operators can use to make sure they have
+        # completed this migration.
         request_spec.migrate_instances_add_request_spec,
         # Added in Newton
         keypair_obj.migrate_keypairs_to_api_db,
