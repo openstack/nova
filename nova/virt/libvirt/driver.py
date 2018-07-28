@@ -6434,14 +6434,16 @@ class LibvirtDriver(driver.ComputeDriver):
         # If a sharing DISK_GB provider exists in the provider tree, then our
         # storage is shared, and we should not report the DISK_GB inventory in
         # the compute node provider.
-        if not provider_tree.has_sharing_provider(
-                rc_fields.ResourceClass.DISK_GB):
-            result[rc_fields.ResourceClass.DISK_GB] = {
-                'total': disk_gb,
-                'min_unit': 1,
-                'max_unit': disk_gb,
-                'step_size': 1,
-            }
+        # TODO(efried): Reinstate non-reporting of shared resource by the
+        # compute RP once the issues from bug #1784020 have been resolved.
+        if provider_tree.has_sharing_provider(rc_fields.ResourceClass.DISK_GB):
+            LOG.debug('Ignoring sharing provider - see bug #1784020')
+        result[rc_fields.ResourceClass.DISK_GB] = {
+            'total': disk_gb,
+            'min_unit': 1,
+            'max_unit': disk_gb,
+            'step_size': 1,
+        }
 
         if vgpus > 0:
             # Only provide VGPU resource classes if the driver supports it.

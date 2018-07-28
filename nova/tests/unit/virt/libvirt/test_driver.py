@@ -28,6 +28,7 @@ import shutil
 import signal
 import threading
 import time
+import unittest
 
 from castellan import key_manager
 import ddt
@@ -18021,7 +18022,9 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 return_value=memory_mb)
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_total',
                 return_value=vcpus)
-    def teste_update_provider_tree_for_shared_disk_gb_resource(
+    # TODO(efried): Bug #1784020
+    @unittest.expectedFailure
+    def test_update_provider_tree_for_shared_disk_gb_resource(
         self, mock_vcpu, mock_mem, mock_disk, mock_vgpus):
         """Test to check DISK_GB is reported from shared resource
         provider.
