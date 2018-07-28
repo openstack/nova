@@ -63,6 +63,10 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.heal_reqspec_is_bfv_mock = _p.start()
         self.addCleanup(_p.stop)
 
+        _p = mock.patch('nova.objects.RequestSpec.ensure_network_metadata')
+        self.ensure_network_metadata_mock = _p.start()
+        self.addCleanup(_p.stop)
+
     def _generate_task(self):
         self.task = live_migrate.LiveMigrationTask(self.context,
             self.instance, self.destination, self.block_migration,
@@ -127,6 +131,11 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         # being forced and we don't call the scheduler, so we don't need to
         # heal the request spec.
         self.heal_reqspec_is_bfv_mock.assert_not_called()
+
+        # When the task is executed with a destination it means the host is
+        # being forced and we don't call the scheduler, so we don't need to
+        # modify the request spec
+        self.ensure_network_metadata_mock.assert_not_called()
 
     def test_execute_with_destination_old_school(self):
         self.test_execute_with_destination(new_mode=False)
@@ -356,6 +365,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_reset.assert_called_once_with()
+        self.ensure_network_metadata_mock.assert_called_once_with(
+            self.instance)
         self.heal_reqspec_is_bfv_mock.assert_called_once_with(
             self.context, self.fake_spec, self.instance)
         mock_select.assert_called_once_with(self.context, self.fake_spec,
@@ -390,6 +401,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
             get_image.assert_called_once_with(self.instance.system_metadata)
             setup_ig.assert_called_once_with(self.context, another_spec)
+            self.ensure_network_metadata_mock.assert_called_once_with(
+                self.instance)
             self.heal_reqspec_is_bfv_mock.assert_called_once_with(
                 self.context, another_spec, self.instance)
             select_dest.assert_called_once_with(self.context, another_spec,

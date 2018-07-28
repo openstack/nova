@@ -766,6 +766,12 @@ class TestNeutronv2(TestNeutronv2Base):
             self.instance['uuid'], mox.IgnoreArg()).AndReturn(fake_info_cache)
         neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
             self.moxed_client)
+        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
+        self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
+        api._get_physnet_tunneled_info(
+            mox.IgnoreArg(), mox.IgnoreArg(),
+            self.port_data1[0]['network_id']).AndReturn((None, False))
         self.moxed_client.list_ports(
             tenant_id=self.instance['project_id'],
             device_id=self.instance['uuid']).AndReturn(
@@ -1400,6 +1406,13 @@ class TestNeutronv2(TestNeutronv2Base):
         net_ids = [port['network_id'] for port in port_data]
         neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
             self.moxed_client)
+        if number == 2:
+            neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
+                self.moxed_client)
+            self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
+            api._get_physnet_tunneled_info(
+                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
+                    (None, False))
         self.moxed_client.list_networks(id=net_ids).AndReturn(
             {'networks': nets})
         float_data = number == 1 and self.float_data1 or self.float_data2
@@ -2433,10 +2446,15 @@ class TestNeutronv2(TestNeutronv2Base):
                       'mtu': 9000}]
         api = neutronapi.API()
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
+        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
+        self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
+        api._get_physnet_tunneled_info(self.context, self.moxed_client,
+                                       'net-id').AndReturn((None, False))
         self.mox.ReplayAll()
         neutronapi.get_client(uuids.fake)
-        net, iid = api._nw_info_build_network(fake_port, fake_nets,
-                                              fake_subnets)
+        net, iid = api._nw_info_build_network(self.context, fake_port,
+                                              fake_nets, fake_subnets)
         self.assertEqual(fake_subnets, net['subnets'])
         self.assertEqual('net-id', net['id'])
         self.assertEqual('foo', net['label'])
@@ -2488,10 +2506,15 @@ class TestNeutronv2(TestNeutronv2Base):
         fake_nets = [{'id': 'net-id2', 'name': 'foo', 'tenant_id': 'tenant'}]
         api = neutronapi.API()
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
+        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
+        self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
+        api._get_physnet_tunneled_info(self.context, self.moxed_client,
+                                       'net-id1').AndReturn((None, False))
         self.mox.ReplayAll()
         neutronapi.get_client(uuids.fake)
-        net, iid = api._nw_info_build_network(fake_port, fake_nets,
-                                              fake_subnets)
+        net, iid = api._nw_info_build_network(self.context, fake_port,
+                                              fake_nets, fake_subnets)
         self.assertEqual(fake_subnets, net['subnets'])
         self.assertEqual('net-id1', net['id'])
         self.assertEqual('tenant', net['meta']['tenant_id'])
@@ -2510,10 +2533,15 @@ class TestNeutronv2(TestNeutronv2Base):
         fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
         api = neutronapi.API()
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
+        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
+        self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
+        api._get_physnet_tunneled_info(mox.IgnoreArg(), mox.IgnoreArg(),
+                                       'net-id').AndReturn((None, False))
         self.mox.ReplayAll()
         neutronapi.get_client(uuids.fake)
-        net, iid = api._nw_info_build_network(fake_port, fake_nets,
-                                              fake_subnets)
+        net, iid = api._nw_info_build_network(self.context, fake_port,
+                                              fake_nets, fake_subnets)
         self.assertEqual(fake_subnets, net['subnets'])
         self.assertEqual('net-id', net['id'])
         self.assertEqual('foo', net['label'])
@@ -2538,10 +2566,15 @@ class TestNeutronv2(TestNeutronv2Base):
         fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
         api = neutronapi.API()
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
+        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
+        self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
+        api._get_physnet_tunneled_info(mox.IgnoreArg(), mox.IgnoreArg(),
+                                       'net-id').AndReturn((None, False))
         self.mox.ReplayAll()
         neutronapi.get_client(uuids.fake)
         net, ovs_interfaceid = api._nw_info_build_network(
-            fake_port, fake_nets, fake_subnets)
+            self.context, fake_port, fake_nets, fake_subnets)
         self.assertEqual(fake_subnets, net['subnets'])
         self.assertEqual('net-id', net['id'])
         self.assertEqual('foo', net['label'])
@@ -2565,10 +2598,15 @@ class TestNeutronv2(TestNeutronv2Base):
         fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
         api = neutronapi.API()
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
+        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
+        self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
+        api._get_physnet_tunneled_info(mox.IgnoreArg(), mox.IgnoreArg(),
+                                       'net-id').AndReturn((None, False))
         self.mox.ReplayAll()
         neutronapi.get_client(uuids.fake)
-        net, iid = api._nw_info_build_network(fake_port, fake_nets,
-                                              fake_subnets)
+        net, iid = api._nw_info_build_network(self.context, fake_port,
+                                              fake_nets, fake_subnets)
         self.assertNotEqual(CONF.neutron.ovs_bridge, net['bridge'])
         self.assertEqual('custom-bridge', net['bridge'])
 
@@ -2701,6 +2739,16 @@ class TestNeutronv2(TestNeutronv2Base):
 
         self.mox.StubOutWithMock(api, '_get_preexisting_port_ids')
         api._get_preexisting_port_ids(fake_inst).AndReturn(['port5'])
+
+        neutronapi.get_client(mox.IgnoreArg(),
+                              admin=True).MultipleTimes().AndReturn(
+            self.moxed_client)
+        self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
+        api._get_physnet_tunneled_info(
+            mox.IgnoreArg(), mox.IgnoreArg(),
+            mox.IgnoreArg()).MultipleTimes().AndReturn(
+                (None, False))
+
         self.mox.ReplayAll()
         fake_inst.info_cache = objects.InstanceInfoCache.new(
             self.context, uuids.instance)
@@ -3068,7 +3116,7 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
 
         nw_inf = self.api.get_instance_nw_info(self.context, instance)
 
-        mock_get_client.assert_called_once_with(mock.ANY, admin=True)
+        mock_get_client.assert_any_call(mock.ANY, admin=True)
         mock_cache_update.assert_called_once_with(
             mock.ANY, self.instance['uuid'], mock.ANY)
         mock_cache_get.assert_called_once_with(mock.ANY, self.instance['uuid'])
@@ -3311,7 +3359,7 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
             self.assertEqual(port_ids[iface_index],
                              nw_infs[iface_index]['id'])
 
-        mock_get_client.assert_called_once_with(mock.ANY, admin=True)
+        mock_get_client.assert_any_call(mock.ANY, admin=True)
         mock_cache_update.assert_called_once_with(
             mock.ANY, self.instance['uuid'], mock.ANY)
         mock_cache_get.assert_called_once_with(mock.ANY, self.instance['uuid'])

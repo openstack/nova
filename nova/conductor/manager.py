@@ -794,6 +794,7 @@ class ComputeTaskManager(base.Base):
                                 cell=instance_mapping.cell_mapping))
 
                     request_spec.ensure_project_and_user_id(instance)
+                    request_spec.ensure_network_metadata(instance)
                     compute_utils.heal_reqspec_is_bfv(
                         context, request_spec, instance)
                     host_lists = self._schedule_instances(context,
@@ -950,6 +951,7 @@ class ComputeTaskManager(base.Base):
                                                                 instance,
                                                                 image_ref)
                     request_spec.ensure_project_and_user_id(instance)
+                    request_spec.ensure_network_metadata(instance)
                     compute_utils.heal_reqspec_is_bfv(
                         context, request_spec, instance)
                     host_lists = self._schedule_instances(context,

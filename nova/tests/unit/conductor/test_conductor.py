@@ -347,6 +347,10 @@ class _BaseTaskTestCase(object):
         self.heal_reqspec_is_bfv_mock = _p.start()
         self.addCleanup(_p.stop)
 
+        _p = mock.patch('nova.objects.RequestSpec.ensure_network_metadata')
+        self.ensure_network_metadata_mock = _p.start()
+        self.addCleanup(_p.stop)
+
     def _prepare_rebuild_args(self, update_args=None):
         # Args that don't get passed in to the method but do get passed to RPC
         migration = update_args and update_args.pop('migration', None)
@@ -1032,6 +1036,8 @@ class _BaseTaskTestCase(object):
             # ComputeTaskManager.
             if isinstance(self.conductor,
                           conductor_manager.ComputeTaskManager):
+                self.ensure_network_metadata_mock.assert_called_once_with(
+                    test.MatchType(objects.Instance))
                 self.heal_reqspec_is_bfv_mock.assert_called_once_with(
                     self.context, fake_spec, instance)
                 sched_instances.assert_called_once_with(
@@ -1042,6 +1048,8 @@ class _BaseTaskTestCase(object):
             else:
                 # RPC API tests won't have the same request spec or instance
                 # since they go over the wire.
+                self.ensure_network_metadata_mock.assert_called_once_with(
+                    test.MatchType(objects.Instance))
                 self.heal_reqspec_is_bfv_mock.assert_called_once_with(
                     self.context, test.MatchType(objects.RequestSpec),
                     test.MatchType(objects.Instance))
@@ -1299,6 +1307,8 @@ class _BaseTaskTestCase(object):
                 obj_base.obj_to_primitive(inst_obj.image_meta), [inst_obj])
             fp_mock.assert_called_once_with(self.context, request_spec,
                                             filter_properties)
+            self.ensure_network_metadata_mock.assert_called_once_with(
+                inst_obj)
             self.heal_reqspec_is_bfv_mock.assert_called_once_with(
                 self.context, fake_spec, inst_obj)
             select_dest_mock.assert_called_once_with(self.context, fake_spec,

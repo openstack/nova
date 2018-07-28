@@ -19,12 +19,14 @@ from oslo_versionedobjects import base as ovo_base
 
 from nova import context
 from nova import exception
+from nova.network import model as network_model
 from nova import objects
 from nova.objects import base
 from nova.objects import request_spec
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
+from nova.tests.unit import fake_network_cache_model
 from nova.tests.unit import fake_request_spec
 from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel as uuids
@@ -499,6 +501,47 @@ class _TestRequestSpecObject(object):
     def test_to_legacy_filter_properties_dict_with_unset_values(self):
         spec = objects.RequestSpec()
         self.assertEqual({}, spec.to_legacy_filter_properties_dict())
+
+    def test_ensure_network_metadata(self):
+        network_a = fake_network_cache_model.new_network({
+            'physical_network': 'foo', 'tunneled': False})
+        vif_a = fake_network_cache_model.new_vif({'network': network_a})
+        network_b = fake_network_cache_model.new_network({
+            'physical_network': 'foo', 'tunneled': False})
+        vif_b = fake_network_cache_model.new_vif({'network': network_b})
+        network_c = fake_network_cache_model.new_network({
+            'physical_network': 'bar', 'tunneled': False})
+        vif_c = fake_network_cache_model.new_vif({'network': network_c})
+        network_d = fake_network_cache_model.new_network({
+            'physical_network': None, 'tunneled': True})
+        vif_d = fake_network_cache_model.new_vif({'network': network_d})
+        nw_info = network_model.NetworkInfo([vif_a, vif_b, vif_c, vif_d])
+        info_cache = objects.InstanceInfoCache(network_info=nw_info,
+                                               instance_uuid=uuids.instance)
+        instance = objects.Instance(id=3, uuid=uuids.instance,
+                                    info_cache=info_cache)
+
+        spec = objects.RequestSpec()
+        self.assertNotIn('network_metadata', spec)
+
+        spec.ensure_network_metadata(instance)
+        self.assertIn('network_metadata', spec)
+        self.assertIsInstance(spec.network_metadata, objects.NetworkMetadata)
+        self.assertEqual(spec.network_metadata.physnets, set(['foo', 'bar']))
+        self.assertTrue(spec.network_metadata.tunneled)
+
+    def test_ensure_network_metadata_missing(self):
+        nw_info = network_model.NetworkInfo([])
+        info_cache = objects.InstanceInfoCache(network_info=nw_info,
+                                               instance_uuid=uuids.instance)
+        instance = objects.Instance(id=3, uuid=uuids.instance,
+                                    info_cache=info_cache)
+
+        spec = objects.RequestSpec()
+        self.assertNotIn('network_metadata', spec)
+
+        spec.ensure_network_metadata(instance)
+        self.assertNotIn('network_metadata', spec)
 
     @mock.patch.object(request_spec.RequestSpec,
             '_get_by_instance_uuid_from_db')
