@@ -173,7 +173,7 @@ class Host(object):
             # NOTE(siva_krishnan): We have to check if
             # VIR_DOMAIN_EVENT_SUSPENDED_POSTCOPY and
             # VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED exist since the current
-            # minimum version of libvirt (1.2.9) don't have those attributes.
+            # minimum version of libvirt (1.3.1) don't have those attributes.
             # This check can be removed once MIN_LIBVIRT_VERSION is bumped to
             # at least 1.3.3.
             if (hasattr(libvirt, 'VIR_DOMAIN_EVENT_SUSPENDED_POSTCOPY') and

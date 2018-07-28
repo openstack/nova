@@ -407,11 +407,27 @@ class API(base_api.NetworkAPI):
                 # the current instance.host.
                 has_binding_ext = self.supports_port_binding_extension(context)
                 if port_migrating and has_binding_ext:
+                    # Attempt to delete all port bindings on the host and raise
+                    # any errors at the end.
+                    failed_port_ids = []
                     for port in ports:
                         # This call is safe in that 404s for non-existing
                         # bindings are ignored.
-                        self.delete_port_binding(
-                            context, port['id'], host)
+                        try:
+                            self.delete_port_binding(
+                                context, port['id'], host)
+                        except exception.PortBindingDeletionFailed:
+                            # delete_port_binding will log an error for each
+                            # failure but since we're iterating a list we want
+                            # to keep track of all failures to build a generic
+                            # exception to raise
+                            failed_port_ids.append(port['id'])
+                    if failed_port_ids:
+                        msg = (_("Failed to delete binding for port(s) "
+                                 "%(port_ids)s and host %(host)s.") %
+                               {'port_ids': ','.join(failed_port_ids),
+                                'host': host})
+                        raise exception.PortBindingDeletionFailed(msg)
             elif port_migrating:
                 # Setup the port profile
                 self._setup_migration_port_profile(
@@ -1334,20 +1350,19 @@ class API(base_api.NetworkAPI):
         if resp:
             LOG.debug('Activated binding for port %s and host %s.',
                       port_id, host)
+        # A 409 means the port binding is already active, which shouldn't
+        # happen if the caller is doing things in the correct order.
+        elif resp.status_code == 409:
+            LOG.warning('Binding for port %s and host %s is already '
+                        'active.', port_id, host)
         else:
-            # A 409 means the port binding is already active, which shouldn't
-            # happen if the caller is doing things in the correct order.
-            if resp.status_code == 409:
-                LOG.warning('Binding for port %s and host %s is already '
-                            'active.', port_id, host)
-            else:
-                # Log the details, raise an exception.
-                LOG.error('Unexpected error trying to activate binding '
-                          'for port %s and host %s. Code: %s. '
-                          'Error: %s', port_id, host, resp.status_code,
-                          resp.text)
-                raise exception.PortBindingActivationFailed(
-                    port_id=port_id, host=host)
+            # Log the details, raise an exception.
+            LOG.error('Unexpected error trying to activate binding '
+                      'for port %s and host %s. Code: %s. '
+                      'Error: %s', port_id, host, resp.status_code,
+                      resp.text)
+            raise exception.PortBindingActivationFailed(
+                port_id=port_id, host=host)
 
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
@@ -2555,7 +2570,7 @@ class API(base_api.NetworkAPI):
                 # port bindings will be updated correctly when
                 # migrate_instance_finish runs.
                 LOG.error('Unexpected error trying to get binding info '
-                          'for port %s and destination host %s. Code: %s. '
+                          'for port %s and destination host %s. Code: %i. '
                           'Error: %s', vif['id'], dest_host, resp.status_code,
                           resp.text)
 

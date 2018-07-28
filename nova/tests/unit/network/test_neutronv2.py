@@ -4450,15 +4450,19 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
                     port_id=uuids.port1, host='new-host')) as del_binding:
             with mock.patch.object(self.api, 'supports_port_binding_extension',
                                    return_value=True):
-                self.assertRaises(exception.PortBindingDeletionFailed,
-                                  self.api.setup_networks_on_host,
-                                  self.context, instance, host='new-host',
-                                  teardown=True)
+                ex = self.assertRaises(
+                    exception.PortBindingDeletionFailed,
+                    self.api.setup_networks_on_host,
+                    self.context, instance, host='new-host', teardown=True)
+                # Make sure both ports show up in the exception message.
+                self.assertIn(uuids.port1, six.text_type(ex))
+                self.assertIn(uuids.port2, six.text_type(ex))
         self.api._clear_migration_port_profile.assert_called_once_with(
             self.context, instance, get_client_mock.return_value,
             get_ports['ports'])
-        del_binding.assert_called_once_with(
-            self.context, uuids.port1, 'new-host')
+        del_binding.assert_has_calls([
+            mock.call(self.context, uuids.port1, 'new-host'),
+            mock.call(self.context, uuids.port2, 'new-host')])
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_profile_for_migration_teardown_true_no_profile(

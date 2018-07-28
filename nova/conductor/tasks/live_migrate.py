@@ -242,16 +242,11 @@ class LiveMigrationTask(base.TaskBase):
                     "%s") % destination
             raise exception.MigrationPreCheckError(msg)
 
-        if not self.network_api.supports_port_binding_extension(self.context):
-            LOG.debug('Extended port binding is not available.',
-                      instance=self.instance)
-            # Neutron doesn't support the binding-extended API so we can't
-            # attempt port binding on the destination host.
-            return
-
-        # Check to see that both the source and destination compute hosts
+        # Check to see that neutron supports the binding-extended API and
+        # check to see that both the source and destination compute hosts
         # are new enough to support the new port binding flow.
-        if (supports_extended_port_binding(self.context, self.source) and
+        if (self.network_api.supports_port_binding_extension(self.context) and
+                supports_extended_port_binding(self.context, self.source) and
                 supports_extended_port_binding(self.context, destination)):
             self.migrate_data.vifs = (
                 self._bind_ports_on_destination(destination))

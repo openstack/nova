@@ -1059,10 +1059,6 @@ class ComputeManager(manager.Manager):
                  {'state': event.get_name()},
                  instance_uuid=event.get_instance_uuid())
         context = nova.context.get_admin_context(read_deleted='yes')
-        # Join on info_cache since that's needed in migrate_instance_start.
-        instance = objects.Instance.get_by_uuid(context,
-                                                event.get_instance_uuid(),
-                                                expected_attrs=['info_cache'])
         vm_power_state = None
         event_transition = event.get_transition()
         if event_transition == virtevent.EVENT_LIFECYCLE_STOPPED:
@@ -1080,6 +1076,22 @@ class ComputeManager(manager.Manager):
             vm_power_state = power_state.SUSPENDED
         else:
             LOG.warning("Unexpected lifecycle event: %d", event_transition)
+
+        migrate_finish_statuses = {
+            # This happens on the source node and indicates live migration
+            # entered post-copy mode.
+            virtevent.EVENT_LIFECYCLE_POSTCOPY_STARTED: 'running (post-copy)',
+            # Suspended for offline migration.
+            virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED: 'running'
+        }
+
+        expected_attrs = []
+        if event_transition in migrate_finish_statuses:
+            # Join on info_cache since that's needed in migrate_instance_start.
+            expected_attrs.append('info_cache')
+        instance = objects.Instance.get_by_uuid(context,
+                                                event.get_instance_uuid(),
+                                                expected_attrs=expected_attrs)
 
         # Note(lpetrut): The event may be delayed, thus not reflecting
         # the current instance power state. In that case, ignore the event.
@@ -1105,13 +1117,9 @@ class ComputeManager(manager.Manager):
         # is resumed on the destination host in order to reduce network
         # downtime. Otherwise the ports are bound to the destination host
         # in post_live_migration_at_destination.
-        migrate_finish_statuses = {
-            # This happens on the source node and indicates live migration
-            # entered post-copy mode.
-            virtevent.EVENT_LIFECYCLE_POSTCOPY_STARTED: 'running (post-copy)',
-            # Suspended for offline migration.
-            virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED: 'running'
-        }
+        # TODO(danms): Explore options for using a different live migration
+        # specific callback for this instead of piggy-backing on the
+        # handle_lifecycle_event callback.
         if (instance.task_state == task_states.MIGRATING and
                 event_transition in migrate_finish_statuses):
             status = migrate_finish_statuses[event_transition]
@@ -6130,6 +6138,9 @@ class ComputeManager(manager.Manager):
             action=fields.NotificationAction.LIVE_MIGRATION_PRE,
             phase=fields.NotificationPhase.START)
 
+        # The driver pre_live_migration will plug vifs on the host.
+        # We call plug_vifs before calling ensure_filtering_rules_for_instance,
+        # to ensure bridge is set up.
         migrate_data = self.driver.pre_live_migration(context,
                                        instance,
                                        block_device_info,

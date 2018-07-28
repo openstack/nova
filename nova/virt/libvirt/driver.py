@@ -7649,14 +7649,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _pre_live_migration_plug_vifs(self, instance, network_info,
                                       migrate_data):
-        # We call plug_vifs before the compute manager calls
-        # ensure_filtering_rules_for_instance, to ensure bridge is set up
-        # Retry operation is necessary because continuously request comes,
-        # concurrent request occurs to iptables, then it complains.
         if 'vifs' in migrate_data and migrate_data.vifs:
             LOG.debug('Plugging VIFs using destination host port bindings '
                       'before live migration.', instance=instance)
-            # Plug VIFs using destination host port binding information.
             vif_plug_nw_info = network_model.NetworkInfo([])
             for migrate_vif in migrate_data.vifs:
                 vif_plug_nw_info.append(migrate_vif.get_dest_vif())
@@ -7664,6 +7659,9 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.debug('Plugging VIFs before live migration.',
                       instance=instance)
             vif_plug_nw_info = network_info
+        # Retry operation is necessary because continuous live migration
+        # requests to the same host cause concurrent requests to iptables,
+        # then it complains.
         max_retry = CONF.live_migration_retry_count
         for cnt in range(max_retry):
             try:
