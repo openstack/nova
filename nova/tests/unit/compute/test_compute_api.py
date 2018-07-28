@@ -4414,6 +4414,9 @@ class _ComputeAPIUnitTestMixIn(object):
                                               mock_br, mock_rs):
         fake_keypair = objects.KeyPair(name='test')
 
+        @mock.patch.object(self.compute_api,
+                           '_create_reqspec_buildreq_instmapping',
+                           new=mock.MagicMock())
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(self.compute_api, 'security_group_api')
         @mock.patch.object(self.compute_api,
@@ -4446,6 +4449,8 @@ class _ComputeAPIUnitTestMixIn(object):
         do_test()
 
     def test_provision_instances_creates_build_request(self):
+        @mock.patch.object(self.compute_api,
+                           '_create_reqspec_buildreq_instmapping')
         @mock.patch.object(objects.Instance, 'create')
         @mock.patch.object(self.compute_api, 'volume_api')
         @mock.patch('nova.compute.utils.check_num_instances_quota')
@@ -4461,7 +4466,8 @@ class _ComputeAPIUnitTestMixIn(object):
         def do_test(mock_get_min_ver, mock_get_min_ver_cells,
                     _mock_inst_mapping_create, mock_build_req,
                     mock_req_spec_from_components, _mock_ensure_default,
-                    mock_check_num_inst_quota, mock_volume, mock_inst_create):
+                    mock_check_num_inst_quota, mock_volume, mock_inst_create,
+                    mock_create_rs_br_im):
 
             min_count = 1
             max_count = 2
@@ -4524,11 +4530,14 @@ class _ComputeAPIUnitTestMixIn(object):
                                  br.instance.project_id)
                 self.assertEqual(1, br.block_device_mappings[0].id)
                 self.assertEqual(br.instance.uuid, br.tags[0].resource_id)
-                br.create.assert_called_with()
+                mock_create_rs_br_im.assert_any_call(ctxt, rs, br, im)
 
         do_test()
 
     def test_provision_instances_creates_instance_mapping(self):
+        @mock.patch.object(self.compute_api,
+                           '_create_reqspec_buildreq_instmapping',
+                           new=mock.MagicMock())
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(objects.Instance, 'create', new=mock.MagicMock())
         @mock.patch.object(self.compute_api.security_group_api,
@@ -4539,8 +4548,6 @@ class _ComputeAPIUnitTestMixIn(object):
                 new=mock.MagicMock())
         @mock.patch.object(objects.RequestSpec, 'from_components',
                 mock.MagicMock())
-        @mock.patch.object(objects.BuildRequest, 'create',
-                new=mock.MagicMock())
         @mock.patch('nova.objects.InstanceMapping')
         def do_test(mock_inst_mapping, mock_check_num_inst_quota):
             inst_mapping_mock = mock.MagicMock()
@@ -4619,6 +4626,8 @@ class _ComputeAPIUnitTestMixIn(object):
             _mock_cinder_reserve_volume,
             _mock_cinder_check_availability_zone, _mock_cinder_get,
             _mock_get_min_ver_cells, _mock_get_min_ver):
+        @mock.patch.object(self.compute_api,
+                           '_create_reqspec_buildreq_instmapping')
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(objects, 'Instance')
         @mock.patch.object(self.compute_api.security_group_api,
@@ -4629,7 +4638,8 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(objects, 'InstanceMapping')
         def do_test(mock_inst_mapping, mock_build_req,
                 mock_req_spec_from_components, _mock_create_bdm,
-                _mock_ensure_default, mock_inst, mock_check_num_inst_quota):
+                _mock_ensure_default, mock_inst, mock_check_num_inst_quota,
+                mock_create_rs_br_im):
 
             min_count = 1
             max_count = 2
@@ -4694,9 +4704,10 @@ class _ComputeAPIUnitTestMixIn(object):
                               check_server_group_quota, filter_properties,
                               None, tags)
             # First instance, build_req, mapping is created and destroyed
-            self.assertTrue(build_req_mocks[0].create.called)
+            mock_create_rs_br_im.assert_called_once_with(ctxt, req_spec_mock,
+                                                         build_req_mocks[0],
+                                                         inst_map_mocks[0])
             self.assertTrue(build_req_mocks[0].destroy.called)
-            self.assertTrue(inst_map_mocks[0].create.called)
             self.assertTrue(inst_map_mocks[0].destroy.called)
             # Second instance, build_req, mapping is not created nor destroyed
             self.assertFalse(inst_mocks[1].create.called)
@@ -4721,6 +4732,8 @@ class _ComputeAPIUnitTestMixIn(object):
             _mock_bdm, _mock_cinder_attach_create,
             _mock_cinder_check_availability_zone, _mock_cinder_get,
             _mock_get_min_ver_cells, _mock_get_min_ver):
+        @mock.patch.object(self.compute_api,
+                '_create_reqspec_buildreq_instmapping')
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(objects, 'Instance')
         @mock.patch.object(self.compute_api.security_group_api,
@@ -4731,7 +4744,8 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(objects, 'InstanceMapping')
         def do_test(mock_inst_mapping, mock_build_req,
                 mock_req_spec_from_components, _mock_create_bdm,
-                _mock_ensure_default, mock_inst, mock_check_num_inst_quota):
+                _mock_ensure_default, mock_inst, mock_check_num_inst_quota,
+                mock_create_rs_br_im):
 
             min_count = 1
             max_count = 2
@@ -4796,9 +4810,10 @@ class _ComputeAPIUnitTestMixIn(object):
                               check_server_group_quota, filter_properties,
                               None, tags)
             # First instance, build_req, mapping is created and destroyed
-            self.assertTrue(build_req_mocks[0].create.called)
+            mock_create_rs_br_im.assert_called_once_with(ctxt, req_spec_mock,
+                                                         build_req_mocks[0],
+                                                         inst_map_mocks[0])
             self.assertTrue(build_req_mocks[0].destroy.called)
-            self.assertTrue(inst_map_mocks[0].create.called)
             self.assertTrue(inst_map_mocks[0].destroy.called)
             # Second instance, build_req, mapping is not created nor destroyed
             self.assertFalse(inst_mocks[1].create.called)
@@ -4809,6 +4824,9 @@ class _ComputeAPIUnitTestMixIn(object):
         do_test()
 
     def test_provision_instances_creates_reqspec_with_secgroups(self):
+        @mock.patch.object(self.compute_api,
+                           '_create_reqspec_buildreq_instmapping',
+                           new=mock.MagicMock())
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(self.compute_api, 'security_group_api')
         @mock.patch.object(compute_api, 'objects')
