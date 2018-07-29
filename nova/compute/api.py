@@ -818,8 +818,9 @@ class API(base.Base):
         # InstancePCIRequests object
         pci_request_info = pci_request.get_pci_requests_from_flavor(
             instance_type)
-        self.network_api.create_resource_requests(
-            context, requested_networks, pci_request_info)
+
+        network_metadata = self.network_api.create_resource_requests(context,
+            requested_networks, pci_request_info)
 
         base_options = {
             'reservation_id': reservation_id,
@@ -859,13 +860,15 @@ class API(base.Base):
 
         # return the validated options and maximum number of instances allowed
         # by the network quotas
-        return base_options, max_network_count, key_pair, security_groups
+        return (base_options, max_network_count, key_pair, security_groups,
+                network_metadata)
 
     def _provision_instances(self, context, instance_type, min_count,
             max_count, base_options, boot_meta, security_groups,
             block_device_mapping, shutdown_terminate,
             instance_group, check_server_group_quota, filter_properties,
-            key_pair, tags, trusted_certs, supports_multiattach=False):
+            key_pair, tags, trusted_certs, supports_multiattach=False,
+            network_metadata=None):
         # Check quotas
         num_instances = compute_utils.check_num_instances_quota(
                 context, instance_type, min_count, max_count)
@@ -900,6 +903,11 @@ class API(base.Base):
                 # batch.
                 req_spec.num_instances = num_instances
                 req_spec.create()
+
+                # NOTE(stephenfin): The network_metadata field is not persisted
+                # and is therefore set after 'create' is called.
+                if network_metadata:
+                    req_spec.network_metadata = network_metadata
 
                 # Create an instance object, but do not store in db yet.
                 instance = objects.Instance(context=context)
@@ -1148,8 +1156,8 @@ class API(base.Base):
         self._check_auto_disk_config(image=boot_meta,
                                      auto_disk_config=auto_disk_config)
 
-        base_options, max_net_count, key_pair, security_groups = \
-                self._validate_and_build_base_options(
+        base_options, max_net_count, key_pair, security_groups, \
+            network_metadata = self._validate_and_build_base_options(
                     context, instance_type, boot_meta, image_href, image_id,
                     kernel_id, ramdisk_id, display_name, display_description,
                     key_name, key_data, security_groups, availability_zone,
@@ -1189,7 +1197,7 @@ class API(base.Base):
             boot_meta, security_groups, block_device_mapping,
             shutdown_terminate, instance_group, check_server_group_quota,
             filter_properties, key_pair, tags, trusted_certs,
-            supports_multiattach)
+            supports_multiattach, network_metadata)
 
         instances = []
         request_specs = []

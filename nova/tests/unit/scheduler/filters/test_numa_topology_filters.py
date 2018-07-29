@@ -28,13 +28,18 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
         super(TestNUMATopologyFilter, self).setUp()
         self.filt_cls = numa_topology_filter.NUMATopologyFilter()
 
-    def _get_spec_obj(self, numa_topology):
+    def _get_spec_obj(self, numa_topology, network_metadata=None):
         image_meta = objects.ImageMeta(properties=objects.ImageMetaProps())
+
         spec_obj = objects.RequestSpec(numa_topology=numa_topology,
                                        pci_requests=None,
                                        instance_uuid=uuids.fake,
                                        flavor=objects.Flavor(extra_specs={}),
                                        image=image_meta)
+
+        if network_metadata:
+            spec_obj.network_metadata = network_metadata
+
         return spec_obj
 
     def test_numa_topology_filter_pass(self):
@@ -229,4 +234,62 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                                     'pci_stats': None,
                                     'cpu_allocation_ratio': 16.0,
                                     'ram_allocation_ratio': 1.5})
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def _get_fake_host_state_with_networks(self):
+        network_a = objects.NetworkMetadata(physnets=set(['foo', 'bar']),
+                                            tunneled=False)
+        network_b = objects.NetworkMetadata(physnets=set(), tunneled=True)
+        host_topology = objects.NUMATopology(cells=[
+            objects.NUMACell(id=1, cpuset=set([1, 2]), memory=2048,
+                             cpu_usage=2, memory_usage=2048, mempages=[],
+                             siblings=[set([1]), set([2])],
+                             pinned_cpus=set([]),
+                             network_metadata=network_a),
+            objects.NUMACell(id=2, cpuset=set([3, 4]), memory=2048,
+                             cpu_usage=2, memory_usage=2048, mempages=[],
+                             siblings=[set([3]), set([4])],
+                             pinned_cpus=set([]),
+                             network_metadata=network_b)])
+
+        return fakes.FakeHostState('host1', 'node1', {
+            'numa_topology': host_topology,
+            'pci_stats': None,
+            'cpu_allocation_ratio': 16.0,
+            'ram_allocation_ratio': 1.5})
+
+    def test_numa_topology_filter_pass_networks(self):
+        host = self._get_fake_host_state_with_networks()
+
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(id=0, cpuset=set([1]), memory=512),
+            objects.InstanceNUMACell(id=1, cpuset=set([3]), memory=512)])
+
+        network_metadata = objects.NetworkMetadata(
+            physnets=set(['foo']), tunneled=False)
+        spec_obj = self._get_spec_obj(numa_topology=instance_topology,
+                                      network_metadata=network_metadata)
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+        # this should pass because while the networks are affined to different
+        # host NUMA nodes, our guest itself has multiple NUMA nodes
+        network_metadata = objects.NetworkMetadata(
+            physnets=set(['foo', 'bar']), tunneled=True)
+        spec_obj = self._get_spec_obj(numa_topology=instance_topology,
+                                      network_metadata=network_metadata)
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_numa_topology_filter_fail_networks(self):
+        host = self._get_fake_host_state_with_networks()
+
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(id=0, cpuset=set([1]), memory=512)])
+
+        # this should fail because the networks are affined to different host
+        # NUMA nodes but our guest only has a single NUMA node
+        network_metadata = objects.NetworkMetadata(
+            physnets=set(['foo']), tunneled=True)
+        spec_obj = self._get_spec_obj(numa_topology=instance_topology,
+                                      network_metadata=network_metadata)
+
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))

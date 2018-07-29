@@ -326,9 +326,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
                 flavor_id, networks)
 
         self.assertTrue(filter_mock.called)
-        # TODO(stephenfin): Switch this to 'ERROR' once the final patch is
-        # merged
-        self.assertEqual('ACTIVE', status)
+        self.assertEqual('ERROR', status)
 
     def test_create_server_with_physnet_and_tunneled_net(self):
         """Test combination of physnet and tunneled network.
