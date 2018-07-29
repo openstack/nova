@@ -49,9 +49,7 @@ flavor_access_policies = [
         base.RULE_ADMIN_OR_OWNER,
         """List flavor access information
 
-Adds the os-flavor-access:is_public key into several flavor APIs.
-
-It also allows access to the full list of tenants that have access
+Allows access to the full list of tenants that have access
 to a flavor via an os-flavor-access API.
 """,
         [
@@ -59,36 +57,7 @@ to a flavor via an os-flavor-access API.
                 'method': 'GET',
                 'path': '/flavors/{flavor_id}/os-flavor-access'
             },
-            {
-                'method': 'GET',
-                'path': '/flavors/detail'
-            },
-            {
-                'method': 'GET',
-                'path': '/flavors/{flavor_id}'
-            },
-            {
-                'method': 'POST',
-                'path': '/flavors'
-            },
-            {
-                'method': 'PUT',
-                'path': '/flavors/{flavor_id}'
-            },
-        ],
-        deprecated_for_removal=True,
-        deprecated_reason=(
-            'Nova API extension concept has been removed in Pike. Those '
-            'extensions have their own policies enforcement. As there is '
-            'no extensions now, "os_compute_api:os-flavor-access" policy '
-            'for POST, PUT, GET /flavors which was added for extensions is '
-            'not needed any more. NOTE: This policy is deprecated only for '
-            'POST /flavors, PUT /flavors, GET /flavors/{flavor_id} & '
-            'GET /flavors/detail. This policy for other API operations is '
-            'still valid and not deprecated'
-
-        ),
-        deprecated_since='17.0.0'),
+        ]),
 ]
 
 

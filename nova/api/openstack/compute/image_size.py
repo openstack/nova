@@ -14,7 +14,6 @@
 #    under the License.
 
 from nova.api.openstack import wsgi
-from nova.policies import image_size as is_policies
 
 
 class ImageSizeController(wsgi.Controller):
@@ -28,21 +27,17 @@ class ImageSizeController(wsgi.Controller):
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
-        context = req.environ["nova.context"]
-        if context.can(is_policies.BASE_POLICY_NAME, fatal=False):
-            image_resp = resp_obj.obj['image']
-            # image guaranteed to be in the cache due to the core API adding
-            # it in its 'show' method
-            image_cached = req.get_db_item('images', image_resp['id'])
-            self._extend_image(image_resp, image_cached)
+        image_resp = resp_obj.obj['image']
+        # image guaranteed to be in the cache due to the core API adding
+        # it in its 'show' method
+        image_cached = req.get_db_item('images', image_resp['id'])
+        self._extend_image(image_resp, image_cached)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
-        context = req.environ['nova.context']
-        if context.can(is_policies.BASE_POLICY_NAME, fatal=False):
-            images_resp = list(resp_obj.obj['images'])
-            # images guaranteed to be in the cache due to the core API adding
-            # it in its 'detail' method
-            for image in images_resp:
-                image_cached = req.get_db_item('images', image['id'])
-                self._extend_image(image, image_cached)
+        images_resp = list(resp_obj.obj['images'])
+        # images guaranteed to be in the cache due to the core API adding
+        # it in its 'detail' method
+        for image in images_resp:
+            image_cached = req.get_db_item('images', image['id'])
+            self._extend_image(image, image_cached)

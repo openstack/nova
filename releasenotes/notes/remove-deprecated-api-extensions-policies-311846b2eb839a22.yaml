@@ -1,0 +1,26 @@
+---
+upgrade:
+  - |
+    The following deprecated Policy Rules have been removed:
+
+    - Show & List server details
+
+      - os_compute_api:os-config-drive
+      - os_compute_api:os-extended-availability-zone
+      - os_compute_api:os-extended-status
+      - os_compute_api:os-extended-volumes
+      - os_compute_api:os-keypairs
+      - os_compute_api:os-server-usage
+      - os_compute_api:os-security-groups (only from /servers APIs)
+
+    - Create, Update, Show & List flavor details
+
+      - os_compute_api:os-flavor-rxtx
+      - os_compute_api:os-flavor-access (only from /flavors APIs)
+
+    - Show & List image details
+
+      - os_compute_api:image-size
+
+    These were deprecated in the 17.0.0 release as nova removed the concept
+    of API extensions.

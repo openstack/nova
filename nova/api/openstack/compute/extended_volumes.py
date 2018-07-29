@@ -19,13 +19,12 @@ from nova.api.openstack import api_version_request
 from nova.api.openstack import wsgi
 from nova import context
 from nova import objects
-from nova.policies import extended_volumes as ev_policies
 
 LOG = logging.getLogger(__name__)
 
 
 class ExtendedVolumesController(wsgi.Controller):
-    def _extend_server(self, context, server, req, bdms):
+    def _extend_server(self, server, req, bdms):
         volumes_attached = []
         for bdm in bdms:
             if bdm.get('volume_id'):
@@ -43,12 +42,11 @@ class ExtendedVolumesController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if context.can(ev_policies.BASE_POLICY_NAME, fatal=False):
-            server = resp_obj.obj['server']
-            bdms = objects.BlockDeviceMappingList.bdms_by_instance_uuid(
-                context, [server['id']])
-            instance_bdms = self._get_instance_bdms(bdms, server)
-            self._extend_server(context, server, req, instance_bdms)
+        server = resp_obj.obj['server']
+        bdms = objects.BlockDeviceMappingList.bdms_by_instance_uuid(
+            context, [server['id']])
+        instance_bdms = self._get_instance_bdms(bdms, server)
+        self._extend_server(server, req, instance_bdms)
 
     @staticmethod
     def _get_instance_bdms_in_multiple_cells(ctxt, servers):
@@ -82,12 +80,11 @@ class ExtendedVolumesController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if context.can(ev_policies.BASE_POLICY_NAME, fatal=False):
-            servers = list(resp_obj.obj['servers'])
-            bdms = self._get_instance_bdms_in_multiple_cells(context, servers)
-            for server in servers:
-                instance_bdms = self._get_instance_bdms(bdms, server)
-                self._extend_server(context, server, req, instance_bdms)
+        servers = list(resp_obj.obj['servers'])
+        bdms = self._get_instance_bdms_in_multiple_cells(context, servers)
+        for server in servers:
+            instance_bdms = self._get_instance_bdms(bdms, server)
+            self._extend_server(server, req, instance_bdms)
 
     def _get_instance_bdms(self, bdms, server):
         # server['id'] is guaranteed to be in the cache due to
