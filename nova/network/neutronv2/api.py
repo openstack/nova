@@ -1768,9 +1768,6 @@ class API(base_api.NetworkAPI):
             segments, the first segment that defines a physnet value will be
             used for the physnet name.
         """
-        def is_tunneled(net):
-            return net.get('provider:network_type') in L3_NETWORK_TYPES
-
         if self._has_multi_provider_extension(context, neutron=neutron):
             network = neutron.show_network(net_id,
                                            fields='segments').get('network')
@@ -1787,7 +1784,7 @@ class API(base_api.NetworkAPI):
                 # physical networks.
                 physnet_name = net.get('provider:physical_network')
                 if physnet_name:
-                    return physnet_name, is_tunneled(net)
+                    return physnet_name, False
 
             # Raising here as at least one segment should
             # have a physical network provided.
@@ -1799,7 +1796,8 @@ class API(base_api.NetworkAPI):
         net = neutron.show_network(
             net_id, fields=['provider:physical_network',
                             'provider:network_type']).get('network')
-        return net.get('provider:physical_network'), is_tunneled(net)
+        return (net.get('provider:physical_network'),
+                net.get('provider:network_type') in L3_NETWORK_TYPES)
 
     @staticmethod
     def _get_trusted_mode_from_port(port):

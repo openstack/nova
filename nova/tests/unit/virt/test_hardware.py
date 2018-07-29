@@ -3451,7 +3451,7 @@ class NetworkRequestSupportTestCase(test.NoDBTestCase):
     def test_multiple_networks(self):
         """Validate behavior with multiple networks.
 
-        If a we request multiple networks that are spread across host NUMA
+        If we request multiple networks that are spread across host NUMA
         nodes, we're going to need to use multiple host instances.
         """
         network_metadata = objects.NetworkMetadata(

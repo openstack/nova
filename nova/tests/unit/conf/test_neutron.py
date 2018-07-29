@@ -31,3 +31,5 @@ class NeutronConfTestCase(test.NoDBTestCase):
 
         self.assertIn('neutron_physnet_foo', CONF)
         self.assertIn('neutron_physnet_bar', CONF)
+        self.assertIn('neutron_tunnel', CONF)
+        self.assertIn('numa_nodes', CONF.neutron_tunnel)
