@@ -80,9 +80,11 @@ class TestRescheduleWithVolumesAttached(
         server_response = self.api.post_server({'server': server_request})
         server_id = server_response['id']
 
-        # FIXME(lyarwood): Assert that the instance ends up in an ERROR state
-        # with no attachments present in the fixture. The instance should be
-        # ACTIVE with a single attachment associated to the volume.
-        self._wait_for_state_change(self.api, server_response, 'ERROR')
-        self.assertNotIn(volume_id,
-                         self.cinder.volume_ids_for_instance(server_id))
+        self._wait_for_state_change(self.api, server_response, 'ACTIVE')
+        attached_volume_ids = self.cinder.volume_ids_for_instance(server_id)
+        self.assertIn(volume_id, attached_volume_ids)
+        self.assertEqual(1, len(self.cinder.volume_to_attachment))
+        # There should only be one attachment record for the volume and
+        # instance because the original would have been deleted before
+        # rescheduling off the first host.
+        self.assertEqual(1, len(self.cinder.volume_to_attachment[volume_id]))
