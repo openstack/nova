@@ -859,18 +859,8 @@ class ResourceTracker(object):
             return True
         return False
 
-    @retrying.retry(stop_max_attempt_number=4,
-                    retry_on_exception=lambda e: isinstance(
-                        e, exception.ResourceProviderUpdateConflict))
-    def _update(self, context, compute_node):
-        """Update partial stats locally and populate them to Scheduler."""
-        if self._resource_change(compute_node):
-            # If the compute_node's resource changed, update to DB.
-            # NOTE(jianghuaw): Once we completely move to use get_inventory()
-            # for all resource provider's inv data. We can remove this check.
-            # At the moment we still need this check and save compute_node.
-            compute_node.save()
-
+    def _update_to_placement(self, context, compute_node):
+        """Send resource and inventory changes to placement."""
         # NOTE(jianghuaw): Some resources(e.g. VGPU) are not saved in the
         # object of compute_node; instead the inventory data for these
         # resource is reported by driver's get_inventory(). So even there
@@ -918,6 +908,20 @@ class ResourceTracker(object):
                 # to remove this code branch
                 self.scheduler_client.update_compute_node(context,
                                                           compute_node)
+
+    @retrying.retry(stop_max_attempt_number=4,
+                    retry_on_exception=lambda e: isinstance(
+                        e, exception.ResourceProviderUpdateConflict))
+    def _update(self, context, compute_node):
+        """Update partial stats locally and populate them to Scheduler."""
+        if self._resource_change(compute_node):
+            # If the compute_node's resource changed, update to DB.
+            # NOTE(jianghuaw): Once we completely move to use get_inventory()
+            # for all resource provider's inv data. We can remove this check.
+            # At the moment we still need this check and save compute_node.
+            compute_node.save()
+
+        self._update_to_placement(context, compute_node)
 
         if self.pci_tracker:
             self.pci_tracker.save(context)
