@@ -561,6 +561,11 @@ after the upgrade as multiple Cells V2 cell support is not fully finished and
 may not work properly in all scenarios. These upgrade steps will help ensure a
 simple cutover from Cells V1 to Cells V2 in the future.
 
+.. note:: There is a Rocky summit video from CERN about how they did their
+          upgrade from cells v1 to v2 here:
+
+          https://www.openstack.org/videos/vancouver-2018/moving-from-cellsv1-to-cellsv2-at-cern
+
 1. If you haven't already created a cell0 database in a prior release,
    create a database for cell0. If you are going to pass the database
    connection url on the command line in step 2, you can name the cell0
