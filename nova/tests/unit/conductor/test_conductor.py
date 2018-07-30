@@ -44,6 +44,7 @@ from nova import exception as exc
 from nova.image import api as image_api
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import block_device as block_device_obj
 from nova.objects import fields
 from nova import rpc
 from nova.scheduler import client as scheduler_client
@@ -61,6 +62,7 @@ from nova.tests.unit import fake_server_actions
 from nova.tests.unit import utils as test_utils
 from nova.tests import uuidsentinel as uuids
 from nova import utils
+from nova.volume import cinder
 
 CONF = conf.CONF
 
@@ -960,6 +962,88 @@ class _BaseTaskTestCase(object):
             mock_destroy_build_req.assert_not_called()
 
         do_test()
+
+    @mock.patch.object(cinder.API, 'attachment_get')
+    @mock.patch.object(cinder.API, 'attachment_create')
+    @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
+    def test_validate_existing_attachment_ids_with_missing_attachments(self,
+            mock_bdm_save, mock_attachment_create, mock_attachment_get):
+        instance = self._create_fake_instance_obj()
+        bdms = [
+            block_device.BlockDeviceDict({
+                'boot_index': 0,
+                'guest_format': None,
+                'connection_info': None,
+                'device_type': u'disk',
+                'source_type': 'image',
+                'destination_type': 'volume',
+                'volume_size': 1,
+                'image_id': 1,
+                'device_name': '/dev/vdb',
+                'attachment_id': uuids.attachment,
+                'volume_id': uuids.volume
+            })]
+        bdms = block_device_obj.block_device_make_list_from_dicts(
+            self.context, bdms)
+        mock_attachment_get.side_effect = exc.VolumeAttachmentNotFound(
+            attachment_id=uuids.attachment)
+        mock_attachment_create.return_value = {'id': uuids.new_attachment}
+
+        self.assertEqual(uuids.attachment, bdms[0].attachment_id)
+        self.conductor_manager._validate_existing_attachment_ids(self.context,
+                                                                 instance,
+                                                                 bdms)
+        mock_attachment_get.assert_called_once_with(self.context,
+                                                    uuids.attachment)
+        mock_attachment_create.assert_called_once_with(self.context,
+                                                       uuids.volume,
+                                                       instance.uuid)
+        mock_bdm_save.assert_called_once()
+        self.assertEqual(uuids.new_attachment, bdms[0].attachment_id)
+
+    @mock.patch.object(cinder.API, 'attachment_get')
+    @mock.patch.object(cinder.API, 'attachment_create')
+    @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
+    def test_validate_existing_attachment_ids_with_attachments_present(self,
+            mock_bdm_save, mock_attachment_create, mock_attachment_get):
+        instance = self._create_fake_instance_obj()
+        bdms = [
+            block_device.BlockDeviceDict({
+                'boot_index': 0,
+                'guest_format': None,
+                'connection_info': None,
+                'device_type': u'disk',
+                'source_type': 'image',
+                'destination_type': 'volume',
+                'volume_size': 1,
+                'image_id': 1,
+                'device_name': '/dev/vdb',
+                'attachment_id': uuids.attachment,
+                'volume_id': uuids.volume
+            })]
+        bdms = block_device_obj.block_device_make_list_from_dicts(
+            self.context, bdms)
+        mock_attachment_get.return_value = {
+        "attachment": {
+            "status": "attaching",
+            "detached_at": "2015-09-16T09:28:52.000000",
+            "connection_info": {},
+            "attached_at": "2015-09-16T09:28:52.000000",
+            "attach_mode": "ro",
+            "instance": instance.uuid,
+            "volume_id": uuids.volume,
+            "id": uuids.attachment
+        }}
+
+        self.assertEqual(uuids.attachment, bdms[0].attachment_id)
+        self.conductor_manager._validate_existing_attachment_ids(self.context,
+                                                                 instance,
+                                                                 bdms)
+        mock_attachment_get.assert_called_once_with(self.context,
+                                                    uuids.attachment)
+        mock_attachment_create.assert_not_called()
+        mock_bdm_save.assert_not_called()
+        self.assertEqual(uuids.attachment, bdms[0].attachment_id)
 
     def test_unshelve_instance_on_host(self):
         instance = self._create_fake_instance_obj()
