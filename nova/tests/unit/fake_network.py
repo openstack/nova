@@ -350,11 +350,6 @@ def stub_out_nw_api_get_instance_nw_info(test, func=None,
     test.stub_out('nova.network.api.API.get_instance_nw_info', func)
 
 
-def stub_out_network_cleanup(test):
-    test.stub_out('nova.network.api.API.deallocate_for_instance',
-              lambda *args, **kwargs: None)
-
-
 _real_functions = {}
 
 
