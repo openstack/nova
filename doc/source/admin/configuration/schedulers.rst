@@ -141,7 +141,7 @@ system as metadata (named 'windows'):
 
 .. code-block:: console
 
-   $ openstack aggregate show MyWinAgg
+   $ openstack aggregate show myWinAgg
    +-------------------+----------------------------+
    | Field             | Value                      |
    +-------------------+----------------------------+
@@ -151,8 +151,8 @@ system as metadata (named 'windows'):
    | deleted_at        | None                       |
    | hosts             | [u'sf-devel']              |
    | id                | 1                          |
-   | name              | test                       |
-   | properties        |                            |
+   | name              | myWinAgg                   |
+   | properties        | os_distro='windows'        |
    | updated_at        | None                       |
    +-------------------+----------------------------+
 
@@ -169,7 +169,11 @@ property, it boots on the ``sf-devel`` host (all other filters being equal):
    | container_format | bare                                                 |
    | created_at       | 2016-12-13T09:30:30Z                                 |
    | disk_format      | qcow2                                                |
-   | ...
+   | ...                                                                     |
+   | name             | Win-2012                                             |
+   | ...                                                                     |
+   | properties       | os_distro='windows'                                  |
+   | ...                                                                     |
 
 You can configure the ``AggregateImagePropertiesIsolation`` filter by using the
 following options in the ``nova.conf`` file:
