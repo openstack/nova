@@ -500,7 +500,7 @@ class LibvirtGenericVIFDriver(object):
         return conf
 
     def _set_config_VIFGeneric(self, instance, vif, conf, host):
-        dev = self.get_vif_devname(vif)
+        dev = vif.vif_name
         designer.set_vif_host_backend_ethernet_config(conf, dev, host)
 
     def _set_config_VIFBridge(self, instance, vif, conf, host=None):
