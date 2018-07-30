@@ -376,6 +376,11 @@ reserved: &reserved
 reserved_opt:
   <<: *reserved
   required: false
+  description: >
+    The amount of the resource a provider has reserved for its own use.
+    Up to microversion 1.25, this value has to be less than the value of
+    ``total``. Starting from microversion 1.26, this value has to be less
+    than or equal to the value of ``total``.
 resource_class:
   <<: *resource_class_path
   in: body
