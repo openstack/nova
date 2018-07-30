@@ -30,6 +30,7 @@ from nova.api.openstack.placement import policies
 from nova import rc_fields as fields
 from nova.tests import fixtures
 from nova.tests.functional.api.openstack.placement.db import test_base as tb
+from nova.tests.functional.api.openstack.placement.fixtures import capture
 from nova.tests.unit import policy_fixture
 from nova.tests import uuidsentinel as uuids
 
@@ -49,7 +50,7 @@ class APIFixture(fixture.GabbiFixture):
         # existing nova fixtures that do that. This captures the
         # output that happens outside individual tests (for
         # example database migrations).
-        self.standard_logging_fixture = fixtures.StandardLogging()
+        self.standard_logging_fixture = capture.Logging()
         self.standard_logging_fixture.setUp()
         self.output_stream_fixture = output.CaptureOutput()
         self.output_stream_fixture.setUp()

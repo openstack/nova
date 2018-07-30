@@ -19,6 +19,7 @@ from nova.api.openstack.placement import context
 from nova.api.openstack.placement import deploy
 from nova.api.openstack.placement.objects import resource_provider
 from nova.tests import fixtures
+from nova.tests.functional.api.openstack.placement.fixtures import capture
 from nova.tests.unit import policy_fixture
 
 
@@ -48,7 +49,7 @@ class TestCase(testtools.TestCase):
 
         self.useFixture(policy_fixture.PlacementPolicyFixture())
 
-        self.useFixture(fixtures.StandardLogging())
+        self.useFixture(capture.Logging())
         self.useFixture(output.CaptureOutput())
         # Filter ignorable warnings during test runs.
         self.useFixture(fixtures.WarningsFixture())
