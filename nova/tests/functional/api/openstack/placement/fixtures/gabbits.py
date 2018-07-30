@@ -55,7 +55,7 @@ class APIFixture(fixture.GabbiFixture):
         self.output_stream_fixture = output.CaptureOutput()
         self.output_stream_fixture.setUp()
         # Filter ignorable warnings during test runs.
-        self.warnings_fixture = fixtures.WarningsFixture()
+        self.warnings_fixture = capture.WarningsFixture()
         self.warnings_fixture.setUp()
 
         self.conf_fixture = config_fixture.Config(CONF)
