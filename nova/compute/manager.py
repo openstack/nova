@@ -4142,7 +4142,7 @@ class ComputeManager(manager.Manager):
                     # FIXME(danms): Remove this in Rocky
                     rt = self._get_resource_tracker()
                     rt.delete_allocation_for_failed_resize(
-                        instance, node, instance_type)
+                        context, instance, node, instance_type)
                 # try to re-schedule the resize elsewhere:
                 exc_info = sys.exc_info()
                 self._reschedule_resize_or_reraise(context, image, instance,

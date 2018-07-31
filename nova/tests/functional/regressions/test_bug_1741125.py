@@ -78,3 +78,12 @@ class TestServerResizeReschedule(ProviderUsageBaseTestCase):
                 'VERIFY_RESIZE')
         self.assertEqual(self.flavor2['name'],
                          server['flavor']['original_name'])
+
+
+class TestServerResizeRescheduleWithCachingScheduler(
+        TestServerResizeReschedule):
+    """Tests the reschedule scenario using the CachingScheduler."""
+
+    def setUp(self):
+        self.flags(driver='caching_scheduler', group='scheduler')
+        super(TestServerResizeRescheduleWithCachingScheduler, self).setUp()
