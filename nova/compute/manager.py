@@ -1708,16 +1708,16 @@ class ComputeManager(manager.Manager):
 
         return block_device_info
 
-    def _build_failed(self):
+    def _build_failed(self, node):
         if CONF.compute.consecutive_build_service_disable_threshold:
             rt = self._get_resource_tracker()
             # NOTE(danms): Update our counter, but wait for the next
             # update_available_resource() periodic to flush it to the DB
-            rt.stats.build_failed()
+            rt.build_failed(node)
 
-    def _build_succeeded(self):
+    def _build_succeeded(self, node):
         rt = self._get_resource_tracker()
-        rt.stats.build_succeeded()
+        rt.build_succeeded(node)
 
     @wrap_exception()
     @reverts_task_state
@@ -1727,6 +1727,11 @@ class ComputeManager(manager.Manager):
                      injected_files=None, requested_networks=None,
                      security_groups=None, block_device_mapping=None,
                      node=None, limits=None):
+
+        if node is None:
+            node = self.driver.get_available_nodes(refresh=True)[0]
+            LOG.debug('No node specified, defaulting to %s', node,
+                      instance=instance)
 
         @utils.synchronized(instance.uuid)
         def _locked_do_build_and_run_instance(*args, **kwargs):
@@ -1766,9 +1771,9 @@ class ComputeManager(manager.Manager):
                         rt.reportclient.delete_allocation_for_instance(
                             instance.uuid)
 
-                        self._build_failed()
+                        self._build_failed(node)
                     else:
-                        self._build_succeeded()
+                        self._build_succeeded(node)
 
         # NOTE(danms): We spawn here to return the RPC worker thread back to
         # the pool. Since what follows could take a really long time, we don't
@@ -1826,11 +1831,6 @@ class ComputeManager(manager.Manager):
 
         if limits is None:
             limits = {}
-
-        if node is None:
-            node = self.driver.get_available_nodes(refresh=True)[0]
-            LOG.debug('No node specified, defaulting to %s', node,
-                      instance=instance)
 
         try:
             with timeutils.StopWatch() as timer:

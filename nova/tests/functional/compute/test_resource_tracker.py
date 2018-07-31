@@ -459,19 +459,14 @@ class IronicResourceTrackerTest(test.TestCase):
             self.rt.update_available_resource(self.ctx, nodename)
 
         self.assertEqual(3, len(self.rt.compute_nodes))
+        self.assertEqual(3, len(self.rt.stats))
 
-        def _assert_stats(bad_node=None):
+        def _assert_stats():
             # Make sure each compute node has a unique set of stats and
             # they don't accumulate across nodes.
             for _cn in self.rt.compute_nodes.values():
                 node_stats_key = 'node:%s' % _cn.hypervisor_hostname
-                if bad_node == _cn.hypervisor_hostname:
-                    # FIXME(mriedem): This is bug 1784705 where the
-                    # compute node has lost its stats and is getting
-                    # stats for a different node.
-                    self.assertNotIn(node_stats_key, _cn.stats)
-                else:
-                    self.assertIn(node_stats_key, _cn.stats)
+                self.assertIn(node_stats_key, _cn.stats)
                 node_stat_count = 0
                 for stat in _cn.stats:
                     if stat.startswith('node:'):
@@ -485,5 +480,4 @@ class IronicResourceTrackerTest(test.TestCase):
         cn1_nodename = cn1_obj.hypervisor_hostname
         inst = self.instances[uuids.instance1]
         with self.rt.instance_claim(self.ctx, inst, cn1_nodename):
-            # FIXME(mriedem): Remove bad_node once bug 1784705 is fixed.
-            _assert_stats(bad_node=cn1_nodename)
+            _assert_stats()
