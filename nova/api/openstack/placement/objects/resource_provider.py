@@ -471,13 +471,14 @@ def _anchors_for_sharing_providers(context, rp_ids, get_id=False):
     join_chain = sa.join(
         join_chain, shr_with_sps,
         shr_with_sps_aggs.c.resource_provider_id == shr_with_sps.c.id)
-    # TODO(efried): Change this to an inner join when we are sure all
-    # root_provider_id values are NOT NULL
-    join_chain = sa.outerjoin(
-        join_chain, rps, shr_with_sps.c.root_provider_id == rps.c.id)
     if get_id:
-        sel = sa.select([sps.c.id, func.coalesce(rps.c.id, shr_with_sps.c.id)])
+        sel = sa.select([sps.c.id, func.coalesce(
+            shr_with_sps.c.root_provider_id, shr_with_sps.c.id)])
     else:
+        # TODO(efried): Change this to an inner join when we are sure all
+        # root_provider_id values are NOT NULL
+        join_chain = sa.outerjoin(
+            join_chain, rps, shr_with_sps.c.root_provider_id == rps.c.id)
         sel = sa.select([sps.c.uuid, func.coalesce(rps.c.uuid,
                                                    shr_with_sps.c.uuid)])
     sel = sel.select_from(join_chain)
