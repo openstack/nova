@@ -54,13 +54,11 @@ class NotificationsTestCase(test.TestCase):
 
         self.stub_out('nova.network.api.API.get_instance_nw_info',
                 fake_get_nw_info)
-        fake_network.set_stub_network_methods(self)
 
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
-        self.flags(network_manager='nova.network.manager.FlatManager',
-                   host='testhost')
+        self.flags(host='testhost')
         self.flags(notify_on_state_change="vm_and_task_state",
                    group='notifications')
 

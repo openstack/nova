@@ -25,7 +25,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_network
 from nova.tests.unit import policy_fixture
 from nova.virt import fake
 
@@ -149,7 +148,6 @@ class ServerGroupTestV21(ServerGroupTestBase):
         fake.set_nodes(['host2'])
         self.addCleanup(fake.restore_nodes)
         self.compute2 = self.start_service('compute', host='host2')
-        fake_network.set_stub_network_methods(self)
 
     def test_get_no_groups(self):
         groups = self.api.get_server_groups()

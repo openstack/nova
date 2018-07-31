@@ -26,7 +26,6 @@ from nova import context
 from nova.db import api as db
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova.tests.functional import test_servers
-from nova.tests.unit import fake_network
 
 
 class TestDatabaseArchive(test_servers.ServersTestBase):
@@ -59,10 +58,6 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
 
         :returns: created server (dict)
         """
-        # TODO(mriedem): We should pull this up into the parent class so we
-        # don't have so much copy/paste in these functional tests.
-        fake_network.set_stub_network_methods(self)
-
         # Create a server
         server = self._build_minimal_create_server_request()
         created_server = self.api.post_server({'server': server})

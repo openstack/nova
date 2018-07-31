@@ -36,7 +36,6 @@ class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase,
         self.useFixture(nova_fixtures.AllServicesCurrent())
         super(TestMultiattachVolumes, self).setUp()
         self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
-        self.useFixture(nova_fixtures.NeutronFixture(self))
 
     def test_boot_from_volume_and_attach_to_second_server(self):
         """This scenario creates a server from the multiattach volume, waits

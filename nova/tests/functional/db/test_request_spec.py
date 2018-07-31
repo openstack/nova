@@ -20,7 +20,6 @@ from nova.objects import request_spec
 from nova import test
 from nova.tests import fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_network
 from nova.tests.unit import fake_request_spec
 
 
@@ -98,11 +97,11 @@ class RequestSpecInstanceMigrationTestCase(
     _image_ref_parameter = 'imageRef'
     _flavor_ref_parameter = 'flavorRef'
 
+    USE_NEUTRON = True
+
     def setUp(self):
         super(RequestSpecInstanceMigrationTestCase, self).setUp()
-
         self.context = context.get_admin_context()
-        fake_network.set_stub_network_methods(self)
 
     def _create_instances(self, old=2, total=5):
         request = self._build_minimal_create_server_request()

@@ -18,7 +18,6 @@ import mock
 
 from nova.tests.functional.api import client
 from nova.tests.functional.test_servers import ServersTestBase
-from nova.tests.unit import fake_network
 from nova.tests.unit.virt.libvirt import fake_imagebackend
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -79,7 +78,6 @@ class RealTimeServersTest(ServersTestBase):
         with mock.patch('nova.virt.libvirt.host.Host.get_connection',
                         return_value=fake_connection):
             self.compute = self.start_service('compute', host='test_compute0')
-            fake_network.set_stub_network_methods(self)
 
             flavor = self._create_flavor(extra_spec={
                 'hw:cpu_realtime': 'yes',
