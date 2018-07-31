@@ -19,13 +19,15 @@ databases, service credentials, and API endpoints.
 
         # mysql
 
-   * Create the ``nova_api``, ``nova``, and ``nova_cell0`` databases:
+   * Create the ``nova_api``, ``nova``, ``nova_cell0``, and ``placement``
+     databases:
 
      .. code-block:: console
 
         MariaDB [(none)]> CREATE DATABASE nova_api;
         MariaDB [(none)]> CREATE DATABASE nova;
         MariaDB [(none)]> CREATE DATABASE nova_cell0;
+        MariaDB [(none)]> CREATE DATABASE placement;
 
    * Grant proper access to the databases:
 
@@ -45,6 +47,11 @@ databases, service credentials, and API endpoints.
           IDENTIFIED BY 'NOVA_DBPASS';
         MariaDB [(none)]> GRANT ALL PRIVILEGES ON nova_cell0.* TO 'nova'@'%' \
           IDENTIFIED BY 'NOVA_DBPASS';
+
+        MariaDB [(none)]> GRANT ALL PRIVILEGES ON placement.* TO 'placement'@'localhost' \
+          IDENTIFIED BY 'PLACEMENT_DBPASS';
+        MariaDB [(none)]> GRANT ALL PRIVILEGES ON placement.* TO 'placement'@'%' \
+          IDENTIFIED BY 'PLACEMENT_DBPASS';
 
      Replace ``NOVA_DBPASS`` with a suitable password.
 
@@ -274,8 +281,8 @@ Install and configure components
 
 #. Edit the ``/etc/nova/nova.conf`` file and complete the following actions:
 
-   * In the ``[api_database]`` and ``[database]`` sections, configure database
-     access:
+   * In the ``[api_database]``, ``[database]``, and ``[placement_database]``
+     sections, configure database access:
 
      .. path /etc/nova/nova.conf
      .. code-block:: ini
@@ -288,8 +295,12 @@ Install and configure components
         # ...
         connection = mysql+pymysql://nova:NOVA_DBPASS@controller/nova
 
+        [placement_database]
+        # ...
+        connection = mysql+pymysql://placement:PLACEMENT_DBPASS@controller/placement
+
      Replace ``NOVA_DBPASS`` with the password you chose for the Compute
-     databases.
+     databases and ``PLACEMENT_DBPASS`` for Placement database.
 
    * In the ``[DEFAULT]`` section, configure ``RabbitMQ`` message queue access:
 
@@ -418,7 +429,7 @@ Install and configure components
       ``placement`` user in the Identity service. Comment out any other options
       in the ``[placement]`` section.
 
-#. Populate the nova-api database:
+#. Populate the ``nova-api`` and ``placement`` databases:
 
    .. code-block:: console
 
