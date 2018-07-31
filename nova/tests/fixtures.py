@@ -942,19 +942,17 @@ class PoisonFunctions(fixtures.Fixture):
         # causes trouble in tests. Make sure that if tests don't
         # properly patch it the test explodes.
 
-        # explicit import because MonkeyPatch doesn't magic import
-        # correctly if we are patching a method on a class in a
-        # module.
-        import nova.virt.libvirt.host  # noqa
-
         def evloop(*args, **kwargs):
             import sys
             warnings.warn("Forgot to disable libvirt event thread")
             sys.exit(1)
 
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.host.Host._init_events',
-            evloop))
+        # Don't poison the function if it's already mocked
+        import nova.virt.libvirt.host
+        if not isinstance(nova.virt.libvirt.host.Host._init_events, mock.Mock):
+            self.useFixture(fixtures.MockPatch(
+                'nova.virt.libvirt.host.Host._init_events',
+                side_effect=evloop))
 
 
 class IndirectionAPIFixture(fixtures.Fixture):

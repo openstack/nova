@@ -481,9 +481,9 @@ def disable_event_thread(self):
     def evloop(*args, **kwargs):
         pass
 
-    self.useFixture(fixtures.MonkeyPatch(
+    self.useFixture(fixtures.MockPatch(
         'nova.virt.libvirt.host.Host._init_events',
-        evloop))
+        side_effect=evloop))
 
 
 class libvirtError(Exception):
