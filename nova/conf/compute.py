@@ -318,7 +318,7 @@ Possible values:
 * A comma-separated list of physical CPU numbers that virtual CPUs can be
   allocated to by default. Each element should be either a single CPU number,
   a range of CPU numbers, or a caret followed by a CPU number to be
-  excluded from a previous range. For example:
+  excluded from a previous range. For example::
 
     vcpu_pin_set = "4-12,^8,15"
 """),
@@ -330,7 +330,7 @@ Number of huge/large memory pages to reserved per NUMA host cell.
 Possible values:
 
 * A list of valid key=value which reflect NUMA node ID, page size
-  (Default unit is KiB) and number of pages to be reserved.
+  (Default unit is KiB) and number of pages to be reserved. For example::
 
     reserved_huge_pages = node:0,size:2048,count:64
     reserved_huge_pages = node:1,size:1GB,count:1
