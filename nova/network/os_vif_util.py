@@ -481,6 +481,20 @@ def _nova_to_osvif_vif_hostdev_physical(vif):
     raise NotImplementedError()
 
 
+# VIF_TYPE_BINDING_FAILED = 'binding_failed'
+def _nova_to_osvif_vif_binding_failed(vif):
+    """Special handler for the "binding_failed" vif type.
+
+    The "binding_failed" vif type indicates port binding to a host failed
+    and we are trying to plug the vifs again, which will fail because we
+    do not know the actual real vif type, like ovs, bridge, etc. We raise
+    NotImplementedError to indicate to the caller that we cannot handle
+    this type of vif rather than the generic "Unsupported VIF type" error
+    in nova_to_osvif_vif.
+    """
+    raise NotImplementedError()
+
+
 def nova_to_osvif_vif(vif):
     """Convert a Nova VIF model to an os-vif object
 
