@@ -867,13 +867,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         expected_task_state = [None]
         if reboot_type == 'HARD':
-            expected_task_state.extend([task_states.REBOOTING,
-                                        task_states.REBOOT_PENDING,
-                                        task_states.REBOOT_STARTED,
-                                        task_states.REBOOTING_HARD,
-                                        task_states.RESUMING,
-                                        task_states.UNPAUSING,
-                                        task_states.SUSPENDING])
+            expected_task_state = task_states.ALLOW_REBOOT
 
         if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
@@ -929,10 +923,6 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_reboot_hard_resuming(self):
         self._test_reboot_type(vm_states.ACTIVE,
                                'HARD', task_state=task_states.RESUMING)
-
-    def test_reboot_hard_pausing(self):
-        self._test_reboot_type(vm_states.ACTIVE,
-                               'HARD', task_state=task_states.PAUSING)
 
     def test_reboot_hard_unpausing(self):
         self._test_reboot_type(vm_states.ACTIVE,
