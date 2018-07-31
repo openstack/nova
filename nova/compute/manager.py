@@ -1690,16 +1690,16 @@ class ComputeManager(manager.Manager):
 
         return block_device_info
 
-    def _build_failed(self):
+    def _build_failed(self, node):
         if CONF.compute.consecutive_build_service_disable_threshold:
             rt = self._get_resource_tracker()
             # NOTE(danms): Update our counter, but wait for the next
             # update_available_resource() periodic to flush it to the DB
-            rt.stats.build_failed()
+            rt.build_failed(node)
 
-    def _build_succeeded(self):
+    def _build_succeeded(self, node):
         rt = self._get_resource_tracker()
-        rt.stats.build_succeeded()
+        rt.build_succeeded(node)
 
     @wrap_exception()
     @reverts_task_state
@@ -1749,9 +1749,9 @@ class ComputeManager(manager.Manager):
 
                     if result in (build_results.FAILED,
                                   build_results.RESCHEDULED):
-                        self._build_failed()
+                        self._build_failed(node)
                     else:
-                        self._build_succeeded()
+                        self._build_succeeded(node)
 
         # NOTE(danms): We spawn here to return the RPC worker thread back to
         # the pool. Since what follows could take a really long time, we don't
