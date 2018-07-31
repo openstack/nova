@@ -1046,6 +1046,12 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         self.assertItemsEqual(
             expected, rp_obj._anchors_for_sharing_providers(self.ctx, [s1.id]))
 
+        # Get same result (id format) when we set get_id=True
+        expected = set([(s1.id, rp.id) for rp in (s1, r1, r2, r3, s5)])
+        self.assertItemsEqual(
+            expected, rp_obj._anchors_for_sharing_providers(self.ctx, [s1.id],
+                                                            get_id=True))
+
         # s2 gets s2 (self) and r3 via agg4
         expected = set([(s2.uuid, rp.uuid) for rp in (s2, r3)])
         self.assertItemsEqual(
