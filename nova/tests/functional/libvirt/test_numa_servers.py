@@ -54,7 +54,6 @@ class NUMAServersTestBase(ServersTestBase):
            'nova.virt.libvirt.guest.libvirt',
            fakelibvirt))
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
-        self.useFixture(nova_fixtures.PlacementFixture())
 
     def _setup_compute_service(self):
         # we need to mock some libvirt stuff so we start this service in the
