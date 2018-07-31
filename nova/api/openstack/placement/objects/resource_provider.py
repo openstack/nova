@@ -278,7 +278,7 @@ def _increment_provider_generation(ctx, rp):
 
     res = ctx.session.execute(upd_stmt)
     if res.rowcount != 1:
-        raise exception.ConcurrentUpdateDetected
+        raise exception.ResourceProviderConcurrentUpdateDetected()
     return new_generation
 
 
@@ -1924,6 +1924,10 @@ def _create_incomplete_consumer(ctx, consumer_id):
 @base.VersionedObjectRegistry.register_if(False)
 class AllocationList(base.ObjectListBase, base.VersionedObject):
 
+    # The number of times to retry set_allocations if there has
+    # been a resource provider (not consumer) generation coflict.
+    RP_CONFLICT_RETRY_COUNT = 10
+
     fields = {
         'objects': fields.ListOfObjectsField('Allocation'),
     }
@@ -2106,9 +2110,41 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
                so, it will end up setting the Allocation.id attribute of each
                Allocation object.
         """
-        # TODO(jaypipes): Retry the allocation writes on
-        # ConcurrentUpdateDetected
-        self._set_allocations(self._context, self.objects)
+        # Retry _set_allocations server side if there is a
+        # ResourceProviderConcurrentUpdateDetected. We don't care about
+        # sleeping, we simply want to reset the resource provider objects
+        # and try again. For sake of simplicity (and because we don't have
+        # easy access to the information) we reload all the resource
+        # providers that may be present.
+        retries = self.RP_CONFLICT_RETRY_COUNT
+        while retries:
+            retries -= 1
+            try:
+                self._set_allocations(self._context, self.objects)
+                break
+            except exception.ResourceProviderConcurrentUpdateDetected:
+                LOG.debug('Retrying allocations write on resource provider '
+                          'generation conflict')
+                # We only want to reload each unique resource provider once.
+                alloc_rp_uuids = set(
+                    alloc.resource_provider.uuid for alloc in self.objects)
+                seen_rps = {}
+                for rp_uuid in alloc_rp_uuids:
+                    seen_rps[rp_uuid] = ResourceProvider.get_by_uuid(
+                        self._context, rp_uuid)
+                for alloc in self.objects:
+                    rp_uuid = alloc.resource_provider.uuid
+                    alloc.resource_provider = seen_rps[rp_uuid]
+        else:
+            # We ran out of retries so we need to raise again.
+            # The log will automatically have request id info associated with
+            # it that will allow tracing back to specific allocations.
+            # Attempting to extract specific consumer or resource provider
+            # information from the allocations is not coherent as this
+            # could be multiple consumers and providers.
+            LOG.warning('Exceeded retry limit of %d on allocations write',
+                        self.RP_CONFLICT_RETRY_COUNT)
+            raise exception.ResourceProviderConcurrentUpdateDetected()
 
     def delete_all(self):
         consumer_uuids = set(alloc.consumer.uuid for alloc in self.objects)
