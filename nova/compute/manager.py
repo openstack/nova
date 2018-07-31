@@ -961,8 +961,15 @@ class ComputeManager(manager.Manager):
         except NotImplementedError as e:
             LOG.debug(e, instance=instance)
         except exception.VirtualInterfacePlugException:
-            # we don't want an exception to block the init_host
-            LOG.exception("Vifs plug failed", instance=instance)
+            # NOTE(mriedem): If we get here, it could be because the vif_type
+            # in the cache is "binding_failed". The only way to fix that is to
+            # try and bind the ports again, which would be expensive here on
+            # host startup. We could add a check to _heal_instance_info_cache
+            # to handle this, but probably only if the instance task_state is
+            # None.
+            LOG.exception('Virtual interface plugging failed for instance. '
+                          'The port binding:host_id may need to be manually '
+                          'updated.', instance=instance)
             self._set_instance_obj_error_state(context, instance)
             return
 
