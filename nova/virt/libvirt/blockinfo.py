@@ -438,10 +438,7 @@ def get_root_info(instance, virt_type, image_meta, root_bdm,
         else:
             root_device_bus = disk_bus
             root_device_type = 'disk'
-        if root_device_name:
-            root_device_bus = get_disk_bus_for_disk_dev(virt_type,
-                                                        root_device_name)
-        else:
+        if not root_device_name:
             root_device_name = find_disk_dev_for_disk_bus({}, root_device_bus)
 
         return {'bus': root_device_bus,
