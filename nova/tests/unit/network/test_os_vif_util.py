@@ -13,6 +13,7 @@
 #    under the License.
 
 from os_vif import objects as osv_objects
+import six
 
 from nova import exception
 from nova.network import model
@@ -813,6 +814,17 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
                 subnets=[]),
         )
 
-        self.assertRaises(exception.NovaException,
-                          os_vif_util.nova_to_osvif_vif,
-                          vif)
+        ex = self.assertRaises(exception.NovaException,
+                               os_vif_util.nova_to_osvif_vif, vif)
+        self.assertIn('Unsupported VIF type wibble', six.text_type(ex))
+
+    def test_nova_to_osvif_vif_binding_failed(self):
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type="binding_failed",
+            address="22:52:25:62:e2:aa",
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                subnets=[]),)
+        self.assertIsNone(os_vif_util.nova_to_osvif_vif(vif))
