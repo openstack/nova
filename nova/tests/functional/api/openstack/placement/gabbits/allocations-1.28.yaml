@@ -64,6 +64,8 @@ tests:
   response_strings:
     - consumer generation conflict
     - expected null but got 5
+  response_json_paths:
+      $.errors[0].code: placement.concurrent_update
 
 - name: new version gen is None no existing
   PUT: /allocations/22222222-2222-2222-2222-222222222222
@@ -147,6 +149,8 @@ tests:
   status: 409
   response_strings:
     - consumer generation conflict
+  response_json_paths:
+      $.errors[0].code: placement.concurrent_update
 
 - name: old version no gen existing
   PUT: /allocations/44444444-4444-4444-4444-444444444444

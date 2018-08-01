@@ -226,7 +226,8 @@ def update_traits_for_resource_provider(req):
         raise webob.exc.HTTPConflict(
             _("Resource provider's generation already changed. Please update "
               "the generation and try again."),
-            json_formatter=util.json_error_formatter)
+            json_formatter=util.json_error_formatter,
+            comment=errors.CONCURRENT_UPDATE)
 
     trait_objs = rp_obj.TraitList.get_all(
         context, filters={'name_in': traits})

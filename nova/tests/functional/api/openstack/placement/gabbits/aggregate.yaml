@@ -116,6 +116,8 @@ tests:
       resource_provider_generation: 0
       aggregates: []
   status: 409
+  response_json_paths:
+      $.errors[0].code: placement.concurrent_update
 
 - name: clear those aggregates
   PUT: $LAST_URL
