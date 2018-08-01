@@ -1287,7 +1287,20 @@ def _server_group_count_members_by_user(context, group, user_id):
     for greenthread in greenthreads:
         found = greenthread.wait()
         instances = instances + found
-    return {'user': {'server_group_members': len(instances)}}
+    # Count build requests using the same filters to catch group members
+    # that are not yet creatd in a cell.
+    # NOTE(mriedem): BuildRequestList.get_by_filters is not very efficient for
+    # what we need and we can optimize this with a new query method.
+    build_requests = objects.BuildRequestList.get_by_filters(context, filters)
+    # Ignore any duplicates since build requests and instances can co-exist
+    # for a short window of time after the instance is created in a cell but
+    # before the build request is deleted.
+    instance_uuids = [inst.uuid for inst in instances]
+    count = len(instances)
+    for build_request in build_requests:
+        if build_request.instance_uuid not in instance_uuids:
+            count += 1
+    return {'user': {'server_group_members': count}}
 
 
 def _fixed_ip_count(context, project_id):
