@@ -1040,7 +1040,7 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
         # s1 gets s1 (self),
         # r1 via agg1 through c1,
         # r2 via agg2 AND via agg3 through c2
-        # r3 via agg2 and agg3
+        # r3 via agg3
         # s5 via agg1 and agg2
         expected = set([(s1.uuid, rp.uuid) for rp in (s1, r1, r2, r3, s5)])
         self.assertItemsEqual(
