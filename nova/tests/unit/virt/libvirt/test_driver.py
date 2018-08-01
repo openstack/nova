@@ -9586,6 +9586,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                       mock_min_version):
         self.compute = manager.ComputeManager()
         instance_ref = self.test_instance
+        target_connection = '127.0.0.2'
 
         xml_tmpl = ("<domain type='kvm'>"
                     "<devices>"
@@ -9614,7 +9615,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         disk_paths = ['vda', 'vdb']
         params = {
-            'migrate_disks': ['vda', 'vdb'],
+            'migrate_uri': 'tcp://127.0.0.2',
+            'migrate_disks': disk_paths,
             'bandwidth': libvirt_driver.MIN_MIGRATION_SPEED_BW,
             'destination_xml': target_xml,
         }
@@ -9625,7 +9627,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             graphics_listen_addr_vnc='10.0.0.1',
             graphics_listen_addr_spice='10.0.0.2',
             serial_listen_addr='127.0.0.1',
-            target_connect_addr=None,
+            target_connect_addr=target_connection,
             bdms=[],
             block_migration=False)
         dom = fakelibvirt.virDomain
@@ -9633,36 +9635,42 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
-                          self.context, instance_ref, 'dest',
+                          self.context, instance_ref, target_connection,
                           False, migrate_data, guest, disk_paths,
                           bandwidth=bandwidth)
         mock_xml.assert_called_once_with(
                 flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE)
         mock_migrateToURI3.assert_called_once_with(
-                drvr._live_migration_uri('dest'),
+                drvr._live_migration_uri(target_connection),
                 params=params, flags=0)
 
     def test_live_migration_parallels_no_new_xml(self):
         self.flags(virt_type='parallels', group='libvirt')
         self.flags(enabled=False, group='vnc')
+        target_connection = None
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         instance_dict = dict(self.test_instance)
         instance_dict.update({'host': 'fake',
                               'power_state': power_state.RUNNING,
                               'vm_state': vm_states.ACTIVE})
         instance = objects.Instance(**instance_dict)
+
+        params = {
+            'bandwidth': libvirt_driver.MIN_MIGRATION_SPEED_BW
+        }
         migrate_data = objects.LibvirtLiveMigrateData(
+            target_connect_addr=target_connection,
             block_migration=False)
         dom_mock = mock.MagicMock()
         guest = libvirt_guest.Guest(dom_mock)
         _bandwidth = libvirt_driver.MIN_MIGRATION_SPEED_BW
-        drvr._live_migration_operation(self.context, instance, 'dest',
-                                       False, migrate_data, guest, [],
+        drvr._live_migration_operation(self.context, instance,
+                                       target_connection, False,
+                                       migrate_data, guest, None,
                                        bandwidth=_bandwidth)
-        # when new xml is not passed we fall back to migrateToURI
-        dom_mock.migrateToURI.assert_called_once_with(
-            drvr._live_migration_uri('dest'),
-            flags=0, bandwidth=_bandwidth)
+        dom_mock.migrateToURI3.assert_called_once_with(
+            drvr._live_migration_uri(target_connection),
+            params=params, flags=0)
 
     @mock.patch.object(utils, 'spawn')
     @mock.patch.object(host.Host, 'get_guest')
@@ -9703,18 +9711,34 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         guest.migrate_configure_max_speed.assert_called_once_with(
             CONF.libvirt.live_migration_bandwidth)
 
-    def test_live_migration_update_volume_xml(self):
+    @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
+    @mock.patch.object(nova.virt.libvirt.migration,
+                       'get_updated_guest_xml', return_value='')
+    @mock.patch.object(fakelibvirt.virDomain, "XMLDesc")
+    def test_live_migration_update_volume_xml(self, mock_xml,
+                                    mock_updated_guest_xml,
+                                    mock_migrateToURI3):
         self.compute = manager.ComputeManager()
-        instance_dict = dict(self.test_instance)
-        instance_dict.update({'host': 'fake',
-                              'power_state': power_state.RUNNING,
-                              'vm_state': vm_states.ACTIVE})
-        instance_ref = objects.Instance(**instance_dict)
+        instance_ref = self.test_instance
+        target_connection = '127.0.0.2'
+
         target_xml = self.device_xml_tmpl.format(
             device_path='/dev/disk/by-path/'
             'ip-1.2.3.4:3260-iqn.'
             'cde.67890.opst-lun-Z')
-        # start test
+
+        # Prepare mocks
+        mock_xml.return_value = target_xml
+
+        disk_paths = ['vda', 'vdb']
+        params = {
+            'migrate_disks': disk_paths,
+            'migrate_uri': 'tcp://127.0.0.2',
+            'bandwidth': libvirt_driver.MIN_MIGRATION_SPEED_BW,
+            'destination_xml': target_xml
+        }
+
+        # Start test
         connection_info = {
             u'driver_volume_type': u'iscsi',
             u'serial': u'58a84f6d-3f0c-4e19-a0af-eb657b790657',
@@ -9732,30 +9756,24 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             connection_info=connection_info)
         migrate_data = objects.LibvirtLiveMigrateData(
             serial_listen_addr='',
-            target_connect_addr=None,
+            target_connect_addr=target_connection,
             bdms=[bdm],
             block_migration=False)
 
+        dom = fakelibvirt.virDomain
+        guest = libvirt_guest.Guest(dom)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        test_mock = mock.MagicMock()
-        guest = libvirt_guest.Guest(test_mock)
 
-        with mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info') as \
-                mget_info,\
-                mock.patch.object(drvr._host, '_get_domain') as mget_domain,\
-                mock.patch.object(fakelibvirt.virDomain, 'migrateToURI2'),\
-                mock.patch.object(
-                    libvirt_migrate, 'get_updated_guest_xml') as mupdate:
-
-            mget_info.side_effect = exception.InstanceNotFound(
-                                     instance_id='foo')
-            mget_domain.return_value = test_mock
-            test_mock.XMLDesc.return_value = target_xml
-            self.assertFalse(drvr._live_migration_operation(
-                             self.context, instance_ref, 'dest', False,
-                             migrate_data, guest, [],
-                             libvirt_driver.MIN_MIGRATION_SPEED_BW))
-            mupdate.assert_called_once_with(
+        _bandwidth = libvirt_driver.MIN_MIGRATION_SPEED_BW
+        mock_updated_guest_xml.return_value = target_xml
+        drvr._live_migration_operation(
+                         self.context, instance_ref, target_connection,
+                         False, migrate_data, guest, disk_paths,
+                         _bandwidth)
+        mock_migrateToURI3.assert_called_once_with(
+                drvr._live_migration_uri(target_connection),
+                params=params, flags=0)
+        mock_updated_guest_xml.assert_called_once_with(
                 guest, migrate_data, mock.ANY, get_vif_config=None)
 
     def test_live_migration_update_vifs_xml(self):
@@ -10101,6 +10119,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                       mock_min_version):
         self.compute = manager.ComputeManager()
         instance_ref = self.test_instance
+        target_connection = '127.0.0.2'
 
         xml_tmpl = ("<domain type='kvm'>"
                     "<devices>"
@@ -10123,6 +10142,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         disk_paths = ['vda', 'vdb']
         params = {
+            'migrate_uri': 'tcp://127.0.0.2',
             'migrate_disks': ['vda', 'vdb'],
             'bandwidth': libvirt_driver.MIN_MIGRATION_SPEED_BW,
             'destination_xml': target_xml,
@@ -10134,7 +10154,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             graphics_listen_addr_vnc='10.0.0.1',
             graphics_listen_addr_spice='10.0.0.2',
             serial_listen_addr='9.0.0.12',
-            target_connect_addr=None,
+            target_connect_addr=target_connection,
             bdms=[],
             block_migration=False,
             serial_listen_ports=[10200])
@@ -10143,13 +10163,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
-                          self.context, instance_ref, 'dest',
+                          self.context, instance_ref, target_connection,
                           False, migrate_data, guest, disk_paths,
                           bandwidth=bandwidth)
         mock_xml.assert_called_once_with(
                 flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE)
         mock_migrateToURI3.assert_called_once_with(
-                drvr._live_migration_uri('dest'),
+                drvr._live_migration_uri(target_connection),
                 params=params, flags=0)
 
     def test_live_migration_fails_without_serial_console_address(self):
@@ -10189,12 +10209,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_live_migration_uses_migrateToURI3(
             self, mock_old_xml, mock_new_xml, mock_migrateToURI3,
             mock_min_version):
+
+        target_connection = '127.0.0.2'
         # Preparing mocks
         disk_paths = ['vda', 'vdb']
         params = {
+            'migrate_uri': 'tcp://127.0.0.2',
             'migrate_disks': ['vda', 'vdb'],
             'bandwidth': libvirt_driver.MIN_MIGRATION_SPEED_BW,
-            'destination_xml': '',
         }
         mock_migrateToURI3.side_effect = fakelibvirt.libvirtError("ERR")
 
@@ -10203,7 +10225,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             graphics_listen_addr_vnc='0.0.0.0',
             graphics_listen_addr_spice='0.0.0.0',
             serial_listen_addr='127.0.0.1',
-            target_connect_addr=None,
+            target_connect_addr=target_connection,
             bdms=[],
             block_migration=False)
 
@@ -10214,11 +10236,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance = objects.Instance(**self.test_instance)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
-                          self.context, instance, 'dest',
+                          self.context, instance, target_connection,
                           False, migrate_data, guest, disk_paths,
                           libvirt_driver.MIN_MIGRATION_SPEED_BW)
         mock_migrateToURI3.assert_called_once_with(
-            drvr._live_migration_uri('dest'),
+            drvr._live_migration_uri(target_connection),
             params=params, flags=0)
 
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
@@ -10228,11 +10250,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def _test_live_migration_block_migration_flags(self,
             device_names, expected_flags,
             mock_old_xml, mock_min_version, mock_migrateToURI3):
+
+        target_connection = '127.0.0.2'
         migrate_data = objects.LibvirtLiveMigrateData(
             graphics_listen_addr_vnc='0.0.0.0',
             graphics_listen_addr_spice='0.0.0.0',
             serial_listen_addr='127.0.0.1',
-            target_connect_addr=None,
+            target_connect_addr=target_connection,
             bdms=[],
             block_migration=True)
 
@@ -10243,17 +10267,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         _bandwidth = libvirt_driver.MIN_MIGRATION_SPEED_BW
         instance = objects.Instance(**self.test_instance)
-        drvr._live_migration_operation(self.context, instance, 'dest',
+        drvr._live_migration_operation(self.context, instance,
+                                       target_connection,
                                        True, migrate_data, guest,
                                        device_names, _bandwidth)
 
         params = {
+            'migrate_uri': 'tcp://127.0.0.2',
             'migrate_disks': device_names,
             'bandwidth': _bandwidth,
             'destination_xml': '<xml/>',
         }
+        if not params['migrate_disks']:
+            del params['migrate_disks']
+
         mock_migrateToURI3.assert_called_once_with(
-            drvr._live_migration_uri('dest'), params=params,
+            drvr._live_migration_uri(target_connection), params=params,
             flags=expected_flags)
 
     def test_live_migration_block_migration_with_devices(self):
@@ -10286,38 +10315,42 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self, mock_old_xml, mock_new_xml,
             mock_migrateToURI3, mock_min_version):
         self.flags(live_migration_tunnelled=True, group='libvirt')
+
+        target_connection = None
+        device_names = ['disk1', 'disk2']
+
         # Preparing mocks
-        disk_paths = []
         _bandwidth = libvirt_driver.MIN_MIGRATION_SPEED_BW
+        # Since we are passing the VIR_MIGRATE_TUNNELLED flag, the
+        # 'parms' dict will not (as expected) contain 'migrate_disks'
         params = {
-            'bandwidth': _bandwidth,
-            'destination_xml': '',
+            'bandwidth': _bandwidth
         }
         # Start test
         migrate_data = objects.LibvirtLiveMigrateData(
             graphics_listen_addr_vnc='0.0.0.0',
             graphics_listen_addr_spice='0.0.0.0',
             serial_listen_addr='127.0.0.1',
-            target_connect_addr=None,
+            target_connect_addr=target_connection,
             bdms=[],
             block_migration=True)
 
         dom = fakelibvirt.virDomain
         guest = libvirt_guest.Guest(dom)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
         drvr._parse_migration_flags()
         instance = objects.Instance(**self.test_instance)
-        drvr._live_migration_operation(self.context, instance, 'dest',
-                                       True, migrate_data, guest, disk_paths,
-                                       _bandwidth)
+        drvr._live_migration_operation(self.context, instance,
+                                       target_connection, True, migrate_data,
+                                       guest, device_names, _bandwidth)
+
         expected_flags = (fakelibvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
                           fakelibvirt.VIR_MIGRATE_PERSIST_DEST |
                           fakelibvirt.VIR_MIGRATE_TUNNELLED |
                           fakelibvirt.VIR_MIGRATE_PEER2PEER |
                           fakelibvirt.VIR_MIGRATE_LIVE)
         mock_migrateToURI3.assert_called_once_with(
-            drvr._live_migration_uri('dest'),
+            drvr._live_migration_uri(target_connection),
             params=params, flags=expected_flags)
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
@@ -10330,16 +10363,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # Prepare data
         self.compute = manager.ComputeManager()
         instance_ref = self.test_instance
-
-        # Prepare mocks
-        mock_migrateToURI3.side_effect = fakelibvirt.libvirtError("ERR")
+        target_connection = '127.0.0.2'
 
         disk_paths = ['vda', 'vdb']
         params = {
+            'migrate_uri': 'tcp://127.0.0.2',
             'migrate_disks': disk_paths,
             'bandwidth': libvirt_driver.MIN_MIGRATION_SPEED_BW,
             'destination_xml': '<xml/>',
         }
+
+        # Prepare mocks
+        mock_migrateToURI3.side_effect = fakelibvirt.libvirtError("ERR")
 
         # Start test
         bandwidth = libvirt_driver.MIN_MIGRATION_SPEED_BW
@@ -10347,7 +10382,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             graphics_listen_addr_vnc='10.0.0.1',
             graphics_listen_addr_spice='10.0.0.2',
             serial_listen_addr='127.0.0.1',
-            target_connect_addr=None,
+            target_connect_addr=target_connection,
             bdms=[],
             block_migration=False)
         dom = fakelibvirt.virDomain
@@ -10355,11 +10390,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
-                          self.context, instance_ref, 'dest',
+                          self.context, instance_ref, target_connection,
                           False, migrate_data, guest, disk_paths,
                           bandwidth=bandwidth)
         mock_migrateToURI3.assert_called_once_with(
-                drvr._live_migration_uri('dest'),
+                drvr._live_migration_uri(target_connection),
                 params=params, flags=0)
 
     @mock.patch('shutil.rmtree')

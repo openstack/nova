@@ -773,20 +773,6 @@ class Domain(object):
                 self._def['vcpu'],
                 123456789]
 
-    def migrateToURI(self, desturi, flags, dname, bandwidth):
-        raise make_libvirtError(
-                libvirtError,
-                "Migration always fails for fake libvirt!",
-                error_code=VIR_ERR_INTERNAL_ERROR,
-                error_domain=VIR_FROM_QEMU)
-
-    def migrateToURI2(self, dconnuri, miguri, dxml, flags, dname, bandwidth):
-        raise make_libvirtError(
-                libvirtError,
-                "Migration always fails for fake libvirt!",
-                error_code=VIR_ERR_INTERNAL_ERROR,
-                error_domain=VIR_FROM_QEMU)
-
     def migrateToURI3(self, dconnuri, params, flags):
         raise make_libvirtError(
                 libvirtError,

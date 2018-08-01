@@ -1158,10 +1158,6 @@ class ComputeDriver(object):
         - setup_basic_filtering (for nova-basic, etc.)
         - prepare_instance_filter(for nova-instance-instance-xxx, etc.)
 
-        to_xml may have to be called since it defines PROJNET, PROJMASK.
-        but libvirt migrates those value through migrateToURI(),
-        so , no need to be called.
-
         Don't use thread for this method since migration should
         not be started when setting-up filtering rules operations
         are not completed.

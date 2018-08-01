@@ -133,8 +133,9 @@ class _FakeDriverBackendTestCase(object):
         self.stub_out('nova.virt.libvirt.guest.Guest.detach_device_with_retry',
                       fake_detach_device_with_retry)
         self.stub_out('nova.virt.libvirt.guest.Guest.migrate',
-                      lambda self, destination, migrate_uri, params, flags,
-                      domain_xml, bandwidth: None)
+                      lambda self, destination, migrate_uri=None,
+                      migrate_disks=None, destination_xml=None, flags=0,
+                      bandwidth=0: None)
         # We can't actually make a config drive v2 because ensure_tree has
         # been faked out
         self.stub_out('nova.virt.configdrive.ConfigDriveBuilder.make_drive',
@@ -631,7 +632,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
             migration=migration, bdms=[], block_migration=False,
             serial_listen_addr='127.0.0.1')
         self.connection.live_migration(self.ctxt, instance_ref, 'otherhost',
-                                       lambda *a: None, lambda *a: None,
+                                       lambda *a, **b: None,
+                                       lambda *a, **b: None,
                                        migrate_data=migrate_data)
 
     @catch_notimplementederror
