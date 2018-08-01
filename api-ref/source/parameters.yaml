@@ -626,11 +626,17 @@ exclude:
 flavor_is_public_query:
   in: query
   required: false
-  type: boolean
+  type: string
   description: |
-    Filters the flavor list by only public flavors. By default ``non
-    admin`` users only see public flavors, and ``admin`` users can see
-    additional non public flavors.
+    This parameter is only applicable to users with the administrative role.
+    For all other non-admin users, the parameter is ignored and only public
+    flavors will be returned. Filters the flavor list based on whether the
+    flavor is public or private. If the value of this parameter is not
+    specified, it is treated as ``True``. If the value is specified, ``1``,
+    ``t``, ``true``, ``on``, ``y`` and ``yes`` are treated as ``True``. ``0``,
+    ``f``, ``false``, ``off``, ``n`` and ``no`` are treated as ``False``
+    (they are case-insensitive). If the value is ``None`` (case-insensitive)
+    both public and private flavors will be listed in a single request.
 flavor_query:
   description: |
     Filters the response by a flavor, as a UUID. A flavor is a combination of memory,
