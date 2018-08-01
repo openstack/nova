@@ -17,7 +17,7 @@ import wsgi_intercept
 
 from gabbi import driver
 
-from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional.api.openstack.placement.fixtures import capture
 # TODO(cdent): This whitespace blight will go away post extraction.
 from nova.tests.functional.api.openstack.placement.fixtures \
         import gabbits as fixtures
@@ -35,7 +35,7 @@ def load_tests(loader, tests, pattern):
     # capture, for cleaner results reporting.
     inner_fixtures = [
         output.CaptureOutput,
-        nova_fixtures.StandardLogging,
+        capture.Logging,
     ]
     return driver.build_tests(test_dir, loader, host=None,
                               test_loader_name=__name__,
