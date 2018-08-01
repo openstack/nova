@@ -11,7 +11,7 @@
       - openstack-infra/devstack-gate
       - openstack/nova
       - openstack/tempest
-    irrelevant-files:
+    irrelevant-files: &dsvm-irrelevant-files
       - ^(placement-)?api-.*$
       - ^(test-|)requirements.txt$
       - ^.*\.rst$
@@ -38,20 +38,7 @@
       - openstack-infra/devstack-gate
       - openstack/nova
       - openstack/tempest
-    irrelevant-files:
-      - ^(placement-)?api-.*$
-      - ^(test-|)requirements.txt$
-      - ^.*\.rst$
-      - ^.git.*$
-      - ^doc/.*$
-      - ^nova/hacking/.*$
-      - ^nova/locale/.*$
-      - ^nova/tests/(?!live_migration).*$
-      - ^releasenotes/.*$
-      - ^setup.cfg$
-      - ^tests-py3.txt$
-      - ^tools/.*$
-      - ^tox.ini$
+    irrelevant-files: *dsvm-irrelevant-files
     nodeset: legacy-ubuntu-xenial-2-node
 
 - job:
@@ -61,7 +48,7 @@
       Run tox-based functional tests for the OpenStack Nova project with Nova
       specific irrelevant-files list. Uses tox with the ``functional``
       environment.
-    irrelevant-files:
+    irrelevant-files: &functional-irrelevant-files
       - ^.*\.rst$
       - ^api-.*$
       - ^doc/source/.*$
@@ -79,13 +66,7 @@
       Run tox-based functional tests for the OpenStack Nova project
       under cPython version 3.5. with Nova specific irrelevant-files list.
       Uses tox with the ``functional-py35`` environment.
-    irrelevant-files:
-      - ^.*\.rst$
-      - ^api-.*$
-      - ^doc/source/.*$
-      - ^nova/locale/.*$
-      - ^placement-api-ref/.*$
-      - ^releasenotes/.*$
+    irrelevant-files: *functional-irrelevant-files
     vars:
       tox_envlist: functional-py35
     timeout: 3600
@@ -173,22 +154,7 @@
         # on things like nova docs-only changes.
         - ironic-tempest-dsvm-ipa-wholedisk-bios-agent_ipmitool-tinyipa:
             voting: false
-            # This irrelevant-files list should match nova-dsvm-base.
-            # TODO(mriedem): Define a node anchor to deduplicate this.
-            irrelevant-files:
-              - ^(placement-)?api-.*$
-              - ^(test-|)requirements.txt$
-              - ^.*\.rst$
-              - ^.git.*$
-              - ^doc/.*$
-              - ^nova/hacking/.*$
-              - ^nova/locale/.*$
-              - ^nova/tests/.*$
-              - ^releasenotes/.*$
-              - ^setup.cfg$
-              - ^tests-py3.txt$
-              - ^tools/.*$
-              - ^tox.ini$
+            irrelevant-files: *dsvm-irrelevant-files
         - nova-cells-v1
         - nova-live-migration
         - nova-lvm
