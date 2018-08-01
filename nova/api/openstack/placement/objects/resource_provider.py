@@ -3554,14 +3554,28 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
     # Let's look into each tree
     for root_id, alloc_dict in tree_dict.items():
         # Get request_groups, which is a list of lists of
-        # AllocationRequestResource per requested resource class.
-        request_groups = alloc_dict.values()
+        # AllocationRequestResource(ARR) per requested resource class(rc).
+        # For example, if we have the alloc_dict:
+        # {rc1_id: [ARR(rc1, rp1), ARR(rc1, rp2)],
+        #  rc2_id: [ARR(rc2, rp1), ARR(rc2, rp2)],
+        #  rc3_id: [ARR(rc3, rp1)]}
+        # then the request_groups would be something like
+        # [[ARR(rc1, rp1), ARR(rc1, rp2)],
+        #  [ARR(rc2, rp1), ARR(rc2, rp2)],
+        #  [ARR(rc3, rp1)]]
+        # , which should be ordered by the resource class id.
+        request_groups = [val for key, val in sorted(alloc_dict.items())]
 
         root_summary = summaries[root_id]
         root_uuid = root_summary.resource_provider.uuid
 
         # Using itertools.product, we get all the combinations of resource
         # providers in a tree.
+        # For example, the sample in the comment above becomes:
+        # [(ARR(rc1, ss1), ARR(rc2, ss1), ARR(rc3, ss1)),
+        #  (ARR(rc1, ss1), ARR(rc2, ss2), ARR(rc3, ss1)),
+        #  (ARR(rc1, ss2), ARR(rc2, ss1), ARR(rc3, ss1)),
+        #  (ARR(rc1, ss2), ARR(rc2, ss2), ARR(rc3, ss1))]
         for res_requests in itertools.product(*request_groups):
             all_prov_ids = _check_traits_for_alloc_request(res_requests,
                 summaries, prov_traits, required_traits, forbidden_traits)
