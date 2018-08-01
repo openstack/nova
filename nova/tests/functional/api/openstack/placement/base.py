@@ -52,7 +52,7 @@ class TestCase(testtools.TestCase):
         self.useFixture(capture.Logging())
         self.useFixture(output.CaptureOutput())
         # Filter ignorable warnings during test runs.
-        self.useFixture(fixtures.WarningsFixture())
+        self.useFixture(capture.WarningsFixture())
 
         self.placement_db = self.useFixture(
             fixtures.Database(database='placement'))

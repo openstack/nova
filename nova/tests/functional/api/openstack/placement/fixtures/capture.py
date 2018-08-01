@@ -13,6 +13,7 @@
 #    under the License.
 
 import logging
+import warnings
 
 import fixtures
 from oslotest import log
@@ -57,3 +58,24 @@ class Logging(log.ConfigureLogging):
             handler = NullHandler()
             self.useFixture(fixtures.LogHandler(handler, nuke_handlers=False))
             handler.setLevel(logging.DEBUG)
+
+
+class WarningsFixture(fixtures.Fixture):
+    """Filter or escalates certain warnings during test runs.
+
+    Add additional entries as required. Remove when obsolete.
+    """
+
+    def setUp(self):
+        super(WarningsFixture, self).setUp()
+
+        # Ignore policy scope warnings.
+        warnings.filterwarnings('ignore',
+                                message="Policy .* failed scope check",
+                                category=UserWarning)
+        # The UUIDFields emits a warning if the value is not a  valid UUID.
+        # Let's escalate that to an exception in the test to prevent adding
+        # violations.
+        warnings.filterwarnings('error', message=".*invalid UUID.*")
+
+        self.addCleanup(warnings.resetwarnings)
