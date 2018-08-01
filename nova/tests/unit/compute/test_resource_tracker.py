@@ -2685,6 +2685,15 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         self.assertEqual(0, result['root_gb'])
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
+    def test_get_usage_dict_include_swap(
+            self, mock_check_bfv):
+        mock_check_bfv.return_value = False
+        instance_with_swap = self.instance.obj_clone()
+        instance_with_swap.flavor.swap = 10
+        result = self.rt._get_usage_dict(instance_with_swap)
+        self.assertEqual(10, result['swap'])
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update_usage')
     def test_building(self, mock_update_usage, mock_check_bfv):
