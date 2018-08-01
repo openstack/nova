@@ -6,6 +6,9 @@ Resize (or Server resize) is the ability to change the flavor of a server, thus
 allowing it to upscale or downscale according to user needs.  For this feature
 to work properly, you might need to configure some underlying virt layers.
 
+.. todo:: This document needs to be updated for other virt drivers, shared
+          storage considerations, etc.
+
 KVM
 ~~~
 
@@ -14,9 +17,8 @@ compute nodes over ssh. For KVM you need hostnames to resolve properly and
 passwordless ssh access between your compute hosts. Direct access from one
 compute host to another is needed to copy the VM file across.
 
-Cloud end users can find out how to resize a server by reading the
-:python-openstackclient-doc:`OpenStack CLI Guide
-<cli/command-objects/server.html#server-resize>`
+Cloud end users can find out how to resize a server by reading
+:doc:`/user/resize`.
 
 XenServer
 ~~~~~~~~~
