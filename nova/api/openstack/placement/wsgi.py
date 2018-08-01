@@ -19,12 +19,12 @@ import os
 import os.path
 
 from oslo_log import log as logging
+from oslo_middleware import cors
 from oslo_utils import importutils
 import pbr.version
 
 from nova.api.openstack.placement import db_api
 from nova.api.openstack.placement import deploy
-from nova.common import config
 from nova import conf
 
 
@@ -63,10 +63,32 @@ def _parse_args(argv, default_config_files):
     if profiler:
         profiler.set_defaults(conf.CONF)
 
-    config.set_middleware_defaults()
+    _set_middleware_defaults()
 
     conf.CONF(argv[1:], project='nova', version=version_info.version_string(),
               default_config_files=default_config_files)
+
+
+def _set_middleware_defaults():
+    """Update default configuration options for oslo.middleware."""
+    cors.set_defaults(
+        allow_headers=['X-Auth-Token',
+                       'X-Openstack-Request-Id',
+                       'X-Identity-Status',
+                       'X-Roles',
+                       'X-Service-Catalog',
+                       'X-User-Id',
+                       'X-Tenant-Id'],
+        expose_headers=['X-Auth-Token',
+                        'X-Openstack-Request-Id',
+                        'X-Subject-Token',
+                        'X-Service-Token'],
+        allow_methods=['GET',
+                       'PUT',
+                       'POST',
+                       'DELETE',
+                       'PATCH']
+    )
 
 
 def init_application():
