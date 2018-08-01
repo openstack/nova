@@ -2680,9 +2680,22 @@ class TestUpdateUsageFromInstance(BaseTestCase):
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     def test_get_usage_dict_return_0_root_gb_for_bfv_instance(
             self, mock_check_bfv):
-        mock_check_bfv.retur_value = True
+        mock_check_bfv.return_value = True
+        # Make sure the cache is empty.
+        self.assertNotIn(self.instance.uuid, self.rt.is_bfv)
         result = self.rt._get_usage_dict(self.instance)
         self.assertEqual(0, result['root_gb'])
+        mock_check_bfv.assert_called_once_with(
+            self.instance._context, self.instance)
+        # Make sure we updated the cache.
+        self.assertIn(self.instance.uuid, self.rt.is_bfv)
+        self.assertTrue(self.rt.is_bfv[self.instance.uuid])
+        # Now run _get_usage_dict again to make sure we don't call
+        # is_volume_backed_instance.
+        mock_check_bfv.reset_mock()
+        result = self.rt._get_usage_dict(self.instance)
+        self.assertEqual(0, result['root_gb'])
+        mock_check_bfv.assert_not_called()
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     def test_get_usage_dict_include_swap(
@@ -2711,12 +2724,16 @@ class TestUpdateUsageFromInstance(BaseTestCase):
     def test_shelve_offloading(self, mock_update_usage, mock_check_bfv):
         mock_check_bfv.return_value = False
         self.instance.vm_state = vm_states.SHELVED_OFFLOADED
+        # Stub out the is_bfv cache to make sure we remove the instance
+        # from it after updating usage.
+        self.rt.is_bfv[self.instance.uuid] = False
         self.rt.tracked_instances = {
             self.instance.uuid: obj_base.obj_to_primitive(self.instance)
         }
         self.rt._update_usage_from_instance(mock.sentinel.ctx, self.instance,
                                             _NODENAME)
-
+        # The instance should have been removed from the is_bfv cache.
+        self.assertNotIn(self.instance.uuid, self.rt.is_bfv)
         mock_update_usage.assert_called_once_with(
             self.rt._get_usage_dict(self.instance), _NODENAME, sign=-1)
 
