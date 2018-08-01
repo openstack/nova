@@ -7756,9 +7756,6 @@ class ComputeManager(manager.Manager):
             LOG.warning("Virt driver is not ready.")
             return
 
-        for nodename in nodenames:
-            self._update_available_resource_for_node(context, nodename)
-
         # Delete orphan compute node not reported by driver but still in db
         for cn in compute_nodes_in_db:
             if cn.hypervisor_hostname not in nodenames:
@@ -7773,6 +7770,9 @@ class ComputeManager(manager.Manager):
                 # TODO(cdent): Move use of reportclient into resource tracker.
                 self.scheduler_client.reportclient.delete_resource_provider(
                     context, cn, cascade=True)
+
+        for nodename in nodenames:
+            self._update_available_resource_for_node(context, nodename)
 
     def _get_compute_nodes_in_db(self, context, use_slave=False,
                                  startup=False):
