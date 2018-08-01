@@ -11,6 +11,7 @@
 #    under the License.
 
 import os
+from oslotest import output
 
 import wsgi_intercept
 
@@ -33,7 +34,7 @@ def load_tests(loader, tests, pattern):
     # These inner fixtures provide per test request output and log
     # capture, for cleaner results reporting.
     inner_fixtures = [
-        nova_fixtures.OutputStreamCapture,
+        output.CaptureOutput,
         nova_fixtures.StandardLogging,
     ]
     return driver.build_tests(test_dir, loader, host=None,

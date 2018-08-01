@@ -12,6 +12,7 @@
 
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
+from oslotest import output
 import testtools
 
 from nova.api.openstack.placement import context
@@ -48,7 +49,7 @@ class TestCase(testtools.TestCase):
         self.useFixture(policy_fixture.PlacementPolicyFixture())
 
         self.useFixture(fixtures.StandardLogging())
-        self.useFixture(fixtures.OutputStreamCapture())
+        self.useFixture(output.CaptureOutput())
         # Filter ignorable warnings during test runs.
         self.useFixture(fixtures.WarningsFixture())
 

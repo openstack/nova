@@ -17,6 +17,7 @@ from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_middleware import cors
 from oslo_utils import uuidutils
+from oslotest import output
 
 from nova.api.openstack.placement import context
 from nova.api.openstack.placement import deploy
@@ -50,7 +51,7 @@ class APIFixture(fixture.GabbiFixture):
         # example database migrations).
         self.standard_logging_fixture = fixtures.StandardLogging()
         self.standard_logging_fixture.setUp()
-        self.output_stream_fixture = fixtures.OutputStreamCapture()
+        self.output_stream_fixture = output.CaptureOutput()
         self.output_stream_fixture.setUp()
         # Filter ignorable warnings during test runs.
         self.warnings_fixture = fixtures.WarningsFixture()
