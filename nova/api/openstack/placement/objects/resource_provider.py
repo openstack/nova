@@ -1174,7 +1174,7 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount, member_of=None):
     #   INNER JOIN resource_provider_traits AS rpt
     #     ON rp.id = rpt.resource_provider_id
     #   INNER JOIN traits AS t
-    #     AND rpt.trait_id = t.id
+    #     ON rpt.trait_id = t.id
     #     AND t.name = "MISC_SHARES_VIA_AGGREGATE"
     #   INNER JOIN inventories AS inv
     #     ON rp.id = inv.resource_provider_id
