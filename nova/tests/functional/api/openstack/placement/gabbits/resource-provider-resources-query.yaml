@@ -117,7 +117,7 @@ tests:
       $.resource_providers.`len`: 0
 
 - name: list resource providers providing resources (no match - more than max_unit)
-  GET: /resource_providers?resources=DISK_GB:610
+  GET: /resource_providers?resources=DISK_GB:1010
   response_json_paths:
       $.resource_providers.`len`: 0
 
