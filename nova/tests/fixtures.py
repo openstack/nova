@@ -22,6 +22,7 @@ from contextlib import contextmanager
 import copy
 import logging as std_logging
 import os
+import random
 import warnings
 
 import fixtures
@@ -1119,6 +1120,7 @@ class NeutronFixture(fixtures.Fixture):
         'admin_state_up': True,
         'tenant_id': tenant_id,
         'id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
+        'shared': False,
     }
     subnet_1 = {
         'name': 'private-subnet',
@@ -1154,7 +1156,8 @@ class NeutronFixture(fixtures.Fixture):
                 'subnet_id': subnet_1['id']
             }
         ],
-        'tenant_id': tenant_id
+        'tenant_id': tenant_id,
+        'binding:vif_type': 'ovs'
     }
 
     port_2 = {
@@ -1169,7 +1172,8 @@ class NeutronFixture(fixtures.Fixture):
                 'subnet_id': subnet_1['id']
             }
         ],
-        'tenant_id': tenant_id
+        'tenant_id': tenant_id,
+        'binding:vif_type': 'ovs'
     }
 
     nw_info = [{
@@ -1234,10 +1238,6 @@ class NeutronFixture(fixtures.Fixture):
         super(NeutronFixture, self).setUp()
 
         self.test.stub_out(
-            'nova.network.neutronv2.api.API.'
-            'validate_networks',
-            lambda *args, **kwargs: 1)
-        self.test.stub_out(
             'nova.network.neutronv2.api.API.setup_networks_on_host',
             lambda *args, **kwargs: None)
         self.test.stub_out(
@@ -1300,6 +1300,9 @@ class NeutronFixture(fixtures.Fixture):
         networks = copy.deepcopy(self._networks)
         if 'id' in _params:
             networks = [x for x in networks if x['id'] in _params['id']]
+        if 'shared' in _params:
+            networks = [x for x in networks if x['shared'] ==
+                        _params['shared']]
         return {'networks': networks}
 
     def list_ports(self, retrieve_all=True, **_params):
@@ -1312,8 +1315,23 @@ class NeutronFixture(fixtures.Fixture):
         return copy.deepcopy({'floatingips': self._floatingips})
 
     def create_port(self, body=None):
-        self._ports.append(copy.deepcopy(NeutronFixture.port_2))
-        return copy.deepcopy({'port': NeutronFixture.port_2})
+        if self._get_first_id_match(NeutronFixture.port_2['id'],
+                                    self._ports) is None:
+            # we need the double copy as port_2 is a class variable but
+            # self._ports is an instance variable
+            new_port = copy.deepcopy(NeutronFixture.port_2)
+            self._ports.append(new_port)
+        else:
+            new_port = copy.deepcopy(NeutronFixture.port_2)
+            # we need truly random uuids instead of named sentinels as some
+            # tests needs more than 3 ports
+            new_port.update({
+                'id': str(uuidutils.generate_uuid()),
+                'mac_address': '00:' + ':'.join(
+                    ['%02x' % random.randint(0, 255) for _ in range(5)]),
+            })
+            self._ports.append(new_port)
+        return {'port': copy.deepcopy(new_port)}
 
     def update_port(self, port_id, body=None):
         new_port = self._get_first_id_match(port_id, self._ports)
@@ -1323,6 +1341,10 @@ class NeutronFixture(fixtures.Fixture):
                 new_port[k] = v
 
         return {'port': new_port}
+
+    def show_quota(self, project_id):
+        # unlimited quota
+        return {'quota': {'port': -1}}
 
 
 class _NoopConductor(object):

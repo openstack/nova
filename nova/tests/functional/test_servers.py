@@ -38,7 +38,6 @@ from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
-from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
 from nova.tests import uuidsentinel as uuids
@@ -70,13 +69,11 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
     _return_resv_id_parameter = 'return_reservation_id'
     _min_count_parameter = 'min_count'
 
+    USE_NEUTRON = True
+
     def setUp(self):
         self.computes = {}
         super(ServersTestBase, self).setUp()
-        # The network service is called as part of server creates but no
-        # networks have been populated in the db, so stub the methods.
-        # The networks aren't relevant to what is being tested.
-        fake_network.set_stub_network_methods(self)
         self.conductor = self.start_service(
             'conductor', manager='nova.conductor.manager.ConductorManager')
 
@@ -1046,7 +1043,6 @@ class ServerTestV220(ServersTestBase):
     def setUp(self):
         super(ServerTestV220, self).setUp()
         self.api.microversion = '2.20'
-        fake_network.set_stub_network_methods(self)
         self.ctxt = context.get_admin_context()
 
     def _create_server(self):

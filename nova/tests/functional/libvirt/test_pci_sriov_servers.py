@@ -21,7 +21,6 @@ from oslo_log import log as logging
 from nova.objects import fields
 from nova import test
 from nova.tests.functional.test_servers import ServersTestBase
-from nova.tests.unit import fake_network
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
@@ -93,8 +92,6 @@ class SRIOVServersTest(ServersTestBase):
         if not self.compute_started:
             self.compute = self.start_service('compute', host='test_compute0')
             self.compute_started = True
-
-        fake_network.set_stub_network_methods(self)
 
         # Create server
         good_server = self._build_server(flavor_id)

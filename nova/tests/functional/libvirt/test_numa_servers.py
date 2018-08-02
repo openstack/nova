@@ -27,12 +27,10 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional.test_servers import ServersTestBase
-from nova.tests.unit import fake_network
 from nova.tests.unit.virt.libvirt import fake_imagebackend
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
-import os_vif
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -331,8 +329,6 @@ class NUMAAffinityNeutronFixture(nova_fixtures.NeutronFixture):
 
 class NUMAServersWithNetworksTest(NUMAServersTestBase):
 
-    USE_NEUTRON = True
-
     def setUp(self):
         # We need to enable neutron in this one
         self.flags(physnets=['foo', 'bar'], group='neutron')
@@ -343,18 +339,15 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
 
         super(NUMAServersWithNetworksTest, self).setUp()
 
-        # NOTE(mriedem): Unset the stub methods so we actually run our
-        # neutronv2/api code and populate the net attributes on the
-        # network model.
-        fake_network.unset_stub_network_methods(self)
-
-        self.neutron_fixture = self.useFixture(
-            NUMAAffinityNeutronFixture(self))
+        # The ultimate base class _IntegratedTestBase uses NeutronFixture but
+        # we need a bit more intelligent neutron for these tests. Applying the
+        # new fixture here means that we re-stub what the previous neutron
+        # fixture already stubbed.
+        self.neutron = self.useFixture(NUMAAffinityNeutronFixture(self))
 
         _p = mock.patch('nova.virt.libvirt.host.Host.get_connection')
         self.mock_conn = _p.start()
         self.addCleanup(_p.stop)
-        os_vif.initialize()
 
     def _test_create_server_with_networks(self, flavor_id, networks):
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,

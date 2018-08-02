@@ -1563,3 +1563,10 @@ class FakeLibvirtFixture(fixtures.Fixture):
             self.useFixture(fixtures.MonkeyPatch(
                 'nova.virt.libvirt.vif.LibvirtGenericVIFDriver._plug_os_vif',
                 lambda *a, **kw: None))
+
+        # os_vif.initialize is typically done in nova-compute startup
+        # even if we are not planning to plug anything with os_vif in the test
+        # we still need the object model initialized to be able to generate
+        # guest config xml properly
+        import os_vif
+        os_vif.initialize()
