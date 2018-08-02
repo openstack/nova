@@ -80,6 +80,9 @@ function _ceph_configure_nova {
     $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a  "dest=${NOVA_CONF} section=libvirt option=images_rbd_pool value=${NOVA_CEPH_POOL}"
     $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a  "dest=${NOVA_CONF} section=libvirt option=images_rbd_ceph_conf value=${CEPH_CONF_FILE}"
 
+    # Configure nova-compute to wait for network-vif-plugged events.
+    $ANSIBLE all --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a  "dest=${NOVA_CONF} section=compute option=live_migration_wait_for_vif_plug value=True"
+
     sudo ceph -c ${CEPH_CONF_FILE} auth get-or-create client.${CINDER_CEPH_USER} \
     mon "allow r" \
     osd "allow class-read object_prefix rbd_children, allow rwx pool=${CINDER_CEPH_POOL}, allow rwx pool=${NOVA_CEPH_POOL},allow rwx pool=${GLANCE_CEPH_POOL}" | \
