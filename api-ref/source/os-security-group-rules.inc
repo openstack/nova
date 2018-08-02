@@ -1,6 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
-.. needs:body_verification
 
 ================================================================
  Rules for security group (os-security-group-rules) (DEPRECATED)
@@ -46,11 +44,10 @@ Request
   - cidr: secgroup_rule_cidr
   - group_id: group_id
 
-.. TODO(sdague): we currently have no samples here
-   **Example Create security group rule: JSON request**
+**Example Create security group rule: JSON request**
 
-   .. literalinclude:: ../../doc/api_samples/os-security-group-rules/security-group-rule-create-req.json
-      :language: javascript
+.. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-rules-post-req.json
+   :language: javascript
 
 Response
 --------
@@ -66,18 +63,17 @@ The ``ip_range`` is empty if ``cidr`` was not provided on the request.
   - from_port: from_port
   - to_port: to_port
   - ip_range: secgroup_rule_ip_range
-  - cidr: secgroup_rule_cidr
+  - ip_range.cidr: secgroup_rule_cidr
   - id: secgroup_rule_id
-  - group: group
   - parent_group_id: parent_group_id
-  - name: name
-  - tenant_id: secgroup_tenant_id_body
+  - group: group
+  - group.name: name_sec_group_optional
+  - group.tenant_id: secgroup_tenant_id_body
 
-.. TODO(sdague): we currently have no samples here
-   **Example Create security group rule: JSON response**
+**Example Create security group rule: JSON response**
 
-   .. literalinclude:: ../../doc/api_samples/os-security-group-rules/security-group-rule-create-resp.json
-      :language: javascript
+.. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-rules-post-resp.json
+   :language: javascript
 
 Delete Security Group Rule
 ==========================
