@@ -1,0 +1,19 @@
+---
+features:
+  - |
+    The following legacy notifications have been transformed to
+    a new versioned payload:
+
+    * ``aggregate.updatemetadata``
+    * ``aggregate.updateprop``
+    * ``instance.exists``
+    * ``instance.live_migration._post``
+    * ``instance.live.migration.force.complete``
+    * ``instance.live_migration.post.dest``
+    * ``instance.live_migration.rollback.dest``
+    * ``instance.rebuild.scheduled``
+    * ``metrics.update``
+    * ``servergroup.addmember``
+
+    Consult https://docs.openstack.org/nova/latest/reference/notifications.html
+    for more information including payload samples.
