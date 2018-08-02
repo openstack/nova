@@ -584,6 +584,13 @@ class ComputeTaskManager(base.Base):
                 host_lists = self._schedule_instances(context, spec_obj,
                         instance_uuids, return_alternates=True)
         except Exception as exc:
+            # NOTE(mriedem): If we're rescheduling from a failed build on a
+            # compute, "retry" will be set and num_attempts will be >1 because
+            # populate_retry above will increment it. If the server build was
+            # forced onto a host/node or [scheduler]/max_attempts=1, "retry"
+            # won't be in filter_properties and we won't get here because
+            # nova-compute will just abort the build since reschedules are
+            # disabled in those cases.
             num_attempts = filter_properties.get(
                 'retry', {}).get('num_attempts', 1)
             updates = {'vm_state': vm_states.ERROR, 'task_state': None}
