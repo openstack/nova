@@ -61,7 +61,8 @@ class DeleteWithReservedVolumes(integrated_helpers._IntegratedTestBase,
         return self._wait_for_state_change(self.api, server, 'ERROR')
 
     @mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                return_value=compute_api.BFV_RESERVE_MIN_COMPUTE_VERSION)
+                return_value=
+                compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1)
     def test_delete_with_reserved_volumes(self, mock_version_get=None):
         self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
 

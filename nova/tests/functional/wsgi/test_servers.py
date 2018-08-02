@@ -248,8 +248,9 @@ class ServersPreSchedulingTestCase(test.TestCase,
         self.assertEqual(0, len(list_resp))
 
     @mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                return_value=compute_api.BFV_RESERVE_MIN_COMPUTE_VERSION)
-    def test_bfv_delete_build_request_pre_scheduling_ocata(self, mock_get):
+                return_value=
+                compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1)
+    def test_bfv_delete_build_request_pre_scheduling_old_flow(self, mock_get):
         cinder = self.useFixture(nova_fixtures.CinderFixture(self))
 
         volume_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL

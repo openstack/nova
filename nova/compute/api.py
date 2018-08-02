@@ -102,7 +102,6 @@ AGGREGATE_ACTION_UPDATE = 'Update'
 AGGREGATE_ACTION_UPDATE_META = 'UpdateMeta'
 AGGREGATE_ACTION_DELETE = 'Delete'
 AGGREGATE_ACTION_ADD = 'Add'
-BFV_RESERVE_MIN_COMPUTE_VERSION = 17
 CINDER_V3_ATTACH_MIN_COMPUTE_VERSION = 24
 MIN_COMPUTE_MULTIATTACH = 27
 MIN_COMPUTE_TRUSTED_CERTS = 31
@@ -1400,28 +1399,10 @@ class API(base.Base):
                         "destination_type 'volume' need to have a non-zero "
                         "size specified"))
             elif volume_id is not None:
-                # The instance is being created and we don't know which
-                # cell it's going to land in, so check all cells.
-                min_compute_version = \
-                    objects.service.get_minimum_version_all_cells(
-                        context, ['nova-compute'])
                 try:
-                    # NOTE(ildikov): The boot from volume operation did not
-                    # reserve the volume before Pike and as the older computes
-                    # are running 'check_attach' which will fail if the volume
-                    # is in 'attaching' state; if the compute service version
-                    # is not high enough we will just perform the old check as
-                    # opposed to reserving the volume here.
                     volume = self.volume_api.get(context, volume_id)
-                    if (min_compute_version >=
-                        BFV_RESERVE_MIN_COMPUTE_VERSION):
-                        self._check_attach_and_reserve_volume(
-                            context, volume, instance, bdm,
-                            supports_multiattach)
-                    else:
-                        # NOTE(ildikov): This call is here only for backward
-                        # compatibility can be removed after Ocata EOL.
-                        self._check_attach(context, volume, instance)
+                    self._check_attach_and_reserve_volume(
+                        context, volume, instance, bdm, supports_multiattach)
                     bdm.volume_size = volume.get('size')
 
                     # NOTE(mnaser): If we end up reserving the volume, it will
@@ -1477,20 +1458,6 @@ class API(base.Base):
                              if bdm.destination_type == 'local'])
             if num_local > max_local:
                 raise exception.InvalidBDMLocalsLimit()
-
-    def _check_attach(self, context, volume, instance):
-        # TODO(ildikov): This check_attach code is kept only for backward
-        # compatibility and should be removed after Ocata EOL.
-        if volume['status'] != 'available':
-            msg = _("volume '%(vol)s' status must be 'available'. Currently "
-                    "in '%(status)s'") % {'vol': volume['id'],
-                                          'status': volume['status']}
-            raise exception.InvalidVolume(reason=msg)
-        if volume['attach_status'] == 'attached':
-            msg = _("volume %s already attached") % volume['id']
-            raise exception.InvalidVolume(reason=msg)
-        self.volume_api.check_availability_zone(context, volume,
-                                                instance=instance)
 
     def _populate_instance_names(self, instance, num_instances, index):
         """Populate instance display_name and hostname.

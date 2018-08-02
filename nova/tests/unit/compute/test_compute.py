@@ -977,9 +977,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         for expected, got in zip(expected_result, preped_bdm):
             self.assertThat(expected, matchers.IsSubDictOf(got))
 
-    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
-        return_value=17)
-    def test_validate_bdm(self, mock_get_min_ver):
+    def test_validate_bdm(self):
         def fake_get(self, context, res_id):
             return {'id': res_id, 'size': 4, 'multiattach': False}
 
@@ -1205,52 +1203,13 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.context, self.instance,
                           instance_type, all_mappings)
 
-    @mock.patch.object(objects.Service, 'get_minimum_version',
-        return_value=16)
-    @mock.patch.object(nova.volume.cinder.API, 'get')
-    @mock.patch.object(cinder.API, 'check_availability_zone')
-    def test_validate_bdm_volume_old_compute(self, mock_check_av_zone,
-                                             mock_get, mock_get_min_ver):
-        instance = self._create_fake_instance_obj()
-        instance_type = {'ephemeral_gb': 2}
-        volume_id = uuids.volume_id
-        mappings = [
-            fake_block_device.FakeDbBlockDeviceDict({
-                'device_name': '/dev/sda1',
-                'source_type': 'volume',
-                'destination_type': 'volume',
-                'device_type': 'disk',
-                'volume_id': volume_id,
-                'guest_format': None,
-                'boot_index': 0,
-            }, anon=True)
-        ]
-        mappings = block_device_obj.block_device_make_list_from_dicts(
-            self.context, mappings)
-
-        volume = {'id': volume_id,
-                  'size': 4,
-                  'status': 'available',
-                  'attach_status': 'detached',
-                  'multiattach': False}
-
-        mock_get.return_value = volume
-        self.compute_api._validate_bdm(self.context, instance,
-                                       instance_type, mappings)
-        self.assertEqual(4, mappings[0].volume_size)
-        mock_check_av_zone.assert_called_once_with(self.context, volume,
-                                                   instance=instance)
-
-    @mock.patch.object(objects.Service, 'get_minimum_version',
-                       return_value=17)
     @mock.patch.object(cinder.API, 'get')
     @mock.patch.object(cinder.API, 'check_availability_zone')
     @mock.patch.object(cinder.API, 'reserve_volume',
                        side_effect=exception.InvalidVolume(reason='error'))
     def test_validate_bdm_media_service_invalid_volume(self, mock_reserve_vol,
                                                        mock_check_av_zone,
-                                                       mock_get,
-                                                       mock_get_min_ver):
+                                                       mock_get):
         volume_id = uuids.volume_id
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
         bdms = [fake_block_device.FakeDbBlockDeviceDict({
@@ -1296,11 +1255,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                               instance_type, bdms)
             mock_get.assert_called_with(self.context, volume_id)
 
-    @mock.patch.object(objects.Service, 'get_minimum_version',
-                   return_value=17)
     @mock.patch.object(cinder.API, 'get')
-    def test_validate_bdm_media_service_volume_not_found(self, mock_get,
-                                                         mock_get_min_ver):
+    def test_validate_bdm_media_service_volume_not_found(self, mock_get):
         volume_id = uuids.volume_id
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
         bdms = [fake_block_device.FakeDbBlockDeviceDict({
@@ -1322,15 +1278,12 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.context, self.instance,
                           instance_type, bdms)
 
-    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
-                       return_value=17)
     @mock.patch.object(cinder.API, 'get')
     @mock.patch.object(cinder.API, 'check_availability_zone')
     @mock.patch.object(cinder.API, 'reserve_volume')
     def test_validate_bdm_media_service_valid(self, mock_reserve_vol,
                                               mock_check_av_zone,
-                                              mock_get,
-                                              mock_get_min_ver):
+                                              mock_get):
         volume_id = uuids.volume_id
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
         bdms = [fake_block_device.FakeDbBlockDeviceDict({
