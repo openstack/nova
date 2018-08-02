@@ -21,7 +21,6 @@
             "disk": 1,
             "ephemeral": 0,
             "extra_specs": {
-                "hw:cpu_model": "SandyBridge",
                 "hw:mem_page_size": "2048",
                 "hw:cpu_policy": "dedicated"
             },

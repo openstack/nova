@@ -667,7 +667,6 @@ class DefaultFlavorsFixture(fixtures.Fixture):
         defaults = {'rxtx_factor': 1.0, 'disabled': False, 'is_public': True,
                     'ephemeral_gb': 0, 'swap': 0}
         extra_specs = {
-            "hw:cpu_model": "SandyBridge",
             "hw:mem_page_size": "2048",
             "hw:cpu_policy": "dedicated"
         }
