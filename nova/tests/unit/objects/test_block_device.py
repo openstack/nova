@@ -395,10 +395,14 @@ class _TestBlockDeviceMappingObject(object):
     def test_obj_make_compatible_pre_1_17(self):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
-                  'instance_uuid': uuids.instance}
+                  'instance_uuid': uuids.instance, 'tag': 'fake-tag'}
         bdm = objects.BlockDeviceMapping(context=self.context, **values)
-        primitive = bdm.obj_to_primitive(target_version='1.16')
+        data = lambda x: x['nova_object.data']
+        primitive = data(bdm.obj_to_primitive(target_version='1.17'))
+        self.assertIn('tag', primitive)
+        primitive = data(bdm.obj_to_primitive(target_version='1.16'))
         self.assertNotIn('tag', primitive)
+        self.assertIn('volume_id', primitive)
 
     def test_obj_make_compatible_pre_1_18(self):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
@@ -406,16 +410,20 @@ class _TestBlockDeviceMappingObject(object):
                   'instance_uuid': uuids.instance,
                   'attachment_id': uuids.attachment_id}
         bdm = objects.BlockDeviceMapping(context=self.context, **values)
-        primitive = bdm.obj_to_primitive(target_version='1.17')
+        data = lambda x: x['nova_object.data']
+        primitive = data(bdm.obj_to_primitive(target_version='1.17'))
         self.assertNotIn('attachment_id', primitive)
+        self.assertIn('volume_id', primitive)
 
     def test_obj_make_compatible_pre_1_19(self):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
                   'instance_uuid': uuids.instance, 'uuid': uuids.bdm}
         bdm = objects.BlockDeviceMapping(context=self.context, **values)
-        primitive = bdm.obj_to_primitive(target_version='1.18')
+        data = lambda x: x['nova_object.data']
+        primitive = data(bdm.obj_to_primitive(target_version='1.18'))
         self.assertNotIn('uuid', primitive)
+        self.assertIn('volume_id', primitive)
 
 
 class TestBlockDeviceMappingUUIDMigration(test.TestCase):

@@ -166,8 +166,11 @@ class _TestBuildRequestObject(object):
     def test_obj_make_compatible_pre_1_3(self):
         obj = fake_build_request.fake_req_obj(self.context)
         build_request_obj = objects.BuildRequest(self.context)
-        obj_primitive = obj.obj_to_primitive()
+        data = lambda x: x['nova_object.data']
+        obj_primitive = data(obj.obj_to_primitive())
+        self.assertIn('tags', obj_primitive)
         build_request_obj.obj_make_compatible(obj_primitive, '1.2')
+        self.assertIn('instance_uuid', obj_primitive)
         self.assertNotIn('tags', obj_primitive)
 
     def test_create_with_tags_set(self):

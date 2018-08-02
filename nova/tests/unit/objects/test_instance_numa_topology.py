@@ -195,8 +195,12 @@ class _TestInstanceNUMATopology(object):
         topo_obj = objects.InstanceNUMACell(
             cpuset_reserved=set([1, 2]))
         versions = ovo_base.obj_tree_get_versions('InstanceNUMACell')
-        primitive = topo_obj.obj_to_primitive(target_version='1.3',
-                                              version_manifest=versions)
+        data = lambda x: x['nova_object.data']
+        primitive = data(topo_obj.obj_to_primitive(target_version='1.4',
+                                                   version_manifest=versions))
+        self.assertIn('cpuset_reserved', primitive)
+        primitive = data(topo_obj.obj_to_primitive(target_version='1.3',
+                                                   version_manifest=versions))
         self.assertNotIn('cpuset_reserved', primitive)
 
 
