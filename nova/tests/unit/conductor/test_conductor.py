@@ -1625,7 +1625,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     @mock.patch('nova.objects.HostMapping.get_by_host')
-    def test_schedule_and_build_multiple_instances(self,
+    @mock.patch('nova.availability_zones.get_host_availability_zone',
+                return_value='nova')
+    def test_schedule_and_build_multiple_instances(self, mock_get_az,
                                                    get_hostmapping,
                                                    select_destinations,
                                                    build_and_run_instance):
@@ -1678,6 +1680,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         build_and_run_instance.side_effect = _build_and_run_instance
         self.conductor.schedule_and_build_instances(**params)
         self.assertEqual(3, build_and_run_instance.call_count)
+        # We're processing 4 instances over 2 hosts, so we should only lookup
+        # the AZ per host once.
+        mock_get_az.assert_has_calls([
+            mock.call(self.ctxt, 'host1'), mock.call(self.ctxt, 'host2')],
+            any_order=True)
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
