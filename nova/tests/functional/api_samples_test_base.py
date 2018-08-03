@@ -495,12 +495,14 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             return jsonutils.loads(response.content)
         return response
 
-    def _do_post(self, url, name, subs, method='POST', headers=None):
-        self.subs = subs
-        body = self._read_template(name) % self.subs
-        sample = self._get_sample(name, self.microversion)
-        if self.generate_samples and not os.path.exists(sample):
-                self._write_sample(name, body)
+    def _do_post(self, url, name=None, subs=None, method='POST', headers=None):
+        self.subs = {} if subs is None else subs
+        body = None
+        if name:
+            body = self._read_template(name) % self.subs
+            sample = self._get_sample(name, self.microversion)
+            if self.generate_samples and not os.path.exists(sample):
+                    self._write_sample(name, body)
         return self._get_response(url, method, body, headers=headers)
 
     def _do_put(self, url, name=None, subs=None, headers=None):

@@ -60,21 +60,15 @@ class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV21):
                               {}, response, 200)
 
     def test_floating_ips_list(self):
-        self._do_post('os-floating-ips',
-                      'floating-ips-create-nopool-req',
-                      {})
-        self._do_post('os-floating-ips',
-                      'floating-ips-create-nopool-req',
-                      {})
+        self._do_post('os-floating-ips')
+        self._do_post('os-floating-ips')
 
         response = self._do_get('os-floating-ips')
         self._verify_response('floating-ips-list-resp',
                               {}, response, 200)
 
     def test_floating_ips_create_nopool(self):
-        response = self._do_post('os-floating-ips',
-                                 'floating-ips-create-nopool-req',
-                                 {})
+        response = self._do_post('os-floating-ips')
         self._verify_response('floating-ips-create-resp',
                               {}, response, 200)
 
