@@ -686,7 +686,7 @@ class GuestBlockTestCase(test.NoDBTestCase):
         self.domain.blockJobAbort.assert_called_once_with('vda', flags=0)
 
     def test_abort_job_async(self):
-        self.gblock.abort_job(async=True)
+        self.gblock.abort_job(async_=True)
         self.domain.blockJobAbort.assert_called_once_with(
             'vda', flags=fakelibvirt.VIR_DOMAIN_BLOCK_JOB_ABORT_ASYNC)
 

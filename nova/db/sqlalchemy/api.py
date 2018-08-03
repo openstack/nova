@@ -202,7 +202,7 @@ def select_db_reader_mode(f):
         use_slave = keyed_args.get('use_slave', False)
 
         if use_slave:
-            reader_mode = get_context_manager(context).async
+            reader_mode = get_context_manager(context).async_
         else:
             reader_mode = get_context_manager(context).reader
 

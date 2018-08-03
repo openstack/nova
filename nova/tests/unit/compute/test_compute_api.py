@@ -2527,7 +2527,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                          block_migration=True,
                                          disk_over_commit=True,
                                          request_spec=fake_spec,
-                                         async=False)
+                                         async_=False)
 
     def _get_volumes_for_test_swap_volume(self):
         volumes = {}

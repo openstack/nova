@@ -99,9 +99,9 @@ class ComputeTaskAPI(object):
 
     def live_migrate_instance(self, context, instance, host_name,
                               block_migration, disk_over_commit,
-                              request_spec=None, async=False):
+                              request_spec=None, async_=False):
         scheduler_hint = {'host': host_name}
-        if async:
+        if async_:
             self.conductor_compute_rpcapi.live_migrate_instance(
                 context, instance, scheduler_hint, block_migration,
                 disk_over_commit, request_spec)
