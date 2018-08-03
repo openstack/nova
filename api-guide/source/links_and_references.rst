@@ -30,7 +30,7 @@ exists in the current OpenStack deployment.
     }
 
 
-**Example: Full image reference: JSON request**
+**Example: Full image reference: JSON request**
 
 .. code::
 
@@ -97,7 +97,7 @@ following types of link relations are associated with resources:
     }
 
 
-**Example: Server with alternate link: JSON**
+**Example: Server with alternate link: JSON**
 
 .. code::
 

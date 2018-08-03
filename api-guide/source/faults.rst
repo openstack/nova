@@ -144,7 +144,7 @@ API status code. The system also returns additional
 information about the fault in the body of the response.
 
 
-**Example: Fault: JSON response**
+**Example: Fault: JSON response**
 
 .. code::
 
@@ -158,7 +158,7 @@ information about the fault in the body of the response.
 The error ``code`` is returned in the body of the response for convenience.
 The ``message`` section returns a human-readable message that is appropriate
 for display to the end user. The ``details`` section is optional and may
-contain information—for example, a stack trace—to assist in tracking
+contain information--for example, a stack trace--to assist in tracking
 down an error. The ``details`` section might or might not be appropriate for
 display to an end user.
 
@@ -189,7 +189,7 @@ faults may also contain a ``created`` timestamp that specifies when the fault
 occurred.
 
 
-**Example: Server in error state: JSON response**
+**Example: Server in error state: JSON response**
 
 .. code::
 

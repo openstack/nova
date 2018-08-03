@@ -262,7 +262,7 @@ the volume to boot an instance.
    .. note::
 
       A bootable encrypted volume can also be created by adding the
-      `-–type ENCRYPTED_VOLUME_TYPE` parameter to the volume create command:
+      `--type ENCRYPTED_VOLUME_TYPE` parameter to the volume create command:
 
    .. code-block:: console
 
@@ -362,7 +362,7 @@ Use the ``nova boot`` ``--swap`` parameter to attach a swap disk on boot
 or the ``nova boot`` ``--ephemeral`` parameter to attach an ephemeral
 disk on boot. When you terminate the instance, both disks are deleted.
 
-Boot an instance with a 512 MB swap disk and 2 GB ephemeral disk.
+Boot an instance with a 512 MB swap disk and 2 GB ephemeral disk.
 
 .. code-block:: console
 

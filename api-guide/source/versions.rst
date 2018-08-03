@@ -12,7 +12,7 @@ A version MIME type is always linked to a base MIME type, such as
 application/json. If conflicting versions are specified using both an HTTP
 header and a URI, the URI takes precedence.
 
-**Example: Request with MIME type versioning**
+**Example: Request with MIME type versioning**
 
 .. code::
 
@@ -22,7 +22,7 @@ header and a URI, the URI takes precedence.
     X-Auth-Token: eaaafd18-0fed-4b3a-81b4-663c99ec1cbb
 
 
-**Example: Request with URI versioning**
+**Example: Request with URI versioning**
 
 .. code::
 
@@ -44,7 +44,7 @@ headers, then a multiple-choices response (300) follows that provides
 links and MIME types to available versions.
 
 
-**Example: Multiple choices: JSON response**
+**Example: Multiple choices: JSON response**
 
 .. code::
 

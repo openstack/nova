@@ -32,7 +32,7 @@ links to traverse a paginated collection without having to input the
 *``marker``* parameter.
 
 
-**Example: Servers collection: JSON (first page)**
+**Example: Servers collection: JSON (first page)**
 
 .. code::
 
