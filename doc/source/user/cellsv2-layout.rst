@@ -320,7 +320,7 @@ implement some features without such connectivity. Thus, anything that
 requires a so-called "upcall" will not function. This impacts the
 following:
 
-#. Instance reschedules during boot and resize
+#. Instance reschedules during boot and resize (part 1)
 
    .. note:: This has been resolved in the Queens release [#]_.
 
@@ -331,6 +331,7 @@ following:
    .. note:: This has been resolved in the Rocky release [#]_.
 
 #. Attaching a volume and ``[cinder]/cross_az_attach=False``
+#. Instance reschedules during boot and resize (part 2)
 
 The first is simple: if you boot an instance, it gets scheduled to a
 compute node, fails, it would normally be re-scheduled to another
@@ -368,6 +369,14 @@ case of boot from volume where the *nova-compute* service itself creates the
 volume and must tell Cinder in which availability zone to create the volume.
 Long-term, volume creation during boot from volume should be moved to the
 top-level superconductor which would eliminate this AZ up-call check problem.
+
+The sixth is detailed in `bug 1781286`_ and similar to the first issue.
+The issue is that servers created without a specific availability zone
+will have their AZ calculated during a reschedule based on the alternate host
+selected. Determining the AZ for the alternate host requires an "up call" to
+the API DB.
+
+.. _bug 1781286: https://bugs.launchpad.net/nova/+bug/1781286
 
 .. [#] https://blueprints.launchpad.net/nova/+spec/efficient-multi-cell-instance-list-and-sort
 .. [#] https://specs.openstack.org/openstack/nova-specs/specs/queens/approved/return-alternate-hosts.html
