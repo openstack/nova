@@ -33,8 +33,7 @@ class ConsolesSamplesJsonTest(test_servers.ServersSampleBase):
         self.console = self.start_service('console', host='fake')
 
     def _create_consoles(self, server_uuid):
-        response = self._do_post('servers/%s/consoles' % server_uuid,
-                                 'consoles-create-req', {})
+        response = self._do_post('servers/%s/consoles' % server_uuid)
         self.assertEqual(response.status_code, 200)
 
     def test_create_consoles(self):
