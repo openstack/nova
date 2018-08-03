@@ -109,14 +109,6 @@ class InstanceTypeToolsTest(test.TestCase):
         flavors.save_flavor_info(metadata, instance_type, 'foo')
         self.assertEqual(example_prefix, metadata)
 
-    def test_delete_flavor_info(self):
-        instance_type = flavors.get_default_flavor()
-        metadata = {}
-        flavors.save_flavor_info(metadata, instance_type)
-        flavors.save_flavor_info(metadata, instance_type, '_')
-        flavors.delete_flavor_info(metadata, '', '_')
-        self.assertEqual(metadata, {})
-
     def test_flavor_numa_extras_are_saved(self):
         instance_type = flavors.get_default_flavor()
         instance_type['extra_specs'] = {
@@ -135,8 +127,6 @@ class InstanceTypeToolsTest(test.TestCase):
             'hw:numa_cpus.1': 'ABC',
         }
         self.assertEqual(expected_extra_specs, _instance_type['extra_specs'])
-        flavors.delete_flavor_info(sysmeta, '')
-        self.assertEqual({}, sysmeta)
 
 
 class InstanceTypeFilteringTest(test.TestCase):

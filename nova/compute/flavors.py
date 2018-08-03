@@ -260,30 +260,6 @@ def save_flavor_info(metadata, instance_type, prefix=''):
     return metadata
 
 
-# NOTE(danms): This method is deprecated, do not use it!
-# Instances no longer store flavor information in system_metadata
-def delete_flavor_info(metadata, *prefixes):
-    """Delete flavor instance_type information from instance's system_metadata
-    by prefix.
-    """
-
-    for key in system_metadata_flavor_props.keys():
-        for prefix in prefixes:
-            to_key = '%sinstance_type_%s' % (prefix, key)
-            del metadata[to_key]
-
-    # NOTE(danms): We do NOT save all of extra_specs, but only the
-    # NUMA-related ones that we need to avoid an uglier alternative. This
-    # should be replaced by a general split-out of flavor information from
-    # system_metadata very soon.
-    for key in list(metadata.keys()):
-        for prefix in prefixes:
-            if key.startswith('%sinstance_type_extra_' % prefix):
-                del metadata[key]
-
-    return metadata
-
-
 def validate_extra_spec_keys(key_names_list):
     for key_name in key_names_list:
         if not VALID_EXTRASPEC_NAME_REGEX.match(key_name):
