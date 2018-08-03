@@ -1821,8 +1821,9 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch('nova.objects.Quotas.check_deltas')
     @mock.patch('nova.objects.Migration.get_by_instance_and_status')
     @mock.patch('nova.context.RequestContext.elevated')
-    def _test_revert_resize(self, mock_elevated, mock_get_migration,
-                            mock_check):
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
+    def _test_revert_resize(self, mock_get_reqspec, mock_elevated,
+                            mock_get_migration, mock_check):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
         fake_inst.old_flavor = fake_inst.flavor
@@ -1854,6 +1855,9 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, fake_inst['uuid'], 'finished')
             mock_inst_save.assert_called_once_with(expected_task_state=[None])
             mock_mig_save.assert_called_once_with()
+            mock_get_reqspec.assert_called_once_with(
+                self.context, fake_inst.uuid)
+            mock_get_reqspec.return_value.save.assert_called_once_with()
             mock_record_action.assert_called_once_with(self.context, fake_inst,
                                                        'revertResize')
             mock_revert_resize.assert_called_once_with(

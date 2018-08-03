@@ -3287,6 +3287,21 @@ class API(base.Base):
         self._record_action_start(context, instance,
                                   instance_actions.REVERT_RESIZE)
 
+        # Conductor updated the RequestSpec.flavor during the initial resize
+        # operation to point at the new flavor, so we need to update the
+        # RequestSpec to point back at the original flavor, otherwise
+        # subsequent move operations through the scheduler will be using the
+        # wrong flavor.
+        try:
+            reqspec = objects.RequestSpec.get_by_instance_uuid(
+                context, instance.uuid)
+            reqspec.flavor = instance.old_flavor
+            reqspec.save()
+        except exception.RequestSpecNotFound:
+            # TODO(mriedem): Make this a failure in Stein when we drop
+            # compatibility for missing request specs.
+            pass
+
         # TODO(melwitt): We're not rechecking for strict quota here to guard
         # against going over quota during a race at this time because the
         # resource consumption for this operation is written to the database
