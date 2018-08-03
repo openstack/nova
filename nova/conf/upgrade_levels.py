@@ -85,6 +85,12 @@ Possible values:
   'liberty'.
 """),
     cfg.StrOpt("cert",
+        deprecated_for_removal=True,
+        deprecated_since='18.0.0',
+        deprecated_reason="""
+The nova-cert service was removed in 16.0.0 (Pike) so this option
+is no longer used.
+""",
         help="""
 Cert RPC API version cap.
 
@@ -133,6 +139,12 @@ Possible values:
   'liberty'.
 """),
     cfg.StrOpt('consoleauth',
+        deprecated_for_removal=True,
+        deprecated_since='18.0.0',
+        deprecated_reason="""
+The nova-consoleauth service was deprecated in 18.0.0 (Rocky) and will be
+removed in an upcoming release.
+""",
         help="""
 Consoleauth RPC API version cap.
 
@@ -145,6 +157,12 @@ Possible values:
   'liberty'.
 """),
     cfg.StrOpt('network',
+        deprecated_for_removal=True,
+        deprecated_since='18.0.0',
+        deprecated_reason="""
+The nova-network service was deprecated in 14.0.0 (Newton) and will be
+removed in an upcoming release.
+""",
         help="""
 Network RPC API version cap.
 
