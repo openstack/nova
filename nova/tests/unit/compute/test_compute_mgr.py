@@ -4150,6 +4150,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                            mock_elevated):
         mock_elevated.return_value = self.context
         instance = fake_instance.fake_instance_obj(self.context)
+        instance.system_metadata = {}
         ex = test.TestingException('foo')
         with mock.patch.object(self.compute, '_get_resource_tracker') as mrt:
             self.assertRaises(test.TestingException,
@@ -4223,6 +4224,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_instance_fault):
         instance = fake_instance.fake_instance_obj(self.context)
         instance.info_cache = None
+        instance.system_metadata = {}
         elevated_context = mock.Mock()
         mock_context_elevated.return_value = elevated_context
         request_spec = objects.RequestSpec()
@@ -4266,8 +4268,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     def test_rebuild_node_updated_if_recreate(self):
         dead_node = uuidutils.generate_uuid()
+        img_sys_meta = {'image_hw_numa_nodes': 1}
         instance = fake_instance.fake_instance_obj(self.context,
                                                    node=dead_node)
+        instance.system_metadata = img_sys_meta
         instance.migration_context = None
         with test.nested(
             mock.patch.object(self.compute, '_get_resource_tracker'),
@@ -4284,6 +4288,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertEqual('new-node', instance.node)
             mock_set.assert_called_once_with(None, 'done')
             mock_rt.assert_called_once_with()
+            # Make sure the rebuild_claim was called with the proper image_meta
+            # from the instance.
+            mock_rebuild_claim = mock_rt.return_value.rebuild_claim
+            mock_rebuild_claim.assert_called_once()
+            self.assertIn('image_meta', mock_rebuild_claim.call_args[1])
+            actual_image_meta = mock_rebuild_claim.call_args[1][
+                'image_meta'].properties
+            self.assertIn('hw_numa_nodes', actual_image_meta)
+            self.assertEqual(1, actual_image_meta.hw_numa_nodes)
 
     @mock.patch.object(compute_utils, 'notify_about_instance_rebuild')
     @mock.patch.object(compute_utils, 'notify_usage_exists')
