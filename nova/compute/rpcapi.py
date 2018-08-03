@@ -694,7 +694,9 @@ class ComputeAPI(object):
             block_migration, host):
         version = '5.0'
         cctxt = self.router.client(ctxt).prepare(
-                server=host, version=version)
+                server=host, version=version,
+                call_monitor_timeout=CONF.rpc_response_timeout,
+                timeout=CONF.long_rpc_timeout)
         return cctxt.call(ctxt, 'post_live_migration_at_destination',
             instance=instance, block_migration=block_migration)
 

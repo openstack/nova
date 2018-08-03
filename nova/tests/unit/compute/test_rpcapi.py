@@ -342,9 +342,11 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 migration_id='1', version='5.0')
 
     def test_post_live_migration_at_destination(self):
+        self.flags(long_rpc_timeout=1234)
         self._test_compute_api('post_live_migration_at_destination', 'call',
                 instance=self.fake_instance_obj,
-                block_migration='block_migration', host='host', version='5.0')
+                block_migration='block_migration', host='host', version='5.0',
+                timeout=1234, call_monitor_timeout=60)
 
     def test_pause_instance(self):
         self._test_compute_api('pause_instance', 'cast',
