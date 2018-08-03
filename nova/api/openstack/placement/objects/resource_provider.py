@@ -2822,7 +2822,7 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
     # First filter by the resource providers that had all the required traits
     if trait_rps:
         where_conds.append(rpt.c.id.in_(trait_rps))
-    # or have any forbidden trait
+    # and didn't have any forbidden traits
     if forbidden_rp_ids:
         where_conds.append(~rpt.c.id.in_(forbidden_rp_ids))
 
@@ -3966,16 +3966,13 @@ class AllocationCandidates(base.VersionedObject):
 
         # Either we are processing a single-RP request group, or there are no
         # sharing providers that (help) satisfy the request.  Get a list of
-        # resource provider IDs that have ALL the requested resources and more
-        # efficiently construct the allocation requests.
-        # NOTE(jaypipes): When we start handling nested providers, we may
-        # add new code paths or modify this code path to return root
-        # provider IDs of provider trees instead of the resource provider
-        # IDs.
-        rp_ids = _get_provider_ids_matching(context, resources,
+        # tuples of (internal provider ID, root provider ID) that have ALL
+        # the requested resources and more efficiently construct the
+        # allocation requests.
+        rp_tuples = _get_provider_ids_matching(context, resources,
                                             required_trait_map,
                                             forbidden_trait_map, member_of)
-        return _alloc_candidates_single_provider(context, resources, rp_ids)
+        return _alloc_candidates_single_provider(context, resources, rp_tuples)
 
     @classmethod
     # TODO(efried): This is only a writer context because it accesses the
