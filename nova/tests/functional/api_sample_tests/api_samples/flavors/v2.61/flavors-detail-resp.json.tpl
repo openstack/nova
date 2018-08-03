@@ -143,7 +143,6 @@
             "rxtx_factor": 1.0,
             "description": null,
             "extra_specs": {
-                "hw:cpu_model": "SandyBridge",
                 "hw:mem_page_size": "2048",
                 "hw:cpu_policy": "dedicated"
             }
