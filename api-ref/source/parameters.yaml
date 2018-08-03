@@ -4416,9 +4416,13 @@ migration_new_flavor_id:
     In ``resize`` case, the flavor ID for resizing the server.
     In the other cases, this parameter is same as the flavor ID
     of the server when the migration was started.
+
+    .. note:: This is an internal ID and is not exposed in any other API.
+      In particular, this is not the ID specified or automatically generated
+      during flavor creation or returned via the ``GET /flavors`` API.
   in: body
   required: true
-  type: string
+  type: integer
 migration_next_links_2_59:
   description: |
     Links pertaining to the migration.
@@ -4433,9 +4437,13 @@ migration_next_links_2_59:
 migration_old_flavor_id:
   description: |
     The flavor ID of the server when the migration was started.
+
+    .. note:: This is an internal ID and is not exposed in any other API.
+      In particular, this is not the ID specified or automatically generated
+      during flavor creation or returned via the ``GET /flavors`` API.
   in: body
   required: true
-  type: string
+  type: integer
 migration_type_2_23:
   description: |
     The type of the server migration. This is one of ``live-migration``,
