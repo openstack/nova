@@ -17,6 +17,7 @@ import time
 
 import mock
 from oslo_config import cfg
+import six
 
 from nova import context
 from nova.db import api as db
@@ -26,6 +27,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import policy_fixture
+from nova import utils
 from nova.virt import fake
 
 import nova.scheduler.utils
@@ -970,3 +972,97 @@ class ServerGroupTestMultiCell(ServerGroupTestBase):
         # because group members found in cell2 should violate the policy.
         self._boot_a_server_to_group(created_group, az='cell1',
                                      expected_status='ERROR')
+
+
+class TestAntiAffinityLiveMigration(test.TestCase,
+                                    integrated_helpers.InstanceHelperMixin):
+
+    def setUp(self):
+        super(TestAntiAffinityLiveMigration, self).setUp()
+        # Setup common fixtures.
+        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.PlacementFixture())
+        # Setup API.
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1'))
+        self.api = api_fixture.api
+        self.admin_api = api_fixture.admin_api
+        # Fake out glance.
+        nova.tests.unit.image.fake.stub_out_image_service(self)
+        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
+        # Start conductor, scheduler and two computes.
+        self.start_service('conductor')
+        self.start_service('scheduler')
+        for host in ('host1', 'host2'):
+            fake.set_nodes([host])
+            self.addCleanup(fake.restore_nodes)
+            self.start_service('compute', host=host)
+
+    def test_serial_no_valid_host_then_pass_with_third_host(self):
+        """Creates 2 servers in order (not a multi-create request) in an
+        anti-affinity group so there will be 1 server on each host. Then
+        attempts to live migrate the first server which will fail because the
+        only other available host will be full. Then starts up a 3rd compute
+        service and retries the live migration which should then pass.
+        """
+        # Create the anti-affinity group used for the servers.
+        group = self.api.post_server_groups(
+            {'name': 'test_serial_no_valid_host_then_pass_with_third_host',
+             'policies': ['anti-affinity']})
+        servers = []
+        for x in range(2):
+            server = self._build_minimal_create_server_request(
+                self.api,
+                'test_serial_no_valid_host_then_pass_with_third_host-%d' % x,
+                networks='none')
+            # Add the group hint so the server is created in our group.
+            server_req = {
+                'server': server,
+                'os:scheduler_hints': {'group': group['id']}
+            }
+            # Use microversion 2.37 for passing networks='none'.
+            with utils.temporary_mutation(self.api, microversion='2.37'):
+                server = self.api.post_server(server_req)
+                servers.append(
+                    self._wait_for_state_change(
+                        self.admin_api, server, 'ACTIVE'))
+
+        # Make sure each server is on a unique host.
+        hosts = set([svr['OS-EXT-SRV-ATTR:host'] for svr in servers])
+        self.assertEqual(2, len(hosts))
+
+        # And make sure the group has 2 members.
+        members = self.api.get_server_group(group['id'])['members']
+        self.assertEqual(2, len(members))
+
+        # Now attempt to live migrate one of the servers which should fail
+        # because we don't have a free host. Since we're using microversion 2.1
+        # the scheduling will be synchronous and we should get back a 400
+        # response for the NoValidHost error.
+        body = {
+            'os-migrateLive': {
+                'host': None,
+                'block_migration': False,
+                'disk_over_commit': False
+            }
+        }
+        # Specifically use the first server since that was the first member
+        # added to the group.
+        server = servers[0]
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.admin_api.post_server_action,
+                               server['id'], body)
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('No valid host', six.text_type(ex))
+
+        # Now start up a 3rd compute service and retry the live migration which
+        # should work this time.
+        fake.set_nodes(['host3'])
+        self.addCleanup(fake.restore_nodes)
+        self.start_service('compute', host='host3')
+        self.admin_api.post_server_action(server['id'], body)
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        # Now the server should be on host3 since that was the only available
+        # host for the live migration.
+        self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])
