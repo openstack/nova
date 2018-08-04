@@ -1,0 +1,12 @@
+---
+deprecations:
+  - |
+    The following configuration options in the ``[upgrade_levels]`` group
+    have been deprecated:
+
+    * ``network`` - The ``nova-network`` service was deprecated in the 14.0.0
+      Newton release and will be removed in an upcoming release.
+    * ``cert`` - The ``nova-cert`` service was removed in the 16.0.0 Pike
+      release so this option is no longer used.
+    * ``consoleauth`` - The ``nova-consoleauth`` service was deprecated in the
+      18.0.0 Rocky release and will be removed in an upcoming release.
