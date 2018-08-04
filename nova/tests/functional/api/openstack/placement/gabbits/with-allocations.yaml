@@ -25,6 +25,24 @@ tests:
       $.usages.DISK_GB: 1020
       $.usages.VCPU: 7
 
+- name: get allocations
+  GET: /resource_providers/$ENVIRON['RP_UUID']/allocations
+  response_headers:
+      content-type: /application/json/
+  response_json_paths:
+      # Bug#1785382: It doesn't show all the consumers
+      # on the resource provider
+      # $.allocations.`len`: 3
+      $.allocations.`len`: 2
+      $.allocations["$ENVIRON['CONSUMER_0']"].resources:
+          DISK_GB: 1000
+      $.allocations["$ENVIRON['CONSUMER_ID']"].resources:
+          VCPU: 6
+      # $.allocations["$ENVIRON['ALT_CONSUMER_ID']"].resources:
+      #     VCPU: 1
+      #     DISK_GB: 20
+      $.resource_provider_generation: 5
+
 - name: fail to delete resource provider
   DELETE: /resource_providers/$ENVIRON['RP_UUID']
   status: 409

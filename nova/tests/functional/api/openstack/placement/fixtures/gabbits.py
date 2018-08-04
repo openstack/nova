@@ -166,6 +166,7 @@ class AllocationFixture(APIFixture):
         # Create a first consumer for the DISK_GB allocations
         consumer1 = tb.ensure_consumer(self.context, user, project)
         tb.set_allocation(self.context, rp, consumer1, {'DISK_GB': 1000})
+        os.environ['CONSUMER_0'] = consumer1.uuid
 
         # Create a second consumer for the VCPU allocations
         consumer2 = tb.ensure_consumer(self.context, user, project)
