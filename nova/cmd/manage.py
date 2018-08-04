@@ -552,12 +552,18 @@ Error: %s""") % six.text_type(e))
             if deleted_instance_uuids:
                 table_to_rows_archived.setdefault('instance_mappings', 0)
                 table_to_rows_archived.setdefault('request_specs', 0)
+                table_to_rows_archived.setdefault('instance_group_member', 0)
                 deleted_mappings = objects.InstanceMappingList.destroy_bulk(
                                             ctxt, deleted_instance_uuids)
                 table_to_rows_archived['instance_mappings'] += deleted_mappings
                 deleted_specs = objects.RequestSpec.destroy_bulk(
                                             ctxt, deleted_instance_uuids)
                 table_to_rows_archived['request_specs'] += deleted_specs
+                deleted_group_members = (
+                    objects.InstanceGroup.destroy_members_bulk(
+                        ctxt, deleted_instance_uuids))
+                table_to_rows_archived['instance_group_member'] += (
+                    deleted_group_members)
             if not until_complete:
                 break
             elif not run:
