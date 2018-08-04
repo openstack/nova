@@ -90,6 +90,7 @@ def update_database():
     """
     ctx = db_api.DbContext()
     resource_provider.ensure_trait_sync(ctx)
+    resource_provider.ensure_rc_cache(ctx)
 
 
 # NOTE(cdent): Althought project_name is no longer used because of the
