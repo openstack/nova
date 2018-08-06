@@ -44,7 +44,7 @@ Response
   - policy: policy_name
   - rules: policy_rules
 
-**Example List Server Groups: JSON response**
+**Example List Server Groups (2.64): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-server-groups/v2.64/server-groups-list-resp.json
    :language: javascript
@@ -71,7 +71,7 @@ Request
   - policy: policy_name
   - rules: policy_rules_optional
 
-**Example Create Server Group: JSON request**
+**Example Create Server Group (2.64): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-server-groups/v2.64/server-groups-post-req.json
    :language: javascript
@@ -92,7 +92,7 @@ Response
   - policy: policy_name
   - rules: policy_rules
 
-**Example Create Server Group: JSON response**
+**Example Create Server Group (2.64): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-server-groups/v2.64/server-groups-post-resp.json
    :language: javascript
@@ -131,7 +131,7 @@ Response
   - policy: policy_name
   - rules: policy_rules
 
-**Example Show Server Group Details: JSON response**
+**Example Show Server Group Details (2.64): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-server-groups/v2.64/server-groups-get-resp.json
    :language: javascript
