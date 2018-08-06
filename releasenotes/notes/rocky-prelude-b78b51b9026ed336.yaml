@@ -1,0 +1,58 @@
+---
+prelude: |
+    The 18.0.0 release includes many new features and bug fixes. It is
+    difficult to cover all the changes that have been introduced. Please at
+    least read the upgrade section which describes the required actions to
+    upgrade your cloud from 17.0.0 (Queens) to 18.0.0 (Rocky).
+
+    That said, a few major changes are worth mentioning. This is not an
+    exhaustive list:
+
+    - The latest Compute API microversion supported for Rocky is v2.65. Details
+      on REST API microversions added since the 17.0.0 Queens release can be
+      found in the `REST API Version History`_ page.
+
+    - Nova is now using the new Neutron port binding API to minimize network
+      downtime during live migrations. See the `related spec`_ for more
+      details.
+
+    - Volume-backed instances will no longer report ``root_gb`` usage for new
+      instances and existing instances will heal during move operations.
+
+    - Several REST APIs specific to nova-network were removed and the core
+      functionality of nova-network is planned to be removed in the 19.0.0
+      Stein release.
+
+    - A ``nova-manage db purge`` command to `purge archived shadow table data`_
+      is now available. A new ``--purge`` option is also available for the
+      ``nova-manage db archive_deleted_rows`` command.
+
+    - It is now possible to `disable a cell`_ to stop scheduling to a cell by
+      using the ``nova-manage cell_v2 update_cell`` command.
+
+    - The libvirt compute driver now supports trusted image certificates when
+      using the 2.63 compute API microversion. See the `image signature
+      certificate validation`_ documentation for more details.
+
+    - It is now possible to configure a separate database for the placement
+      service, which could help in easing the eventual placement service
+      extraction from Nova and data migration associated with it.
+
+    - A ``nova-manage placement heal_allocations`` command is now available to
+      allow users of the CachingScheduler to get the placement service
+      populated for their eventual migration to the FilterScheduler. The
+      CachingScheduler is deprecated and could be removed as early as Stein.
+
+    - The placement service now supports granular RBAC policy rules
+      configuration. See the `placement policy`_ documentation for details.
+
+    - A new zVM virt driver is now available.
+
+    - The nova-consoleauth service has been deprecated.
+
+    .. _REST API Version History: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html
+    .. _related spec: https://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/neutron-new-port-binding-api.html
+    .. _purge archived shadow table data: https://docs.openstack.org/nova/latest/cli/nova-manage.html#nova-database
+    .. _disable a cell: https://docs.openstack.org/nova/latest/cli/nova-manage.html#nova-cells-v2
+    .. _image signature certificate validation: https://docs.openstack.org/nova/latest/user/certificate-validation.html
+    .. _placement policy: https://docs.openstack.org/nova/latest/configuration/placement-policy.html
