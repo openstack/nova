@@ -4020,6 +4020,8 @@ class AllocationCandidates(base.VersionedObject):
         candidates = {}
         for suffix, request in requests.items():
             alloc_reqs, summaries = cls._get_by_one_request(context, request)
+            LOG.debug("%s (suffix '%s') returned %d matches",
+                      str(request), str(suffix), len(alloc_reqs))
             if not alloc_reqs:
                 # Shortcut: If any one request resulted in no candidates, the
                 # whole operation is shot.
