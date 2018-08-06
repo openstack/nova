@@ -159,22 +159,17 @@ class AllocationFixture(APIFixture):
         inventory = rp_obj.Inventory(
             self.context, resource_provider=rp,
             resource_class='DISK_GB', total=2048,
-            step_size=10, min_unit=10, max_unit=600)
+            step_size=10, min_unit=10, max_unit=1000)
         inventory.obj_set_defaults()
         rp.add_inventory(inventory)
-        alloc1 = rp_obj.Allocation(
+        alloc = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='DISK_GB',
             consumer=consumer,
-            used=500)
-        alloc2 = rp_obj.Allocation(
-            self.context, resource_provider=rp,
-            resource_class='DISK_GB',
-            consumer=consumer,
-            used=500)
+            used=1000)
         alloc_list = rp_obj.AllocationList(
             self.context,
-            objects=[alloc1, alloc2]
+            objects=[alloc]
         )
         alloc_list.replace_all()
 
@@ -190,22 +185,17 @@ class AllocationFixture(APIFixture):
         inventory = rp_obj.Inventory(
             self.context, resource_provider=rp,
             resource_class='VCPU', total=10,
-            max_unit=4)
+            max_unit=10)
         inventory.obj_set_defaults()
         rp.add_inventory(inventory)
-        alloc1 = rp_obj.Allocation(
+        alloc = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='VCPU',
             consumer=consumer,
-            used=2)
-        alloc2 = rp_obj.Allocation(
-            self.context, resource_provider=rp,
-            resource_class='VCPU',
-            consumer=consumer,
-            used=4)
+            used=6)
         alloc_list = rp_obj.AllocationList(
                 self.context,
-                objects=[alloc1, alloc2])
+                objects=[alloc])
         alloc_list.replace_all()
 
         # Create a consumer object for a different user
