@@ -163,6 +163,8 @@
         - nova-tox-functional
         - nova-tox-functional-py35
         - openstack-tox-lower-constraints
+        - tempest-full-py3:
+            irrelevant-files: *dsvm-irrelevant-files
     gate:
       jobs:
         - nova-cells-v1
@@ -172,6 +174,8 @@
         - nova-tox-functional
         - nova-tox-functional-py35
         - openstack-tox-lower-constraints
+        - tempest-full-py3:
+            irrelevant-files: *dsvm-irrelevant-files
     experimental:
       jobs:
         - nova-caching-scheduler
