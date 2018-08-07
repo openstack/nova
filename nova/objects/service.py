@@ -237,7 +237,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     def _do_compute_node(self, context, primitive, version_manifest):
         try:
             target_version = version_manifest['ComputeNode']
-            # NOTE(sbauza): Some drivers (VMware, Ironic) can have multiple
+            # NOTE(sbauza): Ironic deployments can have multiple
             # nodes for the same service, but for keeping same behaviour,
             # returning only the first elem of the list
             compute = objects.ComputeNodeList.get_all_by_host(
@@ -302,7 +302,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
             # NOTE(sbauza); Previous behaviour was raising a ServiceNotFound,
             # we keep it for backwards compatibility
             raise exception.ServiceNotFound(service_id=self.id)
-        # NOTE(sbauza): Some drivers (VMware, Ironic) can have multiple nodes
+        # NOTE(sbauza): Ironic deployments can have multiple nodes
         # for the same service, but for keeping same behaviour, returning only
         # the first elem of the list
         self.compute_node = compute_nodes[0]

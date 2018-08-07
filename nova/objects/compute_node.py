@@ -269,7 +269,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     def get_first_node_by_host_for_old_compat(cls, context, host,
                                               use_slave=False):
         computes = ComputeNodeList.get_all_by_host(context, host, use_slave)
-        # FIXME(sbauza): Some hypervisors (VMware, Ironic) can return multiple
+        # FIXME(sbauza): Ironic deployments can return multiple
         # nodes per host, we should return all the nodes and modify the callers
         # instead.
         # Arbitrarily returning the first node.
