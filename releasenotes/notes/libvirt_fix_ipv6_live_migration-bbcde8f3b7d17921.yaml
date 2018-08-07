@@ -1,0 +1,4 @@
+---
+fixes:
+  - A change has been introduced in the libvirt driver to correctly handle
+    IPv6 addresses for live migration.
