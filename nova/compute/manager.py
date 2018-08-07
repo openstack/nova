@@ -3949,9 +3949,8 @@ class ComputeManager(manager.Manager):
             # made it past the check above), so we need to check to
             # see if the source did migration-based allocation
             # accounting
-            allocs = (
-                self.reportclient.get_allocations_for_consumer_by_provider(
-                    context, cn_uuid, migration.uuid))
+            allocs = self.reportclient.get_allocations_for_consumer(
+                context, migration.uuid)
             if allocs:
                 # NOTE(danms): The source did migration-based allocation
                 # accounting, so we should let the source node rejigger

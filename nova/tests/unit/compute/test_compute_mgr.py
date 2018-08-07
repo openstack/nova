@@ -6958,8 +6958,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute, '_get_resource_tracker')
         @mock.patch.object(self.compute, 'reportclient')
         def doit(new_rules, mock_report, mock_rt):
-            a = new_rules and {'allocations': 'fake'} or {}
-            ga = mock_report.get_allocations_for_consumer_by_provider
+            a = new_rules and {'fake'} or {}
+            ga = mock_report.get_allocations_for_consumer
             ga.return_value = a
             self.migration.source_node = 'src'
             self.migration.dest_node = 'dst'
@@ -6970,9 +6970,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                        mock.sentinel.flavor,
                                                        'dst')
             self.assertFalse(mock_report.delete_allocation_for_instance.called)
-            cn_uuid = mock_rt().get_node_uuid.return_value
-            ga.assert_called_once_with(self.context, cn_uuid,
-                                       self.migration.uuid)
+            ga.assert_called_once_with(self.context, self.migration.uuid)
 
             old = mock_report.remove_provider_from_instance_allocation
             if new_rules:
