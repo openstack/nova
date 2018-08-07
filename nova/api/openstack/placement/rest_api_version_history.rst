@@ -421,6 +421,8 @@ is not in the requested resources.
 1.28 Consumer generation support
 --------------------------------
 
+.. versionadded:: Rocky
+
 A new generation field has been added to the consumer concept. Consumers are
 the actors that are allocated resources in the placement API. When an
 allocation is created, a consumer UUID is specified. Starting with microversion
@@ -492,6 +494,8 @@ consumers involved in the request are modified by another process.
 
 1.29 Support allocation candidates with nested resource providers
 -----------------------------------------------------------------
+
+.. versionadded:: Rocky
 
 Add support for nested resource providers with the following two features.
 1) ``GET /allocation_candidates`` is aware of nested providers. Namely, when
