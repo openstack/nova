@@ -1774,7 +1774,7 @@ def _get_allocations_by_provider_id(ctx, rp_id):
     allocs = sa.alias(_ALLOC_TBL, name="a")
     consumers = sa.alias(_CONSUMER_TBL, name="c")
     projects = sa.alias(_PROJECT_TBL, name="p")
-    users = sa.alias(_PROJECT_TBL, name="u")
+    users = sa.alias(_USER_TBL, name="u")
     cols = [
         allocs.c.id,
         allocs.c.resource_class_id,
