@@ -1,0 +1,88 @@
+{
+    "allocation_requests": [
+        {
+            "allocations": {
+                "a99bad54-a275-4c4f-a8a3-ac00d57e5c64": {
+                    "resources": {
+                        "DISK_GB": 100
+                    }
+                },
+                "35791f28-fb45-4717-9ea9-435b3ef7c3b3": {
+                    "resources": {
+                        "VCPU": 1,
+                        "MEMORY_MB": 1024
+                    }
+                }
+            }
+        },
+        {
+            "allocations": {
+                "a99bad54-a275-4c4f-a8a3-ac00d57e5c64": {
+                    "resources": {
+                        "DISK_GB": 100
+                    }
+                },
+                "915ef8ed-9b91-4e38-8802-2e4224ad54cd": {
+                    "resources": {
+                        "VCPU": 1,
+                        "MEMORY_MB": 1024
+                    }
+                }
+            }
+        }
+    ],
+    "provider_summaries": {
+        "a99bad54-a275-4c4f-a8a3-ac00d57e5c64": {
+            "resources": {
+                "DISK_GB": {
+                    "used": 0,
+                    "capacity": 1900
+                }
+            },
+            "traits": ["MISC_SHARES_VIA_AGGREGATE"],
+            "parent_provider_uuid": null,
+            "root_provider_uuid": "a99bad54-a275-4c4f-a8a3-ac00d57e5c64"
+        },
+        "35791f28-fb45-4717-9ea9-435b3ef7c3b3": {
+            "resources": {
+                "VCPU": {
+                    "used": 0,
+                    "capacity": 384
+                },
+                "MEMORY_MB": {
+                    "used": 0,
+                    "capacity": 196608
+                }
+            },
+            "traits": ["HW_CPU_X86_SSE2", "HW_CPU_X86_AVX2"],
+            "parent_provider_uuid": null,
+            "root_provider_uuid": "35791f28-fb45-4717-9ea9-435b3ef7c3b3"
+        },
+        "915ef8ed-9b91-4e38-8802-2e4224ad54cd": {
+            "resources": {
+                "VCPU": {
+                    "used": 0,
+                    "capacity": 384
+                },
+                "MEMORY_MB": {
+                    "used": 0,
+                    "capacity": 196608
+                }
+            },
+            "traits": ["HW_NIC_SRIOV"],
+            "parent_provider_uuid": null,
+            "root_provider_uuid": "915ef8ed-9b91-4e38-8802-2e4224ad54cd"
+        },
+        "f5120cad-67d9-4f20-9210-3092a79a28cf": {
+            "resources": {
+                "SRIOV_NET_VF": {
+                    "used": 0,
+                    "capacity": 8
+                }
+            },
+            "traits": [],
+            "parent_provider_uuid": "915ef8ed-9b91-4e38-8802-2e4224ad54cd",
+            "root_provider_uuid": "915ef8ed-9b91-4e38-8802-2e4224ad54cd"
+        }
+    }
+}

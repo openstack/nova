@@ -44,15 +44,23 @@ Response (microversions 1.12 - )
 .. rest_parameters:: parameters.yaml
 
   - allocation_requests: allocation_requests
-  - provider_summaries: provider_summaries
+  - provider_summaries: provider_summaries_1_12
   - allocations: allocations_by_resource_provider
   - resources: resources
   - capacity: capacity
   - used: used
   - traits: traits_1_17
+  - parent_provider_uuid: resource_provider_parent_provider_uuid_response_1_29
+  - root_provider_uuid: resource_provider_root_provider_uuid_1_29
 
-Response Example (microversions 1.17 - )
+Response Example (microversions 1.29 - )
 ----------------------------------------
+
+.. literalinclude:: ./samples/allocation_candidates/get-allocation_candidates-1.29.json
+   :language: javascript
+
+Response Example (microversions 1.17 - 1.28)
+--------------------------------------------
 
 .. literalinclude:: ./samples/allocation_candidates/get-allocation_candidates-1.17.json
    :language: javascript
