@@ -837,8 +837,8 @@ in server group APIs:
   body of POST, GET ``/os-server-groups`` API and GET
   ``/os-server-groups/{server_group_id}`` API.
 
-2.65
-----
+2.65 (Maximum in Rocky)
+-----------------------
 
 Add support for abort live migrations in ``queued`` and ``preparing`` status
 for API ``DELETE /servers/{server_id}/migrations/{migration_id}``.
