@@ -1278,7 +1278,8 @@ def _server_group_count_members_by_user(context, group, user_id):
     for cell_mapping in cell_mappings:
         with nova_context.target_cell(context, cell_mapping) as cctxt:
             greenthreads.append(utils.spawn(
-                objects.InstanceList.get_by_filters, cctxt, filters))
+                objects.InstanceList.get_by_filters, cctxt, filters,
+                expected_attrs=[]))
     instances = objects.InstanceList(objects=[])
     for greenthread in greenthreads:
         found = greenthread.wait()
