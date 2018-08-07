@@ -40,6 +40,13 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         tb.add_inventory(excl_big_cm_noalloc, fields.ResourceClass.MEMORY_MB,
                          4096, max_unit=2048)
 
+        # Inventory of adequate memory and disk, no allocations against it.
+        excl_big_md_noalloc = self._create_provider('big_md_noalloc')
+        tb.add_inventory(excl_big_md_noalloc, fields.ResourceClass.MEMORY_MB,
+                         4096, max_unit=2048)
+        tb.add_inventory(excl_big_md_noalloc, fields.ResourceClass.DISK_GB,
+                         2000)
+
         # Adequate inventory, no allocations against it.
         incl_biginv_noalloc = self._create_provider('biginv_noalloc')
         tb.add_inventory(incl_biginv_noalloc, fields.ResourceClass.VCPU, 15)
@@ -185,7 +192,14 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
 
         self.assertEqual([], res)
 
-        # OK, now add the trait to one of the providers and verify that
+        # Next let's set the required trait to an excl_* RPs.
+        # This should result in no results returned as well.
+        excl_big_md_noalloc.set_traits([avx2_t])
+        res = rp_obj._get_provider_ids_matching(self.ctx, resources,
+                                                req_traits, {})
+        self.assertEqual([], res)
+
+        # OK, now add the trait to one of the incl_* providers and verify that
         # provider now shows up in our results
         incl_biginv_noalloc.set_traits([avx2_t])
         res = rp_obj._get_provider_ids_matching(self.ctx, resources,
