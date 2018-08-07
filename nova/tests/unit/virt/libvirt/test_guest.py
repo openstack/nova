@@ -34,6 +34,8 @@ if sys.version_info > (3,):
     long = int
 
 
+# Make RetryDecorator not actually sleep on retries
+@mock.patch('oslo_service.loopingcall._ThreadingEvent.wait', new=mock.Mock())
 class GuestTestCase(test.NoDBTestCase):
 
     def setUp(self):
