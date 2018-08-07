@@ -60,6 +60,31 @@ def set_traits(rp, *traits):
     return tlist
 
 
+def ensure_consumer(ctx, user, project, consumer_id=None):
+    # NOTE(efried): If not specified, use a random consumer UUID - we don't
+    # want to override any existing allocations from the test case.
+    consumer_id = consumer_id or uuidutils.generate_uuid()
+    try:
+        consumer = consumer_obj.Consumer.get_by_uuid(ctx, consumer_id)
+    except exception.NotFound:
+        consumer = consumer_obj.Consumer(
+            ctx, uuid=consumer_id, user=user, project=project)
+        consumer.create()
+    return consumer
+
+
+def set_allocation(ctx, rp, consumer, rc_used_dict):
+    alloc = [
+        rp_obj.Allocation(
+            ctx, resource_provider=rp, resource_class=rc,
+            consumer=consumer, used=used)
+        for rc, used in rc_used_dict.items()
+    ]
+    alloc_list = rp_obj.AllocationList(ctx, objects=alloc)
+    alloc_list.replace_all()
+    return alloc_list
+
+
 class PlacementDbBaseTestCase(base.TestCase):
 
     def setUp(self):
@@ -83,25 +108,10 @@ class PlacementDbBaseTestCase(base.TestCase):
 
     def allocate_from_provider(self, rp, rc, used, consumer_id=None,
                                consumer=None):
-        # NOTE(efried): If not specified, use a random consumer UUID - we don't
-        # want to override any existing allocations from the test case.
-        consumer_id = consumer_id or uuidutils.generate_uuid()
         if consumer is None:
-            try:
-                consumer = consumer_obj.Consumer.get_by_uuid(
-                    self.ctx, consumer_id)
-            except exception.NotFound:
-                consumer = consumer_obj.Consumer(
-                    self.ctx, uuid=consumer_id, user=self.user_obj,
-                    project=self.project_obj)
-                consumer.create()
-        alloc_list = rp_obj.AllocationList(
-            self.ctx, objects=[
-                rp_obj.Allocation(
-                    self.ctx, resource_provider=rp, resource_class=rc,
-                    consumer=consumer, used=used)]
-        )
-        alloc_list.replace_all()
+            consumer = ensure_consumer(
+                self.ctx, self.user_obj, self.project_obj, consumer_id)
+        alloc_list = set_allocation(self.ctx, rp, consumer, {rc: used})
         return alloc_list
 
     def _make_allocation(self, inv_dict, alloc_dict):
@@ -111,15 +121,10 @@ class PlacementDbBaseTestCase(base.TestCase):
         inv_list = rp_obj.InventoryList(objects=[disk_inv])
         rp.set_inventory(inv_list)
         consumer_id = alloc_dict['consumer_id']
-        try:
-            c = consumer_obj.Consumer.get_by_uuid(self.ctx, consumer_id)
-        except exception.NotFound:
-            c = consumer_obj.Consumer(
-                self.ctx, uuid=consumer_id, user=self.user_obj,
-                project=self.project_obj)
-            c.create()
+        consumer = ensure_consumer(
+            self.ctx, self.user_obj, self.project_obj, consumer_id)
         alloc = rp_obj.Allocation(self.ctx, resource_provider=rp,
-                consumer=c, **alloc_dict)
+                consumer=consumer, **alloc_dict)
         alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
         alloc_list.replace_all()
         return rp, alloc
