@@ -1398,9 +1398,26 @@ Related options:
 ]
 
 
+service_opts = [
+    cfg.StrOpt('network_manager',
+        choices=[
+            'nova.network.manager.FlatManager',
+            'nova.network.manager.FlatDHCPManager',
+            'nova.network.manager.VlanManager',
+        ],
+        default='nova.network.manager.VlanManager',
+        deprecated_for_removal=True,
+        deprecated_since='18.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
+        help='Full class name for the Manager for network'),
+]
+
+
 ALL_DEFAULT_OPTS = (linux_net_opts + network_opts + ldap_dns_opts
                     + rpcapi_opts + driver_opts + floating_ip_opts
-                    + ipv6_opts + quota_opts)
+                    + ipv6_opts + quota_opts + service_opts)
 
 
 def register_opts(conf):
