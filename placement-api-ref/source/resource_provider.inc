@@ -34,7 +34,7 @@ Response
   - uuid: resource_provider_uuid
   - links: resource_provider_links
   - name: resource_provider_name
-  - parent_provider_uuid: resource_provider_parent_provider_uuid_required
+  - parent_provider_uuid: resource_provider_parent_provider_uuid_response_1_14
   - root_provider_uuid: resource_provider_root_provider_uuid_required
 
 Response Example
@@ -64,7 +64,7 @@ Request
 
   - uuid: resource_provider_uuid_path
   - name: resource_provider_name
-  - parent_provider_uuid: resource_provider_parent_provider_uuid_1_14
+  - parent_provider_uuid: resource_provider_parent_provider_uuid_request
 
 Request example
 ---------------
@@ -81,7 +81,7 @@ Response
   - uuid: resource_provider_uuid
   - links: resource_provider_links
   - name: resource_provider_name
-  - parent_provider_uuid: resource_provider_parent_provider_uuid_required
+  - parent_provider_uuid: resource_provider_parent_provider_uuid_response_1_14
   - root_provider_uuid: resource_provider_root_provider_uuid_required
 
 Response Example
