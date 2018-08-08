@@ -3565,11 +3565,9 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
 
     for rp_id, root_id, rc_id in rp_tuples:
         rp_summary = summaries[rp_id]
-        rp_uuid = rp_summary.resource_provider.uuid
         tree_dict[root_id][rc_id].append(
             AllocationRequestResource(
-                ctx, resource_provider=ResourceProvider.get_by_uuid(ctx,
-                                                                    rp_uuid),
+                ctx, resource_provider=rp_summary.resource_provider,
                 resource_class=_RC_CACHE.string_from_id(rc_id),
                 amount=requested_resources[rc_id]))
 
