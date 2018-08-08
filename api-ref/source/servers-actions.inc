@@ -480,9 +480,18 @@ Rebuilds a server.
 
 Specify the ``rebuild`` action in the request body.
 
+This operation recreates the root disk of the server.
+For a volume-backed server, this operation keeps the contents of the volume.
+
 **Preconditions**
 
 The server status must be ``ACTIVE``, ``SHUTOFF`` or ``ERROR``.
+
+**Asynchronous Postconditions**
+
+If the server was in status ``SHUTOFF`` before the rebuild, it will be stopped
+and in status ``SHUTOFF`` after the rebuild, otherwise it will be ``ACTIVE``
+if the rebuild was successful or ``ERROR`` if the rebuild failed.
 
 .. note:: There is a `known limitation`_ where the root disk is not
    replaced for volume-backed instances during a rebuild.
