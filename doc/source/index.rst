@@ -210,6 +210,7 @@ looking parts of our architecture. These are collected below.
    contributor/development-environment
    contributor/api
    contributor/api-2
+   contributor/api-ref-guideline
    contributor/blueprints
    contributor/code-review
    contributor/documentation
