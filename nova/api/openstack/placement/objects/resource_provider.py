@@ -661,6 +661,47 @@ ProviderIds = collections.namedtuple(
     'ProviderIds', 'id uuid parent_id parent_uuid root_id root_uuid')
 
 
+def _provider_ids_from_rp_ids(context, rp_ids):
+    """Given an iterable of internal resource provider IDs, returns a dict,
+    keyed by internal provider Id, of ProviderIds namedtuples describing those
+    providers.
+
+    :returns: dict, keyed by internal provider Id, of ProviderIds namedtuples
+    :param rp_ids: iterable of internal provider IDs to look up
+    """
+    # SELECT
+    #   rp.id, rp.uuid,
+    #   parent.id AS parent_id, parent.uuid AS parent_uuid,
+    #   root.id AS root_id, root.uuid AS root_uuid
+    # FROM resource_providers AS rp
+    # LEFT JOIN resource_providers AS parent
+    #   ON rp.parent_provider_id = parent.id
+    # LEFT JOIN resource_providers AS root
+    #   ON rp.root_provider_id = root.id
+    # WHERE rp.id IN ($rp_ids)
+    me = sa.alias(_RP_TBL, name="me")
+    parent = sa.alias(_RP_TBL, name="parent")
+    root = sa.alias(_RP_TBL, name="root")
+    cols = [
+        me.c.id,
+        me.c.uuid,
+        parent.c.id.label('parent_id'),
+        parent.c.uuid.label('parent_uuid'),
+        root.c.id.label('root_id'),
+        root.c.uuid.label('root_uuid'),
+    ]
+    # TODO(jaypipes): Change this to an inner join when we are sure all
+    # root_provider_id values are NOT NULL
+    me_to_root = sa.outerjoin(me, root, me.c.root_provider_id == root.c.id)
+    me_to_parent = sa.outerjoin(me_to_root, parent,
+        me.c.parent_provider_id == parent.c.id)
+    sel = sa.select(cols).select_from(me_to_parent)
+    sel = sel.where(me.c.id.in_(rp_ids))
+    return {
+        r[0]: ProviderIds(**dict(r)) for r in context.session.execute(sel)
+    }
+
+
 def _provider_ids_from_uuid(context, uuid):
     """Given the UUID of a resource provider, returns a namedtuple
     (ProviderIds) with the internal ID, the UUID, the parent provider's
@@ -3222,19 +3263,27 @@ def _build_provider_summaries(context, usages, prov_traits):
     :param prov_traits: A dict, keyed by internal resource provider ID, of
                         string trait names associated with that provider
     """
+    # Before we go creating provider summary objects, first grab all the
+    # provider information (including root, parent and UUID information) for
+    # all providers involved in our operation
+    rp_ids = set(usage['resource_provider_id'] for usage in usages)
+    provider_ids = _provider_ids_from_rp_ids(context, rp_ids)
+
     # Build up a dict, keyed by internal resource provider ID, of
     # ProviderSummary objects containing one or more ProviderSummaryResource
     # objects representing the resources the provider has inventory for.
     summaries = {}
     for usage in usages:
         rp_id = usage['resource_provider_id']
-        rp_uuid = usage['resource_provider_uuid']
         summary = summaries.get(rp_id)
         if not summary:
+            pids = provider_ids[rp_id]
             summary = ProviderSummary(
                 context,
-                resource_provider=ResourceProvider.get_by_uuid(context,
-                                                               uuid=rp_uuid),
+                resource_provider=ResourceProvider(
+                    context, id=pids.id, uuid=pids.uuid,
+                    root_provider_uuid=pids.root_uuid,
+                    parent_provider_uuid=pids.parent_uuid),
                 resources=[],
             )
             summaries[rp_id] = summary
