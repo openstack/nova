@@ -291,12 +291,14 @@ documentation
 <configuration/opts.html#oslo_messaging_notifications.transport_url>` for more
 details.
 
-Neutron Metadata API proxy
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Nova Metadata API service
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Neutron metadata API proxy should be global across all cells, and
+The Nova metadata API service should be global across all cells, and
 thus be configured as an API-level service with access to the
-``[api_database]/connection`` information.
+``[api_database]/connection`` information. The nova metadata API service must
+not be run as a standalone service (e.g. must not be run via the
+nova-api-metadata script).
 
 Consoleauth service and console proxies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
