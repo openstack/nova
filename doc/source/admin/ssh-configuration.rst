@@ -6,13 +6,19 @@ Configure SSH between compute nodes
 
 .. todo::
 
-    Consider merging this into a larger "live-migration" document or to the
+    Consider merging this into a larger "migration" document or to the
     installation guide
 
 If you are resizing or migrating an instance between hypervisors, you might
 encounter an SSH (Permission denied) error. Ensure that each node is configured
 with SSH key authentication so that the Compute service can use SSH to move
 disks to other nodes.
+
+.. note::
+
+   It is not necessary that all the compute nodes share the same key pair.
+   However for the ease of the configuration, this document only utilizes a
+   single key pair for communication between compute nodes.
 
 To share a key pair between compute nodes, complete the following steps:
 
@@ -28,14 +34,15 @@ To share a key pair between compute nodes, complete the following steps:
 
       # usermod -s /bin/bash nova
 
-   Switch to the nova account.
+   Ensure you can switch to the nova account:
 
    .. code-block:: console
 
-      # su nova
+      # su - nova
 
 #. As root, create the folder that is needed by SSH and place the private key
-   that you obtained in step 1 into this folder:
+   that you obtained in step 1 into this folder, and add the pub key to the
+   authorized_keys file:
 
    .. code-block:: console
 
@@ -43,29 +50,20 @@ To share a key pair between compute nodes, complete the following steps:
       cp <private key>  /var/lib/nova/.ssh/id_rsa
       echo 'StrictHostKeyChecking no' >> /var/lib/nova/.ssh/config
       chmod 600 /var/lib/nova/.ssh/id_rsa /var/lib/nova/.ssh/authorized_keys
+      echo <pub key> >> /var/lib/nova/.ssh/authorized_keys
 
-#. Repeat steps 2-4 on each node.
-
-   .. note::
-
-      The nodes must share the same key pair, so do not generate a new key pair
-      for any subsequent nodes.
-
-#. From the first node, where you created the SSH key, run:
+#. Copy the whole folder created in step 4 to the rest of the nodes:
 
    .. code-block:: console
 
-      ssh-copy-id -i <pub key> nova@remote-host
-
-   This command installs your public key in a remote machine's
-   ``authorized_keys`` folder.
+      # scp -r /var/lib/nova/.ssh remote-host:/var/lib/nova/
 
 #. Ensure that the nova user can now log in to each node without using a
    password:
 
    .. code-block:: console
 
-      # su nova
+      # su - nova
       $ ssh *computeNodeAddress*
       $ exit
 
