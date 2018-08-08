@@ -359,7 +359,7 @@ compute host to the storage array:
    Failed to connect to volume 6f6a6a9c-dfcf-4c8d-b1a8-4445ff883200 while\
    attaching at /dev/vdjTRACE nova.compute.manager [instance: 60ebd6c7-c1e3-4\
    bf0-8ef0-f07aa4c3d5f3|instance: 60ebd6c7-c1e3-4bf0-8ef0-f07aa4c3d5f3]
-   Traceback (most recent call last):…f07aa4c3d5f3\] ClientException: The\
+   Traceback (most recent call last):...f07aa4c3d5f3\] ClientException: The\
    server has either erred or is incapable of performing the requested\
    operation.(HTTP 500)(Request-ID: req-71e5132b-21aa-46ee-b3cc-19b5b4ab2f00)
 

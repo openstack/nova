@@ -223,7 +223,7 @@ properly on the 64bit version.
 
       PS C:\> $src = "https://www.python.org/ftp/python/2.7.3/python-2.7.3.msi"
       PS C:\> $dest = "$env:temp\python-2.7.3.msi"
-      PS C:\> Invoke-WebRequest –Uri $src –OutFile $dest
+      PS C:\> Invoke-WebRequest -Uri $src -OutFile $dest
       PS C:\> Unblock-File $dest
       PS C:\> Start-Process $dest
 
@@ -310,7 +310,7 @@ Download the nova code
 
       PS C:\> $src = "https://github.com/msysgit/msysgit/releases/download/Git-1.9.2-preview20140411/Git-1.9.2-preview20140411.exe"
       PS C:\> $dest = "$env:temp\Git-1.9.2-preview20140411.exe"
-      PS C:\> Invoke-WebRequest –Uri $src –OutFile $dest
+      PS C:\> Invoke-WebRequest -Uri $src -OutFile $dest
       PS C:\> Unblock-File $dest
       PS C:\> Start-Process $dest
 

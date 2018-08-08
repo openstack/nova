@@ -281,4 +281,4 @@ systems. However, to use the VFAT format, add the following line to the
 
    config_drive_format=vfat
 
-If you choose VFAT, the configuration drive is 64 MB.
+If you choose VFAT, the configuration drive is 64 MB.
