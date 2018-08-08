@@ -275,11 +275,7 @@ class API(base.Base):
 
     @property
     def cell_type(self):
-        try:
-            return getattr(self, '_cell_type')
-        except AttributeError:
-            self._cell_type = cells_opts.get_cell_type()
-            return self._cell_type
+        return getattr(self, '_cell_type', cells_opts.get_cell_type())
 
     def _validate_cell(self, instance):
         if self.cell_type != 'api':
