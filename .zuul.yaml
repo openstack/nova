@@ -160,6 +160,8 @@
         - nova-lvm
         - nova-multiattach
         - nova-next
+        - tempest-slow:
+            irrelevant-files: *dsvm-irrelevant-files
         - nova-tox-functional
         - nova-tox-functional-py35
         - openstack-tox-lower-constraints
@@ -171,6 +173,8 @@
         - nova-live-migration
         - nova-multiattach
         - nova-next
+        - tempest-slow:
+            irrelevant-files: *dsvm-irrelevant-files
         - nova-tox-functional
         - nova-tox-functional-py35
         - openstack-tox-lower-constraints
