@@ -801,7 +801,7 @@ def _provider_ids_matching_aggregates(context, member_of, rp_ids=None):
     :param rp_ids: When present, returned resource providers are limited
         to only those in this value
 
-    :returns: A list of internal resource provider IDs having all required
+    :returns: A set of internal resource provider IDs having all required
         aggregate associations
     """
     # Given a request for the following:
@@ -862,7 +862,7 @@ def _provider_ids_matching_aggregates(context, member_of, rp_ids=None):
     sel = sa.select([rp_tbl.c.id]).select_from(join_chain)
     if rp_ids:
         sel = sel.where(rp_tbl.c.id.in_(rp_ids))
-    return [r[0] for r in context.session.execute(sel).fetchall()]
+    return set(r[0] for r in context.session.execute(sel))
 
 
 @db_api.placement_context_manager.writer
@@ -2780,7 +2780,7 @@ def _get_usages_by_provider_tree(ctx, root_ids):
 
 @db_api.placement_context_manager.reader
 def _get_provider_ids_having_any_trait(ctx, traits):
-    """Returns a list of resource provider internal IDs that have ANY of the
+    """Returns a set of resource provider internal IDs that have ANY of the
     supplied traits.
 
     :param ctx: Session context to use
@@ -2796,12 +2796,12 @@ def _get_provider_ids_having_any_trait(ctx, traits):
     sel = sa.select([rptt.c.resource_provider_id])
     sel = sel.where(rptt.c.trait_id.in_(traits.values()))
     sel = sel.group_by(rptt.c.resource_provider_id)
-    return [r[0] for r in ctx.session.execute(sel)]
+    return set(r[0] for r in ctx.session.execute(sel))
 
 
 @db_api.placement_context_manager.reader
 def _get_provider_ids_having_all_traits(ctx, required_traits):
-    """Returns a list of resource provider internal IDs that have ALL of the
+    """Returns a set of resource provider internal IDs that have ALL of the
     required traits.
 
     NOTE: Don't call this method with no required_traits.
@@ -2825,7 +2825,7 @@ def _get_provider_ids_having_all_traits(ctx, required_traits):
     num_traits = len(required_traits)
     cond = sa.func.count(rptt.c.trait_id) == num_traits
     sel = sel.having(cond)
-    return [r[0] for r in ctx.session.execute(sel)]
+    return set(r[0] for r in ctx.session.execute(sel))
 
 
 @db_api.placement_context_manager.reader
@@ -2869,112 +2869,102 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
                       resource providers that are members of one or more of the
                       supplied aggregates of each aggregate UUID list.
     """
-    trait_rps = None
-    forbidden_rp_ids = None
+    # The iteratively filtered set of resource provider internal IDs that match
+    # all the constraints in the request
+    filtered_rps = set()
     if required_traits:
         trait_rps = _get_provider_ids_having_all_traits(ctx, required_traits)
-        if not trait_rps:
+        filtered_rps = trait_rps
+        LOG.debug("found %d providers after applying required traits filter "
+                  "(%s)",
+                  len(filtered_rps), list(required_traits))
+        if not filtered_rps:
             return []
-    if forbidden_traits:
-        forbidden_rp_ids = _get_provider_ids_having_any_trait(
-            ctx, forbidden_traits)
-
-    rpt = sa.alias(_RP_TBL, name="rp")
-
-    rc_name_map = {
-        rc_id: _RC_CACHE.string_from_id(rc_id).lower() for rc_id in resources
-    }
-
-    # Dict, keyed by resource class ID, of an aliased table object for the
-    # inventories table winnowed to only that resource class.
-    inv_tables = {
-        rc_id: sa.alias(_INV_TBL, name='inv_%s' % rc_name_map[rc_id])
-        for rc_id in resources
-    }
-
-    # Dict, keyed by resource class ID, of a derived table (subquery in the
-    # FROM clause or JOIN) against the allocations table winnowed to only that
-    # resource class, grouped by resource provider.
-    usage_tables = {
-        rc_id: sa.alias(
-            sa.select([
-                _ALLOC_TBL.c.resource_provider_id,
-                sql.func.sum(_ALLOC_TBL.c.used).label('used'),
-            ]).where(
-                _ALLOC_TBL.c.resource_class_id == rc_id
-            ).group_by(
-                _ALLOC_TBL.c.resource_provider_id
-            ),
-            name='usage_%s' % rc_name_map[rc_id],
-        )
-        for rc_id in resources
-    }
-
-    sel = sa.select([rpt.c.id, rpt.c.root_provider_id])
-
-    # List of the WHERE conditions we build up by iterating over the requested
-    # resources
-    where_conds = []
-
-    # First filter by the resource providers that had all the required traits
-    if trait_rps:
-        where_conds.append(rpt.c.id.in_(trait_rps))
-    # and didn't have any forbidden traits
-    if forbidden_rp_ids:
-        where_conds.append(~rpt.c.id.in_(forbidden_rp_ids))
-
-    # The chain of joins that we eventually pass to select_from()
-    join_chain = rpt
-
-    for rc_id, amount in resources.items():
-        inv_by_rc = inv_tables[rc_id]
-        usage_by_rc = usage_tables[rc_id]
-
-        # We can do a more efficient INNER JOIN because we don't have shared
-        # resource providers to deal with
-        rp_inv_join = sa.join(
-            join_chain, inv_by_rc,
-            sa.and_(
-                inv_by_rc.c.resource_provider_id == rpt.c.id,
-                # Add a join condition winnowing this copy of inventories table
-                # to only the resource class being analyzed in this loop...
-                inv_by_rc.c.resource_class_id == rc_id,
-            ),
-        )
-        rp_inv_usage_join = sa.outerjoin(
-            rp_inv_join, usage_by_rc,
-            inv_by_rc.c.resource_provider_id ==
-                usage_by_rc.c.resource_provider_id,
-        )
-        join_chain = rp_inv_usage_join
-
-        usage_cond = sa.and_(
-            (
-            (sql.func.coalesce(usage_by_rc.c.used, 0) + amount) <=
-            (inv_by_rc.c.total - inv_by_rc.c.reserved) *
-                inv_by_rc.c.allocation_ratio
-            ),
-            inv_by_rc.c.min_unit <= amount,
-            inv_by_rc.c.max_unit >= amount,
-            amount % inv_by_rc.c.step_size == 0,
-        )
-        where_conds.append(usage_cond)
 
     # If 'member_of' has values, do a separate lookup to identify the
     # resource providers that meet the member_of constraints.
     if member_of:
         rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of)
-        if not rps_in_aggs:
-            # Short-circuit. The user either asked for a non-existing
-            # aggregate or there were no resource providers that matched
-            # the requirements...
+        if filtered_rps:
+            filtered_rps &= set(rps_in_aggs)
+        else:
+            filtered_rps = set(rps_in_aggs)
+        LOG.debug("found %d providers after applying aggregates filter (%s)",
+                  len(filtered_rps), member_of)
+        if not filtered_rps:
             return []
-        where_conds.append(rpt.c.id.in_(rps_in_aggs))
 
-    sel = sel.select_from(join_chain)
-    sel = sel.where(sa.and_(*where_conds))
+    forbidden_rp_ids = set()
+    if forbidden_traits:
+        forbidden_rp_ids = _get_provider_ids_having_any_trait(
+            ctx, forbidden_traits)
+        if filtered_rps:
+            filtered_rps -= forbidden_rp_ids
+            LOG.debug("found %d providers after applying forbidden traits "
+                      "filter (%s)", len(filtered_rps),
+                      list(forbidden_traits))
+            if not filtered_rps:
+                return []
 
-    return [(r[0], r[1]) for r in ctx.session.execute(sel)]
+    # Instead of constructing a giant complex SQL statement that joins multiple
+    # copies of derived usage tables and inventory tables to each other, we do
+    # one query for each requested resource class. This allows us to log a
+    # rough idea of which resource class query returned no results (for
+    # purposes of rough debugging of a single allocation candidates request) as
+    # well as reduce the necessary knowledge of SQL in order to understand the
+    # queries being executed here.
+    #
+    # NOTE(jaypipes): The efficiency of this operation may be improved by
+    # passing the trait_rps and/or forbidden_ip_ids iterables to the
+    # _get_providers_with_resource() function so that we don't have to process
+    # as many records inside the loop below to remove providers from the
+    # eventual results list
+    provs_with_resource = set()
+    first = True
+    for rc_id, amount in resources.items():
+        rc_name = _RC_CACHE.string_from_id(rc_id)
+        provs_with_resource = _get_providers_with_resource(ctx, rc_id, amount)
+        LOG.debug("found %d providers with available %d %s",
+                  len(provs_with_resource), amount, rc_name)
+        if not provs_with_resource:
+            return []
+
+        rc_rp_ids = set(p[0] for p in provs_with_resource)
+        # The branching below could be collapsed code-wise, but is in place to
+        # make the debug logging clearer.
+        if first:
+            first = False
+            if filtered_rps:
+                filtered_rps &= rc_rp_ids
+                LOG.debug("found %d providers after applying initial "
+                          "aggregate and trait filters", len(filtered_rps))
+            else:
+                filtered_rps = rc_rp_ids
+                # The following condition is not necessary for the logic; just
+                # prevents the message from being logged unnecessarily.
+                if forbidden_rp_ids:
+                    # Forbidden trait filters only need to be applied
+                    # a) on the first iteration; and
+                    # b) if not already set up before the loop
+                    # ...since any providers in the resulting set are the basis
+                    # for intersections, and providers with forbidden traits
+                    # are already absent from that set after we've filtered
+                    # them once.
+                    filtered_rps -= forbidden_rp_ids
+                    LOG.debug("found %d providers after applying forbidden "
+                              "traits", len(filtered_rps))
+        else:
+            filtered_rps &= rc_rp_ids
+            LOG.debug("found %d providers after filtering by previous result",
+                      len(filtered_rps))
+
+        if not filtered_rps:
+            return []
+
+    # provs_with_resource will contain a superset of providers with IDs still
+    # in our filtered_rps set. We return the list of tuples of
+    # (internal provider ID, root internal provider ID)
+    return [rpids for rpids in provs_with_resource if rpids[0] in filtered_rps]
 
 
 @db_api.placement_context_manager.reader
