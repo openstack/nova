@@ -66,6 +66,7 @@ _FOLDER_PATH_REF_MAPPING = {}
 # that this is a rescue VM. This is in order to prevent
 # unnecessary communication with the backend.
 _VM_REFS_CACHE = {}
+_VM_VALUE_CACHE = collections.defaultdict(dict)
 
 
 class Limits(object):
@@ -115,6 +116,23 @@ class ExtraSpecs(object):
         self.hv_enabled = hv_enabled
         self.firmware = firmware
         self.hw_video_ram = hw_video_ram
+
+
+def vm_value_cache_reset():
+    global _VM_VALUE_CACHE
+    _VM_VALUE_CACHE = {}
+
+
+def vm_value_cache_delete(id):
+    _VM_VALUE_CACHE.pop(id, None)
+
+
+def vm_value_cache_update(id, change_name, val):
+    _VM_VALUE_CACHE[id][change_name] = val
+
+
+def vm_value_cache_get(id):
+    return _VM_VALUE_CACHE.get(id)
 
 
 def vm_refs_cache_reset():

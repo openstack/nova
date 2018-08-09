@@ -177,6 +177,11 @@ class VMwareVMOpsTestCase(test.TestCase):
                 uuids.image,
                 version.version_string_with_package()))
 
+    vm_util.vm_value_cache_update("test_id",
+        'runtime.powerState', 'poweredOn')
+    vm_util.vm_value_cache_update("fake_powered_off",
+        'runtime.powerState', 'poweredOff')
+
     def test_get_machine_id_str(self):
         result = vmops.VMwareVMOps._get_machine_id_str(self.network_info)
         self.assertEqual('DE:AD:BE:EF:00:00;192.168.0.100;255.255.255.0;'
@@ -298,8 +303,12 @@ class VMwareVMOpsTestCase(test.TestCase):
             mock_save.assert_called_once_with()
         self.assertEqual(50, self._instance.progress)
 
-    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')
-    def test_get_info(self, mock_get_vm_ref):
+    @mock.patch.object(vm_util, 'get_vm_ref',
+        return_value=vmwareapi_fake.ManagedObjectReference(value='test_id'))
+    @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
+    @mock.patch.object(vm_util, '_VM_VALUE_CACHE')
+    def test_get_info(self, mock_value_cache,
+                      mock_update_cached_instances, mock_get_vm_ref):
         result = {
             'summary.config.numCpu': 4,
             'summary.config.memorySizeMB': 128,
@@ -314,7 +323,9 @@ class VMwareVMOpsTestCase(test.TestCase):
             expected = hardware.InstanceInfo(state=power_state.RUNNING)
             self.assertEqual(expected, info)
 
-    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')
+    @mock.patch.object(vm_util, 'get_vm_ref',
+        return_value=vmwareapi_fake.ManagedObjectReference(
+            value='fake_powered_off'))
     def test_get_info_when_ds_unavailable(self, mock_get_vm_ref):
         result = {
             'runtime.powerState': 'poweredOff'
@@ -328,8 +339,15 @@ class VMwareVMOpsTestCase(test.TestCase):
             self.assertEqual(hardware.InstanceInfo(state=power_state.SHUTDOWN),
                              info)
 
-    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')
-    def test_get_info_instance_deleted(self, mock_get_vm_ref):
+    @mock.patch.object(vm_util, 'get_vm_ref',
+        return_value=vmwareapi_fake.ManagedObjectReference(
+            value='fake_powered_off'))
+    @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
+    @mock.patch.object(vm_util, '_VM_VALUE_CACHE')
+    def test_get_info_instance_deleted(self, mock_value_cache,
+                                       mock_update_cached_instances,
+                                       mock_get_vm_ref):
+        vm_util.vm_value_cache_reset()
         props = ['summary.config.numCpu', 'summary.config.memorySizeMB',
                  'runtime.powerState']
         prop_cpu = vmwareapi_fake.Prop(props[0], 4)
@@ -485,7 +503,9 @@ class VMwareVMOpsTestCase(test.TestCase):
                 vm_ref, self._instance, mock.ANY, destroy_disk=True)
 
     @mock.patch.object(time, 'sleep')
-    def _test_clean_shutdown(self, mock_sleep,
+    @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
+    def _test_clean_shutdown(self, mock_update_cached_instances,
+                             mock_sleep,
                              timeout, retry_interval,
                              returns_on, returns_off,
                              vmware_tools_status,
@@ -2785,25 +2805,34 @@ class VMwareVMOpsTestCase(test.TestCase):
         base_folder = self._vmops._get_base_folder()
         self.assertEqual('my_prefix_base', base_folder)
 
-    def _test_reboot_vm(self, reboot_type="SOFT", tool_status=True):
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_props')
+    def _test_reboot_vm(self, get_instance_props,
+                        reboot_type="SOFT", tool_status=True):
 
         expected_methods = ['get_object_properties_dict']
+        get_instance_props.return_value = {
+                    "runtime.powerState": "poweredOn",
+                    "summary.guest.toolsStatus": "toolsOk",
+                    "summary.guest.toolsRunningStatus": "guestToolsRunning"}
         if reboot_type == "SOFT":
             expected_methods.append('RebootGuest')
         else:
             expected_methods.append('ResetVM_Task')
 
         def fake_call_method(module, method, *args, **kwargs):
-            expected_method = expected_methods.pop(0)
-            self.assertEqual(expected_method, method)
-            if expected_method == 'get_object_properties_dict' and tool_status:
+            if method == 'get_object_properties_dict' and tool_status:
                 return {
                     "runtime.powerState": "poweredOn",
                     "summary.guest.toolsStatus": "toolsOk",
                     "summary.guest.toolsRunningStatus": "guestToolsRunning"}
-            elif expected_method == 'get_object_properties_dict':
+            elif method == 'get_object_properties_dict':
                 return {"runtime.powerState": "poweredOn"}
-            elif expected_method == 'ResetVM_Task':
+            elif method == 'CreatePropertyCollector':
+                return {
+                    "runtime.powerState": "poweredOn",
+                    "summary.guest.toolsStatus": "toolsOk",
+                    "summary.guest.toolsRunningStatus": "guestToolsRunning"}
+            elif method == 'ResetVM_Task':
                 return 'fake-task'
 
         with test.nested(
