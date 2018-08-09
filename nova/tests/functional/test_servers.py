@@ -2827,14 +2827,9 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
-    @mock.patch('nova.virt.fake.FakeDriver.pre_live_migration',
-                # The actual type of exception here doesn't matter. The point
-                # is that the virt driver raised an exception from the
-                # pre_live_migration method on the destination host.
-                side_effect=test.TestingException(
-                    'test_live_migrate_rollback_cleans_dest_node_allocations'))
+    @mock.patch('nova.virt.fake.FakeDriver.pre_live_migration')
     def test_live_migrate_rollback_cleans_dest_node_allocations(
-            self, mock_pre_live_migration):
+            self, mock_pre_live_migration, force=False):
         """Tests the case that when live migration fails, either during the
         call to pre_live_migration on the destination, or during the actual
         live migration in the virt driver, the allocations on the destination
@@ -2848,10 +2843,35 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         server = self._boot_and_check_allocations(
             self.flavor1, source_hostname)
 
+        def stub_pre_live_migration(context, instance, block_device_info,
+                                    network_info, disk_info, migrate_data):
+            # Make sure the source node allocations are against the migration
+            # record and the dest node allocations are against the instance.
+            _allocations = self._get_allocations_by_server_uuid(
+                migrate_data.migration.uuid)
+            self.assertEqual(1, len(_allocations))
+            self.assertIn(source_rp_uuid, _allocations)
+            self.assertFlavorMatchesAllocation(
+                self.flavor1, _allocations[source_rp_uuid]['resources'])
+
+            _allocations = self._get_allocations_by_server_uuid(server['id'])
+            self.assertEqual(1, len(_allocations))
+            self.assertIn(dest_rp_uuid, _allocations)
+            self.assertFlavorMatchesAllocation(
+                self.flavor1, _allocations[dest_rp_uuid]['resources'])
+            # The actual type of exception here doesn't matter. The point
+            # is that the virt driver raised an exception from the
+            # pre_live_migration method on the destination host.
+            raise test.TestingException(
+                'test_live_migrate_rollback_cleans_dest_node_allocations')
+
+        mock_pre_live_migration.side_effect = stub_pre_live_migration
+
         post = {
             'os-migrateLive': {
                 'host': dest_hostname,
                 'block_migration': True,
+                'force': force
             }
         }
         self.api.post_server_action(server['id'], post)
@@ -2885,6 +2905,16 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             self.flavor1, allocations[source_rp_uuid]['resources'])
 
         self._delete_and_check_allocations(server)
+
+    def test_live_migrate_rollback_cleans_dest_node_allocations_forced(self):
+        """Tests the case that when a forced host live migration fails, either
+        during the call to pre_live_migration on the destination, or during
+        the actual live migration in the virt driver, the allocations on the
+        destination node are rolled back since the instance is still on the
+        source node.
+        """
+        self.test_live_migrate_rollback_cleans_dest_node_allocations(
+            force=True)
 
     def test_rescheduling_when_migrating_instance(self):
         """Tests that allocations are removed from the destination node by
