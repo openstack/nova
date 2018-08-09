@@ -30,6 +30,7 @@ operating system, and exposes functionality over a web-based API.
    manage-users.rst
    manage-volumes.rst
    migration.rst
+   migrate-instance-with-snapshot.rst
    networking-nova.rst
    networking.rst
    node-down.rst
