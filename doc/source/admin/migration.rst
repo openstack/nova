@@ -2,6 +2,11 @@
 Migrate instances
 =================
 
+.. note::
+
+   This documentation is about cold-migration. For live-migration usage, see
+   :doc:`live-migration-usage`.
+
 When you want to move an instance from one compute host to another, you can use
 the :command:`openstack server migrate` command. The scheduler chooses the
 destination compute host based on its settings. This process does not assume
@@ -20,7 +25,7 @@ nodes. For more information, see :ref:`cli-os-migrate-cfg-ssh`.
 
    .. code-block:: console
 
-      $ openstack server migrate --live TARGET_HOST VM_INSTANCE
+      $ openstack server migrate VM_INSTANCE
 
 #. To migrate an instance and watch the status, use this example script:
 
@@ -48,7 +53,7 @@ nodes. For more information, see :ref:`cli-os-migrate-cfg-ssh`.
       VM_OUTPUT=$(openstack server show $VM_ID)
       VM_STATUS=$(echo "$VM_OUTPUT" | grep status | awk '{print $4}')
       done
-      nova resize-confirm $VM_ID
+      openstack server resize --confirm $VM_ID
       echo " instance migrated and resized."
       echo;
 
@@ -65,7 +70,7 @@ nodes. For more information, see :ref:`cli-os-migrate-cfg-ssh`.
    with the wrong credentials, such as a non-admin user, or the ``policy.json``
    file prevents migration for your user::
 
-     ERROR (Forbidden): Policy doesn't allow compute_extension:admin_actions:migrate to be performed. (HTTP 403)``
+     Policy doesn't allow os_compute_api:os-migrate-server:migrate to be performed. (HTTP 403)
 
 .. note::
 
