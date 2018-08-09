@@ -278,7 +278,7 @@ PERF_EVENTS_CPU_FLAG_MAPPING = {'cmt': 'cmt',
 # Mediated devices support
 MIN_LIBVIRT_MDEV_SUPPORT = (3, 4, 0)
 
-# libvirt>=3.10 is required for volume multiattach if qemu<2.10.
+# libvirt>=3.10 is required for volume multiattach unless qemu<2.10.
 # See https://bugzilla.redhat.com/show_bug.cgi?id=1378242
 # for details.
 MIN_LIBVIRT_MULTIATTACH = (3, 10, 0)
