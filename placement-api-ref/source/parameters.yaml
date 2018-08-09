@@ -363,10 +363,20 @@ provider_summaries:
   in: body
   required: true
   description: >
-    A dictionary keyed by resource provider UUID,
-    of dictionaries of inventory/capacity information. The list of traits
-    the resource provider has associated with it is included in version `1.17`
-    and above.
+    A dictionary keyed by resource provider UUID included in the
+    ``allocation_requests``, of dictionaries of inventory/capacity information.
+provider_summaries_1_12:
+  type: object
+  in: body
+  required: true
+  description: >
+    A dictionary keyed by resource provider UUID included in the
+    ``allocation_requests``, of dictionaries of inventory/capacity information.
+    The list of traits the resource provider has associated with it is included
+    in version 1.17 and above.
+    Starting from microversion 1.29, the provider summaries include
+    all resource providers in the same resource provider tree that has one
+    or more resource providers included in the ``allocation_requests``.
 reserved: &reserved
   type: integer
   in: body
@@ -474,6 +484,20 @@ resource_provider_parent_provider_uuid_response_1_14:
   description: >
     The UUID of the immediate parent of the resource provider.
   min_version: 1.14
+resource_provider_parent_provider_uuid_response_1_29:
+  type: string
+  in: body
+  required: true
+  description: >
+    The UUID of the immediate parent of the resource provider.
+  min_version: 1.29
+resource_provider_root_provider_uuid_1_29:
+  type: string
+  in: body
+  required: true
+  description: >
+    UUID of the top-most provider in this provider tree.
+  min_version: 1.29
 resource_provider_root_provider_uuid_no_min: &resource_provider_root_provider_uuid_no_min
   type: string
   in: body
