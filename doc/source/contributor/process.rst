@@ -36,8 +36,8 @@ If you are new to Nova, please read this first: :ref:`getting_involved`.
 Dates overview
 ==============
 
-For Rocky, please see:
-https://wiki.openstack.org/wiki/Nova/Rocky_Release_Schedule
+For Stein, please see:
+https://wiki.openstack.org/wiki/Nova/Stein_Release_Schedule
 
 .. note: Throughout this document any link which references the name of a
          release cycle in the link can usually be changed to the name of the
@@ -102,9 +102,9 @@ Why we have a Spec Freeze:
 
 By the freeze date, we expect all blueprints that will be approved for the
 cycle to be listed on launchpad and all relevant specs to be merged.
-For Rocky, blueprints can be found at
-https://blueprints.launchpad.net/nova/rocky and specs at
-https://specs.openstack.org/openstack/nova-specs/specs/rocky/index.html
+For Stein, blueprints can be found at
+https://blueprints.launchpad.net/nova/stein and specs at
+https://specs.openstack.org/openstack/nova-specs/specs/stein/index.html
 
 Starting with Liberty, we are keeping a backlog open for submission at all
 times.
@@ -131,7 +131,7 @@ Non-priority Feature Freeze
 This is a Nova specific process.
 
 This only applies to low priority blueprints in this list:
-https://blueprints.launchpad.net/nova/rocky
+https://blueprints.launchpad.net/nova/stein
 
 We currently have a very finite amount of review bandwidth. In order to
 make code review time for the agreed community wide priorities, we have
@@ -157,7 +157,7 @@ http://lists.openstack.org/pipermail/openstack-dev/2015-July/070920.html
 Exception process:
 
 -  Please add request in here:
-   https://etherpad.openstack.org/p/rocky-nova-non-priority-feature-freeze
+   https://etherpad.openstack.org/p/stein-nova-non-priority-feature-freeze
    (ideally with core reviewers to sponsor your patch, normally the
    folks who have already viewed those patches)
 -  make sure you make your request before the end of the feature freeze
@@ -165,7 +165,7 @@ Exception process:
 -  nova-drivers will meet to decide what gets an exception (for some history
    see:
    http://lists.openstack.org/pipermail/openstack-dev/2015-February/056208.html)
--  an initial list of exceptions (probably just a PTL compiled list at
+-  an initial list of exceptions (probably just a `PTL`_ compiled list at
    that point) will be available for discussion during the next Nova meeting
 -  the aim is to merge the code for all exceptions early in the following week
 
@@ -236,7 +236,7 @@ But here is the rough idea:
    with limited deployer and doc impact, it probably doesn't need a
    spec.
 
-If you are unsure, please ask the PTL on IRC, or one of the other
+If you are unsure, please ask the `PTL`_ on IRC, or one of the other
 nova-drivers.
 
 How do I get my blueprint approved?
@@ -254,7 +254,7 @@ So you need your blueprint approved? Here is how:
 -  if you need a spec, then please submit a nova-spec for review, see:
    https://docs.openstack.org/infra/manual/developers.html
 
-Got any more questions? Contact the PTL or one of the other
+Got any more questions? Contact the `PTL`_ or one of the other
 nova-specs-core who are awake at the same time as you. IRC is best as
 you will often get an immediate response, if they are too busy send
 him/her an email.
@@ -275,7 +275,7 @@ lead to terse responses with very little preamble or nicety. That said,
 there's no excuse for being actively rude or mean. OpenStack has a Code
 of Conduct (https://www.openstack.org/legal/community-code-of-conduct/)
 and if you feel this has been breached please raise the matter
-privately. Either with the relevant parties, the PTL or failing those,
+privately. Either with the relevant parties, the `PTL`_ or failing those,
 the OpenStack Foundation.
 
 That said, there are many objective reasons for applying a -1 or -2 to a
@@ -330,8 +330,9 @@ entirely. A few tips:
    you should do if you are unable to negotiate a resolution to an
    issue.
 
-Secondly, Nova is a big project, be aware of the average wait times:
-http://russellbryant.net/openstack-stats/nova-openreviews.html
+Secondly, Nova is a big project, look for things that have been waiting
+a long time for a review:
+https://review.openstack.org/#/q/project:openstack/nova+status:open+age:2weeks
 
 Eventually you should get some +1s from people working through the
 review queue. Expect to get -1s as well. You can ask for reviews within
@@ -359,8 +360,10 @@ It helps to apply correct tracking information.
    message tags as necessary.
 -  If you have to raise a bug in Launchpad first, do it - this helps
    someone else find your fix.
--  Make sure the bug has the correct priority and tag set:
-   https://wiki.openstack.org/wiki/Nova/BugTriage#Step_2:_Triage_Tagged_Bugs
+-  Make sure the bug has the correct `priority`_ and `tag`_ set.
+
+.. _priority: https://wiki.openstack.org/wiki/BugTriage#Task_2:_Prioritize_confirmed_bugs_.28bug_supervisors.29
+.. _tag: https://wiki.openstack.org/wiki/Nova/BugTriage#Tags
 
 Features
 ^^^^^^^^
@@ -380,7 +383,7 @@ For blueprint and spec features, do everything for blueprint-only
 features and also:
 
 -  If it's a project or subteam priority, add it to:
-   https://etherpad.openstack.org/p/rocky-nova-priorities-tracking
+   https://etherpad.openstack.org/p/stein-nova-subteam-tracking
 -  Ensure your spec is approved for the current release cycle.
 
 If your code is a project or subteam priority, the cores interested in
@@ -785,7 +788,7 @@ get, and increase the velocity of getting code merged.
 
 The first part is for subgroups to show they can do a great job of
 recommending patches. This is starting in here:
-https://etherpad.openstack.org/p/rocky-nova-priorities-tracking
+https://etherpad.openstack.org/p/stein-nova-subteam-tracking
 
 Ideally this would be done with gerrit user "tags" rather than an
 etherpad. There are some investigations by sdague in how feasible it
@@ -931,3 +934,5 @@ Main benefits:
    are added
 -  allows a way to add experimental things into Nova, and track either
    their removal or maturation
+
+.. _PTL: https://governance.openstack.org/tc/reference/projects/nova.html

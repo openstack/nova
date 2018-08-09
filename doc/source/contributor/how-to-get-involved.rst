@@ -24,7 +24,7 @@ We are working on building easy ways for you to get help and ideas on
 how to learn more about Nova and how the Nova community works.
 
 Any questions, please ask! If you are unsure who to ask, then please
-contact the `Mentoring Czar`__.
+contact the `PTL`__.
 
 __ `Nova People`_
 
@@ -33,14 +33,15 @@ How do I get started?
 
 There are quite a few global docs on this:
 
--  http://www.openstack.org/assets/welcome-guide/OpenStackWelcomeGuide.pdf
--  https://wiki.openstack.org/wiki/How_To_Contribute
--  http://www.openstack.org/community/
+- https://docs.openstack.org/contributors/
+- https://www.openstack.org/community/
+- https://www.openstack.org/assets/welcome-guide/OpenStackWelcomeGuide.pdf
+- https://wiki.openstack.org/wiki/How_To_Contribute
 
 There is more general info, non Nova specific info here:
 
--  https://wiki.openstack.org/wiki/Mentors
--  https://wiki.openstack.org/wiki/OpenStack_Upstream_Training
+- https://wiki.openstack.org/wiki/Mentoring
+- https://docs.openstack.org/upstream-training/
 
 What should I work on?
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -56,13 +57,12 @@ you don't understand. It's also OK to see some potential problems but put a +0.
 
 Another way is to look for a subteam you'd like to get involved with and review
 their patches. See:
-https://etherpad.openstack.org/p/rocky-nova-priorities-tracking
+https://etherpad.openstack.org/p/stein-nova-subteam-tracking
 
 Once you're ready to write code, take a look at some of the work already marked
 as low-hanging fruit:
 
 * https://bugs.launchpad.net/nova/+bugs?field.tag=low-hanging-fruit
-* https://etherpad.openstack.org/p/nova-low-hanging-fruit
 
 How do I get my feature in?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -100,11 +100,12 @@ Here are some top tips around engaging with the Nova community:
 -  IRC
 
    -  we talk a lot in #openstack-nova
+   -  we also have #openstack-placement for :doc:`placement </user/placement>`
    -  do ask us questions in there, and we will try to help you
    -  not sure about asking questions? feel free to listen in around
       other people's questions
    -  we recommend you setup an IRC bouncer:
-      https://wiki.openstack.org/wiki/IRC
+      https://docs.openstack.org/contributors/common/irc.html
 
 -  Email
 
@@ -264,7 +265,7 @@ reviews:
 -  Where do I start? What should I review?
 
    -  There are various tools, but a good place to start is:
-      https://etherpad.openstack.org/p/rocky-nova-priorities-tracking
+      https://etherpad.openstack.org/p/stein-nova-subteam-tracking
    -  Depending on the time in the cycle, it's worth looking at
       NeedsCodeReview blueprints:
       https://blueprints.launchpad.net/nova/
@@ -279,7 +280,7 @@ reviews:
    -  Maybe take a look at things you want to see merged, bug fixes and
       features, or little code fixes
    -  Look for things that have been waiting a long time for a review:
-      http://5885fef486164bb8596d-41634d3e64ee11f37e8658ed1b4d12ec.r44.cf3.rackcdn.com/nova-openreviews.html
+      https://review.openstack.org/#/q/project:openstack/nova+status:open+age:2weeks
    -  If you get through the above lists, try other tools, such as:
       http://status.openstack.org/reviews
 
@@ -326,7 +327,7 @@ becoming a member of nova-core.
 How to do great nova-spec reviews?
 ==================================
 
-https://specs.openstack.org/openstack/nova-specs/specs/rocky/template.html
+https://specs.openstack.org/openstack/nova-specs/specs/stein/template.html
 
 :doc:`/contributor/blueprints`.
 
@@ -369,12 +370,11 @@ There are many ways to help lead the Nova project:
 * Mentoring efforts, and getting started tips:
   https://wiki.openstack.org/wiki/Nova/Mentoring
 * Info on process, with a focus on how you can go from an idea
-  to getting code merged Nova:
-  https://wiki.openstack.org/wiki/Nova/Mitaka_Release_Schedule
+  to getting code merged Nova: :ref:`process`
 * Consider leading an existing `Nova subteam`_ or forming a new one.
 * Consider becoming a `Bug tag owner`_.
 * Contact the PTL about becoming a Czar `Nova People`_.
 
 .. _`Nova people`: https://wiki.openstack.org/wiki/Nova#People
 .. _`Nova subteam`: https://wiki.openstack.org/wiki/Nova#Nova_subteams
-.. _`Bug tag owner`: https://wiki.openstack.org/wiki/Nova/BugTriage#Step_2:_Triage_Tagged_Bugs
+.. _`Bug tag owner`: https://wiki.openstack.org/wiki/Nova/BugTriage#Tag_Owner_List
