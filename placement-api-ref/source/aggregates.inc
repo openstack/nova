@@ -87,7 +87,7 @@ Response (microversions 1.19 - )
 .. rest_parameters:: parameters.yaml
 
   - aggregates: aggregates
-  - resource_provider_generation: resource_provider_generation_v1_19
+  - resource_provider_generation: resource_provider_generation
 
 Response Example (microversions 1.19 - )
 ----------------------------------------
@@ -127,7 +127,7 @@ Request (microversion 1.19 - )
 
   - uuid: resource_provider_uuid_path
   - aggregates: aggregates
-  - resource_provider_generation: resource_provider_generation_v1_19
+  - resource_provider_generation: resource_provider_generation
 
 Request example (microversion 1.19 - )
 -----------------------------------------
