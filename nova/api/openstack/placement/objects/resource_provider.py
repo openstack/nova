@@ -3976,7 +3976,7 @@ class AllocationCandidates(base.VersionedObject):
         )
 
     @staticmethod
-    def _get_by_one_request(context, request):
+    def _get_by_one_request(context, request, sharing_providers, has_trees):
         """Get allocation candidates for one RequestGroup.
 
         Must be called from within an placement_context_manager.reader
@@ -3984,6 +3984,12 @@ class AllocationCandidates(base.VersionedObject):
 
         :param context: Nova RequestContext.
         :param request: One nova.api.openstack.placement.util.RequestGroup
+        :param sharing_providers: dict, keyed by resource class internal ID, of
+                                  the set of provider IDs containing shared
+                                  inventory of that resource class
+        :param has_trees: bool indicating there is some level of nesting in the
+                          environment (if there isn't, we take faster, simpler
+                          code paths)
         :return: A tuple of (allocation_requests, provider_summaries)
                  satisfying `request`.
         """
@@ -4006,26 +4012,14 @@ class AllocationCandidates(base.VersionedObject):
                     missing = traits - set(trait_map)
                     raise exception.TraitNotFound(names=', '.join(missing))
 
-        # Microversions prior to 1.21 will not have 'member_of' in the groups.
-        # This allows earlier microversions to continue to work.
-        member_of = getattr(request, "member_of", None)
+        member_of = request.member_of
 
-        if not request.use_same_provider:
+        any_sharing = any(sharing_providers.values())
+        if not request.use_same_provider and (has_trees or any_sharing):
             # TODO(jaypipes): The check/callout to handle trees goes here.
             # Build a dict, keyed by resource class internal ID, of lists of
             # internal IDs of resource providers that share some inventory for
             # each resource class requested.
-            # TODO(jaypipes): Consider caching this for some amount of time
-            # since sharing providers generally don't change often and here we
-            # aren't concerned with how *much* inventory/capacity the sharing
-            # provider has, only that it is sharing *some* inventory of a
-            # particular resource class.
-            sharing_providers = {
-                rc_id: _get_providers_with_shared_capacity(context, rc_id,
-                                                           amount, member_of)
-                for rc_id, amount in resources.items()
-            }
-
             # If there aren't any providers that have any of the
             # required traits, just exit early...
             if required_trait_map:
@@ -4064,9 +4058,23 @@ class AllocationCandidates(base.VersionedObject):
     @db_api.placement_context_manager.writer
     def _get_by_requests(cls, context, requests, limit=None,
                          group_policy=None):
+        # TODO(jaypipes): Make a RequestGroupContext object and put these
+        # pieces of information in there, passing the context to the various
+        # internal functions handling that part of the request.
+        sharing = {}
+        for request in requests.values():
+            member_of = request.member_of
+            for rc_name, amount in request.resources.items():
+                rc_id = _RC_CACHE.id_from_string(rc_name)
+                if rc_id not in sharing:
+                    sharing[rc_id] = _get_providers_with_shared_capacity(
+                        context, rc_id, amount, member_of)
+        has_trees = _has_provider_trees(context)
+
         candidates = {}
         for suffix, request in requests.items():
-            alloc_reqs, summaries = cls._get_by_one_request(context, request)
+            alloc_reqs, summaries = cls._get_by_one_request(
+                context, request, sharing, has_trees)
             LOG.debug("%s (suffix '%s') returned %d matches",
                       str(request), str(suffix), len(alloc_reqs))
             if not alloc_reqs:
