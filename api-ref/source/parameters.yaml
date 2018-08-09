@@ -3958,6 +3958,11 @@ key_pairs_quota_details:
   description: |
     The object of detailed key pairs quota, including in_use, limit and
     reserved number of key pairs.
+
+    .. note:: ``in_use`` field value for keypair quota details is always
+      zero. In Nova, key_pairs are a user-level resource, not a project-
+      level resource, so for legacy reasons, the keypair in-use information
+      is not counted.
   in: body
   required: true
   type: object
