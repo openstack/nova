@@ -256,7 +256,8 @@ aggregates:
   in: body
   required: true
   description: >
-    A list of aggregate uuids.
+    A list of aggregate uuids. Previously nonexistent aggregates are
+    created automatically.
 allocation_ratio: &allocation_ratio
   type: float
   in: body
