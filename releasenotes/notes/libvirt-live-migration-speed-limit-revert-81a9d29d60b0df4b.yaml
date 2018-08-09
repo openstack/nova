@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Note that the original fix for `bug 1414559`_ committed early in rocky was automatic and always
+    enabled. Because of `bug 1786346`_ that fix has since been reverted and superseded by an opt-in
+    mechanism which must be enabled. Setting ``[compute]/live_migration_wait_for_vif_plug=True``
+    will restore the behavior of `waiting for neutron events`_ during the live migration process.
+
+    .. _bug 1414559: https://bugs.launchpad.net/neutron/+bug/1414559
+    .. _bug 1786346: https://bugs.launchpad.net/nova/+bug/1786346
+    .. _waiting for neutron events: https://docs.openstack.org/nova/latest/configuration/config.html#compute.live_migration_wait_for_vif_plug
