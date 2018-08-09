@@ -20,6 +20,7 @@ import os.path
 
 from oslo_log import log as logging
 from oslo_middleware import cors
+from oslo_policy import opts as policy_opts
 from oslo_utils import importutils
 import pbr.version
 
@@ -64,6 +65,10 @@ def _parse_args(argv, default_config_files):
         profiler.set_defaults(conf.CONF)
 
     _set_middleware_defaults()
+
+    # This is needed so we can check [oslo_policy]/enforce_scope in the
+    # deploy module.
+    policy_opts.set_defaults(conf.CONF)
 
     conf.CONF(argv[1:], project='nova', version=version_info.version_string(),
               default_config_files=default_config_files)
