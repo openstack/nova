@@ -285,6 +285,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             with excutils.save_and_reraise_exception():
                 LOG.warning('Guest refused to detach volume %(vol)s',
                             {'vol': volume_id}, instance=instance)
+                volume_api.roll_detaching(context, volume_id)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception('Failed to detach volume '

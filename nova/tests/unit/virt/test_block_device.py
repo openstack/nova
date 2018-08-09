@@ -239,6 +239,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                           self.context, inst, vol_api, virt)
         self.assertFalse(log.exception.called)
         self.assertTrue(log.warning.called)
+        vol_api.roll_detaching.assert_called_once_with(self.context,
+                                                       driver_bdm.volume_id)
 
     def test_no_device_raises(self):
         for name, cls in self.driver_classes.items():
