@@ -677,11 +677,17 @@ class GuestTestCase(test.NoDBTestCase):
 
     @testtools.skipIf(not six.PY2, 'libvirt python3 bindings accept unicode')
     def test_migrate_v3_unicode(self):
-        self.guest.migrate('an-uri', domain_xml=u'</xml>',
-                           params={'p1': u'v1', 'p2': 'v2', 'p3': 3},
+        dest_xml_template = "<domain type='qemu'><name>%s</name></domain>"
+        name = u'\u00CD\u00F1st\u00E1\u00F1c\u00E9'
+        dest_xml = dest_xml_template % name
+        expect_dest_xml = dest_xml_template % encodeutils.to_utf8(name)
+        self.guest.migrate('an-uri', domain_xml=dest_xml,
+                           params={'p1': u'v1', 'p2': 'v2', 'p3': 3,
+                                   'destination_xml': dest_xml},
                            flags=1, bandwidth=2)
         self.domain.migrateToURI3.assert_called_once_with(
                 'an-uri', flags=1, params={'p1': 'v1', 'p2': 'v2', 'p3': 3,
+                                           'destination_xml': expect_dest_xml,
                                            'bandwidth': 2})
 
     def test_abort_job(self):
