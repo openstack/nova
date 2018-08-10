@@ -35,7 +35,6 @@ import pprint
 import sys
 
 import fixtures
-import mock
 from oslo_cache import core as cache
 from oslo_concurrency import lockutils
 from oslo_config import cfg
@@ -150,29 +149,6 @@ class skipIf(object):
         else:
             raise TypeError('skipUnless can be used only with functions or '
                             'classes')
-
-
-def _patch_mock_to_raise_for_invalid_assert_calls():
-    def raise_for_invalid_assert_calls(wrapped):
-        def wrapper(_self, name):
-            valid_asserts = [
-                'assert_called_with',
-                'assert_called_once_with',
-                'assert_has_calls',
-                'assert_any_calls']
-
-            if name.startswith('assert') and name not in valid_asserts:
-                raise AttributeError('%s is not a valid mock assert method'
-                                     % name)
-
-            return wrapped(_self, name)
-        return wrapper
-    mock.Mock.__getattr__ = raise_for_invalid_assert_calls(
-        mock.Mock.__getattr__)
-
-# NOTE(gibi): needs to be called only once at import time
-# to patch the mock lib
-_patch_mock_to_raise_for_invalid_assert_calls()
 
 
 class NovaExceptionReraiseFormatError(object):
