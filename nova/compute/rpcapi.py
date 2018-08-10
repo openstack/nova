@@ -359,6 +359,7 @@ class ComputeAPI(object):
         'ocata': '4.13',
         'pike': '4.18',
         'queens': '5.0',
+        'rocky': '5.0',
     }
 
     def __init__(self):
