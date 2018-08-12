@@ -1,0 +1,862 @@
+# Sungjin Kang <gang.sungjin@gmail.com>, 2017. #zanata
+msgid ""
+msgstr ""
+"Project-Id-Version: nova\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-08-10 21:06+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2017-02-11 08:04+0000\n"
+"Last-Translator: Sungjin Kang <gang.sungjin@gmail.com>\n"
+"Language-Team: Korean (South Korea)\n"
+"Language: ko_KR\n"
+"X-Generator: Zanata 4.3.3\n"
+"Plural-Forms: nplurals=1; plural=0\n"
+
+msgid "'3840x2160' is only available on Windows / Hyper-V Server 2016."
+msgstr ""
+"Windows / Hyper-V Server 2016 에서는 '3840x2160' 만 사용할 수 있습니다."
+
+msgid "**Filtering**"
+msgstr "**Filtering**"
+
+msgid "**Other**"
+msgstr "**Other**"
+
+msgid "**Sorting**"
+msgstr "**Sorting**"
+
+msgid "/images"
+msgstr "/images"
+
+msgid "/os-baremetal-nodes"
+msgstr "/os-baremetal-nodes"
+
+msgid "/os-fixed-ips"
+msgstr "/os-fixed-ips"
+
+msgid "/os-floating-ip-dns"
+msgstr "/os-floating-ip-dns"
+
+msgid "/os-floating-ip-pools"
+msgstr "/os-floating-ip-pools"
+
+msgid "/os-floating-ips"
+msgstr "/os-floating-ips"
+
+msgid "/os-floating-ips-bulk"
+msgstr "/os-floating-ips-bulk"
+
+msgid "/os-fping"
+msgstr "/os-fping"
+
+msgid "/os-networks"
+msgstr "/os-networks"
+
+msgid "/os-security-group-default-rules"
+msgstr "/os-security-group-default-rules"
+
+msgid "/os-security-group-rules"
+msgstr "/os-security-group-rules"
+
+msgid "/os-security-groups"
+msgstr "/os-security-groups"
+
+msgid "/os-snapshots"
+msgstr "/os-snapshots"
+
+msgid "/os-volumes"
+msgstr "/os-volumes"
+
+msgid "12.0.1"
+msgstr "12.0.1"
+
+msgid "12.0.3"
+msgstr "12.0.3"
+
+msgid "12.0.4"
+msgstr "12.0.4"
+
+msgid "12.0.5"
+msgstr "12.0.5"
+
+msgid "13.0.0"
+msgstr "13.0.0"
+
+msgid "13.1.0"
+msgstr "13.1.0"
+
+msgid "13.1.1"
+msgstr "13.1.1"
+
+msgid "13.1.2"
+msgstr "13.1.2"
+
+msgid "14.0.0"
+msgstr "14.0.0"
+
+msgid "14.0.1"
+msgstr "14.0.1"
+
+msgid "14.0.2"
+msgstr "14.0.2"
+
+msgid "Bug Fixes"
+msgstr "버그 수정"
+
+msgid "Contents"
+msgstr "내용"
+
+msgid "Current Series Release Notes"
+msgstr "최신 시리즈에 대한 릴리즈 노트"
+
+msgid "Deprecation Notes"
+msgstr "지원 종료된 기능 노트"
+
+msgid "EC2 API support is fully removed."
+msgstr "EC2 API 지원 전부 삭제하였습니다."
+
+msgid "For Windows / Hyper-V Server 2012 R2::"
+msgstr "Windows / Hyper-V Server 2012 R2 인 경우 ::"
+
+msgid "For Windows / Hyper-V Server 2016::"
+msgstr "Windows / Hyper-V Server 2016 인 경우 ::"
+
+msgid "Known Issues"
+msgstr "알려진 이슈"
+
+msgid "Liberty Series Release Notes"
+msgstr "Liberty 시리즈에 대한 릴리즈 노트"
+
+msgid "Mitaka Series Release Notes"
+msgstr "Mitaka 시리즈에 대한 릴리즈 노트"
+
+msgid "New Features"
+msgstr "새로운 기능"
+
+msgid "Newton Series Release Notes"
+msgstr "Newton 시리즈에 대한 릴리즈 노트"
+
+msgid "Other Notes"
+msgstr "기타 기능"
+
+msgid "Security Issues"
+msgstr "보안 이슈"
+
+msgid "Welcome to Nova Release Notes documentation!"
+msgstr "Nova 릴리즈 노트 문서에 오신 것을 환영합니다!"
+
+msgid ""
+"``?resources=$RESOURCE_CLASS_NAME:$AMOUNT,$RESOURCE_CLASS_NAME:$AMOUNT``"
+msgstr ""
+"``?resources=$RESOURCE_CLASS_NAME:$AMOUNT,$RESOURCE_CLASS_NAME:$AMOUNT``"
+
+msgid "``aggregate_image_properties_isolation_namespace``"
+msgstr "``aggregate_image_properties_isolation_namespace``"
+
+msgid "``aggregate_image_properties_isolation_separator``"
+msgstr "``aggregate_image_properties_isolation_separator``"
+
+msgid "``allow_instance_snapshots``"
+msgstr "``allow_instance_snapshots``"
+
+msgid "``auth_strategy``"
+msgstr "``auth_strategy``"
+
+msgid "``auto_assign_floating_ip``"
+msgstr "``auto_assign_floating_ip``"
+
+msgid "``barbican.catalog_info``"
+msgstr "``barbican.catalog_info``"
+
+msgid "``barbican.endpoint_template``"
+msgstr "``barbican.endpoint_template``"
+
+msgid "``barbican.os_region_name``"
+msgstr "``barbican.os_region_name``"
+
+msgid ""
+"``baremetal_scheduler_default_filters`` (now ``baremetal_enabled_filters``)"
+msgstr ""
+"``baremetal_scheduler_default_filters`` (now ``baremetal_enabled_filters``)"
+
+msgid "``cert_manager``"
+msgstr "``cert_manager``"
+
+msgid "``cnt_vpn_clients``"
+msgstr "``cnt_vpn_clients``"
+
+msgid "``compute_link_prefix`` (was ``osapi_compute_link_prefix``)"
+msgstr "``compute_link_prefix`` (was ``osapi_compute_link_prefix``)"
+
+msgid "``compute_manager``"
+msgstr "``compute_manager``"
+
+msgid "``conductor.manager``"
+msgstr "``conductor.manager``"
+
+msgid "``config_drive_skip_versions``"
+msgstr "``config_drive_skip_versions``"
+
+msgid "``console_manager``"
+msgstr "``console_manager``"
+
+msgid "``consoleauth_manager``"
+msgstr "``consoleauth_manager``"
+
+msgid "``create_unique_mac_address_attempts``"
+msgstr "``create_unique_mac_address_attempts``"
+
+msgid "``default_level`` (was ``default_notification_level``)"
+msgstr "``default_level`` (was ``default_notification_level``)"
+
+msgid "``default_publisher_id``"
+msgstr "``default_publisher_id``"
+
+msgid "``dhcp_domain``"
+msgstr "``dhcp_domain``"
+
+msgid "``disk_weight_multipler``"
+msgstr "``disk_weight_multipler``"
+
+msgid "``dns_update_periodic_interval``"
+msgstr "``dns_update_periodic_interval``"
+
+msgid "``enable_instance_password``"
+msgstr "``enable_instance_password``"
+
+msgid "``fixed_ip_disassociate_timeout``"
+msgstr "``fixed_ip_disassociate_timeout``"
+
+msgid "``fixed_ips``"
+msgstr "``fixed_ips``"
+
+msgid "``fixed_range_v6``"
+msgstr "``fixed_range_v6``"
+
+msgid "``flat_interface``"
+msgstr "``flat_interface``"
+
+msgid "``flat_network_bridge``"
+msgstr "``flat_network_bridge``"
+
+msgid "``flat_network_dns``"
+msgstr "``flat_network_dns``"
+
+msgid "``floating_ip_dns_manager``"
+msgstr "``floating_ip_dns_manager``"
+
+msgid "``floating_ips``"
+msgstr "``floating_ips``"
+
+msgid "``force_dhcp_release``"
+msgstr "``force_dhcp_release``"
+
+msgid "``fping_path``"
+msgstr "``fping_path``"
+
+msgid "``gateway_v6``"
+msgstr "``gateway_v6``"
+
+msgid "``gateway``"
+msgstr "``gateway``"
+
+msgid "``glance_link_prefix`` (was ``osapi_glance_link_prefix``)"
+msgstr "``glance_link_prefix`` (was ``osapi_glance_link_prefix``)"
+
+msgid ""
+"``hide_server_address_states`` (was ``osapi_hide_server_address_states``)"
+msgstr ""
+"``hide_server_address_states`` (was ``osapi_hide_server_address_states``)"
+
+msgid "``instance_dns_domain``"
+msgstr "``instance_dns_domain``"
+
+msgid "``instance_dns_manager``"
+msgstr "``instance_dns_manager``"
+
+msgid "``io_ops_weight_multipler``"
+msgstr "``io_ops_weight_multipler``"
+
+msgid "``isolated_hosts``"
+msgstr "``isolated_hosts``"
+
+msgid "``isolated_images``"
+msgstr "``isolated_images``"
+
+msgid "``l3_lib``"
+msgstr "``l3_lib``"
+
+msgid "``max_age``"
+msgstr "``max_age``"
+
+msgid "``max_limit`` (was ``osapi_max_limit``)"
+msgstr "``max_limit`` (was ``osapi_max_limit``)"
+
+msgid "``metadata_cache_expiration``"
+msgstr "``metadata_cache_expiration``"
+
+msgid "``metadata_manager``"
+msgstr "``metadata_manager``"
+
+msgid "``multi_host``"
+msgstr "``multi_host``"
+
+msgid "``network_driver``"
+msgstr "``network_driver``"
+
+msgid "``network_size``"
+msgstr "``network_size``"
+
+msgid "``neutron_default_tenant_id``"
+msgstr "``neutron_default_tenant_id``"
+
+msgid "``notification_format``"
+msgstr "``notification_format``"
+
+msgid "``notify_on_api_faults`` (was ``notify_api_faults``)"
+msgstr "``notify_on_api_faults`` (was ``notify_api_faults``)"
+
+msgid "``notify_on_state_change``"
+msgstr "``notify_on_state_change``"
+
+msgid "``nova-manage account scrub``"
+msgstr "``nova-manage account scrub``"
+
+msgid "``nova-manage fixed *``"
+msgstr "``nova-manage fixed *``"
+
+msgid "``nova-manage project scrub``"
+msgstr "``nova-manage project scrub``"
+
+msgid "``nova-manage vpn *``"
+msgstr "``nova-manage vpn *``"
+
+msgid "``num_networks``"
+msgstr "``num_networks``"
+
+msgid "``quota_cores`` (now ``cores``)"
+msgstr "``quota_cores`` (now ``cores``)"
+
+msgid "``quota_driver`` (now ``driver``)"
+msgstr "``quota_driver`` (now ``driver``)"
+
+msgid "``quota_fixed_ips`` (now ``fixed_ips``)"
+msgstr "``quota_fixed_ips`` (now ``fixed_ips``)"
+
+msgid "``quota_floating_ips`` (now ``floating_ips``)"
+msgstr "``quota_floating_ips`` (now ``floating_ips``)"
+
+msgid ""
+"``quota_injected_file_content_bytes`` (now ``injected_file_content_bytes``)"
+msgstr ""
+"``quota_injected_file_content_bytes`` (now ``injected_file_content_bytes``)"
+
+msgid "``quota_injected_file_path_length`` (now ``injected_file_path_length``)"
+msgstr ""
+"``quota_injected_file_path_length`` (now ``injected_file_path_length``)"
+
+msgid "``quota_injected_files`` (now ``injected_files``)"
+msgstr "``quota_injected_files`` (now ``injected_files``)"
+
+msgid "``quota_instances`` (now ``instances``)"
+msgstr "``quota_instances`` (now ``instances``)"
+
+msgid "``quota_key_pairs`` (now ``key_pairs``)"
+msgstr "``quota_key_pairs`` (now ``key_pairs``)"
+
+msgid "``quota_metadata_items`` (now ``metadata_items``)"
+msgstr "``quota_metadata_items`` (now ``metadata_items``)"
+
+msgid "``quota_ram`` (now ``ram``)"
+msgstr "``quota_ram`` (now ``ram``)"
+
+msgid "``quota_security_group_rules`` (now ``security_group_rules``)"
+msgstr "``quota_security_group_rules`` (now ``security_group_rules``)"
+
+msgid "``quota_security_groups`` (now ``security_groups``)"
+msgstr "``quota_security_groups`` (now ``security_groups``)"
+
+msgid "``quota_server_group_members`` (now ``server_group_members``)"
+msgstr "``quota_server_group_members`` (now ``server_group_members``)"
+
+msgid "``quota_server_groups`` (now ``server_groups``)"
+msgstr "``quota_server_groups`` (now ``server_groups``)"
+
+msgid "``ram_weight_multiplier``"
+msgstr "``ram_weight_multiplier``"
+
+msgid "``reservation_expire``"
+msgstr "``reservation_expire``"
+
+msgid "``restrict_isolated_hosts_to_isolated_images``"
+msgstr "``restrict_isolated_hosts_to_isolated_images``"
+
+msgid "``scheduler_available_filters`` (now ``available_filters``)"
+msgstr "``scheduler_available_filters`` (now ``available_filters``)"
+
+msgid "``scheduler_default_filters`` (now ``enabled_filters``)"
+msgstr "``scheduler_default_filters`` (now ``enabled_filters``)"
+
+msgid "``scheduler_driver_task_period`` (now ``periodic_task_interval``)"
+msgstr "``scheduler_driver_task_period`` (now ``periodic_task_interval``)"
+
+msgid "``scheduler_driver`` (now ``driver``)"
+msgstr "``scheduler_driver`` (now ``driver``)"
+
+msgid "``scheduler_host_manager`` (now ``host_manager``)"
+msgstr "``scheduler_host_manager`` (now ``host_manager``)"
+
+msgid "``scheduler_host_subset_size`` (now ``host_subset_size``)"
+msgstr "``scheduler_host_subset_size`` (now ``host_subset_size``)"
+
+msgid "``scheduler_manager``"
+msgstr "``scheduler_manager``"
+
+msgid "``scheduler_max_attempts`` (now ``max_attempts``)"
+msgstr "``scheduler_max_attempts`` (now ``max_attempts``)"
+
+msgid "``scheduler_max_instances_per_host`` (now ``max_instances_per_host``)"
+msgstr "``scheduler_max_instances_per_host`` (now ``max_instances_per_host``)"
+
+msgid "``scheduler_tracks_instance_changes`` (now ``track_instance_changes``)"
+msgstr "``scheduler_tracks_instance_changes`` (now ``track_instance_changes``)"
+
+msgid "``scheduler_use_baremetal_filters`` (now ``use_baremetal_filters``)"
+msgstr "``scheduler_use_baremetal_filters`` (now ``use_baremetal_filters``)"
+
+msgid "``scheduler_weight_classes`` (now ``weight_classes``)"
+msgstr "``scheduler_weight_classes`` (now ``weight_classes``)"
+
+msgid "``security_group_rules``"
+msgstr "``security_group_rules``"
+
+msgid "``security_groups``"
+msgstr "``security_groups``"
+
+msgid "``soft_affinity_weight_multiplier``"
+msgstr "``soft_affinity_weight_multiplier``"
+
+msgid "``soft_anti_affinity_weight_multiplier``"
+msgstr "``soft_anti_affinity_weight_multiplier``"
+
+msgid "``teardown_unused_network_gateway``"
+msgstr "``teardown_unused_network_gateway``"
+
+msgid "``torrent_base_url``"
+msgstr "``torrent_base_url``"
+
+msgid "``torrent_download_stall_cutoff``"
+msgstr "``torrent_download_stall_cutoff``"
+
+msgid "``torrent_listen_port_end``"
+msgstr "``torrent_listen_port_end``"
+
+msgid "``torrent_listen_port_start``"
+msgstr "``torrent_listen_port_start``"
+
+msgid "``torrent_max_last_accessed``"
+msgstr "``torrent_max_last_accessed``"
+
+msgid "``torrent_max_seeder_processes_per_host``"
+msgstr "``torrent_max_seeder_processes_per_host``"
+
+msgid "``torrent_seed_chance``"
+msgstr "``torrent_seed_chance``"
+
+msgid "``torrent_seed_duration``"
+msgstr "``torrent_seed_duration``"
+
+msgid "``until_refresh``"
+msgstr "``until_refresh``"
+
+msgid "``update_dns_entries``"
+msgstr "``update_dns_entries``"
+
+msgid "``use_forwarded_for``"
+msgstr "``use_forwarded_for``"
+
+msgid "``use_neutron_default_nets``"
+msgstr "``use_neutron_default_nets``"
+
+msgid "``use_neutron``"
+msgstr "``use_neutron``"
+
+msgid "``vendordata_dynamic_connect_timeout``"
+msgstr "``vendordata_dynamic_connect_timeout``"
+
+msgid "``vendordata_dynamic_read_timeout``"
+msgstr "``vendordata_dynamic_read_timeout``"
+
+msgid "``vendordata_dynamic_ssl_certfile``"
+msgstr "``vendordata_dynamic_ssl_certfile``"
+
+msgid "``vendordata_dynamic_targets``"
+msgstr "``vendordata_dynamic_targets``"
+
+msgid "``vendordata_jsonfile_path``"
+msgstr "``vendordata_jsonfile_path``"
+
+msgid "``vendordata_providers``"
+msgstr "``vendordata_providers``"
+
+msgid "``vlan_interface``"
+msgstr "``vlan_interface``"
+
+msgid "``vlan_start``"
+msgstr "``vlan_start``"
+
+msgid "``vpn_ip``"
+msgstr "``vpn_ip``"
+
+msgid "``vpn_start``"
+msgstr "``vpn_start``"
+
+msgid "access_ip_v4"
+msgstr "access_ip_v4"
+
+msgid "access_ip_v6"
+msgstr "access_ip_v6"
+
+msgid "admin_password"
+msgstr "admin_password"
+
+msgid "admin_tenant_name"
+msgstr "admin_tenant_name"
+
+msgid "admin_url"
+msgstr "admin_url"
+
+msgid "admin_usernale"
+msgstr "admin_usernale"
+
+msgid "aggregate.create"
+msgstr "aggregate.create"
+
+msgid "aggregate.delete"
+msgstr "aggregate.delete"
+
+msgid "all_tenants"
+msgstr "all_tenants"
+
+msgid "api_insecure"
+msgstr "api_insecure"
+
+msgid "auto_disk_config"
+msgstr "auto_disk_config"
+
+msgid "availability_zone"
+msgstr "availability_zone"
+
+msgid "block_device_mapping"
+msgstr "block_device_mapping"
+
+msgid "ca_certificates_file"
+msgstr "ca_certificates_file"
+
+msgid "cells.topic"
+msgstr "cells.topic"
+
+msgid "cert_manager"
+msgstr "cert_manager"
+
+msgid "changes-since"
+msgstr "changes-since"
+
+msgid "compute.exception"
+msgstr "compute.exception"
+
+msgid "compute_manager"
+msgstr "compute_manager"
+
+msgid "compute_topic"
+msgstr "compute_topic"
+
+msgid "conductor.topic"
+msgstr "conductor.topic"
+
+msgid "config_drive"
+msgstr "config_drive"
+
+msgid "console_manager"
+msgstr "console_manager"
+
+msgid "console_topic"
+msgstr "console_topic"
+
+msgid "consoleauth_manager"
+msgstr "consoleauth_manager"
+
+msgid "consoleauth_topic"
+msgstr "consoleauth_topic"
+
+msgid "created_at"
+msgstr "created_at"
+
+msgid "deleted"
+msgstr "deleted"
+
+msgid "description"
+msgstr "description"
+
+msgid "display_description"
+msgstr "display_description"
+
+msgid "display_name"
+msgstr "display_name"
+
+msgid "flavor"
+msgstr "flavor"
+
+msgid "host"
+msgstr "host"
+
+msgid "hostname"
+msgstr "hostname"
+
+msgid "http://docs.openstack.org/developer/nova/cells.html"
+msgstr "http://docs.openstack.org/developer/nova/cells.html"
+
+msgid "http_timeout"
+msgstr "http_timeout"
+
+msgid "image"
+msgstr "image"
+
+msgid "image_ref"
+msgstr "image_ref"
+
+msgid "info_cache"
+msgstr "info_cache"
+
+msgid "instance.create"
+msgstr "instance.create"
+
+msgid "instance.delete"
+msgstr "instance.delete"
+
+msgid "instance.finish_resize"
+msgstr "instance.finish_resize"
+
+msgid "instance.pause"
+msgstr "instance.pause"
+
+msgid "instance.power_off"
+msgstr "instance.power_off"
+
+msgid "instance.power_on"
+msgstr "instance.power_on"
+
+msgid "instance.resize"
+msgstr "instance.resize"
+
+msgid "instance.restore"
+msgstr "instance.restore"
+
+msgid "instance.resume"
+msgstr "instance.resume"
+
+msgid "instance.shelve"
+msgstr "instance.shelve"
+
+msgid "instance.shelve_offload"
+msgstr "instance.shelve_offload"
+
+msgid "instance.shutdown"
+msgstr "instance.shutdown"
+
+msgid "instance.snapshot"
+msgstr "instance.snapshot"
+
+msgid "instance.suspend"
+msgstr "instance.suspend"
+
+msgid "instance.unpause"
+msgstr "instance.unpause"
+
+msgid "instance.unshelve"
+msgstr "instance.unshelve"
+
+msgid "instance.update"
+msgstr "instance.update"
+
+msgid "instance.volume_swap.end"
+msgstr "instance.volume_swap.end"
+
+msgid "instance.volume_swap.error"
+msgstr "instance.volume_swap.error"
+
+msgid "instance.volume_swap.start"
+msgstr "instance.volume_swap.start"
+
+msgid "instance_type_id"
+msgstr "instance_type_id"
+
+msgid "ip"
+msgstr "ip"
+
+msgid "ip6"
+msgstr "ip6"
+
+msgid "kernel_id"
+msgstr "kernel_id"
+
+msgid "kernels 3.x: 8"
+msgstr "kernels 3.x: 8"
+
+msgid "kernels 4.x: 256"
+msgstr "kernels 4.x: 256"
+
+msgid "kernels prior to 3.0: 1"
+msgstr "kernels prior to 3.0: 1"
+
+msgid "key_name"
+msgstr "key_name"
+
+msgid "launch_index"
+msgstr "launch_index"
+
+msgid "launched_at"
+msgstr "launched_at"
+
+msgid "libvirt.live_migration_completion_timeout"
+msgstr "libvirt.live_migration_completion_timeout"
+
+msgid "libvirt.live_migration_progress_timeout"
+msgstr "libvirt.live_migration_progress_timeout"
+
+msgid "limit"
+msgstr "limit"
+
+msgid "locked_by"
+msgstr "locked_by"
+
+msgid "marker"
+msgstr "marker"
+
+msgid "metadata"
+msgstr "metadata"
+
+msgid "metadata_manager"
+msgstr "metadata_manager"
+
+msgid "name"
+msgstr "name"
+
+msgid "network_topic"
+msgstr "network_topic"
+
+msgid "node"
+msgstr "node"
+
+msgid "not-tags          (available in 2.26+)"
+msgstr "not-tags          (available in 2.26+)"
+
+msgid "not-tags-any      (available in 2.26+)"
+msgstr "not-tags-any      (available in 2.26+)"
+
+msgid "nova-manage fixed *"
+msgstr "nova-manage fixed *"
+
+msgid "nova-manage floating *"
+msgstr "nova-manage floating *"
+
+msgid "nova-manage network *"
+msgstr "nova-manage network *"
+
+msgid "nova-manage project scrub"
+msgstr "nova-manage project scrub"
+
+msgid "nova-manage vm list"
+msgstr "nova-manage vm list"
+
+msgid "nova-manage vpn *"
+msgstr "nova-manage vpn *"
+
+msgid "pci_alias (now pci.alias)"
+msgstr "pci_alias (now pci.alias)"
+
+msgid "pci_devices"
+msgstr "pci_devices"
+
+msgid "pci_passthrough_whitelist (now pci.passthrough_whitelist)"
+msgstr "pci_passthrough_whitelist (now pci.passthrough_whitelist)"
+
+msgid "power_state"
+msgstr "power_state"
+
+msgid "progress"
+msgstr "progress"
+
+msgid "project_id"
+msgstr "project_id"
+
+msgid "quota:disk_total_bytes_sec"
+msgstr "quota:disk_total_bytes_sec"
+
+msgid "ramdisk_id"
+msgstr "ramdisk_id"
+
+msgid "reservation_id"
+msgstr "reservation_id"
+
+msgid "root_device_name"
+msgstr "root_device_name"
+
+msgid "scheduler_manager"
+msgstr "scheduler_manager"
+
+msgid "scheduler_topic"
+msgstr "scheduler_topic"
+
+msgid "security_groups"
+msgstr "security_groups"
+
+msgid "services"
+msgstr "services"
+
+msgid "sort_dir"
+msgstr "sort_dir"
+
+msgid "sort_key"
+msgstr "sort_key"
+
+msgid "status"
+msgstr "status"
+
+msgid "system_metadata"
+msgstr "system_metadata"
+
+msgid "tags              (available in 2.26+)"
+msgstr "tags              (available in 2.26+)"
+
+msgid "tags-any          (available in 2.26+)"
+msgstr "tags-any          (available in 2.26+)"
+
+msgid "task_state"
+msgstr "task_state"
+
+msgid "tenant_id"
+msgstr "tenant_id"
+
+msgid "terminated_at"
+msgstr "terminated_at"
+
+msgid "total_bytes_sec"
+msgstr "total_bytes_sec"
+
+msgid "updated_at"
+msgstr "updated_at"
+
+msgid "url_timeout"
+msgstr "url_timeout"
+
+msgid "user_id"
+msgstr "user_id"
+
+msgid "uuid"
+msgstr "uuid"
+
+msgid "vm_state"
+msgstr "vm_state"
