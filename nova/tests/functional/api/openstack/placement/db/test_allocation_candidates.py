@@ -208,6 +208,26 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         rp_ids = [r[0] for r in res]
         self.assertEqual([incl_biginv_noalloc.id], rp_ids)
 
+    def test_get_provider_ids_matching_with_multiple_forbidden(self):
+        rp1 = self._create_provider('rp1', uuids.agg1)
+        tb.add_inventory(rp1, fields.ResourceClass.VCPU, 64)
+
+        rp2 = self._create_provider('rp2', uuids.agg1)
+        trait_two, = tb.set_traits(rp2, 'CUSTOM_TWO')
+        tb.add_inventory(rp2, fields.ResourceClass.VCPU, 64)
+
+        rp3 = self._create_provider('rp3')
+        trait_three, = tb.set_traits(rp3, 'CUSTOM_THREE')
+        tb.add_inventory(rp3, fields.ResourceClass.VCPU, 64)
+
+        resources = {
+            fields.ResourceClass.STANDARD.index(fields.ResourceClass.VCPU): 4}
+        res = rp_obj._get_provider_ids_matching(
+            self.ctx, resources, {},
+            {trait_two.name: trait_two.id,
+             trait_three.name: trait_three.id}, member_of=[[uuids.agg1]])
+        self.assertEqual({(rp1.id, rp1.id)}, set(res))
+
     def test_get_provider_ids_having_all_traits(self):
         def run(traitnames, expected_ids):
             tmap = {}
