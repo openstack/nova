@@ -135,13 +135,19 @@ Request example (microversion 1.19 - )
 .. literalinclude:: ./samples/aggregates/update-aggregates-request-1.19.json
    :language: javascript
 
-Response (microversion 1.19 - )
-----------------------------------
+Response (microversion 1.1 - )
+------------------------------
 
 .. rest_parameters:: parameters.yaml
 
   - aggregates: aggregates
   - resource_provider_generation: resource_provider_generation_v1_19
+
+Response Example (microversion 1.1 - 1.18)
+------------------------------------------
+
+.. literalinclude:: ./samples/aggregates/update-aggregates.json
+   :language: javascript
 
 Response Example (microversion 1.19 - )
 ------------------------------------------
