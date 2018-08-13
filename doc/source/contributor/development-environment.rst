@@ -160,16 +160,18 @@ OpenStack CI environment and replicate it in your test environment.
 Using a remote debugger
 =======================
 
-Some modern IDE such as pycharm (commercial) or Eclipse (open source) support remote debugging.  In order to run nova with remote debugging, start the nova process
-with the following parameters
---remote_debug-host <host IP where the debugger is running>
---remote_debug-port <port it is listening on>
+Some modern IDE such as pycharm (commercial) or Eclipse (open source) support remote debugging.  In order to
+run nova with remote debugging, start the nova process with the following parameters::
 
-Before you start your nova process, start the remote debugger using the instructions for that debugger.
-For pycharm - http://blog.jetbrains.com/pycharm/2010/12/python-remote-debug-with-pycharm/
-For Eclipse - http://pydev.org/manual_adv_remote_debugger.html
+    --remote_debug-host <host IP where the debugger is running>
+    --remote_debug-port <port it is listening on>
 
-More detailed instructions are located here - http://novaremotedebug.blogspot.com
+Before you start your nova process, start the remote debugger using the instructions for that debugger:
+
+* For pycharm - http://blog.jetbrains.com/pycharm/2010/12/python-remote-debug-with-pycharm/
+* For Eclipse - http://pydev.org/manual_adv_remote_debugger.html
+
+More detailed instructions are located here - https://wiki.openstack.org/wiki/Nova/RemoteDebugging
 
 Using fake computes for tests
 =============================
