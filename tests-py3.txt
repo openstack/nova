@@ -1,7 +1,0 @@
-##########################################################################
-# NOTE(dims): The following tests randomly fail in the gate. Please be
-# careful before you re-enable them
-##########################################################################
-nova.tests.unit.virt.xenapi.test_vmops.BootableTestCase
-nova.tests.unit.virt.xenapi.test_volumeops.VolumeDetachTestCase
-nova.tests.unit.virt.xenapi.test_xenapi.XenAPIMigrateInstance
