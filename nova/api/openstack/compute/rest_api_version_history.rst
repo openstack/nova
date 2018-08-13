@@ -308,7 +308,7 @@ Both the original form of header and the new form is supported.
 Nova API hypervisor.cpu_info change from string to JSON object.
 
 From this version of the API the hypervisor's 'cpu_info' field will be
-will returned as JSON object (not string) by sending GET request
+returned as JSON object (not string) by sending GET request
 to the /v2.1/os-hypervisors/{hypervisor_id}.
 
 2.29
