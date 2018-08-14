@@ -7646,6 +7646,12 @@ class ComputeTestCase(BaseTestCase,
         self.stub_out('nova.objects.quotas.Quotas.reserve',
                       lambda *a, **k: None)
 
+        self.stub_out('nova.compute.utils.notify_about_instance_usage',
+                      lambda *a, **k: None)
+
+        self.stub_out('nova.compute.utils.notify_about_instance_action',
+                      lambda *a, **k: None)
+
         self.compute._complete_partial_deletion(admin_context, instance)
 
         self.assertNotEqual(0, instance.deleted)

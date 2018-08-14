@@ -2047,21 +2047,63 @@ class SchedulerReportClient(object):
 
     @safe_connect
     def delete_allocation_for_instance(self, context, uuid):
+        """Delete the instance allocation from placement
+
+        :param context: The security context
+        :param uuid: the instance UUID which will be used as the consumer UUID
+                     towards placement
+        :return: Returns True if the allocation is successfully deleted by this
+                 call. Returns False if the allocation does not exist.
+        :raises AllocationDeleteFailed: If the allocation cannot be read from
+                placement or it is changed by another process while we tried to
+                delete it.
+        """
         url = '/allocations/%s' % uuid
-        r = self.delete(url, global_request_id=context.global_id)
-        if r:
+        # We read the consumer generation then try to put an empty allocation
+        # for that consumer. If between the GET and the PUT the consumer
+        # generation changes then we raise AllocationDeleteFailed.
+        # NOTE(gibi): This only detect a small portion of possible cases when
+        # allocation is modified outside of the delete code path. The rest can
+        # only be detected if nova would cache at least the consumer generation
+        # of the instance.
+        # NOTE(gibi): placement does not return 404 for non-existing consumer
+        # but returns an empty consumer instead. Putting an empty allocation to
+        # that non-existing consumer won't be 404 or other error either.
+        r = self.get(url, global_request_id=context.global_id,
+                     version=CONSUMER_GENERATION_VERSION)
+        if not r:
+            # at the moment there is no way placement returns a failure so we
+            # could even delete this code
+            LOG.warning('Unable to delete allocation for instance '
+                        '%(uuid)s: (%(code)i %(text)s)',
+                        {'uuid': uuid,
+                         'code': r.status_code,
+                         'text': r.text})
+            raise exception.AllocationDeleteFailed(consumer_uuid=uuid,
+                                                   error=r.text)
+        allocations = r.json()
+        if allocations['allocations'] == {}:
+            # the consumer did not exist in the first place
+            LOG.debug('Cannot delete allocation for %s consumer in placement '
+                      'as consumer does not exists', uuid)
+            return False
+
+        # removing all resources from the allocation will auto delete the
+        # consumer in placement
+        allocations['allocations'] = {}
+        r = self.put(url, allocations, global_request_id=context.global_id,
+                     version=CONSUMER_GENERATION_VERSION)
+        if r.status_code == 204:
             LOG.info('Deleted allocation for instance %s', uuid)
             return True
         else:
-            # Check for 404 since we don't need to log a warning if we tried to
-            # delete something which doesn't actually exist.
-            if r.status_code != 404:
-                LOG.warning('Unable to delete allocation for instance '
-                            '%(uuid)s: (%(code)i %(text)s)',
-                            {'uuid': uuid,
-                             'code': r.status_code,
-                             'text': r.text})
-            return False
+            LOG.warning('Unable to delete allocation for instance '
+                        '%(uuid)s: (%(code)i %(text)s)',
+                        {'uuid': uuid,
+                         'code': r.status_code,
+                         'text': r.text})
+            raise exception.AllocationDeleteFailed(consumer_uuid=uuid,
+                                                   error=r.text)
 
     def get_allocations_for_resource_provider(self, context, rp_uuid):
         """Retrieves the allocations for a specific provider.

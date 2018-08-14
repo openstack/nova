@@ -232,14 +232,22 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         methods_called = [n for n, a, k in call_tracker.mock_calls]
         self.assertEqual(['clear_events_for_instance',
                           '_notify_about_instance_usage',
-                          '_shutdown_instance'],
+                          '_shutdown_instance',
+                          '_notify_about_instance_usage'],
                          methods_called)
-        mock_notify.assert_called_once_with(self.context,
-                                            mock_inst,
-                                            specd_compute.host,
-                                            action='delete',
-                                            phase='start',
-                                            bdms=mock_bdms)
+        mock_notify.assert_has_calls([
+            mock.call(self.context,
+                      mock_inst,
+                      specd_compute.host,
+                      action='delete',
+                      phase='start',
+                      bdms=mock_bdms),
+            mock.call(self.context,
+                      mock_inst,
+                      specd_compute.host,
+                      action='delete',
+                      phase='end',
+                      bdms=mock_bdms)])
 
     def _make_compute_node(self, hyp_hostname, cn_id):
             cn = mock.Mock(spec_set=['hypervisor_hostname', 'id',

@@ -865,7 +865,8 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         except exception.InstanceUnknownCell as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InstanceIsLocked as e:
+        except (exception.InstanceIsLocked,
+                exception.AllocationDeleteFailed) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,

@@ -2322,6 +2322,11 @@ class AllocationUpdateFailed(NovaException):
                 'Error: %(error)s')
 
 
+class AllocationDeleteFailed(NovaException):
+    msg_fmt = _('Failed to delete allocations for consumer %(consumer_uuid)s. '
+                'Error: %(error)s')
+
+
 class TooManyComputesForHost(NovaException):
     msg_fmt = _('Unexpected number of compute node records '
                 '(%(num_computes)d) found for host %(host)s. There should '
