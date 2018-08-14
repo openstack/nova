@@ -45,6 +45,7 @@ from nova.network.neutronv2 import api as neutronapi
 from nova.network.neutronv2 import constants
 from nova import objects
 from nova.objects import network_request as net_req_obj
+from nova.objects import virtual_interface as obj_vif
 from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
 from nova.pci import utils as pci_utils
@@ -6882,6 +6883,11 @@ class TestGetInstanceNetworkInfo(test.NoDBTestCase):
         network_id = kwargs.get('network_id', uuids.network_id)
         return {'id': port_id, 'network_id': network_id}
 
+    @staticmethod
+    def _get_fake_vif(context, **kwargs):
+        """Returns VirtualInterface based on provided VIF ID"""
+        return obj_vif.VirtualInterface(context=context, **kwargs)
+
     def test_get_nw_info_refresh_vif_id_add_vif(self):
         """Tests that a network-changed event occurred on a single port
         which is not already in the cache so it's added.
@@ -6972,3 +6978,123 @@ class TestGetInstanceNetworkInfo(test.NoDBTestCase):
         self.assertIsNotNone(old_vif)
         removed_vif = self._get_vif_in_cache(nwinfo, uuids.removed_port)
         self.assertIsNone(removed_vif)
+
+    def test_get_instance_nw_info_force_refresh(self):
+        """Tests a full refresh of the instance info cache using information
+        from neutron rather than the instance's current info cache data.
+        """
+        # Fake out an empty cache.
+        self.instance.info_cache = self._get_fake_info_cache([])
+        # The instance has one attached port in neutron.
+        self.client.list_ports.return_value = {
+            'ports': [self._get_fake_port(uuids.port_id)]}
+        ordered_port_list = [uuids.port_id]
+
+        with test.nested(
+            mock.patch.object(self.api, '_get_available_networks',
+                              return_value=[{'id': uuids.network_id}]),
+            mock.patch.object(self.api, '_build_vif_model',
+                              return_value=model.VIF(uuids.port_id)),
+            # We should not call _gather_port_ids_and_networks since that uses
+            # the existing instance.info_cache when no ports/networks are
+            # passed to _build_network_info_model and what we want is a full
+            # refresh of the ports based on what neutron says is current.
+            mock.patch.object(self.api, '_gather_port_ids_and_networks',
+                              new_callable=mock.NonCallableMock),
+            mock.patch.object(self.api, '_get_ordered_port_list',
+                              return_value=ordered_port_list)
+        ) as (
+            get_nets, build_vif, gather_ports, mock_port_map
+        ):
+            nwinfo = self.api._get_instance_nw_info(
+                self.context, self.instance, force_refresh=True)
+        get_nets.assert_called_once_with(
+            self.context, self.instance.project_id,
+            [uuids.network_id], self.client)
+        # Assert that the port is in the cache now.
+        self.assertIsNotNone(self._get_vif_in_cache(nwinfo, uuids.port_id))
+
+    def test__get_ordered_port_list(self):
+        """This test if port_list is sorted by VirtualInterface id
+        sequence.
+        """
+        nova_vifs = [
+            self._get_fake_vif(self.context,
+                               uuid=uuids.port_id_1, id=0),
+            self._get_fake_vif(self.context,
+                               uuid=uuids.port_id_2, id=1),
+            self._get_fake_vif(self.context,
+                               uuid=uuids.port_id_3, id=2),
+        ]
+        # Random order.
+        current_neutron_ports = [
+            self._get_fake_port(uuids.port_id_2),
+            self._get_fake_port(uuids.port_id_1),
+            self._get_fake_port(uuids.port_id_3),
+        ]
+        expected_port_list = [uuids.port_id_1,
+                              uuids.port_id_2,
+                              uuids.port_id_3]
+        with mock.patch.object(self.api, 'get_vifs_by_instance',
+                               return_value=nova_vifs):
+            port_list = self.api._get_ordered_port_list(
+               self.context, self.instance, current_neutron_ports)
+            self.assertEqual(expected_port_list,
+                             port_list)
+
+    def test__get_ordered_port_list_new_port(self):
+        """This test if port_list is sorted by VirtualInterface id
+        sequence while new port appears.
+        """
+        nova_vifs = [
+            self._get_fake_vif(self.context,
+                               uuid=uuids.port_id_1, id=0),
+            self._get_fake_vif(self.context,
+                               uuid=uuids.port_id_3, id=2),
+        ]
+        # New port appears.
+        current_neutron_ports = [
+            self._get_fake_port(uuids.port_id_1),
+            self._get_fake_port(uuids.port_id_4),
+            self._get_fake_port(uuids.port_id_3)
+        ]
+        expected_port_list = [uuids.port_id_1,
+                              uuids.port_id_3,
+                              uuids.port_id_4]
+        with mock.patch.object(self.api, 'get_vifs_by_instance',
+                               return_value=nova_vifs):
+            port_list = self.api._get_ordered_port_list(
+               self.context, self.instance, current_neutron_ports)
+            self.assertEqual(expected_port_list,
+                             port_list)
+
+    def test__get_ordered_port_list_new_port_and_deleted_vif(self):
+        """This test if port_list is sorted by VirtualInterface id
+        sequence while new port appears along with deleted old
+        VirtualInterface objects.
+        """
+        # Display also deleted VirtualInterface.
+        nova_vifs = [
+            self._get_fake_vif(self.context,
+                               uuid=uuids.port_id_1, id=0,
+                               deleted=True),
+            self._get_fake_vif(self.context,
+                               uuid=uuids.port_id_2, id=3),
+            self._get_fake_vif(self.context,
+                               uuid=uuids.port_id_3, id=5),
+        ]
+        # Random order and new port.
+        current_neutron_ports = [
+            self._get_fake_port(uuids.port_id_4),
+            self._get_fake_port(uuids.port_id_3),
+            self._get_fake_port(uuids.port_id_2),
+        ]
+        expected_port_list = [uuids.port_id_2,
+                              uuids.port_id_3,
+                              uuids.port_id_4]
+        with mock.patch.object(self.api, 'get_vifs_by_instance',
+                               return_value=nova_vifs):
+            port_list = self.api._get_ordered_port_list(
+               self.context, self.instance, current_neutron_ports)
+            self.assertEqual(expected_port_list,
+                             port_list)

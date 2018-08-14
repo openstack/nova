@@ -7036,7 +7036,8 @@ class ComputeManager(manager.Manager):
             try:
                 # Call to network API to get instance info.. this will
                 # force an update to the instance's info_cache
-                self.network_api.get_instance_nw_info(context, instance)
+                self.network_api.get_instance_nw_info(
+                    context, instance, force_refresh=True)
                 LOG.debug('Updated the network info_cache for instance',
                           instance=instance)
             except exception.InstanceNotFound:
