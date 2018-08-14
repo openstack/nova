@@ -81,6 +81,13 @@ def deploy(conf):
         if middleware:
             application = middleware(application)
 
+    # NOTE(mriedem): Ignore scope check UserWarnings from oslo.policy.
+    if not conf.oslo_policy.enforce_scope:
+        import warnings
+        warnings.filterwarnings('ignore',
+                                message="Policy .* failed scope check",
+                                category=UserWarning)
+
     return application
 
 
