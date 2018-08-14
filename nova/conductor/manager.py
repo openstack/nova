@@ -921,8 +921,23 @@ class ComputeTaskManager(base.Base):
                 if host != instance.host:
                     # If a destination host is forced for evacuate, create
                     # allocations against it in Placement.
-                    self._allocate_for_evacuate_dest_host(
-                        context, instance, host, request_spec)
+                    try:
+                        self._allocate_for_evacuate_dest_host(
+                            context, instance, host, request_spec)
+                    except exception.AllocationUpdateFailed as ex:
+                        with excutils.save_and_reraise_exception():
+                            if migration:
+                                migration.status = 'error'
+                                migration.save()
+                            self._set_vm_state_and_notify(
+                                context,
+                                instance.uuid,
+                                'rebuild_server',
+                                {'vm_state': vm_states.ERROR,
+                                 'task_state': None}, ex, request_spec)
+                            LOG.warning('Rebuild failed: %s',
+                                        six.text_type(ex), instance=instance)
+
             else:
                 # At this point, the user is either:
                 #
@@ -973,7 +988,8 @@ class ComputeTaskManager(base.Base):
                     host, node, limits = (selection.service_host,
                             selection.nodename, selection.limits)
                 except (exception.NoValidHost,
-                        exception.UnsupportedPolicyException) as ex:
+                        exception.UnsupportedPolicyException,
+                        exception.AllocationUpdateFailed) as ex:
                     if migration:
                         migration.status = 'error'
                         migration.save()

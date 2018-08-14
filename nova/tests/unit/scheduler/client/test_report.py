@@ -375,51 +375,6 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             mock.call(expected_url, mock.ANY, version='1.28',
             global_request_id=self.context.global_id)] * 3)
 
-    def test_claim_resources_success_with_old_version(self):
-        get_resp_mock = mock.Mock(status_code=200)
-        get_resp_mock.json.return_value = {
-            'allocations': {},  # build instance, not move
-        }
-        self.ks_adap_mock.get.return_value = get_resp_mock
-        resp_mock = mock.Mock(status_code=204)
-        self.ks_adap_mock.put.return_value = resp_mock
-        consumer_uuid = uuids.consumer_uuid
-        alloc_req = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.cn1
-                    },
-                    'resources': {
-                        'VCPU': 1,
-                        'MEMORY_MB': 1024,
-                    }
-                },
-            ],
-        }
-
-        project_id = uuids.project_id
-        user_id = uuids.user_id
-        res = self.client.claim_resources(
-            self.context, consumer_uuid, alloc_req, project_id, user_id)
-
-        expected_url = "/allocations/%s" % consumer_uuid
-        expected_payload = {
-            'allocations': {
-                alloc['resource_provider']['uuid']: {
-                    'resources': alloc['resources']
-                }
-                for alloc in alloc_req['allocations']
-            }
-        }
-        expected_payload['project_id'] = project_id
-        expected_payload['user_id'] = user_id
-        self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.12', json=expected_payload,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
-
-        self.assertTrue(res)
-
     def test_claim_resources_success(self):
         get_resp_mock = mock.Mock(status_code=200)
         get_resp_mock.json.return_value = {
@@ -458,35 +413,24 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         self.assertTrue(res)
 
-    def test_claim_resources_success_move_operation_no_shared(self):
-        """Tests that when a move operation is detected (existing allocations
-        for the same instance UUID) that we end up constructing an appropriate
-        allocation that contains the original resources on the source host
-        as well as the resources on the destination host.
+    def test_claim_resources_older_alloc_req(self):
+        """Test the case when a stale allocation request is sent to the report
+        client to claim
         """
         get_resp_mock = mock.Mock(status_code=200)
         get_resp_mock.json.return_value = {
-            'allocations': {
-                uuids.source: {
-                    'resource_provider_generation': 42,
-                    'resources': {
-                        'VCPU': 1,
-                        'MEMORY_MB': 1024,
-                    },
-                },
-            },
+            'allocations': {},  # build instance, not move
         }
-
         self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=204)
         self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
             'allocations': {
-                uuids.destination: {
+                uuids.cn1: {
                     'resources': {
                         'VCPU': 1,
-                        'MEMORY_MB': 1024
+                        'MEMORY_MB': 1024,
                     }
                 },
             },
@@ -499,147 +443,32 @@ class TestPutAllocations(SchedulerReportClientTestCase):
                                           allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
-        # New allocation should include resources claimed on both the source
-        # and destination hosts
         expected_payload = {
             'allocations': {
-                uuids.source: {
-                    'resources': {
-                        'VCPU': 1,
-                        'MEMORY_MB': 1024
-                    }
-                },
-                uuids.destination: {
-                    'resources': {
-                        'VCPU': 1,
-                        'MEMORY_MB': 1024
-                    }
-                },
-            },
-        }
-        expected_payload['project_id'] = project_id
-        expected_payload['user_id'] = user_id
+                rp_uuid: res
+                for rp_uuid, res in alloc_req['allocations'].items()},
+            # no consumer generation in the payload as the caller requested
+            # older microversion to be used
+            'project_id': project_id,
+            'user_id': user_id}
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.12', json=mock.ANY,
+            expected_url, microversion='1.12', json=expected_payload,
             headers={'X-Openstack-Request-Id': self.context.global_id})
-        # We have to pull the json body from the mock call_args to validate
-        # it separately otherwise hash seed issues get in the way.
-        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
-        self.assertEqual(expected_payload, actual_payload)
-
-        self.assertTrue(res)
-
-    def test_claim_resources_success_move_operation_with_shared(self):
-        """Tests that when a move operation is detected (existing allocations
-        for the same instance UUID) that we end up constructing an appropriate
-        allocation that contains the original resources on the source host
-        as well as the resources on the destination host but that when a shared
-        storage provider is claimed against in both the original allocation as
-        well as the new allocation request, we don't double that allocation
-        resource request up.
-        """
-        get_resp_mock = mock.Mock(status_code=200)
-        get_resp_mock.json.return_value = {
-            'allocations': {
-                uuids.source: {
-                    'resource_provider_generation': 42,
-                    'resources': {
-                        'VCPU': 1,
-                        'MEMORY_MB': 1024,
-                    },
-                },
-                uuids.shared_storage: {
-                    'resource_provider_generation': 42,
-                    'resources': {
-                        'DISK_GB': 100,
-                    },
-                },
-            },
-        }
-
-        self.ks_adap_mock.get.return_value = get_resp_mock
-        resp_mock = mock.Mock(status_code=204)
-        self.ks_adap_mock.put.return_value = resp_mock
-        consumer_uuid = uuids.consumer_uuid
-        alloc_req = {
-            'allocations': {
-                uuids.destination: {
-                    'resources': {
-                        'VCPU': 1,
-                        'MEMORY_MB': 1024,
-                    }
-                },
-                uuids.shared_storage: {
-                    'resources': {
-                        'DISK_GB': 100,
-                    }
-                },
-            }
-        }
-
-        project_id = uuids.project_id
-        user_id = uuids.user_id
-        res = self.client.claim_resources(self.context, consumer_uuid,
-                                          alloc_req, project_id, user_id,
-                                          allocation_request_version='1.12')
-
-        expected_url = "/allocations/%s" % consumer_uuid
-        # New allocation should include resources claimed on both the source
-        # and destination hosts but not have a doubled-up request for the disk
-        # resources on the shared provider
-        expected_payload = {
-            'allocations': {
-                uuids.source: {
-                    'resources': {
-                        'VCPU': 1,
-                        'MEMORY_MB': 1024
-                    }
-                },
-                uuids.shared_storage: {
-                    'resources': {
-                        'DISK_GB': 100
-                    }
-                },
-                uuids.destination: {
-                    'resources': {
-                        'VCPU': 1,
-                        'MEMORY_MB': 1024
-                    }
-                },
-            },
-        }
-        expected_payload['project_id'] = project_id
-        expected_payload['user_id'] = user_id
-        self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.12', json=mock.ANY,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
-        # We have to pull the allocations from the json body from the
-        # mock call_args to validate it separately otherwise hash seed
-        # issues get in the way.
-        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
-        self.assertEqual(expected_payload, actual_payload)
-
         self.assertTrue(res)
 
     def test_claim_resources_success_resize_to_same_host_no_shared(self):
-        """Tests that when a resize to the same host operation is detected
-        (existing allocations for the same instance UUID and same resource
-        provider) that we end up constructing an appropriate allocation that
-        contains the original resources on the source host as well as the
-        resources on the destination host, which in this case are the same.
+        """Tests resize to the same host operation. In this case allocation
+        exists against the same host RP but with the migration_uuid.
         """
         get_current_allocations_resp_mock = mock.Mock(status_code=200)
+        # source host allocation held by the migration_uuid so it is not
+        # not returned to the claim code as that asks for the instance_uuid
+        # consumer
         get_current_allocations_resp_mock.json.return_value = {
-            'allocations': {
-                uuids.same_host: {
-                    'resource_provider_generation': 42,
-                    'resources': {
-                        'VCPU': 1,
-                        'MEMORY_MB': 1024,
-                        'DISK_GB': 20
-                    },
-                },
-            },
+            'allocations': {},
+            "consumer_generation": 1,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id
         }
 
         self.ks_adap_mock.get.return_value = get_current_allocations_resp_mock
@@ -648,8 +477,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         consumer_uuid = uuids.consumer_uuid
         # This is the resize-up allocation where VCPU, MEMORY_MB and DISK_GB
         # are all being increased but on the same host. We also throw a custom
-        # resource class in the new allocation to make sure it's not lost and
-        # that we don't have a KeyError when merging the allocations.
+        # resource class in the new allocation to make sure it's not lost
         alloc_req = {
             'allocations': {
                 uuids.same_host: {
@@ -661,33 +489,36 @@ class TestPutAllocations(SchedulerReportClientTestCase):
                     }
                 },
             },
+            # this allocation request comes from the scheduler therefore it
+            # does not have consumer_generation in it.
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id
         }
 
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.claim_resources(self.context, consumer_uuid,
                                           alloc_req, project_id, user_id,
-                                          allocation_request_version='1.12')
+                                          allocation_request_version='1.28')
 
         expected_url = "/allocations/%s" % consumer_uuid
-        # New allocation should include doubled resources claimed on the same
-        # host.
         expected_payload = {
             'allocations': {
                 uuids.same_host: {
                     'resources': {
-                        'VCPU': 3,
-                        'MEMORY_MB': 3072,
-                        'DISK_GB': 60,
+                        'VCPU': 2,
+                        'MEMORY_MB': 2048,
+                        'DISK_GB': 40,
                         'CUSTOM_FOO': 1
                     }
                 },
             },
-        }
-        expected_payload['project_id'] = project_id
-        expected_payload['user_id'] = user_id
+            # report client assumes a new consumer in this case
+            'consumer_generation': None,
+            'project_id': project_id,
+            'user_id': user_id}
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.12', json=mock.ANY,
+            expected_url, microversion='1.28', json=mock.ANY,
             headers={'X-Openstack-Request-Id': self.context.global_id})
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
@@ -697,31 +528,19 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.assertTrue(res)
 
     def test_claim_resources_success_resize_to_same_host_with_shared(self):
-        """Tests that when a resize to the same host operation is detected
-        (existing allocations for the same instance UUID and same resource
-        provider) that we end up constructing an appropriate allocation that
-        contains the original resources on the source host as well as the
-        resources on the destination host, which in this case are the same.
-        This test adds the fun wrinkle of throwing a shared storage provider
-        in the mix when doing resize to the same host.
+        """Tests resize to the same host operation. In this case allocation
+        exists against the same host RP and the shared RP but with the
+        migration_uuid.
         """
         get_current_allocations_resp_mock = mock.Mock(status_code=200)
+        # source host allocation held by the migration_uuid so it is not
+        # not returned to the claim code as that asks for the instance_uuid
+        # consumer
         get_current_allocations_resp_mock.json.return_value = {
-            'allocations': {
-                uuids.same_host: {
-                    'resource_provider_generation': 42,
-                    'resources': {
-                        'VCPU': 1,
-                        'MEMORY_MB': 1024
-                    },
-                },
-                uuids.shared_storage: {
-                    'resource_provider_generation': 42,
-                    'resources': {
-                        'DISK_GB': 20,
-                    },
-                },
-            },
+            'allocations': {},
+            "consumer_generation": 1,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id
         }
 
         self.ks_adap_mock.get.return_value = get_current_allocations_resp_mock
@@ -729,13 +548,15 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.ks_adap_mock.put.return_value = put_allocations_resp_mock
         consumer_uuid = uuids.consumer_uuid
         # This is the resize-up allocation where VCPU, MEMORY_MB and DISK_GB
-        # are all being increased but DISK_GB is on a shared storage provider.
+        # are all being increased but on the same host. We also throw a custom
+        # resource class in the new allocation to make sure it's not lost
         alloc_req = {
             'allocations': {
                 uuids.same_host: {
                     'resources': {
                         'VCPU': 2,
-                        'MEMORY_MB': 2048
+                        'MEMORY_MB': 2048,
+                        'CUSTOM_FOO': 1
                     }
                 },
                 uuids.shared_storage: {
@@ -744,36 +565,40 @@ class TestPutAllocations(SchedulerReportClientTestCase):
                     }
                 },
             },
+            # this allocation request comes from the scheduler therefore it
+            # does not have consumer_generation in it.
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id
         }
 
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.claim_resources(self.context, consumer_uuid,
                                           alloc_req, project_id, user_id,
-                                          allocation_request_version='1.12')
+                                          allocation_request_version='1.28')
 
         expected_url = "/allocations/%s" % consumer_uuid
-        # New allocation should include doubled resources claimed on the same
-        # host.
         expected_payload = {
             'allocations': {
                 uuids.same_host: {
                     'resources': {
-                        'VCPU': 3,
-                        'MEMORY_MB': 3072
+                        'VCPU': 2,
+                        'MEMORY_MB': 2048,
+                        'CUSTOM_FOO': 1
                     }
                 },
                 uuids.shared_storage: {
                     'resources': {
-                        'DISK_GB': 60
+                        'DISK_GB': 40,
                     }
                 },
             },
-        }
-        expected_payload['project_id'] = project_id
-        expected_payload['user_id'] = user_id
+            # report client assumes a new consumer in this case
+            'consumer_generation': None,
+            'project_id': project_id,
+            'user_id': user_id}
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.12', json=mock.ANY,
+            expected_url, microversion='1.28', json=mock.ANY,
             headers={'X-Openstack-Request-Id': self.context.global_id})
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
@@ -782,19 +607,399 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         self.assertTrue(res)
 
-    def test_claim_resources_fail_retry_success(self):
+    def test_claim_resources_success_evacuate_no_shared(self):
+        """Tests non-forced evacuate. In this case both the source and the
+        dest allocation are held by the instance_uuid in placement. So the
+        claim code needs to merge allocations. The second claim comes from the
+        scheduler and therefore it does not have consumer_generation in it.
+        """
+        # the source allocation is also held by the instance_uuid so report
+        # client will see it.
+        current_allocs = {
+            'allocations': {
+                uuids.source_host: {
+                    'generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                        'DISK_GB': 20
+                    },
+                },
+            },
+            "consumer_generation": 1,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id
+        }
+        self.ks_adap_mock.get.return_value = fake_requests.FakeResponse(
+            status_code=200,
+            content=jsonutils.dumps(current_allocs))
+        put_allocations_resp_mock = fake_requests.FakeResponse(status_code=204)
+        self.ks_adap_mock.put.return_value = put_allocations_resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        # this is an evacuate so we have the same resources request towards the
+        # dest host
+        alloc_req = {
+            'allocations': {
+                uuids.dest_host: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                        'DISK_GB': 20,
+                    }
+                },
+            },
+            # this allocation request comes from the scheduler therefore it
+            # does not have consumer_generation in it.
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.claim_resources(self.context, consumer_uuid,
+                                          alloc_req, project_id, user_id,
+                                          allocation_request_version='1.28')
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        # we expect that both the source and dest allocations are here
+        expected_payload = {
+            'allocations': {
+                uuids.source_host: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                        'DISK_GB': 20
+                    },
+                },
+                uuids.dest_host: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                        'DISK_GB': 20,
+                    }
+                },
+            },
+            # report client uses the consumer_generation that it got from
+            # placement when asked for the existing allocations
+            'consumer_generation': 1,
+            'project_id': project_id,
+            'user_id': user_id}
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.28', json=mock.ANY,
+            headers={'X-Openstack-Request-Id': self.context.global_id})
+        # We have to pull the json body from the mock call_args to validate
+        # it separately otherwise hash seed issues get in the way.
+        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
+        self.assertEqual(expected_payload, actual_payload)
+
+        self.assertTrue(res)
+
+    def test_claim_resources_success_evacuate_with_shared(self):
+        """Similar test that test_claim_resources_success_evacuate_no_shared
+        but adds shared disk into the mix.
+        """
+        # the source allocation is also held by the instance_uuid so report
+        # client will see it.
+        current_allocs = {
+            'allocations': {
+                uuids.source_host: {
+                    'generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                uuids.shared_storage: {
+                    'generation': 42,
+                    'resources': {
+                        'DISK_GB': 20,
+                    },
+                },
+            },
+            "consumer_generation": 1,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id
+        }
+        self.ks_adap_mock.get.return_value = fake_requests.FakeResponse(
+            status_code=200,
+            content = jsonutils.dumps(current_allocs))
+        self.ks_adap_mock.put.return_value = fake_requests.FakeResponse(
+            status_code=204)
+        consumer_uuid = uuids.consumer_uuid
+        # this is an evacuate so we have the same resources request towards the
+        # dest host
+        alloc_req = {
+            'allocations': {
+                uuids.dest_host: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                uuids.shared_storage: {
+                    'generation': 42,
+                    'resources': {
+                        'DISK_GB': 20,
+                    },
+                },
+            },
+            # this allocation request comes from the scheduler therefore it
+            # does not have consumer_generation in it.
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.claim_resources(self.context, consumer_uuid,
+                                          alloc_req, project_id, user_id,
+                                          allocation_request_version='1.28')
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        # we expect that both the source and dest allocations are here plus the
+        # shared storage allocation
+        expected_payload = {
+            'allocations': {
+                uuids.source_host: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                uuids.dest_host: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    }
+                },
+                uuids.shared_storage: {
+                    'resources': {
+                        'DISK_GB': 20,
+                    },
+                },
+            },
+            # report client uses the consumer_generation that got from
+            # placement when asked for the existing allocations
+            'consumer_generation': 1,
+            'project_id': project_id,
+            'user_id': user_id}
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.28', json=mock.ANY,
+            headers={'X-Openstack-Request-Id': self.context.global_id})
+        # We have to pull the json body from the mock call_args to validate
+        # it separately otherwise hash seed issues get in the way.
+        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
+        self.assertEqual(expected_payload, actual_payload)
+
+        self.assertTrue(res)
+
+    def test_claim_resources_success_force_evacuate_no_shared(self):
+        """Tests forced evacuate. In this case both the source and the
+        dest allocation are held by the instance_uuid in placement. So the
+        claim code needs to merge allocations. The second claim comes from the
+        conductor and therefore it does have consumer_generation in it.
+        """
+        # the source allocation is also held by the instance_uuid so report
+        # client will see it.
+        current_allocs = {
+            'allocations': {
+                uuids.source_host: {
+                    'generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                        'DISK_GB': 20
+                    },
+                },
+            },
+            "consumer_generation": 1,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id
+        }
+
+        self.ks_adap_mock.get.return_value = fake_requests.FakeResponse(
+            status_code=200,
+            content=jsonutils.dumps(current_allocs))
+        self.ks_adap_mock.put.return_value = fake_requests.FakeResponse(
+            status_code=204)
+        consumer_uuid = uuids.consumer_uuid
+        # this is an evacuate so we have the same resources request towards the
+        # dest host
+        alloc_req = {
+            'allocations': {
+                uuids.dest_host: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                        'DISK_GB': 20,
+                    }
+                },
+            },
+            # this allocation request comes from the conductor that read the
+            # allocation from placement therefore it has consumer_generation in
+            # it.
+            "consumer_generation": 1,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.claim_resources(self.context, consumer_uuid,
+                                          alloc_req, project_id, user_id,
+                                          allocation_request_version='1.28')
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        # we expect that both the source and dest allocations are here
+        expected_payload = {
+            'allocations': {
+                uuids.source_host: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                        'DISK_GB': 20
+                    },
+                },
+                uuids.dest_host: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                        'DISK_GB': 20,
+                    }
+                },
+            },
+            # report client uses the consumer_generation that it got in the
+            # allocation request
+            'consumer_generation': 1,
+            'project_id': project_id,
+            'user_id': user_id}
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.28', json=mock.ANY,
+            headers={'X-Openstack-Request-Id': self.context.global_id})
+        # We have to pull the json body from the mock call_args to validate
+        # it separately otherwise hash seed issues get in the way.
+        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
+        self.assertEqual(expected_payload, actual_payload)
+
+        self.assertTrue(res)
+
+    def test_claim_resources_success_force_evacuate_with_shared(self):
+        """Similar test that
+        test_claim_resources_success_force_evacuate_no_shared but adds shared
+        disk into the mix.
+        """
+        # the source allocation is also held by the instance_uuid so report
+        # client will see it.
+        current_allocs = {
+            'allocations': {
+                uuids.source_host: {
+                    'generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                uuids.shared_storage: {
+                    'generation': 42,
+                    'resources': {
+                        'DISK_GB': 20,
+                    },
+                },
+            },
+            "consumer_generation": 1,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id
+        }
+
+        self.ks_adap_mock.get.return_value = fake_requests.FakeResponse(
+            status_code=200,
+            content=jsonutils.dumps(current_allocs))
+        self.ks_adap_mock.put.return_value = fake_requests.FakeResponse(
+            status_code=204)
+        consumer_uuid = uuids.consumer_uuid
+        # this is an evacuate so we have the same resources request towards the
+        # dest host
+        alloc_req = {
+            'allocations': {
+                uuids.dest_host: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                uuids.shared_storage: {
+                    'generation': 42,
+                    'resources': {
+                        'DISK_GB': 20,
+                    },
+                },
+            },
+            # this allocation request comes from the conductor that read the
+            # allocation from placement therefore it has consumer_generation in
+            # it.
+            "consumer_generation": 1,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.claim_resources(self.context, consumer_uuid,
+                                          alloc_req, project_id, user_id,
+                                          allocation_request_version='1.28')
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        # we expect that both the source and dest allocations are here plus the
+        # shared storage allocation
+        expected_payload = {
+            'allocations': {
+                uuids.source_host: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                uuids.dest_host: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    }
+                },
+                uuids.shared_storage: {
+                    'resources': {
+                        'DISK_GB': 20,
+                    },
+                },
+            },
+            # report client uses the consumer_generation that it got in the
+            # allocation request
+            'consumer_generation': 1,
+            'project_id': project_id,
+            'user_id': user_id}
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.28', json=mock.ANY,
+            headers={'X-Openstack-Request-Id': self.context.global_id})
+        # We have to pull the json body from the mock call_args to validate
+        # it separately otherwise hash seed issues get in the way.
+        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
+        self.assertEqual(expected_payload, actual_payload)
+
+        self.assertTrue(res)
+
+    def test_claim_resources_fail_due_to_rp_generation_retry_success(self):
         get_resp_mock = mock.Mock(status_code=200)
         get_resp_mock.json.return_value = {
             'allocations': {},  # build instance, not move
         }
         self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mocks = [
-            mock.Mock(
-                status_code=409,
-                text='Inventory changed while attempting to allocate: '
-                     'Another thread concurrently updated the data. '
-                     'Please retry your update'),
-            mock.Mock(status_code=204),
+            fake_requests.FakeResponse(
+                409,
+                jsonutils.dumps(
+                    {'errors': [
+                        {'code': 'placement.concurrent_update',
+                         'detail': ''}]})),
+            fake_requests.FakeResponse(204)
         ]
         self.ks_adap_mock.put.side_effect = resp_mocks
         consumer_uuid = uuids.consumer_uuid
@@ -813,7 +1018,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         user_id = uuids.user_id
         res = self.client.claim_resources(self.context, consumer_uuid,
                                           alloc_req, project_id, user_id,
-                                          allocation_request_version='1.12')
+                                          allocation_request_version='1.28')
 
         expected_url = "/allocations/%s" % consumer_uuid
         expected_payload = {
@@ -823,10 +1028,11 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         }
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
+        expected_payload['consumer_generation'] = None
         # We should have exactly two calls to the placement API that look
         # identical since we're retrying the same HTTP request
         expected_calls = [
-            mock.call(expected_url, microversion='1.12', json=expected_payload,
+            mock.call(expected_url, microversion='1.28', json=expected_payload,
                       headers={'X-Openstack-Request-Id':
                                self.context.global_id})] * 2
         self.assertEqual(len(expected_calls),
@@ -842,7 +1048,13 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'allocations': {},  # build instance, not move
         }
         self.ks_adap_mock.get.return_value = get_resp_mock
-        resp_mock = mock.Mock(status_code=409, text='not cool')
+        resp_mock = fake_requests.FakeResponse(
+            409,
+            jsonutils.dumps(
+                {'errors': [
+                    {'code': 'something else',
+                     'detail': 'not cool'}]}))
+
         self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
@@ -860,7 +1072,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         user_id = uuids.user_id
         res = self.client.claim_resources(self.context, consumer_uuid,
                                           alloc_req, project_id, user_id,
-                                          allocation_request_version='1.12')
+                                          allocation_request_version='1.28')
 
         expected_url = "/allocations/%s" % consumer_uuid
         expected_payload = {
@@ -870,12 +1082,58 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         }
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
+        expected_payload['consumer_generation'] = None
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.12', json=expected_payload,
+            expected_url, microversion='1.28', json=expected_payload,
             headers={'X-Openstack-Request-Id': self.context.global_id})
 
         self.assertFalse(res)
         self.assertTrue(mock_log.called)
+
+    def test_claim_resources_consumer_generation_failure(self):
+        get_resp_mock = mock.Mock(status_code=200)
+        get_resp_mock.json.return_value = {
+            'allocations': {},  # build instance, not move
+        }
+        self.ks_adap_mock.get.return_value = get_resp_mock
+        resp_mock = fake_requests.FakeResponse(
+            409,
+            jsonutils.dumps(
+                {'errors': [
+                    {'code': 'placement.concurrent_update',
+                     'detail': 'consumer generation conflict'}]}))
+
+        self.ks_adap_mock.put.return_value = resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        alloc_req = {
+            'allocations': {
+                uuids.cn1: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    }
+                },
+            },
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        self.assertRaises(exception.AllocationUpdateFailed,
+                          self.client.claim_resources, self.context,
+                          consumer_uuid, alloc_req, project_id, user_id,
+                          allocation_request_version='1.28')
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        expected_payload = {
+            'allocations': {
+                rp_uuid: res
+                for rp_uuid, res in alloc_req['allocations'].items()},
+            'project_id': project_id,
+            'user_id': user_id,
+            'consumer_generation': None}
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.28', json=expected_payload,
+            headers={'X-Openstack-Request-Id': self.context.global_id})
 
     def test_remove_provider_from_inst_alloc_no_shared(self):
         """Tests that the method which manipulates an existing doubled-up
@@ -1637,7 +1895,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/allocation_candidates?%s' % parse.urlencode(
             expected_query)
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, microversion='1.25',
+            expected_url, microversion='1.28',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
         self.assertEqual(mock.sentinel.p_sums, p_sums)
@@ -1677,7 +1935,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             expected_query)
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, microversion='1.25',
+            expected_url, microversion='1.28',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         self.assertEqual(mock.sentinel.p_sums, p_sums)
 
@@ -1699,7 +1957,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         res = self.client.get_allocation_candidates(self.context, resources)
 
         self.ks_adap_mock.get.assert_called_once_with(
-            mock.ANY, microversion='1.25',
+            mock.ANY, microversion='1.28',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         url = self.ks_adap_mock.get.call_args[0][0]
         split_url = parse.urlsplit(url)

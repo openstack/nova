@@ -473,7 +473,7 @@ def resources_from_request_spec(spec_obj):
 # some sort of skip_filters flag.
 def claim_resources_on_destination(
         context, reportclient, instance, source_node, dest_node,
-        source_node_allocations=None):
+        source_node_allocations=None, consumer_generation=None):
     """Copies allocations from source node to dest node in Placement
 
     Normally the scheduler will allocate resources on a chosen destination
@@ -492,21 +492,50 @@ def claim_resources_on_destination(
                         lives
     :param dest_node: destination ComputeNode where the instance is being
                       moved
+    :param source_node_allocations: The consumer's current  allocation on the
+                                    source compute
+    :param consumer_generation: The expected generation of the consumer.
+                                None if a new consumer is expected
     :raises NoValidHost: If the allocation claim on the destination
                          node fails.
+    :raises: keystoneauth1.exceptions.base.ClientException on failure to
+             communicate with the placement API
+    :raises: ConsumerAllocationRetrievalFailed if the placement API call fails
+    :raises: AllocationUpdateFailed: If a parallel consumer update changed the
+                                     consumer
     """
     # Get the current allocations for the source node and the instance.
     if not source_node_allocations:
-        source_node_allocations = (
-            reportclient.get_allocations_for_consumer_by_provider(
-                context, source_node.uuid, instance.uuid))
+        # NOTE(gibi): This is the forced evacuate case where the caller did not
+        # provide any allocation request. So we ask placement here for the
+        # current allocation and consumer generation and use that for the new
+        # allocation on the dest_node. If the allocation fails due to consumer
+        # generation conflict then the claim will raise and the operation will
+        # be aborted.
+        # NOTE(gibi): This only detect a small portion of possible
+        # cases when allocation is modified outside of the this
+        # code path. The rest can only be detected if nova would
+        # cache at least the consumer generation of the instance.
+        allocations = reportclient.get_allocs_for_consumer(
+            context, instance.uuid)
+        source_node_allocations = allocations.get(
+            'allocations', {}).get(source_node.uuid, {}).get('resources')
+        consumer_generation = allocations.get('consumer_generation')
+    else:
+        # NOTE(gibi) This is the live migrate case. The caller provided the
+        # allocation that needs to be used on the dest_node along with the
+        # expected consumer_generation of the consumer (which is the instance).
+        pass
+
     if source_node_allocations:
         # Generate an allocation request for the destination node.
         alloc_request = {
             'allocations': {
                 dest_node.uuid: {'resources': source_node_allocations}
-            }
+            },
         }
+        # import locally to avoid cyclic import
+        from nova.scheduler.client import report
         # The claim_resources method will check for existing allocations
         # for the instance and effectively "double up" the allocations for
         # both the source and destination node. That's why when requesting
@@ -515,7 +544,8 @@ def claim_resources_on_destination(
         if reportclient.claim_resources(
                 context, instance.uuid, alloc_request,
                 instance.project_id, instance.user_id,
-                allocation_request_version='1.12'):
+                allocation_request_version=report.CONSUMER_GENERATION_VERSION,
+                consumer_generation=consumer_generation):
             LOG.debug('Instance allocations successfully created on '
                       'destination node %(dest)s: %(alloc_request)s',
                       {'dest': dest_node.uuid,
@@ -974,8 +1004,17 @@ def claim_resources(ctx, client, spec_obj, instance_uuid, alloc_req,
     # the spec object?
     user_id = ctx.user_id
 
+    # NOTE(gibi): this could raise AllocationUpdateFailed which means there is
+    # a serious issue with the instance_uuid as a consumer. Every caller of
+    # utils.claim_resources() assumes that instance_uuid will be a new consumer
+    # and therefore we passing None as expected consumer_generation to
+    # reportclient.claim_resources() here. If the claim fails
+    # due to consumer generation conflict, which in this case means the
+    # consumer is not new, then we let the AllocationUpdateFailed propagate and
+    # fail the build / migrate as the instance is in inconsistent state.
     return client.claim_resources(ctx, instance_uuid, alloc_req, project_id,
-            user_id, allocation_request_version=allocation_request_version)
+            user_id, allocation_request_version=allocation_request_version,
+            consumer_generation=None)
 
 
 def remove_allocation_from_compute(context, instance, compute_node_uuid,
