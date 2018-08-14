@@ -1,0 +1,10 @@
+---
+issues:
+  - |
+    Nova leaks resource allocations in placement during
+    ``POST /servers/{server_id}/action (revertResize Action)`` if the
+    allocation held by the migration_uuid is modified in parallel with the
+    revert operation. Nova will log an ERROR and will put the server into ERROR
+    state but will not delete the migration allocation. We assume that this can
+    only happen if somebody outside of nova is actively changing the migration
+    allocation in placement. Therefore it is not considered as a bug.

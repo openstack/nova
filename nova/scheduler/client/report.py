@@ -1922,68 +1922,81 @@ class SchedulerReportClient(object):
 
     @safe_connect
     @retries
-    def set_and_clear_allocations(self, context, rp_uuid, consumer_uuid,
-                                  alloc_data, project_id, user_id,
-                                  consumer_to_clear=None):
-        """Create allocation records for the supplied consumer UUID while
-        simultaneously clearing any allocations identified by the uuid
-        in consumer_to_clear, for example a migration uuid when moving an
-        instance to another host. This is for atomically managing so-called
-        "doubled" migration records.
+    def move_allocations(self, context, source_consumer_uuid,
+                         target_consumer_uuid):
+        """Move allocations from one consumer to the other
 
-        :note Currently we only allocate against a single resource provider.
-              Once shared storage and things like NUMA allocations are a
-              reality, this will change to allocate against multiple providers.
+        Note that this call moves the current allocation from the source
+        consumer to the target consumer. If parallel update happens on either
+        or both consumers during this call then Placement will detect that and
+        this code will re-read the new state of the consumers and retry the
+        operation. If you want to move a known piece of allocation from source
+        to target then this function might not be what you want as it always
+        moves what source has in Placement.
 
         :param context: The security context
-        :param rp_uuid: The UUID of the resource provider to allocate against.
-        :param consumer_uuid: The consumer UUID for which allocations are
-                              being set.
-        :param alloc_data: Dict, keyed by resource class, of amounts to
-                           consume.
-        :param project_id: The project_id associated with the allocations.
-        :param user_id: The user_id associated with the allocations.
-        :param consumer_to_clear: A UUID identifying allocations for a
-                                  consumer that should be cleared.
-        :returns: True if the allocations were created, False otherwise.
-        :raises: Retry if the operation should be retried due to a concurrent
-                 update.
+        :param source_consumer_uuid: the UUID of the consumer from which
+                                     allocations are moving
+        :param target_consumer_uuid: the UUID of the target consumer for the
+                                     allocations
+        :returns: True if the move was successful False otherwise.
+        :raises AllocationMoveFailed: If the source or the target consumer has
+                                      been modified while this call tries to
+                                      move allocations.
         """
-        # FIXME(cdent): Fair amount of duplicate with put in here, but now
-        # just working things through.
-        payload = {
-            consumer_uuid: {
-                'allocations': {
-                    rp_uuid: {
-                        'resources': alloc_data
-                    }
-                },
-                'project_id': project_id,
-                'user_id': user_id,
+        source_alloc = self.get_allocs_for_consumer(
+            context, source_consumer_uuid)
+        target_alloc = self.get_allocs_for_consumer(
+            context, target_consumer_uuid)
+
+        if target_alloc and target_alloc['allocations']:
+            LOG.warning('Overwriting current allocation %(allocation)s on '
+                        'consumer %(consumer)s',
+                        {'allocation': target_alloc,
+                         'consumer': target_consumer_uuid})
+
+        new_allocs = {
+            source_consumer_uuid: {
+                # 'allocations': {} means we are removing the allocation from
+                # the source consumer
+                'allocations': {},
+                'project_id': source_alloc['project_id'],
+                'user_id': source_alloc['user_id'],
+                'consumer_generation': source_alloc['consumer_generation']},
+            target_consumer_uuid: {
+                'allocations': source_alloc['allocations'],
+                # NOTE(gibi): Is there any case when we need to keep the
+                # project_id and user_id of the target allocation that we are
+                # about to overwrite?
+                'project_id': source_alloc['project_id'],
+                'user_id': source_alloc['user_id'],
+                'consumer_generation': target_alloc.get('consumer_generation')
             }
         }
-        if consumer_to_clear:
-            payload[consumer_to_clear] = {
-                'allocations': {},
-                'project_id': project_id,
-                'user_id': user_id,
-            }
-        r = self.post('/allocations', payload,
-                      version=POST_ALLOCATIONS_API_VERSION,
+        r = self.post('/allocations', new_allocs,
+                      version=CONSUMER_GENERATION_VERSION,
                       global_request_id=context.global_id)
         if r.status_code != 204:
-            # NOTE(jaypipes): Yes, it sucks doing string comparison like this
-            # but we have no error codes, only error messages.
-            if 'concurrently updated' in r.text:
+            err = r.json()['errors'][0]
+            if err['code'] == 'placement.concurrent_update':
+                # NOTE(jaypipes): Yes, it sucks doing string comparison like
+                # this but we have no error codes, only error messages.
+                # TODO(gibi): Use more granular error codes when available
+                if 'consumer generation conflict' in err['detail']:
+                    raise exception.AllocationMoveFailed(
+                        source_consumer=source_consumer_uuid,
+                        target_consumer=target_consumer_uuid,
+                        error=r.text)
+
                 reason = ('another process changed the resource providers '
                           'involved in our attempt to post allocations for '
-                          'consumer %s' % consumer_uuid)
-                raise Retry('set_and_clear_allocations', reason)
+                          'consumer %s' % target_consumer_uuid)
+                raise Retry('move_allocations', reason)
             else:
                 LOG.warning(
-                    'Unable to post allocations for instance '
+                    'Unable to post allocations for consumer '
                     '%(uuid)s (%(code)i %(text)s)',
-                    {'uuid': consumer_uuid,
+                    {'uuid': target_consumer_uuid,
                      'code': r.status_code,
                      'text': r.text})
         return r.status_code == 204

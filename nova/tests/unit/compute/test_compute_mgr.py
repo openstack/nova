@@ -7151,10 +7151,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                 self.instance, self.migration)
 
             self.assertTrue(r)
-            mock_report.set_and_clear_allocations.assert_called_once_with(
-                mock.sentinel.ctx, cu, self.instance.uuid, {'DISK_GB': 1},
-                self.instance.project_id, self.instance.user_id,
-                consumer_to_clear=self.migration.uuid)
+            mock_report.move_allocations.assert_called_once_with(
+                mock.sentinel.ctx, self.migration.uuid, self.instance.uuid)
 
         doit()
 
@@ -7170,7 +7168,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                 self.instance, self.migration)
 
             self.assertFalse(r)
-            self.assertFalse(mock_report.set_and_clear_allocations.called)
+            self.assertFalse(mock_report.move_allocations.called)
 
         doit()
 
@@ -7195,7 +7193,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                 self.instance, self.migration)
 
             self.assertTrue(r)
-            self.assertTrue(mock_report.set_and_clear_allocations.called)
+            self.assertTrue(mock_report.move_allocations.called)
 
         doit()
 

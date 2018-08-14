@@ -57,7 +57,8 @@ class MigrateServerController(wsgi.Controller):
         except (exception.TooManyInstances, exception.QuotaError) as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
         except (exception.InstanceIsLocked,
-                exception.CannotMigrateWithTargetHost) as e:
+                exception.CannotMigrateWithTargetHost,
+                exception.AllocationMoveFailed) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,

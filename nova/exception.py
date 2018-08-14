@@ -2322,6 +2322,12 @@ class AllocationUpdateFailed(NovaException):
                 'Error: %(error)s')
 
 
+class AllocationMoveFailed(NovaException):
+    msg_fmt = _('Failed to move allocations from consumer %(source_consumer)s '
+                'to consumer %(target_consumer)s. '
+                'Error: %(error)s')
+
+
 class AllocationDeleteFailed(NovaException):
     msg_fmt = _('Failed to delete allocations for consumer %(consumer_uuid)s. '
                 'Error: %(error)s')

@@ -227,8 +227,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         task._migration.save.assert_called_once_with()
         self.assertEqual('error', task._migration.status)
         mock_ra.assert_called_once_with(task.context, task._source_cn,
-                                        task.instance, task._migration,
-                                        task._held_allocations)
+                                        task.instance, task._migration)
 
 
 class MigrationTaskAllocationUtils(test.NoDBTestCase):
