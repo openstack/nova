@@ -249,3 +249,19 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     @classmethod
     def destroy_bulk(cls, context, instance_uuids):
         return cls._destroy_bulk_in_db(context, instance_uuids)
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_by_cell_and_project_from_db(context, cell_id, project_id):
+        return (context.session.query(api_models.InstanceMapping)
+                .options(joinedload('cell_mapping'))
+                .filter_by(cell_id=cell_id)
+                .filter_by(project_id=project_id)
+                .all())
+
+    @classmethod
+    def get_by_cell_and_project(cls, context, cell_id, project_id):
+        db_mappings = cls._get_by_cell_and_project_from_db(context, cell_id,
+                                                           project_id)
+        return base.obj_make_list(context, cls(), objects.InstanceMapping,
+                db_mappings)
