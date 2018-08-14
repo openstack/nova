@@ -13,10 +13,10 @@
 
 import copy
 
+from nova.api.openstack.placement.schemas import common
 from nova.db import constants as db_const
 
 
-RESOURCE_CLASS_IDENTIFIER = "^[A-Z0-9_]+$"
 BASE_INVENTORY_SCHEMA = {
     "type": "object",
     "properties": {
@@ -64,7 +64,7 @@ BASE_INVENTORY_SCHEMA = {
 POST_INVENTORY_SCHEMA = copy.deepcopy(BASE_INVENTORY_SCHEMA)
 POST_INVENTORY_SCHEMA['properties']['resource_class'] = {
     "type": "string",
-    "pattern": RESOURCE_CLASS_IDENTIFIER,
+    "pattern": common.RC_PATTERN,
 }
 POST_INVENTORY_SCHEMA['required'].append('resource_class')
 POST_INVENTORY_SCHEMA['required'].remove('resource_provider_generation')
@@ -81,7 +81,7 @@ PUT_INVENTORY_SCHEMA = {
         "inventories": {
             "type": "object",
             "patternProperties": {
-                RESOURCE_CLASS_IDENTIFIER: PUT_INVENTORY_RECORD_SCHEMA,
+                common.RC_PATTERN: PUT_INVENTORY_RECORD_SCHEMA,
             }
         }
     },

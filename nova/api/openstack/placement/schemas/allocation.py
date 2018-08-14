@@ -13,6 +13,8 @@
 
 import copy
 
+from nova.api.openstack.placement.schemas import common
+
 
 ALLOCATION_SCHEMA = {
     "type": "object",
@@ -38,7 +40,7 @@ ALLOCATION_SCHEMA = {
                         "type": "object",
                         "minProperties": 1,
                         "patternProperties": {
-                            "^[0-9A-Z_]+$": {
+                            common.RC_PATTERN: {
                                 "type": "integer",
                                 "minimum": 1,
                             }
@@ -78,7 +80,7 @@ ALLOCATION_SCHEMA_V1_12 = {
             "minProperties": 1,
             # resource provider uuid
             "patternProperties": {
-                "^[0-9a-fA-F-]{36}$": {
+                common.UUID_PATTERN: {
                     "type": "object",
                     "properties": {
                         # generation is optional
@@ -90,7 +92,7 @@ ALLOCATION_SCHEMA_V1_12 = {
                             "minProperties": 1,
                             # resource class
                             "patternProperties": {
-                                "^[0-9A-Z_]+$": {
+                                common.RC_PATTERN: {
                                     "type": "integer",
                                     "minimum": 1,
                                 }
@@ -137,7 +139,7 @@ POST_ALLOCATIONS_V1_13 = {
     "minProperties": 1,
     "additionalProperties": False,
     "patternProperties": {
-        "^[0-9a-fA-F-]{36}$": DELETABLE_ALLOCATIONS
+        common.UUID_PATTERN: DELETABLE_ALLOCATIONS
     }
 }
 
@@ -163,5 +165,5 @@ alloc_props['consumer_generation'] = {
 REQUIRED_GENERATION_ALLOCS_POST['required'].append("consumer_generation")
 POST_ALLOCATIONS_V1_28 = copy.deepcopy(POST_ALLOCATIONS_V1_13)
 POST_ALLOCATIONS_V1_28["patternProperties"] = {
-    "^[0-9a-fA-F-]{36}$": REQUIRED_GENERATION_ALLOCS_POST
+    common.UUID_PATTERN: REQUIRED_GENERATION_ALLOCS_POST
 }

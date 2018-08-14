@@ -9,25 +9,14 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""Placement API schemas for resource classes."""
+_UUID_CHAR = "[0-9a-fA-F-]"
+# TODO(efried): Use this stricter pattern, and replace string/uuid with it:
+# UUID_PATTERN = "^%s{8}-%s{4}-%s{4}-%s{4}-%s{12}$" % ((_UUID_CHAR,) * 5)
+UUID_PATTERN = "^%s{36}$" % _UUID_CHAR
 
-import copy
-
-from nova.api.openstack.placement.schemas import common
-
-
-POST_RC_SCHEMA_V1_2 = {
-    "type": "object",
-    "properties": {
-        "name": {
-            "type": "string",
-            "pattern": common.CUSTOM_RC_PATTERN,
-            "maxLength": 255,
-        },
-    },
-    "required": [
-        "name"
-    ],
-    "additionalProperties": False,
-}
-PUT_RC_SCHEMA_V1_2 = copy.deepcopy(POST_RC_SCHEMA_V1_2)
+_RC_TRAIT_CHAR = "[A-Z0-9_]"
+_RC_TRAIT_PATTERN = "^%s+$" % _RC_TRAIT_CHAR
+RC_PATTERN = _RC_TRAIT_PATTERN
+_CUSTOM_RC_TRAIT_PATTERN = "^CUSTOM_%s+$" % _RC_TRAIT_CHAR
+CUSTOM_RC_PATTERN = _CUSTOM_RC_TRAIT_PATTERN
+CUSTOM_TRAIT_PATTERN = _CUSTOM_RC_TRAIT_PATTERN

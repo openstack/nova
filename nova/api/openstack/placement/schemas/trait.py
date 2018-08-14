@@ -13,13 +13,16 @@
 
 import copy
 
+from nova.api.openstack.placement.schemas import common
+
+
 TRAIT = {
     "type": "string",
     'minLength': 1, 'maxLength': 255,
 }
 
 CUSTOM_TRAIT = copy.deepcopy(TRAIT)
-CUSTOM_TRAIT.update({"pattern": "^CUSTOM_[A-Z0-9_]+$"})
+CUSTOM_TRAIT.update({"pattern": common.CUSTOM_TRAIT_PATTERN})
 
 PUT_TRAITS_SCHEMA = {
     "type": "object",
