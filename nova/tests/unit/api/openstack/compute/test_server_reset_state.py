@@ -80,7 +80,8 @@ class ResetStateTestsV21(test.NoDBTestCase):
                           body={"os-resetState": {"state": "active"}})
 
         self.compute_api.get.assert_called_once_with(
-            self.context, self.uuid, expected_attrs=None)
+            self.context, self.uuid, expected_attrs=None,
+            cell_down_support=False)
 
     def test_reset_active(self):
         expected = dict(vm_state=vm_states.ACTIVE, task_state=None)
@@ -101,7 +102,8 @@ class ResetStateTestsV21(test.NoDBTestCase):
         self.assertEqual(202, status_int)
 
         self.compute_api.get.assert_called_once_with(
-            self.context, self.instance.uuid, expected_attrs=None)
+            self.context, self.instance.uuid, expected_attrs=None,
+            cell_down_support=False)
         self.instance.save.assert_called_once_with(admin_state_reset=True)
 
     def test_reset_error(self):
@@ -123,5 +125,6 @@ class ResetStateTestsV21(test.NoDBTestCase):
         self.assertEqual(202, status_int)
 
         self.compute_api.get.assert_called_once_with(
-            self.context, self.instance.uuid, expected_attrs=None)
+            self.context, self.instance.uuid, expected_attrs=None,
+            cell_down_support=False)
         self.instance.save.assert_called_once_with(admin_state_reset=True)

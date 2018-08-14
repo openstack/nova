@@ -57,7 +57,8 @@ class CommonMixin(object):
                           controller_function,
                           self.req, uuid, body=body_map)
         self.mock_get.assert_called_once_with(self.context, uuid,
-                                              expected_attrs=None)
+                                              expected_attrs=None,
+                                              cell_down_support=False)
 
     def _test_action(self, action, body=None, method=None,
                      compute_api_args_map=None):
@@ -84,7 +85,8 @@ class CommonMixin(object):
             mock_method.assert_called_once_with(self.context, instance, *args,
                                                 **kwargs)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=None)
+                                              expected_attrs=None,
+                                              cell_down_support=False)
 
     def _test_not_implemented_state(self, action, method=None):
         # Reset the mock.
@@ -108,7 +110,8 @@ class CommonMixin(object):
             mock_method.assert_called_once_with(self.context, instance,
                                                 *args, **kwargs)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=None)
+                                              expected_attrs=None,
+                                              cell_down_support=False)
 
     def _test_invalid_state(self, action, method=None, body_map=None,
                             compute_api_args_map=None,
@@ -143,7 +146,8 @@ class CommonMixin(object):
             mock_method.assert_called_once_with(self.context, instance,
                                                 *args, **kwargs)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=None)
+                                              expected_attrs=None,
+                                              cell_down_support=False)
 
     def _test_locked_instance(self, action, method=None, body=None,
                               compute_api_args_map=None):
@@ -169,7 +173,8 @@ class CommonMixin(object):
             mock_method.assert_called_once_with(self.context, instance,
                                                 *args, **kwargs)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=None)
+                                              expected_attrs=None,
+                                              cell_down_support=False)
 
     def _test_instance_not_found_in_compute_api(self, action,
                          method=None, body=None, compute_api_args_map=None):
@@ -195,7 +200,8 @@ class CommonMixin(object):
             mock_method.assert_called_once_with(self.context, instance,
                                                 *args, **kwargs)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=None)
+                                              expected_attrs=None,
+                                              cell_down_support=False)
 
 
 class CommonTests(CommonMixin, test.NoDBTestCase):

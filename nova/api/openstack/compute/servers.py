@@ -307,7 +307,8 @@ class ServersController(wsgi.Controller):
                                                             expected_attrs)
         instance = common.get_instance(self.compute_api, context,
                                        instance_uuid,
-                                       expected_attrs=expected_attrs)
+                                       expected_attrs=expected_attrs,
+                                       cell_down_support=False)
         return instance
 
     @staticmethod

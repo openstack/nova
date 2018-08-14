@@ -26,6 +26,7 @@ from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
+import six
 
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
@@ -5736,6 +5737,101 @@ class _ComputeAPIUnitTestMixIn(object):
                                                  self.context.project_id,
                                                  limit=1)
 
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_get_instance_from_cell_success(self, mock_get_inst):
+        cell_mapping = objects.CellMapping(uuid=uuids.cell1,
+                                           name='1', id=1)
+        im = objects.InstanceMapping(instance_uuid=uuids.inst,
+                                     cell_mapping=cell_mapping)
+        mock_get_inst.return_value = objects.Instance(uuid=uuids.inst)
+        result = self.compute_api._get_instance_from_cell(self.context,
+            im, [], True)
+        self.assertEqual(uuids.inst, result.uuid)
+        mock_get_inst.assert_called_once()
+
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_get_instance_from_cell_failure(self, mock_get_inst):
+        # Make sure InstanceNotFound is bubbled up and not treated like
+        # other errors
+        mock_get_inst.side_effect = exception.InstanceNotFound(
+            instance_id=uuids.inst)
+        cell_mapping = objects.CellMapping(uuid=uuids.cell1,
+                                           name='1', id=1)
+        im = objects.InstanceMapping(instance_uuid=uuids.inst,
+                                     cell_mapping=cell_mapping)
+        exp = self.assertRaises(exception.InstanceNotFound,
+            self.compute_api._get_instance_from_cell, self.context,
+            im, [], False)
+        self.assertIn('could not be found', six.text_type(exp))
+
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    @mock.patch('nova.context.scatter_gather_cells')
+    def test_get_instance_with_cell_down_support(self, mock_sg, mock_rs):
+        cell_mapping = objects.CellMapping(uuid=uuids.cell1,
+                                           name='1', id=1)
+        im1 = objects.InstanceMapping(instance_uuid=uuids.inst1,
+                                      cell_mapping=cell_mapping,
+                                      queued_for_delete=True)
+        im2 = objects.InstanceMapping(instance_uuid=uuids.inst2,
+                                      cell_mapping=cell_mapping,
+                                      queued_for_delete=False,
+                                      project_id='fake',
+                                      created_at=None)
+        mock_sg.return_value = {
+            uuids.cell1: context.did_not_respond_sentinel
+        }
+
+        # No cell down support, error means we return 500
+        exp = self.assertRaises(exception.NovaException,
+            self.compute_api._get_instance_from_cell, self.context,
+            im1, [], False)
+        self.assertIn('info is not available', six.text_type(exp))
+
+        # Have cell down support, error + queued_for_delete = NotFound
+        exp = self.assertRaises(exception.InstanceNotFound,
+            self.compute_api._get_instance_from_cell, self.context,
+            im1, [], True)
+        self.assertIn('could not be found', six.text_type(exp))
+
+        # Have cell down support, error + archived reqspec = NotFound
+        mock_rs.side_effect = exception.RequestSpecNotFound(
+            instance_uuid=uuids.inst2)
+        exp = self.assertRaises(exception.InstanceNotFound,
+            self.compute_api._get_instance_from_cell, self.context,
+            im2, [], True)
+        self.assertIn('could not be found', six.text_type(exp))
+
+        # Have cell down support, error + reqspec + not queued_for_delete
+        # means we return a minimal instance
+        req_spec = objects.RequestSpec(instance_uuid=uuids.inst2,
+                                       user_id='fake',
+                                       flavor=objects.Flavor(name='fake1'),
+                                       image=objects.ImageMeta(id=uuids.image,
+                                                               name='fake1'),
+                                       availability_zone='nova')
+        mock_rs.return_value = req_spec
+        mock_rs.side_effect = None
+        result = self.compute_api._get_instance_from_cell(self.context,
+            im2, [], True)
+        self.assertIn('user_id', result)
+        self.assertNotIn('display_name', result)
+        self.assertEqual(uuids.inst2, result.uuid)
+        self.assertEqual('nova', result.availability_zone)
+        self.assertEqual(uuids.image, result.image_ref)
+
+        # Same as above, but boot-from-volume where image is not None but the
+        # id of the image is not set.
+        req_spec.image = objects.ImageMeta(name='fake1')
+        result = self.compute_api._get_instance_from_cell(self.context,
+            im2, [], True)
+        self.assertIsNone(result.image_ref)
+
+        # Same as above, but boot-from-volume where image is None
+        req_spec.image = None
+        result = self.compute_api._get_instance_from_cell(self.context,
+            im2, [], True)
+        self.assertIsNone(result.image_ref)
+
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
             side_effect=exception.InstanceMappingNotFound(uuid='fake'))
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
@@ -5788,13 +5884,11 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_get_min_service.assert_called_once_with(self.context,
                                                      'nova-osapi_compute')
 
-    @mock.patch.object(context, 'set_target_cell')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_get_instance_not_in_cell_buildreq_deleted_inst_in_cell(
-            self, mock_get_inst, mock_get_build_req, mock_get_inst_map,
-            mock_target_cell):
+            self, mock_get_inst, mock_get_build_req, mock_get_inst_map):
         # This test checks the following scenario:
         # The instance is not mapped to a cell, so it should be retrieved from
         # a BuildRequest object. However the BuildRequest does not exist
@@ -5804,7 +5898,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.useFixture(nova_fixtures.AllServicesCurrent())
         build_req_obj = fake_build_request.fake_req_obj(self.context)
         instance = build_req_obj.instance
-        inst_map = objects.InstanceMapping(cell_mapping=objects.CellMapping())
+        inst_map = objects.InstanceMapping(cell_mapping=objects.CellMapping(
+            uuid=uuids.cell), instance_uuid=instance.uuid)
 
         mock_get_inst_map.side_effect = [
             objects.InstanceMapping(cell_mapping=None), inst_map]
@@ -5821,8 +5916,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertEqual(2, mock_get_inst_map.call_count)
             mock_get_build_req.assert_called_once_with(self.context,
                                                        instance.uuid)
-            mock_target_cell.assert_called_once_with(self.context,
-                                                 inst_map.cell_mapping)
+
         mock_get_inst.assert_called_once_with(self.context, instance.uuid,
                                               expected_attrs=[
                                                   'metadata',
@@ -5875,19 +5969,19 @@ class _ComputeAPIUnitTestMixIn(object):
                                                       'info_cache'])
             self.assertEqual(instance, inst_from_get)
 
-    @mock.patch.object(context, 'set_target_cell')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_get_instance_in_cell(self, mock_get_inst, mock_get_build_req,
-            mock_get_inst_map, mock_target_cell):
+            mock_get_inst_map):
         self.useFixture(nova_fixtures.AllServicesCurrent())
         # This just checks that the instance is looked up normally and not
         # synthesized from a BuildRequest object. Verification of pulling the
         # instance from the proper cell will be added when that capability is.
         instance = self._create_instance_obj()
         build_req_obj = fake_build_request.fake_req_obj(self.context)
-        inst_map = objects.InstanceMapping(cell_mapping=objects.CellMapping())
+        inst_map = objects.InstanceMapping(cell_mapping=objects.CellMapping(
+            uuid=uuids.cell), instance_uuid=instance.uuid)
         mock_get_inst_map.return_value = inst_map
         mock_get_build_req.return_value = build_req_obj
         mock_get_inst.return_value = instance
@@ -5897,11 +5991,8 @@ class _ComputeAPIUnitTestMixIn(object):
         if self.cell_type is None:
             mock_get_inst_map.assert_called_once_with(self.context,
                                                       instance.uuid)
-            mock_target_cell.assert_called_once_with(self.context,
-                                                     inst_map.cell_mapping)
         else:
             self.assertFalse(mock_get_inst_map.called)
-            self.assertFalse(mock_target_cell.called)
         self.assertEqual(instance, returned_inst)
         mock_get_inst.assert_called_once_with(self.context, instance.uuid,
                                               expected_attrs=[

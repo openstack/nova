@@ -29,7 +29,8 @@ from nova.tests.unit.api.openstack import fakes
 UUID = uuids.abc
 
 
-def fake_instance_get(self, _context, instance_uuid, expected_attrs=None):
+def fake_instance_get(self, _context, instance_uuid, expected_attrs=None,
+                      cell_down_support=False):
     if instance_uuid != UUID:
         raise Exception("Invalid UUID")
     return objects.Instance(uuid=instance_uuid, host='123')

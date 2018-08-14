@@ -127,7 +127,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
             mock_resize.assert_called_once_with(
                 self.context, instance, host_name=self.host_name)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=None)
+                                              expected_attrs=None,
+                                              cell_down_support=False)
 
     def test_migrate_too_many_instances(self):
         exc_info = exception.TooManyInstances(overs='', req='', used=0,
@@ -149,7 +150,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                 'hostname', self.force, self.async_)
 
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=None)
+                                              expected_attrs=None,
+                                              cell_down_support=False)
 
     def test_migrate_live_enabled(self):
         param = self._get_params(host='hostname')
@@ -226,7 +228,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                 self.context, instance, False, self.disk_over_commit,
                 'hostname', self.force, self.async_)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=None)
+                                              expected_attrs=None,
+                                              cell_down_support=False)
 
     def test_migrate_live_compute_service_unavailable(self):
         self._test_migrate_live_failed_with_exception(
@@ -443,7 +446,8 @@ class MigrateServerTestsV234(MigrateServerTestsV230):
                 self.context, instance, None, self.disk_over_commit,
                 'hostname', self.force, self.async_)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=None)
+                                              expected_attrs=None,
+                                              cell_down_support=False)
 
     def test_migrate_live_unexpected_error(self):
         body = {'os-migrateLive':
@@ -461,7 +465,8 @@ class MigrateServerTestsV234(MigrateServerTestsV230):
                 self.context, instance, None, self.disk_over_commit,
                 'hostname', self.force, self.async_)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=None)
+                                              expected_attrs=None,
+                                              cell_down_support=False)
 
 
 class MigrateServerTestsV256(MigrateServerTestsV234):
