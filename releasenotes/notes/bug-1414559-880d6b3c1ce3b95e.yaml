@@ -1,8 +1,0 @@
----
-upgrade:
-  - |
-    Live migrations are now initially slowed to ensure Neutron is given
-    adequate time to wire up the VIFs on the destination. Once complete Neutron
-    will send an event to Nova returning the migration to full speed. This
-    requires Neutron >=11.0.4 on Pike when used with LinuxBridge VIFs in order
-    to pick up the Icb039ae2d465e3822ab07ae4f9bc405c1362afba bugfix.
