@@ -1994,7 +1994,7 @@ class SchedulerReportClient(object):
     @safe_connect
     @retries
     def put_allocations(self, context, rp_uuid, consumer_uuid, alloc_data,
-                        project_id, user_id):
+                        project_id, user_id, consumer_generation):
         """Creates allocation records for the supplied instance UUID against
         the supplied resource provider.
 
@@ -2009,29 +2009,38 @@ class SchedulerReportClient(object):
                            consume.
         :param project_id: The project_id associated with the allocations.
         :param user_id: The user_id associated with the allocations.
+        :param consumer_generation: The current generation of the consumer
         :returns: True if the allocations were created, False otherwise.
         :raises: Retry if the operation should be retried due to a concurrent
-                 update.
+                 resource provider update.
+        :raises: AllocationUpdateFailed if placement returns a consumer
+                                        generation conflict
         """
+
         payload = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': rp_uuid,
-                    },
-                    'resources': alloc_data,
-                },
-            ],
+            'allocations': {
+                    rp_uuid: {'resources': alloc_data},
+            },
             'project_id': project_id,
             'user_id': user_id,
+            'consumer_generation': consumer_generation
         }
         url = '/allocations/%s' % consumer_uuid
-        r = self.put(url, payload, version='1.8',
+        r = self.put(url, payload, version=CONSUMER_GENERATION_VERSION,
                      global_request_id=context.global_id)
         if r.status_code != 204:
+            err = r.json()['errors'][0]
             # NOTE(jaypipes): Yes, it sucks doing string comparison like this
             # but we have no error codes, only error messages.
-            if 'concurrently updated' in r.text:
+            # TODO(gibi): Use more granular error codes when available
+            if err['code'] == 'placement.concurrent_update':
+                if 'consumer generation conflict' in err['detail']:
+                    raise exception.AllocationUpdateFailed(
+                        consumer_uuid=consumer_uuid, error=err['detail'])
+                # this is not a consumer generation conflict so it can only be
+                # a resource provider generation conflict. The caller does not
+                # provide resource provider generation so this is just a
+                # placement internal race. We can blindly retry locally.
                 reason = ('another process changed the resource providers '
                           'involved in our attempt to put allocations for '
                           'consumer %s' % consumer_uuid)

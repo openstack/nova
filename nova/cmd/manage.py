@@ -1815,7 +1815,7 @@ class PlacementCommands(object):
                 ctxt, instance.uuid)
         except ks_exc.ClientException as e:
             raise exception.AllocationUpdateFailed(
-                instance=instance.uuid,
+                consumer_uuid=instance.uuid,
                 error=_("Allocation retrieval failed: %s") % e)
         except exception.ConsumerAllocationRetrievalFailed as e:
             output(_("Allocation retrieval failed: %s") % e)
@@ -1858,7 +1858,7 @@ class PlacementCommands(object):
                 return True
             else:
                 raise exception.AllocationUpdateFailed(
-                    instance=instance.uuid, error=resp.text)
+                    consumer_uuid=instance.uuid, error=resp.text)
 
         # This instance doesn't have allocations so we need to find
         # its compute node resource provider.
@@ -1871,7 +1871,8 @@ class PlacementCommands(object):
             instance, instance.flavor)
         if placement.put_allocations(
                 ctxt, node_uuid, instance.uuid, resources,
-                instance.project_id, instance.user_id):
+                instance.project_id, instance.user_id,
+                consumer_generation=None):
             output(_('Successfully created allocations for '
                      'instance %(instance)s against resource '
                      'provider %(provider)s.') %

@@ -2535,7 +2535,43 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         mock_put_allocations.assert_called_once_with(
             test.MatchType(context.RequestContext), uuidsentinel.node,
             uuidsentinel.instance, mock.sentinel.resources, 'fake-project',
-            'fake-user')
+            'fake-user', consumer_generation=None)
+
+    @mock.patch('nova.objects.CellMappingList.get_all',
+                return_value=objects.CellMappingList(objects=[
+                    objects.CellMapping(name='cell1',
+                                        uuid=uuidsentinel.cell1)]))
+    @mock.patch('nova.objects.InstanceList.get_by_filters',
+                return_value=objects.InstanceList(objects=[
+                    objects.Instance(
+                        uuid=uuidsentinel.instance, host='fake', node='fake',
+                        task_state=None, flavor=objects.Flavor(),
+                        project_id='fake-project', user_id='fake-user')]))
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocs_for_consumer', return_value={})
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
+                return_value=objects.ComputeNode(uuid=uuidsentinel.node))
+    @mock.patch('nova.scheduler.utils.resources_from_flavor',
+                return_value=mock.sentinel.resources)
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put_allocations',
+                side_effect=exception.AllocationUpdateFailed(
+                    consumer_uuid=uuidsentinel.instance,
+                    error="consumer generation conflict"))
+    def test_heal_allocations_put_allocations_fails_with_consumer_conflict(
+            self, mock_put_allocations, mock_res_from_flavor,
+            mock_get_compute_node, mock_get_allocs, mock_get_instances,
+            mock_get_all_cells):
+        self.assertEqual(3, self.cli.heal_allocations())
+        self.assertIn('Failed to update allocations for consumer',
+                      self.output.getvalue())
+        instance = mock_get_instances.return_value[0]
+        mock_res_from_flavor.assert_called_once_with(
+            instance, instance.flavor)
+        mock_put_allocations.assert_called_once_with(
+            test.MatchType(context.RequestContext), uuidsentinel.node,
+            uuidsentinel.instance, mock.sentinel.resources, 'fake-project',
+            'fake-user', consumer_generation=None)
 
     @mock.patch('nova.objects.CellMappingList.get_all',
                 new=mock.Mock(return_value=objects.CellMappingList(objects=[
