@@ -557,7 +557,7 @@ class HostAPI(compute_api.HostAPI):
         return self.cells_rpcapi.get_host_uptime(context, host_name)
 
     def service_get_all(self, context, filters=None, set_zones=False,
-                        all_cells=False):
+                        all_cells=False, cell_down_support=False):
         """Get all services.
 
         Note that this is the cellsv1 variant, which means we ignore the

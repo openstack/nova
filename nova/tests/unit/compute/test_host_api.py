@@ -199,6 +199,42 @@ class ComputeHostAPITestCase(test.TestCase):
         self.assertEqual(['host-%s' % uuids.cell1],
                          [svc.host for svc in services])
 
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    @mock.patch.object(objects.HostMappingList, 'get_by_cell_id')
+    @mock.patch('nova.context.scatter_gather_all_cells')
+    def test_service_get_all_cells_with_minimal_constructs(self, mock_sg,
+                                                           mock_get_hm,
+                                                           mock_cm_list):
+        service = objects.Service(binary='nova-compute',
+                                  host='host-%s' % uuids.cell0)
+        cells = [
+            objects.CellMapping(uuid=uuids.cell1, id=1),
+            objects.CellMapping(uuid=uuids.cell2, id=2),
+        ]
+        mock_cm_list.return_value = cells
+        context.load_cells()
+        # create two hms in cell1, which is the down cell in this test.
+        hm1 = objects.HostMapping(self.ctxt, host='host1-unavailable',
+            cell_mapping=cells[0])
+        hm1.create()
+        hm2 = objects.HostMapping(self.ctxt, host='host2-unavailable',
+            cell_mapping=cells[0])
+        hm2.create()
+        mock_sg.return_value = {
+            cells[0].uuid: [service],
+            cells[1].uuid: context.did_not_respond_sentinel,
+        }
+        mock_get_hm.return_value = [hm1, hm2]
+        services = self.host_api.service_get_all(self.ctxt, all_cells=True,
+            cell_down_support=True)
+        # returns the results from cell0 and minimal construct from cell1.
+        self.assertEqual(sorted(['host-%s' % uuids.cell0, 'host1-unavailable',
+                         'host2-unavailable']),
+                         sorted([svc.host for svc in services]))
+        mock_sg.assert_called_once_with(self.ctxt, objects.ServiceList.get_all,
+                                        None, set_zones=False)
+        mock_get_hm.assert_called_once_with(self.ctxt, cells[1].id)
+
     def test_service_get_all_no_zones(self):
         services = [dict(test_service.fake_service,
                          id=1, topic='compute', host='host1'),
@@ -539,6 +575,10 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
 
     @testtools.skip('cellsv1 does not use this')
     def test_service_get_all_cells_with_failures(self):
+        pass
+
+    @testtools.skip('cellsv1 does not use this')
+    def test_service_get_all_cells_with_minimal_constructs(self):
         pass
 
     @testtools.skip('cellsv1 does not use this')
