@@ -2364,3 +2364,7 @@ class ZVMConnectorError(ZVMDriverException):
         self.rc = results.get('rc')
         self.rs = results.get('rs')
         self.errmsg = results.get('errmsg')
+
+
+class NoResourceClass(NovaException):
+    msg_fmt = _("Resource class not found for Ironic node %(node)s.")
