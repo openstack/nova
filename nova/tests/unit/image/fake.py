@@ -167,10 +167,10 @@ class _FakeImageService(object):
                  trusted_certs=None):
         self.show(context, image_id)
         if data:
-            data.write(self._imagedata.get(image_id, ''))
+            data.write(self._imagedata.get(image_id, b''))
         elif dst_path:
             with open(dst_path, 'wb') as data:
-                data.write(self._imagedata.get(image_id, ''))
+                data.write(self._imagedata.get(image_id, b''))
 
     def show(self, context, image_id, include_locations=False,
              show_deleted=True):
