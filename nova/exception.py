@@ -885,6 +885,12 @@ class PortUpdateFailed(Invalid):
     msg_fmt = _("Port update failed for port %(port_id)s: %(reason)s")
 
 
+class AttachSRIOVPortNotSupported(Invalid):
+    msg_fmt = _('Attaching SR-IOV port %(port_id)s to server '
+                '%(instance_uuid)s is not supported. SR-IOV ports must be '
+                'specified during server creation.')
+
+
 class FixedIpExists(NovaException):
     msg_fmt = _("Fixed IP %(address)s already exists.")
 
