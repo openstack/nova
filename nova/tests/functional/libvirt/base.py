@@ -51,7 +51,8 @@ class ServersTestBase(base.ServersTestBase):
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
         self.useFixture(fixtures.MockPatch(
-            'nova.virt.libvirt.LibvirtDriver._create_image'))
+            'nova.virt.libvirt.LibvirtDriver._create_image',
+            return_value=(False, False)))
         self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
             return_value={'total': 128, 'used': 44, 'free': 84}))
