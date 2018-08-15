@@ -17,8 +17,10 @@ assigned to only one guest and cannot be shared.
 
 .. note::
 
-   For information on attaching virtual SR-IOV devices to guests, refer to the
-   :neutron-doc:`Networking Guide <admin/config-sriov>`.
+   For information on creating servers with virtual SR-IOV devices, refer to
+   the :neutron-doc:`Networking Guide <admin/config-sriov>`. Attaching
+   SR-IOV ports to existing servers is not currently supported, see
+   `bug 1708433 <https://bugs.launchpad.net/nova/+bug/1708433>`_ for details.
 
 To enable PCI passthrough, follow the steps below:
 

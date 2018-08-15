@@ -650,7 +650,7 @@ class API(base_api.NetworkAPI):
                               port_id)
 
     def _validate_requested_port_ids(self, context, instance, neutron,
-                                     requested_networks):
+                                     requested_networks, attach=False):
         """Processes and validates requested networks for allocation.
 
         Iterates over the list of NetworkRequest objects, validating the
@@ -665,6 +665,9 @@ class API(base_api.NetworkAPI):
         :type neutron: neutronclient.v2_0.client.Client
         :param requested_networks: List of user-requested networks and/or ports
         :type requested_networks: nova.objects.NetworkRequestList
+        :param attach: Boolean indicating if a port is being attached to an
+            existing running instance. Should be False during server create.
+        :type attach: bool
         :returns: tuple of:
             - ports: dict mapping of port id to port dict
             - ordered_networks: list of nova.objects.NetworkRequest objects
@@ -678,6 +681,8 @@ class API(base_api.NetworkAPI):
             attached to another instance.
         :raises nova.exception.PortNotUsableDNS: If a requested port has a
             value assigned to its dns_name attribute.
+        :raises nova.exception.AttachSRIOVPortNotSupported: If a requested port
+            is an SR-IOV port and ``attach=True``.
         """
         ports = {}
         ordered_networks = []
@@ -714,6 +719,16 @@ class API(base_api.NetworkAPI):
 
                     # Make sure the port is usable
                     _ensure_no_port_binding_failure(port)
+
+                    # Make sure the port can be attached.
+                    if attach:
+                        # SR-IOV port attach is not supported.
+                        vnic_type = port.get('binding:vnic_type',
+                                             network_model.VNIC_TYPE_NORMAL)
+                        if vnic_type in network_model.VNIC_TYPES_SRIOV:
+                            raise exception.AttachSRIOVPortNotSupported(
+                                port_id=port['id'],
+                                instance_uuid=instance.uuid)
 
                     # If requesting a specific port, automatically process
                     # the network for that port as if it were explicitly
@@ -955,7 +970,8 @@ class API(base_api.NetworkAPI):
 
     def allocate_for_instance(self, context, instance, vpn,
                               requested_networks, macs=None,
-                              security_groups=None, bind_host_id=None):
+                              security_groups=None, bind_host_id=None,
+                              attach=False):
         """Allocate network resources for the instance.
 
         :param context: The request context.
@@ -973,6 +989,8 @@ class API(base_api.NetworkAPI):
         :param security_groups: None or security groups to allocate for
             instance.
         :param bind_host_id: the host ID to attach to the ports being created.
+        :param attach: Boolean indicating if a port is being attached to an
+            existing running instance. Should be False during server create.
         :returns: network info as from get_instance_nw_info()
         """
         LOG.debug('allocate_for_instance()', instance=instance)
@@ -993,7 +1011,7 @@ class API(base_api.NetworkAPI):
         #
         requested_ports_dict, ordered_networks = (
             self._validate_requested_port_ids(
-                context, instance, neutron, requested_networks))
+                context, instance, neutron, requested_networks, attach=attach))
 
         nets = self._validate_requested_network_ids(
             context, instance, neutron, requested_networks, ordered_networks)
@@ -1542,7 +1560,7 @@ class API(base_api.NetworkAPI):
                                             tag=tag)])
         return self.allocate_for_instance(context, instance, vpn=False,
                 requested_networks=requested_networks,
-                bind_host_id=bind_host_id)
+                bind_host_id=bind_host_id, attach=True)
 
     def deallocate_port_for_instance(self, context, instance, port_id):
         """Remove a specified port from the instance.
