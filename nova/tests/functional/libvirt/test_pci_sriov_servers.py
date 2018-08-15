@@ -126,7 +126,8 @@ class SRIOVServersTest(_PCIServersTestBase):
         },
     )]
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image',
+                return_value=(False, False))
     def test_create_server_with_VF(self, img_mock):
 
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
@@ -142,7 +143,8 @@ class SRIOVServersTest(_PCIServersTestBase):
 
         self._run_build_test(flavor_id)
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image',
+                return_value=(False, False))
     def test_create_server_with_PF(self, img_mock):
 
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
@@ -158,7 +160,8 @@ class SRIOVServersTest(_PCIServersTestBase):
 
         self._run_build_test(flavor_id)
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image',
+                return_value=(False, False))
     def test_create_server_with_PF_no_VF(self, img_mock):
 
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
@@ -179,7 +182,8 @@ class SRIOVServersTest(_PCIServersTestBase):
         self._run_build_test(flavor_id_pfs)
         self._run_build_test(flavor_id_vfs, end_status='ERROR')
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image',
+                return_value=(False, False))
     def test_create_server_with_VF_no_PF(self, img_mock):
 
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
@@ -294,7 +298,8 @@ class PCIServersTest(_PCIServersTestBase):
         }
     )]
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image',
+                return_value=(False, False))
     def test_create_server_with_pci_dev_and_numa(self, img_mock):
         """Verifies that an instance can be booted with cpu pinning and with an
            assigned pci device.
@@ -316,7 +321,8 @@ class PCIServersTest(_PCIServersTestBase):
 
         self._run_build_test(flavor_id)
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image',
+                return_value=(False, False))
     def test_create_server_with_pci_dev_and_numa_fails(self, img_mock):
         """This test ensures that it is not possible to allocated CPU and
            memory resources from one NUMA node and a PCI device from another.
@@ -363,7 +369,8 @@ class PCIServersWithNUMAPoliciesTest(_PCIServersTestBase):
         }
     )]
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image',
+                return_value=(False, False))
     def test_create_server_with_pci_dev_and_numa(self, img_mock):
         """Validate behavior of 'preferred' PCI NUMA policy.
 
