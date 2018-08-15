@@ -25,6 +25,7 @@ from oslo_policy import policy as oslo_policy
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
@@ -162,7 +163,9 @@ class ControllerTest(test.TestCase):
         self.flags(use_ipv6=False)
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
-        return_server = fakes.fake_compute_get(id=2, availability_zone='nova')
+        return_server = fakes.fake_compute_get(id=2, availability_zone='nova',
+                                               launched_at=None,
+                                               terminated_at=None)
         return_servers = fakes.fake_compute_get_all()
         # Server sort keys extension is enabled in v21 so sort data is passed
         # to the instance API and the sorted DB API is invoked
@@ -385,7 +388,9 @@ class ServersControllerTest(ControllerTest):
                 "OS-EXT-SRV-ATTR:host": None,
                 "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000002",
-                "key_name": ''
+                "key_name": '',
+                "OS-SRV-USG:launched_at": None,
+                "OS-SRV-USG:terminated_at": None
             }
         }
 
@@ -1345,6 +1350,62 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(1, len(servers))
         self.assertEqual(uuids.fake, servers[0]['id'])
 
+    def _assertServerUsage(self, server, launched_at, terminated_at):
+        resp_launched_at = timeutils.parse_isotime(
+            server.get('OS-SRV-USG:launched_at'))
+        self.assertEqual(timeutils.normalize_time(resp_launched_at),
+                         launched_at)
+        resp_terminated_at = timeutils.parse_isotime(
+            server.get('OS-SRV-USG:terminated_at'))
+        self.assertEqual(timeutils.normalize_time(resp_terminated_at),
+                         terminated_at)
+
+    def test_show_server_usage(self):
+        DATE1 = datetime.datetime(year=2013, month=4, day=5, hour=12)
+        DATE2 = datetime.datetime(year=2013, month=4, day=5, hour=13)
+        self.mock_get.side_effect = fakes.fake_compute_get(
+            id=1, uuid=FAKE_UUID, launched_at=DATE1, terminated_at=DATE2)
+        fakes.stub_out_secgroup_api(self)
+        req = self.req('/fake/servers/%s' % FAKE_UUID)
+        req.accept = 'application/json'
+        req.method = 'GET'
+        res = req.get_response(compute.APIRouterV21())
+        self.assertEqual(res.status_int, 200)
+        self.useFixture(utils_fixture.TimeFixture())
+        self._assertServerUsage(jsonutils.loads(res.body).get('server'),
+                                launched_at=DATE1,
+                                terminated_at=DATE2)
+
+    def test_detail_server_usage(self):
+        DATE1 = datetime.datetime(year=2013, month=4, day=5, hour=12)
+        DATE2 = datetime.datetime(year=2013, month=4, day=5, hour=13)
+        DATE3 = datetime.datetime(year=2013, month=4, day=5, hour=14)
+
+        def fake_compute_get_all(*args, **kwargs):
+            db_list = [
+                fakes.stub_instance_obj(context, id=2, uuid=FAKE_UUID,
+                                        launched_at=DATE2,
+                                        terminated_at=DATE3),
+                fakes.stub_instance_obj(context, id=3, uuid=FAKE_UUID,
+                                        launched_at=DATE1,
+                                        terminated_at=DATE3),
+            ]
+            return objects.InstanceList(objects=db_list)
+        self.mock_get_all.side_effect = fake_compute_get_all
+        fakes.stub_out_secgroup_api(self)
+        req = self.req('/fake/servers/detail')
+        req.accept = 'application/json'
+        servers = req.get_response(compute.APIRouterV21())
+        self.assertEqual(servers.status_int, 200)
+        self._assertServerUsage(jsonutils.loads(
+                                    servers.body).get('servers')[0],
+                                launched_at=DATE2,
+                                terminated_at=DATE3)
+        self._assertServerUsage(jsonutils.loads(
+                                    servers.body).get('servers')[1],
+                                launched_at=DATE1,
+                                terminated_at=DATE3)
+
     def test_get_all_server_details(self):
         expected_flavor = {
                 "id": "2",
@@ -1445,7 +1506,9 @@ class ServersControllerTestV23(ServersControllerTest):
             root_device_name="/dev/vda",
             user_data="userdata",
             metadata={"seq": "2"},
-            availability_zone='nova')
+            availability_zone='nova',
+            launched_at=None,
+            terminated_at=None)
 
     def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
                               status="ACTIVE", progress=100):
@@ -1494,7 +1557,9 @@ class ServersControllerTestV23(ServersControllerTest):
                               root_device_name="/dev/vda",
                               user_data="userdata",
                               metadata={"seq": "2"},
-                              availability_zone='nova')
+                              availability_zone='nova',
+                              launched_at=None,
+                              terminated_at=None)
                 obj_list.append(server)
             return objects.InstanceList(objects=obj_list)
 
@@ -1527,7 +1592,9 @@ class ServersControllerTestV29(ServersControllerTest):
             root_device_name="/dev/vda",
             user_data="userdata",
             metadata={"seq": "2"},
-            availability_zone='nova')
+            availability_zone='nova',
+            launched_at=None,
+            terminated_at=None)
 
     def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
                               status="ACTIVE", progress=100):
@@ -1561,7 +1628,9 @@ class ServersControllerTestV29(ServersControllerTest):
             root_device_name="/dev/vda",
             user_data="userdata",
             metadata={"seq": "2"},
-            availability_zone='nova')
+            availability_zone='nova',
+            launched_at=None,
+            terminated_at=None)
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
@@ -1599,7 +1668,9 @@ class ServersControllerTestV29(ServersControllerTest):
             root_device_name="/dev/vda",
             user_data="userdata",
             metadata={"seq": "2"},
-            availability_zone='nova')
+            availability_zone='nova',
+            launched_at=None,
+            terminated_at=None)
 
         req = self.req('/fake/servers/detail')
         servers_list = self.controller.detail(req)
@@ -1655,7 +1726,9 @@ class ServersControllerTestV216(ServersControllerTest):
             root_device_name="/dev/vda",
             user_data="userdata",
             metadata={"seq": "2"},
-            availability_zone='nova')
+            availability_zone='nova',
+            launched_at=None,
+            terminated_at=None)
         self.useFixture(fixtures.MockPatchObject(
             compute_api.API, 'get_instance_host_status',
             return_value='UP')).mock
@@ -1708,7 +1781,9 @@ class ServersControllerTestV216(ServersControllerTest):
                               root_device_name="/dev/vda",
                               user_data="userdata",
                               metadata={"seq": "2"},
-                              availability_zone='nova')
+                              availability_zone='nova',
+                              launched_at=None,
+                              terminated_at=None)
                 obj_list.append(server)
             return objects.InstanceList(objects=obj_list)
 
@@ -1741,7 +1816,9 @@ class ServersControllerTestV219(ServersControllerTest):
             root_device_name="/dev/vda",
             user_data="userdata",
             metadata={"seq": "2"},
-            availability_zone='nova')
+            availability_zone='nova',
+            launched_at=None,
+            terminated_at=None)
         self.useFixture(fixtures.MockPatchObject(
             compute_api.API, 'get_instance_host_status',
             return_value='UP')).mock
@@ -1781,7 +1858,9 @@ class ServersControllerTestV219(ServersControllerTest):
             root_device_name="/dev/vda",
             user_data="userdata",
             metadata={"seq": "2"},
-            availability_zone='nova')
+            availability_zone='nova',
+            launched_at=None,
+            terminated_at=None)
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
@@ -1800,7 +1879,9 @@ class ServersControllerTestV219(ServersControllerTest):
         self.mock_get_all.side_effect = None
         self.mock_get_all.return_value = (
             fake_instance_get_all_with_description(context,
-                                                   [s1_desc, s2_desc]))
+                                                   [s1_desc, s2_desc],
+                                                   launched_at=None,
+                                                   terminated_at=None))
         req = self.req('/fake/servers/detail')
         servers_list = self.controller.detail(req)
         # Check that each returned server has the same 'description' value
@@ -2335,7 +2416,9 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                            'OS-EXT-SRV-ATTR:ramdisk_id',
                            'OS-EXT-SRV-ATTR:reservation_id',
                            'OS-EXT-SRV-ATTR:root_device_name',
-                           'OS-EXT-SRV-ATTR:user_data', 'host_status']
+                           'OS-EXT-SRV-ATTR:user_data', 'host_status',
+                           'OS-SRV-USG:launched_at',
+                           'OS-SRV-USG:terminated_at']
         if not self.expected_key_name:
             get_only_fields.append('key_name')
         for field in get_only_fields:
@@ -2946,7 +3029,8 @@ class ServersControllerUpdateTest(ControllerTest):
                            'OS-EXT-SRV-ATTR:reservation_id',
                            'OS-EXT-SRV-ATTR:root_device_name',
                            'OS-EXT-SRV-ATTR:user_data', 'host_status',
-                           'key_name']
+                           'key_name', 'OS-SRV-USG:launched_at',
+                           'OS-SRV-USG:terminated_at']
         for field in get_only_fields:
             self.assertNotIn(field, res_dict['server'])
 
@@ -6083,7 +6167,9 @@ class ServersViewBuilderTest(test.TestCase):
             display_name="test_server",
             include_fake_metadata=False,
             availability_zone='nova',
-            nw_cache=nw_cache_info)
+            nw_cache=nw_cache_info,
+            launched_at=None,
+            terminated_at=None)
 
         privates = ['172.19.0.1']
         publics = ['192.168.0.3']
@@ -6262,7 +6348,9 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-EXT-SRV-ATTR:host": None,
                 "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
-                "key_name": ''
+                "key_name": '',
+                "OS-SRV-USG:launched_at": None,
+                "OS-SRV-USG:terminated_at": None
             }
         }
 
@@ -6347,7 +6435,10 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-EXT-SRV-ATTR:host": None,
                 "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
-                "key_name": ''
+                "key_name": '',
+                "OS-SRV-USG:launched_at": None,
+                "OS-SRV-USG:terminated_at": None
+
             }
         }
 
@@ -6531,7 +6622,9 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-EXT-SRV-ATTR:host": None,
                 "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
-                "key_name": ''
+                "key_name": '',
+                "OS-SRV-USG:launched_at": None,
+                "OS-SRV-USG:terminated_at": None
             }
         }
 
@@ -6613,7 +6706,9 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-EXT-SRV-ATTR:host": None,
                 "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
-                "key_name": ''
+                "key_name": '',
+                "OS-SRV-USG:launched_at": None,
+                "OS-SRV-USG:terminated_at": None
             }
         }
 

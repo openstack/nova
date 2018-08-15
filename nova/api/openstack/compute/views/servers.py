@@ -118,7 +118,7 @@ class ViewBuilder(common.ViewBuilder):
     def show(self, request, instance, extend_address=True,
              show_extra_specs=None, show_AZ=True, show_config_drive=True,
              show_extended_attr=None, show_host_status=None,
-             show_keypair=True):
+             show_keypair=True, show_srv_usg=True):
         """Detailed view of a single instance."""
         ip_v4 = instance.get('access_ip_v4')
         ip_v6 = instance.get('access_ip_v6')
@@ -181,6 +181,16 @@ class ViewBuilder(common.ViewBuilder):
 
         if show_keypair:
             server["server"]["key_name"] = instance["key_name"]
+
+        if show_srv_usg:
+            for k in ['launched_at', 'terminated_at']:
+                key = "OS-SRV-USG:" + k
+                # NOTE(danms): Historically, this timestamp has been generated
+                # merely by grabbing str(datetime) of a TZ-naive object. The
+                # only way we can keep that with instance objects is to strip
+                # the tzinfo from the stamp and str() it.
+                server["server"][key] = (instance[k].replace(tzinfo=None)
+                                         if instance[k] else None)
 
         if show_extended_attr is None:
             show_extended_attr = context.can(

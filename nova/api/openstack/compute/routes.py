@@ -78,7 +78,6 @@ from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import server_migrations
 from nova.api.openstack.compute import server_password
 from nova.api.openstack.compute import server_tags
-from nova.api.openstack.compute import server_usage
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import services
 from nova.api.openstack.compute import shelve
@@ -270,7 +269,6 @@ server_controller = functools.partial(_create_controller,
         extended_volumes.ExtendedVolumesController,
         hide_server_addresses.Controller,
         security_groups.SecurityGroupsOutputController,
-        server_usage.ServerUsageController,
     ],
     [
         admin_actions.AdminActionsController,
