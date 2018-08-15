@@ -117,7 +117,8 @@ class ViewBuilder(common.ViewBuilder):
 
     def show(self, request, instance, extend_address=True,
              show_extra_specs=None, show_AZ=True, show_config_drive=True,
-             show_extended_attr=None, show_host_status=None):
+             show_extended_attr=None, show_host_status=None,
+             show_keypair=True):
         """Detailed view of a single instance."""
         ip_v4 = instance.get('access_ip_v4')
         ip_v6 = instance.get('access_ip_v6')
@@ -177,6 +178,9 @@ class ViewBuilder(common.ViewBuilder):
 
         if show_config_drive:
             server["server"]["config_drive"] = instance["config_drive"]
+
+        if show_keypair:
+            server["server"]["key_name"] = instance["key_name"]
 
         if show_extended_attr is None:
             show_extended_attr = context.can(

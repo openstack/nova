@@ -721,7 +721,8 @@ class ServersController(wsgi.Controller):
                                            show_AZ=False,
                                            show_config_drive=False,
                                            show_extended_attr=False,
-                                           show_host_status=False)
+                                           show_host_status=False,
+                                           show_keypair=False)
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
@@ -985,20 +986,21 @@ class ServersController(wsgi.Controller):
 
         instance = self._get_server(context, req, id, is_detail=True)
 
+        # NOTE(liuyulong): set the new key_name for the API response.
+        # from microversion 2.54 onwards.
+        show_keypair = api_version_request.is_supported(
+                           req, min_version='2.54')
         view = self._view_builder.show(req, instance, extend_address=False,
                                        show_AZ=False,
                                        show_config_drive=False,
                                        show_extended_attr=False,
-                                       show_host_status=False)
+                                       show_host_status=False,
+                                       show_keypair=show_keypair)
 
         # Add on the admin_password attribute since the view doesn't do it
         # unless instance passwords are disabled
         if CONF.api.enable_instance_password:
             view['server']['adminPass'] = password
-
-        if api_version_request.is_supported(req, min_version='2.54'):
-            # NOTE(liuyulong): set the new key_name for the API response.
-            view['server']['key_name'] = instance.key_name
 
         if include_user_data:
             view['server']['user_data'] = instance.user_data

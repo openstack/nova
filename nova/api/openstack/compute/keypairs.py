@@ -288,28 +288,3 @@ class KeypairController(wsgi.Controller):
                 keypairs_dict['keypairs_links'] = keypairs_links
 
         return keypairs_dict
-
-
-class Controller(wsgi.Controller):
-
-    def _add_key_name(self, req, servers):
-        for server in servers:
-            db_server = req.get_db_instance(server['id'])
-            # server['id'] is guaranteed to be in the cache due to
-            # the core API adding it in its 'show'/'detail' methods.
-            server['key_name'] = db_server['key_name']
-
-    def _show(self, req, resp_obj):
-        if 'server' in resp_obj.obj:
-            server = resp_obj.obj['server']
-            self._add_key_name(req, [server])
-
-    @wsgi.extends
-    def show(self, req, resp_obj, id):
-        self._show(req, resp_obj)
-
-    @wsgi.extends
-    def detail(self, req, resp_obj):
-        if 'servers' in resp_obj.obj:
-            servers = resp_obj.obj['servers']
-            self._add_key_name(req, servers)
