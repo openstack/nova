@@ -105,7 +105,7 @@ def _get_applicable_vm_recs(xenapi):
     for vm_ref in call_xenapi(xenapi, 'VM.get_all'):
         try:
             vm_rec = call_xenapi(xenapi, 'VM.get_record', vm_ref)
-        except XenAPI.Failure, e:
+        except XenAPI.Failure as e:
             if e.details[0] != 'HANDLE_INVALID':
                 raise
             continue
@@ -161,7 +161,7 @@ def _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids):
                 try:
                     cur_vdi_rec = call_xenapi(xenapi, 'VDI.get_record',
                             cur_vdi_ref)
-                except XenAPI.Failure, e:
+                except XenAPI.Failure as e:
                     if e.details[0] != 'HANDLE_INVALID':
                         raise
                     break
@@ -176,7 +176,7 @@ def _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids):
         for vbd_ref in vbd_refs:
             try:
                 vbd_rec = call_xenapi(xenapi, 'VBD.get_record', vbd_ref)
-            except XenAPI.Failure, e:
+            except XenAPI.Failure as e:
                 if e.details[0] != 'HANDLE_INVALID':
                     raise
                 continue
@@ -191,7 +191,7 @@ def _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids):
 
             try:
                 vdi_rec = call_xenapi(xenapi, 'VDI.get_record', vbd_vdi_ref)
-            except XenAPI.Failure, e:
+            except XenAPI.Failure as e:
                 if e.details[0] != 'HANDLE_INVALID':
                     raise
                 continue
@@ -210,7 +210,7 @@ def _find_all_vdis_and_system_vdis(xenapi, all_vdi_uuids, connected_vdi_uuids):
     for vdi_ref in call_xenapi(xenapi, 'VDI.get_all'):
         try:
             vdi_rec = call_xenapi(xenapi, 'VDI.get_record', vdi_ref)
-        except XenAPI.Failure, e:
+        except XenAPI.Failure as e:
             if e.details[0] != 'HANDLE_INVALID':
                 raise
             continue
@@ -254,7 +254,7 @@ def clean_orphaned_vdis(xenapi, vdi_uuids):
         vdi_ref = call_xenapi(xenapi, 'VDI.get_by_uuid', vdi_uuid)
         try:
             call_xenapi(xenapi, 'VDI.destroy', vdi_ref)
-        except XenAPI.Failure, exc:
+        except XenAPI.Failure as exc:
             sys.stderr.write("Skipping %s: %s" % (vdi_uuid, exc))
 
 

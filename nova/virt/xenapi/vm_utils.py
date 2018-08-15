@@ -23,7 +23,6 @@ import contextlib
 import math
 import os
 import time
-import urllib
 from xml.dom import minidom
 from xml.parsers import expat
 
@@ -42,6 +41,7 @@ from oslo_utils import versionutils
 import six
 from six.moves import range
 import six.moves.urllib.parse as urlparse
+import six.moves.urllib.request as urlrequest
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state
@@ -1950,7 +1950,7 @@ def _get_rrd_server():
 def _get_rrd(server, vm_uuid):
     """Return the VM RRD XML as a string."""
     try:
-        xml = urllib.urlopen("%s://%s:%s@%s/vm_rrd?uuid=%s" % (
+        xml = urlrequest.urlopen("%s://%s:%s@%s/vm_rrd?uuid=%s" % (
             server[0],
             CONF.xenserver.connection_username,
             CONF.xenserver.connection_password,
