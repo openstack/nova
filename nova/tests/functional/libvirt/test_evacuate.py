@@ -141,10 +141,9 @@ class _FileTest(object):
         source_root_disk = os.path.join(
             self.source_instance_path(server), disk)
 
-        # FIXME(mdbooth): We should not have deleted a shared disk
-        self.assertFalse(os.path.exists(source_root_disk),
-                         "Source root disk %s for server %s exists" %
-                         (source_root_disk, name))
+        self.assertTrue(os.path.exists(source_root_disk),
+                        "Source root disk %s for server %s does not exist" %
+                        (source_root_disk, name))
 
 
 class _FlatTest(_FileTest):
@@ -235,8 +234,7 @@ class _RbdTest(object):
         # Check that we created a root disk and haven't called _cleanup_rbd at
         # all
         self.assertIn("%s_%s" % (server['id'], disk), self.created)
-        # FIXME(mdbooth): we should not have deleted shared disks
-        self.assertGreater(self.mock_rbd_driver.cleanup_volumes.call_count, 0)
+        self.mock_rbd_driver.cleanup_volumes.assert_not_called()
 
     # We never want to cleanup rbd disks during evacuate, regardless of
     # instance shared storage
@@ -633,10 +631,9 @@ class _LibvirtEvacuateTest(integrated_helpers.InstanceHelperMixin):
             server = self._evacuate_with_failure(server, compute1)
 
             # Check that the instance directory still exists
-            # FIXME(mdbooth): the shared instance directory should still exist
-            self.assertFalse(os.path.exists(shared_instance_path),
-                             "Shared instance directory %s for server %s "
-                             "exists" % (shared_instance_path, name))
+            self.assertTrue(os.path.exists(shared_instance_path),
+                            "Shared instance directory %s for server %s "
+                            "does not exist" % (shared_instance_path, name))
 
             self.assert_disks_shared_instancedir(server)
 
