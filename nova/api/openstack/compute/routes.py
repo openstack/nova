@@ -269,7 +269,6 @@ server_controller = functools.partial(_create_controller,
         extended_status.ExtendedStatusController,
         extended_volumes.ExtendedVolumesController,
         hide_server_addresses.Controller,
-        security_groups.SecurityGroupsOutputController,
     ],
     [
         admin_actions.AdminActionsController,

@@ -15,6 +15,7 @@
 #    under the License.
 
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
@@ -25,6 +26,7 @@ from nova import availability_zones as avail_zone
 from nova import compute
 from nova import context as nova_context
 from nova import exception
+from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.policies import extended_server_attributes as esa_policies
 from nova.policies import flavor_extra_specs as fes_policies
@@ -65,10 +67,13 @@ class ViewBuilder(common.ViewBuilder):
         self._image_builder = views_images.ViewBuilder()
         self._flavor_builder = views_flavors.ViewBuilder()
         self.compute_api = compute.API()
+        self.security_group_api = (
+            openstack_driver.get_openstack_security_group_driver())
 
     def create(self, request, instance):
         """View that should be returned when an instance is created."""
-        return {
+
+        server = {
             "server": {
                 "id": instance["uuid"],
                 "links": self._get_links(request,
@@ -81,9 +86,13 @@ class ViewBuilder(common.ViewBuilder):
                     'AUTO' if instance.get('auto_disk_config') else 'MANUAL'),
             },
         }
+        self._add_security_grps(request, [server["server"]], [instance])
+
+        return server
 
     def basic(self, request, instance, show_extra_specs=False,
-              show_extended_attr=None, show_host_status=None):
+              show_extended_attr=None, show_host_status=None,
+              show_sec_grp=None):
         """Generic, non-detailed view of an instance."""
         return {
             "server": {
@@ -118,7 +127,7 @@ class ViewBuilder(common.ViewBuilder):
     def show(self, request, instance, extend_address=True,
              show_extra_specs=None, show_AZ=True, show_config_drive=True,
              show_extended_attr=None, show_host_status=None,
-             show_keypair=True, show_srv_usg=True):
+             show_keypair=True, show_srv_usg=True, show_sec_grp=True):
         """Detailed view of a single instance."""
         ip_v4 = instance.get('access_ip_v4')
         ip_v6 = instance.get('access_ip_v6')
@@ -191,6 +200,8 @@ class ViewBuilder(common.ViewBuilder):
                 # the tzinfo from the stamp and str() it.
                 server["server"][key] = (instance[k].replace(tzinfo=None)
                                          if instance[k] else None)
+        if show_sec_grp:
+            self._add_security_grps(request, [server["server"]], [instance])
 
         if show_extended_attr is None:
             show_extended_attr = context.can(
@@ -270,13 +281,23 @@ class ViewBuilder(common.ViewBuilder):
         if (api_version_request.is_supported(request, min_version='2.16')):
             show_host_status = context.can(
                 servers_policies.SERVERS % 'show:host_status', fatal=False)
-        return self._list_view(self.show, request, instances, coll_name,
-                               show_extra_specs,
-                               show_extended_attr=show_extended_attr,
-                               show_host_status=show_host_status)
+        # NOTE(gmann): pass show_sec_grp=False in _list_view() because
+        # security groups for detail method will be added by separate
+        # call to self._add_security_grps by passing the all servers
+        # together. That help to avoid multiple neutron call for each server.
+        servers_dict = self._list_view(self.show, request, instances,
+                                       coll_name, show_extra_specs,
+                                       show_extended_attr=show_extended_attr,
+                                       show_host_status=show_host_status,
+                                       show_sec_grp=False)
+
+        self._add_security_grps(request, list(servers_dict["servers"]),
+                                instances)
+        return servers_dict
 
     def _list_view(self, func, request, servers, coll_name, show_extra_specs,
-                   show_extended_attr=None, show_host_status=None):
+                   show_extended_attr=None, show_host_status=None,
+                   show_sec_grp=False):
         """Provide a view for a list of servers.
 
         :param func: Function used to format the server data
@@ -288,12 +309,15 @@ class ViewBuilder(common.ViewBuilder):
                         included in the response dict.
         :param show_host_status: If the host status should be included in
                         the response dict.
+        :param show_sec_grp: If the security group should be included in
+                        the response dict.
         :returns: Server data in dictionary format
         """
         server_list = [func(request, server,
                             show_extra_specs=show_extra_specs,
                             show_extended_attr=show_extended_attr,
-                            show_host_status=show_host_status)["server"]
+                            show_host_status=show_host_status,
+                            show_sec_grp=show_sec_grp)["server"]
                        for server in servers]
         servers_links = self._get_collection_links(request,
                                                    servers,
@@ -422,3 +446,42 @@ class ViewBuilder(common.ViewBuilder):
                 fault_dict['details'] = fault["details"]
 
         return fault_dict
+
+    def _add_security_grps(self, req, servers, instances):
+        # TODO(arosen) this function should be refactored to reduce duplicate
+        # code and use get_instance_security_groups instead of get_db_instance.
+        if not len(servers):
+            return
+        if not openstack_driver.is_neutron_security_groups():
+            instances = {inst['uuid']: inst for inst in instances}
+            for server in servers:
+                instance = instances[server['id']]
+                groups = instance.get('security_groups')
+                if groups:
+                    server['security_groups'] = [{"name": group.name}
+                                                 for group in groups]
+        else:
+            # If method is a POST we get the security groups intended for an
+            # instance from the request. The reason for this is if using
+            # neutron security groups the requested security groups for the
+            # instance are not in the db and have not been sent to neutron yet.
+            if req.method != 'POST':
+                context = req.environ['nova.context']
+                sg_instance_bindings = (
+                    self.security_group_api
+                    .get_instances_security_groups_bindings(context,
+                                                            servers))
+                for server in servers:
+                    groups = sg_instance_bindings.get(server['id'])
+                    if groups:
+                        server['security_groups'] = groups
+
+            # This section is for POST request. There can be only one security
+            # group for POST request.
+            else:
+                # try converting to json
+                req_obj = jsonutils.loads(req.body)
+                # Add security group to server, if no security group was in
+                # request add default since that is the group it is part of
+                servers[0]['security_groups'] = req_obj['server'].get(
+                    'security_groups', [{'name': 'default'}])

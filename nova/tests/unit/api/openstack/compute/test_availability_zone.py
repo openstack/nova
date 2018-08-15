@@ -168,6 +168,8 @@ class ServersControllerCreateTestV21(test.TestCase):
         super(ServersControllerCreateTestV21, self).setUp()
 
         self.instance_cache_num = 0
+        # Neutron security groups are tested in test_neutron_security_groups.py
+        self.flags(use_neutron=False)
         fakes.stub_out_nw_api(self)
         self._set_up_controller()
 

@@ -33,7 +33,8 @@ class AccessIPsAPIValidationTestV21(test.TestCase):
 
         def fake_rebuild(*args, **kwargs):
             pass
-
+        # Neutron security groups are tested in test_neutron_security_groups.py
+        self.flags(use_neutron=False)
         fakes.stub_out_nw_api(self)
         self._set_up_controller()
         fake.stub_out_image_service(self)
