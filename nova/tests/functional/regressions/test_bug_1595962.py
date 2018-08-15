@@ -82,7 +82,8 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
     @mock.patch('os.path.getsize', return_value=1024)
     @mock.patch('nova.conductor.tasks.live_migrate.LiveMigrationTask.'
                 '_check_destination_is_not_source', return_value=False)
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image',
+                return_value=(False, False))
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
                 return_value={'total': 128,
                               'used': 44,
