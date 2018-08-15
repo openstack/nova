@@ -378,6 +378,7 @@ class ServersControllerTest(ControllerTest):
                 "accessIPv4": '',
                 "accessIPv6": '',
                 "OS-EXT-AZ:availability_zone": "nova",
+                "config_drive": None,
             }
         }
 
@@ -2088,6 +2089,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                                                body=body).obj
 
         self.assertNotIn('OS-EXT-AZ:availability_zone', body['server'])
+        self.assertNotIn('config_drive', body['server'])
 
     @mock.patch.object(compute_api.API, 'start')
     def test_start(self, mock_start):
@@ -2683,6 +2685,7 @@ class ServersControllerUpdateTest(ControllerTest):
         req = self._get_request(body)
         res_dict = self.controller.update(req, FAKE_UUID, body=body)
         self.assertNotIn('OS-EXT-AZ:availability_zone', res_dict['server'])
+        self.assertNotIn('config_drive', res_dict['server'])
 
     def test_update_server_name_too_long(self):
         body = {'server': {'name': 'x' * 256}}
@@ -5992,6 +5995,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "accessIPv4": '',
                 "accessIPv6": '',
                 "OS-EXT-AZ:availability_zone": "nova",
+                "config_drive": None,
             }
         }
 
@@ -6072,6 +6076,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "accessIPv4": '',
                 "accessIPv6": '',
                 "OS-EXT-AZ:availability_zone": "nova",
+                "config_drive": None,
             }
         }
 
@@ -6251,6 +6256,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "accessIPv4": '',
                 "accessIPv6": '',
                 "OS-EXT-AZ:availability_zone": "nova",
+                "config_drive": None,
             }
         }
 
@@ -6328,6 +6334,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "accessIPv4": '',
                 "accessIPv6": '',
                 "OS-EXT-AZ:availability_zone": "nova",
+                "config_drive": None,
             }
         }
 

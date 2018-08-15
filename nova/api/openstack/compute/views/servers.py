@@ -111,7 +111,7 @@ class ViewBuilder(common.ViewBuilder):
         return sorted(list(set(self._show_expected_attrs + expected_attrs)))
 
     def show(self, request, instance, extend_address=True,
-             show_extra_specs=None, show_AZ=True):
+             show_extra_specs=None, show_AZ=True, show_config_drive=True):
         """Detailed view of a single instance."""
         ip_v4 = instance.get('access_ip_v4')
         ip_v6 = instance.get('access_ip_v6')
@@ -168,6 +168,9 @@ class ViewBuilder(common.ViewBuilder):
             # attributes after v2.1. They are only in v2.1 for backward compat
             # with v2.0.
             server["server"]["OS-EXT-AZ:availability_zone"] = az or ''
+
+        if show_config_drive:
+            server["server"]["config_drive"] = instance["config_drive"]
 
         if api_version_request.is_supported(request, min_version="2.9"):
             server["server"]["locked"] = (True if instance["locked_by"]
