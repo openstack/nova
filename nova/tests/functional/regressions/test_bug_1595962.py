@@ -84,7 +84,8 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
     @mock.patch('os.path.getsize', return_value=1024)
     @mock.patch('nova.conductor.tasks.live_migrate.LiveMigrationTask.'
                 '_check_destination_is_not_source', return_value=False)
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image',
+                return_value=(False, False))
     def test_serial_console_live_migrate(self, mock_create_image,
                                          mock_conductor_source_check,
                                          mock_path_get_size,
