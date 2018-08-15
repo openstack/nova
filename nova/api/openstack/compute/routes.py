@@ -34,7 +34,6 @@ from nova.api.openstack.compute import consoles
 from nova.api.openstack.compute import create_backup
 from nova.api.openstack.compute import deferred_delete
 from nova.api.openstack.compute import evacuate
-from nova.api.openstack.compute import extended_server_attributes
 from nova.api.openstack.compute import extended_status
 from nova.api.openstack.compute import extended_volumes
 from nova.api.openstack.compute import extension_info
@@ -267,7 +266,6 @@ security_group_rules_controller = functools.partial(_create_controller,
 server_controller = functools.partial(_create_controller,
     servers.ServersController,
     [
-        extended_server_attributes.ExtendedServerAttributesController,
         extended_status.ExtendedStatusController,
         extended_volumes.ExtendedVolumesController,
         hide_server_addresses.Controller,

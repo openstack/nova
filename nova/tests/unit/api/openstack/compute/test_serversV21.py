@@ -73,6 +73,9 @@ CONF = nova.conf.CONF
 
 FAKE_UUID = fakes.FAKE_UUID
 
+UUID1 = '00000000-0000-0000-0000-000000000001'
+UUID2 = '00000000-0000-0000-0000-000000000002'
+
 INSTANCE_IDS = {FAKE_UUID: 1}
 FIELDS = instance_obj.INSTANCE_DEFAULT_FIELDS
 
@@ -159,7 +162,7 @@ class ControllerTest(test.TestCase):
         self.flags(use_ipv6=False)
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
-        return_server = fakes.fake_compute_get(availability_zone='nova')
+        return_server = fakes.fake_compute_get(id=2, availability_zone='nova')
         return_servers = fakes.fake_compute_get_all()
         # Server sort keys extension is enabled in v21 so sort data is passed
         # to the instance API and the sorted DB API is invoked
@@ -379,6 +382,9 @@ class ServersControllerTest(ControllerTest):
                 "accessIPv6": '',
                 "OS-EXT-AZ:availability_zone": "nova",
                 "config_drive": None,
+                "OS-EXT-SRV-ATTR:host": None,
+                "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
+                "OS-EXT-SRV-ATTR:instance_name": "instance-00000002",
             }
         }
 
@@ -395,8 +401,6 @@ class ServersControllerTest(ControllerTest):
                                                      image_bookmark,
                                                      flavor_bookmark,
                                                      progress=0)
-        expected_server['server']['name'] = 'server1'
-        expected_server['server']['metadata']['seq'] = '1'
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
 
     def test_get_server_empty_az(self):
@@ -411,15 +415,12 @@ class ServersControllerTest(ControllerTest):
         image_bookmark = "http://localhost/fake/images/10"
         flavor_bookmark = "http://localhost/fake/flavors/2"
 
-        self.mock_get.side_effect = fakes.fake_compute_get(
-            id=2, vm_state=vm_states.ACTIVE, progress=100,
-            availability_zone='nova')
-
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
         expected_server = self._get_server_data_dict(FAKE_UUID,
                                                      image_bookmark,
-                                                     flavor_bookmark)
+                                                     flavor_bookmark,
+                                                     progress=0)
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
         self.mock_get.assert_called_once_with(
             req.environ['nova.context'], FAKE_UUID,
@@ -427,21 +428,15 @@ class ServersControllerTest(ControllerTest):
                             'numa_topology'])
 
     def test_get_server_with_id_image_ref_by_id(self):
-        image_ref = "10"
         image_bookmark = "http://localhost/fake/images/10"
-        flavor_id = "1"
         flavor_bookmark = "http://localhost/fake/flavors/2"
-
-        self.mock_get.side_effect = fakes.fake_compute_get(
-            id=2, vm_state=vm_states.ACTIVE, image_ref=image_ref,
-            flavor_id=flavor_id, progress=100,
-            availability_zone='nova')
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
         expected_server = self._get_server_data_dict(FAKE_UUID,
                                                      image_bookmark,
-                                                     flavor_bookmark)
+                                                     flavor_bookmark,
+                                                     progress=0)
 
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
         self.mock_get.assert_called_once_with(
@@ -1435,8 +1430,103 @@ class ServersControllerTest(ControllerTest):
         self.assertIn('servers', self.controller.detail(req))
 
 
+class ServersControllerTestV23(ServersControllerTest):
+    wsgi_api_version = '2.3'
+
+    def setUp(self):
+        super(ServersControllerTestV23, self).setUp()
+        self.mock_get.side_effect = fakes.fake_compute_get(
+            id=2, uuid=FAKE_UUID,
+            node="node-fake",
+            reservation_id="r-1", launch_index=0,
+            kernel_id=UUID1, ramdisk_id=UUID2,
+            display_name="server2",
+            root_device_name="/dev/vda",
+            user_data="userdata",
+            metadata={"seq": "2"},
+            availability_zone='nova')
+
+    def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
+                              status="ACTIVE", progress=100):
+        server_dict = super(ServersControllerTestV23,
+                            self)._get_server_data_dict(uuid,
+                                                        image_bookmark,
+                                                        flavor_bookmark,
+                                                        status,
+                                                        progress)
+        server_dict['server']["OS-EXT-SRV-ATTR:hostname"] = "server2"
+        server_dict['server'][
+            "OS-EXT-SRV-ATTR:hypervisor_hostname"] = "node-fake"
+        server_dict['server']["OS-EXT-SRV-ATTR:kernel_id"] = UUID1
+        server_dict['server']["OS-EXT-SRV-ATTR:launch_index"] = 0
+        server_dict['server']["OS-EXT-SRV-ATTR:ramdisk_id"] = UUID2
+        server_dict['server']["OS-EXT-SRV-ATTR:reservation_id"] = "r-1"
+        server_dict['server']["OS-EXT-SRV-ATTR:root_device_name"] = "/dev/vda"
+        server_dict['server']["OS-EXT-SRV-ATTR:user_data"] = "userdata"
+        return server_dict
+
+    def test_show(self):
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_bookmark = "http://localhost/fake/flavors/2"
+
+        req = self.req('/fake/servers/%s' % FAKE_UUID)
+        res_dict = self.controller.show(req, FAKE_UUID)
+
+        expected_server = self._get_server_data_dict(FAKE_UUID,
+                                                     image_bookmark,
+                                                     flavor_bookmark,
+                                                     progress=0)
+        self.assertThat(res_dict, matchers.DictMatches(expected_server))
+
+    def test_detail(self):
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+            obj_list = []
+            for i in range(2):
+                server = fakes.stub_instance_obj(context,
+                              id=2, uuid=FAKE_UUID,
+                              node="node-fake",
+                              reservation_id="r-1", launch_index=0,
+                              kernel_id=UUID1, ramdisk_id=UUID2,
+                              display_name="server2",
+                              root_device_name="/dev/vda",
+                              user_data="userdata",
+                              metadata={"seq": "2"},
+                              availability_zone='nova')
+                obj_list.append(server)
+            return objects.InstanceList(objects=obj_list)
+
+        self.mock_get_all.side_effect = None
+        self.mock_get_all.return_value = fake_get_all(context)
+
+        req = self.req('/fake/servers/detail')
+        servers_list = self.controller.detail(req)
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_bookmark = "http://localhost/fake/flavors/2"
+        expected_server = self._get_server_data_dict(FAKE_UUID,
+                                                     image_bookmark,
+                                                     flavor_bookmark,
+                                                     progress=0)
+
+        self.assertIn(expected_server['server'], servers_list['servers'])
+
+
 class ServersControllerTestV29(ServersControllerTest):
     wsgi_api_version = '2.9'
+
+    def setUp(self):
+        super(ServersControllerTestV29, self).setUp()
+        self.mock_get.side_effect = fakes.fake_compute_get(
+            id=2, uuid=FAKE_UUID,
+            node="node-fake",
+            reservation_id="r-1", launch_index=0,
+            kernel_id=UUID1, ramdisk_id=UUID2,
+            display_name="server2",
+            root_device_name="/dev/vda",
+            user_data="userdata",
+            metadata={"seq": "2"},
+            availability_zone='nova')
 
     def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
                               status="ACTIVE", progress=100):
@@ -1447,6 +1537,15 @@ class ServersControllerTestV29(ServersControllerTest):
                                                         status,
                                                         progress)
         server_dict['server']['locked'] = False
+        server_dict['server']["OS-EXT-SRV-ATTR:hostname"] = "server2"
+        server_dict['server'][
+            "OS-EXT-SRV-ATTR:hypervisor_hostname"] = "node-fake"
+        server_dict['server']["OS-EXT-SRV-ATTR:kernel_id"] = UUID1
+        server_dict['server']["OS-EXT-SRV-ATTR:launch_index"] = 0
+        server_dict['server']["OS-EXT-SRV-ATTR:ramdisk_id"] = UUID2
+        server_dict['server']["OS-EXT-SRV-ATTR:reservation_id"] = "r-1"
+        server_dict['server']["OS-EXT-SRV-ATTR:root_device_name"] = "/dev/vda"
+        server_dict['server']["OS-EXT-SRV-ATTR:user_data"] = "userdata"
         return server_dict
 
     def _test_get_server_with_lock(self, locked_by):
@@ -1454,6 +1553,13 @@ class ServersControllerTestV29(ServersControllerTest):
         flavor_bookmark = "http://localhost/fake/flavors/2"
         self.mock_get.side_effect = fakes.fake_compute_get(
             id=2, locked_by=locked_by, uuid=FAKE_UUID,
+            node="node-fake",
+            reservation_id="r-1", launch_index=0,
+            kernel_id=UUID1, ramdisk_id=UUID2,
+            display_name="server2",
+            root_device_name="/dev/vda",
+            user_data="userdata",
+            metadata={"seq": "2"},
             availability_zone='nova')
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
@@ -1484,7 +1590,16 @@ class ServersControllerTestV29(ServersControllerTest):
                                            s2_locked):
         self.mock_get_all.side_effect = None
         self.mock_get_all.return_value = fake_instance_get_all_with_locked(
-            context, [s1_locked, s2_locked])
+            context, [s1_locked, s2_locked],
+            node="node-fake",
+            reservation_id="r-1", launch_index=0,
+            kernel_id=UUID1, ramdisk_id=UUID2,
+            display_name="server2",
+            root_device_name="/dev/vda",
+            user_data="userdata",
+            metadata={"seq": "2"},
+            availability_zone='nova')
+
         req = self.req('/fake/servers/detail')
         servers_list = self.controller.detail(req)
         # Check that each returned server has the same 'locked' value
@@ -1525,8 +1640,110 @@ class ServersControllerTestV29(ServersControllerTest):
             self.assertNotIn(key, search_opts)
 
 
+class ServersControllerTestV216(ServersControllerTest):
+    wsgi_api_version = '2.16'
+
+    def setUp(self):
+        super(ServersControllerTestV216, self).setUp()
+        self.mock_get.side_effect = fakes.fake_compute_get(
+            id=2, uuid=FAKE_UUID,
+            node="node-fake",
+            reservation_id="r-1", launch_index=0,
+            kernel_id=UUID1, ramdisk_id=UUID2,
+            display_name="server2",
+            root_device_name="/dev/vda",
+            user_data="userdata",
+            metadata={"seq": "2"},
+            availability_zone='nova')
+        self.useFixture(fixtures.MockPatchObject(
+            compute_api.API, 'get_instance_host_status',
+            return_value='UP')).mock
+
+    def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
+                              status="ACTIVE", progress=100):
+        server_dict = super(ServersControllerTestV216,
+                            self)._get_server_data_dict(uuid,
+                                                        image_bookmark,
+                                                        flavor_bookmark,
+                                                        status,
+                                                        progress)
+        server_dict['server']['locked'] = False
+        server_dict['server']["host_status"] = "UP"
+        server_dict['server']["OS-EXT-SRV-ATTR:hostname"] = "server2"
+        server_dict['server'][
+            "OS-EXT-SRV-ATTR:hypervisor_hostname"] = "node-fake"
+        server_dict['server']["OS-EXT-SRV-ATTR:kernel_id"] = UUID1
+        server_dict['server']["OS-EXT-SRV-ATTR:launch_index"] = 0
+        server_dict['server']["OS-EXT-SRV-ATTR:ramdisk_id"] = UUID2
+        server_dict['server']["OS-EXT-SRV-ATTR:reservation_id"] = "r-1"
+        server_dict['server']["OS-EXT-SRV-ATTR:root_device_name"] = "/dev/vda"
+        server_dict['server']["OS-EXT-SRV-ATTR:user_data"] = "userdata"
+
+        return server_dict
+
+    def test_show(self):
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_bookmark = "http://localhost/fake/flavors/2"
+        req = self.req('/fake/servers/%s' % FAKE_UUID)
+        res_dict = self.controller.show(req, FAKE_UUID)
+        expected_server = self._get_server_data_dict(FAKE_UUID,
+                                                     image_bookmark,
+                                                     flavor_bookmark,
+                                                     progress=0)
+        self.assertThat(res_dict, matchers.DictMatches(expected_server))
+
+    def test_detail(self):
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+            obj_list = []
+            for i in range(2):
+                server = fakes.stub_instance_obj(context,
+                              id=2, uuid=FAKE_UUID,
+                              node="node-fake",
+                              reservation_id="r-1", launch_index=0,
+                              kernel_id=UUID1, ramdisk_id=UUID2,
+                              display_name="server2",
+                              root_device_name="/dev/vda",
+                              user_data="userdata",
+                              metadata={"seq": "2"},
+                              availability_zone='nova')
+                obj_list.append(server)
+            return objects.InstanceList(objects=obj_list)
+
+        self.mock_get_all.side_effect = None
+        self.mock_get_all.return_value = fake_get_all(context)
+
+        req = self.req('/fake/servers/detail')
+        servers_list = self.controller.detail(req)
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_bookmark = "http://localhost/fake/flavors/2"
+        expected_server = self._get_server_data_dict(FAKE_UUID,
+                                                     image_bookmark,
+                                                     flavor_bookmark,
+                                                     progress=0)
+
+        self.assertIn(expected_server['server'], servers_list['servers'])
+
+
 class ServersControllerTestV219(ServersControllerTest):
     wsgi_api_version = '2.19'
+
+    def setUp(self):
+        super(ServersControllerTestV219, self).setUp()
+        self.mock_get.side_effect = fakes.fake_compute_get(
+            id=2, uuid=FAKE_UUID,
+            node="node-fake",
+            reservation_id="r-1", launch_index=0,
+            kernel_id=UUID1, ramdisk_id=UUID2,
+            display_name="server2",
+            root_device_name="/dev/vda",
+            user_data="userdata",
+            metadata={"seq": "2"},
+            availability_zone='nova')
+        self.useFixture(fixtures.MockPatchObject(
+            compute_api.API, 'get_instance_host_status',
+            return_value='UP')).mock
 
     def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
                               status="ACTIVE", progress=100, description=None):
@@ -1538,6 +1755,17 @@ class ServersControllerTestV219(ServersControllerTest):
                                                         progress)
         server_dict['server']['locked'] = False
         server_dict['server']['description'] = description
+        server_dict['server']["host_status"] = "UP"
+        server_dict['server']["OS-EXT-SRV-ATTR:hostname"] = "server2"
+        server_dict['server'][
+            "OS-EXT-SRV-ATTR:hypervisor_hostname"] = "node-fake"
+        server_dict['server']["OS-EXT-SRV-ATTR:kernel_id"] = UUID1
+        server_dict['server']["OS-EXT-SRV-ATTR:launch_index"] = 0
+        server_dict['server']["OS-EXT-SRV-ATTR:ramdisk_id"] = UUID2
+        server_dict['server']["OS-EXT-SRV-ATTR:reservation_id"] = "r-1"
+        server_dict['server']["OS-EXT-SRV-ATTR:root_device_name"] = "/dev/vda"
+        server_dict['server']["OS-EXT-SRV-ATTR:user_data"] = "userdata"
+
         return server_dict
 
     def _test_get_server_with_description(self, description):
@@ -1545,6 +1773,13 @@ class ServersControllerTestV219(ServersControllerTest):
         flavor_bookmark = "http://localhost/fake/flavors/2"
         self.mock_get.side_effect = fakes.fake_compute_get(
             id=2, display_description=description, uuid=FAKE_UUID,
+            node="node-fake",
+            reservation_id="r-1", launch_index=0,
+            kernel_id=UUID1, ramdisk_id=UUID2,
+            display_name="server2",
+            root_device_name="/dev/vda",
+            user_data="userdata",
+            metadata={"seq": "2"},
             availability_zone='nova')
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
@@ -2088,8 +2323,19 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         body = self.controller._action_rebuild(self.req, FAKE_UUID,
                                                body=body).obj
 
-        self.assertNotIn('OS-EXT-AZ:availability_zone', body['server'])
-        self.assertNotIn('config_drive', body['server'])
+        get_only_fields = ['OS-EXT-AZ:availability_zone', 'config_drive',
+                           'OS-EXT-SRV-ATTR:host',
+                           'OS-EXT-SRV-ATTR:hypervisor_hostname',
+                           'OS-EXT-SRV-ATTR:instance_name',
+                           'OS-EXT-SRV-ATTR:hostname'
+                           'OS-EXT-SRV-ATTR:kernel_id',
+                           'OS-EXT-SRV-ATTR:launch_index',
+                           'OS-EXT-SRV-ATTR:ramdisk_id',
+                           'OS-EXT-SRV-ATTR:reservation_id',
+                           'OS-EXT-SRV-ATTR:root_device_name',
+                           'OS-EXT-SRV-ATTR:user_data', 'host_status']
+        for field in get_only_fields:
+            self.assertNotIn(field, body['server'])
 
     @mock.patch.object(compute_api.API, 'start')
     def test_start(self, mock_start):
@@ -2684,8 +2930,19 @@ class ServersControllerUpdateTest(ControllerTest):
         body = {'server': {'name': 'server_test'}}
         req = self._get_request(body)
         res_dict = self.controller.update(req, FAKE_UUID, body=body)
-        self.assertNotIn('OS-EXT-AZ:availability_zone', res_dict['server'])
-        self.assertNotIn('config_drive', res_dict['server'])
+        get_only_fields = ['OS-EXT-AZ:availability_zone', 'config_drive',
+                           'OS-EXT-SRV-ATTR:host',
+                           'OS-EXT-SRV-ATTR:hypervisor_hostname',
+                           'OS-EXT-SRV-ATTR:instance_name',
+                           'OS-EXT-SRV-ATTR:hostname'
+                           'OS-EXT-SRV-ATTR:kernel_id',
+                           'OS-EXT-SRV-ATTR:launch_index',
+                           'OS-EXT-SRV-ATTR:ramdisk_id',
+                           'OS-EXT-SRV-ATTR:reservation_id',
+                           'OS-EXT-SRV-ATTR:root_device_name',
+                           'OS-EXT-SRV-ATTR:user_data', 'host_status']
+        for field in get_only_fields:
+            self.assertNotIn(field, res_dict['server'])
 
     def test_update_server_name_too_long(self):
         body = {'server': {'name': 'x' * 256}}
@@ -5996,6 +6253,9 @@ class ServersViewBuilderTest(test.TestCase):
                 "accessIPv6": '',
                 "OS-EXT-AZ:availability_zone": "nova",
                 "config_drive": None,
+                "OS-EXT-SRV-ATTR:host": None,
+                "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
+                "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
             }
         }
 
@@ -6077,6 +6337,9 @@ class ServersViewBuilderTest(test.TestCase):
                 "accessIPv6": '',
                 "OS-EXT-AZ:availability_zone": "nova",
                 "config_drive": None,
+                "OS-EXT-SRV-ATTR:host": None,
+                "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
+                "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
             }
         }
 
@@ -6257,6 +6520,9 @@ class ServersViewBuilderTest(test.TestCase):
                 "accessIPv6": '',
                 "OS-EXT-AZ:availability_zone": "nova",
                 "config_drive": None,
+                "OS-EXT-SRV-ATTR:host": None,
+                "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
+                "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
             }
         }
 
@@ -6335,6 +6601,9 @@ class ServersViewBuilderTest(test.TestCase):
                 "accessIPv6": '',
                 "OS-EXT-AZ:availability_zone": "nova",
                 "config_drive": None,
+                "OS-EXT-SRV-ATTR:host": None,
+                "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
+                "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
             }
         }
 

@@ -22,10 +22,13 @@ from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack.compute.views import flavors as views_flavors
 from nova.api.openstack.compute.views import images as views_images
 from nova import availability_zones as avail_zone
+from nova import compute
 from nova import context as nova_context
 from nova import exception
 from nova import objects
+from nova.policies import extended_server_attributes as esa_policies
 from nova.policies import flavor_extra_specs as fes_policies
+from nova.policies import servers as servers_policies
 from nova import utils
 
 
@@ -61,6 +64,7 @@ class ViewBuilder(common.ViewBuilder):
         self._address_builder = views_addresses.ViewBuilder()
         self._image_builder = views_images.ViewBuilder()
         self._flavor_builder = views_flavors.ViewBuilder()
+        self.compute_api = compute.API()
 
     def create(self, request, instance):
         """View that should be returned when an instance is created."""
@@ -78,7 +82,8 @@ class ViewBuilder(common.ViewBuilder):
             },
         }
 
-    def basic(self, request, instance, show_extra_specs=False):
+    def basic(self, request, instance, show_extra_specs=False,
+              show_extended_attr=None, show_host_status=None):
         """Generic, non-detailed view of an instance."""
         return {
             "server": {
@@ -111,7 +116,8 @@ class ViewBuilder(common.ViewBuilder):
         return sorted(list(set(self._show_expected_attrs + expected_attrs)))
 
     def show(self, request, instance, extend_address=True,
-             show_extra_specs=None, show_AZ=True, show_config_drive=True):
+             show_extra_specs=None, show_AZ=True, show_config_drive=True,
+             show_extended_attr=None, show_host_status=None):
         """Detailed view of a single instance."""
         ip_v4 = instance.get('access_ip_v4')
         ip_v6 = instance.get('access_ip_v6')
@@ -161,8 +167,8 @@ class ViewBuilder(common.ViewBuilder):
         if server["server"]["status"] in self._progress_statuses:
             server["server"]["progress"] = instance.get("progress", 0)
 
+        context = request.environ['nova.context']
         if show_AZ:
-            context = request.environ['nova.context']
             az = avail_zone.get_instance_availability_zone(context, instance)
             # NOTE(mriedem): The OS-EXT-AZ prefix should not be used for new
             # attributes after v2.1. They are only in v2.1 for backward compat
@@ -171,6 +177,40 @@ class ViewBuilder(common.ViewBuilder):
 
         if show_config_drive:
             server["server"]["config_drive"] = instance["config_drive"]
+
+        if show_extended_attr is None:
+            show_extended_attr = context.can(
+                esa_policies.BASE_POLICY_NAME, fatal=False)
+        if show_extended_attr:
+            server["server"][
+                "OS-EXT-SRV-ATTR:hypervisor_hostname"] = instance.node
+
+            properties = ['host', 'name']
+            if api_version_request.is_supported(request, min_version='2.3'):
+                # NOTE(mriedem): These will use the OS-EXT-SRV-ATTR prefix
+                # below and that's OK for microversion 2.3 which is being
+                # compatible with v2.0 for the ec2 API split out from Nova.
+                # After this, however, new microversions should not be using
+                # the OS-EXT-SRV-ATTR prefix.
+                properties += ['reservation_id', 'launch_index',
+                               'hostname', 'kernel_id', 'ramdisk_id',
+                               'root_device_name', 'user_data']
+            for attr in properties:
+                if attr == 'name':
+                    key = "OS-EXT-SRV-ATTR:instance_%s" % attr
+                else:
+                    # NOTE(mriedem): Nothing after microversion 2.3 should use
+                    # the OS-EXT-SRV-ATTR prefix for the attribute key name.
+                    key = "OS-EXT-SRV-ATTR:%s" % attr
+                server["server"][key] = instance[attr]
+        if (api_version_request.is_supported(request, min_version='2.16')):
+            if show_host_status is None:
+                show_host_status = context.can(
+                    servers_policies.SERVERS % 'show:host_status', fatal=False)
+            if show_host_status:
+                host_status = self.compute_api.get_instance_host_status(
+                                  instance)
+                server["server"]['host_status'] = host_status
 
         if api_version_request.is_supported(request, min_version="2.9"):
             server["server"]["locked"] = (True if instance["locked_by"]
@@ -209,11 +249,20 @@ class ViewBuilder(common.ViewBuilder):
                                            fatal=False)
         else:
             show_extra_specs = False
-
+        context = request.environ['nova.context']
+        show_extended_attr = context.can(
+            esa_policies.BASE_POLICY_NAME, fatal=False)
+        show_host_status = False
+        if (api_version_request.is_supported(request, min_version='2.16')):
+            show_host_status = context.can(
+                servers_policies.SERVERS % 'show:host_status', fatal=False)
         return self._list_view(self.show, request, instances, coll_name,
-                               show_extra_specs)
+                               show_extra_specs,
+                               show_extended_attr=show_extended_attr,
+                               show_host_status=show_host_status)
 
-    def _list_view(self, func, request, servers, coll_name, show_extra_specs):
+    def _list_view(self, func, request, servers, coll_name, show_extra_specs,
+                   show_extended_attr=None, show_host_status=None):
         """Provide a view for a list of servers.
 
         :param func: Function used to format the server data
@@ -221,10 +270,16 @@ class ViewBuilder(common.ViewBuilder):
         :param servers: List of servers in dictionary format
         :param coll_name: Name of collection, used to generate the next link
                           for a pagination query
+        :param show_extended_attr: If the server extended attributes should be
+                        included in the response dict.
+        :param show_host_status: If the host status should be included in
+                        the response dict.
         :returns: Server data in dictionary format
         """
         server_list = [func(request, server,
-                            show_extra_specs=show_extra_specs)["server"]
+                            show_extra_specs=show_extra_specs,
+                            show_extended_attr=show_extended_attr,
+                            show_host_status=show_host_status)["server"]
                        for server in servers]
         servers_links = self._get_collection_links(request,
                                                    servers,
