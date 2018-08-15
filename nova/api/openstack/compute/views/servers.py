@@ -127,7 +127,8 @@ class ViewBuilder(common.ViewBuilder):
     def show(self, request, instance, extend_address=True,
              show_extra_specs=None, show_AZ=True, show_config_drive=True,
              show_extended_attr=None, show_host_status=None,
-             show_keypair=True, show_srv_usg=True, show_sec_grp=True):
+             show_keypair=True, show_srv_usg=True, show_sec_grp=True,
+             show_extended_status=True):
         """Detailed view of a single instance."""
         ip_v4 = instance.get('access_ip_v4')
         ip_v6 = instance.get('access_ip_v6')
@@ -228,6 +229,16 @@ class ViewBuilder(common.ViewBuilder):
                     # the OS-EXT-SRV-ATTR prefix for the attribute key name.
                     key = "OS-EXT-SRV-ATTR:%s" % attr
                 server["server"][key] = instance[attr]
+        if show_extended_status:
+            # NOTE(gmann): Removed 'locked_by' from extended status
+            # to make it same as V2. If needed it can be added with
+            # microversion.
+            for state in ['task_state', 'vm_state', 'power_state']:
+                # NOTE(mriedem): The OS-EXT-STS prefix should not be used for
+                # new attributes after v2.1. They are only in v2.1 for backward
+                # compat with v2.0.
+                key = "%s:%s" % ('OS-EXT-STS', state)
+                server["server"][key] = instance[state]
         if (api_version_request.is_supported(request, min_version='2.16')):
             if show_host_status is None:
                 show_host_status = context.can(
