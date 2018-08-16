@@ -47,10 +47,11 @@ Nova code uses the nova.rpc.get_notifier call to get a configured
 oslo.messaging Notifier object and it uses the oslo provided functions on the
 Notifier object to emit notifications. The configuration of the returned
 Notifier object depends on the parameters of the get_notifier call and the
-value of the oslo.messaging configuration options `driver` and `topics`.
+value of the oslo.messaging configuration options ``driver`` and ``topics``.
 There are notification configuration options in Nova which are specific for
-certain notification types like `notifications.notify_on_state_change`,
-`notifications.default_level`, etc.
+certain notification types like
+:oslo.config:option:`notifications.notify_on_state_change`,
+:oslo.config:option:`notifications.default_level`, etc.
 
 The structure of the payload of the unversioned notifications is defined in the
 code that emits the notification and no documentation or enforced backward
@@ -67,8 +68,8 @@ serialized :oslo.versionedobjects-doc:`oslo versionedobjects object <>`.
 
 .. _service.update:
 
-For example the wire format of the `service.update` notification looks like the
-following::
+For example the wire format of the ``service.update`` notification looks like
+the following::
 
     {
         "priority":"INFO",
@@ -97,9 +98,9 @@ the consumer so the consumer can detect if the structure of the payload is
 changed. Nova provides the following contract regarding the versioned
 notification payload:
 
-* the payload version defined by the `the nova_object.version` field of the
+* the payload version defined by the ``nova_object.version`` field of the
   payload will be increased if and only if the syntax or the semantics of the
-  `nova_object.data` field of the payload is changed.
+  ``nova_object.data`` field of the payload is changed.
 * a minor version bump indicates a backward compatible change which means that
   only new fields are added to the payload so a well written consumer can still
   consume the new payload without any change.
@@ -110,14 +111,16 @@ notification payload:
   the nova internal representation of the payload type. Client code should not
   depend on this name.
 
-There is a Nova configuration parameter `notifications.notification_format`
+There is a Nova configuration parameter
+:oslo.config:option:`notifications.notification_format`
 that can be used to specify which notifications are emitted by Nova. The
-possible values are `unversioned`, `versioned`, `both` and the default value
-is `both`.
+possible values are ``unversioned``, ``versioned``, ``both`` and the default
+value is ``both``.
 
 The versioned notifications are emitted to a different topic than the legacy
 notifications. By default they are emitted to 'versioned_notifications' but it
-is configurable in the nova.conf with the `versioned_notifications_topic`
+is configurable in the nova.conf with the
+:oslo.config:option:`notifications.versioned_notifications_topics`
 config option.
 
 How to add a new versioned notification
@@ -125,12 +128,12 @@ How to add a new versioned notification
 
 To support the above contract from the Nova code every versioned notification
 is modeled with oslo versionedobjects. Every versioned notification class
-shall inherit from the `nova.notifications.objects.base.NotificationBase` which
-already defines three mandatory fields of the notification `event_type`,
-`publisher_id` and `priority`. The new notification class shall add a new field
-`payload` with an appropriate payload type. The payload object of the
-notifications shall inherit from the
-`nova.objects.notifications.base.NotificationPayloadBase` class and shall
+shall inherit from the ``nova.notifications.objects.base.NotificationBase``
+which already defines three mandatory fields of the notification
+``event_type``, ``publisher`` and ``priority``. The new notification class
+shall add a new field ``payload`` with an appropriate payload type. The payload
+object of the notifications shall inherit from the
+``nova.notifications.objects.base.NotificationPayloadBase`` class and shall
 define the fields of the payload as versionedobject fields. The base classes
 are described in the following section.
 
@@ -147,7 +150,7 @@ objects. Instead of that use the register_notification decorator on every
 concrete notification object.
 
 The following code example defines the necessary model classes for a new
-notification `myobject.update`::
+notification ``myobject.update``::
 
     @notification.notification_sample('myobject-update.json')
     @object_base.NovaObjectRegistry.register.register_notification
@@ -202,10 +205,11 @@ The above code will generate the following notification on the wire::
 
 
 There is a possibility to reuse an existing versionedobject as notification
-payload by adding a `SCHEMA` field for the payload class that defines a mapping
-between the fields of existing objects and the fields of the new payload
-object. For example the service.status notification reuses the existing
-`nova.objects.service.Service` object when defines the notification's payload::
+payload by adding a ``SCHEMA`` field for the payload class that defines a
+mapping between the fields of existing objects and the fields of the new
+payload object. For example the service.status notification reuses the existing
+``nova.objects.service.Service`` object when defines the notification's
+payload::
 
     @notification.notification_sample('service-update.json')
     @object_base.NovaObjectRegistry.register.register_notification
@@ -249,8 +253,8 @@ object. For example the service.status notification reuses the existing
         def populate_schema(self, service):
             super(ServiceStatusPayload, self).populate_schema(service=service)
 
-If the `SCHEMA` field is defined then the payload object needs to be populated
-with the `populate_schema` call before it can be emitted::
+If the ``SCHEMA`` field is defined then the payload object needs to be
+populated with the ``populate_schema`` call before it can be emitted::
 
     payload = ServiceStatusPayload()
     payload.populate_schema(service=<nova.object.service.Service object>)
@@ -266,33 +270,35 @@ with the `populate_schema` call before it can be emitted::
 The above code will emit the :ref:`already shown notification<service.update>`
 on the wire.
 
-Every item in the `SCHEMA` has the syntax of::
+Every item in the ``SCHEMA`` has the syntax of::
 
     <payload field name which needs to be filled>:
         (<name of the parameter of the populate_schema call>,
          <the name of a field of the parameter object>)
 
-The mapping defined in the `SCHEMA` field has the following semantics. When
-the `populate_schema` function is called the content of the `SCHEMA` field is
-enumerated and the value of the field of the pointed parameter object is copied
-to the requested payload field. So in the above example the `host` field of
-the payload object is populated from the value of the `host` field of the
-`service` object that is passed as a parameter to the `populate_schema` call.
+The mapping defined in the ``SCHEMA`` field has the following semantics. When
+the ``populate_schema`` function is called the content of the ``SCHEMA`` field
+is enumerated and the value of the field of the pointed parameter object is
+copied to the requested payload field. So in the above example the ``host``
+field of the payload object is populated from the value of the ``host`` field
+of the ``service`` object that is passed as a parameter to the
+``populate_schema`` call.
 
 A notification payload object can reuse fields from multiple existing
 objects. Also a notification can have both new and reused fields in its
 payload.
 
 Note that the notification's publisher instance can be created two different
-ways. It can be created by instantiating the `NotificationPublisher` object
-with a `host` and a `binary` string parameter or it can be generated from a
-`Service` object by calling `NotificationPublisher.from_service_obj` function.
+ways. It can be created by instantiating the ``NotificationPublisher`` object
+with a ``host`` and a ``binary`` string parameter or it can be generated from a
+``Service`` object by calling ``NotificationPublisher.from_service_obj``
+function.
 
 Versioned notifications shall have a sample file stored under
-`doc/sample_notifications` directory and the notification object shall be
-decorated with the `notification_sample` decorator. For example the
-`service.update` notification has a sample file stored in
-`doc/sample_notifications/service-update.json` and the
+``doc/sample_notifications`` directory and the notification object shall be
+decorated with the ``notification_sample`` decorator. For example the
+``service.update`` notification has a sample file stored in
+``doc/sample_notifications/service-update.json`` and the
 ServiceUpdateNotification class is decorated accordingly.
 
 Notification payload classes can use inheritance to avoid duplicating common
