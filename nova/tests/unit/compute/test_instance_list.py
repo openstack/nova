@@ -12,10 +12,12 @@
 
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
+import six
 
 from nova.compute import instance_list
 from nova.compute import multi_cell_list
 from nova import context as nova_context
+from nova import exception
 from nova import objects
 from nova import test
 from nova.tests import fixtures
@@ -184,6 +186,32 @@ class TestInstanceList(test.NoDBTestCase):
 
         # return the results from the up cell, ignoring the down cell.
         self.assertEqual(uuid_initial, uuid_final)
+
+    @mock.patch('nova.context.scatter_gather_cells')
+    def test_get_instances_by_not_skipping_down_cells(self, mock_sg):
+        self.flags(list_records_by_skipping_down_cells=False, group='api')
+        inst_cell0 = self.insts[uuids.cell0]
+
+        def wrap(thing):
+            return multi_cell_list.RecordWrapper(ctx, self.context, thing)
+
+        ctx = nova_context.RequestContext()
+        instances = [wrap(inst) for inst in inst_cell0]
+
+        # creating one up cell and two down cells
+        ret_val = {}
+        ret_val[uuids.cell0] = instances
+        ret_val[uuids.cell1] = [wrap(nova_context.raised_exception_sentinel)]
+        ret_val[uuids.cell2] = [wrap(nova_context.did_not_respond_sentinel)]
+        mock_sg.return_value = ret_val
+
+        # Raises exception if a cell is down without skipping them
+        # as CONF.api.list_records_by_skipping_down_cells is set to False.
+        # This would in turn result in an API 500 internal error.
+        exp = self.assertRaises(exception.NovaException,
+            instance_list.get_instance_objects_sorted, self.context, {}, None,
+            None, [], None, None)
+        self.assertIn('configuration indicates', six.text_type(exp))
 
     def test_batch_size_fixed(self):
         fixed_size = 200

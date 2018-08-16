@@ -1,0 +1,16 @@
+---
+other:
+  - |
+    In case of infrastructure failures like non-responsive cells, prior to
+    `change e3534d`_ we raised an API 500 error. However currently when
+    listing instances or migrations, we skip that cell and display results from
+    the up cells with the aim of increasing availability at the expense of
+    accuracy. If the old behaviour is desired, a new flag called
+    ``CONF.api.list_records_by_skipping_down_cells`` has been added which can
+    be set to False to mimic the old behavior. Both of these potential
+    behaviors will be unified in an upcoming microversion done through the
+    `blueprint handling-down-cell`_  where minimal constructs would be returned
+    for the down cell instances instead of raising 500s or skipping down cells.
+
+    .. _change e3534d : https://review.openstack.org/#/q/I308b494ab07f6936bef94f4c9da45e9473e3534d
+    .. _blueprint handling-down-cell: https://blueprints.launchpad.net/nova/+spec/handling-down-cell
