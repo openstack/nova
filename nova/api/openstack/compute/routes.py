@@ -35,7 +35,6 @@ from nova.api.openstack.compute import consoles
 from nova.api.openstack.compute import create_backup
 from nova.api.openstack.compute import deferred_delete
 from nova.api.openstack.compute import evacuate
-from nova.api.openstack.compute import extended_availability_zone
 from nova.api.openstack.compute import extended_server_attributes
 from nova.api.openstack.compute import extended_status
 from nova.api.openstack.compute import extended_volumes
@@ -270,7 +269,6 @@ server_controller = functools.partial(_create_controller,
     servers.ServersController,
     [
         config_drive.ConfigDriveController,
-        extended_availability_zone.ExtendedAZController,
         extended_server_attributes.ExtendedServerAttributesController,
         extended_status.ExtendedStatusController,
         extended_volumes.ExtendedVolumesController,
