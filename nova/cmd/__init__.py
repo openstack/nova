@@ -13,20 +13,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import eventlet
-from oslo_utils import importutils
-from six.moves import reload_module
+from nova import utils
 
-from nova import debugger
-
-if debugger.enabled():
-    # turn off thread patching to enable the remote debugger
-    eventlet.monkey_patch(os=False, thread=False)
-else:
-    eventlet.monkey_patch(os=False)
-
-# NOTE(rgerganov): oslo.context is storing a global thread-local variable
-# which keeps the request context for the current thread. If oslo.context is
-# imported before calling monkey_patch(), then this thread-local won't be
-# green. To workaround this, reload the module after calling monkey_patch()
-reload_module(importutils.import_module('oslo_context.context'))
+utils.monkey_patch()
