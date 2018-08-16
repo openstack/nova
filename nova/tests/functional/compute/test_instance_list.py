@@ -146,6 +146,15 @@ class InstanceListTestCase(test.TestCase):
         self.assertEqual(sorted(uuids), uuids)
         self.assertEqual(len(self.instances), len(uuids))
 
+    def test_get_sorted_with_large_limit_batched(self):
+        insts = instance_list.get_instances_sorted(self.context, {},
+                                                   5000, None,
+                                                   [], ['uuid'], ['asc'],
+                                                   batch_size=2)
+        uuids = [inst['uuid'] for inst in insts]
+        self.assertEqual(sorted(uuids), uuids)
+        self.assertEqual(len(self.instances), len(uuids))
+
     def _test_get_sorted_with_limit_marker(self, sort_by, pages=2, pagesize=2,
                                            sort_dir='asc'):
         """Get multiple pages by a sort key and validate the results.
