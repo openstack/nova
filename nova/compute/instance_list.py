@@ -98,6 +98,37 @@ def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
         ctx, filters, limit, marker, columns_to_join=columns_to_join)
 
 
+def get_instance_list_cells_batch_size(limit, cells):
+    """Calculate the proper batch size for a list request.
+
+    This will consider config, request limit, and cells being queried and
+    return an appropriate batch size to use for querying said cells.
+
+    :param limit: The overall limit specified in the request
+    :param cells: The list of CellMapping objects being queried
+    :returns: An integer batch size
+    """
+    strategy = CONF.api.instance_list_cells_batch_strategy
+    limit = limit or CONF.api.max_limit
+
+    if len(cells) <= 1:
+        # If we're limited to one (or no) cell for whatever reason, do
+        # not do any batching and just pull the desired limit from the
+        # single cell in one shot.
+        return limit
+
+    if strategy == 'fixed':
+        # Fixed strategy, always a static batch size
+        batch_size = CONF.api.instance_list_cells_batch_fixed_size
+    elif strategy == 'distributed':
+        # Distributed strategy, 10% more than even partitioning
+        batch_size = int((limit / len(cells)) * 1.10)
+
+    # We never query a larger batch than the total requested, and never
+    # smaller than the lower limit of 100.
+    return max(min(batch_size, limit), 100)
+
+
 def get_instance_objects_sorted(ctx, filters, limit, marker, expected_attrs,
                                 sort_keys, sort_dirs):
     """Same as above, but return an InstanceList."""
@@ -115,11 +146,14 @@ def get_instance_objects_sorted(ctx, filters, limit, marker, expected_attrs,
         context.load_cells()
         cell_mappings = context.CELLS
 
+    batch_size = get_instance_list_cells_batch_size(limit, cell_mappings)
+
     columns_to_join = instance_obj._expected_cols(expected_attrs)
     instance_generator = get_instances_sorted(ctx, filters, limit, marker,
                                               columns_to_join, sort_keys,
                                               sort_dirs,
-                                              cell_mappings=cell_mappings)
+                                              cell_mappings=cell_mappings,
+                                              batch_size=batch_size)
 
     if 'fault' in expected_attrs:
         # We join fault above, so we need to make sure we don't ask
