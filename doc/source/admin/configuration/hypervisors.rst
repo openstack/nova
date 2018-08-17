@@ -15,6 +15,7 @@ Hypervisors
    hypervisor-hyper-v.rst
    hypervisor-virtuozzo.rst
    hypervisor-powervm.rst
+   hypervisor-zvm.rst
 
 OpenStack Compute supports many hypervisors, which might make it difficult for
 you to choose one. Most installations use only one hypervisor.  However, you
@@ -57,6 +58,9 @@ The following hypervisors are supported:
 * `PowerVM`_ Server virtualization with IBM PowerVM for AIX, IBM i, and Linux
   workloads on the Power Systems platform.
 
+* `zVM`_ Server virtualization on z Systems and IBM LinuxONE, it can run Linux,
+  z/OS and more.
+
 .. _KVM: http://www.linux-kvm.org/page/Main_Page
 .. _LXC: https://linuxcontainers.org/
 .. _QEMU: http://wiki.qemu.org/Manual
@@ -66,3 +70,4 @@ The following hypervisors are supported:
 .. _Hyper-V: https://azure.microsoft.com/en-us/
 .. _Virtuozzo: https://www.virtuozzo.com/products/vip.html#product-virtuozzo/
 .. _PowerVM: https://www.ibm.com/us-en/marketplace/ibm-powervm
+.. _zVM: https://www.ibm.com/it-infrastructure/z/zvm
