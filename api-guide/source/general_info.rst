@@ -182,6 +182,10 @@ on compute hosts rather than servers.
 
 -  **Services Actions**
 
+   .. note::
+      The services actions described in this section apply only to
+      **nova-compute** services.
+
    - **enable, disable, disable-log-reason**
 
      The service can be disabled to indicate the service is not available anymore.
@@ -196,13 +200,24 @@ on compute hosts rather than servers.
      .. note::
        This action is enabled in microversion 2.11.
 
-     This action allows you set the state of service down immediately. Actually
-     Nova only provides the health monitor of service status, there isn't any
-     guarantee about health status of other parts of infrastructure, like the
-     health status of data network, storage network and other components. The
-     more complete health monitor of infrastructure is provided by external
-     system normally. An external health monitor system can mark the service
-     down for notifying the fault.
+     This action allows you set the state of service down immediately. Nova
+     only provides a very basic health monitor of service status, there isn't
+     any guarantee about health status of other parts of infrastructure, like
+     the health status of data network, storage network and other
+     components.
+
+     If you have a more extensive health monitoring system external to Nova,
+     and know that the service in question is dead (and disconnected from the
+     network), this can be used to tell the rest of Nova it can trust that this
+     service is never coming back, and allow actions such as evacuate.
+
+     .. warning::
+
+        This must *only* be used if you have fully fenced the service in
+        question, and that it can never send updates to the rest of the
+        system. This can be done by powering off the node or completely
+        isolating its networking. If you force-down a service that is not
+        fenced you can corrupt the VMs that were running on that host.
 
 -  **Hosts**
 
