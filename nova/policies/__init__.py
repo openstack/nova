@@ -24,29 +24,23 @@ from nova.policies import baremetal_nodes
 from nova.policies import base
 from nova.policies import cells
 from nova.policies import cells_scheduler
-from nova.policies import config_drive
 from nova.policies import console_auth_tokens
 from nova.policies import console_output
 from nova.policies import consoles
 from nova.policies import create_backup
 from nova.policies import deferred_delete
 from nova.policies import evacuate
-from nova.policies import extended_availability_zone
 from nova.policies import extended_server_attributes
-from nova.policies import extended_status
-from nova.policies import extended_volumes
 from nova.policies import extensions
 from nova.policies import flavor_access
 from nova.policies import flavor_extra_specs
 from nova.policies import flavor_manage
-from nova.policies import flavor_rxtx
 from nova.policies import flavors
 from nova.policies import floating_ip_pools
 from nova.policies import floating_ips
 from nova.policies import hide_server_addresses
 from nova.policies import hosts
 from nova.policies import hypervisors
-from nova.policies import image_size
 from nova.policies import instance_actions
 from nova.policies import instance_usage_audit_log
 from nova.policies import ips
@@ -71,7 +65,6 @@ from nova.policies import server_groups
 from nova.policies import server_metadata
 from nova.policies import server_password
 from nova.policies import server_tags
-from nova.policies import server_usage
 from nova.policies import servers
 from nova.policies import servers_migrations
 from nova.policies import services
@@ -97,29 +90,23 @@ def list_rules():
         baremetal_nodes.list_rules(),
         cells.list_rules(),
         cells_scheduler.list_rules(),
-        config_drive.list_rules(),
         console_auth_tokens.list_rules(),
         console_output.list_rules(),
         consoles.list_rules(),
         create_backup.list_rules(),
         deferred_delete.list_rules(),
         evacuate.list_rules(),
-        extended_availability_zone.list_rules(),
         extended_server_attributes.list_rules(),
-        extended_status.list_rules(),
-        extended_volumes.list_rules(),
         extensions.list_rules(),
         flavor_access.list_rules(),
         flavor_extra_specs.list_rules(),
         flavor_manage.list_rules(),
-        flavor_rxtx.list_rules(),
         flavors.list_rules(),
         floating_ip_pools.list_rules(),
         floating_ips.list_rules(),
         hide_server_addresses.list_rules(),
         hosts.list_rules(),
         hypervisors.list_rules(),
-        image_size.list_rules(),
         instance_actions.list_rules(),
         instance_usage_audit_log.list_rules(),
         ips.list_rules(),
@@ -144,7 +131,6 @@ def list_rules():
         server_metadata.list_rules(),
         server_password.list_rules(),
         server_tags.list_rules(),
-        server_usage.list_rules(),
         servers.list_rules(),
         servers_migrations.list_rules(),
         services.list_rules(),

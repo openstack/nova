@@ -21,7 +21,6 @@ import webob
 
 from nova.api.openstack.compute import security_groups as \
     secgroups_v21
-from nova.api.openstack import wsgi
 from nova import compute
 from nova.compute import power_state
 from nova import context as context_maker
@@ -1535,56 +1534,6 @@ class SecurityGroupsOutputTestV21(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
-
-
-class SecurityGroupsOutputPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(SecurityGroupsOutputPolicyEnforcementV21, self).setUp()
-        self.controller = secgroups_v21.SecurityGroupsOutputController()
-        self.req = fakes.HTTPRequest.blank('')
-        self.rule_name = "os_compute_api:os-security-groups"
-        self.rule = {self.rule_name: "project:non_fake"}
-        self.policy.set_rules(self.rule)
-        self.fake_res = wsgi.ResponseObject({
-            'server': {'id': '0'},
-            'servers': [{'id': '0'}, {'id': '2'}]})
-
-    @mock.patch('nova.policy.authorize')
-    def test_show_policy_softauth_is_called(self, mock_authorize):
-        mock_authorize.return_value = False
-        self.controller.show(self.req, self.fake_res, FAKE_UUID1)
-        self.assertTrue(mock_authorize.called)
-
-    @mock.patch.object(nova.network.security_group.openstack_driver,
-        "is_neutron_security_groups")
-    def test_show_policy_failed(self, is_neutron_security_groups):
-        self.controller.show(self.req, self.fake_res, FAKE_UUID1)
-        self.assertFalse(is_neutron_security_groups.called)
-
-    @mock.patch('nova.policy.authorize')
-    def test_create_policy_softauth_is_called(self, mock_authorize):
-        mock_authorize.return_value = False
-        self.controller.show(self.req, self.fake_res, {})
-        self.assertTrue(mock_authorize.called)
-
-    @mock.patch.object(nova.network.security_group.openstack_driver,
-        "is_neutron_security_groups")
-    def test_create_policy_failed(self, is_neutron_security_groups):
-        self.controller.create(self.req, self.fake_res, {})
-        self.assertFalse(is_neutron_security_groups.called)
-
-    @mock.patch('nova.policy.authorize')
-    def test_detail_policy_softauth_is_called(self, mock_authorize):
-        mock_authorize.return_value = False
-        self.controller.detail(self.req, self.fake_res)
-        self.assertTrue(mock_authorize.called)
-
-    @mock.patch.object(nova.network.security_group.openstack_driver,
-        "is_neutron_security_groups")
-    def test_detail_policy_failed(self, is_neutron_security_groups):
-        self.controller.detail(self.req, self.fake_res)
-        self.assertFalse(is_neutron_security_groups.called)
 
 
 class PolicyEnforcementV21(test.NoDBTestCase):

@@ -15,10 +15,7 @@
 
 from oslo_policy import policy
 
-from nova.policies import base
 
-
-BASE_POLICY_NAME = 'os_compute_api:os-keypairs'
 POLICY_ROOT = 'os_compute_api:os-keypairs:%s'
 
 
@@ -63,28 +60,6 @@ keypairs_policies = [
                 'method': 'GET'
             }
         ]),
-    policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_OR_OWNER,
-        "Return 'key_name' in the response of server.",
-        [
-            {
-                'path': '/servers/{id}',
-                'method': 'GET',
-            },
-            {
-                'path': '/servers/detail',
-                'method': 'GET'
-            }
-        ],
-        deprecated_for_removal=True,
-        deprecated_reason=(
-            'Nova API extension concept has been removed in Pike. Those '
-            'extensions have their own policies enforcement. As there is '
-            'no extensions now, "os_compute_api:os-keypairs" policy '
-            'which was added for extensions is not needed any more'
-        ),
-        deprecated_since='17.0.0'),
 ]
 
 

@@ -219,29 +219,3 @@ class ExtendedVolumesTestV23(ExtendedVolumesTestV21):
         ],
     ]
     wsgi_api_version = '2.3'
-
-
-class ExtendedVolumesEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(ExtendedVolumesEnforcementV21, self).setUp()
-        self.controller = extended_volumes_v21.ExtendedVolumesController()
-        self.req = fakes.HTTPRequest.blank('')
-
-    @mock.patch.object(extended_volumes_v21.ExtendedVolumesController,
-                       '_extend_server')
-    def test_extend_show_policy_failed(self, mock_extend):
-        rule_name = 'os_compute_api:os-extended-volumes'
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        # Pass ResponseObj as None, the code shouldn't touch the None.
-        self.controller.show(self.req, None, fakes.FAKE_UUID)
-        self.assertFalse(mock_extend.called)
-
-    @mock.patch.object(extended_volumes_v21.ExtendedVolumesController,
-                   '_extend_server')
-    def test_extend_detail_policy_failed(self, mock_extend):
-        rule_name = 'os_compute_api:os-extended-volumes'
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        # Pass ResponseObj as None, the code shouldn't touch the None.
-        self.controller.detail(self.req, None)
-        self.assertFalse(mock_extend.called)

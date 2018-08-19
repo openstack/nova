@@ -490,9 +490,6 @@ class SecurityGroupsOutputController(wsgi.Controller):
             return
         key = "security_groups"
         context = req.environ['nova.context']
-        if not context.can(sg_policies.BASE_POLICY_NAME, fatal=False):
-            return
-
         if not openstack_driver.is_neutron_security_groups():
             for server in servers:
                 instance = req.get_db_instance(server['id'])

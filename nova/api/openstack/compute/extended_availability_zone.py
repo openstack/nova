@@ -17,7 +17,6 @@
 
 from nova.api.openstack import wsgi
 from nova import availability_zones as avail_zone
-from nova.policies import extended_availability_zone as eaz_policies
 
 PREFIX = "OS-EXT-AZ"
 
@@ -34,16 +33,14 @@ class ExtendedAZController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if context.can(eaz_policies.BASE_POLICY_NAME, fatal=False):
-            server = resp_obj.obj['server']
-            db_instance = req.get_db_instance(server['id'])
-            self._extend_server(context, server, db_instance)
+        server = resp_obj.obj['server']
+        db_instance = req.get_db_instance(server['id'])
+        self._extend_server(context, server, db_instance)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if context.can(eaz_policies.BASE_POLICY_NAME, fatal=False):
-            servers = list(resp_obj.obj['servers'])
-            for server in servers:
-                db_instance = req.get_db_instance(server['id'])
-                self._extend_server(context, server, db_instance)
+        servers = list(resp_obj.obj['servers'])
+        for server in servers:
+            db_instance = req.get_db_instance(server['id'])
+            self._extend_server(context, server, db_instance)

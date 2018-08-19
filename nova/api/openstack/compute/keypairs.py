@@ -306,14 +306,10 @@ class Controller(wsgi.Controller):
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
-        context = req.environ['nova.context']
-        if context.can(kp_policies.BASE_POLICY_NAME, fatal=False):
-            self._show(req, resp_obj)
+        self._show(req, resp_obj)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
-        context = req.environ['nova.context']
-        if 'servers' in resp_obj.obj and context.can(
-                kp_policies.BASE_POLICY_NAME, fatal=False):
+        if 'servers' in resp_obj.obj:
             servers = resp_obj.obj['servers']
             self._add_key_name(req, servers)

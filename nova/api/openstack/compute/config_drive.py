@@ -16,7 +16,6 @@
 """Config Drive extension."""
 
 from nova.api.openstack import wsgi
-from nova.policies import config_drive as cd_policies
 
 ATTRIBUTE_NAME = "config_drive"
 
@@ -37,14 +36,10 @@ class ConfigDriveController(wsgi.Controller):
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
-        context = req.environ['nova.context']
-        if context.can(cd_policies.BASE_POLICY_NAME, fatal=False):
-            self._show(req, resp_obj)
+        self._show(req, resp_obj)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
-        context = req.environ['nova.context']
-        if 'servers' in resp_obj.obj and context.can(
-                cd_policies.BASE_POLICY_NAME, fatal=False):
+        if 'servers' in resp_obj.obj:
             servers = resp_obj.obj['servers']
             self._add_config_drive(req, servers)

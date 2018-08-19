@@ -15,8 +15,6 @@
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.policies import flavor_access as fa_policies
-from nova.policies import flavor_rxtx as fr_policies
 
 FLAVOR_DESCRIPTION_MICROVERSION = '2.55'
 FLAVOR_EXTRA_SPECS_MICROVERSION = '2.61'
@@ -27,12 +25,10 @@ class ViewBuilder(common.ViewBuilder):
     _collection_name = "flavors"
 
     def basic(self, request, flavor, include_description=False,
-              update_is_public=None, update_rxtx_factor=None,
               include_extra_specs=False):
-        # include_extra_specs & update_is_public & update_rxtx_factor are
-        # placeholder param which are not used in this method as basic() method
-        # is used by index() (GET /flavors) which does not return those keys in
-        # response.
+        # include_extra_specs is placeholder param which is not used in
+        # this method as basic() method is used by index() (GET /flavors)
+        # which does not return those keys in response.
         flavor_dict = {
             "flavor": {
                 "id": flavor["flavorid"],
@@ -49,7 +45,6 @@ class ViewBuilder(common.ViewBuilder):
         return flavor_dict
 
     def show(self, request, flavor, include_description=False,
-             update_is_public=None, update_rxtx_factor=None,
              include_extra_specs=False):
         flavor_dict = {
             "flavor": {
@@ -61,6 +56,8 @@ class ViewBuilder(common.ViewBuilder):
                 "OS-FLV-EXT-DATA:ephemeral": flavor["ephemeral_gb"],
                 "OS-FLV-DISABLED:disabled": flavor["disabled"],
                 "vcpus": flavor["vcpus"],
+                "os-flavor-access:is_public": flavor['is_public'],
+                "rxtx_factor": flavor['rxtx_factor'] or "",
                 "links": self._get_links(request,
                                          flavor["flavorid"],
                                          self._collection_name),
@@ -72,26 +69,6 @@ class ViewBuilder(common.ViewBuilder):
 
         if include_extra_specs:
             flavor_dict['flavor']['extra_specs'] = flavor.extra_specs
-
-        # TODO(gmann): 'update_is_public' & 'update_rxtx_factor' are policies
-        # checks. Once os-flavor-access & os-flavor-rxtx policies are
-        # removed, 'os-flavor-access:is_public' and 'rxtx_factor' need to be
-        # added in response without any check.
-
-        # Evaluate the policies when using show method directly.
-        context = request.environ['nova.context']
-        if update_is_public is None:
-            update_is_public = context.can(fa_policies.BASE_POLICY_NAME,
-                                           fatal=False)
-        if update_rxtx_factor is None:
-            update_rxtx_factor = context.can(fr_policies.BASE_POLICY_NAME,
-                                             fatal=False)
-        if update_is_public:
-            flavor_dict['flavor'].update({
-                "os-flavor-access:is_public": flavor['is_public']})
-        if update_rxtx_factor:
-            flavor_dict['flavor'].update(
-                {"rxtx_factor": flavor['rxtx_factor'] or ""})
 
         return flavor_dict
 
@@ -108,20 +85,12 @@ class ViewBuilder(common.ViewBuilder):
         coll_name = self._collection_name + '/detail'
         include_description = api_version_request.is_supported(
             request, FLAVOR_DESCRIPTION_MICROVERSION)
-        context = request.environ['nova.context']
-        update_is_public = context.can(fa_policies.BASE_POLICY_NAME,
-                                       fatal=False)
-        update_rxtx_factor = context.can(fr_policies.BASE_POLICY_NAME,
-                                         fatal=False)
         return self._list_view(self.show, request, flavors, coll_name,
                                include_description=include_description,
-                               update_is_public=update_is_public,
-                               update_rxtx_factor=update_rxtx_factor,
                                include_extra_specs=include_extra_specs)
 
     def _list_view(self, func, request, flavors, coll_name,
-                   include_description=False, update_is_public=None,
-                   update_rxtx_factor=None, include_extra_specs=False):
+                   include_description=False, include_extra_specs=False):
         """Provide a view for a list of flavors.
 
         :param func: Function used to format the flavor data
@@ -131,17 +100,12 @@ class ViewBuilder(common.ViewBuilder):
                           for a pagination query
         :param include_description: If the flavor.description should be
                                     included in the response dict.
-        :param update_is_public: If the flavor.is_public field should be
-                                 included in the response dict.
-        :param update_rxtx_factor: If the flavor.rxtx_factor field should be
-                                   included in the response dict.
         :param include_extra_specs: If the flavor.extra_specs should be
                                     included in the response dict.
 
         :returns: Flavor reply data in dictionary format
         """
         flavor_list = [func(request, flavor, include_description,
-                            update_is_public, update_rxtx_factor,
                             include_extra_specs)["flavor"]
                        for flavor in flavors]
         flavors_links = self._get_collection_links(request,
