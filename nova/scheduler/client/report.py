@@ -1095,7 +1095,11 @@ class SchedulerReportClient(object):
         # @safe_connect, so we don't want to decorate this whole method with it
         @safe_connect
         def do_put(url, payload):
-            return self.put(url, payload, global_request_id=context.global_id)
+            # NOTE(vdrok): in microversion 1.26 it is allowed to have inventory
+            # records with reserved value equal to total
+            return self.put(
+                url, payload, global_request_id=context.global_id,
+                version=ALLOW_RESERVED_EQUAL_TOTAL_INVENTORY_VERSION)
 
         # If not different from what we've got, short out
         if not self._provider_tree.has_inventory_changed(rp_uuid, inv_data):
