@@ -21,6 +21,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack.compute.views import flavors as views_flavors
 from nova.api.openstack.compute.views import images as views_images
+from nova import availability_zones as avail_zone
 from nova import context as nova_context
 from nova import exception
 from nova import objects
@@ -110,7 +111,7 @@ class ViewBuilder(common.ViewBuilder):
         return sorted(list(set(self._show_expected_attrs + expected_attrs)))
 
     def show(self, request, instance, extend_address=True,
-             show_extra_specs=None):
+             show_extra_specs=None, show_AZ=True):
         """Detailed view of a single instance."""
         ip_v4 = instance.get('access_ip_v4')
         ip_v6 = instance.get('access_ip_v6')
@@ -159,6 +160,14 @@ class ViewBuilder(common.ViewBuilder):
 
         if server["server"]["status"] in self._progress_statuses:
             server["server"]["progress"] = instance.get("progress", 0)
+
+        if show_AZ:
+            context = request.environ['nova.context']
+            az = avail_zone.get_instance_availability_zone(context, instance)
+            # NOTE(mriedem): The OS-EXT-AZ prefix should not be used for new
+            # attributes after v2.1. They are only in v2.1 for backward compat
+            # with v2.0.
+            server["server"]["OS-EXT-AZ:availability_zone"] = az or ''
 
         if api_version_request.is_supported(request, min_version="2.9"):
             server["server"]["locked"] = (True if instance["locked_by"]

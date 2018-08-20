@@ -136,6 +136,12 @@ def fake_instance_get_all_with_description(context, list_desc, **kwargs):
     return objects.InstanceList(objects=obj_list)
 
 
+def fake_compute_get_empty_az(*args, **kwargs):
+    inst = fakes.stub_instance(vm_state=vm_states.ACTIVE,
+                               availability_zone='')
+    return fake_instance.fake_instance_obj(args[1], **inst)
+
+
 class MockSetAdminPassword(object):
     def __init__(self):
         self.instance_id = None
@@ -153,7 +159,7 @@ class ControllerTest(test.TestCase):
         self.flags(use_ipv6=False)
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
-        return_server = fakes.fake_compute_get()
+        return_server = fakes.fake_compute_get(availability_zone='nova')
         return_servers = fakes.fake_compute_get_all()
         # Server sort keys extension is enabled in v21 so sort data is passed
         # to the instance API and the sorted DB API is invoked
@@ -371,6 +377,7 @@ class ServersControllerTest(ControllerTest):
                 "OS-DCF:diskConfig": "MANUAL",
                 "accessIPv4": '',
                 "accessIPv6": '',
+                "OS-EXT-AZ:availability_zone": "nova",
             }
         }
 
@@ -391,12 +398,21 @@ class ServersControllerTest(ControllerTest):
         expected_server['server']['metadata']['seq'] = '1'
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
 
+    def test_get_server_empty_az(self):
+        self.mock_get.side_effect = fakes.fake_compute_get(
+            availability_zone='')
+        uuid = FAKE_UUID
+        req = self.req('/v2/fake/servers/%s' % uuid)
+        res_dict = self.controller.show(req, uuid)
+        self.assertEqual(res_dict['server']['OS-EXT-AZ:availability_zone'], '')
+
     def test_get_server_with_active_status_by_id(self):
         image_bookmark = "http://localhost/fake/images/10"
         flavor_bookmark = "http://localhost/fake/flavors/2"
 
         self.mock_get.side_effect = fakes.fake_compute_get(
-            id=2, vm_state=vm_states.ACTIVE, progress=100)
+            id=2, vm_state=vm_states.ACTIVE, progress=100,
+            availability_zone='nova')
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
@@ -417,7 +433,8 @@ class ServersControllerTest(ControllerTest):
 
         self.mock_get.side_effect = fakes.fake_compute_get(
             id=2, vm_state=vm_states.ACTIVE, image_ref=image_ref,
-            flavor_id=flavor_id, progress=100)
+            flavor_id=flavor_id, progress=100,
+            availability_zone='nova')
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
@@ -460,7 +477,8 @@ class ServersControllerTest(ControllerTest):
                          'subnets': [{'cidr': '192.168.0.0/24',
                                       'ips': [_ip(ip) for ip in priv0]}]}}]
 
-        self.mock_get.side_effect = fakes.fake_compute_get(nw_cache=nw_cache)
+        self.mock_get.side_effect = fakes.fake_compute_get(nw_cache=nw_cache,
+            availability_zone='nova')
 
         req = self.req('/fake/servers/%s/ips' % FAKE_UUID)
         res_dict = self.ips_controller.index(req, FAKE_UUID)
@@ -1434,7 +1452,8 @@ class ServersControllerTestV29(ServersControllerTest):
         image_bookmark = "http://localhost/fake/images/10"
         flavor_bookmark = "http://localhost/fake/flavors/2"
         self.mock_get.side_effect = fakes.fake_compute_get(
-            id=2, locked_by=locked_by, uuid=FAKE_UUID)
+            id=2, locked_by=locked_by, uuid=FAKE_UUID,
+            availability_zone='nova')
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
@@ -1524,7 +1543,8 @@ class ServersControllerTestV219(ServersControllerTest):
         image_bookmark = "http://localhost/fake/images/10"
         flavor_bookmark = "http://localhost/fake/flavors/2"
         self.mock_get.side_effect = fakes.fake_compute_get(
-            id=2, display_description=description, uuid=FAKE_UUID)
+            id=2, display_description=description, uuid=FAKE_UUID,
+            availability_zone='nova')
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
@@ -2050,6 +2070,24 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                                                body=body).obj
 
         self.assertNotIn('personality', body['server'])
+
+    def test_rebuild_response_has_no_show_server_only_attributes(self):
+        # There are some old server attributes which were added only for
+        # GET server APIs not for rebuild. GET server and Rebuild share the
+        # same view builder method SHOW() to build the response, So make sure
+        # attributes which are not supposed to be included for Rebuild
+        # response are not present.
+
+        body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+            },
+        }
+
+        body = self.controller._action_rebuild(self.req, FAKE_UUID,
+                                               body=body).obj
+
+        self.assertNotIn('OS-EXT-AZ:availability_zone', body['server'])
 
     @mock.patch.object(compute_api.API, 'start')
     def test_start(self, mock_start):
@@ -2634,6 +2672,17 @@ class ServersControllerUpdateTest(ControllerTest):
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['name'], 'server_test')
+
+    def test_update_response_has_no_show_server_only_attributes(self):
+        # There are some old server attributes which were added only for
+        # GET server APIs not for PUT. GET server and PUT server share the
+        # same view builder method SHOW() to build the response, So make sure
+        # attributes which are not supposed to be included for PUT
+        # response are not present.
+        body = {'server': {'name': 'server_test'}}
+        req = self._get_request(body)
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+        self.assertNotIn('OS-EXT-AZ:availability_zone', res_dict['server'])
 
     def test_update_server_name_too_long(self):
         body = {'server': {'name': 'x' * 256}}
@@ -5767,6 +5816,7 @@ class ServersViewBuilderTest(test.TestCase):
             uuid="deadbeef-feed-edee-beef-d0ea7beefedd",
             display_name="test_server",
             include_fake_metadata=False,
+            availability_zone='nova',
             nw_cache=nw_cache_info)
 
         privates = ['172.19.0.1']
@@ -5941,6 +5991,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-DCF:diskConfig": "MANUAL",
                 "accessIPv4": '',
                 "accessIPv6": '',
+                "OS-EXT-AZ:availability_zone": "nova",
             }
         }
 
@@ -6020,6 +6071,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-DCF:diskConfig": "MANUAL",
                 "accessIPv4": '',
                 "accessIPv6": '',
+                "OS-EXT-AZ:availability_zone": "nova",
             }
         }
 
@@ -6198,6 +6250,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-DCF:diskConfig": "MANUAL",
                 "accessIPv4": '',
                 "accessIPv6": '',
+                "OS-EXT-AZ:availability_zone": "nova",
             }
         }
 
@@ -6274,6 +6327,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-DCF:diskConfig": "MANUAL",
                 "accessIPv4": '',
                 "accessIPv6": '',
+                "OS-EXT-AZ:availability_zone": "nova",
             }
         }
 
