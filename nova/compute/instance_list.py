@@ -112,7 +112,9 @@ def get_instance_objects_sorted(ctx, filters, limit, marker, expected_attrs,
     else:
         # Either we are admin, or configured to always hit all cells,
         # so don't limit the list to a subset.
-        cell_mappings = None
+        context.load_cells()
+        cell_mappings = context.CELLS
+
     columns_to_join = instance_obj._expected_cols(expected_attrs)
     instance_generator = get_instances_sorted(ctx, filters, limit, marker,
                                               columns_to_join, sort_keys,
