@@ -79,7 +79,7 @@ class VersionCheckingReportClient(report.SchedulerReportClient):
 
 class SchedulerReportClientTestBase(test.TestCase):
 
-    def _interceptor(self, app=None):
+    def _interceptor(self, app=None, latest_microversion=True):
         """Set up an intercepted placement API to test against.
 
         Use as e.g.
@@ -88,6 +88,10 @@ class SchedulerReportClientTestBase(test.TestCase):
             ret = client.get_provider_tree_and_ensure_root(...)
 
         :param app: An optional wsgi app loader.
+        :param latest_microversion: If True (the default), API requests will
+                                    use the latest microversion if not
+                                    otherwise specified. If False, the base
+                                    microversion is the default.
         :return: Context manager, which in turn returns a direct
                 SchedulerReportClient.
         """
@@ -102,7 +106,8 @@ class SchedulerReportClientTestBase(test.TestCase):
                 self._set_client(client)
                 return client
 
-        interceptor = ReportClientInterceptor(CONF, latest_microversion=True)
+        interceptor = ReportClientInterceptor(
+            CONF, latest_microversion=latest_microversion)
         if app:
             interceptor.app = app
         return interceptor
@@ -504,6 +509,29 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 uuids.sbw, [uuids.agg_bw]))
             self.assertFalse(prov_tree.have_aggregates_changed(
                 self.compute_uuid, [uuids.agg_disk_1, uuids.agg_disk_2]))
+
+    def test__set_inventory_reserved_eq_total(self):
+        with self._interceptor(latest_microversion=False):
+            # Create the provider
+            self.client._ensure_resource_provider(self.context, uuids.cn)
+
+            # Make sure we can set reserved value equal to total
+            inv = {
+                fields.ResourceClass.SRIOV_NET_VF: {
+                    'total': 24,
+                    'reserved': 24,
+                    'min_unit': 1,
+                    'max_unit': 24,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                },
+            }
+            self.client._set_inventory_for_provider(
+                self.context, uuids.cn, inv)
+            self.assertEqual(
+                inv,
+                self.client._get_inventory(
+                    self.context, uuids.cn)['inventories'])
 
     def test__set_inventory_for_provider(self):
         """Tests for SchedulerReportClient._set_inventory_for_provider, NOT
