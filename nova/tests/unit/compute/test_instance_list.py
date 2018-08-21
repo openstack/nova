@@ -41,7 +41,7 @@ class TestInstanceList(test.NoDBTestCase):
 
         self.cells = cells
         self.insts = insts
-        self.context = mock.sentinel.context
+        self.context = nova_context.RequestContext()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
     def test_compare_simple_instance_quirks(self):
@@ -145,7 +145,8 @@ class TestInstanceList(test.NoDBTestCase):
         # storing the uuids of the instances from the up cell
         uuid_initial = [inst['uuid'] for inst in inst_cell0]
 
-        instances = (multi_cell_list.RecordWrapper(self.context, inst)
+        ctx = nova_context.RequestContext()
+        instances = (multi_cell_list.RecordWrapper(ctx, self.context, inst)
                      for inst in inst_cell0)
 
         # creating one up cell and two down cells

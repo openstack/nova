@@ -13,7 +13,9 @@
 import datetime
 
 from nova.compute import multi_cell_list
+from nova import context
 from nova import test
+from nova.tests import uuidsentinel as uuids
 
 
 class TestUtils(test.NoDBTestCase):
@@ -76,22 +78,28 @@ class TestUtils(test.NoDBTestCase):
         inst1 = {'key0': 'foo', 'key1': 'd', 'key2': 456}
         inst2 = {'key0': 'foo', 'key1': 's', 'key2': 123}
 
+        ctx = context.RequestContext()
+        ctx.cell_uuid = uuids.cell
+
         # Should sort by key1
-        ctx = multi_cell_list.RecordSortContext(['key0', 'key1'],
-                                                ['asc', 'asc'])
-        iw1 = multi_cell_list.RecordWrapper(ctx, inst1)
-        iw2 = multi_cell_list.RecordWrapper(ctx, inst2)
+        sort_ctx = multi_cell_list.RecordSortContext(['key0', 'key1'],
+                                                     ['asc', 'asc'])
+        iw1 = multi_cell_list.RecordWrapper(ctx, sort_ctx, inst1)
+        iw2 = multi_cell_list.RecordWrapper(ctx, sort_ctx, inst2)
         # Check this both ways to make sure we're comparing against -1
         # and not just nonzero return from cmp()
         self.assertTrue(iw1 < iw2)
         self.assertFalse(iw2 < iw1)
 
         # Should sort reverse by key1
-        ctx = multi_cell_list.RecordSortContext(['key0', 'key1'],
-                                                ['asc', 'desc'])
-        iw1 = multi_cell_list.RecordWrapper(ctx, inst1)
-        iw2 = multi_cell_list.RecordWrapper(ctx, inst2)
+        sort_ctx = multi_cell_list.RecordSortContext(['key0', 'key1'],
+                                                     ['asc', 'desc'])
+        iw1 = multi_cell_list.RecordWrapper(ctx, sort_ctx, inst1)
+        iw2 = multi_cell_list.RecordWrapper(ctx, sort_ctx, inst2)
         # Check this both ways to make sure we're comparing against -1
         # and not just nonzero return from cmp()
         self.assertTrue(iw1 > iw2)
         self.assertFalse(iw2 > iw1)
+
+        # Make sure we can tell which cell a request came from
+        self.assertEqual(uuids.cell, iw1.cell_uuid)
