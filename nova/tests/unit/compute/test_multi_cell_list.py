@@ -172,11 +172,14 @@ class TestListContext(multi_cell_list.RecordSortContext):
 
 
 class TestLister(multi_cell_list.CrossCellLister):
+    CONTEXT_CLS = TestListContext
+
     def __init__(self, data, sort_keys, sort_dirs,
                  cells=None, batch_size=None):
         self._data = data
         self._count_by_cell = {}
-        super(TestLister, self).__init__(TestListContext(sort_keys, sort_dirs),
+        super(TestLister, self).__init__(self.CONTEXT_CLS(sort_keys,
+                                                          sort_dirs),
                                          cells=cells, batch_size=batch_size)
 
     @property
@@ -219,8 +222,12 @@ class TestLister(multi_cell_list.CrossCellLister):
 
     def get_by_filters(self, ctx, filters, limit, marker, **kwargs):
         self._method_called(ctx, 'get_by_filters', limit)
-        batch = self._data[:limit]
-        self._data = self._data[limit:]
+        if 'batch_size' in kwargs:
+            count = min(kwargs['batch_size'], limit)
+        else:
+            count = limit
+        batch = self._data[:count]
+        self._data = self._data[count:]
         return batch
 
 
@@ -308,23 +315,33 @@ class TestBatching(test.NoDBTestCase):
         self.assertEqual(limit_expected, summary['limit_by_cell'])
 
 
+class FailureListContext(multi_cell_list.RecordSortContext):
+    def compare_records(self, rec1, rec2):
+        return 0
+
+
 class FailureLister(TestLister):
+    CONTEXT_CLS = FailureListContext
+
     def __init__(self, *a, **k):
         super(FailureLister, self).__init__(*a, **k)
-        self._fails = [context.did_not_respond_sentinel,
-                       None,
-                       context.raised_exception_sentinel,
-                       None,
-                       None]
+        self._fails = {}
 
-    def get_by_filters(self, *a, **k):
-        action = self._fails.pop()
+    def set_fails(self, cell, fails):
+        self._fails[cell] = fails
+
+    def get_by_filters(self, ctx, *a, **k):
+        try:
+            action = self._fails[ctx.cell_uuid].pop(0)
+        except (IndexError, KeyError):
+            action = None
+
         if action == context.did_not_respond_sentinel:
             raise exception.CellTimeout
         elif action == context.raised_exception_sentinel:
             raise test.TestingException
         else:
-            return super(FailureLister, self).get_by_filters(*a, **k)
+            return super(FailureLister, self).get_by_filters(ctx, *a, **k)
 
 
 @mock.patch('nova.context.target_cell', new=target_cell_cheater)
@@ -333,13 +350,41 @@ class TestBaseClass(test.NoDBTestCase):
         data = [{'id': 'foo-%i' % i} for i in range(0, 100)]
         cells = [objects.CellMapping(uuid=getattr(uuids, 'cell%i' % i),
                                      name='cell%i' % i)
-                 for i in range(0, 5)]
+                 for i in range(0, 3)]
 
-        # Two of the five cells will fail, one with timeout and one
-        # with an error
         lister = FailureLister(data, [], [], cells=cells)
+        # Two of the cells will fail, one with timeout and one
+        # with an error
+        lister.set_fails(uuids.cell0, [context.did_not_respond_sentinel])
+        lister.set_fails(uuids.cell1, [context.raised_exception_sentinel])
         ctx = context.RequestContext()
-        result = lister.get_records_sorted(ctx, {}, 50, None)
+        result = lister.get_records_sorted(ctx, {}, 50, None, batch_size=10)
         # We should still have 50 results since there are enough from the
         # good cells to fill our limit.
         self.assertEqual(50, len(list(result)))
+        # Make sure the counts line up
+        self.assertEqual(1, len(lister.cells_failed))
+        self.assertEqual(1, len(lister.cells_timed_out))
+        self.assertEqual(1, len(lister.cells_responded))
+
+    def test_with_failing_middle_cells(self):
+        data = [{'id': 'foo-%i' % i} for i in range(0, 100)]
+        cells = [objects.CellMapping(uuid=getattr(uuids, 'cell%i' % i),
+                                     name='cell%i' % i)
+                 for i in range(0, 3)]
+
+        lister = FailureLister(data, [], [], cells=cells)
+        # One cell will succeed and then time out, one will fail immediately,
+        # and the last will always work
+        lister.set_fails(uuids.cell0, [None, context.did_not_respond_sentinel])
+        lister.set_fails(uuids.cell1, [context.raised_exception_sentinel])
+        ctx = context.RequestContext()
+        result = lister.get_records_sorted(ctx, {}, 50, None,
+                                           batch_size=5)
+        # We should still have 50 results since there are enough from the
+        # good cells to fill our limit.
+        self.assertEqual(50, len(list(result)))
+        # Make sure the counts line up
+        self.assertEqual(1, len(lister.cells_responded))
+        self.assertEqual(1, len(lister.cells_failed))
+        self.assertEqual(1, len(lister.cells_timed_out))
