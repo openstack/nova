@@ -1234,7 +1234,10 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
 
 @db_api.pick_context_manager_writer
 def populate_missing_availability_zones(context, count):
+    # instances without host have no reasonable AZ to set
+    not_empty_host = models.Instance.host != None  # noqa E711
     instances = (context.session.query(models.Instance).
+        filter(not_empty_host).
         filter_by(availability_zone=None).limit(count).all())
     count_all = len(instances)
     count_hit = 0

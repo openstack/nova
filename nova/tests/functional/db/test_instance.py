@@ -81,17 +81,20 @@ class InstanceObjectTestCase(test.TestCase):
         uuid1 = inst1.uuid
         inst2 = self._create_instance(availability_zone="fake",
                                       host="fake-host2")
+        # ... and one without a host (simulating failed spawn)
+        self._create_instance(host=None)
+
         self.assertIsNone(inst1.availability_zone)
         self.assertEqual("fake", inst2.availability_zone)
         count_all, count_hit = (objects.instance.
             populate_missing_availability_zones(self.context, 10))
-        # we get only the instance whose avz was None.
+        # we get only the instance whose avz was None and where host is set
         self.assertEqual(1, count_all)
         self.assertEqual(1, count_hit)
+        # since instance has no avz, avz is set by get_host_availability_zone
+        # to CONF.default_availability_zone i.e 'nova' which is the default
+        # zone for compute services.
         inst1 = objects.Instance.get_by_uuid(self.context, uuid1)
-        # since instance.host was None, avz is set to
-        # CONF.default_availability_zone i.e 'nova' which is the default zone
-        # for compute services.
         self.assertEqual('nova', inst1.availability_zone)
 
         # create an instance with avz as None on a host that has avz.
