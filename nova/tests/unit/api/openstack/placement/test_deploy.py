@@ -14,6 +14,7 @@
 """Unit tests for the deply function used to build the Placement service."""
 
 from oslo_config import cfg
+from oslo_policy import opts as policy_opts
 import testtools
 import webob
 
@@ -34,6 +35,8 @@ class DeployTest(testtools.TestCase):
                           group='keystone_authtoken')
         # ensure that the auth_token middleware is chosen
         CONF.set_override('auth_strategy', 'keystone', group='api')
+        # register and default policy opts (referenced by deploy)
+        policy_opts.set_defaults(CONF)
         app = deploy.deploy(CONF)
         req = webob.Request.blank('/resource_providers', method="GET")
 
