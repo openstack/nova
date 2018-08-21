@@ -973,6 +973,14 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
         self.assertEqual(migration.find_job_type(self.guest, self.instance),
                          fakelibvirt.VIR_DOMAIN_JOB_FAILED)
 
+    @mock.patch('nova.virt.libvirt.migration.LOG',
+                new_callable=mock.NonCallableMock)  # asserts not called
+    @mock.patch('nova.virt.libvirt.guest.Guest.is_active', return_value=True)
+    def test_live_migration_find_type_no_logging(self, mock_active, _mock_log):
+        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_FAILED,
+                         migration.find_job_type(self.guest, self.instance,
+                                                 logging_ok=False))
+
     def test_live_migration_abort_too_long(self):
         # Elapsed time is over completion timeout
         self.assertTrue(migration.should_trigger_timeout_action(

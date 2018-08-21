@@ -340,11 +340,13 @@ def _update_vif_xml(xml_doc, migrate_data, get_vif_config):
     return xml_doc
 
 
-def find_job_type(guest, instance):
+def find_job_type(guest, instance, logging_ok=True):
     """Determine the (likely) current migration job type
 
     :param guest: a nova.virt.libvirt.guest.Guest
     :param instance: a nova.objects.Instance
+    :param logging_ok: If logging in this method is OK. If called from a
+        native thread then logging is generally prohibited.
 
     Annoyingly when job type == NONE and migration is
     no longer running, we don't know whether we stopped
@@ -354,25 +356,29 @@ def find_job_type(guest, instance):
 
     :returns: a libvirt job type constant
     """
+    def _log(func, msg, *args, **kwargs):
+        if logging_ok:
+            func(msg, *args, **kwargs)
+
     try:
         if guest.is_active():
-            LOG.debug("VM running on src, migration failed",
-                      instance=instance)
+            _log(LOG.debug, "VM running on src, migration failed",
+                 instance=instance)
             return libvirt.VIR_DOMAIN_JOB_FAILED
         else:
-            LOG.debug("VM is shutoff, migration finished",
-                      instance=instance)
+            _log(LOG.debug, "VM is shutoff, migration finished",
+                 instance=instance)
             return libvirt.VIR_DOMAIN_JOB_COMPLETED
     except libvirt.libvirtError as ex:
-        LOG.debug("Error checking domain status %(ex)s",
-                  {"ex": ex}, instance=instance)
+        _log(LOG.debug, "Error checking domain status %(ex)s", {"ex": ex},
+             instance=instance)
         if ex.get_error_code() == libvirt.VIR_ERR_NO_DOMAIN:
-            LOG.debug("VM is missing, migration finished",
-                      instance=instance)
+            _log(LOG.debug, "VM is missing, migration finished",
+                 instance=instance)
             return libvirt.VIR_DOMAIN_JOB_COMPLETED
         else:
-            LOG.info("Error %(ex)s, migration failed",
-                     {"ex": ex}, instance=instance)
+            _log(LOG.info, "Error %(ex)s, migration failed", {"ex": ex},
+                 instance=instance)
             return libvirt.VIR_DOMAIN_JOB_FAILED
 
 
