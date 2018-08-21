@@ -16,6 +16,7 @@ from gabbi import fixture
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_middleware import cors
+from oslo_policy import opts as policy_opts
 from oslo_utils import uuidutils
 from oslotest import output
 
@@ -75,6 +76,9 @@ class APIFixture(fixture.GabbiFixture):
         # deploy.py. Without setting some config the group will not
         # be present.
         CONF.register_opts(cors.CORS_OPTS, 'cors')
+        # Set default policy opts, otherwise the deploy module can
+        # NoSuchOptError.
+        policy_opts.set_defaults(CONF)
 
         # Make sure default_config_files is an empty list, not None.
         # If None /etc/nova/nova.conf is read and confuses results.
