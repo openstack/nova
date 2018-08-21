@@ -256,8 +256,15 @@ class ContextTestCase(test.NoDBTestCase):
         with context.target_cell(ctxt, mapping) as cctxt:
             self.assertEqual(cctxt.db_connection, mock.sentinel.cdb)
             self.assertEqual(cctxt.mq_connection, mock.sentinel.cmq)
+            self.assertEqual(cctxt.cell_uuid, mapping.uuid)
         self.assertEqual(mock.sentinel.db_conn, ctxt.db_connection)
         self.assertEqual(mock.sentinel.mq_conn, ctxt.mq_connection)
+        self.assertIsNone(ctxt.cell_uuid)
+        # Test again now that we have populated the cache
+        with context.target_cell(ctxt, mapping) as cctxt:
+            self.assertEqual(cctxt.db_connection, mock.sentinel.cdb)
+            self.assertEqual(cctxt.mq_connection, mock.sentinel.cmq)
+            self.assertEqual(cctxt.cell_uuid, mapping.uuid)
 
     @mock.patch('nova.rpc.create_transport')
     @mock.patch('nova.db.api.create_context_manager')

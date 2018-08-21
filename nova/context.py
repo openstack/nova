@@ -147,6 +147,7 @@ class RequestContext(context.RequestContext):
         # provided by this module
         self.db_connection = None
         self.mq_connection = None
+        self.cell_uuid = None
 
         self.user_auth_plugin = user_auth_plugin
         if self.is_admin is None:
@@ -373,16 +374,19 @@ def set_target_cell(context, cell_mapping):
                 if not cell_mapping.transport_url.startswith('none'):
                     context.mq_connection = rpc.create_transport(
                         cell_mapping.transport_url)
+                context.cell_uuid = cell_mapping.uuid
                 CELL_CACHE[cell_mapping.uuid] = (context.db_connection,
                                                  context.mq_connection)
             else:
                 context.db_connection = cell_tuple[0]
                 context.mq_connection = cell_tuple[1]
+                context.cell_uuid = cell_mapping.uuid
 
         get_or_set_cached_cell_and_set_connections()
     else:
         context.db_connection = None
         context.mq_connection = None
+        context.cell_uuid = None
 
 
 @contextmanager
