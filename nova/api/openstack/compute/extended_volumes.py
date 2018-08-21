@@ -65,7 +65,7 @@ class ExtendedVolumesController(wsgi.Controller):
 
         bdms = {}
         results = context.scatter_gather_cells(
-                        ctxt, cell_mappings.values(), 60,
+                        ctxt, cell_mappings.values(), context.CELL_TIMEOUT,
                         objects.BlockDeviceMappingList.bdms_by_instance_uuid,
                         instance_uuids)
         for cell_uuid, result in results.items():

@@ -623,7 +623,8 @@ class HostManager(object):
                 return services, objects.ComputeNodeList.get_all_by_uuids(
                     cctxt, compute_uuids)
 
-        results = context_module.scatter_gather_cells(context, cells, 60,
+        timeout = context_module.CELL_TIMEOUT
+        results = context_module.scatter_gather_cells(context, cells, timeout,
                                                       targeted_operation)
         compute_nodes = collections.defaultdict(list)
         services = {}

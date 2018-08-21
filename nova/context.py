@@ -52,6 +52,8 @@ raised_exception_sentinel = object()
 # first time we look. This needs to be refreshed on a timer or
 # trigger.
 CELLS = []
+# Timeout value for waiting for cells to respond
+CELL_TIMEOUT = 60
 
 
 class _ContextAuthPlugin(plugin.BaseAuthPlugin):
@@ -485,9 +487,9 @@ def load_cells():
 def scatter_gather_skip_cell0(context, fn, *args, **kwargs):
     """Target all cells except cell0 in parallel and return their results.
 
-    The first parameter in the signature of the function to call for each cell
-    should be of type RequestContext. There is a 60 second timeout for waiting
-    on all results to be gathered.
+    The first parameter in the signature of the function to call for
+    each cell should be of type RequestContext. There is a timeout for
+    waiting on all results to be gathered.
 
     :param context: The RequestContext for querying cells
     :param fn: The function to call for each cell
@@ -502,16 +504,16 @@ def scatter_gather_skip_cell0(context, fn, *args, **kwargs):
     """
     load_cells()
     cell_mappings = [cell for cell in CELLS if not cell.is_cell0()]
-    return scatter_gather_cells(context, cell_mappings, 60, fn, *args,
-                                **kwargs)
+    return scatter_gather_cells(context, cell_mappings, CELL_TIMEOUT,
+                                fn, *args, **kwargs)
 
 
 def scatter_gather_all_cells(context, fn, *args, **kwargs):
     """Target all cells in parallel and return their results.
 
-    The first parameter in the signature of the function to call for each cell
-    should be of type RequestContext. There is a 60 second timeout for waiting
-    on all results to be gathered.
+    The first parameter in the signature of the function to call for
+    each cell should be of type RequestContext. There is a timeout for
+    waiting on all results to be gathered.
 
     :param context: The RequestContext for querying cells
     :param fn: The function to call for each cell
@@ -525,4 +527,5 @@ def scatter_gather_all_cells(context, fn, *args, **kwargs):
               exception will be logged.
     """
     load_cells()
-    return scatter_gather_cells(context, CELLS, 60, fn, *args, **kwargs)
+    return scatter_gather_cells(context, CELLS, CELL_TIMEOUT,
+                                fn, *args, **kwargs)
