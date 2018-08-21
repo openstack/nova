@@ -251,7 +251,12 @@ class HostTestCase(test.NoDBTestCase):
                 conn, dom, fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED,
                 detail=VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED, opaque=hostimpl)
         expected_event = hostimpl._queue_event.call_args[0][0]
-        self.assertEqual(event.EVENT_LIFECYCLE_MIGRATION_COMPLETED,
+        # FIXME(mriedem): This should be EVENT_LIFECYCLE_MIGRATION_COMPLETED
+        # once bug 1788014 is fixed and we properly check job status for the
+        # VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED case.
+        # self.assertEqual(event.EVENT_LIFECYCLE_MIGRATION_COMPLETED,
+        #                  expected_event.transition)
+        self.assertEqual(event.EVENT_LIFECYCLE_PAUSED,
                          expected_event.transition)
 
     def test_event_emit_delayed_call_delayed(self):
