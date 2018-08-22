@@ -165,7 +165,7 @@ class CrossCellLister(object):
 
     @abc.abstractmethod
     def get_marker_record(self, ctx, marker_id):
-        """Get an instance of the marker record by id.
+        """Get the cell UUID and instance of the marker record by id.
 
         This needs to look up the marker record in whatever cell it is in
         and return it. It should be populated with values corresponding to
@@ -173,7 +173,8 @@ class CrossCellLister(object):
 
         :param ctx: A RequestContext
         :param marker_id: The identifier of the marker to find
-        :returns: An instance of the marker from the database
+        :returns: A tuple of cell_uuid where the marker was found and an
+                  instance of the marker from the database
         :raises: MarkerNotFound if the marker does not exist
         """
         pass
@@ -242,7 +243,8 @@ class CrossCellLister(object):
             # whatever cell it is in and record the values for the
             # sort keys so we can find the marker instance in each
             # cell (called the 'local' marker).
-            global_marker_record = self.get_marker_record(ctx, marker)
+            global_marker_cell, global_marker_record = self.get_marker_record(
+                ctx, marker)
             global_marker_values = [global_marker_record[key]
                                     for key in self.sort_ctx.sort_keys]
 
@@ -272,11 +274,11 @@ class CrossCellLister(object):
             marker_id = self.marker_identifier
 
             if marker:
-                # FIXME(danms): If we knew which cell we were in here, we could
-                # avoid looking up the marker again. But, we don't currently.
-
-                local_marker = self.get_marker_by_values(cctx,
-                                                         global_marker_values)
+                if cctx.cell_uuid == global_marker_cell:
+                    local_marker = marker
+                else:
+                    local_marker = self.get_marker_by_values(
+                        cctx, global_marker_values)
                 if local_marker:
                     if local_marker != marker:
                         # We did find a marker in our cell, but it wasn't
