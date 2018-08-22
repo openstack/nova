@@ -176,7 +176,7 @@ class CrossCellLister(object):
             global_marker_values = [global_marker_record[key]
                                     for key in self.sort_ctx.sort_keys]
 
-        def do_query(ctx):
+        def do_query(cctx):
             """Generate RecordWrapper(record) objects from a cell.
 
             We do this inside the thread (created by
@@ -205,7 +205,7 @@ class CrossCellLister(object):
                 # FIXME(danms): If we knew which cell we were in here, we could
                 # avoid looking up the marker again. But, we don't currently.
 
-                local_marker = self.get_marker_by_values(ctx,
+                local_marker = self.get_marker_by_values(cctx,
                                                          global_marker_values)
                 if local_marker:
                     if local_marker != marker:
@@ -230,7 +230,7 @@ class CrossCellLister(object):
                             # expected.
                             local_marker_filters[marker_id] = [local_marker]
                         local_marker_prefix = self.get_by_filters(
-                            ctx, local_marker_filters, limit=1, marker=None,
+                            cctx, local_marker_filters, limit=1, marker=None,
                             **kwargs)
                 else:
                     # There was a global marker but everything in our
@@ -241,11 +241,11 @@ class CrossCellLister(object):
                     return []
 
             main_query_result = self.get_by_filters(
-                ctx, filters,
+                cctx, filters,
                 limit=limit, marker=local_marker,
                 **kwargs)
 
-            return (RecordWrapper(ctx, self.sort_ctx, inst) for inst in
+            return (RecordWrapper(cctx, self.sort_ctx, inst) for inst in
                     itertools.chain(local_marker_prefix, main_query_result))
 
         # NOTE(tssurya): When the below routine provides sentinels to indicate
