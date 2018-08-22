@@ -18757,7 +18757,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                vifs_already_plugged=None):
             self.fake_create_domain_called = True
             self.assertEqual(powered_on, power_on)
-            self.assertTrue(vifs_already_plugged)
+            self.assertFalse(vifs_already_plugged)
             return mock.MagicMock()
 
         def fake_enable_hairpin():
