@@ -699,7 +699,8 @@ class ServersControllerTest(ControllerTest):
         self.mock_get_all.assert_called_once_with(
             req.environ['nova.context'], expected_attrs=[], limit=1000,
             marker=None, search_opts={'deleted': False, 'project_id': 'fake'},
-            sort_dirs=['desc'], sort_keys=['created_at'])
+            sort_dirs=['desc'], sort_keys=['created_at'],
+            cell_down_support=False)
 
     def test_get_server_list_with_reservation_id(self):
         req = self.req('/fake/servers?reservation_id=foo')
@@ -791,7 +792,8 @@ class ServersControllerTest(ControllerTest):
             expected_attrs=expected_attrs,
             limit=1000, marker=None,
             search_opts={'deleted': False, 'project_id': 'fake'},
-            sort_dirs=['desc'], sort_keys=['created_at'])
+            sort_dirs=['desc'], sort_keys=['created_at'],
+            cell_down_support=False)
 
     def test_get_server_details_with_bad_name(self):
         req = self.req('/fake/servers/detail?name=%2Binstance')
@@ -909,7 +911,8 @@ class ServersControllerTest(ControllerTest):
         self.controller.index(req)
         self.mock_get_all.assert_called_once_with(
             mock.ANY, search_opts=mock.ANY, limit=mock.ANY, marker=mock.ANY,
-            expected_attrs=mock.ANY, sort_keys=[], sort_dirs=[])
+            expected_attrs=mock.ANY, sort_keys=[], sort_dirs=[],
+            cell_down_support=False)
 
     def test_get_servers_ignore_sort_key_only_one_dir(self):
         req = self.req(
@@ -918,21 +921,23 @@ class ServersControllerTest(ControllerTest):
         self.mock_get_all.assert_called_once_with(
             mock.ANY, search_opts=mock.ANY, limit=mock.ANY, marker=mock.ANY,
             expected_attrs=mock.ANY, sort_keys=['user_id'],
-            sort_dirs=['asc'])
+            sort_dirs=['asc'], cell_down_support=False)
 
     def test_get_servers_ignore_sort_key_with_no_sort_dir(self):
         req = self.req('/fake/servers?sort_key=vcpus&sort_key=user_id')
         self.controller.index(req)
         self.mock_get_all.assert_called_once_with(
             mock.ANY, search_opts=mock.ANY, limit=mock.ANY, marker=mock.ANY,
-            expected_attrs=mock.ANY, sort_keys=['user_id'], sort_dirs=[])
+            expected_attrs=mock.ANY, sort_keys=['user_id'], sort_dirs=[],
+            cell_down_support=False)
 
     def test_get_servers_ignore_sort_key_with_bad_sort_dir(self):
         req = self.req('/fake/servers?sort_key=vcpus&sort_dir=bad_dir')
         self.controller.index(req)
         self.mock_get_all.assert_called_once_with(
             mock.ANY, search_opts=mock.ANY, limit=mock.ANY, marker=mock.ANY,
-            expected_attrs=mock.ANY, sort_keys=[], sort_dirs=[])
+            expected_attrs=mock.ANY, sort_keys=[], sort_dirs=[],
+            cell_down_support=False)
 
     def test_get_servers_non_admin_with_admin_only_sort_key(self):
         req = self.req('/fake/servers?sort_key=host&sort_dir=desc')
@@ -945,12 +950,14 @@ class ServersControllerTest(ControllerTest):
         self.controller.detail(req)
         self.mock_get_all.assert_called_once_with(
             mock.ANY, search_opts=mock.ANY, limit=mock.ANY, marker=mock.ANY,
-            expected_attrs=mock.ANY, sort_keys=['node'], sort_dirs=['desc'])
+            expected_attrs=mock.ANY, sort_keys=['node'], sort_dirs=['desc'],
+            cell_down_support=False)
 
     def test_get_servers_with_bad_option(self):
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             db_list = [fakes.stub_instance(100, uuid=uuids.fake)]
             return instance_obj._make_instance_list(
                 context, objects.InstanceList(), db_list, FIELDS)
@@ -966,12 +973,14 @@ class ServersControllerTest(ControllerTest):
             req.environ['nova.context'], expected_attrs=[],
             limit=1000, marker=None,
             search_opts={'deleted': False, 'project_id': 'fake'},
-            sort_dirs=['desc'], sort_keys=['created_at'])
+            sort_dirs=['desc'], sort_keys=['created_at'],
+            cell_down_support=False)
 
     def test_get_servers_allows_image(self):
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('image', search_opts)
             self.assertEqual(search_opts['image'], '12345')
@@ -1124,7 +1133,8 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_allows_flavor(self):
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('flavor', search_opts)
             # flavor is an integer ID
@@ -1159,7 +1169,8 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_allows_status(self):
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'], [vm_states.ACTIVE])
@@ -1177,7 +1188,8 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_allows_task_status(self):
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('task_state', search_opts)
             self.assertEqual([task_states.REBOOT_PENDING,
@@ -1200,7 +1212,8 @@ class ServersControllerTest(ControllerTest):
         # Test when resize status, it maps list of vm states.
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'],
                              [vm_states.ACTIVE, vm_states.STOPPED])
@@ -1232,7 +1245,8 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_deleted_status_as_admin(self):
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'], ['deleted'])
 
@@ -1290,7 +1304,8 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_allows_name(self):
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('name', search_opts)
             self.assertEqual(search_opts['name'], 'whee.*')
@@ -1317,7 +1332,8 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_allows_changes_since(self):
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('changes-since', search_opts)
             changes_since = datetime.datetime(2011, 1, 24, 17, 8, 1,
@@ -1356,7 +1372,8 @@ class ServersControllerTest(ControllerTest):
         """
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             # Allowed by user
             self.assertIn('name', search_opts)
@@ -1384,7 +1401,8 @@ class ServersControllerTest(ControllerTest):
         """
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             # Allowed by user
             self.assertIn('name', search_opts)
@@ -1416,7 +1434,8 @@ class ServersControllerTest(ControllerTest):
 
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             # Allowed by user
             self.assertIn('name', search_opts)
@@ -1449,7 +1468,8 @@ class ServersControllerTest(ControllerTest):
         """Test getting servers by ip."""
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip', search_opts)
             self.assertEqual(search_opts['ip'], '10\..*')
@@ -1470,7 +1490,8 @@ class ServersControllerTest(ControllerTest):
         """
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip6', search_opts)
             self.assertEqual(search_opts['ip6'], 'ffff.*')
@@ -1492,7 +1513,8 @@ class ServersControllerTest(ControllerTest):
         """
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip6', search_opts)
             self.assertEqual(search_opts['ip6'], 'ffff.*')
@@ -1514,7 +1536,8 @@ class ServersControllerTest(ControllerTest):
         """
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('access_ip_v4', search_opts)
             self.assertEqual(search_opts['access_ip_v4'], 'ffff.*')
@@ -1536,7 +1559,8 @@ class ServersControllerTest(ControllerTest):
         """
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('access_ip_v6', search_opts)
             self.assertEqual(search_opts['access_ip_v6'], 'ffff.*')
@@ -1674,7 +1698,8 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_joins_services(self):
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             cur = api_version_request.APIVersionRequest(self.wsgi_api_version)
             v216 = api_version_request.APIVersionRequest('2.16')
             if cur >= v216:
@@ -2397,7 +2422,8 @@ class ServerControllerTestV266(ControllerTest):
     def test_get_servers_allows_changes_before(self):
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('changes-before', search_opts)
             changes_before = datetime.datetime(2011, 1, 24, 17, 8, 1,
@@ -2434,7 +2460,8 @@ class ServerControllerTestV266(ControllerTest):
     def test_get_servers_allows_changes_since_and_changes_before(self):
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
-                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('changes-since', search_opts)
             changes_since = datetime.datetime(2011, 1, 23, 17, 8, 1,

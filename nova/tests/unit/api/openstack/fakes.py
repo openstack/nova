@@ -418,7 +418,7 @@ def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
 def fake_compute_get_all(num_servers=5, **kwargs):
     def _return_servers_objs(context, search_opts=None, limit=None,
                              marker=None, expected_attrs=None, sort_keys=None,
-                             sort_dirs=None):
+                             sort_dirs=None, cell_down_support=False):
         db_insts = fake_instance_get_all_by_filters()(None,
                                                       limit=limit,
                                                       marker=marker)

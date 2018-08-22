@@ -5350,7 +5350,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                           mock_buildreq_get):
         mock_cell_map_get.side_effect = exception.CellMappingNotFound(
                                                                 uuid='fake')
-        mock_get.return_value = objects.InstanceList(objects=[])
+        mock_get.return_value = objects.InstanceList(objects=[]), list()
         api = compute_api.API()
         api.get_all(self.context, search_opts={'tenant_id': 'foo'})
         filters = mock_get.call_args_list[0][0][1]
@@ -5635,6 +5635,107 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_get.assert_called_once_with(self.context, inst.uuid)
         mock_save.assert_called_once_with()
 
+    @mock.patch.object(objects.InstanceMappingList,
+                       'get_not_deleted_by_cell_and_project')
+    def test_generate_minimal_construct_for_down_cells(self, mock_get_ims):
+        im1 = objects.InstanceMapping(instance_uuid=uuids.inst1, cell_id=1,
+            project_id='fake', created_at=None, queued_for_delete=False)
+        mock_get_ims.return_value = [im1]
+        down_cell_uuids = [uuids.cell1, uuids.cell2, uuids.cell3]
+        result = self.compute_api._generate_minimal_construct_for_down_cells(
+            self.context, down_cell_uuids, [self.context.project_id], None)
+        for inst in result:
+            self.assertEqual(inst.uuid, im1.instance_uuid)
+            self.assertIn('created_at', inst)
+            # minimal construct doesn't contain the usual keys
+            self.assertNotIn('display_name', inst)
+        self.assertEqual(3, mock_get_ims.call_count)
+
+    @mock.patch.object(objects.InstanceMappingList,
+                       'get_not_deleted_by_cell_and_project')
+    def test_generate_minimal_construct_for_down_cells_limited(self,
+                                                               mock_get_ims):
+        im1 = objects.InstanceMapping(instance_uuid=uuids.inst1, cell_id=1,
+            project_id='fake', created_at=None, queued_for_delete=False)
+        # If this gets called a third time, it'll explode, thus asserting
+        # that we break out of the loop once the limit is reached
+        mock_get_ims.side_effect = [[im1, im1], [im1]]
+        down_cell_uuids = [uuids.cell1, uuids.cell2, uuids.cell3]
+        result = self.compute_api._generate_minimal_construct_for_down_cells(
+            self.context, down_cell_uuids, [self.context.project_id], 3)
+        for inst in result:
+            self.assertEqual(inst.uuid, im1.instance_uuid)
+            self.assertIn('created_at', inst)
+            # minimal construct doesn't contain the usual keys
+            self.assertNotIn('display_name', inst)
+        # Two instances at limit 3 from first cell, one at limit 1 from the
+        # second, no third call.
+        self.assertEqual(2, mock_get_ims.call_count)
+        mock_get_ims.assert_has_calls([
+            mock.call(self.context, uuids.cell1, [self.context.project_id],
+                      limit=3),
+            mock.call(self.context, uuids.cell2, [self.context.project_id],
+                      limit=1),
+        ])
+
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
+    @mock.patch.object(objects.InstanceMappingList,
+                       'get_not_deleted_by_cell_and_project')
+    def test_get_all_without_cell_down_support(self, mock_get_ims,
+                                               mock_buildreq_get):
+        mock_buildreq_get.return_value = objects.BuildRequestList()
+        im1 = objects.InstanceMapping(instance_uuid=uuids.inst1, cell_id=1,
+            project_id='fake', created_at=None, queued_for_delete=False)
+        mock_get_ims.return_value = [im1]
+        cell_instances = self._list_of_instances(2)
+        with mock.patch('nova.compute.instance_list.'
+                        'get_instance_objects_sorted') as mock_inst_get:
+            mock_inst_get.return_value = objects.InstanceList(
+                self.context, objects=cell_instances), [uuids.cell1]
+            insts = self.compute_api.get_all(self.context,
+                cell_down_support=False)
+            fields = ['metadata', 'info_cache', 'security_groups']
+            mock_inst_get.assert_called_once_with(self.context, {}, None, None,
+                fields, None, None)
+            for i, instance in enumerate(cell_instances):
+                self.assertEqual(instance, insts[i])
+            mock_get_ims.assert_not_called()
+
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
+    @mock.patch.object(objects.InstanceMappingList,
+                       'get_not_deleted_by_cell_and_project')
+    def test_get_all_with_cell_down_support(self, mock_get_ims,
+                                            mock_buildreq_get):
+        mock_buildreq_get.return_value = objects.BuildRequestList()
+        im = objects.InstanceMapping(context=self.context,
+            instance_uuid=uuids.inst1, cell_id=1,
+            project_id='fake', created_at=None, queued_for_delete=False)
+        mock_get_ims.return_value = [im]
+        cell_instances = self._list_of_instances(2)
+        full_instances = objects.InstanceList(self.context,
+            objects=cell_instances)
+        inst = objects.Instance(context=self.context, uuid=im.instance_uuid,
+            project_id=im.project_id, created_at=im.created_at)
+        partial_instances = objects.InstanceList(self.context, objects=[inst])
+        with mock.patch('nova.compute.instance_list.'
+                        'get_instance_objects_sorted') as mock_inst_get:
+            mock_inst_get.return_value = objects.InstanceList(
+                self.context, objects=cell_instances), [uuids.cell1]
+            insts = self.compute_api.get_all(self.context, limit=3,
+                cell_down_support=True)
+            fields = ['metadata', 'info_cache', 'security_groups']
+            mock_inst_get.assert_called_once_with(self.context, {},
+                                                  3, None, fields, None,
+                                                  None)
+            for i, instance in enumerate(partial_instances + full_instances):
+                self.assertTrue(obj_base.obj_equal_prims(instance, insts[i]))
+            # With an original limit of 3, and 0 build requests but 2 instances
+            # from "up" cells, we should only get at most 1 instance mapping
+            # to fill the limit.
+            mock_get_ims.assert_called_once_with(self.context, uuids.cell1,
+                                                 self.context.project_id,
+                                                 limit=1)
+
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
             side_effect=exception.InstanceMappingNotFound(uuid='fake'))
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
@@ -5835,7 +5936,7 @@ class _ComputeAPIUnitTestMixIn(object):
         with mock.patch('nova.compute.instance_list.'
                         'get_instance_objects_sorted') as mock_inst_get:
             mock_inst_get.return_value = objects.InstanceList(
-                self.context, objects=cell_instances)
+                self.context, objects=cell_instances), list()
 
             instances = self.compute_api.get_all(
                 self.context, search_opts={'foo': 'bar'},
@@ -5869,8 +5970,8 @@ class _ComputeAPIUnitTestMixIn(object):
         with mock.patch('nova.compute.instance_list.'
                         'get_instance_objects_sorted') as mock_inst_get:
             # Insert one of the build_req_instances here so it shows up twice
-            mock_inst_get.return_value = objects.InstanceList(
-                self.context, objects=build_req_instances[:1] + cell_instances)
+            mock_inst_get.return_value = objects.InstanceList(self.context,
+                objects=build_req_instances[:1] + cell_instances), list()
 
             instances = self.compute_api.get_all(
                 self.context, search_opts={'foo': 'bar'},
@@ -5905,7 +6006,7 @@ class _ComputeAPIUnitTestMixIn(object):
         with mock.patch('nova.compute.instance_list.'
                         'get_instance_objects_sorted') as mock_inst_get:
             mock_inst_get.return_value = objects.InstanceList(
-                self.context, objects=cell_instances)
+                self.context, objects=cell_instances), list()
 
             instances = self.compute_api.get_all(
                 self.context, search_opts={'foo': 'bar'},
@@ -5940,9 +6041,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
         with mock.patch('nova.compute.instance_list.'
                         'get_instance_objects_sorted') as mock_inst_get:
-            mock_inst_get.side_effect = [objects.InstanceList(
+            mock_inst_get.return_value = objects.InstanceList(
                                              self.context,
-                                             objects=cell_instances)]
+                                             objects=cell_instances), []
 
             instances = self.compute_api.get_all(
                 self.context, search_opts={'foo': 'bar'},
@@ -6378,7 +6479,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         with mock.patch('nova.compute.instance_list.'
                         'get_instance_objects_sorted') as mock_inst_get:
             mock_inst_get.return_value = objects.InstanceList(
-                self.context, objects=cell_instances)
+                self.context, objects=cell_instances), list()
 
             self.compute_api.get_all(
                 self.context, search_opts={'ip': 'fake'},
@@ -6406,7 +6507,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         with mock.patch('nova.compute.instance_list.'
                         'get_instance_objects_sorted') as mock_inst_get:
             mock_inst_get.return_value = objects.InstanceList(
-                self.context, objects=cell_instances)
+                self.context, objects=cell_instances), list()
 
             self.compute_api.get_all(
                 self.context, search_opts={'ip6': 'fake'},
@@ -6435,7 +6536,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         with mock.patch('nova.compute.instance_list.'
                         'get_instance_objects_sorted') as mock_inst_get:
             mock_inst_get.return_value = objects.InstanceList(
-                self.context, objects=cell_instances)
+                self.context, objects=cell_instances), list()
 
             self.compute_api.get_all(
                 self.context, search_opts={'ip': 'fake1', 'ip6': 'fake2'},
@@ -6765,6 +6866,12 @@ class Cellsv1DeprecatedTestMixIn(object):
             mock_inst_get.assert_has_calls(inst_get_calls)
             for i, instance in enumerate(cell_instances):
                 self.assertEqual(instance, instances[i])
+
+    def test_get_all_with_cell_down_support(self):
+        self.skipTest("Cell down handling is not supported for cells_v1.")
+
+    def test_get_all_without_cell_down_support(self):
+        self.skipTest("Cell down handling is not supported for cells_v1.")
 
 
 class ComputeAPIAPICellUnitTestCase(Cellsv1DeprecatedTestMixIn,
