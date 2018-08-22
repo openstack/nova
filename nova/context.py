@@ -512,6 +512,29 @@ def scatter_gather_skip_cell0(context, fn, *args, **kwargs):
                                 fn, *args, **kwargs)
 
 
+def scatter_gather_single_cell(context, cell_mapping, fn, *args, **kwargs):
+    """Target the provided cell and return its results or sentinels in case of
+    failure.
+
+    The first parameter in the signature of the function to call for each cell
+    should be of type RequestContext.
+
+    :param context: The RequestContext for querying cells
+    :param cell_mapping: The CellMapping to target
+    :param fn: The function to call for each cell
+    :param args: The args for the function to call for each cell, not including
+                 the RequestContext
+    :param kwargs: The kwargs for the function to call for this cell
+    :returns: A dict {cell_uuid: result} containing the joined results. The
+              did_not_respond_sentinel will be returned if the cell did not
+              respond within the timeout. The raised_exception_sentinel will
+              be returned if the call to the cell raised an exception. The
+              exception will be logged.
+    """
+    return scatter_gather_cells(context, [cell_mapping], CELL_TIMEOUT, fn,
+                                *args, **kwargs)
+
+
 def scatter_gather_all_cells(context, fn, *args, **kwargs):
     """Target all cells in parallel and return their results.
 
