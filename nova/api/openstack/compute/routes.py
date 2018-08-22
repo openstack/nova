@@ -28,7 +28,6 @@ from nova.api.openstack.compute import baremetal_nodes
 from nova.api.openstack.compute import cells
 from nova.api.openstack.compute import certificates
 from nova.api.openstack.compute import cloudpipe
-from nova.api.openstack.compute import config_drive
 from nova.api.openstack.compute import console_auth_tokens
 from nova.api.openstack.compute import console_output
 from nova.api.openstack.compute import consoles
@@ -268,7 +267,6 @@ security_group_rules_controller = functools.partial(_create_controller,
 server_controller = functools.partial(_create_controller,
     servers.ServersController,
     [
-        config_drive.ConfigDriveController,
         extended_server_attributes.ExtendedServerAttributesController,
         extended_status.ExtendedStatusController,
         extended_volumes.ExtendedVolumesController,
