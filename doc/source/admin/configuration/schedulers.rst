@@ -917,14 +917,6 @@ For example:
    ram_weight_multiplier = 1.0
    offset_weight_multiplier = 1.0
 
-Chance scheduler
-~~~~~~~~~~~~~~~~
-
-As an administrator, you work with the filter scheduler.  However, the Compute
-service also uses the Chance Scheduler,
-``nova.scheduler.chance.ChanceScheduler``, which randomly selects from lists of
-filtered hosts.
-
 Utilization aware scheduling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

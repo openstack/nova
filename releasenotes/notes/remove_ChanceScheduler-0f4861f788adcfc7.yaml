@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    The ``chance_scheduler`` scheduler driver was deprecated in Pike
+    and has now been removed. You should enable the ``filter_scheduler``
+    driver instead. If ``chance_scheduler`` behavior is desired
+    (i.e. speed is valued over correctness) then configuring the
+    ``filter_scheduler`` with only the ``AllHostsFilter`` enabled and
+    adjusting ``[filter_scheduler]/host_subset_size`` will provide similar
+    performance.
