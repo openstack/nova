@@ -979,7 +979,7 @@ minDisk:
   type: integer
 minRam:
   description: |
-    Filters the response by a minimum RAM, in MB. For example, ``512``.
+    Filters the response by a minimum RAM, in MiB. For example, ``512``.
   in: query
   required: false
   type: integer
@@ -2235,13 +2235,13 @@ disabled_reason_body:
   type: string
 disk_available_least:
   description: |
-    The actual free disk on this hypervisor(in GB).
+    The actual free disk on this hypervisor(in GiB).
   in: body
   required: true
   type: integer
 disk_available_least_total:
   description: |
-    The actual free disk on all hypervisors(in GB).
+    The actual free disk on all hypervisors(in GiB).
   in: body
   required: true
   type: integer
@@ -3129,13 +3129,13 @@ forceDelete:
   type: none
 free_ram_mb:
   description: |
-    The free RAM in this hypervisor(in MB).
+    The free RAM in this hypervisor(in MiB).
   in: body
   required: true
   type: integer
 free_ram_mb_total:
   description: |
-    The free RAM on all hypervisors(in MB).
+    The free RAM on all hypervisors(in MiB).
   in: body
   required: true
   type: integer
@@ -3195,7 +3195,7 @@ host_cpu:
   type: integer
 host_disk_gb:
   description: |
-    The disk size on the host (in GB).
+    The disk size on the host (in GiB).
   in: body
   required: true
   type: integer
@@ -3226,7 +3226,7 @@ host_maintenance_mode_in:
   type: string
 host_memory_mb:
   description: |
-    The memory size on the host (in MB).
+    The memory size on the host (in MiB).
   in: body
   required: true
   type: integer
@@ -3414,13 +3414,13 @@ hypervisor_diagnostics:
   min_version: 2.48
 hypervisor_free_disk_gb:
   description: |
-    The free disk remaining on this hypervisor(in GB).
+    The free disk remaining on this hypervisor(in GiB).
   in: body
   required: true
   type: integer
 hypervisor_free_disk_gb_total:
   description: |
-    The free disk remaining on all hypervisors(in GB).
+    The free disk remaining on all hypervisors(in GiB).
   in: body
   required: true
   type: integer
@@ -4141,7 +4141,7 @@ links:
   type: array
 local_gb:
   description: |
-    The disk in this hypervisor(in GB).
+    The disk in this hypervisor(in GiB).
   in: body
   required: true
   type: integer
@@ -4161,19 +4161,19 @@ local_gb_simple_tenant_usage_optional:
   type: integer
 local_gb_total:
   description: |
-    The disk on all hypervisors(in GB).
+    The disk on all hypervisors(in GiB).
   in: body
   required: true
   type: integer
 local_gb_used:
   description: |
-    The disk used in this hypervisor(in GB).
+    The disk used in this hypervisor(in GiB).
   in: body
   required: true
   type: integer
 local_gb_used_total:
   description: |
-    The disk used on all hypervisors(in GB).
+    The disk used on all hypervisors(in GiB).
   in: body
   required: true
   type: integer
@@ -4231,47 +4231,47 @@ memory_details_diagnostics:
     The dictionary with information about VM memory usage.
     Following fields are presented in the dictionary:
 
-    - ``maximum`` - Amount of memory provisioned for the VM in MB (Integer)
+    - ``maximum`` - Amount of memory provisioned for the VM in MiB (Integer)
 
     - ``used`` - Amount of memory that is currently used by the guest operating
-      system and its applications in MB (Integer)
+      system and its applications in MiB (Integer)
   in: body
   required: true
   type: array
   min_version: 2.48
 memory_mb:
   description: |
-    The memory of this hypervisor(in MB).
+    The memory of this hypervisor(in MiB).
   in: body
   required: true
   type: integer
 memory_mb_simple_tenant_usage:
   description: |
-    The memory size of the server (in MB).
+    The memory size of the server (in MiB).
   in: body
   required: true
   type: integer
 memory_mb_simple_tenant_usage_optional:
   description: |
-    The memory size of the server (in MB).
+    The memory size of the server (in MiB).
   in: body
   required: false
   type: integer
 memory_mb_total:
   description: |
-    The memory of all hypervisors(in MB).
+    The memory of all hypervisors(in MiB).
   in: body
   required: true
   type: integer
 memory_mb_used:
   description: |
-    The memory used in this hypervisor(in MB).
+    The memory used in this hypervisor(in MiB).
   in: body
   required: true
   type: integer
 memory_mb_used_total:
   description: |
-    The memory used on all hypervisors(in MB).
+    The memory used on all hypervisors(in MiB).
   in: body
   required: true
   type: integer
@@ -4501,7 +4501,7 @@ minDisk_body:
   type: integer
 minRam_body:
   description: |
-    The minimum amount of RAM an image requires to function, in MB. For example, ``512``.
+    The minimum amount of RAM an image requires to function, in MiB. For example, ``512``.
   in: body
   required: true
   type: integer
@@ -5335,14 +5335,14 @@ quota_tenant_or_user_id_body:
   type: string
 ram: &ram
   description: |
-    The amount of allowed server RAM, in MB, for each tenant.
+    The amount of allowed server RAM, in MiB, for each tenant.
   in: body
   required: true
   type: integer
 ram_quota_class: &ram_quota_class
   <<: *ram
   description: |
-    The amount of allowed instance RAM, in MB, for the quota class.
+    The amount of allowed instance RAM, in MiB, for the quota class.
 ram_quota_class_optional:
   <<: *ram_quota_class
   required: false
@@ -5355,7 +5355,7 @@ ram_quota_details:
   type: object
 ram_quota_optional:
   description: |
-    The amount of allowed server RAM, in MB, for each tenant.
+    The amount of allowed server RAM, in MiB, for each tenant.
   in: body
   required: false
   type: integer
@@ -6318,7 +6318,7 @@ total_local_gb_usage:
   type: float
 total_memory_mb_usage:
   description: |
-    Multiplying the server memory size (in MB) by hours the server exists,
+    Multiplying the server memory size (in MiB) by hours the server exists,
     and then adding that all together for each server.
   in: body
   required: true
@@ -6660,7 +6660,7 @@ volume_id_resp:
   type: string
 volume_size:
   description: |
-    The size of the volume (in GB).
+    The size of the volume (in GiB).
     This is integer value from range 1 to 2147483647
     which can be requested as integer and string.
   in: body

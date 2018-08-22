@@ -4,7 +4,7 @@ Traits
 
 Traits are *qualitative* characteristics of resource providers.
 The classic example for traits can be requesting disk from different
-providers: a user may request 80GB of disk space for an instance
+providers: a user may request 80GiB of disk space for an instance
 (quantitative), but may also expect that the disk be SSD instead of
 spinning disk (qualitative). Traits provide a way to mark that a
 storage provider is SSD or spinning.
