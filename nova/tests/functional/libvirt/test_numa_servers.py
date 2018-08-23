@@ -15,7 +15,6 @@
 
 import six
 
-import fixtures
 import mock
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -25,9 +24,7 @@ from nova import context as nova_context
 from nova import objects
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
-from nova.tests.functional.test_servers import ServersTestBase
-from nova.tests.unit.virt.libvirt import fake_imagebackend
-from nova.tests.unit.virt.libvirt import fake_libvirt_utils
+from nova.tests.functional.libvirt import base
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
@@ -35,32 +32,10 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class NUMAServersTestBase(ServersTestBase):
+class NUMAServersTestBase(base.ServersTestBase):
 
     def setUp(self):
         super(NUMAServersTestBase, self).setUp()
-
-        # Replace libvirt with fakelibvirt
-        self.useFixture(fake_imagebackend.ImageBackendFixture())
-        self.useFixture(fixtures.MonkeyPatch(
-           'nova.virt.libvirt.driver.libvirt_utils',
-           fake_libvirt_utils))
-        self.useFixture(fixtures.MonkeyPatch(
-           'nova.virt.libvirt.driver.libvirt',
-           fakelibvirt))
-        self.useFixture(fixtures.MonkeyPatch(
-           'nova.virt.libvirt.host.libvirt',
-           fakelibvirt))
-        self.useFixture(fixtures.MonkeyPatch(
-           'nova.virt.libvirt.guest.libvirt',
-           fakelibvirt))
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
-
-        # Mock the 'get_connection' function, as we're going to need to provide
-        # custom capabilities for each test
-        _p = mock.patch('nova.virt.libvirt.host.Host.get_connection')
-        self.mock_conn = _p.start()
-        self.addCleanup(_p.stop)
 
         # Mock the 'NUMATopologyFilter' filter, as most tests need to inspect
         # this
@@ -73,25 +48,13 @@ class NUMAServersTestBase(ServersTestBase):
         self.mock_filter = _p.start()
         self.addCleanup(_p.stop)
 
-    def _setup_compute_service(self):
-        # NOTE(stephenfin): We don't start the compute service here as we wish
-        # to configure the host capabilities first. We instead start the
-        # service in the test
-        self.flags(compute_driver='libvirt.LibvirtDriver')
-
     def _setup_scheduler_service(self):
+        # Enable the 'NUMATopologyFilter'
         self.flags(driver='filter_scheduler', group='scheduler')
         self.flags(enabled_filters=CONF.filter_scheduler.enabled_filters
                                    + ['NUMATopologyFilter'],
                    group='filter_scheduler')
         return self.start_service('scheduler')
-
-    def _get_connection(self, host_info):
-        fake_connection = fakelibvirt.Connection('qemu:///system',
-                                version=fakelibvirt.FAKE_LIBVIRT_VERSION,
-                                hv_version=fakelibvirt.FAKE_QEMU_VERSION,
-                                host_info=host_info)
-        return fake_connection
 
 
 class NUMAServersTest(NUMAServersTestBase):

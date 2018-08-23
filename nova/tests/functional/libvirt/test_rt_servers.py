@@ -13,53 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
-import mock
-
 from nova.tests.functional.api import client
-from nova.tests.functional.test_servers import ServersTestBase
-from nova.tests.unit.virt.libvirt import fake_imagebackend
-from nova.tests.unit.virt.libvirt import fake_libvirt_utils
+from nova.tests.functional.libvirt import base
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
-class RealTimeServersTest(ServersTestBase):
+class RealTimeServersTest(base.ServersTestBase):
 
     def setUp(self):
         super(RealTimeServersTest, self).setUp()
-
-        # Replace libvirt with fakelibvirt
-        self.useFixture(fake_imagebackend.ImageBackendFixture())
-        self.useFixture(fixtures.MonkeyPatch(
-           'nova.virt.libvirt.driver.libvirt_utils',
-           fake_libvirt_utils))
-        self.useFixture(fixtures.MonkeyPatch(
-           'nova.virt.libvirt.driver.libvirt',
-           fakelibvirt))
-        self.useFixture(fixtures.MonkeyPatch(
-           'nova.virt.libvirt.host.libvirt',
-           fakelibvirt))
-        self.useFixture(fixtures.MonkeyPatch(
-           'nova.virt.libvirt.guest.libvirt',
-           fakelibvirt))
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.flags(sysinfo_serial='none', group='libvirt')
-
-        # Mock the 'get_connection' function, as we're going to need to provide
-        # custom capabilities for each test
-        _p = mock.patch('nova.virt.libvirt.host.Host.get_connection')
-        self.mock_conn = _p.start()
-        self.addCleanup(_p.stop)
-
-    def _setup_compute_service(self):
-        self.flags(compute_driver='libvirt.LibvirtDriver')
-
-    def _get_connection(self, host_info):
-        fake_connection = fakelibvirt.Connection('qemu:///system',
-                                version=fakelibvirt.FAKE_LIBVIRT_VERSION,
-                                hv_version=fakelibvirt.FAKE_QEMU_VERSION,
-                                host_info=host_info)
-        return fake_connection
 
     def test_no_dedicated_cpu(self):
         flavor = self._create_flavor(extra_spec={'hw:cpu_realtime': 'yes'})
