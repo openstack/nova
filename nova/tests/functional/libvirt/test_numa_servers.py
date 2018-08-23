@@ -23,7 +23,6 @@ from oslo_log import log as logging
 from nova.conf import neutron as neutron_conf
 from nova import context as nova_context
 from nova import objects
-from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional.test_servers import ServersTestBase
@@ -57,14 +56,30 @@ class NUMAServersTestBase(ServersTestBase):
            fakelibvirt))
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
-    def _setup_compute_service(self):
-        # we need to mock some libvirt stuff so we start this service in the
-        # test instead
-        pass
+        # Mock the 'get_connection' function, as we're going to need to provide
+        # custom capabilities for each test
+        _p = mock.patch('nova.virt.libvirt.host.Host.get_connection')
+        self.mock_conn = _p.start()
+        self.addCleanup(_p.stop)
 
-    def _setup_scheduler_service(self):
+        # Mock the 'NUMATopologyFilter' filter, as most tests need to inspect
+        # this
+        host_manager = self.scheduler.manager.driver.host_manager
+        numa_filter_class = host_manager.filter_cls_map['NUMATopologyFilter']
+        host_pass_mock = mock.Mock(wraps=numa_filter_class().host_passes)
+        _p = mock.patch('nova.scheduler.filters'
+                        '.numa_topology_filter.NUMATopologyFilter.host_passes',
+                        side_effect=host_pass_mock)
+        self.mock_filter = _p.start()
+        self.addCleanup(_p.stop)
+
+    def _setup_compute_service(self):
+        # NOTE(stephenfin): We don't start the compute service here as we wish
+        # to configure the host capabilities first. We instead start the
+        # service in the test
         self.flags(compute_driver='libvirt.LibvirtDriver')
 
+    def _setup_scheduler_service(self):
         self.flags(driver='filter_scheduler', group='scheduler')
         self.flags(enabled_filters=CONF.filter_scheduler.enabled_filters
                                    + ['NUMATopologyFilter'],
@@ -78,16 +93,10 @@ class NUMAServersTestBase(ServersTestBase):
                                 host_info=host_info)
         return fake_connection
 
-    def _get_topology_filter_spy(self):
-        host_manager = self.scheduler.manager.driver.host_manager
-        numa_filter_class = host_manager.filter_cls_map['NUMATopologyFilter']
-        host_pass_mock = mock.Mock(wraps=numa_filter_class().host_passes)
-        return host_pass_mock
-
 
 class NUMAServersTest(NUMAServersTestBase):
 
-    def _run_build_test(self, flavor_id, filter_mock, end_status='ACTIVE'):
+    def _run_build_test(self, flavor_id, end_status='ACTIVE'):
 
         self.compute = self.start_service('compute', host='test_compute0')
 
@@ -111,7 +120,7 @@ class NUMAServersTest(NUMAServersTestBase):
         self.assertIn(created_server_id, server_ids)
 
         # Validate that NUMATopologyFilter has been called
-        self.assertTrue(filter_mock.called)
+        self.assertTrue(self.mock_filter.called)
 
         found_server = self._wait_for_state_change(found_server, 'BUILD')
 
@@ -125,19 +134,13 @@ class NUMAServersTest(NUMAServersTestBase):
                                              cpu_cores=2, cpu_threads=2,
                                              kB_mem=15740000)
         fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
 
         # Create a flavor
         extra_spec = {'hw:numa_nodes': '2'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-        host_pass_mock = self._get_topology_filter_spy()
-        with test.nested(
-            mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                       return_value=fake_connection),
-            mock.patch('nova.scheduler.filters'
-                       '.numa_topology_filter.NUMATopologyFilter.host_passes',
-                       side_effect=host_pass_mock)) as (conn_mock,
-                                                       filter_mock):
-            self._run_build_test(flavor_id, filter_mock)
+
+        self._run_build_test(flavor_id)
 
     def test_create_server_with_pinning(self):
 
@@ -145,47 +148,34 @@ class NUMAServersTest(NUMAServersTestBase):
                                              cpu_cores=5, cpu_threads=2,
                                              kB_mem=15740000)
         fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
 
         # Create a flavor
         extra_spec = {
             'hw:cpu_policy': 'dedicated',
             'hw:cpu_thread_policy': 'prefer',
         }
-
         flavor_id = self._create_flavor(vcpu=5, extra_spec=extra_spec)
-        host_pass_mock = self._get_topology_filter_spy()
-        with test.nested(
-            mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                       return_value=fake_connection),
-            mock.patch('nova.scheduler.filters'
-                       '.numa_topology_filter.NUMATopologyFilter.host_passes',
-                       side_effect=host_pass_mock)) as (conn_mock,
-                                                       filter_mock):
-            server = self._run_build_test(flavor_id, filter_mock)
-            ctx = nova_context.get_admin_context()
-            inst = objects.Instance.get_by_uuid(ctx, server['id'])
-            self.assertEqual(1, len(inst.numa_topology.cells))
-            self.assertEqual(5, inst.numa_topology.cells[0].cpu_topology.cores)
+
+        server = self._run_build_test(flavor_id)
+
+        ctx = nova_context.get_admin_context()
+        inst = objects.Instance.get_by_uuid(ctx, server['id'])
+        self.assertEqual(1, len(inst.numa_topology.cells))
+        self.assertEqual(5, inst.numa_topology.cells[0].cpu_topology.cores)
 
     def test_create_server_with_numa_fails(self):
 
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=1, cpu_sockets=1,
                                              cpu_cores=2, kB_mem=15740000)
         fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
 
         # Create a flavor
         extra_spec = {'hw:numa_nodes': '2'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
-        host_pass_mock = self._get_topology_filter_spy()
-        with test.nested(
-            mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                       return_value=fake_connection),
-            mock.patch('nova.scheduler.filters'
-                       '.numa_topology_filter.NUMATopologyFilter.host_passes',
-                       side_effect=host_pass_mock)) as (conn_mock,
-                                                       filter_mock):
-            self._run_build_test(flavor_id, filter_mock, end_status='ERROR')
+        self._run_build_test(flavor_id, end_status='ERROR')
 
 
 class NUMAAffinityNeutronFixture(nova_fixtures.NeutronFixture):
@@ -345,10 +335,6 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         # fixture already stubbed.
         self.neutron = self.useFixture(NUMAAffinityNeutronFixture(self))
 
-        _p = mock.patch('nova.virt.libvirt.host.Host.get_connection')
-        self.mock_conn = _p.start()
-        self.addCleanup(_p.stop)
-
     def _test_create_server_with_networks(self, flavor_id, networks):
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
                                              cpu_cores=2, cpu_threads=2,
@@ -377,14 +363,10 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
             {'uuid': NUMAAffinityNeutronFixture.network_1['id']},
         ]
 
-        host_pass_mock = self._get_topology_filter_spy()
-        with mock.patch('nova.scheduler.filters'
-                       '.numa_topology_filter.NUMATopologyFilter.host_passes',
-                       side_effect=host_pass_mock) as filter_mock:
-            status = self._test_create_server_with_networks(
-                flavor_id, networks)['status']
+        status = self._test_create_server_with_networks(
+            flavor_id, networks)['status']
 
-        self.assertTrue(filter_mock.called)
+        self.assertTrue(self.mock_filter.called)
         self.assertEqual('ACTIVE', status)
 
     def test_create_server_with_multiple_physnets(self):
@@ -401,14 +383,10 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
             {'uuid': NUMAAffinityNeutronFixture.network_2['id']},
         ]
 
-        host_pass_mock = self._get_topology_filter_spy()
-        with mock.patch('nova.scheduler.filters'
-                       '.numa_topology_filter.NUMATopologyFilter.host_passes',
-                       side_effect=host_pass_mock) as filter_mock:
-            status = self._test_create_server_with_networks(
-                flavor_id, networks)['status']
+        status = self._test_create_server_with_networks(
+            flavor_id, networks)['status']
 
-        self.assertTrue(filter_mock.called)
+        self.assertTrue(self.mock_filter.called)
         self.assertEqual('ACTIVE', status)
 
     def test_create_server_with_multiple_physnets_fail(self):
@@ -424,14 +402,10 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
             {'uuid': NUMAAffinityNeutronFixture.network_2['id']},
         ]
 
-        host_pass_mock = self._get_topology_filter_spy()
-        with mock.patch('nova.scheduler.filters'
-                       '.numa_topology_filter.NUMATopologyFilter.host_passes',
-                       side_effect=host_pass_mock) as filter_mock:
-            status = self._test_create_server_with_networks(
-                flavor_id, networks)['status']
+        status = self._test_create_server_with_networks(
+            flavor_id, networks)['status']
 
-        self.assertTrue(filter_mock.called)
+        self.assertTrue(self.mock_filter.called)
         self.assertEqual('ERROR', status)
 
     def test_create_server_with_physnet_and_tunneled_net(self):
@@ -447,14 +421,10 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
             {'uuid': NUMAAffinityNeutronFixture.network_3['id']},
         ]
 
-        host_pass_mock = self._get_topology_filter_spy()
-        with mock.patch('nova.scheduler.filters'
-                       '.numa_topology_filter.NUMATopologyFilter.host_passes',
-                       side_effect=host_pass_mock) as filter_mock:
-            status = self._test_create_server_with_networks(
-                flavor_id, networks)['status']
+        status = self._test_create_server_with_networks(
+            flavor_id, networks)['status']
 
-        self.assertTrue(filter_mock.called)
+        self.assertTrue(self.mock_filter.called)
         self.assertEqual('ACTIVE', status)
 
     def test_rebuild_server_with_network_affinity(self):
@@ -545,14 +515,15 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.assertEqual('ACTIVE', server['status'])
         original_host = server['OS-EXT-SRV-ATTR:host']
 
+        # We reset mock_filter because we want to ensure it's called as part of
+        # the *migration*
+        self.mock_filter.reset_mock()
+        self.assertEqual(0, len(self.mock_filter.call_args_list))
+
         # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
         # probably be less...dumb
-        host_pass_mock = self._get_topology_filter_spy()
-        with mock.patch('nova.scheduler.filters'
-                        '.numa_topology_filter.NUMATopologyFilter.host_passes',
-                        side_effect=host_pass_mock) as filter_mock, \
-                mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                          '.migrate_disk_and_power_off', return_value='{}'):
+        with mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                        '.migrate_disk_and_power_off', return_value='{}'):
             self.api.post_server_action(server['id'], {'migrate': None})
 
         server = self._wait_for_state_change(created_server, 'VERIFY_RESIZE')
@@ -561,8 +532,8 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         # landed and all we want to know is whether the filter was correct
         self.assertNotEqual(original_host, server['OS-EXT-SRV-ATTR:host'])
 
-        self.assertEqual(1, len(filter_mock.call_args_list))
-        args, kwargs = filter_mock.call_args_list[0]
+        self.assertEqual(1, len(self.mock_filter.call_args_list))
+        args, kwargs = self.mock_filter.call_args_list[0]
         self.assertEqual(2, len(args))
         self.assertEqual({}, kwargs)
         network_metadata = args[1].network_metadata
@@ -623,5 +594,6 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
             ex = self.assertRaises(client.OpenStackApiException,
                                    self.api.post_server_action,
                                    server['id'], {'migrate': None})
-            self.assertEqual(400, ex.response.status_code)
-            self.assertIn('No valid host', six.text_type(ex))
+
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('No valid host', six.text_type(ex))

@@ -45,8 +45,21 @@ class RealTimeServersTest(ServersTestBase):
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.flags(sysinfo_serial='none', group='libvirt')
 
+        # Mock the 'get_connection' function, as we're going to need to provide
+        # custom capabilities for each test
+        _p = mock.patch('nova.virt.libvirt.host.Host.get_connection')
+        self.mock_conn = _p.start()
+        self.addCleanup(_p.stop)
+
     def _setup_compute_service(self):
         self.flags(compute_driver='libvirt.LibvirtDriver')
+
+    def _get_connection(self, host_info):
+        fake_connection = fakelibvirt.Connection('qemu:///system',
+                                version=fakelibvirt.FAKE_LIBVIRT_VERSION,
+                                hv_version=fakelibvirt.FAKE_QEMU_VERSION,
+                                host_info=host_info)
+        return fake_connection
 
     def test_no_dedicated_cpu(self):
         flavor = self._create_flavor(extra_spec={'hw:cpu_realtime': 'yes'})
@@ -71,23 +84,20 @@ class RealTimeServersTest(ServersTestBase):
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
                                              cpu_cores=2, cpu_threads=2,
                                              kB_mem=15740000)
-        fake_connection = fakelibvirt.Connection('qemu:///system',
-                                version=fakelibvirt.FAKE_LIBVIRT_VERSION,
-                                hv_version=fakelibvirt.FAKE_QEMU_VERSION,
-                                host_info=host_info)
-        with mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                        return_value=fake_connection):
-            self.compute = self.start_service('compute', host='test_compute0')
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
 
-            flavor = self._create_flavor(extra_spec={
-                'hw:cpu_realtime': 'yes',
-                'hw:cpu_policy': 'dedicated',
-                'hw:cpu_realtime_mask': '^1'})
-            server = self._build_server(flavor)
-            created = self.api.post_server({'server': server})
+        self.compute = self.start_service('compute', host='test_compute0')
 
-            instance = self.api.get_server(created['id'])
-            instance = self._wait_for_state_change(instance, 'BUILD')
+        flavor = self._create_flavor(extra_spec={
+            'hw:cpu_realtime': 'yes',
+            'hw:cpu_policy': 'dedicated',
+            'hw:cpu_realtime_mask': '^1'})
+        server = self._build_server(flavor)
+        created = self.api.post_server({'server': server})
 
-            self.assertEqual('ACTIVE', instance['status'])
-            self._delete_server(instance['id'])
+        instance = self.api.get_server(created['id'])
+        instance = self._wait_for_state_change(instance, 'BUILD')
+
+        self.assertEqual('ACTIVE', instance['status'])
+        self._delete_server(instance['id'])
