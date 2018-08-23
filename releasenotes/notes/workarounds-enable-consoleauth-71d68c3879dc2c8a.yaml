@@ -2,11 +2,11 @@
 upgrade:
   - |
     The ``nova-consoleauth`` service has been deprecated and new consoles will
-    have their token authorizations stored in cell databases instead of in the
-    ``nova-consoleauth`` service backend. With this, console proxies are
-    required to be deployed per cell. All existing consoles will be reset. For
-    most operators, this should be a minimal disruption as the default TTL of a
-    console token is 10 minutes.
+    have their token authorizations stored in cell databases, in addition to
+    the ``nova-consoleauth`` service backend, in Rocky. With this, console
+    proxies are required to be deployed per cell. All existing consoles will be
+    reset. For most operators, this should be a minimal disruption as the
+    default TTL of a console token is 10 minutes.
 
     Operators that have configured a much longer token TTL or otherwise wish to
     avoid immediately resetting all existing consoles can use the new
@@ -14,11 +14,12 @@ upgrade:
     the ``nova-consoleauth`` service for locating existing console
     authorizations. The option defaults to False. Once all of the existing
     consoles have naturally expired, operators may unset the configuration
-    option and discontinue running the consoleauth service. For example, if
-    a deployment has configured a token TTL of one hour, the operator may
-    disable the ``[workarounds]/enable_consoleauth`` option and stop running
-    the ``nova-consoleauth`` service one hour after deploying the new code.
+    option. For example, if a deployment has configured a token TTL of one
+    hour, the operator may disable the ``[workarounds]/enable_consoleauth``
+    option, one hour after deploying the new code.
 
-    Operators who do not need to use the ``[workarounds]/enable_consoleauth``
-    configuration option may discontinue running the consoleauth service
-    immediately.
+    .. note:: Cells v1 was not converted to use the database backend for
+      console token authorizations. Cells v1 console token authorizations will
+      continue to be supported by the ``nova-consoleauth`` service and use of
+      the ``[workarounds]/enable_consoleauth`` option does not apply to
+      Cells v1 users.
