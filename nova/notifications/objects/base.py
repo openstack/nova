@@ -122,12 +122,10 @@ class NotificationPayloadBase(NotificationObject):
             except (exception.ObjectActionError,
                     NotImplementedError,
                     exception.OrphanedObjectError,
-                    ovo_exception.OrphanedObjectError) as e:
-                LOG.debug(("Defaulting the value of the field '%(field)s' "
-                           "to None in %(payload)s due to '%(exception)s'"),
-                          {'field': key,
-                           'payload': self.__class__.__name__,
-                           'exception': e})
+                    ovo_exception.OrphanedObjectError):
+                # If it is unset or non lazy loadable in the source object
+                # then we cannot do anything else but try to default it in the
+                # payload object we are generating here.
                 # NOTE(gibi): This will fail if the payload field is not
                 # nullable, but that means that either the source object is not
                 # properly initialized or the payload field needs to be defined
