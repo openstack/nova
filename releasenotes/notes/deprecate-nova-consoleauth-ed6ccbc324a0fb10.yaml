@@ -1,6 +1,12 @@
 ---
 deprecations:
   - |
-    The ``nova-consoleauth`` service is deprecated as console token
-    authorization storage has moved from the ``nova-consoleauth`` service
-    backend to the database backend.
+    The ``nova-consoleauth`` service has been deprecated. Console token
+    authorization storage is moving from the ``nova-consoleauth`` service
+    backend to the database backend, with storage happening in both, in Rocky.
+    In Stein, only the database backend will be used for console token
+    authorization storage.
+
+    .. note:: Cells v1 was not converted to use the database backend for
+      console token authorizations. Cells v1 console token authorizations will
+      continue to be supported by the ``nova-consoleauth`` service.
