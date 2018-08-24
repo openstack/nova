@@ -179,9 +179,13 @@ class Host(object):
             if (hasattr(libvirt, 'VIR_DOMAIN_EVENT_SUSPENDED_POSTCOPY') and
                     detail == libvirt.VIR_DOMAIN_EVENT_SUSPENDED_POSTCOPY):
                 transition = virtevent.EVENT_LIFECYCLE_POSTCOPY_STARTED
-            elif (hasattr(libvirt, 'VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED') and
-                    detail == libvirt.VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED):
-                transition = virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED
+            # FIXME(mriedem): VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED is also sent
+            # when live migration of the guest fails, so we cannot simply rely
+            # on the event itself but need to check if the job itself was
+            # successful.
+            # elif (hasattr(libvirt, 'VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED') and
+            #         detail == libvirt.VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED):
+            #     transition = virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED
             else:
                 transition = virtevent.EVENT_LIFECYCLE_PAUSED
         elif event == libvirt.VIR_DOMAIN_EVENT_RESUMED:
