@@ -254,7 +254,8 @@ class CrossCellLister(object):
         # TODO(tssurya): Modify this to return the minimal available info from
         # the down cells.
         if self.cells:
-            results = context.scatter_gather_cells(ctx, self.cells, 60,
+            results = context.scatter_gather_cells(ctx, self.cells,
+                                                   context.CELL_TIMEOUT,
                                                    do_query)
         else:
             results = context.scatter_gather_all_cells(ctx, do_query)
