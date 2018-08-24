@@ -166,11 +166,15 @@ Operators that have much longer token TTL configured or otherwise wish to avoid
 immediately resetting all existing consoles can enable this flag to continue
 using the ``nova-consoleauth`` service in addition to the database backend.
 Once all of the old ``nova-consoleauth`` supported console tokens have expired,
-this flag should be disabled and it will be no longer necessary to run the
-``nova-consoleauth`` service. For example, if a deployment has configured a
-token TTL of one hour, the operator may disable the flag and stop running the
-``nova-consoleauth`` service one hour after deploying the new code during an
-upgrade.
+this flag should be disabled. For example, if a deployment has configured a
+token TTL of one hour, the operator may disable the flag, one hour after
+deploying the new code during an upgrade.
+
+.. note:: Cells v1 was not converted to use the database backend for
+  console token authorizations. Cells v1 console token authorizations will
+  continue to be supported by the ``nova-consoleauth`` service and use of
+  the ``[workarounds]/enable_consoleauth`` option does not apply to
+  Cells v1 users.
 
 Related options:
 
