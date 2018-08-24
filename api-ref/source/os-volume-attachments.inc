@@ -145,9 +145,9 @@ Update a volume attachment.
 .. note:: This action only valid when the server is in ACTIVE, PAUSED and RESIZED state,
           or a conflict(409) error will be returned.
 
-Policy defaults enable only users with the administrative role or
-the owner of the server to perform this operation. Cloud providers
-can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role to perform
+this operation. Cloud providers can change these permissions through the
+``policy.json`` file.
 
 Normal response codes: 202
 
