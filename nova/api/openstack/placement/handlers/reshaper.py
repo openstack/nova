@@ -80,7 +80,8 @@ def reshape(req):
             inv_obj = inventory.make_inventory_object(
                 resource_provider, res_class, **inv_data)
             inv_list.append(inv_obj)
-        inventory_by_rp[rp_uuid] = rp_obj.InventoryList(objects=inv_list)
+        inventory_by_rp[resource_provider] = rp_obj.InventoryList(
+            objects=inv_list)
 
     # Make the consumer objects associated with the allocations.
     consumers, new_consumers_created = allocation.inspect_consumers(
