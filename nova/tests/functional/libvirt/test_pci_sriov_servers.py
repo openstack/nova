@@ -19,7 +19,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.objects import fields
-from nova import test
 from nova.tests.functional.test_servers import ServersTestBase
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -67,6 +66,23 @@ class SRIOVServersTest(ServersTestBase):
 
         self.compute_started = False
 
+        # Mock the 'get_connection' function, as we're going to need to provide
+        # custom capabilities for each test
+        _p = mock.patch('nova.virt.libvirt.host.Host.get_connection')
+        self.mock_conn = _p.start()
+        self.addCleanup(_p.stop)
+
+        # Mock the 'PciPassthroughFilter' filter, as most tests need to inspect
+        # this
+        host_manager = self.scheduler.manager.driver.host_manager
+        pci_filter_class = host_manager.filter_cls_map['PciPassthroughFilter']
+        host_pass_mock = mock.Mock(wraps=pci_filter_class().host_passes)
+        _p = mock.patch('nova.scheduler.filters.pci_passthrough_filter'
+                        '.PciPassthroughFilter.host_passes',
+                        side_effect=host_pass_mock)
+        self.mock_filter = _p.start()
+        self.addCleanup(_p.stop)
+
     def _setup_compute_service(self):
         pass
 
@@ -87,7 +103,7 @@ class SRIOVServersTest(ServersTestBase):
                                 pci_info=pci_info)
         return fake_connection
 
-    def _run_build_test(self, flavor_id, filter_mock, end_status='ACTIVE'):
+    def _run_build_test(self, flavor_id, end_status='ACTIVE'):
 
         if not self.compute_started:
             self.compute = self.start_service('compute', host='test_compute0')
@@ -113,18 +129,12 @@ class SRIOVServersTest(ServersTestBase):
         self.assertIn(created_server_id, server_ids)
 
         # Validate that PciPassthroughFilter has been called
-        self.assertTrue(filter_mock.called)
+        self.assertTrue(self.mock_filter.called)
 
         found_server = self._wait_for_state_change(found_server, 'BUILD')
 
         self.assertEqual(end_status, found_server['status'])
         return created_server
-
-    def _get_pci_passthrough_filter_spy(self):
-        host_manager = self.scheduler.manager.driver.host_manager
-        pci_filter_class = host_manager.filter_cls_map['PciPassthroughFilter']
-        host_pass_mock = mock.Mock(wraps=pci_filter_class().host_passes)
-        return host_pass_mock
 
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
     def test_create_server_with_VF(self, img_mock):
@@ -134,20 +144,14 @@ class SRIOVServersTest(ServersTestBase):
                                              kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo()
         fake_connection = self._get_connection(host_info, pci_info)
+        self.mock_conn.return_value = fake_connection
 
         # Create a flavor
         extra_spec = {"pci_passthrough:alias": "%s:1" % self.vfs_alias_name}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-        host_pass_mock = self._get_pci_passthrough_filter_spy()
-        with test.nested(
-            mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                       return_value=fake_connection),
-            mock.patch('nova.scheduler.filters'
-                       '.pci_passthrough_filter.PciPassthroughFilter'
-                       '.host_passes',
-                       side_effect=host_pass_mock)) as (conn_mock,
-                                                       filter_mock):
-            server = self._run_build_test(flavor_id, filter_mock)
+
+        server = self._run_build_test(flavor_id)
+
         self._delete_server(server['id'])
 
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
@@ -158,20 +162,14 @@ class SRIOVServersTest(ServersTestBase):
                                              kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo()
         fake_connection = self._get_connection(host_info, pci_info)
+        self.mock_conn.return_value = fake_connection
 
         # Create a flavor
         extra_spec = {"pci_passthrough:alias": "%s:1" % self.pfs_alias_name}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-        host_pass_mock = self._get_pci_passthrough_filter_spy()
-        with test.nested(
-            mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                       return_value=fake_connection),
-            mock.patch('nova.scheduler.filters'
-                       '.pci_passthrough_filter.PciPassthroughFilter'
-                       '.host_passes',
-                       side_effect=host_pass_mock)) as (conn_mock,
-                                                       filter_mock):
-            server = self._run_build_test(flavor_id, filter_mock)
+
+        server = self._run_build_test(flavor_id)
+
         self._delete_server(server['id'])
 
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
@@ -182,6 +180,7 @@ class SRIOVServersTest(ServersTestBase):
                                              kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, num_vfs=4)
         fake_connection = self._get_connection(host_info, pci_info)
+        self.mock_conn.return_value = fake_connection
 
         # Create a flavor
         extra_spec = {"pci_passthrough:alias": "%s:1" % self.pfs_alias_name}
@@ -189,18 +188,9 @@ class SRIOVServersTest(ServersTestBase):
                           self.vfs_alias_name}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         flavor_id_vfs = self._create_flavor(extra_spec=extra_spec_vfs)
-        host_pass_mock = self._get_pci_passthrough_filter_spy()
-        with test.nested(
-            mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                       return_value=fake_connection),
-            mock.patch('nova.scheduler.filters'
-                       '.pci_passthrough_filter.PciPassthroughFilter'
-                       '.host_passes',
-                       side_effect=host_pass_mock)) as (conn_mock,
-                                                       filter_mock):
-            pf_server = self._run_build_test(flavor_id, filter_mock)
-            vf_server = self._run_build_test(flavor_id_vfs, filter_mock,
-                                             end_status='ERROR')
+
+        pf_server = self._run_build_test(flavor_id)
+        vf_server = self._run_build_test(flavor_id_vfs, end_status='ERROR')
 
         self._delete_server(pf_server['id'])
         self._delete_server(vf_server['id'])
@@ -213,6 +203,7 @@ class SRIOVServersTest(ServersTestBase):
                                              kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, num_vfs=4)
         fake_connection = self._get_connection(host_info, pci_info)
+        self.mock_conn.return_value = fake_connection
 
         # Create a flavor
         extra_spec = {"pci_passthrough:alias": "%s:1" % self.pfs_alias_name}
@@ -220,18 +211,9 @@ class SRIOVServersTest(ServersTestBase):
                           self.vfs_alias_name}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         flavor_id_vfs = self._create_flavor(extra_spec=extra_spec_vfs)
-        host_pass_mock = self._get_pci_passthrough_filter_spy()
-        with test.nested(
-            mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                       return_value=fake_connection),
-            mock.patch('nova.scheduler.filters'
-                       '.pci_passthrough_filter.PciPassthroughFilter'
-                       '.host_passes',
-                       side_effect=host_pass_mock)) as (conn_mock,
-                                                       filter_mock):
-            vf_server = self._run_build_test(flavor_id_vfs, filter_mock)
-            pf_server = self._run_build_test(flavor_id, filter_mock,
-                                             end_status='ERROR')
+
+        vf_server = self._run_build_test(flavor_id_vfs)
+        pf_server = self._run_build_test(flavor_id, end_status='ERROR')
 
         self._delete_server(pf_server['id'])
         self._delete_server(vf_server['id'])
@@ -247,6 +229,7 @@ class SRIOVServersTest(ServersTestBase):
                                              kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, numa_node=1)
         fake_connection = self._get_connection(host_info, pci_info)
+        self.mock_conn.return_value = fake_connection
 
         # Create a flavor
         extra_spec = {"pci_passthrough:alias": "%s:1" % self.pfs_alias_name,
@@ -254,16 +237,9 @@ class SRIOVServersTest(ServersTestBase):
                       'hw:cpu_policy': 'dedicated',
                       'hw:cpu_thread_policy': 'prefer'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-        host_pass_mock = self._get_pci_passthrough_filter_spy()
-        with test.nested(
-            mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                       return_value=fake_connection),
-            mock.patch('nova.scheduler.filters'
-                       '.pci_passthrough_filter.PciPassthroughFilter'
-                       '.host_passes',
-                       side_effect=host_pass_mock)) as (conn_mock,
-                                                       filter_mock):
-            pf_server = self._run_build_test(flavor_id, filter_mock)
+
+        pf_server = self._run_build_test(flavor_id)
+
         self._delete_server(pf_server['id'])
 
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
@@ -277,6 +253,7 @@ class SRIOVServersTest(ServersTestBase):
                                              kB_mem=15740000)
         pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, numa_node=0)
         fake_connection = self._get_connection(host_info, pci_info)
+        self.mock_conn.return_value = fake_connection
 
         # Create a flavor
         extra_spec_vm = {'hw:cpu_policy': 'dedicated',
@@ -287,17 +264,9 @@ class SRIOVServersTest(ServersTestBase):
                       'hw:cpu_thread_policy': 'prefer'}
         vm_flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec_vm)
         pf_flavor_id = self._create_flavor(extra_spec=extra_spec)
-        host_pass_mock = self._get_pci_passthrough_filter_spy()
-        with test.nested(
-            mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                       return_value=fake_connection),
-            mock.patch('nova.scheduler.filters'
-                       '.pci_passthrough_filter.PciPassthroughFilter'
-                       '.host_passes',
-                       side_effect=host_pass_mock)) as (conn_mock,
-                                                        filter_mock):
-            vm_server = self._run_build_test(vm_flavor_id, filter_mock)
-            pf_server = self._run_build_test(pf_flavor_id, filter_mock,
-                                             end_status='ERROR')
+
+        vm_server = self._run_build_test(vm_flavor_id)
+        pf_server = self._run_build_test(pf_flavor_id, end_status='ERROR')
+
         self._delete_server(vm_server['id'])
         self._delete_server(pf_server['id'])
