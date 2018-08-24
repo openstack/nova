@@ -15,7 +15,6 @@
 
 import mock
 from oslo_policy import policy as oslo_policy
-from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute import keypairs as keypairs_v21
@@ -29,7 +28,6 @@ from nova import quota
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.objects import test_keypair
-from nova.tests import uuidsentinel as uuids
 
 
 QUOTAS = quota.QUOTAS
@@ -316,44 +314,6 @@ class KeypairsTestV21(test.TestCase):
 
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, self.req, 'FAKE')
-
-    def test_show_server(self):
-        self.stub_out('nova.db.api.instance_get',
-                      fakes.fake_instance_get())
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      fakes.fake_instance_get())
-        # NOTE(sdague): because of the way extensions work, we have to
-        # also stub out the Request compute cache with a real compute
-        # object. Delete this once we remove all the gorp of
-        # extensions modifying the server objects.
-        self.stub_out('nova.api.openstack.wsgi.Request.get_db_instance',
-                      fakes.fake_compute_get())
-
-        req = fakes.HTTPRequest.blank(
-            self.base_url + '/servers/' + uuids.server)
-        req.headers['Content-Type'] = 'application/json'
-        response = req.get_response(self.app_server)
-        self.assertEqual(response.status_int, 200)
-        res_dict = jsonutils.loads(response.body)
-        self.assertIn('key_name', res_dict['server'])
-        self.assertEqual(res_dict['server']['key_name'], '')
-
-    @mock.patch('nova.compute.api.API.get_all')
-    def test_detail_servers(self, mock_get_all):
-        # NOTE(danms): Orphan these fakes (no context) so that we
-        # are sure that the API is requesting what it needs without
-        # having to lazy-load.
-        mock_get_all.return_value = objects.InstanceList(
-            objects=[fakes.stub_instance_obj(ctxt=None, id=1),
-                     fakes.stub_instance_obj(ctxt=None, id=2)])
-        req = fakes.HTTPRequest.blank(self.base_url + '/servers/detail')
-        res = req.get_response(self.app_server)
-        server_dicts = jsonutils.loads(res.body)['servers']
-        self.assertEqual(len(server_dicts), 2)
-
-        for server_dict in server_dicts:
-            self.assertIn('key_name', server_dict)
-            self.assertEqual(server_dict['key_name'], '')
 
     def _assert_keypair_type(self, res_dict):
         self.assertNotIn('type', res_dict['keypair'])

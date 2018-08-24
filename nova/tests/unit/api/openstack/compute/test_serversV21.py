@@ -385,6 +385,7 @@ class ServersControllerTest(ControllerTest):
                 "OS-EXT-SRV-ATTR:host": None,
                 "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000002",
+                "key_name": ''
             }
         }
 
@@ -2065,6 +2066,7 @@ class ServersControllerDeleteTest(ControllerTest):
 class ServersControllerRebuildInstanceTest(ControllerTest):
 
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+    expected_key_name = False
 
     def setUp(self):
         super(ServersControllerRebuildInstanceTest, self).setUp()
@@ -2334,6 +2336,8 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                            'OS-EXT-SRV-ATTR:reservation_id',
                            'OS-EXT-SRV-ATTR:root_device_name',
                            'OS-EXT-SRV-ATTR:user_data', 'host_status']
+        if not self.expected_key_name:
+            get_only_fields.append('key_name')
         for field in get_only_fields:
             self.assertNotIn(field, body['server'])
 
@@ -2415,6 +2419,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
 
 class ServersControllerRebuildTestV254(ServersControllerRebuildInstanceTest):
+    expected_key_name = True
 
     def setUp(self):
         super(ServersControllerRebuildTestV254, self).setUp()
@@ -2940,7 +2945,8 @@ class ServersControllerUpdateTest(ControllerTest):
                            'OS-EXT-SRV-ATTR:ramdisk_id',
                            'OS-EXT-SRV-ATTR:reservation_id',
                            'OS-EXT-SRV-ATTR:root_device_name',
-                           'OS-EXT-SRV-ATTR:user_data', 'host_status']
+                           'OS-EXT-SRV-ATTR:user_data', 'host_status',
+                           'key_name']
         for field in get_only_fields:
             self.assertNotIn(field, res_dict['server'])
 
@@ -6256,6 +6262,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-EXT-SRV-ATTR:host": None,
                 "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
+                "key_name": ''
             }
         }
 
@@ -6340,6 +6347,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-EXT-SRV-ATTR:host": None,
                 "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
+                "key_name": ''
             }
         }
 
@@ -6523,6 +6531,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-EXT-SRV-ATTR:host": None,
                 "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
+                "key_name": ''
             }
         }
 
@@ -6604,6 +6613,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-EXT-SRV-ATTR:host": None,
                 "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
+                "key_name": ''
             }
         }
 
