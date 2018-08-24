@@ -95,8 +95,8 @@ There are many standard filter classes which may be used
   use a comma. E.g., "value1,value2". All hosts are passed if no extra_specs
   are specified.
 * |ComputeFilter| - passes all hosts that are operational and enabled.
-* |CoreFilter| - filters based on CPU core utilization. It passes hosts with
-  sufficient number of CPU cores.
+* |CoreFilter| - DEPRECATED; filters based on CPU core utilization. It passes
+  hosts with sufficient number of CPU cores.
 * |AggregateCoreFilter| - filters hosts by CPU core number with per-aggregate
   ``cpu_allocation_ratio`` setting. If no per-aggregate value is found, it will
   fall back to the global default ``cpu_allocation_ratio``. If more than one value
@@ -105,15 +105,15 @@ There are many standard filter classes which may be used
 * |IsolatedHostsFilter| - filter based on ``isolated_images``, ``isolated_hosts``
   and ``restrict_isolated_hosts_to_isolated_images`` flags.
 * |JsonFilter| - allows simple JSON-based grammar for selecting hosts.
-* |RamFilter| - filters hosts by their RAM. Only hosts with sufficient RAM
-  to host the instance are passed.
+* |RamFilter| - DEPRECATED; filters hosts by their RAM. Only hosts with
+  sufficient RAM to host the instance are passed.
 * |AggregateRamFilter| - filters hosts by RAM with per-aggregate
   ``ram_allocation_ratio`` setting. If no per-aggregate value is found, it will
   fall back to the global default ``ram_allocation_ratio``. If more than one value
   is found for a host (meaning the host is in two different aggregates with
   different ratio settings), the minimum value will be used.
-* |DiskFilter| - filters hosts by their disk allocation. Only hosts with sufficient
-  disk space to host the instance are passed.
+* |DiskFilter| - DEPRECATED; filters hosts by their disk allocation. Only
+  hosts with sufficient disk space to host the instance are passed.
   ``disk_allocation_ratio`` setting. The virtual disk to physical disk
   allocation ratio, 1.0 by default. The total allowed allocated disk size will
   be physical disk multiplied this ratio.
