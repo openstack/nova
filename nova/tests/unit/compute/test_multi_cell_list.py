@@ -10,10 +10,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from contextlib import contextmanager
+import copy
 import datetime
+import mock
 
 from nova.compute import multi_cell_list
 from nova import context
+from nova import exception
+from nova import objects
 from nova import test
 from nova.tests import uuidsentinel as uuids
 
@@ -103,3 +108,238 @@ class TestUtils(test.NoDBTestCase):
 
         # Make sure we can tell which cell a request came from
         self.assertEqual(uuids.cell, iw1.cell_uuid)
+
+    def test_wrapper_sentinels(self):
+        inst1 = {'key0': 'foo', 'key1': 'd', 'key2': 456}
+
+        ctx = context.RequestContext()
+        ctx.cell_uuid = uuids.cell
+
+        sort_ctx = multi_cell_list.RecordSortContext(['key0', 'key1'],
+                                                     ['asc', 'asc'])
+        iw1 = multi_cell_list.RecordWrapper(ctx, sort_ctx, inst1)
+
+        # Wrappers with sentinels
+        iw2 = multi_cell_list.RecordWrapper(ctx, sort_ctx,
+                                            context.did_not_respond_sentinel)
+        iw3 = multi_cell_list.RecordWrapper(ctx, sort_ctx,
+                                            context.raised_exception_sentinel)
+
+        # NOTE(danms): The sentinel wrappers always win
+        self.assertTrue(iw2 < iw1)
+        self.assertTrue(iw3 < iw1)
+        self.assertFalse(iw1 < iw2)
+        self.assertFalse(iw1 < iw3)
+
+        # NOTE(danms): Comparing two wrappers with sentinels will always return
+        # True for less-than because we're just naive about always favoring the
+        # left hand side. This is fine for our purposes but put it here to make
+        # it explicit.
+        self.assertTrue(iw2 < iw3)
+        self.assertTrue(iw3 < iw2)
+
+    def test_query_wrapper_success(self):
+        def test(ctx, data):
+            for thing in data:
+                yield thing
+
+        self.assertEqual([1, 2, 3],
+                         list(multi_cell_list.query_wrapper(
+                             None, test, [1, 2, 3])))
+
+    def test_query_wrapper_timeout(self):
+        def test(ctx):
+            raise exception.CellTimeout
+
+        self.assertEqual([context.did_not_respond_sentinel],
+                         [x._db_record for x in
+                          multi_cell_list.query_wrapper(
+                              mock.MagicMock(), test)])
+
+    def test_query_wrapper_fail(self):
+        def test(ctx):
+            raise test.TestingException
+
+        self.assertEqual([context.raised_exception_sentinel],
+                         [x._db_record for x in
+                          multi_cell_list.query_wrapper(
+                              mock.MagicMock(), test)])
+
+
+class TestListContext(multi_cell_list.RecordSortContext):
+    def compare_records(self, rec1, rec2):
+        return -1
+
+
+class TestLister(multi_cell_list.CrossCellLister):
+    def __init__(self, data, sort_keys, sort_dirs,
+                 cells=None, batch_size=None):
+        self._data = data
+        self._count_by_cell = {}
+        super(TestLister, self).__init__(TestListContext(sort_keys, sort_dirs),
+                                         cells=cells, batch_size=batch_size)
+
+    @property
+    def marker_identifier(self):
+        return 'id'
+
+    def _method_called(self, ctx, method, limit):
+        self._count_by_cell.setdefault(ctx.cell_uuid, {})
+        self._count_by_cell[ctx.cell_uuid].setdefault(method, [])
+        self._count_by_cell[ctx.cell_uuid][method].append(limit)
+
+    def call_summary(self, method):
+        results = {
+            'total': 0,
+            'count_by_cell': [],
+            'limit_by_cell': [],
+            'total_by_cell': [],
+        }
+        for i, cell in enumerate(self._count_by_cell):
+            results['total'] += len(self._count_by_cell[cell][method])
+            # List of number of calls in each cell
+            results['count_by_cell'].append(
+                len(self._count_by_cell[cell][method]))
+            # List of limits used in calls to each cell
+            results['limit_by_cell'].append(
+                self._count_by_cell[cell][method])
+            # List of total results fetched from each cell
+            results['total_by_cell'].append(sum(
+                self._count_by_cell[cell][method]))
+        results['count_by_cell'].sort()
+        results['limit_by_cell'].sort()
+        results['total_by_cell'].sort()
+        return results
+
+    def get_marker_record(self, ctx, marker):
+        pass
+
+    def get_marker_by_values(self, ctx, values):
+        pass
+
+    def get_by_filters(self, ctx, filters, limit, marker, **kwargs):
+        self._method_called(ctx, 'get_by_filters', limit)
+        batch = self._data[:limit]
+        self._data = self._data[limit:]
+        return batch
+
+
+@contextmanager
+def target_cell_cheater(context, target_cell):
+    # In order to help us do accounting, we need to mimic the real
+    # behavior where at least cell_uuid gets set on the context, which
+    # doesn't happen in the simple test fixture.
+    context = copy.deepcopy(context)
+    context.cell_uuid = target_cell.uuid
+    yield context
+
+
+@mock.patch('nova.context.target_cell', new=target_cell_cheater)
+class TestBatching(test.NoDBTestCase):
+    def setUp(self):
+        super(TestBatching, self).setUp()
+
+        self._data = [{'id': 'foo-%i' % i}
+                      for i in range(0, 1000)]
+        self._cells = [objects.CellMapping(uuid=getattr(uuids, 'cell%i' % i),
+                                           name='cell%i' % i)
+                       for i in range(0, 10)]
+
+    def test_batches_not_needed(self):
+        lister = TestLister(self._data, [], [],
+                            cells=self._cells, batch_size=10)
+        ctx = context.RequestContext()
+        res = list(lister.get_records_sorted(ctx, {}, 5, None))
+        self.assertEqual(5, len(res))
+        summary = lister.call_summary('get_by_filters')
+        # We only needed one batch per cell to hit the total,
+        # so we should have the same number of calls as cells
+        self.assertEqual(len(self._cells), summary['total'])
+        # One call per cell, hitting all cells
+        self.assertEqual(len(self._cells), len(summary['count_by_cell']))
+        self.assertTrue(all([
+            cell_count == 1 for cell_count in summary['count_by_cell']]))
+
+    def test_batches(self):
+        lister = TestLister(self._data, [], [],
+                            cells=self._cells, batch_size=10)
+        ctx = context.RequestContext()
+        res = list(lister.get_records_sorted(ctx, {}, 500, None))
+        self.assertEqual(500, len(res))
+        summary = lister.call_summary('get_by_filters')
+
+        # Since we got everything from one cell (due to how things are sorting)
+        # we should have made 500 / 10 calls to one cell, and 1 call to
+        # the rest
+        calls_expected = [1 for cell in self._cells[1:]] + [500 / 10]
+        self.assertEqual(calls_expected, summary['count_by_cell'])
+
+        # Since we got everything from one cell (due to how things are sorting)
+        # we should have received 500 from one cell and 10 from the rest
+        count_expected = [10 for cell in self._cells[1:]] + [500]
+        self.assertEqual(count_expected, summary['total_by_cell'])
+
+        # Since we got everything from one cell (due to how things are sorting)
+        # we should have a bunch of calls for batches of 10, one each for
+        # every cell except the one that served the bulk of the requests which
+        # should have 500 / 10 batches of 10.
+        limit_expected = ([[10] for cell in self._cells[1:]] +
+                          [[10 for i in range(0, 500 // 10)]])
+        self.assertEqual(limit_expected, summary['limit_by_cell'])
+
+    def test_no_batches(self):
+        lister = TestLister(self._data, [], [],
+                            cells=self._cells)
+        ctx = context.RequestContext()
+        res = list(lister.get_records_sorted(ctx, {}, 50, None))
+        self.assertEqual(50, len(res))
+        summary = lister.call_summary('get_by_filters')
+
+        # Since we used no batches we should have one call per cell
+        calls_expected = [1 for cell in self._cells]
+        self.assertEqual(calls_expected, summary['count_by_cell'])
+
+        # Since we used no batches, each cell should have returned 50 results
+        count_expected = [50 for cell in self._cells]
+        self.assertEqual(count_expected, summary['total_by_cell'])
+
+        # Since we used no batches, each cell call should be for $limit
+        limit_expected = [[count] for count in count_expected]
+        self.assertEqual(limit_expected, summary['limit_by_cell'])
+
+
+class FailureLister(TestLister):
+    def __init__(self, *a, **k):
+        super(FailureLister, self).__init__(*a, **k)
+        self._fails = [context.did_not_respond_sentinel,
+                       None,
+                       context.raised_exception_sentinel,
+                       None,
+                       None]
+
+    def get_by_filters(self, *a, **k):
+        action = self._fails.pop()
+        if action == context.did_not_respond_sentinel:
+            raise exception.CellTimeout
+        elif action == context.raised_exception_sentinel:
+            raise test.TestingException
+        else:
+            return super(FailureLister, self).get_by_filters(*a, **k)
+
+
+@mock.patch('nova.context.target_cell', new=target_cell_cheater)
+class TestBaseClass(test.NoDBTestCase):
+    def test_with_failing_cells(self):
+        data = [{'id': 'foo-%i' % i} for i in range(0, 100)]
+        cells = [objects.CellMapping(uuid=getattr(uuids, 'cell%i' % i),
+                                     name='cell%i' % i)
+                 for i in range(0, 5)]
+
+        # Two of the five cells will fail, one with timeout and one
+        # with an error
+        lister = FailureLister(data, [], [], cells=cells)
+        ctx = context.RequestContext()
+        result = lister.get_records_sorted(ctx, {}, 50, None)
+        # We should still have 50 results since there are enough from the
+        # good cells to fill our limit.
+        self.assertEqual(50, len(list(result)))

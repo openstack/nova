@@ -45,9 +45,10 @@ class InstanceSortContext(multi_cell_list.RecordSortContext):
 
 
 class InstanceLister(multi_cell_list.CrossCellLister):
-    def __init__(self, sort_keys, sort_dirs, cells=None):
+    def __init__(self, sort_keys, sort_dirs, cells=None, batch_size=None):
         super(InstanceLister, self).__init__(
-            InstanceSortContext(sort_keys, sort_dirs), cells=cells)
+            InstanceSortContext(sort_keys, sort_dirs), cells=cells,
+            batch_size=batch_size)
 
     @property
     def marker_identifier(self):
@@ -89,9 +90,11 @@ class InstanceLister(multi_cell_list.CrossCellLister):
 # NOTE(danms): These methods are here for legacy glue reasons. We should not
 # replicate these for every data type we implement.
 def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
-                         sort_keys, sort_dirs, cell_mappings=None):
+                         sort_keys, sort_dirs, cell_mappings=None,
+                         batch_size=None):
     return InstanceLister(sort_keys, sort_dirs,
-                          cells=cell_mappings).get_records_sorted(
+                          cells=cell_mappings,
+                          batch_size=batch_size).get_records_sorted(
         ctx, filters, limit, marker, columns_to_join=columns_to_join)
 
 

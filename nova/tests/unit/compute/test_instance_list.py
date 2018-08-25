@@ -145,15 +145,17 @@ class TestInstanceList(test.NoDBTestCase):
         # storing the uuids of the instances from the up cell
         uuid_initial = [inst['uuid'] for inst in inst_cell0]
 
+        def wrap(thing):
+            return multi_cell_list.RecordWrapper(ctx, self.context, thing)
+
         ctx = nova_context.RequestContext()
-        instances = (multi_cell_list.RecordWrapper(ctx, self.context, inst)
-                     for inst in inst_cell0)
+        instances = [wrap(inst) for inst in inst_cell0]
 
         # creating one up cell and two down cells
         ret_val = {}
         ret_val[uuids.cell0] = instances
-        ret_val[uuids.cell1] = nova_context.raised_exception_sentinel
-        ret_val[uuids.cell2] = nova_context.did_not_respond_sentinel
+        ret_val[uuids.cell1] = [wrap(nova_context.raised_exception_sentinel)]
+        ret_val[uuids.cell2] = [wrap(nova_context.did_not_respond_sentinel)]
         mock_sg.return_value = ret_val
 
         res = instance_list.get_instances_sorted(self.context, {}, None, None,
