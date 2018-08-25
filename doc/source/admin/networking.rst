@@ -146,6 +146,14 @@ For all other types of ports, some manual configuration is required.
      This should be set to a list of one or NUMA nodes to which instances using
      tunneled networks will be affinitized.
 
+#. Configure a NUMA topology for instance flavor(s)
+
+   For network NUMA affinity to have any effect, the instance must have a NUMA
+   topology itself. This can be configured explicitly, using the
+   ``hw:numa_nodes`` extra spec, or implicitly through the use of CPU pinning
+   (``hw:cpu_policy=dedicated``) or PCI devices. For more information, refer to
+   :doc:`cpu-topologies`.
+
 Examples
 ~~~~~~~~
 
