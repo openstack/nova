@@ -55,7 +55,8 @@ class RecordWrapper(object):
 
     Implementing __lt__ is enough for heapq.merge() to do its work.
     """
-    def __init__(self, sort_ctx, db_record):
+    def __init__(self, ctx, sort_ctx, db_record):
+        self.cell_uuid = ctx.cell_uuid
         self._sort_ctx = sort_ctx
         self._db_record = db_record
 
@@ -244,7 +245,7 @@ class CrossCellLister(object):
                 limit=limit, marker=local_marker,
                 **kwargs)
 
-            return (RecordWrapper(self.sort_ctx, inst) for inst in
+            return (RecordWrapper(ctx, self.sort_ctx, inst) for inst in
                     itertools.chain(local_marker_prefix, main_query_result))
 
         # NOTE(tssurya): When the below routine provides sentinels to indicate
