@@ -34,6 +34,8 @@ class SupportDirectIOTestCase(test.NoDBTestCase):
             self.addCleanup(delattr, os, 'O_DIRECT')
         self.einval = OSError()
         self.einval.errno = errno.EINVAL
+        self.enoent = OSError()
+        self.enoent.errno = errno.ENOENT
         self.test_path = os.path.join('.', '.directio.test')
         self.io_flags = os.O_CREAT | os.O_WRONLY | os.O_DIRECT
 
@@ -100,8 +102,18 @@ class SupportDirectIOTestCase(test.NoDBTestCase):
         self.mock_close.assert_called_once_with(3)
         self.mock_unlink.assert_called_once_with(self.test_path)
 
-    def test_supports_direct_io_with_oserror_in_open(self):
+    def test_supports_direct_io_with_oserror_in_open_einval(self):
         self.mock_open.side_effect = self.einval
+
+        self.assertFalse(nova.privsep.utils.supports_direct_io('.'))
+
+        self.mock_open.assert_called_once_with(self.test_path, self.io_flags)
+        self.mock_write.assert_not_called()
+        self.mock_close.assert_not_called()
+        self.mock_unlink.assert_called_once_with(self.test_path)
+
+    def test_supports_direct_io_with_oserror_in_open_enoent(self):
+        self.mock_open.side_effect = self.enoent
 
         self.assertFalse(nova.privsep.utils.supports_direct_io('.'))
 
