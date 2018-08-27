@@ -4504,7 +4504,7 @@ class _ComputeAPIUnitTestMixIn(object):
                               boot_meta, security_groups, block_device_mapping,
                               shutdown_terminate, instance_group,
                               check_server_group_quota, filter_properties,
-                              None, objects.TagList(), trusted_certs)
+                              None, objects.TagList(), trusted_certs, False)
 
         do_test()
 
@@ -4573,7 +4573,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                                   {}, None,
                                                   None, None, None, {}, None,
                                                   fake_keypair,
-                                                  objects.TagList(), None)
+                                                  objects.TagList(), None,
+                                                  False)
             self.assertEqual(
                 'test',
                 mock_instance.return_value.keypairs.objects[0].name)
@@ -4583,7 +4584,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                   {}, None,
                                                   None, None, None, {}, None,
                                                   None, objects.TagList(),
-                                                  None)
+                                                  None, False)
             self.assertEqual(
                 0,
                 len(mock_instance.return_value.keypairs.objects))
@@ -4661,7 +4662,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     min_count, max_count, base_options, boot_meta,
                     security_groups, block_device_mappings, shutdown_terminate,
                     instance_group, check_server_group_quota,
-                    filter_properties, None, instance_tags, trusted_certs)
+                    filter_properties, None, instance_tags, trusted_certs,
+                    False)
 
             for rs, br, im in instances_to_build:
                 self.assertIsInstance(br.instance, objects.Instance)
@@ -4742,7 +4744,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     min_count, max_count, base_options, boot_meta,
                     security_groups, block_device_mapping, shutdown_terminate,
                     instance_group, check_server_group_quota,
-                    filter_properties, None, objects.TagList(), trusted_certs))
+                    filter_properties, None, objects.TagList(), trusted_certs,
+                    False))
             rs, br, im = instances_to_build[0]
             self.assertTrue(uuidutils.is_uuid_like(br.instance.uuid))
             self.assertEqual(br.instance_uuid, im.instance_uuid)
@@ -4840,7 +4843,7 @@ class _ComputeAPIUnitTestMixIn(object):
                               boot_meta, security_groups, block_device_mapping,
                               shutdown_terminate, instance_group,
                               check_server_group_quota, filter_properties,
-                              None, tags, trusted_certs)
+                              None, tags, trusted_certs, False)
             # First instance, build_req, mapping is created and destroyed
             self.assertTrue(build_req_mocks[0].create.called)
             self.assertTrue(build_req_mocks[0].destroy.called)
@@ -4943,7 +4946,7 @@ class _ComputeAPIUnitTestMixIn(object):
                               boot_meta, security_groups, block_device_mapping,
                               shutdown_terminate, instance_group,
                               check_server_group_quota, filter_properties,
-                              None, tags, trusted_certs)
+                              None, tags, trusted_certs, False)
             # First instance, build_req, mapping is created and destroyed
             self.assertTrue(build_req_mocks[0].create.called)
             self.assertTrue(build_req_mocks[0].destroy.called)
@@ -4976,7 +4979,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                   mock.MagicMock(), None, None,
                                                   [], None, None, None, None,
                                                   None, objects.TagList(),
-                                                  None)
+                                                  None, False)
             secgroups = mock_secgroup.populate_security_groups.return_value
             mock_objects.RequestSpec.from_components.assert_called_once_with(
                 mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY,
