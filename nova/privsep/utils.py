@@ -51,7 +51,7 @@ def supports_direct_io(dirpath):
         LOG.debug("Path '%(path)s' supports direct I/O",
                   {'path': dirpath})
     except OSError as e:
-        if e.errno == errno.EINVAL:
+        if e.errno in (errno.EINVAL, errno.ENOENT):
             LOG.debug("Path '%(path)s' does not support direct I/O: "
                       "'%(ex)s'", {'path': dirpath, 'ex': e})
             hasDirectIO = False
