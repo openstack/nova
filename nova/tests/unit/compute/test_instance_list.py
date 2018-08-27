@@ -20,6 +20,8 @@ from nova import test
 from nova.tests import fixtures
 from nova.tests import uuidsentinel as uuids
 
+FAKE_CELLS = [objects.CellMapping(), objects.CellMapping()]
+
 
 class TestInstanceList(test.NoDBTestCase):
     def setUp(self):
@@ -94,10 +96,12 @@ class TestInstanceList(test.NoDBTestCase):
                                         None, None,
                                         cell_mappings=mock_cm.return_value)
 
+    @mock.patch('nova.context.CELLS', new=FAKE_CELLS)
+    @mock.patch('nova.context.load_cells')
     @mock.patch('nova.objects.BuildRequestList.get_by_filters')
     @mock.patch('nova.compute.instance_list.get_instances_sorted')
     @mock.patch('nova.objects.CellMappingList.get_by_project_id')
-    def test_admin_gets_all_cells(self, mock_cm, mock_gi, mock_br):
+    def test_admin_gets_all_cells(self, mock_cm, mock_gi, mock_br, mock_lc):
         mock_gi.return_value = []
         mock_br.return_value = []
         admin_context = nova_context.RequestContext('fake', 'fake',
@@ -106,13 +110,16 @@ class TestInstanceList(test.NoDBTestCase):
             admin_context, {}, None, None, [], None, None)
         mock_gi.assert_called_once_with(admin_context, {}, None, None, [],
                                         None, None,
-                                        cell_mappings=None)
+                                        cell_mappings=FAKE_CELLS)
         mock_cm.assert_not_called()
+        mock_lc.assert_called_once_with()
 
+    @mock.patch('nova.context.CELLS', new=FAKE_CELLS)
+    @mock.patch('nova.context.load_cells')
     @mock.patch('nova.objects.BuildRequestList.get_by_filters')
     @mock.patch('nova.compute.instance_list.get_instances_sorted')
     @mock.patch('nova.objects.CellMappingList.get_by_project_id')
-    def test_user_gets_all_cells(self, mock_cm, mock_gi, mock_br):
+    def test_user_gets_all_cells(self, mock_cm, mock_gi, mock_br, mock_lc):
         self.flags(instance_list_per_project_cells=False, group='api')
         mock_gi.return_value = []
         mock_br.return_value = []
@@ -121,12 +128,16 @@ class TestInstanceList(test.NoDBTestCase):
             user_context, {}, None, None, [], None, None)
         mock_gi.assert_called_once_with(user_context, {}, None, None, [],
                                         None, None,
-                                        cell_mappings=None)
+                                        cell_mappings=FAKE_CELLS)
+        mock_lc.assert_called_once_with()
 
+    @mock.patch('nova.context.CELLS', new=FAKE_CELLS)
+    @mock.patch('nova.context.load_cells')
     @mock.patch('nova.objects.BuildRequestList.get_by_filters')
     @mock.patch('nova.compute.instance_list.get_instances_sorted')
     @mock.patch('nova.objects.CellMappingList.get_by_project_id')
-    def test_admin_gets_all_cells_anyway(self, mock_cm, mock_gi, mock_br):
+    def test_admin_gets_all_cells_anyway(self, mock_cm, mock_gi, mock_br,
+                                         mock_lc):
         self.flags(instance_list_per_project_cells=True, group='api')
         mock_gi.return_value = []
         mock_br.return_value = []
@@ -136,8 +147,9 @@ class TestInstanceList(test.NoDBTestCase):
             admin_context, {}, None, None, [], None, None)
         mock_gi.assert_called_once_with(admin_context, {}, None, None, [],
                                         None, None,
-                                        cell_mappings=None)
+                                        cell_mappings=FAKE_CELLS)
         mock_cm.assert_not_called()
+        mock_lc.assert_called_once_with()
 
     @mock.patch('nova.context.scatter_gather_cells')
     def test_get_instances_with_down_cells(self, mock_sg):
