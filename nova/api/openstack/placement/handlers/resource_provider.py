@@ -78,8 +78,11 @@ def _serialize_providers(environ, resource_providers, want_version):
 def create_resource_provider(req):
     """POST to create a resource provider.
 
-    On success return a 201 response with an empty body and a location
-    header pointing to the newly created resource provider.
+    On success return a 201 response with an empty body
+    (microversions 1.0 - 1.19) or a 200 response with a
+    payload representing the newly created resource provider
+    (microversions 1.20 - latest), and a location header
+    pointing to the resource provider.
     """
     context = req.environ['placement.context']
     context.can(policies.CREATE)
