@@ -24,6 +24,8 @@ The following is a dive into some of the internals in nova.
   nova, and considerations when adding notifications.
 * :doc:`/reference/update-provider-tree`: A detailed explanation of the
   ``ComputeDriver.update_provider_tree`` method.
+* :doc:`/reference/upgrade-checks`: A guide to writing automated upgrade
+  checks.
 
 Debugging
 =========

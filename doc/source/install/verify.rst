@@ -98,6 +98,8 @@ Verify operation of the Compute service.
 
 #. Check the cells and placement API are working successfully:
 
+   .. _verify-install-nova-status:
+
    .. code-block:: console
 
       # nova-status upgrade check

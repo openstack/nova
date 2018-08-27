@@ -184,6 +184,7 @@ code has been upgraded.
   to list and iterate over cell mapping records, which require a
   functioning API database schema.
 
+.. _data-migrations:
 
 Data Migrations
 '''''''''''''''''
