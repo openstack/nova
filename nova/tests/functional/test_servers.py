@@ -1670,7 +1670,10 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self.mock_upt.side_effect = update_provider_tree
 
-        self._run_update_available_resource(startup)
+        if startup:
+            self.restart_compute_service(self.compute)
+        else:
+            self._run_update_available_resource(False)
 
         # Create a dict, keyed by provider UUID, of all the providers
         rps_by_uuid = {}
@@ -1833,10 +1836,6 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
 
     def test_reshape(self):
         """On startup, virt driver signals it needs to reshape, then does so.
-
-        Okay, not really on actual startup. That still happens via setUp. We
-        simulate startup after the fact by passing startup=True to
-        update_available_resource.
 
         This test creates a couple of instances so there are allocations to be
         moved by the reshape operation. Then we do the reshape and make sure
