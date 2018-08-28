@@ -186,10 +186,10 @@ class TestLister(multi_cell_list.CrossCellLister):
     def marker_identifier(self):
         return 'id'
 
-    def _method_called(self, ctx, method, limit):
+    def _method_called(self, ctx, method, arg):
         self._count_by_cell.setdefault(ctx.cell_uuid, {})
         self._count_by_cell[ctx.cell_uuid].setdefault(method, [])
-        self._count_by_cell[ctx.cell_uuid][method].append(limit)
+        self._count_by_cell[ctx.cell_uuid][method].append(arg)
 
     def call_summary(self, method):
         results = {
@@ -197,8 +197,11 @@ class TestLister(multi_cell_list.CrossCellLister):
             'count_by_cell': [],
             'limit_by_cell': [],
             'total_by_cell': [],
+            'called_in_cell': [],
         }
         for i, cell in enumerate(self._count_by_cell):
+            if method not in self._count_by_cell[cell]:
+                continue
             results['total'] += len(self._count_by_cell[cell][method])
             # List of number of calls in each cell
             results['count_by_cell'].append(
@@ -206,19 +209,29 @@ class TestLister(multi_cell_list.CrossCellLister):
             # List of limits used in calls to each cell
             results['limit_by_cell'].append(
                 self._count_by_cell[cell][method])
-            # List of total results fetched from each cell
-            results['total_by_cell'].append(sum(
-                self._count_by_cell[cell][method]))
+            try:
+                # List of total results fetched from each cell
+                results['total_by_cell'].append(sum(
+                    self._count_by_cell[cell][method]))
+            except TypeError:
+                # Don't do this for non-integer args
+                pass
+            results['called_in_cell'].append(cell)
         results['count_by_cell'].sort()
         results['limit_by_cell'].sort()
         results['total_by_cell'].sort()
+        results['called_in_cell'].sort()
         return results
 
     def get_marker_record(self, ctx, marker):
-        pass
+        self._method_called(ctx, 'get_marker_record', marker)
+        # Always assume this came from the second cell
+        cell = self.cells[1]
+        return cell.uuid, self._data[0]
 
     def get_marker_by_values(self, ctx, values):
-        pass
+        self._method_called(ctx, 'get_marker_by_values', values)
+        return self._data[0]
 
     def get_by_filters(self, ctx, filters, limit, marker, **kwargs):
         self._method_called(ctx, 'get_by_filters', limit)
@@ -388,3 +401,26 @@ class TestBaseClass(test.NoDBTestCase):
         self.assertEqual(1, len(lister.cells_responded))
         self.assertEqual(1, len(lister.cells_failed))
         self.assertEqual(1, len(lister.cells_timed_out))
+
+    def test_marker_cell_not_requeried(self):
+        data = [{'id': 'foo-%i' % i} for i in range(0, 100)]
+        cells = [objects.CellMapping(uuid=getattr(uuids, 'cell%i' % i),
+                                     name='cell%i' % i)
+                 for i in range(0, 3)]
+
+        lister = TestLister(data, [], [], cells=cells)
+        ctx = context.RequestContext()
+        result = list(lister.get_records_sorted(ctx, {}, 10, None))
+        result = list(lister.get_records_sorted(ctx, {}, 10, result[-1]['id']))
+
+        # get_marker_record() is called untargeted and its result defines which
+        # cell we skip.
+        gmr_summary = lister.call_summary('get_marker_record')
+        self.assertEqual([None], gmr_summary['called_in_cell'])
+
+        # All cells other than the second one should have been called for
+        # a local marker
+        gmbv_summary = lister.call_summary('get_marker_by_values')
+        self.assertEqual(sorted([cell.uuid for cell in cells
+                                 if cell.uuid != uuids.cell1]),
+                         gmbv_summary['called_in_cell'])

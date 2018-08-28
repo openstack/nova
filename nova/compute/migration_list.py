@@ -56,14 +56,15 @@ class MigrationLister(multi_cell_list.CrossCellLister):
         results = context.scatter_gather_skip_cell0(
             ctx, db.migration_get_by_uuid, marker)
         db_migration = None
-        for result in results.values():
+        for result_cell_uuid, result in results.items():
             if result not in (context.did_not_respond_sentinel,
                               context.raised_exception_sentinel):
                 db_migration = result
+                cell_uuid = result_cell_uuid
                 break
         if not db_migration:
             raise exception.MarkerNotFound(marker=marker)
-        return db_migration
+        return cell_uuid, db_migration
 
     def get_marker_by_values(self, ctx, values):
         return db.migration_get_by_sort_filters(ctx,

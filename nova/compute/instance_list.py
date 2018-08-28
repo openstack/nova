@@ -71,7 +71,7 @@ class InstanceLister(multi_cell_list.CrossCellLister):
                                                   columns_to_join=[])
             except exception.InstanceNotFound:
                 raise exception.MarkerNotFound(marker=marker)
-        return db_inst
+        return im.cell_mapping.uuid, db_inst
 
     def get_marker_by_values(self, ctx, values):
         return db.instance_get_by_sort_filters(ctx,
