@@ -46,6 +46,8 @@ class TestInstanceList(test.NoDBTestCase):
         self.context = nova_context.RequestContext()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
+        self.flags(instance_list_cells_batch_strategy='fixed', group='api')
+
     def test_compare_simple_instance_quirks(self):
         # Ensure uuid,asc is added
         ctx = instance_list.InstanceSortContext(['key0'], ['asc'])
@@ -94,7 +96,8 @@ class TestInstanceList(test.NoDBTestCase):
             user_context, {}, None, None, [], None, None)
         mock_gi.assert_called_once_with(user_context, {}, None, None, [],
                                         None, None,
-                                        cell_mappings=mock_cm.return_value)
+                                        cell_mappings=mock_cm.return_value,
+                                        batch_size=1000)
 
     @mock.patch('nova.context.CELLS', new=FAKE_CELLS)
     @mock.patch('nova.context.load_cells')
@@ -110,7 +113,8 @@ class TestInstanceList(test.NoDBTestCase):
             admin_context, {}, None, None, [], None, None)
         mock_gi.assert_called_once_with(admin_context, {}, None, None, [],
                                         None, None,
-                                        cell_mappings=FAKE_CELLS)
+                                        cell_mappings=FAKE_CELLS,
+                                        batch_size=100)
         mock_cm.assert_not_called()
         mock_lc.assert_called_once_with()
 
@@ -128,7 +132,8 @@ class TestInstanceList(test.NoDBTestCase):
             user_context, {}, None, None, [], None, None)
         mock_gi.assert_called_once_with(user_context, {}, None, None, [],
                                         None, None,
-                                        cell_mappings=FAKE_CELLS)
+                                        cell_mappings=FAKE_CELLS,
+                                        batch_size=100)
         mock_lc.assert_called_once_with()
 
     @mock.patch('nova.context.CELLS', new=FAKE_CELLS)
@@ -147,7 +152,8 @@ class TestInstanceList(test.NoDBTestCase):
             admin_context, {}, None, None, [], None, None)
         mock_gi.assert_called_once_with(admin_context, {}, None, None, [],
                                         None, None,
-                                        cell_mappings=FAKE_CELLS)
+                                        cell_mappings=FAKE_CELLS,
+                                        batch_size=100)
         mock_cm.assert_not_called()
         mock_lc.assert_called_once_with()
 
@@ -177,3 +183,121 @@ class TestInstanceList(test.NoDBTestCase):
 
         # return the results from the up cell, ignoring the down cell.
         self.assertEqual(uuid_initial, uuid_final)
+
+    def test_batch_size_fixed(self):
+        fixed_size = 200
+        self.flags(instance_list_cells_batch_strategy='fixed', group='api')
+        self.flags(instance_list_cells_batch_fixed_size=fixed_size,
+                   group='api')
+
+        # We call the batch size calculator with various arguments, including
+        # lists of cells which are just counted, so the cardinality is all that
+        # matters.
+
+        # One cell, so batch at $limit
+        ret = instance_list.get_instance_list_cells_batch_size(
+            1000, [mock.sentinel.cell1])
+        self.assertEqual(1000, ret)
+
+        # Two cells, so batch at $fixed_size
+        ret = instance_list.get_instance_list_cells_batch_size(
+            1000, [mock.sentinel.cell1, mock.sentinel.cell2])
+
+        self.assertEqual(fixed_size, ret)
+
+        # Four cells, so batch at $fixed_size
+        ret = instance_list.get_instance_list_cells_batch_size(
+            1000, [mock.sentinel.cell1, mock.sentinel.cell2,
+                   mock.sentinel.cell3, mock.sentinel.cell4])
+        self.assertEqual(fixed_size, ret)
+
+        # Three cells, tiny limit, so batch at lower threshold
+        ret = instance_list.get_instance_list_cells_batch_size(
+            10, [mock.sentinel.cell1,
+                 mock.sentinel.cell2,
+                 mock.sentinel.cell3])
+        self.assertEqual(100, ret)
+
+        # Three cells, limit above floor, so batch at limit
+        ret = instance_list.get_instance_list_cells_batch_size(
+            110, [mock.sentinel.cell1,
+                  mock.sentinel.cell2,
+                  mock.sentinel.cell3])
+        self.assertEqual(110, ret)
+
+    def test_batch_size_distributed(self):
+        self.flags(instance_list_cells_batch_strategy='distributed',
+                   group='api')
+
+        # One cell, so batch at $limit
+        ret = instance_list.get_instance_list_cells_batch_size(1000, [1])
+        self.assertEqual(1000, ret)
+
+        # Two cells so batch at ($limit/2)+10%
+        ret = instance_list.get_instance_list_cells_batch_size(1000, [1, 2])
+        self.assertEqual(550, ret)
+
+        # Four cells so batch at ($limit/4)+10%
+        ret = instance_list.get_instance_list_cells_batch_size(1000, [1, 2,
+                                                                      3, 4])
+        self.assertEqual(275, ret)
+
+        # Three cells, tiny limit, so batch at lower threshold
+        ret = instance_list.get_instance_list_cells_batch_size(10, [1, 2, 3])
+        self.assertEqual(100, ret)
+
+        # Three cells, small limit, so batch at lower threshold
+        ret = instance_list.get_instance_list_cells_batch_size(110, [1, 2, 3])
+        self.assertEqual(100, ret)
+
+        # No cells, so batch at $limit
+        ret = instance_list.get_instance_list_cells_batch_size(1000, [])
+        self.assertEqual(1000, ret)
+
+
+class TestInstanceListBig(test.NoDBTestCase):
+    def setUp(self):
+        super(TestInstanceListBig, self).setUp()
+
+        cells = [objects.CellMapping(uuid=getattr(uuids, 'cell%i' % i),
+                                     name='cell%i' % i,
+                                     transport_url='fake:///',
+                                     database_connection='fake://')
+                 for i in range(0, 3)]
+
+        insts = list([
+            dict(
+                uuid=getattr(uuids, 'inst%i' % i),
+                hostname='inst%i' % i)
+            for i in range(0, 100)])
+
+        self.cells = cells
+        self.insts = insts
+        self.context = nova_context.RequestContext()
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
+
+    @mock.patch('nova.db.api.instance_get_all_by_filters_sort')
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    def test_get_instances_batched(self, mock_cells, mock_inst):
+        mock_cells.return_value = self.cells
+
+        def fake_get_insts(ctx, filters, limit, *a, **k):
+            for i in range(0, limit):
+                yield self.insts.pop()
+
+        mock_inst.side_effect = fake_get_insts
+        insts = instance_list.get_instances_sorted(self.context, {},
+                                                   50, None,
+                                                   [], ['hostname'], ['desc'],
+                                                   batch_size=10)
+
+        # Make sure we returned exactly how many were requested
+        insts = list(insts)
+        self.assertEqual(50, len(insts))
+
+        # Since the instances are all uniform, we should have a
+        # predictable number of queries to the database. 5 queries
+        # would get us 50 results, plus one more gets triggered by the
+        # sort to fill the buffer for the first cell feeder that runs
+        # dry.
+        self.assertEqual(6, mock_inst.call_count)

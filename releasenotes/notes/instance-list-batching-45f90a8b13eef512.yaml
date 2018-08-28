@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    Instance list operations across cells are now made more efficient by batching queries
+    as a fraction of the total limit for a request. Before this, an instance list with a
+    limit of 1000 records (the default) would generate queries to each cell with that
+    limit, and potentially process/sort/merge $num_cells*$limit records, despite only
+    returning $limit to the user. The strategy can now be controlled via
+    ``[api]/instance_list_cells_batch_strategy`` and related options to either use
+    fixed batch sizes, or a fractional value that scales with the number of configured
+    cells.

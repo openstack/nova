@@ -266,6 +266,61 @@ are likely to have instances in all cells, then this should be
 False. If you have many cells, especially if you confine tenants to a
 small subset of those cells, this should be True.
 """),
+    cfg.StrOpt("instance_list_cells_batch_strategy",
+        choices=("fixed", "distributed"),
+        default="distributed",
+        help="""
+This controls the method by which the API queries cell databases in
+smaller batches during large instance list operations. If batching is
+performed, a large instance list operation will request some fraction
+of the overall API limit from each cell database initially, and will
+re-request that same batch size as records are consumed (returned)
+from each cell as necessary. Larger batches mean less chattiness
+between the API and the database, but potentially more wasted effort
+processing the results from the database which will not be returned to
+the user. Any strategy will yield a batch size of at least 100 records,
+to avoid a user causing many tiny database queries in their request.
+
+``distributed`` (the default) will attempt to divide the limit
+requested by the user by the number of cells in the system. This
+requires counting the cells in the system initially, which will not be
+refreshed until service restart or SIGHUP. The actual batch size will
+be increased by 10% over the result of ($limit / $num_cells).
+
+``fixed`` will simply request fixed-size batches from each cell, as
+defined by ``instance_list_cells_batch_fixed_size``. If the limit is
+smaller than the batch size, the limit will be used instead. If you do
+not wish batching to be used at all, setting the fixed size equal to
+the ``max_limit`` value will cause only one request per cell database
+to be issued.
+
+Possible values:
+
+* distributed (default)
+* fixed
+
+Related options:
+
+* instance_list_cells_batch_fixed_size
+* max_limit
+"""),
+    cfg.IntOpt("instance_list_cells_batch_fixed_size",
+        min=100,
+        default=100,
+        help="""
+This controls the batch size of instances requested from each cell
+database if ``instance_list_cells_batch_strategy``` is set to ``fixed``.
+This integral value will define the limit issued to each cell every time
+a batch of instances is requested, regardless of the number of cells in
+the system or any other factors. Per the general logic called out in
+the documentation for ``instance_list_cells_batch_strategy``, the
+minimum value for this is 100 records per batch.
+
+Related options:
+
+* instance_list_cells_batch_strategy
+* max_limit
+"""),
 ]
 
 # NOTE(edleafe): I would like to import the value directly from
