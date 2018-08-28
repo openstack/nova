@@ -41,6 +41,7 @@ Request
   - project_id: project_id_body
   - user_id: user_id_body
   - allocations: allocations_dict_empty
+  - generation: resource_provider_generation_optional
   - resources: resources
 
 Request example (microversions 1.28 - )

@@ -8,7 +8,8 @@
         "resources": {
           "VCPU": 2,
           "MEMORY_MB": 3
-        }
+        },
+        "generation": 4
       }
     }
   },
@@ -27,7 +28,8 @@
         "resources": {
           "VCPU": 4,
           "MEMORY_MB": 5
-        }
+        },
+        "generation": 12
       }
     }
   }
