@@ -301,6 +301,15 @@ In general, you should always enable this filter.
 CoreFilter
 ----------
 
+.. deprecated:: 19.0.0
+
+   ``CoreFilter`` is deprecated since the 19.0.0 Stein release. VCPU
+   filtering is performed natively using the Placement service when using the
+   ``filter_scheduler`` driver. Users of the ``caching_scheduler`` driver may
+   still rely on this filter but the ``caching_scheduler`` driver is itself
+   deprecated. Furthermore, enabling CoreFilter may incorrectly filter out
+   `baremetal nodes`_ which must be scheduled using custom resource classes.
+
 Only schedules instances on hosts if sufficient CPU cores are available.  If
 this filter is not set, the scheduler might over-provision a host based on
 cores. For example, the virtual cores running on an instance may exceed the
@@ -370,6 +379,15 @@ With the API, use the ``os:scheduler_hints`` key. For example:
 
 DiskFilter
 ----------
+
+.. deprecated:: 19.0.0
+
+   ``DiskFilter`` is deprecated since the 19.0.0 Stein release. DISK_GB
+   filtering is performed natively using the Placement service when using the
+   ``filter_scheduler`` driver. Users of the ``caching_scheduler`` driver may
+   still rely on this filter but the ``caching_scheduler`` driver is itself
+   deprecated. Furthermore, enabling DiskFilter may incorrectly filter out
+   `baremetal nodes`_ which must be scheduled using custom resource classes.
 
 Only schedules instances on hosts if there is sufficient disk space available
 for root and ephemeral storage.
@@ -611,6 +629,17 @@ device requests in the ``extra_specs`` attribute for the flavor.
 
 RamFilter
 ---------
+
+.. deprecated:: 19.0.0
+
+   ``RamFilter`` is deprecated since the 19.0.0 Stein release. MEMORY_MB
+   filtering is performed natively using the Placement service when using the
+   ``filter_scheduler`` driver. Users of the ``caching_scheduler`` driver may
+   still rely on this filter but the ``caching_scheduler`` driver is itself
+   deprecated. Furthermore, enabling RamFilter may incorrectly filter out
+   `baremetal nodes`_ which must be scheduled using custom resource classes.
+
+.. _baremetal nodes: https://docs.openstack.org/ironic/latest/install/configure-nova-flavors.html
 
 Only schedules instances on hosts that have sufficient RAM available.  If this
 filter is not set, the scheduler may over provision a host based on RAM (for

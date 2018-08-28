@@ -137,7 +137,7 @@ For example:
   firewall_driver=nova.virt.firewall.NoopFirewallDriver
 
   [filter_scheduler]
-  enabled_filters=RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,PciPassthroughFilter,NUMATopologyFilter
+  enabled_filters=ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,PciPassthroughFilter,NUMATopologyFilter
   EOF
   $ FORCE=yes ./stack.sh
 

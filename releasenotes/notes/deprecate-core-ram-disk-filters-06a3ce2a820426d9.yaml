@@ -1,0 +1,10 @@
+---
+deprecations:
+  - |
+    The ``CoreFilter``, ``DiskFilter`` and ``RamFilter`` are now deprecated.
+    VCPU, DISK_GB and MEMORY_MB filtering is performed natively using the
+    Placement service when using the ``filter_scheduler`` driver. Users of the
+    ``caching_scheduler`` driver may still rely on these filters but the
+    ``caching_scheduler`` driver is itself deprecated. Furthermore, enabling
+    these filters may incorrectly filter out baremetal nodes which must be
+    `scheduled using custom resource classes <https://docs.openstack.org/ironic/latest/install/configure-nova-flavors.html>`_.

@@ -68,6 +68,18 @@ class BaseRamFilter(filters.BaseHostFilter):
 class RamFilter(BaseRamFilter):
     """Ram Filter with over subscription flag."""
 
+    def __init__(self):
+        super(RamFilter, self).__init__()
+        LOG.warning('The RamFilter is deprecated since the 19.0.0 Stein '
+                    'release. MEMORY_MB filtering is performed natively '
+                    'using the Placement service when using the '
+                    'filter_scheduler driver. Users of the '
+                    'caching_scheduler driver may still rely on this '
+                    'filter but the caching_scheduler driver is itself '
+                    'deprecated. Furthermore, enabling RamFilter may '
+                    'incorrectly filter out baremetal nodes which must be '
+                    'scheduled using custom resource classes.')
+
     def _get_ram_allocation_ratio(self, host_state, spec_obj):
         return host_state.ram_allocation_ratio
 
