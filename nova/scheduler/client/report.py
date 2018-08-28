@@ -2121,6 +2121,14 @@ class SchedulerReportClient(object):
         This method is (and should remain) used exclusively in the reshaper
         flow by the resource tracker.
 
+        Note that, in addition to allocations on providers in this compute
+        node's provider tree, this method will return allocations on sharing
+        providers if those allocations are associated with a consumer on this
+        compute node. This is intentional and desirable. But it may also return
+        allocations belonging to other hosts, e.g. if this is happening in the
+        middle of an evacuate. ComputeDriver.update_provider_tree is supposed
+        to ignore such allocations if they appear.
+
         :param context: The security context
         :param nodename: The name of a node for whose tree we are getting
                 allocations.
@@ -2173,8 +2181,12 @@ class SchedulerReportClient(object):
             # The allocations dict is keyed by consumer UUID
             consumers.update(alloc_info.allocations)
 
-        # Now get all the allocations (which will include allocations on
-        # sharing providers) for each of these consumers to build the result.
+        # Now get all the allocations for each of these consumers to build the
+        # result. This will include allocations on sharing providers, which is
+        # intentional and desirable. But it may also include allocations
+        # belonging to other hosts, e.g. if this is happening in the middle of
+        # an evacuate. ComputeDriver.update_provider_tree is supposed to ignore
+        # such allocations if they appear.
         # TODO(efried): This could be more efficient if placement offered an
         # operation like GET /allocations?consumer_uuid=in:<list>
         return {consumer: self.get_allocs_for_consumer(context, consumer)
