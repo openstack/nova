@@ -2481,7 +2481,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                         uuid=uuidsentinel.instance, host='fake', node='fake',
                         task_state=None)]))
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_allocations_for_consumer', return_value={})
+                'get_allocs_for_consumer', return_value={})
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
                 side_effect=exception.ComputeHostNotFound(host='fake'))
     def test_heal_allocations_compute_host_not_found(
@@ -2502,7 +2502,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                         task_state=None, flavor=objects.Flavor(),
                         project_id='fake-project', user_id='fake-user')]))
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_allocations_for_consumer', return_value={})
+                'get_allocs_for_consumer', return_value={})
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
                 return_value=objects.ComputeNode(uuid=uuidsentinel.node))
     @mock.patch('nova.scheduler.utils.resources_from_flavor',
@@ -2523,6 +2523,54 @@ class TestNovaManagePlacement(test.NoDBTestCase):
             test.MatchType(context.RequestContext), uuidsentinel.node,
             uuidsentinel.instance, mock.sentinel.resources, 'fake-project',
             'fake-user')
+
+    @mock.patch('nova.objects.CellMappingList.get_all',
+                new=mock.Mock(return_value=objects.CellMappingList(objects=[
+                    objects.CellMapping(name='cell1',
+                                        uuid=uuidsentinel.cell1)])))
+    @mock.patch('nova.objects.InstanceList.get_by_filters',
+                new=mock.Mock(return_value=objects.InstanceList(objects=[
+                    objects.Instance(
+                        uuid=uuidsentinel.instance, host='fake', node='fake',
+                        task_state=None, flavor=objects.Flavor(),
+                        project_id='fake-project', user_id='fake-user')])))
+    def test_heal_allocations_get_allocs_placement_fails(self):
+        self.assertEqual(3, self.cli.heal_allocations())
+        output = self.output.getvalue()
+        self.assertIn('Allocation retrieval failed', output)
+        # Having not mocked get_allocs_for_consumer, we get MissingAuthPlugin.
+        self.assertIn('An auth plugin is required', output)
+
+    @mock.patch('nova.objects.CellMappingList.get_all',
+                new=mock.Mock(return_value=objects.CellMappingList(objects=[
+                    objects.CellMapping(name='cell1',
+                                        uuid=uuidsentinel.cell1)])))
+    @mock.patch('nova.objects.InstanceList.get_by_filters',
+                side_effect=[
+                    objects.InstanceList(objects=[objects.Instance(
+                        uuid=uuidsentinel.instance, host='fake', node='fake',
+                        task_state=None, flavor=objects.Flavor(),
+                        project_id='fake-project', user_id='fake-user')]),
+                    objects.InstanceList(objects=[])])
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocs_for_consumer',
+                new=mock.Mock(
+                    side_effect=exception.ConsumerAllocationRetrievalFailed(
+                        consumer_uuid='CONSUMER', error='ERROR')))
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
+                new=mock.Mock(
+                    return_value=objects.ComputeNode(uuid=uuidsentinel.node)))
+    @mock.patch('nova.scheduler.utils.resources_from_flavor',
+                new=mock.Mock(return_value=mock.sentinel.resources))
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put_allocations', return_value=True)
+    def test_heal_allocations_get_allocs_retrieval_fails(self, mock_put,
+                                                         mock_getinst):
+        # This "succeeds"
+        self.assertEqual(0, self.cli.heal_allocations())
+        # We're really just verifying that we got to the end
+        mock_put.assert_called_once()
+        self.assertEqual(2, mock_getinst.call_count)
 
     @mock.patch('nova.objects.CellMappingList.get_all',
                 return_value=objects.CellMappingList(objects=[
