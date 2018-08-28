@@ -23,11 +23,13 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova import service
+from nova import utils
 
 CONF = cfg.CONF
 
 CONFIG_FILES = ['api-paste.ini', 'nova.conf']
 
+utils.monkey_patch()
 objects.register_all()
 
 
