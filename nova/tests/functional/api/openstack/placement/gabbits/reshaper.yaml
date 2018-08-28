@@ -155,10 +155,6 @@ tests:
                       total: 2048
                       step_size: 10
                       min_unit: 10
-                      # this was 600 originally but we reset it to 1200
-                      # here because the fixture allocated twice for
-                      # the same consumer and we can't do that from
-                      # the api.
                       max_unit: 1200
           # This resource provider does not exist.
           '39bafc00-3fff-444d-b87a-2ead3f866e05':
@@ -166,10 +162,6 @@ tests:
               inventories:
                   VCPU:
                       total: 10
-                      # this was 4 originally but we reset it to 8
-                      # here because the fixture allocated twice for
-                      # the same consumer and we can't do that from
-                      # the api.
                       max_unit: 8
       # these consumer generations are all 1 because they have
       # previously allocated
@@ -216,10 +208,6 @@ tests:
                       total: 2048
                       step_size: 10
                       min_unit: 10
-                      # this was 600 originally but we reset it to 1200
-                      # here because the fixture allocated twice for
-                      # the same consumer and we can't do that from
-                      # the api.
                       max_unit: 1200
                       bad_field: moo
           $ENVIRON['ALT_RP_UUID']:
@@ -227,10 +215,6 @@ tests:
               inventories:
                   VCPU:
                       total: 10
-                      # this was 4 originally but we reset it to 8
-                      # here because the fixture allocated twice for
-                      # the same consumer and we can't do that from
-                      # the api.
                       max_unit: 8
       # these consumer generations are all 1 because they have
       # previously allocated
@@ -278,20 +262,12 @@ tests:
                       total: 2048
                       step_size: 10
                       min_unit: 10
-                      # this was 600 originally but we reset it to 1200
-                      # here because the fixture allocated twice for
-                      # the same consumer and we can't do that from
-                      # the api.
                       max_unit: 1200
           $ENVIRON['ALT_RP_UUID']:
               resource_provider_generation: 0
               inventories:
                   VCPU:
                       total: 10
-                      # this was 4 originally but we reset it to 8
-                      # here because the fixture allocated twice for
-                      # the same consumer and we can't do that from
-                      # the api.
                       max_unit: 8
       # these consumer generations are all 1 because they have
       # previously allocated
@@ -342,20 +318,12 @@ tests:
                       total: 2048
                       step_size: 10
                       min_unit: 10
-                      # this was 600 originally but we reset it to 1200
-                      # here because the fixture allocated twice for
-                      # the same consumer and we can't do that from
-                      # the api.
                       max_unit: 1200
           $ENVIRON['ALT_RP_UUID']:
               resource_provider_generation: 0
               inventories:
                   VCPU:
                       total: 10
-                      # this was 4 originally but we reset it to 8
-                      # here because the fixture allocated twice for
-                      # the same consumer and we can't do that from
-                      # the api.
                       max_unit: 8
       # these consumer generations are all 1 because they have
       # previously allocated
@@ -409,10 +377,6 @@ tests:
               inventories:
                   VCPU:
                       total: 10
-                      # this was 4 originally but we reset it to 8
-                      # here because the fixture allocated twice for
-                      # the same consumer and we can't do that from
-                      # the api.
                       max_unit: 8
       # these consumer generations are all 1 because they have
       # previously allocated
@@ -464,20 +428,12 @@ tests:
                       total: 2048
                       step_size: 10
                       min_unit: 10
-                      # this was 600 originally but we reset it to 1200
-                      # here because the fixture allocated twice for
-                      # the same consumer and we can't do that from
-                      # the api.
                       max_unit: 1200
           $ENVIRON['ALT_RP_UUID']:
               resource_provider_generation: 0
               inventories:
                   VCPU:
                       total: 10
-                      # this was 4 originally but we reset it to 8
-                      # here because the fixture allocated twice for
-                      # the same consumer and we can't do that from
-                      # the api.
                       max_unit: 8
       # these consumer generations are all 1 because they have
       # previously allocated
