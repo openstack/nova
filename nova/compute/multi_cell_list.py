@@ -127,6 +127,30 @@ class CrossCellLister(object):
         self.sort_ctx = sort_ctx
         self.cells = cells
         self.batch_size = batch_size
+        self._cells_responded = set()
+        self._cells_failed = set()
+        self._cells_timed_out = set()
+
+    @property
+    def cells_responded(self):
+        """A list of uuids representing those cells that returned a successful
+        result.
+        """
+        return list(self._cells_responded)
+
+    @property
+    def cells_failed(self):
+        """A list of uuids representing those cells that failed to return a
+        successful result.
+        """
+        return list(self._cells_failed)
+
+    @property
+    def cells_timed_out(self):
+        """A list of uuids representing those cells that timed out while being
+        contacted.
+        """
+        return list(self._cells_timed_out)
 
     @property
     @abc.abstractmethod
@@ -377,9 +401,18 @@ class CrossCellLister(object):
                 LOG.warning('Cell %s is not responding and hence is '
                             'being omitted from the results',
                             item.cell_uuid)
+                if item._db_record == context.did_not_respond_sentinel:
+                    self._cells_timed_out.add(item.cell_uuid)
+                elif item._db_record == context.raised_exception_sentinel:
+                    self._cells_failed.add(item.cell_uuid)
+                # We might have received one batch but timed out or failed
+                # on a later one, so be sure we fix the accounting.
+                if item.cell_uuid in self._cells_responded:
+                    self._cells_responded.remove(item.cell_uuid)
                 continue
 
             yield item._db_record
+            self._cells_responded.add(item.cell_uuid)
             total_limit -= 1
             if total_limit == 0:
                 # We'll only hit this if limit was nonzero and we just
