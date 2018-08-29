@@ -63,7 +63,6 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
 
         self.start_service('conductor')
         self.start_service('consoleauth')
-        self.start_service('scheduler')
 
         # We start two compute services because we're going to fake one
         # of them to fail the build so we can trigger the retry code.
@@ -79,6 +78,10 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
         fake.set_nodes(['host2'])
         self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host2')
+
+        # Start the scheduler after the compute nodes are created in the DB
+        # in the case of using the CachingScheduler.
+        self.start_service('scheduler')
 
         self.useFixture(cast_as_call.CastAsCall(self))
 
