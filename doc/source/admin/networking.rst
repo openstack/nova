@@ -102,9 +102,9 @@ For all other types of ports, some manual configuration is required.
 
    For an L3-type network using the Linux Bridge mechanism driver, the device
    used will be configured using protocol-specific endpoint IP configuration
-   option. For VXLAN, this is the ``[vxlan] local_ip`` option. For example::
+   option. For VXLAN, this is the ``[vxlan] local_ip`` option. For example:
 
-   .. code-block::
+   .. code-block:: ini
 
       [vxlan]
       local_ip = OVERLAY_INTERFACE_IP_ADDRESS
