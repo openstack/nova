@@ -756,6 +756,9 @@ class SchedulerReportClient(object):
         if curr is None:
             return None
 
+        LOG.debug('Updating ProviderTree inventory for provider %s from '
+                  '_refresh_and_get_inventory using data: %s', rp_uuid,
+                  curr['inventories'])
         self._provider_tree.update_inventory(
             rp_uuid, curr['inventories'],
             generation=curr['resource_provider_generation'])
@@ -863,12 +866,15 @@ class SchedulerReportClient(object):
         # update_resource_stats() is called? :(
         curr = self._refresh_and_get_inventory(context, rp_uuid)
         if curr is None:
+            LOG.debug('No inventory for provider: %s', rp_uuid, inv_data)
             return False
 
         cur_gen = curr['resource_provider_generation']
 
         # Check to see if we need to update placement's view
         if not self._provider_tree.has_inventory_changed(rp_uuid, inv_data):
+            LOG.debug('Inventory has not changed for provider %s based '
+                      'on inventory data: %s', rp_uuid, inv_data)
             return True
 
         payload = {
@@ -961,11 +967,11 @@ class SchedulerReportClient(object):
         # Update our view of the generation for next time
         updated_inventories_result = result.json()
         new_gen = updated_inventories_result['resource_provider_generation']
-
+        LOG.debug('Updating ProviderTree inventory for provider %s with '
+                  'generation %s from _update_inventory_attempt with data: '
+                  '%s', rp_uuid, new_gen, inv_data)
         self._provider_tree.update_inventory(rp_uuid, inv_data,
                                              generation=new_gen)
-        LOG.debug('Updated inventory for %s at generation %i',
-                  rp_uuid, new_gen)
         return True
 
     @safe_connect
@@ -1110,6 +1116,8 @@ class SchedulerReportClient(object):
 
         # If not different from what we've got, short out
         if not self._provider_tree.has_inventory_changed(rp_uuid, inv_data):
+            LOG.debug('Inventory has not changed for provider %s based '
+                      'on inventory data: %s', rp_uuid, inv_data)
             return
 
         # Ensure non-standard resource classes exist, creating them if needed.
@@ -1125,6 +1133,9 @@ class SchedulerReportClient(object):
         resp = do_put(url, payload)
 
         if resp.status_code == 200:
+            LOG.debug('Updated inventory for provider %s with generation %s '
+                      'in Placement from _set_inventory_for_provider using '
+                      'data: %s', rp_uuid, generation, inv_data)
             json = resp.json()
             self._provider_tree.update_inventory(
                 rp_uuid, json['inventories'],
