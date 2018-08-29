@@ -1140,3 +1140,20 @@ To customize the VMware driver, use the configuration option settings below.
        * http://<server>/vimService.wsdl
 
        * file:///opt/stack/vmware/SDK/wsdl/vim25/vimService.wsdl
+
+Troubleshooting
+~~~~~~~~~~~~~~~
+
+Operators can troubleshoot VMware specific failures by correlating OpenStack
+logs to vCenter logs. Every RPC call which is made by an OpenStack driver has
+an ``opID`` which can be traced in the vCenter logs. For example consider the
+following excerpt from a ``nova-compute`` log:
+
+.. code-block:: console
+
+   Aug 15 07:31:09 localhost nova-compute[16683]: DEBUG oslo_vmware.service [-] Invoking Folder.CreateVM_Task with opID=oslo.vmware-debb6064-690e-45ac-b0ae-1b94a9638d1f {{(pid=16683) request_handler /opt/stack/oslo.vmware/oslo_vmware/service.py:355}}
+
+In this case the ``opID`` is
+``oslo.vmware-debb6064-690e-45ac-b0ae-1b94a9638d1f`` and we can grep the
+vCenter log (usually ``/var/log/vmware/vpxd/vpxd.log``) for it to
+find if anything went wrong with the ``CreateVM`` operation.
