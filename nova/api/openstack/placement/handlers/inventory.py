@@ -75,7 +75,7 @@ def _extract_inventories(body, schema):
     return data
 
 
-def _make_inventory_object(resource_provider, resource_class, **data):
+def make_inventory_object(resource_provider, resource_class, **data):
     """Single place to catch malformed Inventories."""
     # TODO(cdent): Some of the validation checks that are done here
     # could be done via JSONschema (using, for example, "minimum":
@@ -191,9 +191,9 @@ def create_inventory(req):
     data = _extract_inventory(req.body, schema.POST_INVENTORY_SCHEMA)
     resource_class = data.pop('resource_class')
 
-    inventory = _make_inventory_object(resource_provider,
-                                       resource_class,
-                                       **data)
+    inventory = make_inventory_object(resource_provider,
+                                      resource_class,
+                                      **data)
 
     try:
         _validate_inventory_capacity(
@@ -336,7 +336,7 @@ def set_inventories(req):
 
     inv_list = []
     for res_class, inventory_data in data['inventories'].items():
-        inventory = _make_inventory_object(
+        inventory = make_inventory_object(
             resource_provider, res_class, **inventory_data)
         inv_list.append(inventory)
     inventories = rp_obj.InventoryList(objects=inv_list)
@@ -440,9 +440,9 @@ def update_inventory(req):
             _('resource provider generation conflict'),
             comment=errors.CONCURRENT_UPDATE)
 
-    inventory = _make_inventory_object(resource_provider,
-                                       resource_class,
-                                       **data)
+    inventory = make_inventory_object(resource_provider,
+                                      resource_class,
+                                      **data)
 
     try:
         _validate_inventory_capacity(

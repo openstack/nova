@@ -1,0 +1,67 @@
+{
+  "allocations": {
+    "9ae60315-80c2-48a0-a168-ca4f27c307e1": {
+      "allocations": {
+        "a7466641-cd72-499b-b6c9-c208eacecb3d": {
+          "resources": {
+            "DISK_GB": 1000
+          }
+        }
+      },
+      "project_id": "2f0c4ffc-4c4d-407a-b334-56297b871b7f",
+      "user_id": "cc8a0fe0-2b7c-4392-ae51-747bc73cf473",
+      "consumer_generation": 1
+    },
+    "4a6444e5-10d6-43f6-9a0b-8acce9309ac9": {
+      "allocations": {
+        "c4ddddbb-01ee-4814-85c9-f57a962c22ba": {
+          "resources": {
+            "VCPU": 1
+          }
+        },
+        "a7466641-cd72-499b-b6c9-c208eacecb3d": {
+          "resources": {
+            "DISK_GB": 20
+          }
+        }
+      },
+      "project_id": "2f0c4ffc-4c4d-407a-b334-56297b871b7f",
+      "user_id": "406e1095-71cb-47b9-9b3c-aedb7f663f5a",
+      "consumer_generation": 1
+    },
+    "e10e7ca0-2ac5-4c98-bad9-51c95b1930ed": {
+      "allocations": {
+        "c4ddddbb-01ee-4814-85c9-f57a962c22ba": {
+          "resources": {
+            "VCPU": 8
+          }
+        }
+      },
+      "project_id": "2f0c4ffc-4c4d-407a-b334-56297b871b7f",
+      "user_id": "cc8a0fe0-2b7c-4392-ae51-747bc73cf473",
+      "consumer_generation": 1
+    }
+  },
+  "inventories": {
+    "c4ddddbb-01ee-4814-85c9-f57a962c22ba": {
+      "inventories": {
+        "VCPU": {
+          "max_unit": 8,
+          "total": 10
+        }
+      },
+      "resource_provider_generation": null
+    },
+    "a7466641-cd72-499b-b6c9-c208eacecb3d": {
+      "inventories": {
+        "DISK_GB": {
+          "min_unit": 10,
+          "total": 2048,
+          "max_unit": 1200,
+          "step_size": 10
+        }
+      },
+      "resource_provider_generation": 5
+    }
+  }
+}

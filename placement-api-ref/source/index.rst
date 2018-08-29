@@ -30,3 +30,4 @@ header for APIs sending data payloads in the request body (i.e. ``PUT`` and
 .. include:: usages.inc
 .. include:: resource_provider_usages.inc
 .. include:: allocation_candidates.inc
+.. include:: reshaper.inc

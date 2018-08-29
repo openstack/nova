@@ -504,3 +504,15 @@ provider trees are present, ``allocation_requests`` in the response of
 multiple resource providers in the same tree.
 2) ``root_provider_uuid`` and ``parent_provider_uuid`` are added to
 ``provider_summaries`` in the response of ``GET /allocation_candidates``.
+
+1.30 Provide a /reshaper resource
+---------------------------------
+
+Add support for a ``POST /reshaper`` resource that provides for atomically
+migrating resource provider inventories and associated allocations when some of
+the inventory moves from one resource provider to another, such as when a class
+of inventory moves from a parent provider to a new child provider.
+
+.. note:: This is a special operation that should only be used in rare cases
+          of resource provider topology changing when inventory is in use.
+          Only use this if you are really sure of what you are doing.
