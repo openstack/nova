@@ -148,15 +148,17 @@ class _Provider(object):
                     return True
         return False
 
-    def _update_generation(self, generation):
+    def _update_generation(self, generation, operation):
         if generation is not None and generation != self.generation:
             msg_args = {
                 'rp_uuid': self.uuid,
                 'old': self.generation,
                 'new': generation,
+                'op': operation
             }
             LOG.debug("Updating resource provider %(rp_uuid)s generation "
-                      "from %(old)s to %(new)s", msg_args)
+                      "from %(old)s to %(new)s during operation: %(op)s",
+                      msg_args)
             self.generation = generation
 
     def update_inventory(self, inventory, generation):
@@ -164,7 +166,7 @@ class _Provider(object):
         provider generation to set the provider to. The method returns whether
         the inventory has changed.
         """
-        self._update_generation(generation)
+        self._update_generation(generation, 'update_inventory')
         if self.has_inventory_changed(inventory):
             self.inventory = copy.deepcopy(inventory)
             return True
@@ -179,7 +181,7 @@ class _Provider(object):
         provider generation to set the provider to. The method returns whether
         the traits have changed.
         """
-        self._update_generation(generation)
+        self._update_generation(generation, 'update_traits')
         if self.have_traits_changed(new):
             self.traits = set(new)  # create a copy of the new traits
             return True
@@ -204,7 +206,7 @@ class _Provider(object):
         provider generation to set the provider to. The method returns whether
         the aggregates have changed.
         """
-        self._update_generation(generation)
+        self._update_generation(generation, 'update_aggregates')
         if self.have_aggregates_changed(new):
             self.aggregates = set(new)  # create a copy of the new aggregates
             return True
