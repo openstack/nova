@@ -387,6 +387,14 @@ class TestNovaManagePlacementHealAllocations(
         self.flavor = self.api.get_flavors()[0]
         self.output = StringIO()
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+        # On startup, the CachingScheduler runs a periodic task to pull the
+        # initial set of compute nodes out of the database which it then puts
+        # into a cache (hence the name of the driver). This can race with
+        # actually starting the compute services so we need to restart the
+        # scheduler to refresh the cache.
+        self.scheduler_service.stop()
+        self.scheduler_service.manager.driver.all_host_states = None
+        self.scheduler_service.start()
 
     def _boot_and_assert_no_allocations(self, flavor, hostname):
         """Creates a server on the given host and asserts neither have usage
