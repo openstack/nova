@@ -42,3 +42,5 @@ Request Example
 
 .. literalinclude:: ./samples/reshaper/post-reshaper-1.30.json
    :language: javascript
+
+No body content is returned on a successful POST.
