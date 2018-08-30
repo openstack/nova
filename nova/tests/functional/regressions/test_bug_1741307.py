@@ -59,15 +59,17 @@ class TestResizeWithCachingScheduler(test.TestCase,
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
         self.start_service('conductor')
-        # Configure the CachingScheduler.
-        self.flags(driver='caching_scheduler', group='scheduler')
-        self.start_service('scheduler')
 
         # Create two compute nodes/services.
         for host in ('host1', 'host2'):
             fake.set_nodes([host])
             self.addCleanup(fake.restore_nodes)
             self.start_service('compute', host=host)
+
+        # Start the scheduler after the compute nodes are created in the DB
+        # in the case of using the CachingScheduler.
+        self.flags(driver='caching_scheduler', group='scheduler')
+        self.start_service('scheduler')
 
         flavors = self.api.get_flavors()
         self.old_flavor = flavors[0]
