@@ -7757,7 +7757,8 @@ class ComputeManager(manager.Manager):
             # or may not happen again. Depending on the previous and intended
             # shape of the providers/inventories, this may not actually cause
             # any immediately visible symptoms (in terms of scheduling, etc.)
-            # TODO(efried): Make it pop immediately, e.g. disable the service.
+            # If this becomes a problem, we may wish to make it pop immediately
+            # (e.g. disable the service).
             with excutils.save_and_reraise_exception():
                 LOG.exception("ReshapeNeeded exception is unexpected here!")
         except Exception:
