@@ -47,6 +47,7 @@ _RE_INV_IN_USE = re.compile("Inventory for (.+) on resource provider "
                             "(.+) in use")
 WARN_EVERY = 10
 PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
+RESHAPER_VERSION = '1.30'
 CONSUMER_GENERATION_VERSION = '1.28'
 GRANULAR_AC_VERSION = '1.25'
 ALLOW_RESERVED_EQUAL_TOTAL_INVENTORY_VERSION = '1.26'
@@ -1419,6 +1420,40 @@ class SchedulerReportClient(object):
         # if an out-of-band update occurs between when we GET the latest and
         # when we invoke the DELETE.  See bug #1746374.
         self._update_inventory(context, compute_node.uuid, inv_data)
+
+    def _reshape(self, context, inventories, allocations):
+        """Perform atomic inventory & allocation data migration.
+
+        :param context: The security context
+        :param inventories: A dict, keyed by resource provider UUID, of:
+                { "inventories": { inventory dicts, keyed by resource class },
+                  "resource_provider_generation": $RP_GEN }
+        :param allocations: A dict, keyed by consumer UUID, of:
+                { "project_id": $PROJ_ID,
+                  "user_id": $USER_ID,
+                  "consumer_generation": $CONSUMER_GEN,
+                  "allocations": {
+                      $RP_UUID: {
+                          "resources": { $RC: $AMOUNT, ... }
+                      },
+                      ...
+                  }
+                }
+        :return: The Response object representing a successful API call.
+        :raises: ReshapeFailed if the POST /reshaper request fails.
+        :raises: keystoneauth1.exceptions.ClientException if placement API
+                 communication fails.
+        """
+        # We have to make sure any new resource classes exist
+        for invs in inventories.values():
+            self._ensure_resource_classes(context, list(invs['inventories']))
+        payload = {"inventories": inventories, "allocations": allocations}
+        resp = self.post('/reshaper', payload, version=RESHAPER_VERSION,
+                         global_request_id=context.global_id)
+        if not resp:
+            raise exception.ReshapeFailed(error=resp.text)
+
+        return resp
 
     def update_from_provider_tree(self, context, new_tree):
         """Flush changes from a specified ProviderTree back to placement.

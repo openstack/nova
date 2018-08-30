@@ -118,6 +118,10 @@ Upgrade
   * Checks that existing instances have been migrated to have a matching
     request spec in the API DB.
 
+  **19.0.0 (Stein)**
+
+  * Checks for the Placement API are modified to require version 1.30.
+
 See Also
 ========
 
