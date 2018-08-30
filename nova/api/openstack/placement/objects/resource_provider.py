@@ -488,7 +488,7 @@ def _anchors_for_sharing_providers(context, rp_ids, get_id=False):
     return set([(r[0], r[1]) for r in context.session.execute(sel).fetchall()])
 
 
-@db_api.placement_context_manager.independent.writer
+@db_api.placement_context_manager.writer
 def _ensure_aggregate(ctx, agg_uuid):
     """Finds an aggregate and returns its internal ID. If not found, creates
     the aggregate and returns the new aggregate's internal ID.
