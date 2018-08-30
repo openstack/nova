@@ -104,7 +104,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # storage provider.
         after_inventories = {
             # cn1 keeps the RAM only
-            cn1.uuid: rp_obj.InventoryList(self.ctx, objects=[
+            cn1: rp_obj.InventoryList(self.ctx, objects=[
                 rp_obj.Inventory(
                     self.ctx, resource_provider=cn1,
                     resource_class='MEMORY_MB', total=32768, reserved=0,
@@ -112,14 +112,14 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
                     allocation_ratio=1.0),
             ]),
             # each NUMA node gets half of the CPUs
-            cn1_numa0.uuid: rp_obj.InventoryList(self.ctx, objects=[
+            cn1_numa0: rp_obj.InventoryList(self.ctx, objects=[
                 rp_obj.Inventory(
                     self.ctx, resource_provider=cn1_numa0,
                     resource_class='VCPU', total=8, reserved=0,
                     max_unit=8, min_unit=1, step_size=1,
                     allocation_ratio=1.0),
             ]),
-            cn1_numa1.uuid: rp_obj.InventoryList(self.ctx, objects=[
+            cn1_numa1: rp_obj.InventoryList(self.ctx, objects=[
                 rp_obj.Inventory(
                     self.ctx, resource_provider=cn1_numa1,
                     resource_class='VCPU', total=8, reserved=0,
@@ -127,7 +127,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
                     allocation_ratio=1.0),
             ]),
             # The sharing provider gets a bunch of disk
-            ss.uuid: rp_obj.InventoryList(self.ctx, objects=[
+            ss: rp_obj.InventoryList(self.ctx, objects=[
                 rp_obj.Inventory(
                     self.ctx, resource_provider=ss,
                     resource_class='DISK_GB', total=100000, reserved=0,
@@ -283,7 +283,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
         # storage provider.
         after_inventories = {
             # cn1 keeps the RAM only
-            cn1.uuid: rp_obj.InventoryList(self.ctx, objects=[
+            cn1: rp_obj.InventoryList(self.ctx, objects=[
                 rp_obj.Inventory(
                     self.ctx, resource_provider=cn1,
                     resource_class='MEMORY_MB', total=32768, reserved=0,
@@ -291,14 +291,14 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
                     allocation_ratio=1.0),
             ]),
             # each NUMA node gets half of the CPUs
-            cn1_numa0.uuid: rp_obj.InventoryList(self.ctx, objects=[
+            cn1_numa0: rp_obj.InventoryList(self.ctx, objects=[
                 rp_obj.Inventory(
                     self.ctx, resource_provider=cn1_numa0,
                     resource_class='VCPU', total=8, reserved=0,
                     max_unit=8, min_unit=1, step_size=1,
                     allocation_ratio=1.0),
             ]),
-            cn1_numa1.uuid: rp_obj.InventoryList(self.ctx, objects=[
+            cn1_numa1: rp_obj.InventoryList(self.ctx, objects=[
                 rp_obj.Inventory(
                     self.ctx, resource_provider=cn1_numa1,
                     resource_class='VCPU', total=8, reserved=0,
@@ -306,7 +306,7 @@ class ReshapeTestCase(tb.PlacementDbBaseTestCase):
                     allocation_ratio=1.0),
             ]),
             # The sharing provider gets a bunch of disk
-            ss.uuid: rp_obj.InventoryList(self.ctx, objects=[
+            ss: rp_obj.InventoryList(self.ctx, objects=[
                 rp_obj.Inventory(
                     self.ctx, resource_provider=ss,
                     resource_class='DISK_GB', total=100000, reserved=0,

@@ -4171,9 +4171,9 @@ def reshape(ctx, inventories, allocations):
 
     :param ctx: `nova.api.openstack.placement.context.RequestContext` object
                 containing the DB transaction context.
-    :param inventories: dict, keyed by resource provider UUID, of
-                        `InventoryList` objects representing the replaced
-                        inventory information for the provider.
+    :param inventories: dict, keyed by ResourceProvider, of `InventoryList`
+                        objects representing the replaced inventory information
+                        for the provider.
     :param allocations: `AllocationList` object containing all allocations for
                         all consumers being modified by the reshape operation.
     :raises: `exception.ConcurrentUpdateDetected` when any resource provider or
@@ -4201,25 +4201,12 @@ def reshape(ctx, inventories, allocations):
     # allocated, but that's allowed by the code. If the final picture is
     # overcommitted, we'll get an appropriate exception when we replace the
     # allocations at the end.
-    for rp_uuid, new_inv_list in inventories.items():
+    for rp, new_inv_list in inventories.items():
         LOG.debug("reshaping: *interim* inventory replacement for provider %s",
-                  rp_uuid)
-        # We need the resource provider object.
-        if new_inv_list:
-            # If the inventory list is nonempty, grab it from the first entry.
-            # This overrides (and will replace, below) an object that was
-            # prepopulated from the allocations.
-            rp = new_inv_list[0].resource_provider
-        elif rp_uuid in affected_providers:
-            # No inventory object; second choice is from an allocation object.
-            rp = affected_providers[rp_uuid]
-        else:
-            # No inventory or allocations for this provider - which makes sense
-            # when we're "clearing out" a provider. Look it up.
-            rp = ResourceProvider.get_by_uuid(ctx, rp_uuid)
+                  rp.uuid)
         # Update the cache. This may be replacing an entry that came from
-        # allocations, or adding a new entry from inventories and/or db lookup.
-        affected_providers[rp_uuid] = rp
+        # allocations, or adding a new entry from inventories.
+        affected_providers[rp.uuid] = rp
 
         # Optimization: If the new inventory is empty, the below would be
         # replacing it with itself (and incrementing the generation)
@@ -4253,7 +4240,7 @@ def reshape(ctx, inventories, allocations):
     allocations.replace_all()
 
     # And finally, we can set the inventories to their actual desired state.
-    for rp_uuid, new_inv_list in inventories.items():
+    for rp, new_inv_list in inventories.items():
         LOG.debug("reshaping: *final* inventory replacement for provider %s",
-                  rp_uuid)
-        affected_providers[rp_uuid].set_inventory(new_inv_list)
+                  rp.uuid)
+        rp.set_inventory(new_inv_list)
