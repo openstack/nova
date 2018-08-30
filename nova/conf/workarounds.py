@@ -154,6 +154,11 @@ Related options:
         deprecated_for_removal=True,
         deprecated_since="18.0.0",
         deprecated_reason="""
+This option has been added as deprecated originally because it is used
+for avoiding a upgrade issue and it will not be used in the future.
+See the help text for more details.
+""",
+        help="""
 Enable the consoleauth service to avoid resetting unexpired consoles.
 
 Console token authorizations have moved from the ``nova-consoleauth`` service
