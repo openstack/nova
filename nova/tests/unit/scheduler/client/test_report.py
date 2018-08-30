@@ -3406,6 +3406,28 @@ class TestAllocations(SchedulerReportClientTestCase):
         self.assertEqual(0, mock_log.info.call_count)
         self.assertEqual(1, mock_log.error.call_count)
 
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
+    def test_get_allocations_for_resource_provider(self, mock_get):
+        mock_get.return_value = fake_requests.FakeResponse(
+            200, content=jsonutils.dumps(
+                {'allocations': 'fake', 'resource_provider_generation': 42}))
+        ret = self.client.get_allocations_for_resource_provider(
+            self.context, 'rpuuid')
+        self.assertEqual('fake', ret.allocations)
+        mock_get.assert_called_once_with(
+            '/resource_providers/rpuuid/allocations',
+            global_request_id=self.context.global_id)
+
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
+    def test_get_allocations_for_resource_provider_fail(self, mock_get):
+        mock_get.return_value = fake_requests.FakeResponse(400, content="ouch")
+        self.assertRaises(exception.ResourceProviderAllocationRetrievalFailed,
+                          self.client.get_allocations_for_resource_provider,
+                          self.context, 'rpuuid')
+        mock_get.assert_called_once_with(
+            '/resource_providers/rpuuid/allocations',
+            global_request_id=self.context.global_id)
+
 
 class TestResourceClass(SchedulerReportClientTestCase):
     def setUp(self):

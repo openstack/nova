@@ -13,6 +13,7 @@
 import copy
 import datetime
 
+from keystoneauth1 import exceptions as ks_exc
 import mock
 from oslo_config import cfg
 from oslo_utils import timeutils
@@ -33,6 +34,7 @@ from nova.objects import fields as obj_fields
 from nova.objects import pci_device
 from nova.pci import manager as pci_manager
 from nova import rc_fields
+from nova.scheduler.client import report
 from nova import test
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
@@ -2799,7 +2801,8 @@ class TestUpdateUsageFromInstance(BaseTestCase):
             mock_inst_get):
         rc = self.rt.reportclient
         self.rt.tracked_instances = {}
-        allocs = {uuids.deleted: "fake_deleted_instance"}
+        allocs = report.ProviderAllocInfo(
+            allocations={uuids.deleted: "fake_deleted_instance"})
         rc.get_allocations_for_resource_provider = mock.MagicMock(
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
@@ -2824,7 +2827,8 @@ class TestUpdateUsageFromInstance(BaseTestCase):
             mock_inst_get):
         rc = self.rt.reportclient
         self.rt.tracked_instances = {}
-        allocs = {uuids.deleted: "fake_deleted_instance"}
+        allocs = report.ProviderAllocInfo(
+            allocations={uuids.deleted: "fake_deleted_instance"})
         rc.get_allocations_for_resource_provider = mock.MagicMock(
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
@@ -2843,8 +2847,9 @@ class TestUpdateUsageFromInstance(BaseTestCase):
             mock_inst_get):
         rc = self.rt.reportclient
         self.rt.tracked_instances = {}
-        allocs = {uuids.deleted: "fake_deleted_instance",
-                  uuids.migration: "fake_migration"}
+        allocs = report.ProviderAllocInfo(
+            allocations={uuids.deleted: "fake_deleted_instance",
+                         uuids.migration: "fake_migration"})
         mig = objects.Migration(uuid=uuids.migration)
         rc.get_allocations_for_resource_provider = mock.MagicMock(
             return_value=allocs)
@@ -2867,7 +2872,8 @@ class TestUpdateUsageFromInstance(BaseTestCase):
             mock_inst_get):
         rc = self.rt.reportclient
         self.rt.tracked_instances = {}
-        allocs = {uuids.scheduled: "fake_scheduled_instance"}
+        allocs = report.ProviderAllocInfo(
+            allocations={uuids.scheduled: "fake_scheduled_instance"})
         rc.get_allocations_for_resource_provider = mock.MagicMock(
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
@@ -2916,15 +2922,17 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         rc = self.rt.reportclient
         self.rt.tracked_instances = {
             uuids.known: objects.Instance(uuid=uuids.known)}
-        allocs = {
-            uuids.known: {
-                'resources': {
-                    'VCPU': 1,
-                    'MEMORY_MB': 2048,
-                    'DISK_GB': 20
+        allocs = report.ProviderAllocInfo(
+            allocations={
+                uuids.known: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 2048,
+                        'DISK_GB': 20
+                    }
                 }
             }
-        }
+        )
         rc.get_allocations_for_resource_provider = mock.MagicMock(
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
@@ -2951,15 +2959,17 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # No tracked instances on this node.
         self.rt.tracked_instances = {}
         # But there is an allocation for an instance on this node.
-        allocs = {
-            instance.uuid: {
-                'resources': {
-                    'VCPU': 1,
-                    'MEMORY_MB': 2048,
-                    'DISK_GB': 20
+        allocs = report.ProviderAllocInfo(
+            allocations={
+                instance.uuid: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 2048,
+                        'DISK_GB': 20
+                    }
                 }
             }
-        }
+        )
         rc.get_allocations_for_resource_provider = mock.MagicMock(
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
@@ -2973,6 +2983,33 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # testing the current behavior but in the future when we get smart
         # and figure things out, this should actually be an error.
         rc.delete_allocation_for_instance.assert_not_called()
+
+    def test_remove_deleted_instances_allocations_retrieval_fail(self):
+        """When the report client errs or otherwise retrieves no allocations,
+        _remove_deleted_instances_allocations gracefully no-ops.
+        """
+        cn = self.rt.compute_nodes[_NODENAME]
+        rc = self.rt.reportclient
+        # We'll test three different ways get_allocations_for_resource_provider
+        # can cause us to no-op.
+        side_effects = (
+            # Actual placement error
+            exc.ResourceProviderAllocationRetrievalFailed(
+                rp_uuid='rp_uuid', error='error'),
+            # API communication failure
+            ks_exc.ClientException,
+            # Legitimately no allocations
+            report.ProviderAllocInfo(allocations={}),
+        )
+        rc.get_allocations_for_resource_provider = mock.Mock(
+            side_effect=side_effects)
+        for _ in side_effects:
+            # If we didn't no op, this would blow up at 'ctx'.elevated()
+            self.rt._remove_deleted_instances_allocations(
+                'ctx', cn, [], self.rt.tracked_instances)
+            rc.get_allocations_for_resource_provider.assert_called_once_with(
+                'ctx', cn.uuid)
+            rc.get_allocations_for_resource_provider.reset_mock()
 
     def test_delete_allocation_for_shelve_offloaded_instance(self):
         instance = _INSTANCE_FIXTURES[0].obj_clone()

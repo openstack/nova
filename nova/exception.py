@@ -2368,3 +2368,8 @@ class ZVMConnectorError(ZVMDriverException):
 
 class NoResourceClass(NovaException):
     msg_fmt = _("Resource class not found for Ironic node %(node)s.")
+
+
+class ResourceProviderAllocationRetrievalFailed(NovaException):
+    msg_fmt = _("Failed to retrieve allocations for resource provider "
+                "%(rp_uuid)s: %(error)s")
