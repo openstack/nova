@@ -1536,32 +1536,74 @@ class SchedulerReportClient(object):
         if not success:
             raise exception.ResourceProviderSyncFailed()
 
-    @safe_connect
-    def get_allocations_for_consumer(self, context, consumer,
-                                     include_generation=False):
+    # TODO(efried): Cut users of this method over to get_allocs_for_consumer
+    def get_allocations_for_consumer(self, context, consumer):
+        """Legacy method for allocation retrieval.
+
+        Callers should move to using get_allocs_for_consumer, which handles
+        errors properly and returns the entire payload.
+
+        :param context: The nova.context.RequestContext auth context
+        :param consumer: UUID of the consumer resource
+        :returns: A dict of the form:
+                {
+                    $RP_UUID: {
+                              "generation": $RP_GEN,
+                              "resources": {
+                                  $RESOURCE_CLASS: $AMOUNT
+                                  ...
+                              },
+                    },
+                    ...
+                }
+        """
+        try:
+            return self.get_allocs_for_consumer(
+                context, consumer)['allocations']
+        except ks_exc.ClientException as e:
+            LOG.warning("Failed to get allocations for consumer %(consumer)s: "
+                        "%(error)s", {'consumer': consumer, 'error': e})
+            # Because this is what @safe_connect did
+            return None
+        except exception.ConsumerAllocationRetrievalFailed as e:
+            LOG.warning(e)
+            # Because this is how we used to treat non-200
+            return {}
+
+    def get_allocs_for_consumer(self, context, consumer):
         """Makes a GET /allocations/{consumer} call to Placement.
 
         :param context: The nova.context.RequestContext auth context
         :param consumer: UUID of the consumer resource
-        :param include_generation: True if the response should be the
-            full allocations response including ``consumer_generation`` (new
-            in microversion 1.28), False if only the "allocations" dict from
-            the response body should be returned.
-        :returns: dict, see ``include_generation`` for details on format;
-            returns None if unable to connect to Placement (see safe_connect)
+        :return: Dict of the form:
+                { "allocations": {
+                      $RP_UUID: {
+                          "generation": $RP_GEN,
+                          "resources": {
+                              $RESOURCE_CLASS: $AMOUNT
+                              ...
+                          },
+                      },
+                      ...
+                  },
+                  "consumer_generation": $CONSUMER_GEN,
+                  "project_id": $PROJ_ID,
+                  "user_id": $USER_ID,
+                }
+        :raises: keystoneauth1.exceptions.base.ClientException on failure to
+                 communicate with the placement API
+        :raises: ConsumerAllocationRetrievalFailed if the placement API call
+                 fails
         """
-        url = '/allocations/%s' % consumer
-        resp = self.get(
-            url, version=CONSUMER_GENERATION_VERSION,
-            global_request_id=context.global_id)
+        resp = self.get('/allocations/%s' % consumer,
+                        version=CONSUMER_GENERATION_VERSION,
+                        global_request_id=context.global_id)
         if not resp:
-            return {}
-        else:
-            # TODO(efried): refactor all callers to accept the whole response
-            # so we can get rid of this condition
-            if include_generation:
-                return resp.json()
-            return resp.json()['allocations']
+            # TODO(efried): Use code/title/detail to make a better exception
+            raise exception.ConsumerAllocationRetrievalFailed(
+                consumer_uuid=consumer, error=resp.text)
+
+        return resp.json()
 
     def get_allocations_for_consumer_by_provider(self, context, rp_uuid,
                                                  consumer):

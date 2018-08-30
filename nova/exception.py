@@ -2373,3 +2373,8 @@ class NoResourceClass(NovaException):
 class ResourceProviderAllocationRetrievalFailed(NovaException):
     msg_fmt = _("Failed to retrieve allocations for resource provider "
                 "%(rp_uuid)s: %(error)s")
+
+
+class ConsumerAllocationRetrievalFailed(NovaException):
+    msg_fmt = _("Failed to retrieve allocations for consumer "
+                "%(consumer_uuid)s: %(error)s")

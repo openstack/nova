@@ -2538,7 +2538,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                             project_id='fake-project', user_id='fake-user')]),
                     objects.InstanceList()))
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_allocations_for_consumer')
+                'get_allocs_for_consumer')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
                 new_callable=mock.NonCallableMock)  # assert not called
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
@@ -2571,8 +2571,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         self.assertEqual(0, self.cli.heal_allocations(verbose=True))
         self.assertIn('Processed 1 instances.', self.output.getvalue())
         mock_get_allocs.assert_called_once_with(
-            test.MatchType(context.RequestContext), uuidsentinel.instance,
-            include_generation=True)
+            test.MatchType(context.RequestContext), uuidsentinel.instance)
         expected_put_data = mock_get_allocs.return_value
         expected_put_data['project_id'] = 'fake-project'
         expected_put_data['user_id'] = 'fake-user'
@@ -2591,7 +2590,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                         task_state=None, project_id='fake-project',
                         user_id='fake-user')]))
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_allocations_for_consumer')
+                'get_allocs_for_consumer')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
                 return_value=fake_requests.FakeResponse(
                     409, content='Inventory and/or allocations changed while '
@@ -2623,8 +2622,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         self.assertIn(
             'Inventory and/or allocations changed', self.output.getvalue())
         mock_get_allocs.assert_called_once_with(
-            test.MatchType(context.RequestContext), uuidsentinel.instance,
-            include_generation=True)
+            test.MatchType(context.RequestContext), uuidsentinel.instance)
         expected_put_data = mock_get_allocs.return_value
         expected_put_data['project_id'] = 'fake-project'
         expected_put_data['user_id'] = 'fake-user'

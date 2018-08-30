@@ -3428,6 +3428,36 @@ class TestAllocations(SchedulerReportClientTestCase):
             '/resource_providers/rpuuid/allocations',
             global_request_id=self.context.global_id)
 
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
+    def test_get_allocs_for_consumer(self, mock_get):
+        mock_get.return_value = fake_requests.FakeResponse(
+            200, content=jsonutils.dumps({'foo': 'bar'}))
+        ret = self.client.get_allocs_for_consumer(self.context, 'consumer')
+        self.assertEqual({'foo': 'bar'}, ret)
+        mock_get.assert_called_once_with(
+            '/allocations/consumer', version='1.28',
+            global_request_id=self.context.global_id)
+
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
+    def test_get_allocs_for_consumer_fail(self, mock_get):
+        mock_get.return_value = fake_requests.FakeResponse(400, content='err')
+        self.assertRaises(exception.ConsumerAllocationRetrievalFailed,
+                          self.client.get_allocs_for_consumer,
+                          self.context, 'consumer')
+        mock_get.assert_called_once_with(
+            '/allocations/consumer', version='1.28',
+            global_request_id=self.context.global_id)
+
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
+    def test_get_allocs_for_consumer_safe_connect_fail(self, mock_get):
+        mock_get.side_effect = ks_exc.EndpointNotFound()
+        self.assertRaises(ks_exc.ClientException,
+                          self.client.get_allocs_for_consumer,
+                          self.context, 'consumer')
+        mock_get.assert_called_once_with(
+            '/allocations/consumer', version='1.28',
+            global_request_id=self.context.global_id)
+
 
 class TestResourceClass(SchedulerReportClientTestCase):
     def setUp(self):

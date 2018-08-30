@@ -31,6 +31,7 @@ import traceback
 
 from dateutil import parser as dateutil_parser
 import decorator
+from keystoneauth1 import exceptions as ks_exc
 import netaddr
 from oslo_config import cfg
 from oslo_db import exception as db_exc
@@ -1804,8 +1805,15 @@ class PlacementCommands(object):
             output(_('Instance %s is not on a host.') % instance.uuid)
             return
 
-        allocations = placement.get_allocations_for_consumer(
-            ctxt, instance.uuid, include_generation=True)
+        try:
+            allocations = placement.get_allocs_for_consumer(
+                ctxt, instance.uuid)
+        except (ks_exc.ClientException,
+                exception.ConsumerAllocationRetrievalFailed) as e:
+            output(_("Allocation retrieval failed: %s") % e)
+            # TODO(mriedem): Fail fast here, since we can't talk to placement.
+            allocations = None
+
         # get_allocations_for_consumer uses safe_connect which will
         # return None if we can't communicate with Placement, and the
         # response can have an empty {'allocations': {}} response if
@@ -1831,10 +1839,12 @@ class PlacementCommands(object):
             # provider allocations.
             allocations['project_id'] = instance.project_id
             allocations['user_id'] = instance.user_id
-            # We use 1.28 for PUT /allocations/{consumer_id} to mirror
-            # the body structure from get_allocations_for_consumer.
-            resp = placement.put('/allocations/%s' % instance.uuid,
-                                 allocations, version='1.28')
+            # We use CONSUMER_GENERATION_VERSION for PUT
+            # /allocations/{consumer_id} to mirror the body structure from
+            # get_allocs_for_consumer.
+            resp = placement.put(
+                '/allocations/%s' % instance.uuid,
+                allocations, version=report.CONSUMER_GENERATION_VERSION)
             if resp:
                 output(_('Successfully updated allocations for '
                          'instance %s.') % instance.uuid)
