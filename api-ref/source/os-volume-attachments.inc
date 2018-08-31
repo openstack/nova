@@ -145,6 +145,16 @@ Update a volume attachment.
 .. note:: This action only valid when the server is in ACTIVE, PAUSED and RESIZED state,
           or a conflict(409) error will be returned.
 
+.. warning:: This API is typically meant to only be used as part of a larger
+             orchestrated volume migration operation initiated in the block
+             storage service via the ``os-retype`` or ``os-migrate_volume``
+             volume actions. Direct usage of this API is not recommended and
+             may result in needing to hard reboot the server to update details
+             within the guest such as block storage serial IDs. Furthermore,
+             this API is only implemented by `certain compute drivers`_.
+
+.. _certain compute drivers: https://docs.openstack.org/nova/latest/user/support-matrix.html#operation_swap_volume
+
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through the
 ``policy.json`` file.
