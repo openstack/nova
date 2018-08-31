@@ -953,9 +953,12 @@ def get_image_metadata_from_volume(volume):
         val = properties.pop(attr, None)
         if attr in ('min_ram', 'min_disk'):
             image_meta[attr] = int(val or 0)
-    # NOTE(yjiang5): Always set the image status as 'active'
-    # and depends on followed volume_api.check_attach() to
-    # verify it. This hack should be harmless with that check.
+    # NOTE(mriedem): Set the status to 'active' as a really old hack
+    # from when this method was in the compute API class and is
+    # needed for _check_requested_image which makes sure the image
+    # is 'active'. For volume-backed servers, if the volume is not
+    # available because the image backing the volume is not active,
+    # then the compute API trying to reserve the volume should fail.
     image_meta['status'] = 'active'
     return image_meta
 
