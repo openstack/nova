@@ -174,7 +174,8 @@ class HostState(object):
                 LOG.debug("Update host state with service dict: %s", service)
                 self.service = ReadOnlyDict(service)
             if inst_dict is not None:
-                LOG.debug("Update host state with instances: %s", inst_dict)
+                LOG.debug("Update host state with instances: %s",
+                          list(inst_dict))
                 self.instances = inst_dict
 
         return _locked_update(self, compute, service, aggregates, inst_dict)
