@@ -1036,7 +1036,24 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 self.context, utils.ResourceRequest())
 
     def _set_up_provider_tree(self):
-        """Create two compute nodes in placement: "this" one, and another one.
+        """Create two compute nodes in placement ("this" one, and another one)
+        and a storage provider sharing with both.
+
+             +-----------------------+      +------------------------+
+             |uuid: self.compute_uuid|      |uuid: uuids.ssp         |
+             |name: self.compute_name|      |name: 'ssp'             |
+             |inv: MEMORY_MB=2048    |......|inv: DISK_GB=500        |...
+             |     SRIOV_NET_VF=2    | agg1 |traits: [MISC_SHARES...]|  .
+             |aggs: [uuids.agg1]     |      |aggs: [uuids.agg1]      |  . agg1
+             +-----------------------+      +------------------------+  .
+                    /             \                                     .
+        +-------------------+  +-------------------+     +-------------------+
+        |uuid: uuids.numa1  |  |uuid: uuids.numa2  |     |uuid: uuids.othercn|
+        |name: 'numa1'      |  |name: 'numa2'      |     |name: 'othercn'    |
+        |inv: VCPU=8        |  |inv: VCPU=8        |     |inv: VCPU=8        |
+        |     CUSTOM_PCPU=8 |  |     CUSTOM_PCPU=8 |     |     MEMORY_MB=1024|
+        |     SRIOV_NET_VF=4|  |     SRIOV_NET_VF=4|     |aggs: [uuids.agg1] |
+        +-------------------+  +-------------------+     +-------------------+
 
         Must be invoked from within an _interceptor() context.
 
@@ -1131,7 +1148,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
         # Part of the shared storage aggregate
         self.client.put(
             '/resource_providers/%s/aggregates' % uuids.othercn,
-            {'aggregates': [uuids.ssp],
+            {'aggregates': [uuids.agg1],
              'resource_provider_generation':
                  resp.json()['resource_provider_generation']},
             version='1.19')
@@ -1324,6 +1341,12 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             self.client.update_from_provider_tree(self.context, ptree,
                                                   allocations=allocs)
 
+            # Now a reshape that adds an inventory item to all the providers in
+            # the provider tree (i.e. the "local" ones and the shared one, but
+            # not the othercn); and an allocation of that resource only for the
+            # local instances, and only on providers that already have
+            # allocations (i.e. the compute node and sharing provider for both
+            # cn_inst*, and numa1 for cn_inst1 and numa2 for cn_inst2).
             ptree = self.client.get_provider_tree_and_ensure_root(
                 self.context, self.compute_uuid)
             allocs = self.client.get_allocations_for_provider_tree(
@@ -1355,18 +1378,20 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             self.assertAllocations(exp_allocs, allocs)
             cum_inv = {}
             for rp_uuid in ptree.get_provider_uuids():
+                # Accumulate all the inventory amounts for each RC
                 for rc, inv in ptree.data(rp_uuid).inventory.items():
                     if rc not in cum_inv:
                         cum_inv[rc] = {'total': 0}
                     cum_inv[rc]['total'] += inv['total']
                 # Remove all the providers except the compute node and the
                 # shared storage provider, which still has (and shall
-                # retain (allocations from the "other" compute node.
+                # retain) allocations from the "other" compute node.
                 # TODO(efried): But is that right? I should be able to
                 # remove the SSP from *this* tree and have it continue to
                 # exist in the world. But how would ufpt distinguish?
                 if rp_uuid not in (self.compute_uuid, uuids.ssp):
                     ptree.remove(rp_uuid)
+            # Put the accumulated inventory onto the compute RP
             ptree.update_inventory(self.compute_uuid, cum_inv)
             # Cause trait and aggregate transformations too.
             ptree.update_aggregates(self.compute_uuid, set())
@@ -1386,21 +1411,24 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
 
             # Let's inject an error path test here: attempting to reshape
             # inventories without having moved their allocations should fail.
-            self.assertRaises(
+            ex = self.assertRaises(
                 exception.ReshapeFailed,
                 self.client.update_from_provider_tree, self.context, ptree,
                 allocations=allocs)
+            self.assertIn('placement.inventory.inuse', ex.format_message())
 
             # Move all the allocations off their existing providers and
             # onto the compute node
             for c_uuid, alloc in allocs.items():
                 cum_allocs = {}
                 for rp_uuid, resources in alloc['allocations'].items():
+                    # Accumulate all the allocations for each RC
                     for rc, amount in resources['resources'].items():
                         if rc not in cum_allocs:
                             cum_allocs[rc] = 0
                         cum_allocs[rc] += amount
                 alloc['allocations'] = {
+                    # Put the accumulated allocations on the compute RP
                     self.compute_uuid: {'resources': cum_allocs}}
             exp_allocs = copy.deepcopy(allocs)
             self.client.update_from_provider_tree(self.context, ptree,
