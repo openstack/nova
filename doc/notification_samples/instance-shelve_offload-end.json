@@ -3,7 +3,7 @@
     "payload":{
         "nova_object.data":{
             "architecture":"x86_64",
-            "availability_zone": "nova",
+            "availability_zone": null,
             "block_devices": [{
                 "nova_object.data": {
                     "boot_index": null,
