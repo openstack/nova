@@ -7723,11 +7723,12 @@ class ComputeManager(manager.Manager):
                   instance=instance)
         return node
 
-    def _update_available_resource_for_node(self, context, nodename):
+    def _update_available_resource_for_node(self, context, nodename,
+                                            startup=False):
 
         rt = self._get_resource_tracker()
         try:
-            rt.update_available_resource(context, nodename)
+            rt.update_available_resource(context, nodename, startup=startup)
         except exception.ComputeHostNotFound:
             # NOTE(comstud): We can get to this case if a node was
             # marked 'deleted' in the DB and then re-added with a
@@ -7744,6 +7745,29 @@ class ComputeManager(manager.Manager):
             # anyway.
             self._resource_tracker = None
             return
+        except exception.ReshapeFailed:
+            # We're only supposed to get here on startup, if a reshape was
+            # needed, was attempted, and failed. We want to kill the service.
+            with excutils.save_and_reraise_exception():
+                LOG.critical("Resource provider data migration failed "
+                             "fatally during startup for node %s.", nodename)
+        except exception.ReshapeNeeded:
+            # This exception should only find its way here if the virt driver's
+            # update_provider_tree raised it incorrectly: either
+            # a) After the resource tracker already caught it once and
+            # reinvoked update_provider_tree with allocations. At this point
+            # the driver is just supposed to *do* the reshape, so if it raises
+            # ReshapeNeeded, it's a bug, and we want to kill the compute
+            # service.
+            # b) On periodic rather than startup (we only allow reshapes to
+            # happen on startup). In this case we'll just make the logs red and
+            # go again at the next periodic interval, where the same thing may
+            # or may not happen again. Depending on the previous and intended
+            # shape of the providers/inventories, this may not actually cause
+            # any immediately visible symptoms (in terms of scheduling, etc.)
+            # TODO(efried): Make it pop immediately, e.g. disable the service.
+            with excutils.save_and_reraise_exception():
+                LOG.exception("ReshapeNeeded exception is unexpected here!")
         except Exception:
             LOG.exception("Error updating resources for node %(node)s.",
                           {'node': nodename})
@@ -7787,7 +7811,8 @@ class ComputeManager(manager.Manager):
                     context, cn, cascade=True)
 
         for nodename in nodenames:
-            self._update_available_resource_for_node(context, nodename)
+            self._update_available_resource_for_node(context, nodename,
+                                                     startup=startup)
 
     def _get_compute_nodes_in_db(self, context, use_slave=False,
                                  startup=False):

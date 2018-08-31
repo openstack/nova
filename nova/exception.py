@@ -2383,3 +2383,8 @@ class ConsumerAllocationRetrievalFailed(NovaException):
 class ReshapeFailed(NovaException):
     msg_fmt = _("Resource provider inventory and allocation data migration "
                 "failed: %(error)s")
+
+
+class ReshapeNeeded(NovaException):
+    msg_fmt = _("Virt driver indicates that provider inventories need to be "
+                "moved.")
