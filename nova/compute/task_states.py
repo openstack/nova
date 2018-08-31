@@ -123,3 +123,10 @@ ALLOW_REBOOT = [None, REBOOTING, REBOOT_PENDING, REBOOT_STARTED, RESUMING,
 # These states indicate a reboot
 soft_reboot_states = (REBOOTING, REBOOT_PENDING, REBOOT_STARTED)
 hard_reboot_states = (REBOOTING_HARD, REBOOT_PENDING_HARD, REBOOT_STARTED_HARD)
+
+# These states indicate a resize in progress
+resizing_states = (RESIZE_PREP, RESIZE_MIGRATING, RESIZE_MIGRATED,
+                   RESIZE_FINISH)
+
+# These states indicate a rebuild
+rebuild_states = (REBUILDING, REBUILD_BLOCK_DEVICE_MAPPING, REBUILD_SPAWNING)
