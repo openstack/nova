@@ -736,6 +736,7 @@ class SchedulerReportClient(object):
         url = '/resource_providers/%s/inventories' % rp_uuid
         result = self.get(url, global_request_id=context.global_id)
         if not result:
+            # TODO(efried): Log.
             return None
         return result.json()
 
@@ -1455,7 +1456,43 @@ class SchedulerReportClient(object):
 
         return resp
 
-    def update_from_provider_tree(self, context, new_tree):
+    def _set_up_and_do_reshape(self, context, old_tree, new_tree, allocations):
+        LOG.info("Performing resource provider inventory and allocation "
+                 "data migration.")
+        new_uuids = new_tree.get_provider_uuids()
+        inventories = {}
+        for rp_uuid in new_uuids:
+            data = new_tree.data(rp_uuid)
+            inventories[rp_uuid] = {
+                "inventories": data.inventory,
+                "resource_provider_generation": data.generation
+            }
+        # Even though we're going to delete them immediately, we still want
+        # to send "inventory changes" for to-be-removed providers in this
+        # reshape request so they're done atomically. This prevents races
+        # where the scheduler could allocate between here and when we
+        # delete the providers.
+        to_remove = set(old_tree.get_provider_uuids()) - set(new_uuids)
+        for rp_uuid in to_remove:
+            inventories[rp_uuid] = {
+                "inventories": {},
+                "resource_provider_generation":
+                    old_tree.data(rp_uuid).generation
+            }
+        # Now we're ready to POST /reshaper. This can raise ReshapeFailed,
+        # but we also need to convert any other exception (including e.g.
+        # PlacementAPIConnectFailure) to ReshapeFailed because we want any
+        # failure here to be fatal to the caller.
+        try:
+            self._reshape(context, inventories, allocations)
+        except exception.ReshapeFailed:
+            raise
+        except Exception as e:
+            # Make sure the original stack trace gets logged.
+            LOG.exception('Reshape failed')
+            raise exception.ReshapeFailed(error=e)
+
+    def update_from_provider_tree(self, context, new_tree, allocations=None):
         """Flush changes from a specified ProviderTree back to placement.
 
         The specified ProviderTree is compared against the local cache.  Any
@@ -1470,13 +1507,21 @@ class SchedulerReportClient(object):
         :param context: The security context
         :param new_tree: A ProviderTree instance representing the desired state
                          of providers in placement.
+        :param allocations: A dict, keyed by consumer UUID, of allocation
+                            records of the form returned by
+                            GET /allocations/{consumer_uuid} representing the
+                            comprehensive final picture of the allocations for
+                            each consumer therein. A value of None indicates
+                            that no reshape is being performed.
         :raises: ResourceProviderSyncFailed if any errors were encountered
-                 attempting to perform the necessary API operations.
+                 attempting to perform the necessary API operations, except
+                 reshape (see below).
+        :raises: ReshapeFailed if a reshape was signaled (allocations not None)
+                 and it fails for any reason.
         """
         # NOTE(efried): We currently do not handle the "rename" case.  This is
         # where new_tree contains a provider named Y whose UUID already exists
-        # but is named X.  Today the only way the consumer could accomplish
-        # this is by deleting the provider and recreating it with the new name.
+        # but is named X.
 
         @contextlib.contextmanager
         def catch_all(rp_uuid):
@@ -1501,6 +1546,8 @@ class SchedulerReportClient(object):
                 exception.ResourceProviderUpdateFailed,
                 exception.TraitCreationFailed,
                 exception.TraitRetrievalFailed,
+                # NOTE(efried): We do not trap/convert ReshapeFailed - that one
+                # needs to bubble up right away and be handled specially.
             )
             try:
                 yield s
@@ -1522,21 +1569,11 @@ class SchedulerReportClient(object):
         old_tree = self._provider_tree
         old_uuids = old_tree.get_provider_uuids()
         new_uuids = new_tree.get_provider_uuids()
-
-        # Do provider deletion first, since it has the best chance of failing
-        # for non-generation-conflict reasons (i.e. allocations).
-        uuids_to_remove = set(old_uuids) - set(new_uuids)
-        # We have to do deletions in bottom-up order, so we don't error
-        # attempting to delete a parent who still has children.
-        for uuid in reversed(old_uuids):
-            if uuid not in uuids_to_remove:
-                continue
-            with catch_all(uuid) as status:
-                self._delete_provider(uuid)
-            success = success and status.success
-
-        # Now create (or load) any "new" providers
         uuids_to_add = set(new_uuids) - set(old_uuids)
+        uuids_to_remove = set(old_uuids) - set(new_uuids)
+
+        # In case a reshape is happening, we first have to create (or load) any
+        # "new" providers.
         # We have to do additions in top-down order, so we don't error
         # attempting to create a child before its parent exists.
         for uuid in new_uuids:
@@ -1547,17 +1584,59 @@ class SchedulerReportClient(object):
                 self._ensure_resource_provider(
                     context, uuid, name=provider.name,
                     parent_provider_uuid=provider.parent_uuid)
+                # We have to stuff the freshly-created provider's generation
+                # into the new_tree so we don't get conflicts updating its
+                # inventories etc. later.
+                # TODO(efried): We don't have a good way to set the generation
+                # independently; this is a hack.
+                new_tree.update_inventory(
+                    uuid, new_tree.data(uuid).inventory,
+                    generation=self._provider_tree.data(uuid).generation)
+                success = success and status.success
+
+        # If we need to reshape, do it here.
+        if allocations is not None:
+            # NOTE(efried): We do not catch_all here, because ReshapeFailed
+            # needs to bubble up right away and be handled specially.
+            self._set_up_and_do_reshape(context, old_tree, new_tree,
+                                        allocations)
+            # The reshape updated provider generations, so the ones we have in
+            # the cache are now stale. The inventory update below will short
+            # out, but we would still bounce with a provider generation
+            # conflict on the trait and aggregate updates.
+            for uuid in new_uuids:
+                # TODO(efried): GET /resource_providers?uuid=in:[list] would be
+                # handy here. Meanwhile, this is an already-written, if not
+                # obvious, way to refresh provider generations in the cache.
+                with catch_all(uuid) as status:
+                    self._refresh_and_get_inventory(context, uuid)
+                success = success and status.success
+
+        # Now we can do provider deletions, because we should have moved any
+        # allocations off of them via reshape.
+        # We have to do deletions in bottom-up order, so we don't error
+        # attempting to delete a parent who still has children. (We get the
+        # UUIDs in bottom-up order by reversing old_uuids, which was given to
+        # us in top-down order per ProviderTree.get_provider_uuids().)
+        for uuid in reversed(old_uuids):
+            if uuid not in uuids_to_remove:
+                continue
+            with catch_all(uuid) as status:
+                self._delete_provider(uuid)
             success = success and status.success
 
         # At this point the local cache should have all the same providers as
         # new_tree.  Whether we added them or not, walk through and diff/flush
-        # inventories, traits, and aggregates as necessary (the helper methods
-        # are set up to check and short out when the relevant property does not
-        # differ from what's in the cache).
+        # inventories, traits, and aggregates as necessary. Note that, if we
+        # reshaped above, any inventory changes have already been done. But the
+        # helper methods are set up to check and short out when the relevant
+        # property does not differ from what's in the cache.
         # If we encounter any error and remove a provider from the cache, all
         # its descendants are also removed, and set_*_for_provider methods on
         # it wouldn't be able to get started. Walking the tree in bottom-up
-        # order ensures we at least try to process all of the providers.
+        # order ensures we at least try to process all of the providers. (We
+        # get the UUIDs in bottom-up order by reversing new_uuids, which was
+        # given to us in top-down order per ProviderTree.get_provider_uuids().)
         for uuid in reversed(new_uuids):
             pd = new_tree.data(uuid)
             with catch_all(pd.uuid) as status:
