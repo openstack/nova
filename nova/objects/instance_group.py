@@ -337,6 +337,17 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
                    in_(set(instance_uuids))).\
             delete(synchronize_session=False)
 
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _destroy_members_bulk_in_db(context, instance_uuids):
+        return context.session.query(api_models.InstanceGroupMember).filter(
+            api_models.InstanceGroupMember.instance_uuid.in_(instance_uuids)).\
+            delete(synchronize_session=False)
+
+    @classmethod
+    def destroy_members_bulk(cls, context, instance_uuids):
+        return cls._destroy_members_bulk_in_db(context, instance_uuids)
+
     def obj_load_attr(self, attrname):
         # NOTE(sbauza): Only hosts could be lazy-loaded right now
         if attrname != 'hosts':

@@ -510,8 +510,10 @@ Rows were archived, running purge...
 
     @mock.patch.object(db, 'archive_deleted_rows')
     @mock.patch.object(objects.RequestSpec, 'destroy_bulk')
-    def test_archive_deleted_rows_and_instance_mappings_and_request_specs(self,
-                                mock_destroy, mock_db_archive, verbose=True):
+    @mock.patch.object(objects.InstanceGroup, 'destroy_members_bulk')
+    def test_archive_deleted_rows_and_api_db_records(
+            self, mock_members_destroy, mock_reqspec_destroy, mock_db_archive,
+            verbose=True):
         self.useFixture(nova_fixtures.Database())
         self.useFixture(nova_fixtures.Database(database='api'))
 
@@ -533,24 +535,27 @@ Rows were archived, running purge...
                                 .create()
 
         mock_db_archive.return_value = (dict(instances=2, consoles=5), uuids)
-        mock_destroy.return_value = 2
+        mock_reqspec_destroy.return_value = 2
+        mock_members_destroy.return_value = 0
         result = self.commands.archive_deleted_rows(20, verbose=verbose)
 
         self.assertEqual(1, result)
         mock_db_archive.assert_called_once_with(20)
-        self.assertEqual(1, mock_destroy.call_count)
+        self.assertEqual(1, mock_reqspec_destroy.call_count)
+        mock_members_destroy.assert_called_once()
 
         output = self.output.getvalue()
         if verbose:
             expected = '''\
-+-------------------+-------------------------+
-| Table             | Number of Rows Archived |
-+-------------------+-------------------------+
-| consoles          | 5                       |
-| instance_mappings | 2                       |
-| instances         | 2                       |
-| request_specs     | 2                       |
-+-------------------+-------------------------+
++-----------------------+-------------------------+
+| Table                 | Number of Rows Archived |
++-----------------------+-------------------------+
+| consoles              | 5                       |
+| instance_group_member | 0                       |
+| instance_mappings     | 2                       |
+| instances             | 2                       |
+| request_specs         | 2                       |
++-----------------------+-------------------------+
 '''
             self.assertEqual(expected, output)
         else:
