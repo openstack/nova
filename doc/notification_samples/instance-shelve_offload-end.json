@@ -3,6 +3,7 @@
     "payload":{
         "$ref": "common_payloads/InstanceActionPayload.json#",
         "nova_object.data":{
+            "availability_zone": null,
             "state": "shelved_offloaded",
             "power_state": "shutdown",
             "host": null,

@@ -2601,7 +2601,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.api.post_server_action(server['id'], req)
         self._wait_for_server_parameter(
             self.api, server, {'status': 'SHELVED_OFFLOADED',
-                               'OS-EXT-SRV-ATTR:host': None})
+                               'OS-EXT-SRV-ATTR:host': None,
+                               'OS-EXT-AZ:availability_zone': ''})
         source_usages = self._get_provider_usages(source_rp_uuid)
         self.assertEqual({'VCPU': 0,
                           'MEMORY_MB': 0,

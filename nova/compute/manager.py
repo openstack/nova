@@ -578,6 +578,9 @@ class ComputeManager(manager.Manager):
         # to the database layer.
         instance.host = None
         instance.node = None
+        # If the instance is not on a host, it's not in an aggregate and
+        # therefore is not in an availability zone.
+        instance.availability_zone = None
 
     def _set_instance_obj_error_state(self, context, instance,
                                       clean_task_state=False):
