@@ -16,6 +16,7 @@ Common parameter types for validating request Body.
 
 """
 import copy
+import functools
 import re
 import unicodedata
 
@@ -23,6 +24,27 @@ import six
 
 from nova.i18n import _
 from nova.objects import tag
+
+_REGEX_RANGE_CACHE = {}
+
+
+def memorize(func):
+
+    @functools.wraps(func)
+    def memorizer(*args, **kwargs):
+        global _REGEX_RANGE_CACHE
+        key = "%s:%s:%s" % (func.__name__, hash(str(args)), hash(str(kwargs)))
+        value = _REGEX_RANGE_CACHE.get(key)
+        if value is None:
+            value = func(*args, **kwargs)
+            _REGEX_RANGE_CACHE[key] = value
+        return value
+    return memorizer
+
+
+def _reset_cache():
+    global _REGEX_RANGE_CACHE
+    _REGEX_RANGE_CACHE = {}
 
 
 def single_param(schema):
@@ -83,6 +105,7 @@ def _get_all_chars():
 # constraint fails and this causes issues for some unittests when
 # PYTHONHASHSEED is set randomly.
 
+@memorize
 def _build_regex_range(ws=True, invert=False, exclude=None):
     """Build a range regex for a set of characters in utf8.
 
