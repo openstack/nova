@@ -1,0 +1,12 @@
+---
+upgrade:
+  - |
+    The libvirt compute driver will "reshape" VGPU inventories and allocations
+    on start of the ``nova-compute`` service. This will result in moving
+    VGPU inventory from the root compute node resource provider to a nested
+    (child) resource provider in the tree and move any associated VGPU
+    allocations with it. This will be a one-time operation on startup in Stein.
+    There is no end-user visible impact for this; it is for internal resource
+    tracking purposes. See the `spec`__ for more details.
+
+    .. __: https://specs.openstack.org/openstack/nova-specs/specs/stein/approved/reshape-provider-tree.html

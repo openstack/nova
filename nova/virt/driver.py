@@ -985,6 +985,8 @@ class ComputeDriver(object):
         :raises ReshapeNeeded: If allocations is None and any inventory needs
             to be moved from one provider to another and/or to a different
             resource class.
+        :raises: ReshapeFailed if the requested tree reshape fails for
+            whatever reason.
         """
         raise NotImplementedError()
 
