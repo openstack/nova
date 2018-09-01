@@ -2991,6 +2991,12 @@ class ComputeManager(manager.Manager):
         image_meta = {}
         if image_ref:
             image_meta = self.image_api.get(context, image_ref)
+        elif evacuate:
+            # For evacuate the API does not send down the image_ref since the
+            # image does not change so just get it from what was stashed in
+            # the instance system_metadata when the instance was created (or
+            # last rebuilt). This also works for volume-backed instances.
+            image_meta = instance.image_meta
 
         # NOTE(mriedem): On an evacuate, we need to update
         # the instance's host and node properties to reflect it's

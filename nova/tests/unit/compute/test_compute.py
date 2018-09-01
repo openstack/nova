@@ -12614,6 +12614,7 @@ class EvacuateHostTestCase(BaseTestCase):
         super(EvacuateHostTestCase, self).setUp()
         self.inst = self._create_fake_instance_obj(
             {'host': 'fake_host_2', 'node': 'fakenode2'})
+        self.inst.system_metadata = {}
         self.inst.task_state = task_states.REBUILDING
         self.inst.save()
 
@@ -12894,10 +12895,8 @@ class EvacuateHostTestCase(BaseTestCase):
             block_device_info=mock.ANY)
 
     @mock.patch.object(fake.FakeDriver, 'spawn')
-    @mock.patch('nova.objects.Instance.image_meta',
-                new_callable=mock.PropertyMock)
     def test_on_shared_storage_not_provided_host_with_shared_storage(self,
-            mock_image_meta, mock_spawn):
+            mock_spawn):
         self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
                       lambda *a, **ka: True)
 
@@ -12906,7 +12905,7 @@ class EvacuateHostTestCase(BaseTestCase):
         mock_spawn.assert_called_once_with(
             test.MatchType(context.RequestContext),
             test.MatchType(objects.Instance),
-            mock_image_meta.return_value,
+            test.MatchType(objects.ImageMeta),
             mock.ANY, 'newpass', mock.ANY,
             network_info=mock.ANY,
             block_device_info=mock.ANY)
