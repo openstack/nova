@@ -668,19 +668,50 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self.assertIsNone(conf.vhost_queues)
         self.assertIsNone(conf.driver_name)
 
-    def _test_virtio_config_queue_sizes(self):
+    def _test_virtio_config_queue_sizes(
+            self, vnic_type=network_model.VNIC_TYPE_NORMAL):
         self.flags(rx_queue_size=512, group='libvirt')
         self.flags(tx_queue_size=1024, group='libvirt')
         hostimpl = host.Host("qemu:///system")
         v = vif.LibvirtGenericVIFDriver()
         conf = v.get_base_config(
-            None, 'ca:fe:de:ad:be:ef', {}, objects.Flavor(), 'kvm', 'normal',
+            None, 'ca:fe:de:ad:be:ef', {}, objects.Flavor(), 'kvm', vnic_type,
             hostimpl)
         return hostimpl, v, conf
 
     @mock.patch.object(host.Host, "has_min_version", return_value=True)
     def test_virtio_vhost_queue_sizes(self, has_min_version):
         _, _, conf = self._test_virtio_config_queue_sizes()
+        self.assertEqual(512, conf.vhost_rx_queue_size)
+        self.assertIsNone(conf.vhost_tx_queue_size)
+
+    @mock.patch.object(host.Host, "has_min_version", return_value=True)
+    def test_virtio_vhost_queue_sizes_vnic_type_direct(self, has_min_version):
+        _, _, conf = self._test_virtio_config_queue_sizes(
+            vnic_type=network_model.VNIC_TYPE_DIRECT)
+        self.assertIsNone(conf.vhost_rx_queue_size)
+        self.assertIsNone(conf.vhost_tx_queue_size)
+
+    @mock.patch.object(host.Host, "has_min_version", return_value=True)
+    def test_virtio_vhost_queue_sizes_vnic_type_direct_physical(
+            self, has_min_version):
+        _, _, conf = self._test_virtio_config_queue_sizes(
+            vnic_type=network_model.VNIC_TYPE_DIRECT_PHYSICAL)
+        self.assertIsNone(conf.vhost_rx_queue_size)
+        self.assertIsNone(conf.vhost_tx_queue_size)
+
+    @mock.patch.object(host.Host, "has_min_version", return_value=True)
+    def test_virtio_vhost_queue_sizes_vnic_type_macvtap(self, has_min_version):
+        _, _, conf = self._test_virtio_config_queue_sizes(
+            vnic_type=network_model.VNIC_TYPE_MACVTAP)
+        self.assertEqual(512, conf.vhost_rx_queue_size)
+        self.assertIsNone(conf.vhost_tx_queue_size)
+
+    @mock.patch.object(host.Host, "has_min_version", return_value=True)
+    def test_virtio_vhost_queue_sizes_vnic_type_virtio_forwarder(
+            self, has_min_version):
+        _, _, conf = self._test_virtio_config_queue_sizes(
+            vnic_type=network_model.VNIC_TYPE_VIRTIO_FORWARDER)
         self.assertEqual(512, conf.vhost_rx_queue_size)
         self.assertIsNone(conf.vhost_tx_queue_size)
 
@@ -817,7 +848,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                          'virtio', None, None, None)
 
     @mock.patch.object(vif.designer, 'set_vif_guest_frontend_config')
-    def test_model_sriov_multi_queue_not_set(self, mock_set):
+    def test_model_sriov_direct_multi_queue_not_set(self, mock_set):
         self.flags(use_virtio_for_bridges=True,
                    virt_type='kvm',
                    group='libvirt')
@@ -829,9 +860,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         image_meta = {'properties': {'os_name': 'fedora22'}}
         image_meta = objects.ImageMeta.from_dict(image_meta)
         conf = d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
-                                 None, 'kvm', 'direct', hostimpl)
+                                 None, 'kvm', network_model.VNIC_TYPE_DIRECT,
+                                 hostimpl)
         mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
-                                         'virtio', None, None, None)
+                                         None, None, None, None)
         self.assertIsNone(conf.vhost_queues)
         self.assertIsNone(conf.driver_name)
 
