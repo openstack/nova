@@ -78,7 +78,8 @@ class ServersController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @wsgi.expected_errors((400, 403))
-    @validation.query_schema(schema_servers.query_params_v226, '2.26')
+    @validation.query_schema(schema_servers.query_params_v266, '2.66')
+    @validation.query_schema(schema_servers.query_params_v226, '2.26', '2.65')
     @validation.query_schema(schema_servers.query_params_v21, '2.1', '2.25')
     def index(self, req):
         """Returns a list of server names and ids for a given user."""
@@ -91,7 +92,8 @@ class ServersController(wsgi.Controller):
         return servers
 
     @wsgi.expected_errors((400, 403))
-    @validation.query_schema(schema_servers.query_params_v226, '2.26')
+    @validation.query_schema(schema_servers.query_params_v266, '2.66')
+    @validation.query_schema(schema_servers.query_params_v226, '2.26', '2.65')
     @validation.query_schema(schema_servers.query_params_v21, '2.1', '2.25')
     def detail(self, req):
         """Returns a list of server details for a given user."""
@@ -154,15 +156,32 @@ class ServersController(wsgi.Controller):
                 msg = _("Invalid filter field: changes-since.")
                 raise exc.HTTPBadRequest(explanation=msg)
 
+        if 'changes-before' in search_opts:
+            try:
+                search_opts['changes-before'] = timeutils.parse_isotime(
+                    search_opts['changes-before'])
+                changes_since = search_opts.get('changes-since')
+                if changes_since and search_opts['changes-before'] < \
+                        search_opts['changes-since']:
+                    msg = _('The value of changes-since must be'
+                            ' less than or equal to changes-before.')
+                    raise exc.HTTPBadRequest(explanation=msg)
+            except ValueError:
+                msg = _("Invalid filter field: changes-before.")
+                raise exc.HTTPBadRequest(explanation=msg)
+
         # By default, compute's get_all() will return deleted instances.
         # If an admin hasn't specified a 'deleted' search option, we need
         # to filter out deleted instances by setting the filter ourselves.
-        # ... Unless 'changes-since' is specified, because 'changes-since'
-        # should return recently deleted instances according to the API spec.
+        # ... Unless 'changes-since' or 'changes-before' is specified,
+        # because those will return recently deleted instances according to
+        # the API spec.
 
         if 'deleted' not in search_opts:
-            if 'changes-since' not in search_opts:
-                # No 'changes-since', so we only want non-deleted servers
+            if 'changes-since' not in search_opts and \
+                    'changes-before' not in search_opts:
+                # No 'changes-since' or 'changes-before', so we only
+                # want non-deleted servers
                 search_opts['deleted'] = False
         else:
             # Convert deleted filter value to a valid boolean.
@@ -1090,6 +1109,8 @@ class ServersController(wsgi.Controller):
             opt_list += ('ip6',)
         if api_version_request.is_supported(req, min_version='2.26'):
             opt_list += TAG_SEARCH_FILTERS
+        if api_version_request.is_supported(req, min_version='2.66'):
+            opt_list += ('changes-before',)
         return opt_list
 
     def _get_instance(self, context, instance_uuid):

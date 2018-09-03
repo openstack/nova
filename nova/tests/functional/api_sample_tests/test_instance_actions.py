@@ -139,3 +139,17 @@ class ServerActionsV262SampleJsonTest(ServerActionsV258SampleJsonTest):
 
 class ServerActionsV262NonAdminSampleJsonTest(ServerActionsV262SampleJsonTest):
     ADMIN_API = False
+
+
+class ServerActionsV266SampleJsonTest(ServerActionsV262SampleJsonTest):
+    microversion = '2.66'
+    scenarios = [('v2_66', {'api_major_version': 'v2.1'})]
+
+    def test_instance_actions_with_changes_before(self):
+        stop_action_time = self.action_stop['updated_at']
+        response = self._do_get(
+            'servers/%s/os-instance-actions'
+            '?changes-before=%s' % (self.uuid, stop_action_time))
+        self._verify_response(
+            'instance-actions-list-with-changes-before',
+            self._get_subs(), response, 200)

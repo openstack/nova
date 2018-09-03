@@ -132,9 +132,9 @@ For different user roles, the user has different query options set:
 
 - For general user, there is limited set of attributes of the servers can be
   used as query option. ``reservation_id``, ``name``, ``status``, ``image``,
-  ``flavor``, ``ip``, ``changes-since``, ``ip6``, ``tags``, ``tags-any``,
-  ``not-tags``, ``not-tags-any`` are supported options to be used. Other
-  options will be ignored by nova silently.
+  ``flavor``, ``ip``, ``changes-since``, ``changes-before``, ``ip6``,
+  ``tags``, ``tags-any``, ``not-tags``, ``not-tags-any`` are supported options
+  to be used. Other options will be ignored by nova silently.
 
 - For administrator, most of the server attributes can be used as query
   options. Before the Ocata release, the fields in the database schema of
@@ -197,9 +197,12 @@ For different user roles, the user has different query options set:
        ]
    }
 
-There are also some speical query options:
+There are also some special query options:
 
 - ``changes-since`` returns the servers updated after the given time.
+  Please see: :doc:`polling_changes-since_parameter`
+
+- ``changes-before`` returns the servers updated before the given time.
   Please see: :doc:`polling_changes-since_parameter`
 
 - ``deleted`` returns (or excludes) deleted servers
@@ -212,7 +215,7 @@ There are also some speical query options:
 
 .. code::
 
-   **Example: User query server with special keys changes-since**
+   **Example: User query server with special keys changes-since or changes-before**
 
    Precondition:
    GET /servers/detail
@@ -221,13 +224,13 @@ There are also some speical query options:
    {
        "servers": [
            {
-               "name": "t1"
-               "updated": "2015-12-15T15:55:52Z"
+               "name": "t1",
+               "updated": "2015-12-15T15:55:52Z",
                ...
            },
            {
                "name": "t2",
-               "updated": "2015-12-17T15:55:52Z"
+               "updated": "2015-12-17T15:55:52Z",
                ...
            }
        ]
@@ -239,9 +242,38 @@ There are also some speical query options:
    {
        {
            "name": "t2",
-           "updated": "2015-12-17T15:55:52Z"
+           "updated": "2015-12-17T15:55:52Z",
            ...
        }
+   }
+
+   GET /servers/detail?changes-before='2015-12-16T15:55:52Z'
+
+   Response:
+   {
+       {
+           "name": "t1",
+           "updated": "2015-12-15T15:55:52Z",
+           ...
+       }
+   }
+
+   GET /servers/detail?changes-since='2015-12-10T15:55:52Z'&changes-before='2015-12-28T15:55:52Z'
+
+   Response:
+   {
+       "servers": [
+           {
+               "name": "t1",
+               "updated": "2015-12-15T15:55:52Z",
+               ...
+           },
+           {
+               "name": "t2",
+               "updated": "2015-12-17T15:55:52Z",
+               ...
+           }
+       ]
    }
 
 There are two kinds of matching in query options: Exact matching and

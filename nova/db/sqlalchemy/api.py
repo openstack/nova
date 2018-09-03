@@ -2003,6 +2003,32 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
                                             sort_dirs=[sort_dir])
 
 
+def _get_query_nova_resource_by_changes_time(query, filters, model_object):
+    """Filter resources by changes-since or changes-before.
+
+    Special keys are used to tweek the query further::
+
+    |   'changes-since' - only return resources updated after
+    |   'changes-before' - only return resources updated before
+
+    Return query results.
+
+    :param query: query to apply filters to.
+    :param filters: dictionary of filters with regex values.
+    :param model_object: object of the operation target.
+    """
+    for change_filter in ['changes-since', 'changes-before']:
+        if filters and filters.get(change_filter):
+            changes_filter_time = timeutils.normalize_time(
+                filters.get(change_filter))
+            updated_at = getattr(model_object, 'updated_at')
+            if change_filter == 'changes-since':
+                query = query.filter(updated_at >= changes_filter_time)
+            else:
+                query = query.filter(updated_at <= changes_filter_time)
+    return query
+
+
 @require_context
 @pick_context_manager_reader_allow_async
 def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
@@ -2036,6 +2062,7 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     Special keys are used to tweek the query further::
 
     |   'changes-since' - only return instances updated after
+    |   'changes-before' - only return instances updated before
     |   'deleted' - only return (or exclude) deleted instances
     |   'soft_deleted' - modify behavior of 'deleted' to either
     |                    include or exclude instances whose
@@ -2097,10 +2124,10 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     # be modifying it and we shouldn't affect the caller's use of it.
     filters = copy.deepcopy(filters)
 
-    if 'changes-since' in filters:
-        changes_since = timeutils.normalize_time(filters['changes-since'])
-        query_prefix = query_prefix.\
-                            filter(models.Instance.updated_at >= changes_since)
+    model_object = models.Instance
+    query_prefix = _get_query_nova_resource_by_changes_time(query_prefix,
+                                                            filters,
+                                                            model_object)
 
     if 'deleted' in filters:
         # Instances can be soft or hard deleted and the query needs to
@@ -4371,10 +4398,12 @@ def migration_get_all_by_filters(context, filters,
         uuid = filters["uuid"]
         uuid = [uuid] if isinstance(uuid, six.string_types) else uuid
         query = query.filter(models.Migration.uuid.in_(uuid))
-    if 'changes-since' in filters:
-        changes_since = timeutils.normalize_time(filters['changes-since'])
-        query = query. \
-            filter(models.Migration.updated_at >= changes_since)
+
+    model_object = models.Migration
+    query = _get_query_nova_resource_by_changes_time(query,
+                                                     filters,
+                                                     model_object)
+
     if "status" in filters:
         status = filters["status"]
         status = [status] if isinstance(status, six.string_types) else status
@@ -5117,10 +5146,11 @@ def actions_get(context, instance_uuid, limit=None, marker=None,
 
     query_prefix = model_query(context, models.InstanceAction).\
         filter_by(instance_uuid=instance_uuid)
-    if filters and 'changes-since' in filters:
-        changes_since = timeutils.normalize_time(filters['changes-since'])
-        query_prefix = query_prefix. \
-            filter(models.InstanceAction.updated_at >= changes_since)
+
+    model_object = models.InstanceAction
+    query_prefix = _get_query_nova_resource_by_changes_time(query_prefix,
+                                                            filters,
+                                                            model_object)
 
     if marker is not None:
         marker = action_get_by_request_id(context, instance_uuid, marker)

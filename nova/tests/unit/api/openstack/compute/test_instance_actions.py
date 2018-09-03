@@ -145,6 +145,13 @@ class InstanceActionsTestV21(test.NoDBTestCase):
                                        use_admin_context=use_admin_context,
                                        version=self.wsgi_api_version)
 
+    def _get_http_req_with_version(self, action, use_admin_context=False,
+                                   version="2.21"):
+        fake_url = '/123/servers/12/%s' % action
+        return fakes.HTTPRequest.blank(fake_url,
+                                       use_admin_context=use_admin_context,
+                                       version=version)
+
     def _set_policy_rules(self):
         rules = {'compute:get': '',
                  'os_compute_api:os-instance-actions': '',
@@ -319,3 +326,29 @@ class InstanceActionsTestV262(InstanceActionsTestV251):
     wsgi_api_version = "2.62"
     expect_event_hostId = True
     expect_event_host = True
+
+
+class InstanceActionsTestV266(InstanceActionsTestV258):
+    wsgi_api_version = "2.66"
+
+    def test_get_action_with_invalid_changes_before(self):
+        """Tests get paging with a invalid changes-before."""
+        req = self._get_http_req('os-instance-actions?'
+                                 'changes-before=wrong_time')
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.index, req)
+        self.assertIn('Invalid input for query parameters changes-before',
+                      six.text_type(ex))
+
+    def test_get_action_with_changes_before_old_microversion(self):
+        """Tests that the changes-before query parameter is an error before
+        microversion 2.66.
+        """
+        param = 'changes-before=2018-09-13T15:13:03Z'
+        req = self._get_http_req_with_version('os-instance-actions?%s' %
+                                              param, use_admin_context=True,
+                                              version="2.65")
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.index, req)
+        detail = 'Additional properties are not allowed'
+        self.assertIn(detail, six.text_type(ex))

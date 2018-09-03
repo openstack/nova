@@ -621,3 +621,9 @@ query_params_v226['properties'].update({
     'not-tags': parameter_types.common_query_regex_param,
     'not-tags-any': parameter_types.common_query_regex_param,
 })
+
+query_params_v266 = copy.deepcopy(query_params_v226)
+query_params_v266['properties'].update({
+    'changes-before': multi_params({'type': 'string',
+                                    'format': 'date-time'}),
+})

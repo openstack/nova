@@ -453,6 +453,61 @@ changes-since:
   in: query
   required: false
   type: string
+changes_before_instance_action:
+  description: |
+    Filters the response by a date and time stamp when the instance actions last changed.
+    Those instances that changed before or equal to the specified date and time stamp
+    are returned.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+    ::
+
+       CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
+    For example, ``2015-08-27T09:49:58-05:00``.
+    If you omit the time zone, the UTC time zone is assumed.
+  in: query
+  required: false
+  type: string
+  min_version: 2.66
+changes_before_migration:
+  description: |
+    Filters the response by a date and time stamp when the migration last
+    changed. Those migrations that changed before or equal to the specified date and time
+    stamp are returned.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+    ::
+
+       CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
+    For example, ``2015-08-27T09:49:58-05:00``.
+    If you omit the time zone, the UTC time zone is assumed.
+  in: query
+  required: false
+  type: string
+  min_version: 2.66
+changes_before_server:
+  description: |
+    Filters the response by a date and time stamp when the server last changed.
+    Those servers that changed before or equal to the specified date and time stamp
+    are returned. To help keep track of changes this may also return recently deleted
+    servers.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+    ::
+
+       CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
+    For example, ``2015-08-27T09:49:58-05:00``.
+    If you omit the time zone, the UTC time zone is assumed.
+  in: query
+  required: false
+  type: string
+  min_version: 2.66
 changes_since_instance_action:
   description: |
     Filters the response by a date and time stamp when the instance action last

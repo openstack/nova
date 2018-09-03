@@ -1,0 +1,28 @@
+{
+    "server" : {
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "80fe::",
+        "name" : "new-server-test",
+        "imageRef" : "70a599e0-31e7-49b7-b260-868f441e862b",
+        "flavorRef" : "6",
+        "availability_zone": "nova",
+        "OS-DCF:diskConfig": "AUTO",
+        "metadata" : {
+            "My Server Name" : "Apache1"
+        },
+        "security_groups": [
+            {
+                "name": "default"
+            }
+        ],
+        "user_data" : "IyEvYmluL2Jhc2gKL2Jpbi9zdQplY2hvICJJIGFtIGluIHlvdSEiCg==",
+        "networks": "auto",
+        "trusted_image_certificates": [
+            "0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8",
+            "674736e3-f25c-405c-8362-bbf991e0ce0a"
+        ]
+    },
+    "OS-SCH-HNT:scheduler_hints": {
+        "same_host": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    }
+}

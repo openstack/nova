@@ -35,6 +35,7 @@ Request
   - limit: migration_limit
   - marker: migration_marker
   - changes-since: changes_since_migration
+  - changes-before: changes_before_migration
 
 Response
 --------

@@ -92,8 +92,10 @@ class InstanceActionsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.58")  # noqa
     @wsgi.expected_errors((400, 404))
+    @validation.query_schema(schema_instance_actions.list_query_params_v266,
+                             "2.66")
     @validation.query_schema(schema_instance_actions.list_query_params_v258,
-                             "2.58")
+                             "2.58", "2.65")
     def index(self, req, server_id):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
@@ -104,6 +106,10 @@ class InstanceActionsController(wsgi.Controller):
         if 'changes-since' in search_opts:
             search_opts['changes-since'] = timeutils.parse_isotime(
                 search_opts['changes-since'])
+
+        if 'changes-before' in search_opts:
+            search_opts['changes-before'] = timeutils.parse_isotime(
+                search_opts['changes-before'])
 
         limit, marker = common.get_limit_and_marker(req)
         try:

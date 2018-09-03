@@ -34,6 +34,7 @@ Request
   - limit: instance_action_limit
   - marker: instance_action_marker
   - changes-since: changes_since_instance_action
+  - changes-before: changes_before_instance_action
 
 Response
 --------

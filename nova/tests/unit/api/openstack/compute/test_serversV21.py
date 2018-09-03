@@ -2054,6 +2054,97 @@ class ServerControllerTestV247(ControllerTest):
             self.assertEqual(s['flavor'], expected_flavor)
 
 
+class ServerControllerTestV266(ControllerTest):
+    """Server controller test for microversion 2.66
+
+    Add changes-before parameter to get servers or servers details of
+    2.66 microversion.
+
+    Filters the response by a date and time stamp when the server last
+    changed. Those changed before the specified date and time stamp are
+    returned.
+    """
+    wsgi_api_version = '2.66'
+
+    def req(self, url, use_admin_context=False):
+        return fakes.HTTPRequest.blank(url,
+                                       use_admin_context=use_admin_context,
+                                       version=self.wsgi_api_version)
+
+    def test_get_servers_allows_changes_before(self):
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+            self.assertIsNotNone(search_opts)
+            self.assertIn('changes-before', search_opts)
+            changes_before = datetime.datetime(2011, 1, 24, 17, 8, 1,
+                                              tzinfo=iso8601.iso8601.UTC)
+            self.assertEqual(search_opts['changes-before'], changes_before)
+            self.assertNotIn('deleted', search_opts)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=uuids.fake)])
+
+        self.mock_get_all.side_effect = fake_get_all
+
+        params = 'changes-before=2011-01-24T17:08:01Z'
+        req = self.req('/fake/servers?%s' % params)
+        req.api_version_request = api_version_request.APIVersionRequest('2.66')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(1, len(servers))
+        self.assertEqual(uuids.fake, servers[0]['id'])
+
+    def test_get_servers_allows_changes_before_bad_value(self):
+        params = 'changes-before=asdf'
+        req = self.req('/fake/servers?%s' % params)
+        req.api_version_request = api_version_request.APIVersionRequest('2.66')
+        self.assertRaises(exception.ValidationError, self.controller.index,
+                          req)
+
+    def test_get_servers_allows_changes_before_bad_value_on_compat_mode(self):
+        params = 'changes-before=asdf'
+        req = self.req('/fake/servers?%s' % params)
+        req.api_version_request = api_version_request.APIVersionRequest('2.66')
+        req.set_legacy_v2()
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
+
+    def test_get_servers_allows_changes_since_and_changes_before(self):
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+            self.assertIsNotNone(search_opts)
+            self.assertIn('changes-since', search_opts)
+            changes_since = datetime.datetime(2011, 1, 23, 17, 8, 1,
+                                              tzinfo=iso8601.iso8601.UTC)
+            self.assertIn('changes-before', search_opts)
+            changes_before = datetime.datetime(2011, 1, 24, 17, 8, 1,
+                                              tzinfo=iso8601.iso8601.UTC)
+            self.assertEqual(search_opts['changes-since'], changes_since)
+            self.assertEqual(search_opts['changes-before'], changes_before)
+            self.assertNotIn('deleted', search_opts)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=uuids.fake)])
+
+        self.mock_get_all.side_effect = fake_get_all
+
+        params = 'changes-since=2011-01-23T17:08:01Z&' \
+                 'changes-before=2011-01-24T17:08:01Z'
+        req = self.req('/fake/servers?%s' % params)
+        req.api_version_request = api_version_request.APIVersionRequest('2.66')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(1, len(servers))
+        self.assertEqual(uuids.fake, servers[0]['id'])
+
+    def test_get_servers_filters_with_distinct_changes_time_bad_request(self):
+        changes_since = '2018-09-04T05:45:27Z'
+        changes_before = '2018-09-03T05:45:27Z'
+        req = self.req('/fake/servers?changes-since=%s&changes-before=%s' %
+                       (changes_since, changes_before))
+        req.api_version_request = api_version_request.APIVersionRequest('2.66')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
+
+
 class ServersControllerDeleteTest(ControllerTest):
 
     def setUp(self):
