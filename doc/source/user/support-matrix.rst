@@ -2,6 +2,9 @@
 Feature Support Matrix
 ======================
 
+.. TODO: Add UML (User-Mode Linux) hypervisor and its support status
+   for the listed features to the support matrix.
+
 When considering which capabilities should be marked as mandatory the
 following general guiding principles were applied
 
