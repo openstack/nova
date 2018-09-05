@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova import context as nova_context
@@ -20,7 +21,6 @@ from nova.notifications.objects import instance as instance_notification
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel as uuids
 
 
 class TestInstanceNotification(test.NoDBTestCase):

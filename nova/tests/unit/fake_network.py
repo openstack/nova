@@ -13,8 +13,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from six.moves import range
 
 from nova.compute import api as compute_api
@@ -34,7 +34,6 @@ from nova.tests.unit.objects import test_fixed_ip
 from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests.unit.objects import test_pci_device
 from nova.tests.unit import utils
-from nova.tests import uuidsentinel as uuids
 
 
 HOST = "testhost"

@@ -17,6 +17,7 @@ import copy
 import mock
 import netaddr
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
@@ -30,7 +31,7 @@ from nova.objects import hv_spec
 from nova.objects import service
 from nova.tests.unit import fake_pci_device_pools
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel
+
 
 NOW = timeutils.utcnow().replace(microsecond=0)
 fake_stats = {'num_foo': '10'}

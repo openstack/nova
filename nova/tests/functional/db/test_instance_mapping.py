@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
 
 from nova.compute import vm_states
@@ -20,7 +21,6 @@ from nova.objects import instance
 from nova.objects import instance_mapping
 from nova import test
 from nova.tests import fixtures
-from nova.tests import uuidsentinel
 
 
 sample_mapping = {'instance_uuid': '',

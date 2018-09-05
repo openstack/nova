@@ -13,9 +13,9 @@
 import os
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.tests.unit.virt.libvirt.volume import test_volume
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt.libvirt.volume import mount
 from nova.virt.libvirt.volume import nfs

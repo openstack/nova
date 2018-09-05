@@ -13,12 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
 from nova.objects import keypair as keypair_obj
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit import fake_crypto
-from nova.tests import uuidsentinel as uuids
 
 
 class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):

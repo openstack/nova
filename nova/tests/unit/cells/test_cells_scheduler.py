@@ -18,6 +18,7 @@ Tests For CellsScheduler
 import copy
 
 import mock
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
 
 from nova import block_device
@@ -31,7 +32,6 @@ from nova import objects
 from nova import test
 from nova.tests.unit.cells import fakes
 from nova.tests.unit import fake_block_device
-from nova.tests import uuidsentinel
 from nova import utils
 
 

@@ -16,6 +16,7 @@
 import copy
 
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack import api_version_request as avr
 from nova.api.openstack.compute import views
@@ -23,7 +24,6 @@ from nova.api import wsgi
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
-from nova.tests import uuidsentinel as uuids
 
 
 NS = {

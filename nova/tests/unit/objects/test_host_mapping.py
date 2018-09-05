@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import context
 from nova import exception
@@ -19,7 +20,6 @@ from nova.objects import host_mapping
 from nova import test
 from nova.tests.unit.objects import test_cell_mapping
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel as uuids
 
 
 def get_db_mapping(mapped_cell=None, **updates):

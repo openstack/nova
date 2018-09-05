@@ -18,6 +18,7 @@ import mock
 import netaddr
 from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova.cells import rpcapi as cells_rpcapi
@@ -46,7 +47,6 @@ from nova.tests.unit.objects import test_migration_context as test_mig_ctxt
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit.objects import test_security_group
 from nova.tests.unit.objects import test_vcpu_model
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 

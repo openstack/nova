@@ -12,13 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils.fixture import uuidsentinel
 from oslo_versionedobjects import fixture as ovo_fixture
 
 from nova import context
 from nova import exception
 from nova import objects
 from nova import test
-from nova.tests import uuidsentinel
 
 
 class ConsoleAuthTokenTestCase(test.TestCase):

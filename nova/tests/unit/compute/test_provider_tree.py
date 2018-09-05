@@ -9,11 +9,11 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import provider_tree
 from nova import objects
 from nova import test
-from nova.tests import uuidsentinel as uuids
 
 
 class TestProviderTree(test.NoDBTestCase):

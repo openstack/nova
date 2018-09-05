@@ -20,6 +20,7 @@ import zlib
 import mock
 from oslo_log import log as logging
 from oslo_serialization import base64
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 import six
 
@@ -40,7 +41,6 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
-from nova.tests import uuidsentinel as uuids
 from nova.virt import fake
 from nova import volume
 

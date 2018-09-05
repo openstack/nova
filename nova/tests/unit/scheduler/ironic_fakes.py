@@ -15,9 +15,9 @@
 """
 Fake nodes for Ironic host manager tests.
 """
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import objects
-from nova.tests import uuidsentinel as uuids
 
 
 COMPUTE_NODES = [

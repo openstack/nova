@@ -16,13 +16,13 @@
 import math
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 
 from nova import exception
 from nova.objects import fields as obj_fields
 from nova import rc_fields
 from nova.tests.unit.virt.xenapi import stubs
-from nova.tests import uuidsentinel as uuids
 from nova.virt import driver
 from nova.virt import fake
 from nova.virt import xenapi

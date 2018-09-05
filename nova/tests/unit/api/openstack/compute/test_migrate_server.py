@@ -14,6 +14,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import six
 import webob
@@ -26,7 +27,6 @@ from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
-from nova.tests import uuidsentinel as uuids
 
 
 class MigrateServerTestsV21(admin_only_action_common.CommonTests):

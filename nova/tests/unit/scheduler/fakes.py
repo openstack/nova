@@ -18,10 +18,12 @@ Fakes For Scheduler tests.
 
 import datetime
 
+from oslo_utils.fixture import uuidsentinel
+
 from nova import objects
 from nova.scheduler import driver
 from nova.scheduler import host_manager
-from nova.tests import uuidsentinel
+
 
 NUMA_TOPOLOGY = objects.NUMATopology(cells=[
     objects.NUMACell(

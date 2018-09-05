@@ -17,6 +17,7 @@ import copy
 
 import fixtures
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import block_device
 from nova import context
@@ -27,7 +28,6 @@ from nova import test
 from nova.tests.unit import fake_block_device
 import nova.tests.unit.image.fake
 from nova.tests.unit.virt import fakelibosinfo
-from nova.tests import uuidsentinel as uuids
 from nova.virt import block_device as driver_block_device
 from nova.virt import driver
 from nova.virt.libvirt import blockinfo

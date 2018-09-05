@@ -22,6 +22,7 @@ import datetime
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import versionutils
 import six
 
@@ -39,7 +40,6 @@ from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import fake_instance
 from nova.tests.unit.scheduler import fakes
-from nova.tests import uuidsentinel as uuids
 
 
 class FakeFilterClass1(filters.BaseHostFilter):

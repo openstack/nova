@@ -17,6 +17,7 @@ import copy
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
 from nova import context
@@ -27,7 +28,6 @@ from nova.objects import fields
 from nova.pci import stats
 from nova import test
 from nova.tests.unit import fake_pci_device_pools as fake_pci
-from nova.tests import uuidsentinel as uuids
 from nova.virt import hardware as hw
 
 

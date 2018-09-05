@@ -15,6 +15,7 @@ import functools
 import mock
 import os_traits
 from oslo_db import exception as db_exc
+from oslo_utils.fixture import uuidsentinel
 import sqlalchemy as sa
 
 import nova
@@ -24,7 +25,6 @@ from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.db.sqlalchemy import api_models as models
 from nova import rc_fields as fields
 from nova.tests.functional.api.openstack.placement.db import test_base as tb
-from nova.tests import uuidsentinel
 
 
 DISK_INVENTORY = dict(

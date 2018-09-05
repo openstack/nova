@@ -16,6 +16,7 @@ import copy
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_versionedobjects import exception as ovo_exc
 
@@ -23,7 +24,6 @@ from nova import exception
 from nova import objects
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit import utils as test_utils
-from nova.tests import uuidsentinel as uuids
 
 
 _TS_NOW = timeutils.utcnow(with_timezone=True)

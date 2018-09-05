@@ -14,11 +14,11 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import exception
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
-from nova.tests import uuidsentinel as uuids
 from nova.virt import fake
 from nova.virt.libvirt import driver
 from nova.virt.libvirt import host

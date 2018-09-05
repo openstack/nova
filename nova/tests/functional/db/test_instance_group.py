@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_versionedobjects import fixture as ovo_fixture
 
 from nova import context
@@ -19,7 +20,6 @@ from nova import exception
 from nova import objects
 from nova.objects import base
 from nova import test
-from nova.tests import uuidsentinel as uuids
 
 
 class InstanceGroupObjectTestCase(test.TestCase):

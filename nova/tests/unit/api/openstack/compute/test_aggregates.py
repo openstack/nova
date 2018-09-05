@@ -16,6 +16,7 @@
 """Tests for the aggregates admin api."""
 
 import mock
+from oslo_utils.fixture import uuidsentinel
 from webob import exc
 
 from nova.api.openstack import api_version_request
@@ -27,7 +28,6 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests import uuidsentinel
 
 
 def _make_agg_obj(agg_dict):

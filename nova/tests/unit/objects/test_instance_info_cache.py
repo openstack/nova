@@ -15,6 +15,7 @@
 import datetime
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova.cells import opts as cells_opts
@@ -24,7 +25,6 @@ from nova import exception
 from nova.network import model as network_model
 from nova.objects import instance_info_cache
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel as uuids
 
 
 fake_info_cache = {

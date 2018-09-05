@@ -12,13 +12,14 @@
 
 import datetime
 
+from oslo_utils.fixture import uuidsentinel as uuids
+
 from nova.compute import instance_list
 from nova import context
 from nova.db import api as db
 from nova import exception
 from nova import objects
 from nova import test
-from nova.tests import uuidsentinel as uuids
 
 
 class InstanceListTestCase(test.TestCase):

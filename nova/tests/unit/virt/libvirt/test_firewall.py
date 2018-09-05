@@ -20,6 +20,7 @@ from eventlet import greenthread
 from lxml import etree
 import mock
 from oslo_concurrency.fixture import lockutils as lock_fixture
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
 from nova import exception
@@ -28,7 +29,6 @@ from nova import objects
 from nova import test
 from nova.tests.unit import fake_network
 from nova.tests.unit.virt.libvirt import fakelibvirt
-from nova.tests import uuidsentinel as uuids
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import host
 from nova.virt import netutils

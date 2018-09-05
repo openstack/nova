@@ -13,13 +13,13 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional import test_servers
 from nova.tests.unit import policy_fixture
-from nova.tests import uuidsentinel as uuids
 
 
 def create_request_body():

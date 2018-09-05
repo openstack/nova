@@ -21,6 +21,7 @@ import mock
 from mox3 import mox
 import oslo_messaging
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova.cells import messaging
@@ -40,7 +41,6 @@ from nova import test
 from nova.tests.unit.cells import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
-from nova.tests import uuidsentinel as uuids
 
 
 class CellsMessageClassesTestCase(test.NoDBTestCase):

@@ -12,6 +12,7 @@
 
 import os
 
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
 from nova import context
@@ -19,7 +20,6 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests import uuidsentinel as uuids
 
 
 class ConnectionSwitchTestCase(test.NoDBTestCase):

@@ -12,6 +12,7 @@
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_versionedobjects import base as o_vo_base
 
 from nova import exception
@@ -21,7 +22,6 @@ from nova.objects import build_request
 from nova.tests.unit import fake_build_request
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel as uuids
 
 
 class _TestBuildRequestObject(object):

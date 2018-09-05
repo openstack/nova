@@ -19,6 +19,7 @@ import os
 import tarfile
 
 import mock
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import units
 from oslo_vmware import rw_handles
 
@@ -26,7 +27,6 @@ from nova import exception
 from nova import objects
 from nova import test
 import nova.tests.unit.image.fake
-from nova.tests import uuidsentinel
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi import vm_util

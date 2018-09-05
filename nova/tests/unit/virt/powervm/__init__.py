@@ -12,10 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
+from oslo_utils.fixture import uuidsentinel
+
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova import objects
-from nova.tests import uuidsentinel
 
 
 TEST_FLAVOR = objects.flavor.Flavor(

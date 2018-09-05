@@ -14,6 +14,7 @@
 
 import mock
 from oslo_policy import policy as oslo_policy
+from oslo_utils.fixture import uuidsentinel as uuids
 import six
 import webob
 
@@ -26,7 +27,6 @@ from nova import policy
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
-from nova.tests import uuidsentinel as uuids
 
 
 class ServerStartStopTestV21(test.TestCase):

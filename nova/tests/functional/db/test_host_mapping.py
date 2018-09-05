@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
 from nova import context
@@ -20,7 +21,6 @@ from nova.objects import cell_mapping
 from nova.objects import host_mapping
 from nova import test
 from nova.tests import fixtures
-from nova.tests import uuidsentinel as uuids
 
 
 sample_mapping = {'host': 'fake-host',

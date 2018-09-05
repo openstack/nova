@@ -15,6 +15,7 @@
 
 import fixtures
 import mock
+from oslo_utils.fixture import uuidsentinel
 
 from nova import context
 from nova.image import glance
@@ -25,7 +26,6 @@ import nova.tests.unit.image.fake
 from nova.tests.unit import utils
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
-from nova.tests import uuidsentinel
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import vm_util

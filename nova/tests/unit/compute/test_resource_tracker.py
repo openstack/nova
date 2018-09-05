@@ -16,6 +16,7 @@ import datetime
 from keystoneauth1 import exceptions as ks_exc
 import mock
 from oslo_config import cfg
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import units
 
@@ -38,7 +39,6 @@ from nova.scheduler.client import report
 from nova import test
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
-from nova.tests import uuidsentinel as uuids
 from nova.virt import driver
 
 _HOSTNAME = 'fake-host'

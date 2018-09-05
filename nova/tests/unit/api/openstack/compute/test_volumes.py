@@ -20,6 +20,7 @@ import fixtures
 import mock
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+from oslo_utils.fixture import uuidsentinel as uuids
 import six
 from six.moves import urllib
 import webob
@@ -41,8 +42,8 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel as uuids
 from nova.volume import cinder
+
 
 CONF = nova.conf.CONF
 

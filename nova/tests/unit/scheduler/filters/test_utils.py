@@ -12,12 +12,13 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import objects
 from nova.scheduler.filters import utils
 from nova import test
 from nova.tests.unit.scheduler import fakes
-from nova.tests import uuidsentinel as uuids
+
 
 _AGGREGATE_FIXTURES = [
     objects.Aggregate(

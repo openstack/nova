@@ -17,6 +17,7 @@ Tests For Cells RPCAPI
 """
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
 from nova.cells import rpcapi as cells_rpcapi
@@ -24,7 +25,6 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel as uuids
 
 
 class CellsAPITestCase(test.NoDBTestCase):

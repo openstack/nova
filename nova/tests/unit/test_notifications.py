@@ -21,6 +21,7 @@ import datetime
 import mock
 from oslo_config import cfg
 from oslo_context import fixture as o_fixture
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova.compute import flavors
@@ -34,7 +35,7 @@ from nova.objects import base as obj_base
 from nova import test
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
-from nova.tests import uuidsentinel as uuids
+
 
 CONF = cfg.CONF
 

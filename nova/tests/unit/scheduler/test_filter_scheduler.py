@@ -18,6 +18,7 @@ Tests For Filter Scheduler.
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import exception
 from nova import objects
@@ -29,7 +30,6 @@ from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
 from nova import test  # noqa
 from nova.tests.unit.scheduler import test_scheduler
-from nova.tests import uuidsentinel as uuids
 
 
 fake_numa_limit = objects.NUMATopologyLimits(cpu_allocation_ratio=1.0,

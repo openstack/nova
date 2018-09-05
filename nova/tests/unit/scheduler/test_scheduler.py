@@ -19,6 +19,7 @@ Tests For Scheduler
 
 import mock
 import oslo_messaging as messaging
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import context
 from nova import objects
@@ -30,7 +31,6 @@ from nova import servicegroup
 from nova import test
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit.scheduler import fakes
-from nova.tests import uuidsentinel as uuids
 
 
 class SchedulerManagerInitTestCase(test.NoDBTestCase):

@@ -20,6 +20,7 @@ from keystoneauth1 import loading as ks_loading
 from keystoneauth1 import session
 from keystoneclient import exceptions as keystone_exception
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 import six
 
@@ -28,8 +29,8 @@ from nova import context
 from nova import exception
 from nova import test
 from nova.tests.unit.fake_instance import fake_instance_obj
-from nova.tests import uuidsentinel as uuids
 from nova.volume import cinder
+
 
 CONF = nova.conf.CONF
 

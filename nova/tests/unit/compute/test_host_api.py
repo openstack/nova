@@ -19,6 +19,7 @@ import copy
 import fixtures
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 import testtools
 
 from nova.api.openstack.compute import services
@@ -34,7 +35,6 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit.objects import test_service
-from nova.tests import uuidsentinel as uuids
 
 
 class ComputeHostAPITestCase(test.TestCase):

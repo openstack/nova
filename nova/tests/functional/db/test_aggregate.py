@@ -14,6 +14,7 @@ from copy import deepcopy
 
 import mock
 from oslo_db import exception as db_exc
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 
 from nova import context
@@ -24,7 +25,6 @@ import nova.objects.aggregate as aggregate_obj
 from nova import test
 from nova.tests.unit import matchers
 from nova.tests.unit.objects.test_objects import compare_obj as base_compare
-from nova.tests import uuidsentinel
 
 
 SUBS = {'metadata': 'metadetails'}

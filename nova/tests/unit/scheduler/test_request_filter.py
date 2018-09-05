@@ -11,13 +11,13 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import context as nova_context
 from nova import exception
 from nova import objects
 from nova.scheduler import request_filter
 from nova import test
-from nova.tests import uuidsentinel as uuids
 
 
 class TestRequestFilter(test.NoDBTestCase):

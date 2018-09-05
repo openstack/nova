@@ -14,6 +14,7 @@ import datetime
 
 import iso8601
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova import context
@@ -21,7 +22,6 @@ from nova.db import api as db
 from nova.objects import bandwidth_usage
 from nova import test
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel as uuids
 
 
 class _TestBandwidthUsage(test.TestCase):

@@ -12,6 +12,7 @@
 
 import mock
 from oslo_utils import fixture as utils_fixture
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova.compute import claims
@@ -28,7 +29,7 @@ from nova import objects
 from nova import test
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit.image import fake as fake_image
-from nova.tests import uuidsentinel as uuids
+
 
 CONF = nova.conf.CONF
 

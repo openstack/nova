@@ -14,6 +14,7 @@
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 from oslo_versionedobjects import base as ovo_base
 
@@ -29,7 +30,6 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network_cache_model
 from nova.tests.unit import fake_request_spec
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel as uuids
 
 
 class _TestRequestSpecObject(object):

@@ -22,6 +22,7 @@ import string
 import time
 
 from oslo_log import log as logging
+from oslo_utils.fixture import uuidsentinel as uuids
 
 import nova.conf
 from nova import context
@@ -34,7 +35,6 @@ from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
-from nova.tests import uuidsentinel as uuids
 from nova.virt import fake
 
 

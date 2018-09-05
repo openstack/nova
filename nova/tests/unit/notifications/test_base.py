@@ -16,12 +16,12 @@ import datetime
 
 from keystoneauth1 import exceptions as ks_exc
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import context as nova_context
 from nova.notifications import base
 from nova import test
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 

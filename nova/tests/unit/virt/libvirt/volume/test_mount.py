@@ -19,12 +19,11 @@ import time
 import eventlet
 import fixtures
 import mock
-
 from oslo_concurrency import processutils
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import exception
 from nova import test
-from nova.tests import uuidsentinel as uuids
 from nova.virt.libvirt import config as libvirt_config
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host as libvirt_host

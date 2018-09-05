@@ -17,13 +17,13 @@ import mock
 
 from nova import exception
 from nova import test
+from oslo_utils.fixture import uuidsentinel as uuids
 from pypowervm import const as pvm_const
 from pypowervm.tasks import storage as tsk_stg
 from pypowervm.utils import transaction as pvm_tx
 from pypowervm.wrappers import storage as pvm_stg
 from pypowervm.wrappers import virtual_io_server as pvm_vios
 
-from nova.tests import uuidsentinel as uuids
 from nova.virt.powervm.disk import driver as disk_dvr
 from nova.virt.powervm.disk import localdisk
 

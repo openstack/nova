@@ -19,6 +19,7 @@ import copy
 import itertools
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
 from nova.compute import flavors
@@ -37,7 +38,7 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_fixed_ip
 from nova.tests.unit.objects import test_virtual_interface
-from nova.tests import uuidsentinel as uuids
+
 
 FAKE_UUID = 'a47ae74e-ab08-547f-9eee-ffd23fc46c16'
 

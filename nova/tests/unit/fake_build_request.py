@@ -13,6 +13,7 @@
 import datetime
 
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
 from nova import context
@@ -20,7 +21,6 @@ from nova import objects
 from nova.objects import fields
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel as uuids
 
 
 def fake_db_req(**updates):

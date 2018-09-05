@@ -32,6 +32,7 @@ from oslo_db.sqlalchemy import update_match
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_serialization import jsonutils
 from oslo_utils import fixture as utils_fixture
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
@@ -64,8 +65,8 @@ from nova.objects import fields
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_console_auth_token
-from nova.tests import uuidsentinel
 from nova import utils
+
 
 CONF = nova.conf.CONF
 

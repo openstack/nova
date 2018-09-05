@@ -11,7 +11,7 @@
 #    under the License.
 """Base class and convenience utilities for functional placement tests."""
 
-
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
 from nova.api.openstack.placement import exception
@@ -20,7 +20,6 @@ from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.objects import user as user_obj
 from nova.tests.functional.api.openstack.placement import base
-from nova.tests import uuidsentinel as uuids
 
 
 def create_provider(context, name, *aggs, **kwargs):

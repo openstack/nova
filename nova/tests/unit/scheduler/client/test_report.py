@@ -16,6 +16,7 @@ import fixtures
 from keystoneauth1 import exceptions as ks_exc
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from six.moves.urllib import parse
 
 import nova.conf
@@ -27,7 +28,7 @@ from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit import fake_requests
-from nova.tests import uuidsentinel as uuids
+
 
 CONF = nova.conf.CONF
 

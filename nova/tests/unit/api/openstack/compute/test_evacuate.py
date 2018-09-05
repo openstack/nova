@@ -13,6 +13,7 @@
 #   under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 import testtools
 import webob
 
@@ -24,7 +25,6 @@ from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel as uuids
 
 
 CONF = nova.conf.CONF

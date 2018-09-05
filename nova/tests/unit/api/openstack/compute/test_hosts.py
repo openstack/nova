@@ -14,6 +14,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel
 import testtools
 import webob.exc
 
@@ -27,7 +28,6 @@ from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_hosts
-from nova.tests import uuidsentinel
 
 
 def stub_service_get_all(context, disabled=None):

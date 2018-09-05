@@ -35,6 +35,7 @@ from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_messaging import conffixture as messaging_conffixture
 from oslo_privsep import daemon as privsep_daemon
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
 from requests import adapters
 from wsgi_intercept import interceptor
@@ -57,7 +58,6 @@ from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
 from nova.tests.functional.api.openstack.placement.fixtures import placement
-from nova.tests import uuidsentinel
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 

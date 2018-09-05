@@ -13,6 +13,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
@@ -29,7 +30,7 @@ from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.objects import test_compute_node
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel
+
 
 NOW = timeutils.utcnow().replace(microsecond=0)
 

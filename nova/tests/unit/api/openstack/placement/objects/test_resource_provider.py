@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 import six
 import testtools
@@ -19,7 +20,6 @@ from nova.api.openstack.placement import context
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import resource_provider
 from nova import rc_fields as fields
-from nova.tests import uuidsentinel as uuids
 
 
 _RESOURCE_CLASS_NAME = 'DISK_GB'

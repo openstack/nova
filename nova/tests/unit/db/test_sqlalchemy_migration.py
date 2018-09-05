@@ -19,6 +19,7 @@ from migrate import UniqueConstraint
 from migrate.versioning import api as versioning_api
 import mock
 from oslo_db.sqlalchemy import utils as db_utils
+from oslo_utils.fixture import uuidsentinel
 import sqlalchemy
 
 from nova import context
@@ -29,7 +30,6 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests import uuidsentinel
 
 
 class TestNullInstanceUuidScanDB(test.TestCase):

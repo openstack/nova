@@ -11,12 +11,12 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
 from nova import context
 from nova import objects
 from nova.tests.unit import fake_flavor
-from nova.tests import uuidsentinel as uuids
 
 
 INSTANCE_NUMA_TOPOLOGY = objects.InstanceNUMATopology(

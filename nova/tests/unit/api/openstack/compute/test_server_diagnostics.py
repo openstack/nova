@@ -15,6 +15,7 @@
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.compute import server_diagnostics
 from nova.api.openstack import wsgi as os_wsgi
@@ -23,7 +24,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests import uuidsentinel as uuids
+
 
 UUID = uuids.abc
 

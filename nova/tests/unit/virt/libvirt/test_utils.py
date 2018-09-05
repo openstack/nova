@@ -22,6 +22,7 @@ import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_utils import fileutils
+from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
 from nova import context
@@ -32,7 +33,6 @@ import nova.privsep.fs
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.libvirt import fakelibvirt
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images

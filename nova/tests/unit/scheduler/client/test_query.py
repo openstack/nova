@@ -11,12 +11,12 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import context
 from nova import objects
 from nova.scheduler.client import query
 from nova import test
-from nova.tests import uuidsentinel as uuids
 
 
 class SchedulerQueryClientTestCase(test.NoDBTestCase):

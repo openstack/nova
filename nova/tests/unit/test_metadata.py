@@ -34,6 +34,7 @@ from oslo_config import cfg
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+from oslo_utils.fixture import uuidsentinel as uuids
 import requests
 import six
 import webob
@@ -55,7 +56,6 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_requests
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import netutils
 

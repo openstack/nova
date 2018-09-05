@@ -15,6 +15,7 @@
 
 import copy
 import mock
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
 import six
 import webob
@@ -29,7 +30,6 @@ from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import policy_fixture
-from nova.tests import uuidsentinel
 
 
 class AttrDict(dict):

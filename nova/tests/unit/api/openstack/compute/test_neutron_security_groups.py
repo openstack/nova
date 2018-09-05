@@ -19,6 +19,7 @@ from neutronclient.common import exceptions as n_exc
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import webob
 
@@ -32,7 +33,7 @@ from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.api.openstack.compute import test_security_groups
 from nova.tests.unit.api.openstack import fakes
-from nova.tests import uuidsentinel as uuids
+
 
 UUID_SERVER = uuids.server
 
