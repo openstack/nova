@@ -653,6 +653,17 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
         # create an externally shared IP allocation pool resource provider
         self._create_resource_provider(FAKE_IP_POOL_INVENTORY)
 
+        # Stub out _count_compute_nodes to make sure we never call it without
+        # a cell-targeted context.
+        original_count_compute_nodes = (
+            status.UpgradeCommands._count_compute_nodes)
+
+        def stub_count_compute_nodes(_self, context=None):
+            self.assertIsNotNone(context.db_connection)
+            return original_count_compute_nodes(_self, context=context)
+        self.stub_out('nova.cmd.status.UpgradeCommands._count_compute_nodes',
+                      stub_count_compute_nodes)
+
         result = self.cmd._check_resource_providers()
         self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
         self.assertIsNone(result.details)
