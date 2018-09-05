@@ -4389,7 +4389,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             instance.pci_requests = None
             instance.pci_devices = None
             orig_image_ref = None
-            image_ref = None
+            image_meta = instance.image_meta
             injected_files = []
             new_pass = None
             orig_sys_metadata = None
@@ -4401,7 +4401,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_get_nw_info.return_value = new_nw_info
 
             self.compute._do_rebuild_instance(self.context, instance,
-                                              orig_image_ref, image_ref,
+                                              orig_image_ref, image_meta,
                                               injected_files, new_pass,
                                               orig_sys_metadata, bdms,
                                               recreate, on_shared_storage,
@@ -4497,7 +4497,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 exception.BuildAbortException,
                 self.compute._do_rebuild_instance,
                 self.context, instance, instance.image_ref,
-                image_ref=None, injected_files=[], new_pass=None,
+                instance.image_meta, injected_files=[], new_pass=None,
                 orig_sys_metadata={}, bdms=objects.BlockDeviceMapping(),
                 evacuate=False, on_shared_storage=None,
                 preserve_ephemeral=False, migration=objects.Migration(),

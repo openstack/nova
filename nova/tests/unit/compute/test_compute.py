@@ -12877,19 +12877,18 @@ class EvacuateHostTestCase(BaseTestCase):
                               lambda: self._rebuild(on_shared_storage=True))
 
     @mock.patch.object(fake.FakeDriver, 'spawn')
-    @mock.patch('nova.objects.ImageMeta.from_image_ref')
     def test_on_shared_storage_not_provided_host_without_shared_storage(self,
-            mock_image_meta, mock_spawn):
+            mock_spawn):
         self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
                        lambda *a, **ka: False)
 
         self._rebuild(on_shared_storage=None)
 
-        # 'spawn' should be called with the image_meta from the image_ref
+        # 'spawn' should be called with the image_meta from the instance
         mock_spawn.assert_called_once_with(
             test.MatchType(context.RequestContext),
             test.MatchType(objects.Instance),
-            mock_image_meta.return_value,
+            test.MatchObjPrims(self.inst.image_meta),
             mock.ANY, 'newpass', mock.ANY,
             network_info=mock.ANY,
             block_device_info=mock.ANY)
