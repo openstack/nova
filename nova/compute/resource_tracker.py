@@ -20,11 +20,11 @@ model.
 """
 import collections
 import copy
-import retrying
 
 from keystoneauth1 import exceptions as ks_exc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+import retrying
 
 from nova.compute import claims
 from nova.compute import monitors
@@ -46,6 +46,7 @@ from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
 from nova import utils
 from nova.virt import hardware
+
 
 CONF = nova.conf.CONF
 

@@ -1219,9 +1219,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             self.client._provider_tree.has_traits(uuids.compute_node,
                                                   ['CUSTOM_SILVER']))
         get_shr_mock.assert_called_once_with(self.context, set([uuids.agg1]))
-        self.assertEqual(
-            43,
-            self.client._provider_tree.data(uuids.compute_node).generation)
+        gen = self.client._provider_tree.data(uuids.compute_node).generation
+        self.assertEqual(43, gen)
         self.assertFalse(create_rp_mock.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
