@@ -1574,6 +1574,34 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         """Make update_provider_tree create multiple providers, including an
         additional root as a sharing provider; and some descendants in the
         compute node's tree.
+
+                   +---------------------------+   +--------------------------+
+                   |uuid: self.host_uuid       |   |uuid: uuids.ssp           |
+                   |name: self.compute.host    |   |name: 'ssp'               |
+                   |inv: (per MediumFakeDriver)|   |inv: DISK_GB=500          |
+                   |     VCPU=10               |...|traits: [MISC_SHARES_..., |
+                   |     MEMORY_MB=8192        |   |         STORAGE_DISK_SSD]|
+                   |     DISK_GB=1028          |   |aggs: [uuids.agg]         |
+                   |aggs: [uuids.agg]          |   +--------------------------+
+                   +---------------------------+
+                         /                   \
+             +-----------------+          +-----------------+
+             |uuid: uuids.numa1|          |uuid: uuids.numa2|
+             |name: 'numa1'    |          |name: 'numa2'    |
+             |inv: VCPU=10     |          |inv: VCPU=20     |
+             |     MEMORY_MB=1G|          |     MEMORY_MB=2G|
+             +-----------------+          +-----------------+
+                 /          \                    /         \
+        +------------+  +------------+   +------------+  +------------+
+        |uuid:       |  |uuid:       |   |uuid:       |  |uuid:       |
+        | uuids.pf1_1|  | uuids.pf1_2|   | uuids.pf2_1|  | uuids.pf2_2|
+        |name:       |  |name:       |   |name:       |  |name:       |
+        | 'pf1_1'    |  | 'pf1_2'    |   | 'pf2_1'    |  | 'pf2_2'    |
+        |inv:        |  |inv:        |   |inv:        |  |inv:        |
+        | ..NET_VF: 2|  | ..NET_VF: 3|   | ..NET_VF: 3|  | ..NET_VF: 4|
+        |traits:     |  |traits:     |   |traits:     |  |traits:     |
+        | ..PHYSNET_0|  | ..PHYSNET_1|   | ..PHYSNET_0|  | ..PHYSNET_1|
+        +------------+  +------------+   +------------+  +------------+
         """
         def update_provider_tree(prov_tree, nodename, allocations=None):
             if do_reshape and allocations is None:
@@ -1796,36 +1824,6 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertIn('HW_CPU_X86_AVX', traits)
         self.assertNotIn('FOO', traits)
 
-    def test_reshape_needed_non_startup(self):
-        """ReshapeNeeded is reraised when not starting up."""
-        self.mock_upt.side_effect = exception.ReshapeNeeded()
-
-        # Note that we _run_periodics here (rather than
-        # _run_update_available_resource_and_assert_raises) to prove that, for
-        # this case, the exception does *not* get swallowed by
-        # update_available_resource_for_node.
-        self.assertRaises(exception.ReshapeNeeded, self._run_periodics)
-
-        # update_provider_tree was only called once, without allocs
-        self.mock_upt.assert_called_once_with(mock.ANY, 'host1')
-
-    def test_reshape_needed_twice_startup(self):
-        """ReshapeNeeded is reraised if it happens on the second call to
-        update_provider_tree (the one with allocations).
-        """
-        self.mock_upt.side_effect = exception.ReshapeNeeded()
-
-        self._run_update_available_resource_and_assert_raises(
-            exc=exception.ReshapeNeeded, startup=True)
-
-        # This time update_provider_tree was called twice: the second time with
-        # the allocations argument.
-        self.assertEqual(2, self.mock_upt.call_count)
-        self.mock_upt.assert_has_calls([
-            mock.call(mock.ANY, 'host1'),
-            mock.call(mock.ANY, 'host1', allocations={}),
-        ])
-
     def _create_instance(self, flavor):
         server_req = self._build_minimal_create_server_request(
             self.api, 'some-server', flavor_id=flavor['id'],
@@ -1846,8 +1844,8 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         inst1 = self._create_instance(flavors[0])
         inst2 = self._create_instance(flavors[1])
 
-        # Instance create calls _update, which calls update_provider_tree,
-        # which is currently mocked to a no-op.
+        # Instance create calls RT._update, which calls
+        # driver.update_provider_tree, which is currently mocked to a no-op.
         self.assertEqual(2, self.mock_upt.call_count)
         self.mock_upt.reset_mock()
 

@@ -310,7 +310,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
     def test_update_available_resource_for_node_reshape_needed(self, get_rt,
                                                                log_mock):
-        """ReshapeFailed logs and reraises."""
+        """ReshapeNeeded logs and reraises."""
         rt = mock.Mock(spec_set=['update_available_resource'])
         get_rt.return_value = rt
         rt.update_available_resource.side_effect = exception.ReshapeNeeded()

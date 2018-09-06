@@ -926,7 +926,7 @@ class ResourceTracker(object):
                     raise
                 LOG.info("Performing resource provider inventory and "
                          "allocation data migration during compute service "
-                         "startup or FFU.")
+                         "startup or fast-forward upgrade.")
                 allocs = reportclient.get_allocations_for_provider_tree(
                     context, nodename)
                 self.driver.update_provider_tree(prov_tree, nodename,
@@ -939,7 +939,8 @@ class ResourceTracker(object):
             inv_data = prov_tree.data(nodename).inventory
             _normalize_inventory_from_cn_obj(inv_data, compute_node)
             prov_tree.update_inventory(nodename, inv_data)
-            # Flush any changes.
+            # Flush any changes. If we processed ReshapeNeeded above, allocs is
+            # not None, and this will hit placement's POST /reshaper route.
             reportclient.update_from_provider_tree(context, prov_tree,
                                                    allocations=allocs)
         except NotImplementedError:
