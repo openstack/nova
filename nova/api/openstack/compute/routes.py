@@ -15,6 +15,7 @@
 #    under the License.
 
 import functools
+import six
 
 import nova.api.openstack
 from nova.api.openstack.compute import admin_actions
@@ -879,7 +880,7 @@ class APIRouterV21(base_wsgi.Router):
             # For example, the request to the '' will be redirect to the '/' in
             # the Nova API. To indicate that, using the target path instead of
             # a dict. The route entry just writes as "('', '/)".
-            if isinstance(methods, str):
+            if isinstance(methods, six.string_types):
                 self.map.redirect(path, methods)
                 continue
 
