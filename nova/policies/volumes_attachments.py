@@ -49,7 +49,7 @@ volumes_attachments_policies = [
             {
                 'method': 'GET',
                 'path':
-                 '/servers/{server_id}/os-volume_attachments/{attachment_id}'
+                 '/servers/{server_id}/os-volume_attachments/{volume_id}'
             }
         ]),
     policy.DocumentedRuleDefault(
@@ -60,7 +60,7 @@ volumes_attachments_policies = [
             {
                 'method': 'PUT',
                 'path':
-                 '/servers/{server_id}/os-volume_attachments/{attachment_id}'
+                 '/servers/{server_id}/os-volume_attachments/{volume_id}'
             }
         ]),
     policy.DocumentedRuleDefault(
@@ -71,7 +71,7 @@ volumes_attachments_policies = [
             {
                 'method': 'DELETE',
                 'path':
-                 '/servers/{server_id}/os-volume_attachments/{attachment_id}'
+                 '/servers/{server_id}/os-volume_attachments/{volume_id}'
             }
         ]),
 ]
