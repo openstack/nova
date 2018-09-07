@@ -19,7 +19,6 @@ import copy
 import functools
 import random
 import re
-import retrying
 import time
 
 from keystoneauth1 import exceptions as ks_exc
@@ -27,6 +26,7 @@ import os_traits
 from oslo_log import log as logging
 from oslo_middleware import request_id
 from oslo_utils import versionutils
+import retrying
 
 from nova.compute import provider_tree
 from nova.compute import utils as compute_utils
@@ -37,6 +37,7 @@ from nova import objects
 from nova import rc_fields as fields
 from nova.scheduler import utils as scheduler_utils
 from nova import utils
+
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
