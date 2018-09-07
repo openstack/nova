@@ -231,18 +231,6 @@ memory-intensive instances succeed.
    example, shared-storage live migration of an instance with 8GiB memory will
    time out after 6400 seconds.
 
-#. **Live migration progress timeout**
-
-   The Compute service also aborts a live migration when it detects that memory
-   copy is not making progress for a certain time. You can set this time, in
-   seconds, through the configurable parameter
-   ``live_migration_progress_timeout``.
-
-   In Ocata, the default value of ``live_migration_progress_timeout`` is 0,
-   which disables progress timeouts. You should not change this value, since
-   the algorithm that detects memory copy progress has been determined to be
-   unreliable. It may be re-enabled in future releases.
-
 #. **Instance downtime**
 
    Near the end of the memory copy, the instance is paused for a short time so

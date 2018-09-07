@@ -397,7 +397,10 @@ Related options:
     cfg.IntOpt('live_migration_progress_timeout',
                default=0,
                deprecated_for_removal=True,
-               deprecated_reason="Serious bugs found in this feature.",
+               deprecated_reason="""
+Serious bugs found in this feature, see
+https://bugs.launchpad.net/nova/+bug/1644248 for details.
+""",
                mutable=True,
                help="""
 Time to wait, in seconds, for migration to make forward progress in

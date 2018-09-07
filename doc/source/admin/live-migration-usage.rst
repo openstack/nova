@@ -239,14 +239,17 @@ out:
    live migration not completed after 1800 sec
 
 The Compute service also cancels migrations when the memory copy seems to make
-no progress. Ocata disables this feature by default, but it can be enabled
-using the configuration parameter ``live_migration_progress_timeout``. Should
+no progress. This feature is `disabled by default`_, but it can be enabled
+using the configuration parameter
+:oslo.config:option:`libvirt.live_migration_progress_timeout`. Should
 this be the case, you may find the following message in the log:
 
 .. code-block:: console
 
    WARNING nova.virt.libvirt.migration [req-...] [instance: ...]
    live migration stuck for 150 sec
+
+.. _disabled by default: https://review.openstack.org/#/c/431635/
 
 Addressing migration timeouts
 -----------------------------
