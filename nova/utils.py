@@ -1045,7 +1045,7 @@ def filter_and_format_resource_metadata(resource_type, resource_list,
             return resource.get('uuid')
 
     def _match_any(pattern_list, string):
-        if isinstance(pattern_list, str):
+        if isinstance(pattern_list, six.string_types):
             pattern_list = [pattern_list]
         return any([re.match(pattern, string)
                     for pattern in pattern_list])
