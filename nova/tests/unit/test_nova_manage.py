@@ -1859,7 +1859,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(kwargs['name'], cell1.name)
         self.assertIs(cell1.disabled, True)
 
-    def test_list_cells_no_cells_verbose_false(self):
+    def test_list_cells_verbose_false(self):
         ctxt = context.RequestContext()
         cell_mapping0 = objects.CellMapping(
             context=ctxt, uuid=uuidsentinel.map0,
@@ -1903,19 +1903,26 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             database_connection='fake:///dbdal', transport_url='fake:///mqdal',
             name='dallas')
         cell_mapping2.create()
+        no_name = objects.CellMapping(
+            context=ctxt, uuid=uuidsentinel.none,
+            database_connection='fake:///dbnone',
+            transport_url='fake:///mqnone')
+        no_name.create()
         self.assertEqual(0, self.commands.list_cells(verbose=True))
         output = self.output.getvalue().strip()
         self.assertEqual('''\
-+--------+--------------------------------------+---------------+---------------------+----------+
-|  Name  |                 UUID                 | Transport URL | Database Connection | Disabled |
-+--------+--------------------------------------+---------------+---------------------+----------+
-| cell0  | %(uuid_map0)s |    none:///   |     fake:///db0     |  False   |
-| dallas | %(uuid_map2)s | fake:///mqdal |    fake:///dbdal    |  False   |
-| london | %(uuid_map1)s | fake:///mqlon |    fake:///dblon    |   True   |
-+--------+--------------------------------------+---------------+---------------------+----------+''' %  # noqa
++--------+--------------------------------------+----------------+---------------------+----------+
+|  Name  |                 UUID                 | Transport URL  | Database Connection | Disabled |
++--------+--------------------------------------+----------------+---------------------+----------+
+|        | %(uuid_none)s | fake:///mqnone |    fake:///dbnone   |  False   |
+| cell0  | %(uuid_map0)s |    none:///    |     fake:///db0     |  False   |
+| dallas | %(uuid_map2)s | fake:///mqdal  |    fake:///dbdal    |  False   |
+| london | %(uuid_map1)s | fake:///mqlon  |    fake:///dblon    |   True   |
++--------+--------------------------------------+----------------+---------------------+----------+''' %  # noqa
                 {"uuid_map0": uuidsentinel.map0,
                  "uuid_map1": uuidsentinel.map1,
-                 "uuid_map2": uuidsentinel.map2},
+                 "uuid_map2": uuidsentinel.map2,
+                 "uuid_none": uuidsentinel.none},
                 output)
 
     def test_delete_cell_not_found(self):

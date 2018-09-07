@@ -1488,8 +1488,10 @@ class CellV2Commands(object):
                        _('Database Connection'), _('Disabled')]
 
         t = prettytable.PrettyTable(field_names)
-        for cell in sorted(cell_mappings, key=lambda _cell: _cell.name):
-            fields = [cell.name, cell.uuid]
+        for cell in sorted(cell_mappings,
+                           # CellMapping.name is optional
+                           key=lambda _cell: _cell.name or ''):
+            fields = [cell.name or '', cell.uuid]
             if verbose:
                 fields.extend([cell.transport_url, cell.database_connection])
             else:
