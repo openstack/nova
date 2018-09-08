@@ -565,7 +565,7 @@ New Features
 
 .. releasenotes/notes/policy-discover-cli-a14a115cacbdc9c6.yaml @ b'9864801d468de5dde79141cbab4374bd2310bef2'
 
-- The nova-policy command line is implemented as a tool to experience the under-development feature policy discovery. User can input the credentials infomation and the instance info, the tool will return a list of API which can be allowed to invoke. There isn't any contract for the interface of the tool due to the feature still under-development.
+- The nova-policy command line is implemented as a tool to experience the under-development feature policy discovery. User can input the credentials information and the instance info, the tool will return a list of API which can be allowed to invoke. There isn't any contract for the interface of the tool due to the feature still under-development.
 
 .. releasenotes/notes/refresh-quotas-usage-362b239171c75f5f.yaml @ b'8d25383ad2a1bdde22e306bf9daa52508c90dd3d'
 
