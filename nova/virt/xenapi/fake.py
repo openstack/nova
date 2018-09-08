@@ -51,6 +51,7 @@ A fake XenAPI SDK.
 import base64
 import pickle
 import random
+import six
 from xml.sax import saxutils
 import zlib
 
@@ -443,7 +444,7 @@ def _query_matches(record, query):
     value = value.strip(" \"'")
 
     # Strings should be directly compared
-    if isinstance(record[field], str):
+    if isinstance(record[field], six.string_types):
         return record[field] == value
 
     # But for all other value-checks, convert to a string first

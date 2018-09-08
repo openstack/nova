@@ -7612,7 +7612,7 @@ class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
         }
 
     def _cell_value_modify(self, value, step):
-        if isinstance(value, str):
+        if isinstance(value, six.string_types):
             return value + str(step)
         elif isinstance(value, float):
             return value + step + 0.6
