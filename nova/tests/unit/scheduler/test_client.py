@@ -15,13 +15,13 @@
 
 import mock
 import oslo_messaging as messaging
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import objects
 from nova.scheduler import client as scheduler_client
 from nova.scheduler.client import query as scheduler_query_client
 from nova.scheduler.client import report as scheduler_report_client
 from nova import test
-from nova.tests import uuidsentinel as uuids
 """Tests for Scheduler Client."""
 
 

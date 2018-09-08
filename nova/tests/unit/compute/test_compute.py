@@ -34,6 +34,7 @@ import oslo_messaging as messaging
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
 from oslo_utils import fixture as utils_fixture
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
@@ -85,7 +86,6 @@ from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_instance_numa_topology
 from nova.tests.unit.objects import test_migration
 from nova.tests.unit import utils as test_utils
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt.block_device import DriverVolumeBlockDevice as driver_bdm_volume
@@ -93,6 +93,7 @@ from nova.virt import event
 from nova.virt import fake
 from nova.virt import hardware
 from nova.volume import cinder
+
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF

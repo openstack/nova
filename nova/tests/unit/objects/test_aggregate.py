@@ -13,6 +13,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 
 from nova import exception
@@ -20,7 +21,6 @@ from nova.objects import aggregate
 from nova import test
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel
 
 
 NOW = timeutils.utcnow().replace(microsecond=0)

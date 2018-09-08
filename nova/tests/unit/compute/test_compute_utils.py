@@ -22,6 +22,7 @@ import traceback
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import six
 
@@ -48,7 +49,6 @@ from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit.objects import test_flavor
-from nova.tests import uuidsentinel as uuids
 
 
 FAKE_IMAGE_REF = uuids.image_ref

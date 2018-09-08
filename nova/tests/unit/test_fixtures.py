@@ -21,6 +21,7 @@ import fixtures as fx
 import mock
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import sqlalchemy
@@ -38,7 +39,6 @@ from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 CONF = cfg.CONF

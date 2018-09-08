@@ -13,13 +13,14 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_versionedobjects import exception as ovo_exc
 
 from nova.db import api as db
 from nova import objects
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit.objects import test_security_group
-from nova.tests import uuidsentinel as uuids
+
 
 fake_rule = {
     'created_at': None,

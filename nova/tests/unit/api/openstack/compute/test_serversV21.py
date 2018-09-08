@@ -26,6 +26,7 @@ from oslo_serialization import base64
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import fixture as utils_fixture
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
@@ -67,8 +68,8 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 from nova.tests.unit.image import fake
 from nova.tests.unit import matchers
-from nova.tests import uuidsentinel as uuids
 from nova import utils as nova_utils
+
 
 CONF = nova.conf.CONF
 

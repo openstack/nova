@@ -17,6 +17,7 @@ import mock
 from neutronclient.common import exceptions as n_exc
 from neutronclient.neutron import v2_0 as neutronv20
 from neutronclient.v2_0 import client
+from oslo_utils.fixture import uuidsentinel as uuids
 from six.moves import range
 
 from nova import context
@@ -24,7 +25,6 @@ from nova import exception
 from nova.network.security_group import neutron_driver
 from nova import objects
 from nova import test
-from nova.tests import uuidsentinel as uuids
 
 
 class TestNeutronDriver(test.NoDBTestCase):

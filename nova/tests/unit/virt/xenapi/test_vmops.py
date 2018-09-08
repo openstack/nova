@@ -26,6 +26,7 @@ from eventlet import greenthread
 import fixtures
 import mock
 from os_xenapi.client import host_xenstore
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import importutils
 from oslo_utils import timeutils
 import six
@@ -41,7 +42,6 @@ from nova import test
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.xenapi import stubs
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import fake
 from nova.virt.xenapi import agent as xenapi_agent

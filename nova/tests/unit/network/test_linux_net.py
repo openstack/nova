@@ -24,6 +24,7 @@ import netifaces
 from oslo_concurrency import processutils
 from oslo_serialization import jsonutils
 from oslo_utils import fileutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 import nova.conf
@@ -35,8 +36,8 @@ from nova.network import linux_net
 from nova.network import linux_utils as linux_net_utils
 from nova import objects
 from nova import test
-from nova.tests import uuidsentinel as uuids
 from nova import utils
+
 
 CONF = nova.conf.CONF
 

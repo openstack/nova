@@ -14,6 +14,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import webob
 
@@ -31,7 +32,7 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.tests.unit.image import fake
-from nova.tests import uuidsentinel as uuids
+
 
 CONF = nova.conf.CONF
 FAKE_UUID = fakes.FAKE_UUID

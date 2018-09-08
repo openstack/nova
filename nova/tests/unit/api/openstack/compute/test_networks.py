@@ -22,6 +22,7 @@ import iso8601
 import mock
 import netaddr
 from oslo_config import cfg
+from oslo_utils.fixture import uuidsentinel as uuids
 import webob
 
 from nova.api.openstack.compute import networks as networks_v21
@@ -34,8 +35,8 @@ from nova.network.neutronv2 import api as neutron
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests import uuidsentinel as uuids
 import nova.utils
+
 
 CONF = cfg.CONF
 FAKE_NETWORK_PROJECT_ID = '6133f8b603924f45bc0c9e21f6df12fa'

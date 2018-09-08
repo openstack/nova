@@ -22,6 +22,7 @@ import fixtures
 import mock
 from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
 from six.moves import StringIO
 
@@ -38,7 +39,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.db import fakes as db_fakes
 from nova.tests.unit import fake_requests
 from nova.tests.unit.objects import test_network
-from nova.tests import uuidsentinel
+
 
 CONF = conf.CONF
 

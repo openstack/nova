@@ -25,6 +25,7 @@ from glanceclient.v1 import images
 from glanceclient.v2 import schemas
 from keystoneauth1 import loading as ks_loading
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 import six
 from six.moves import StringIO
 import testtools
@@ -36,7 +37,7 @@ from nova.image import glance
 from nova import objects
 from nova import service_auth
 from nova import test
-from nova.tests import uuidsentinel as uuids
+
 
 CONF = nova.conf.CONF
 NOW_GLANCE_FORMAT = "2010-10-11T10:30:22.000000"

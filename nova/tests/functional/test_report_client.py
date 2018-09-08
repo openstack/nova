@@ -14,6 +14,7 @@
 import copy
 from keystoneauth1 import exceptions as kse
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 import pkg_resources
 
 from nova.api.openstack.placement import direct
@@ -31,7 +32,7 @@ from nova import rc_fields as fields
 from nova.scheduler.client import report
 from nova.scheduler import utils
 from nova import test
-from nova.tests import uuidsentinel as uuids
+
 
 CONF = conf.CONF
 

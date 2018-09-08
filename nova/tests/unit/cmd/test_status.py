@@ -23,6 +23,7 @@ from six.moves import StringIO
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as keystone
 from keystoneauth1 import session
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 from requests import models
 
@@ -37,7 +38,7 @@ from nova.objects import request_spec as reqspec_obj
 from nova import rc_fields as fields
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests import uuidsentinel as uuids
+
 
 CONF = nova.conf.CONF
 

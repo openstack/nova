@@ -17,13 +17,13 @@ import copy
 import mock
 
 from oslo_db.exception import DBDuplicateEntry
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 
 from nova import exception
 from nova.objects import console_auth_token as token_obj
 from nova.tests.unit import fake_console_auth_token as fakes
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel
 
 
 class _TestConsoleAuthToken(object):

@@ -18,6 +18,7 @@ Unit Tests for nova.compute.rpcapi
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
@@ -29,7 +30,6 @@ from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel as uuids
 
 
 class ComputeRpcAPITestCase(test.NoDBTestCase):

@@ -20,6 +20,7 @@ import functools
 import inspect
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova import block_device
@@ -43,7 +44,6 @@ from nova.tests.unit.compute import test_compute
 from nova.tests.unit.compute import test_shelve
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_flavor
-from nova.tests import uuidsentinel as uuids
 
 
 ORIG_COMPUTE_API = None

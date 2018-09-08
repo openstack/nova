@@ -18,6 +18,7 @@ import copy
 import socket
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 import nova.conf
 from nova.console.securityproxy import base
@@ -27,7 +28,6 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_console_auth_token as fake_ca
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 CONF = nova.conf.CONF

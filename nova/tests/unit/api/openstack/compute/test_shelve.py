@@ -14,6 +14,7 @@
 
 import mock
 from oslo_policy import policy as oslo_policy
+from oslo_utils.fixture import uuidsentinel
 import webob
 
 from nova.api.openstack.compute import shelve as shelve_v21
@@ -22,7 +23,6 @@ from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel
 
 
 class ShelvePolicyTestV21(test.NoDBTestCase):

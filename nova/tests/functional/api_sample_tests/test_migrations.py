@@ -15,10 +15,11 @@
 
 import datetime
 
+from oslo_utils.fixture import uuidsentinel as uuids
+
 from nova import context
 from nova import objects
 from nova.tests.functional.api_sample_tests import api_sample_base
-from nova.tests import uuidsentinel as uuids
 
 
 # NOTE(ShaoHe Feng) here I can not use uuidsentinel, it generate a random

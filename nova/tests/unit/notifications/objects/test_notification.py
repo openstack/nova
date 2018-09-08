@@ -14,6 +14,7 @@
 import collections
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_versionedobjects import fixture
 
@@ -24,7 +25,6 @@ from nova.objects import base
 from nova.objects import fields
 from nova import test
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel as uuids
 
 
 class TestNotificationBase(test.NoDBTestCase):

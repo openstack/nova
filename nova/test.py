@@ -42,6 +42,7 @@ from oslo_config import fixture as config_fixture
 from oslo_log.fixture import logging_error as log_fixture
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_versionedobjects import fixture as ovo_fixture
 from oslotest import mock_fixture
@@ -60,7 +61,6 @@ from nova.objects import base as objects_base
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import images
 

@@ -13,12 +13,12 @@
 
 from eventlet import tpool
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import task_states
 from nova import exception
 from nova import objects
 from nova import test
-from nova.tests import uuidsentinel as uuids
 from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 

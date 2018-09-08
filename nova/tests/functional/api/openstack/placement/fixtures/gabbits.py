@@ -17,6 +17,7 @@ from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_middleware import cors
 from oslo_policy import opts as policy_opts
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 from oslotest import output
 
@@ -31,7 +32,6 @@ from nova.tests import fixtures
 from nova.tests.functional.api.openstack.placement.db import test_base as tb
 from nova.tests.functional.api.openstack.placement.fixtures import capture
 from nova.tests.unit import policy_fixture
-from nova.tests import uuidsentinel as uuids
 
 
 CONF = cfg.CONF

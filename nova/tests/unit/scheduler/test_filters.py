@@ -18,13 +18,13 @@ Tests For Scheduler Host Filters.
 import inspect
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from six.moves import range
 
 from nova import filters
 from nova import loadables
 from nova import objects
 from nova import test
-from nova.tests import uuidsentinel as uuids
 
 
 class Filter1(filters.BaseFilter):

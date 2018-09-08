@@ -30,6 +30,7 @@ from oslo_concurrency import lockutils
 from oslo_config import fixture as config_fixture
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import importutils
 from oslo_utils import uuidutils
 import testtools
@@ -64,7 +65,6 @@ from nova.tests.unit.objects import test_aggregate
 from nova.tests.unit.objects import test_diagnostics
 from nova.tests.unit import utils as test_utils
 from nova.tests.unit.virt.xenapi import stubs
-from nova.tests import uuidsentinel as uuids
 from nova.virt import fake
 from nova.virt.xenapi import agent
 from nova.virt.xenapi import driver as xenapi_conn

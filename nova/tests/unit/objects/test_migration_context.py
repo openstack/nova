@@ -12,12 +12,12 @@
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import exception
 from nova import objects
 from nova.tests.unit.objects import test_instance_numa_topology
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel as uuids
 
 
 fake_instance_uuid = uuids.fake

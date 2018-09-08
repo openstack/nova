@@ -17,6 +17,7 @@ import copy
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova import context
@@ -27,7 +28,7 @@ from nova.objects import fields
 from nova.objects import instance
 from nova.objects import pci_device
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel as uuids
+
 
 dev_dict = {
     'compute_node_id': 1,

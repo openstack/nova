@@ -16,6 +16,7 @@ from collections import deque
 
 from lxml import etree
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 import six
 
@@ -26,7 +27,6 @@ from nova import objects
 from nova import test
 from nova.tests.unit import matchers
 from nova.tests.unit.virt.libvirt import fakelibvirt
-from nova.tests import uuidsentinel as uuids
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host

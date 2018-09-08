@@ -20,6 +20,7 @@ import microversion_parse
 import mock
 from oslo_config import cfg
 from oslo_middleware import request_id
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 import testtools
 import webob
@@ -34,7 +35,7 @@ from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.objects import user as user_obj
 from nova.api.openstack.placement import util
-from nova.tests import uuidsentinel
+
 
 CONF = cfg.CONF
 

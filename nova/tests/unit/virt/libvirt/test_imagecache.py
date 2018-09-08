@@ -23,6 +23,7 @@ from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_log import formatters
 from oslo_log import log as logging
+from oslo_utils.fixture import uuidsentinel as uuids
 from six.moves import cStringIO
 
 from nova.compute import manager as compute_manager
@@ -31,7 +32,6 @@ from nova import context
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt.libvirt import imagecache
 

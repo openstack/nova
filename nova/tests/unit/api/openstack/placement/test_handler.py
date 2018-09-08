@@ -15,6 +15,7 @@
 
 import microversion_parse
 import mock
+from oslo_utils.fixture import uuidsentinel
 import routes
 import testtools
 import webob
@@ -22,7 +23,6 @@ import webob
 from nova.api.openstack.placement import handler
 from nova.api.openstack.placement.handlers import root
 from nova.api.openstack.placement import microversion
-from nova.tests import uuidsentinel
 
 
 # Used in tests below

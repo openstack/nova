@@ -29,6 +29,7 @@ from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import requests_mock
@@ -53,7 +54,7 @@ from nova import service_auth
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_requests as fake_req
-from nova.tests import uuidsentinel as uuids
+
 
 CONF = cfg.CONF
 

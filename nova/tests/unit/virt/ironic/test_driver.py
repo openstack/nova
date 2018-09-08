@@ -19,6 +19,7 @@ from ironicclient import exc as ironic_exception
 import mock
 from oslo_config import cfg
 from oslo_service import loopingcall
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import six
 from testtools import matchers
@@ -44,7 +45,6 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers as nova_matchers
 from nova.tests.unit import utils
 from nova.tests.unit.virt.ironic import utils as ironic_utils
-from nova.tests import uuidsentinel as uuids
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt import driver

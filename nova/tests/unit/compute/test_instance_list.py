@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import instance_list
 from nova.compute import multi_cell_list
@@ -18,7 +19,7 @@ from nova import context as nova_context
 from nova import objects
 from nova import test
 from nova.tests import fixtures
-from nova.tests import uuidsentinel as uuids
+
 
 FAKE_CELLS = [objects.CellMapping(), objects.CellMapping()]
 

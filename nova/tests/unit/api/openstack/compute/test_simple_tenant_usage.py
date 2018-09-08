@@ -17,6 +17,7 @@ import datetime
 
 import mock
 from oslo_policy import policy as oslo_policy
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from six.moves import range
 import webob
@@ -31,7 +32,6 @@ from nova import objects
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests import uuidsentinel as uuids
 
 
 CONF = nova.conf.CONF

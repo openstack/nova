@@ -13,12 +13,12 @@
 #    under the License.
 
 from lxml import etree
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 
 from nova.objects import fields as obj_fields
 from nova import test
 from nova.tests.unit import matchers
-from nova.tests import uuidsentinel as uuids
 from nova.virt.libvirt import config
 
 

@@ -9,12 +9,12 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import consumer as consumer_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.tests.functional.api.openstack.placement.db import test_base as tb
-from nova.tests import uuidsentinel as uuids
 
 
 def alloc_for_rc(alloc_list, rc):

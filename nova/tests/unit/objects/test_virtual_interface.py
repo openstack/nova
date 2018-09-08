@@ -13,11 +13,12 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.db import api as db
 from nova.objects import virtual_interface as vif_obj
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel as uuids
+
 
 fake_vif = {
     'created_at': None,

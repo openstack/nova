@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import fixtures
 import mock
+from oslo_utils.fixture import uuidsentinel
 from pypowervm.tasks import scsi_mapper as tsk_map
 from pypowervm.tests import test_fixtures as pvm_fx
 from pypowervm.utils import transaction as pvm_tx
@@ -31,7 +32,6 @@ elif six.PY3:
     import builtins
 
 from nova import test
-from nova.tests import uuidsentinel
 from nova.virt.powervm import media as m
 
 

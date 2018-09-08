@@ -11,12 +11,12 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import objects
 from nova.objects import numa
 from nova.scheduler import host_manager
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel as uuids
 
 
 fake_numa_limit1 = numa.NUMATopologyLimits(cpu_allocation_ratio=1.0,

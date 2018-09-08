@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import power_state
 from nova.compute import resource_tracker
@@ -22,8 +23,8 @@ from nova import objects
 from nova import rc_fields as fields
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import test_report_client as test_base
-from nova.tests import uuidsentinel as uuids
 from nova.virt import driver as virt_driver
+
 
 CONF = conf.CONF
 VCPU = fields.ResourceClass.VCPU

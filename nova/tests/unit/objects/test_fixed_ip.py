@@ -17,6 +17,7 @@ import datetime
 import iso8601
 import mock
 import netaddr
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_versionedobjects import base as ovo_base
 
@@ -26,7 +27,6 @@ from nova.objects import instance as instance_obj
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_network
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 fake_fixed_ip = {

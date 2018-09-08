@@ -13,11 +13,11 @@
 """Implementation of a fake volume API."""
 
 from oslo_log import log as logging
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 import nova.conf
 from nova import exception
-from nova.tests import uuidsentinel as uuids
 
 
 LOG = logging.getLogger(__name__)

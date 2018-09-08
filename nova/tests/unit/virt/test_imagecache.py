@@ -13,6 +13,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import block_device
 from nova.compute import vm_states
@@ -22,7 +23,6 @@ from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova import test
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel as uuids
 from nova.virt import imagecache
 
 CONF = nova.conf.CONF

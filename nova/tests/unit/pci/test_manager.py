@@ -17,6 +17,7 @@ import copy
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel
 
 import nova
 from nova.compute import vm_states
@@ -26,7 +27,6 @@ from nova.objects import fields
 from nova.pci import manager
 from nova import test
 from nova.tests.unit.pci import fakes as pci_fakes
-from nova.tests import uuidsentinel
 
 
 fake_pci = {

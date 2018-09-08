@@ -12,11 +12,10 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import api_samples_test_base
-from nova.tests import uuidsentinel as uuids
 
 
 class VirtualInterfacesJsonTest(api_samples_test_base.ApiSampleTestBase):

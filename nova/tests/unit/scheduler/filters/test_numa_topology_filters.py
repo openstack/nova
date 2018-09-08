@@ -13,13 +13,13 @@
 import itertools
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import objects
 from nova.objects import fields
 from nova.scheduler.filters import numa_topology_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
-from nova.tests import uuidsentinel as uuids
 
 
 class TestNUMATopologyFilter(test.NoDBTestCase):

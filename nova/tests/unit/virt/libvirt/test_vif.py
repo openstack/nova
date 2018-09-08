@@ -21,6 +21,7 @@ from os_vif import objects as osv_objects
 from os_vif.objects import fields as osv_fields
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
 from nova import exception
@@ -32,7 +33,6 @@ from nova import test
 from nova.tests.unit import matchers
 from nova.tests.unit.virt import fakelibosinfo
 from nova.tests.unit.virt.libvirt import fakelibvirt
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import host

@@ -14,6 +14,7 @@
 #    under the License.
 
 import fixtures
+from oslo_utils.fixture import uuidsentinel as uuids
 import unittest
 
 from nova.compute import instance_actions
@@ -21,7 +22,7 @@ from nova import conf
 from nova.tests.functional import integrated_helpers
 import nova.tests.unit.image.fake
 from nova.tests.unit.virt.libvirt import fakelibvirt
-from nova.tests import uuidsentinel as uuids
+
 
 CONF = conf.CONF
 

@@ -13,6 +13,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel
 from oslo_vmware import exceptions as oslo_vmw_exceptions
 from oslo_vmware import vim_util as vutil
 
@@ -25,7 +26,6 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.image import fake as image_fake
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
-from nova.tests import uuidsentinel
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import vm_util

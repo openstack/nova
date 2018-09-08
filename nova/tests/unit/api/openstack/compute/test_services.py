@@ -19,6 +19,7 @@ import datetime
 import iso8601
 import mock
 from oslo_utils import fixture as utils_fixture
+from oslo_utils.fixture import uuidsentinel
 import six
 import webob.exc
 
@@ -35,7 +36,7 @@ from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.objects import test_service
-from nova.tests import uuidsentinel
+
 
 # This is tied into the os-services API samples functional tests.
 FAKE_UUID_COMPUTE_HOST1 = 'e81d66a4-ddd3-4aba-8a84-171d1cb4d339'

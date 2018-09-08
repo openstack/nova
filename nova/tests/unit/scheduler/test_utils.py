@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.placement import lib as plib
 from nova import context as nova_context
@@ -20,7 +21,6 @@ from nova.scheduler.client import report
 from nova.scheduler import utils
 from nova import test
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel as uuids
 
 
 class TestUtils(test.NoDBTestCase):

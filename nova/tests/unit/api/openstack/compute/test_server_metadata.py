@@ -16,6 +16,7 @@
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 import six
 import webob
@@ -28,7 +29,6 @@ from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel as uuids
 
 
 CONF = cfg.CONF

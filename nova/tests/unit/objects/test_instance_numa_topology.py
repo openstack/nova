@@ -13,13 +13,14 @@
 import copy
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_versionedobjects import base as ovo_base
 
 from nova import exception
 from nova import objects
 from nova.objects import fields
 from nova.tests.unit.objects import test_objects
-from nova.tests import uuidsentinel as uuids
+
 
 fake_instance_uuid = uuids.fake
 

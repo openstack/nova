@@ -15,6 +15,7 @@
 import datetime
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 import six
 from webob import exc
 
@@ -25,7 +26,6 @@ from nova import objects
 from nova.objects import base
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests import uuidsentinel as uuids
 
 
 fake_migrations = [

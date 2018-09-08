@@ -17,6 +17,7 @@ import datetime
 import mock
 from oslo_config import cfg
 from oslo_utils import fixture as utils_fixture
+from oslo_utils.fixture import uuidsentinel
 from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import vim_util as vutil
 
@@ -24,9 +25,9 @@ from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake
-from nova.tests import uuidsentinel
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import imagecache
+
 
 CONF = cfg.CONF
 

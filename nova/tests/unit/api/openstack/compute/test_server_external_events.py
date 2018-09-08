@@ -13,6 +13,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 import webob
 
 from nova.api.openstack.compute import server_external_events \
@@ -22,7 +23,7 @@ from nova import objects
 from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests import uuidsentinel as uuids
+
 
 fake_instances = {
     '00000000-0000-0000-0000-000000000001': objects.Instance(id=1,

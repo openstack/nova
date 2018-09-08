@@ -16,6 +16,7 @@
 """
 Tests for Block Device utility functions.
 """
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import block_device
 from nova import exception
@@ -23,7 +24,6 @@ from nova import objects
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import matchers
-from nova.tests import uuidsentinel as uuids
 
 
 class BlockDeviceTestCase(test.NoDBTestCase):

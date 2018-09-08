@@ -17,6 +17,7 @@ import copy
 import datetime
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 import six
 import webob
 
@@ -26,7 +27,7 @@ from nova import objects
 from nova.objects import base
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests import uuidsentinel as uuids
+
 
 SERVER_UUID = uuids.server_uuid
 

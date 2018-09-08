@@ -19,6 +19,7 @@ Tests for Consoleauth Code.
 """
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 import six
 
@@ -26,7 +27,6 @@ from nova.consoleauth import manager
 from nova import context
 from nova import objects
 from nova import test
-from nova.tests import uuidsentinel as uuids
 
 
 class ConsoleauthTestCase(test.NoDBTestCase):

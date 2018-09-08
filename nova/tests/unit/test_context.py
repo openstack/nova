@@ -15,13 +15,13 @@
 import mock
 from oslo_context import context as o_context
 from oslo_context import fixture as o_fixture
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import context
 from nova import exception
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests import uuidsentinel as uuids
 
 
 class ContextTestCase(test.NoDBTestCase):

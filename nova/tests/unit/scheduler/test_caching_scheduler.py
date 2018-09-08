@@ -14,6 +14,7 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from six.moves import range
 
@@ -22,7 +23,7 @@ from nova import objects
 from nova.scheduler import caching_scheduler
 from nova.scheduler import host_manager
 from nova.tests.unit.scheduler import test_scheduler
-from nova.tests import uuidsentinel as uuids
+
 
 ENABLE_PROFILER = False
 

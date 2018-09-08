@@ -11,12 +11,12 @@
 #    under the License.
 
 import mock
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import objects
 from nova.scheduler.filters import affinity_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
-from nova.tests import uuidsentinel as uuids
 
 
 class TestDifferentHostFilter(test.NoDBTestCase):

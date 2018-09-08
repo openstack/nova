@@ -17,9 +17,9 @@ import time
 
 import fixtures
 from lxml import etree
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.objects import fields as obj_fields
-from nova.tests import uuidsentinel as uuids
 from nova.virt.libvirt import config as vconfig
 
 # Allow passing None to the various connect methods

@@ -12,12 +12,13 @@
 
 import datetime
 
+from oslo_utils.fixture import uuidsentinel
+
 from nova.compute import migration_list
 from nova import context
 from nova import exception
 from nova import objects
 from nova import test
-from nova.tests import uuidsentinel
 
 
 class TestMigrationListObjects(test.TestCase):

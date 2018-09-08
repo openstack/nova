@@ -12,9 +12,10 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from oslo_utils.fixture import uuidsentinel
 
-from nova.tests import uuidsentinel
 from nova import utils
+
 
 fake_token = uuidsentinel.token
 fake_token_hash = utils.get_sha256_str(fake_token)

@@ -90,7 +90,7 @@ oslo.reports==1.18.0
 oslo.rootwrap==5.8.0
 oslo.serialization==2.18.0
 oslo.service==1.24.0
-oslo.utils==3.33.0
+oslo.utils==3.37.0
 oslo.versionedobjects==1.31.2
 oslo.vmware==2.17.0
 oslotest==3.2.0

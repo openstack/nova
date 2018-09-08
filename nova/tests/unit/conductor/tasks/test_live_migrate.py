@@ -12,6 +12,7 @@
 
 import mock
 import oslo_messaging as messaging
+from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
 from nova.compute import power_state
@@ -26,7 +27,6 @@ from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
 from nova import test
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 
