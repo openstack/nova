@@ -13,6 +13,8 @@ The following is a dive into some of the internals in nova.
 
 * :doc:`/reference/rpc`: How nova uses AMQP as an RPC transport
 * :doc:`/reference/scheduling`: The workflow through the scheduling process
+* :doc:`/reference/scheduler-hints-vs-flavor-extra-specs`: The similarities
+  and differences between flavor extra specs and scheduler hints.
 * :doc:`/reference/live-migration`: The live migration flow
 * :doc:`/reference/services`: Module descriptions for some of the key modules
   used in starting / running services

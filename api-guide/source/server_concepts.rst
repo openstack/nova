@@ -608,7 +608,9 @@ TODO: Add some description about BDM.
 Scheduler Hints
 ~~~~~~~~~~~~~~~
 
-TODO: Add description about how to custom scheduling policy for server booting.
+Refer to `this document`_ for information on scheduler hints.
+
+.. _this document: https://docs.openstack.org/nova/latest/reference/scheduler-hints-vs-flavor-extra-specs.html#scheduler-hints
 
 Server Consoles
 ~~~~~~~~~~~~~~~

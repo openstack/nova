@@ -335,6 +335,8 @@ resource calculating filters like RamFilter, CoreFilter.
 In medium/large environments having AvailabilityZoneFilter before any
 capability or resource calculating filters can be useful.
 
+.. _custom-scheduler-filters:
+
 Writing Your Own Filter
 -----------------------
 

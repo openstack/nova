@@ -239,6 +239,7 @@ looking parts of our architecture. These are collected below.
    reference/threading
    reference/update-provider-tree
    reference/vm-states
+   reference/scheduler-hints-vs-flavor-extra-specs
    user/index
    user/aggregates
    user/architecture
