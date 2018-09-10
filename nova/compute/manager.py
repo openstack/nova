@@ -2979,15 +2979,17 @@ class ComputeManager(manager.Manager):
             # a claim since the instance is already on this host.
             rebuild_claim = claims.NopClaim
 
-        image_meta = {}
         if image_ref:
-            image_meta = self.image_api.get(context, image_ref)
+            image_meta = objects.ImageMeta.from_image_ref(
+                context, self.image_api, image_ref)
         elif evacuate:
             # For evacuate the API does not send down the image_ref since the
             # image does not change so just get it from what was stashed in
             # the instance system_metadata when the instance was created (or
             # last rebuilt). This also works for volume-backed instances.
             image_meta = instance.image_meta
+        else:
+            image_meta = objects.ImageMeta()
 
         # NOTE(mriedem): On an evacuate, we need to update
         # the instance's host and node properties to reflect it's
@@ -3011,7 +3013,7 @@ class ComputeManager(manager.Manager):
                     migration=migration)
                 self._do_rebuild_instance_with_claim(
                     claim_ctxt, context, instance, orig_image_ref,
-                    image_ref, injected_files, new_pass, orig_sys_metadata,
+                    image_meta, injected_files, new_pass, orig_sys_metadata,
                     bdms, evacuate, on_shared_storage, preserve_ephemeral,
                     migration, request_spec)
             except (exception.ComputeResourcesUnavailable,
@@ -3085,7 +3087,7 @@ class ComputeManager(manager.Manager):
             return ''
 
     def _do_rebuild_instance(self, context, instance, orig_image_ref,
-                             image_ref, injected_files, new_pass,
+                             image_meta, injected_files, new_pass,
                              orig_sys_metadata, bdms, evacuate,
                              on_shared_storage, preserve_ephemeral,
                              migration, request_spec):
@@ -3123,15 +3125,9 @@ class ComputeManager(manager.Manager):
                 LOG.info('disk on shared storage, evacuating using'
                          ' existing disk')
             else:
-                image_ref = orig_image_ref = instance.image_ref
+                orig_image_ref = instance.image_ref
                 LOG.info("disk not on shared storage, evacuating from:"
-                         " '%s'", str(image_ref))
-
-        if image_ref:
-            image_meta = objects.ImageMeta.from_image_ref(
-                context, self.image_api, image_ref)
-        else:
-            image_meta = instance.image_meta
+                         " '%s'", str(orig_image_ref))
 
         # We check trusted certs capabilities for both evacuate (rebuild on
         # another host) and rebuild (rebuild on the same host) because for
