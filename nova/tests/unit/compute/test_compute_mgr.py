@@ -2559,13 +2559,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_prepare_for_instance_event(self, lock_name_mock):
         inst_obj = objects.Instance(uuid=uuids.instance)
         result = self.compute.instance_events.prepare_for_instance_event(
-            inst_obj, 'test-event')
+            inst_obj, 'test-event', None)
         self.assertIn(uuids.instance, self.compute.instance_events._events)
-        self.assertIn('test-event',
+        self.assertIn(('test-event', None),
                       self.compute.instance_events._events[uuids.instance])
         self.assertEqual(
             result,
-            self.compute.instance_events._events[uuids.instance]['test-event'])
+            self.compute.instance_events._events[uuids.instance]
+                                                [('test-event', None)])
         self.assertTrue(hasattr(result, 'send'))
         lock_name_mock.assert_called_once_with(inst_obj)
 
@@ -2574,7 +2575,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         event = eventlet_event.Event()
         self.compute.instance_events._events = {
             uuids.instance: {
-                'network-vif-plugged': event,
+                ('network-vif-plugged', None): event,
                 }
             }
         inst_obj = objects.Instance(uuid=uuids.instance)
@@ -2590,13 +2591,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         event = eventlet_event.Event()
         self.compute.instance_events._events = {
             uuids.instance: {
-                'test-event': event,
+                ('test-event', None): event,
                 }
             }
         inst_obj = objects.Instance(uuid=uuids.instance)
         result = self.compute.instance_events.clear_events_for_instance(
             inst_obj)
-        self.assertEqual(result, {'test-event': event})
+        self.assertEqual(result, {'test-event-None': event})
         lock_name_mock.assert_called_once_with(inst_obj)
 
     def test_instance_events_lock_name(self):
@@ -2607,24 +2608,25 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_prepare_for_instance_event_again(self):
         inst_obj = objects.Instance(uuid=uuids.instance)
         self.compute.instance_events.prepare_for_instance_event(
-            inst_obj, 'test-event')
+            inst_obj, 'test-event', None)
         # A second attempt will avoid creating a new list; make sure we
         # get the current list
         result = self.compute.instance_events.prepare_for_instance_event(
-            inst_obj, 'test-event')
+            inst_obj, 'test-event', None)
         self.assertIn(uuids.instance, self.compute.instance_events._events)
-        self.assertIn('test-event',
+        self.assertIn(('test-event', None),
                       self.compute.instance_events._events[uuids.instance])
         self.assertEqual(
             result,
-            self.compute.instance_events._events[uuids.instance]['test-event'])
+            self.compute.instance_events._events[uuids.instance]
+                                                [('test-event', None)])
         self.assertTrue(hasattr(result, 'send'))
 
     def test_process_instance_event(self):
         event = eventlet_event.Event()
         self.compute.instance_events._events = {
             uuids.instance: {
-                'network-vif-plugged': event,
+                ('network-vif-plugged', None): event,
                 }
             }
         inst_obj = objects.Instance(uuid=uuids.instance)
@@ -2926,7 +2928,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         fake_eventlet_event = mock.MagicMock()
         self.compute.instance_events._events = {
             inst.uuid: {
-                'network-vif-plugged-bar': fake_eventlet_event,
+                ('network-vif-plugged', uuids.portid): fake_eventlet_event,
             }
         }
         self.compute.instance_events.cancel_all_events()
@@ -2935,7 +2937,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertTrue(fake_eventlet_event.send.called)
         event = fake_eventlet_event.send.call_args_list[0][0][0]
         self.assertEqual('network-vif-plugged', event.name)
-        self.assertEqual('bar', event.tag)
+        self.assertEqual(uuids.portid, event.tag)
         self.assertEqual('failed', event.status)
 
     def test_cleanup_cancels_all_events(self):
@@ -2949,7 +2951,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         callback = mock.MagicMock()
         body = mock.MagicMock()
         with self.compute.virtapi.wait_for_instance_event(
-                instance, ['network-vif-plugged-bar'],
+                instance, [('network-vif-plugged', 'bar')],
                 error_callback=callback):
             body()
         self.assertTrue(body.called)
