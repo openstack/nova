@@ -127,32 +127,34 @@ class LibvirtStorPoolVolumeDriverTestCase(
 
         ci_1 = self.conn_info('1')
         ci_2 = self.conn_info('2')
+        rs_1 = ci_1['data']['real_size']
+        rs_2 = ci_2['data']['real_size']
 
         self.assertRaises(MockStorPoolExc,
                           libvirt_driver.extend_volume,
-                          ci_1, mock.sentinel.instance)
+                          ci_1, mock.sentinel.instance, rs_1)
 
         self.assertRaises(MockStorPoolExc,
                           libvirt_driver.extend_volume,
-                          ci_2, mock.sentinel.instance)
+                          ci_2, mock.sentinel.instance, rs_2)
 
         libvirt_driver.connect_volume(ci_1, mock.sentinel.instance)
         self.assertStorpoolAttached(('1',))
 
-        ns_1 = libvirt_driver.extend_volume(ci_1, mock.sentinel.instance)
+        ns_1 = libvirt_driver.extend_volume(ci_1, mock.sentinel.instance, rs_1)
         self.assertEqual(ci_1['data']['real_size'], ns_1)
 
         self.assertRaises(MockStorPoolExc,
                           libvirt_driver.extend_volume,
-                          ci_2, mock.sentinel.instance)
+                          ci_2, mock.sentinel.instance, rs_2)
 
         libvirt_driver.connect_volume(ci_2, mock.sentinel.instance)
         self.assertStorpoolAttached(('1', '2'))
 
-        ns_1 = libvirt_driver.extend_volume(ci_1, mock.sentinel.instance)
+        ns_1 = libvirt_driver.extend_volume(ci_1, mock.sentinel.instance, rs_1)
         self.assertEqual(ci_1['data']['real_size'], ns_1)
 
-        ns_2 = libvirt_driver.extend_volume(ci_2, mock.sentinel.instance)
+        ns_2 = libvirt_driver.extend_volume(ci_2, mock.sentinel.instance, rs_2)
         self.assertEqual(ci_2['data']['real_size'], ns_2)
 
         self.assertRaises(MockStorPoolExc,
@@ -168,7 +170,7 @@ class LibvirtStorPoolVolumeDriverTestCase(
 
         self.assertRaises(MockStorPoolExc,
                           libvirt_driver.extend_volume,
-                          ci_1, mock.sentinel.instance)
+                          ci_1, mock.sentinel.instance, rs_1)
 
         libvirt_driver.disconnect_volume(ci_2, mock.sentinel.instance)
         self.assertDictEqual({}, test_attached)

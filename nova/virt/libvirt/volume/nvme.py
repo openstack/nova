@@ -53,7 +53,7 @@ class LibvirtNVMEVolumeDriver(libvirt_volume.LibvirtVolumeDriver):
         super(LibvirtNVMEVolumeDriver,
               self).disconnect_volume(connection_info, instance)
 
-    def extend_volume(self, connection_info, instance):
+    def extend_volume(self, connection_info, instance, requested_size):
         """Extend the volume."""
         LOG.debug("calling os-brick to extend NVMe Volume", instance=instance)
         new_size = self.connector.extend_volume(connection_info['data'])

@@ -52,6 +52,7 @@ from oslo_service import periodic_task
 from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
+from oslo_utils import units
 import six
 from six.moves import range
 
@@ -8048,7 +8049,8 @@ class ComputeManager(manager.Manager):
 
         try:
             self.driver.extend_volume(connection_info,
-                                      instance)
+                                      instance,
+                                      bdm.volume_size * units.Gi)
         except Exception as ex:
             LOG.warning('Extend volume failed, '
                         'volume_id=%(volume_id)s, reason: %(msg)s',

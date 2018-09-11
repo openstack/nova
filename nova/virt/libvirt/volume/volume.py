@@ -132,8 +132,19 @@ class LibvirtBaseVolumeDriver(object):
         """Disconnect the volume."""
         pass
 
-    def extend_volume(self, connection_info, instance):
-        """Extend the volume."""
+    def extend_volume(self, connection_info, instance, requested_size):
+        """Extend the volume.
+
+        :param: connection_info: connection information about the volume
+            that has been extended.
+        :param: instance: instance connected to the newly extended volume.
+        :param: requested_size: new extended size (in bytes) for the volume to
+            be extended.
+
+        :returns: the new size to use when resizing the disk in QEMU.
+
+        Note: the requested_size parameter is not used by all volume drivers
+        """
         raise NotImplementedError()
 
 

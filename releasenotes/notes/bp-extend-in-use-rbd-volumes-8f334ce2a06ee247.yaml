@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Adds support for extending RBD attached volumes using the libvirt network
+    volume driver.

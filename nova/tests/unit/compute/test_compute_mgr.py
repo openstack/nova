@@ -2965,6 +2965,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_extend_volume(self):
         inst_obj = objects.Instance(id=3, uuid=uuids.instance)
         connection_info = {'foo': 'bar'}
+        new_size = 20
         bdm = objects.BlockDeviceMapping(
             source_type='volume',
             destination_type='volume',
@@ -2982,13 +2983,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         def do_test(bdm_save, bdm_get_by_vol_and_inst, extend_volume,
                     volume_api):
             bdm_get_by_vol_and_inst.return_value = bdm
-            volume_api.get.return_value = {'size': 20}
+            volume_api.get.return_value = {'size': new_size}
 
             self.compute.extend_volume(
                 self.context, inst_obj, uuids.volume_id)
             bdm_save.assert_called_once_with()
             extend_volume.assert_called_once_with(
-                connection_info, inst_obj)
+                connection_info, inst_obj, new_size * pow(1024, 3))
 
         do_test()
 
