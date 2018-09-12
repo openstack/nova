@@ -1,0 +1,115 @@
+#!/bin/bash -x
+
+BASE=${BASE:-/opt/stack}
+# Source stackrc to determine the configured VIRT_DRIVER
+source ${BASE}/new/devstack/stackrc
+
+set -e
+# We need to get the admin credentials to run CLIs.
+set +x
+source ${BASE}/new/devstack/openrc admin
+set -x
+
+if [[ ${VIRT_DRIVER} != libvirt ]]; then
+   echo "Only the libvirt driver is supported by this script"
+   exit 1
+fi
+
+echo "Ensure we have at least two compute nodes"
+nodenames=$(openstack hypervisor list -f value -c 'Hypervisor Hostname')
+node_count=$(echo ${nodenames} | wc -w)
+if [[ ${node_count} -lt 2 ]]; then
+    echo "Evacuate requires at least two nodes"
+    exit 2
+fi
+
+echo "Finding the subnode"
+subnode=''
+local_hostname=$(hostname -s)
+for nodename in ${nodenames}; do
+    if [[ ${local_hostname} != ${nodename} ]]; then
+        subnode=${nodename}
+        break
+    fi
+done
+
+# Sanity check that we found the subnode.
+if [[ -z ${subnode} ]]; then
+    echo "Failed to find subnode from nodes: ${nodenames}"
+    exit 3
+fi
+
+echo "Creating test server on subnode"
+image=$(openstack image list -f value -c Name | awk 'NR==1{print $1}')
+flavor=$(openstack flavor list -f value -c Name | awk 'NR==1{print $1}')
+openstack server create --image ${image} --flavor ${flavor} \
+--availability-zone nova:${subnode} --wait evacuate-test
+
+echo "Forcing down the subnode so we can evacuate from it"
+openstack --os-compute-api-version 2.11 compute service set --down ${subnode} nova-compute
+
+echo "Stopping libvirt on the localhost before evacuating to trigger failure"
+sudo systemctl stop libvirt-bin
+
+# Now force the evacuation to *this* host; we have to force to bypass the
+# scheduler since we killed libvirtd which will trigger the libvirt compute
+# driver to auto-disable the nova-compute service and then the ComputeFilter
+# would filter out this host and we'd get NoValidHost. Normally forcing a host
+# during evacuate and bypassing the scheduler is a very bad idea, but we're
+# doing a negative test here.
+# TODO(mriedem): Use OSC when it supports evacuate.
+echo "Forcing evacuate to local host"
+nova evacuate --force evacuate-test ${local_hostname}
+# Wait for the instance to go into ERROR state from the failed evacuate.
+count=0
+status=$(openstack server show evacuate-test -f value -c status)
+while [ "${status}" != "ERROR" ]
+do
+    sleep 1
+    count=$((count+1))
+    if [ ${count} -eq 30 ]; then
+        echo "Timed out waiting for server to go to ERROR status"
+        exit 4
+    fi
+    status=$(openstack server show evacuate-test -f value -c status)
+done
+
+echo "Now restart libvirt and perform a successful evacuation"
+sudo systemctl start libvirt-bin
+sleep 10
+
+# Wait for the compute service to be enabled.
+count=0
+status=$(openstack compute service list --host ${local_hostname} --service nova-compute -f value -c Status)
+while [ "${status}" != "enabled" ]
+do
+    sleep 1
+    count=$((count+1))
+    if [ ${count} -eq 30 ]; then
+        echo "Timed out waiting for local compute service to be enabled"
+        exit 5
+    fi
+    status=$(openstack compute service list --host ${local_hostname} --service nova-compute -f value -c Status)
+done
+
+nova evacuate evacuate-test
+# Wait for the instance to go into ACTIVE state from the evacuate.
+count=0
+status=$(openstack server show evacuate-test -f value -c status)
+while [ "${status}" != "ACTIVE" ]
+do
+    sleep 1
+    count=$((count+1))
+    if [ ${count} -eq 30 ]; then
+        echo "Timed out waiting for server to go to ACTIVE status"
+        exit 6
+    fi
+    status=$(openstack server show evacuate-test -f value -c status)
+done
+
+# Make sure the server moved.
+host=$(openstack server show evacuate-test -f value -c OS-EXT-SRV-ATTR:host)
+if [[ ${host} != ${local_hostname} ]]; then
+    echo "Unexpected host ${host} for server after evacuate."
+    exit 7
+fi

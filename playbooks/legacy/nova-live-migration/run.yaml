@@ -34,6 +34,7 @@
           export DEVSTACK_GATE_TOPOLOGY="multinode"
           function post_test_hook {
               /opt/stack/new/nova/nova/tests/live_migration/hooks/run_tests.sh
+              $BASE/new/nova/gate/test_evacuate.sh
           }
           export -f post_test_hook
           cp devstack-gate/devstack-vm-gate-wrap.sh ./safe-devstack-vm-gate-wrap.sh

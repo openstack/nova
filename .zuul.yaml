@@ -80,6 +80,10 @@
 - job:
     name: nova-live-migration
     parent: nova-dsvm-multinode-base
+    description: |
+      Run tempest live migration tests against both local storage and shared
+      storage using ceph (the environment is reconfigured for ceph after the
+      local storage tests are run). Also runs simple evacuate tests.
     run: playbooks/legacy/nova-live-migration/run.yaml
     post-run: playbooks/legacy/nova-live-migration/post.yaml
 
