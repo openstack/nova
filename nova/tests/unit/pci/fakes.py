@@ -33,6 +33,8 @@ def patch_pci_whitelist(f):
     @functools.wraps(f)
     def wrapper(self, *args, **kwargs):
         patcher = fake_pci_whitelist()
-        f(self, *args, **kwargs)
-        patcher.stop()
+        try:
+            f(self, *args, **kwargs)
+        finally:
+            patcher.stop()
     return wrapper

@@ -989,10 +989,11 @@ class CinderClientTestCase(test.NoDBTestCase):
         self.ctxt = context.RequestContext('fake-user', 'fake-project')
         # Mock out the keystoneauth stuff.
         self.mock_session = mock.Mock(autospec=session.Session)
-        load_session = mock.patch('keystoneauth1.loading.'
+        patcher = mock.patch('keystoneauth1.loading.'
                                   'load_session_from_conf_options',
-                                  return_value=self.mock_session).start()
-        self.addCleanup(load_session.stop)
+                                  return_value=self.mock_session)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     @mock.patch('cinderclient.client.get_volume_api_from_url',
                 return_value='3')

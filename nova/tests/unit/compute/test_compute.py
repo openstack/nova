@@ -8373,9 +8373,11 @@ class ComputeAPITestCase(BaseTestCase):
                                    'schedule_and_build_instances',
                                    autospec=True)
         self.schedule_and_build_instances_mock = _patch.start()
+        self.addCleanup(_patch.stop)
         _patch = mock.patch.object(self.compute_api.compute_task_api,
                                    'rebuild_instance', autospec=True)
         self.rebuild_instance_mock = _patch.start()
+        self.addCleanup(_patch.stop)
 
         # Assume that we're always OK for network quota.
         def fake_validate_networks(context, requested_networks, num_instances):
