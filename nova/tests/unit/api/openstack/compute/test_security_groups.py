@@ -192,8 +192,8 @@ class TestSecurityGroupsV21(test.TestCase):
             self.controller.create(self.req, {'security_group': sg})
             self.fail('Should have raised BadRequest exception')
         except webob.exc.HTTPBadRequest as exc:
-            self.assertEqual('description has a minimum character requirement'
-                             ' of 1.', exc.explanation)
+            self.assertEqual('description has 0 characters, '
+                             'less than 1.', exc.explanation)
         except exception.InvalidInput:
             self.fail('Should have raised BadRequest exception instead of')
 
