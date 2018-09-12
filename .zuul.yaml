@@ -210,7 +210,7 @@
               - ^tests-py3.txt$
               - ^tools/.*$
               - ^tox.ini$
-        - legacy-tempest-dsvm-full-devstack-plugin-ceph:
+        - devstack-plugin-ceph-tempest:
             voting: false
             irrelevant-files:
               - ^(placement-)?api-.*$
@@ -473,7 +473,7 @@
               - ^tools/.*$
               - ^tox.ini$
         - legacy-barbican-simple-crypto-dsvm-tempest-nova
-        - legacy-tempest-dsvm-py35-full-devstack-plugin-ceph:
+        - devstack-plugin-ceph-tempest-py3:
             irrelevant-files:
               - ^(placement-)?api-.*$
               - ^(test-|)requirements.txt$
