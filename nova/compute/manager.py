@@ -6514,23 +6514,22 @@ class ComputeManager(manager.Manager):
         # migrate_data objects for drivers that expose block live migration
         # information (i.e. Libvirt, Xenapi and HyperV). For other drivers
         # cleanup is not needed.
-        is_shared_block_storage = True
-        is_shared_instance_path = True
+        do_cleanup = False
+        destroy_disks = False
         if isinstance(migrate_data, migrate_data_obj.LibvirtLiveMigrateData):
-            is_shared_block_storage = migrate_data.is_shared_block_storage
-            is_shared_instance_path = migrate_data.is_shared_instance_path
+            # No instance booting at source host, but instance dir
+            # must be deleted for preparing next block migration
+            # must be deleted for preparing next live migration w/o shared
+            # storage
+            do_cleanup = not migrate_data.is_shared_instance_path
+            destroy_disks = not migrate_data.is_shared_block_storage
         elif isinstance(migrate_data, migrate_data_obj.XenapiLiveMigrateData):
-            is_shared_block_storage = not migrate_data.block_migration
-            is_shared_instance_path = not migrate_data.block_migration
+            do_cleanup = migrate_data.block_migration
+            destroy_disks = migrate_data.block_migration
         elif isinstance(migrate_data, migrate_data_obj.HyperVLiveMigrateData):
-            is_shared_instance_path = migrate_data.is_shared_instance_path
-            is_shared_block_storage = migrate_data.is_shared_instance_path
-
-        # No instance booting at source host, but instance dir
-        # must be deleted for preparing next block migration
-        # must be deleted for preparing next live migration w/o shared storage
-        do_cleanup = not is_shared_instance_path
-        destroy_disks = not is_shared_block_storage
+            # NOTE(claudiub): We need to cleanup any zombie Planned VM.
+            do_cleanup = True
+            destroy_disks = not migrate_data.is_shared_instance_path
 
         return (do_cleanup, destroy_disks)
 

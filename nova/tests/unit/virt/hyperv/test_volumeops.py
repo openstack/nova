@@ -304,8 +304,10 @@ class BaseVolumeDriverTestCase(test_base.HyperVBaseTestCase):
 
         self._base_vol_driver._diskutils = mock.Mock()
         self._base_vol_driver._vmutils = mock.Mock()
+        self._base_vol_driver._migrutils = mock.Mock()
         self._base_vol_driver._conn = mock.Mock()
         self._vmutils = self._base_vol_driver._vmutils
+        self._migrutils = self._base_vol_driver._migrutils
         self._diskutils = self._base_vol_driver._diskutils
         self._conn = self._base_vol_driver._conn
 
@@ -452,9 +454,15 @@ class BaseVolumeDriverTestCase(test_base.HyperVBaseTestCase):
     def test_attach_volume_block_dev(self):
         self._test_attach_volume(is_block_dev=True)
 
+    def test_detach_volume_planned_vm(self):
+        self._base_vol_driver.detach_volume(mock.sentinel.connection_info,
+                                            mock.sentinel.inst_name)
+        self._vmutils.detach_vm_disk.assert_not_called()
+
     @mock.patch.object(volumeops.BaseVolumeDriver,
                        'get_disk_resource_path')
     def test_detach_volume(self, mock_get_disk_resource_path):
+        self._migrutils.planned_vm_exists.return_value = False
         connection_info = get_fake_connection_info()
 
         self._base_vol_driver.detach_volume(connection_info,
