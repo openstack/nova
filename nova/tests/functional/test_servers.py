@@ -17,6 +17,7 @@ import datetime
 import time
 import zlib
 
+from keystoneauth1 import adapter
 import mock
 from oslo_log import log as logging
 from oslo_serialization import base64
@@ -4498,6 +4499,59 @@ class ConsumerGenerationConflictTest(
 
         self._delete_and_check_allocations(server)
 
+    def test_confirm_migrate_delete_alloc_on_source_fails(self):
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(self.flavor, source_hostname)
+        self._migrate_and_check_allocations(
+            server, self.flavor, source_rp_uuid, dest_rp_uuid)
+
+        rsp = fake_requests.FakeResponse(
+            409,
+            jsonutils.dumps(
+                {'errors': [
+                    {'code': 'placement.concurrent_update',
+                     'detail': 'consumer generation conflict'}]}))
+
+        with mock.patch('keystoneauth1.adapter.Adapter.put',
+                        autospec=True) as mock_put:
+            mock_put.return_value = rsp
+
+            post = {'confirmResize': None}
+            self.api.post_server_action(
+                server['id'], post, check_response_status=[204])
+            server = self._wait_for_state_change(self.api, server, 'ERROR')
+            self.assertIn('Failed to delete allocations',
+                          server['fault']['message'])
+
+        self.assertEqual(1, mock_put.call_count)
+
+        migrations = self.api.get_migrations()
+        self.assertEqual(1, len(migrations))
+        self.assertEqual('migration', migrations[0]['migration_type'])
+        self.assertEqual(server['id'], migrations[0]['instance_uuid'])
+        self.assertEqual(source_hostname, migrations[0]['source_compute'])
+        # NOTE(gibi): it might be better to mark the migration as error
+        self.assertEqual('confirmed', migrations[0]['status'])
+
+        # NOTE(gibi): Nova leaks the allocation held by the migration_uuid even
+        # after the instance is deleted. At least nova logs a fat ERROR.
+        self.assertIn('Deleting allocation in placement for migration %s '
+                      'failed. The instance %s will be put to ERROR state but '
+                      'the allocation held by the migration is leaked.' %
+                      (migrations[0]['uuid'], server['id']),
+                      self.stdlog.logger.output)
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
+
+        allocations = self._get_allocations_by_server_uuid(
+            migrations[0]['uuid'])
+        self.assertEqual(1, len(allocations))
+
     def test_revert_migrate_delete_dest_allocation_fails_due_to_conflict(self):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
@@ -4597,6 +4651,100 @@ class ConsumerGenerationConflictTest(
 
         allocations = self._get_allocations_by_server_uuid(
             migrations[0]['uuid'])
+        self.assertEqual(1, len(allocations))
+
+    def test_live_migrate_drop_allocation_on_source_fails(self):
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(
+            self.flavor, source_hostname)
+
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
+
+        orig_put = adapter.Adapter.put
+
+        rsp = fake_requests.FakeResponse(
+            409,
+            jsonutils.dumps(
+                {'errors': [
+                    {'code': 'placement.concurrent_update',
+                     'detail': 'consumer generation conflict'}]}))
+
+        def fake_put(_self, url, *args, **kwargs):
+            migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+            if url == '/allocations/%s' % migration_uuid:
+                return rsp
+            else:
+                return orig_put(_self, url, *args, **kwargs)
+
+        with mock.patch('keystoneauth1.adapter.Adapter.put',
+                        autospec=True) as mock_put:
+            mock_put.side_effect = fake_put
+
+            post = {
+                'os-migrateLive': {
+                    'host': dest_hostname,
+                    'block_migration': True,
+                    'force': True,
+                }
+            }
+
+            self.api.post_server_action(server['id'], post)
+
+            # nova does the source host cleanup _after_ setting the migration
+            # to completed and sending end notifications so we have to wait
+            # here a bit.
+            time.sleep(1)
+
+            # Nova failed to clean up on the source host. This right now puts
+            # the instance to ERROR state and fails the migration.
+            server = self._wait_for_server_parameter(self.api, server,
+                {'OS-EXT-SRV-ATTR:host': dest_hostname,
+                 'status': 'ERROR'})
+            self._wait_for_migration_status(server, ['error'])
+            fake_notifier.wait_for_versioned_notifications(
+                'instance.live_migration_post.end')
+
+        # 1 claim on destination, 1 normal delete on dest that fails,
+        self.assertEqual(2, mock_put.call_count)
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        # As the cleanup on the source host failed Nova leaks the allocation
+        # held by the migration.
+        self.assertFlavorMatchesAllocation(self.flavor, source_usages)
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+        allocations = self._get_allocations_by_server_uuid(migration_uuid)
+        self.assertEqual(1, len(allocations))
+        self.assertIn(source_rp_uuid, allocations)
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor, source_allocation)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        self.assertNotIn(source_rp_uuid, allocations)
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor, dest_allocation)
+
+        # NOTE(gibi): Nova leaks the allocation held by the migration_uuid even
+        # after the instance is deleted. At least nova logs a fat ERROR.
+        self.assertIn('Deleting allocation in placement for migration %s '
+                      'failed. The instance %s will be put to ERROR state but '
+                      'the allocation held by the migration is leaked.' %
+                      (migration_uuid, server['id']),
+                      self.stdlog.logger.output)
+
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
+
+        allocations = self._get_allocations_by_server_uuid(migration_uuid)
         self.assertEqual(1, len(allocations))
 
     def test_server_delete_fails_due_to_conflict(self):

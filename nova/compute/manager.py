@@ -3893,7 +3893,8 @@ class ComputeManager(manager.Manager):
             rt = self._get_resource_tracker()
             rt.drop_move_claim(context, instance, migration.source_node,
                                old_instance_type, prefix='old_')
-            self._delete_allocation_after_move(context, instance, migration,
+            self._delete_allocation_after_move(context, instance,
+                                               migration,
                                                old_instance_type,
                                                migration.source_node)
             instance.drop_migration_context()
@@ -3933,18 +3934,28 @@ class ComputeManager(manager.Manager):
 
         if migration.source_node == nodename:
             if migration.status in ('confirmed', 'completed'):
-                # NOTE(danms): We're finishing on the source node, so try to
-                # delete the allocation based on the migration uuid
-                deleted = self.reportclient.delete_allocation_for_instance(
-                    context, migration.uuid)
-                if deleted:
-                    LOG.info(_('Source node %(node)s confirmed migration '
-                               '%(mig)s; deleted migration-based '
-                               'allocation'),
-                             {'node': nodename, 'mig': migration.uuid})
-                    # NOTE(danms): We succeeded, which means we do not
-                    # need to do the complex double allocation dance
-                    return
+                try:
+                    # NOTE(danms): We're finishing on the source node, so try
+                    # to delete the allocation based on the migration uuid
+                    deleted = self.reportclient.delete_allocation_for_instance(
+                        context, migration.uuid)
+                    if deleted:
+                        LOG.info(_('Source node %(node)s confirmed migration '
+                                   '%(mig)s; deleted migration-based '
+                                   'allocation'),
+                                 {'node': nodename, 'mig': migration.uuid})
+                        # NOTE(danms): We succeeded, which means we do not
+                        # need to do the complex double allocation dance
+                        return
+                except exception.AllocationDeleteFailed:
+                    LOG.error('Deleting allocation in placement for migration '
+                              '%(migration_uuid)s failed. The instance '
+                              '%(instance_uuid)s will be put to ERROR state '
+                              'but the allocation held by the migration is '
+                              'leaked.',
+                              {'instance_uuid': instance.uuid,
+                               'migration_uuid': migration.uuid})
+                    raise
             else:
                 # We're reverting (or failed) on the source, so we
                 # need to check if our migration holds a claim and if
