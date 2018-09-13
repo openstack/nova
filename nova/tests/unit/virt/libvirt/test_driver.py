@@ -944,8 +944,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                         'Driver capabilities for '
                         '\'supports_extend_volume\' '
                         'is invalid')
-        self.assertFalse(drvr.requires_allocation_refresh,
-                         'Driver does not need allocation refresh')
         self.assertTrue(drvr.capabilities['supports_trusted_certs'],
                         'Driver capabilities for '
                         '\'supports_trusted_certs\' '
