@@ -20,6 +20,7 @@ import functools
 import sys
 
 from oslo_config import cfg
+from oslo_db import exception as db_exc
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -77,7 +78,12 @@ def targets_cell(fn):
         except exception.InstanceMappingNotFound:
             LOG.error('InstanceMapping not found, unable to target cell',
                       instance=instance)
-            im = None
+        except db_exc.CantStartEngineError:
+            # Check to see if we can ignore API DB connection failures
+            # because we might already be in the cell conductor.
+            with excutils.save_and_reraise_exception() as err_ctxt:
+                if CONF.api_database.connection is None:
+                    err_ctxt.reraise = False
         else:
             LOG.debug('Targeting cell %(cell)s for conductor method %(meth)s',
                       {'cell': im.cell_mapping.identity,
