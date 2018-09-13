@@ -1058,9 +1058,10 @@ class TestSetAndClearAllocations(SchedulerReportClientTestCase):
         super(TestSetAndClearAllocations, self).setUp()
         # We want to reuse the mock throughout the class, but with
         # different return values.
-        self.mock_post = mock.patch(
-            'nova.scheduler.client.report.SchedulerReportClient.post').start()
-        self.addCleanup(self.mock_post.stop)
+        patcher = mock.patch(
+            'nova.scheduler.client.report.SchedulerReportClient.post')
+        self.mock_post = patcher.start()
+        self.addCleanup(patcher.stop)
         self.mock_post.return_value.status_code = 204
         self.rp_uuid = mock.sentinel.rp
         self.consumer_uuid = mock.sentinel.consumer
