@@ -21,6 +21,7 @@ import six
 
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
+from nova import context as nova_context
 from nova import exception
 from nova import objects
 from nova.scheduler import utils as scheduler_utils
@@ -34,7 +35,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
     """Test case for scheduler utils methods."""
     def setUp(self):
         super(SchedulerUtilsTestCase, self).setUp()
-        self.context = 'fake-context'
+        self.context = nova_context.get_context()
 
     def test_build_request_spec_without_image(self):
         instance = {'uuid': uuids.instance}
