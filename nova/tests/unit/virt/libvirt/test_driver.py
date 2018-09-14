@@ -6221,7 +6221,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         cfg = drvr._get_guest_config(instance_ref,
                                      _fake_network_info(self, 1),
                                      image_meta, disk_info)
-        self.assertEqual(cfg.os_mach_type, "vexpress-a15")
+        self.assertEqual(cfg.os_mach_type, "virt")
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_guest_storage_config")
