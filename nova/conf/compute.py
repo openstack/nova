@@ -657,7 +657,56 @@ node.
 Possible values:
 
 * Any positive integer in seconds.
-""")
+"""),
+    cfg.BoolOpt('live_migration_wait_for_vif_plug',
+        # TODO(mriedem): Change to default=True starting in Stein.
+        default=False,
+        help="""
+Determine if the source compute host should wait for a ``network-vif-plugged``
+event from the (neutron) networking service before starting the actual transfer
+of the guest to the destination compute host.
+
+If you set this option the same on all of your compute hosts, which you should
+do if you use the same networking backend universally, you do not have to
+worry about this.
+
+Before starting the transfer of the guest, some setup occurs on the destination
+compute host, including plugging virtual interfaces. Depending on the
+networking backend **on the destination host**, a ``network-vif-plugged``
+event may be triggered and then received on the source compute host and the
+source compute can wait for that event to ensure networking is set up on the
+destination host before starting the guest transfer in the hypervisor.
+
+By default, this is False for two reasons:
+
+1. Backward compatibility: deployments should test this out and ensure it works
+   for them before enabling it.
+
+2. The compute service cannot reliably determine which types of virtual
+   interfaces (``port.binding:vif_type``) will send ``network-vif-plugged``
+   events without an accompanying port ``binding:host_id`` change.
+   Open vSwitch and linuxbridge should be OK, but OpenDaylight is at least
+   one known backend that will not currently work in this case, see bug
+   https://launchpad.net/bugs/1755890 for more details.
+
+Possible values:
+
+* True: wait for ``network-vif-plugged`` events before starting guest transfer
+* False: do not wait for ``network-vif-plugged`` events before starting guest
+  transfer (this is how things have always worked before this option
+  was introduced)
+
+Related options:
+
+* [DEFAULT]/vif_plugging_is_fatal: if ``live_migration_wait_for_vif_plug`` is
+  True and ``vif_plugging_timeout`` is greater than 0, and a timeout is
+  reached, the live migration process will fail with an error but the guest
+  transfer will not have started to the destination host
+* [DEFAULT]/vif_plugging_timeout: if ``live_migration_wait_for_vif_plug`` is
+  True, this controls the amount of time to wait before timing out and either
+  failing if ``vif_plugging_is_fatal`` is True, or simply continuing with the
+  live migration
+"""),
 ]
 
 interval_opts = [

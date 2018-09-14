@@ -20,6 +20,7 @@ import time
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
 from eventlet import event as eventlet_event
+from eventlet import timeout as eventlet_timeout
 import mock
 import netaddr
 from oslo_log import log as logging
@@ -7008,6 +7009,132 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock_attach_delete.assert_called_once_with(self.context,
                                                        new_attachment_id)
         _test()
+
+    def test_get_neutron_events_for_live_migration_empty(self):
+        """Tests the various ways that _get_neutron_events_for_live_migration
+        will return an empty list.
+        """
+        nw = network_model.NetworkInfo([network_model.VIF(uuids.port1)])
+        # 1. no timeout
+        self.flags(vif_plugging_timeout=0)
+        self.assertEqual(
+            [], self.compute._get_neutron_events_for_live_migration(nw))
+        # 2. not neutron
+        self.flags(vif_plugging_timeout=300, use_neutron=False)
+        self.assertEqual(
+            [], self.compute._get_neutron_events_for_live_migration(nw))
+        # 3. no VIFs
+        self.flags(vif_plugging_timeout=300, use_neutron=True)
+        self.assertEqual(
+            [], self.compute._get_neutron_events_for_live_migration([]))
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
+    @mock.patch('nova.compute.manager.ComputeManager._post_live_migration')
+    def test_live_migration_wait_vif_plugged(
+            self, mock_post_live_mig, mock_pre_live_mig):
+        """Tests the happy path of waiting for network-vif-plugged events from
+        neutron when so configured.
+        """
+        self.flags(live_migration_wait_for_vif_plug=True, group='compute')
+        migrate_data = objects.LibvirtLiveMigrateData()
+        mock_pre_live_mig.return_value = migrate_data
+        self.instance.info_cache = objects.InstanceInfoCache(
+            network_info=network_model.NetworkInfo([
+                network_model.VIF(uuids.port1), network_model.VIF(uuids.port2)
+            ]))
+        with mock.patch.object(self.compute.virtapi,
+                               'wait_for_instance_event') as wait_for_event:
+            self.compute._do_live_migration(
+                self.context, 'dest-host', self.instance, None, self.migration,
+                migrate_data)
+        self.assertEqual(2, len(wait_for_event.call_args[0][1]))
+        self.assertEqual(CONF.vif_plugging_timeout,
+                         wait_for_event.call_args[1]['deadline'])
+        mock_pre_live_mig.assert_called_once_with(
+            self.context, self.instance, None, None, 'dest-host',
+            migrate_data)
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
+    @mock.patch('nova.compute.manager.ComputeManager._rollback_live_migration')
+    def test_live_migration_wait_vif_plugged_vif_plug_error(
+            self, mock_rollback_live_mig, mock_pre_live_mig):
+        """Tests the scenario where wait_for_instance_event fails with
+        VirtualInterfacePlugException.
+        """
+        self.flags(live_migration_wait_for_vif_plug=True, group='compute')
+        migrate_data = objects.LibvirtLiveMigrateData()
+        mock_pre_live_mig.return_value = migrate_data
+        self.instance.info_cache = objects.InstanceInfoCache(
+            network_info=network_model.NetworkInfo([
+                network_model.VIF(uuids.port1)]))
+        with mock.patch.object(
+                self.compute.virtapi,
+                'wait_for_instance_event') as wait_for_event:
+            wait_for_event.return_value.__enter__.side_effect = (
+                exception.VirtualInterfacePlugException())
+            self.assertRaises(
+                exception.VirtualInterfacePlugException,
+                self.compute._do_live_migration, self.context, 'dest-host',
+                self.instance, None, self.migration, migrate_data)
+        self.assertEqual('error', self.migration.status)
+        mock_rollback_live_mig.assert_called_once_with(
+            self.context, self.instance, 'dest-host', migrate_data)
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
+    @mock.patch('nova.compute.manager.ComputeManager._rollback_live_migration')
+    def test_live_migration_wait_vif_plugged_timeout_error(
+            self, mock_rollback_live_mig, mock_pre_live_mig):
+        """Tests the scenario where wait_for_instance_event raises an
+        eventlet Timeout exception and we're configured such that vif plugging
+        failures are fatal (which is the default).
+        """
+        self.flags(live_migration_wait_for_vif_plug=True, group='compute')
+        migrate_data = objects.LibvirtLiveMigrateData()
+        mock_pre_live_mig.return_value = migrate_data
+        self.instance.info_cache = objects.InstanceInfoCache(
+            network_info=network_model.NetworkInfo([
+                network_model.VIF(uuids.port1)]))
+        with mock.patch.object(
+                self.compute.virtapi,
+                'wait_for_instance_event') as wait_for_event:
+            wait_for_event.return_value.__enter__.side_effect = (
+                eventlet_timeout.Timeout())
+            ex = self.assertRaises(
+                exception.MigrationError, self.compute._do_live_migration,
+                self.context, 'dest-host', self.instance, None,
+                self.migration, migrate_data)
+            self.assertIn('Timed out waiting for events', six.text_type(ex))
+        self.assertEqual('error', self.migration.status)
+        mock_rollback_live_mig.assert_called_once_with(
+            self.context, self.instance, 'dest-host', migrate_data)
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
+    @mock.patch('nova.compute.manager.ComputeManager._rollback_live_migration')
+    @mock.patch('nova.compute.manager.ComputeManager._post_live_migration')
+    def test_live_migration_wait_vif_plugged_timeout_non_fatal(
+            self, mock_post_live_mig, mock_rollback_live_mig,
+            mock_pre_live_mig):
+        """Tests the scenario where wait_for_instance_event raises an
+        eventlet Timeout exception and we're configured such that vif plugging
+        failures are NOT fatal.
+        """
+        self.flags(live_migration_wait_for_vif_plug=True, group='compute')
+        self.flags(vif_plugging_is_fatal=False)
+        migrate_data = objects.LibvirtLiveMigrateData()
+        mock_pre_live_mig.return_value = migrate_data
+        self.instance.info_cache = objects.InstanceInfoCache(
+            network_info=network_model.NetworkInfo([
+                network_model.VIF(uuids.port1)]))
+        with mock.patch.object(
+                self.compute.virtapi,
+                'wait_for_instance_event') as wait_for_event:
+            wait_for_event.return_value.__enter__.side_effect = (
+                eventlet_timeout.Timeout())
+            self.compute._do_live_migration(
+                self.context, 'dest-host', self.instance, None,
+                self.migration, migrate_data)
+        self.assertEqual('running', self.migration.status)
+        mock_rollback_live_mig.assert_not_called()
 
     def test_live_migration_force_complete_succeeded(self):
         migration = objects.Migration()
