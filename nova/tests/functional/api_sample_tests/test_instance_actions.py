@@ -110,13 +110,13 @@ class ServerActionsV258SampleJsonTest(ServerActionsV251AdminSampleJsonTest):
         self._verify_response('instance-actions-list-with-marker-resp',
                               self._get_subs(), response, 200)
 
-    def test_instance_actions_with_timestamp_filter(self):
+    def test_instance_actions_with_changes_since(self):
         stop_action_time = self.action_stop['start_time']
         response = self._do_get(
             'servers/%s/os-instance-actions'
             '?changes-since=%s' % (self.uuid, stop_action_time))
         self._verify_response(
-            'instance-actions-list-with-timestamp-filter',
+            'instance-actions-list-with-changes-since',
             self._get_subs(), response, 200)
 
 

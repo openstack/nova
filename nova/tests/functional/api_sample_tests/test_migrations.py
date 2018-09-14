@@ -285,10 +285,10 @@ class MigrationsSamplesJsonTestV2_59(MigrationsSamplesJsonTestV2_23):
             {"instance_1": INSTANCE_UUID_1, "instance_2": INSTANCE_UUID_2},
             response, 200)
 
-    def test_get_migrations_with_timestamp_filter(self):
+    def test_get_migrations_with_changes_since(self):
         response = self._do_get(
             'os-migrations?changes-since=2016-06-23T13:42:01.000000')
         self.assertEqual(200, response.status_code)
         self._verify_response(
-            'migrations-get-with-timestamp-filter',
+            'migrations-get-with-changes-since',
             {"instance_2": INSTANCE_UUID_2}, response, 200)
