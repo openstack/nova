@@ -583,7 +583,7 @@ class ResourceTracker(object):
         # to be initialized with resource values.
         cn = objects.ComputeNode(context)
         cn.host = self.host
-        self._copy_resources(cn, resources)
+        self._copy_resources(cn, resources, initial=True)
         self.compute_nodes[nodename] = cn
         cn.create()
         LOG.info('Compute node record created for '
@@ -605,7 +605,7 @@ class ResourceTracker(object):
             dev_pools_obj = self.pci_tracker.stats.to_device_pools_obj()
             compute_node.pci_device_pools = dev_pools_obj
 
-    def _copy_resources(self, compute_node, resources):
+    def _copy_resources(self, compute_node, resources, initial=False):
         """Copy resource values to supplied compute_node."""
         nodename = resources['hypervisor_hostname']
         stats = self.stats[nodename]
@@ -629,20 +629,17 @@ class ResourceTracker(object):
         # resetting the ComputeNode fields to None because that will make
         # the _resource_change method think something changed when really it
         # didn't.
-        # TODO(mriedem): Will this break any scenarios where an operator is
-        # trying to *reset* the allocation ratios by changing config from
-        # non-None back to None? Maybe we should only do this if the fields on
-        # the ComputeNode object are not already set. For example, let's say
-        # the cpu_allocation_ratio config was 1.0 and then the operator wants
-        # to get back to the default (16.0 via the facade), and to do that they
-        # change the config back to None (or just unset the config option).
-        # Should we support that or treat these config options as "sticky" in
-        # that once you start setting them, you can't go back to the implied
-        # defaults by unsetting or resetting to None? Sort of like how
-        # per-tenant quota is sticky once you change it in the API.
+        # NOTE(yikun): The CONF.initial_(cpu|ram|disk)_allocation_ratio would
+        # be used when we initialize the compute node object, that means the
+        # ComputeNode.(cpu|ram|disk)_allocation_ratio will be set to
+        # CONF.initial_(cpu|ram|disk)_allocation_ratio when initial flag is
+        # True.
         for res in ('cpu', 'disk', 'ram'):
             attr = '%s_allocation_ratio' % res
-            conf_alloc_ratio = getattr(self, attr)
+            if initial:
+                conf_alloc_ratio = getattr(CONF, 'initial_%s' % attr)
+            else:
+                conf_alloc_ratio = getattr(self, attr)
             # NOTE(yikun): In Stein version, we change the default value of
             # (cpu|ram|disk)_allocation_ratio from 0.0 to None, but we still
             # should allow 0.0 to keep compatibility, and this 0.0 condition

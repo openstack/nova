@@ -41,6 +41,7 @@ from nova import exception
 from nova.objects import diagnostics as diagnostics_obj
 from nova.objects import fields as obj_fields
 from nova.objects import migrate_data
+from nova import rc_fields
 from nova.virt import driver
 from nova.virt import hardware
 from nova.virt import virtapi
@@ -500,17 +501,19 @@ class FakeDriver(driver.ComputeDriver):
         return host_status
 
     def update_provider_tree(self, provider_tree, nodename, allocations=None):
-        # TODO(mriedem): The allocation_ratio config usage will change with
-        # blueprint initial-allocation-ratios. For now, the allocation ratio
-        # config values all default to 0.0 and the ComputeNode provides a
-        # facade for giving the real defaults, so we have to mimic that here.
+        # NOTE(yikun): If the inv record does not exists, the allocation_ratio
+        # will use the CONF.xxx_allocation_ratio value if xxx_allocation_ratio
+        # is set, and fallback to use the initial_xxx_allocation_ratio
+        # otherwise.
+        inv = provider_tree.data(nodename).inventory
+        ratios = self._get_allocation_ratios(inv)
         inventory = {
             'VCPU': {
                 'total': self.vcpus,
                 'min_unit': 1,
                 'max_unit': self.vcpus,
                 'step_size': 1,
-                'allocation_ratio': CONF.cpu_allocation_ratio or 16.0,
+                'allocation_ratio': ratios[rc_fields.ResourceClass.VCPU],
                 'reserved': CONF.reserved_host_cpus,
             },
             'MEMORY_MB': {
@@ -518,7 +521,7 @@ class FakeDriver(driver.ComputeDriver):
                 'min_unit': 1,
                 'max_unit': self.memory_mb,
                 'step_size': 1,
-                'allocation_ratio': CONF.ram_allocation_ratio or 1.5,
+                'allocation_ratio': ratios[rc_fields.ResourceClass.MEMORY_MB],
                 'reserved': CONF.reserved_host_memory_mb,
             },
             'DISK_GB': {
@@ -526,7 +529,7 @@ class FakeDriver(driver.ComputeDriver):
                 'min_unit': 1,
                 'max_unit': self.local_gb,
                 'step_size': 1,
-                'allocation_ratio': CONF.disk_allocation_ratio or 1.0,
+                'allocation_ratio': ratios[rc_fields.ResourceClass.DISK_GB],
                 'reserved': self._get_reserved_host_disk_gb_from_config(),
             },
         }

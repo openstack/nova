@@ -399,11 +399,16 @@ NOTE: If this option is set to something *other than* ``None`` or ``0.0``, the
 allocation ratio will be overwritten by the value of this option, otherwise,
 the allocation ratio will not change. Once set to a non-default value, it is
 not possible to "unset" the config to get back to the default behavior. If you
-want to reset back to the default, explicitly specify 16.0.
+want to reset back to the initial value, explicitly specify it to the value of
+``initial_cpu_allocation_ratio``.
 
 Possible values:
 
 * Any valid positive integer or float value
+
+Related options:
+
+* ``initial_cpu_allocation_ratio``
 """),
     cfg.FloatOpt('ram_allocation_ratio',
         default=None,
@@ -425,11 +430,16 @@ NOTE: If this option is set to something *other than* ``None`` or ``0.0``, the
 allocation ratio will be overwritten by the value of this option, otherwise,
 the allocation ratio will not change. Once set to a non-default value, it is
 not possible to "unset" the config to get back to the default behavior. If you
-want to reset back to the default, explicitly specify 1.5.
+want to reset back to the initial value, explicitly specify it to the value of
+``initial_ram_allocation_ratio``.
 
 Possible values:
 
 * Any valid positive integer or float value
+
+Related options:
+
+* ``initial_ram_allocation_ratio``
 """),
     cfg.FloatOpt('disk_allocation_ratio',
         default=None,
@@ -455,11 +465,58 @@ NOTE: If this option is set to something *other than* ``None`` or ``0.0``, the
 allocation ratio will be overwritten by the value of this option, otherwise,
 the allocation ratio will not change. Once set to a non-default value, it is
 not possible to "unset" the config to get back to the default behavior. If you
-want to reset back to the default, explicitly specify 1.0.
+want to reset back to the initial value, explicitly specify it to the value of
+``initial_disk_allocation_ratio``.
 
 Possible values:
 
 * Any valid positive integer or float value
+
+Related options:
+
+* ``initial_disk_allocation_ratio``
+"""),
+    cfg.FloatOpt('initial_cpu_allocation_ratio',
+                 default=16.0,
+                 min=0.0,
+                 help="""
+This option helps you specify initial virtual CPU to physical CPU allocation
+ratio.
+
+This is only used when initially creating the ``computes_nodes`` table record
+for a given nova-compute service.
+
+Related options:
+
+* ``cpu_allocation_ratio``
+"""),
+    cfg.FloatOpt('initial_ram_allocation_ratio',
+                 default=1.5,
+                 min=0.0,
+                 help="""
+This option helps you specify initial virtual RAM to physical RAM allocation
+ratio.
+
+This is only used when initially creating the ``computes_nodes`` table record
+for a given nova-compute service.
+
+Related options:
+
+* ``ram_allocation_ratio``
+"""),
+    cfg.FloatOpt('initial_disk_allocation_ratio',
+                 default=1.0,
+                 min=0.0,
+                 help="""
+This option helps you specify initial virtual disk to physical disk allocation
+ratio.
+
+This is only used when initially creating the ``computes_nodes`` table record
+for a given nova-compute service.
+
+Related options:
+
+* ``disk_allocation_ratio``
 """)
 ]
 
