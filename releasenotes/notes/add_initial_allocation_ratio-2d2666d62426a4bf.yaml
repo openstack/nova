@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    The default value for the "cpu_allocation_ratio", "ram_allocation_ratio"
+    and "disk_allocation_ratio" configurations have been changed to ``None``.

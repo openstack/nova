@@ -381,7 +381,7 @@ Possible values:
 
 allocation_ratio_opts = [
     cfg.FloatOpt('cpu_allocation_ratio',
-        default=0.0,
+        default=None,
         min=0.0,
         help="""
 This option helps you specify virtual CPU to physical CPU allocation ratio.
@@ -395,18 +395,18 @@ This configuration specifies ratio for CoreFilter which can be set
 per compute node. For AggregateCoreFilter, it will fall back to this
 configuration value if no per-aggregate setting is found.
 
-NOTE: This can be set per-compute, or if set to 0.0, the value
-set on the scheduler node(s) or compute node(s) will be used
-and defaulted to 16.0. Once set to a non-default value, it is not possible
-to "unset" the config to get back to the default behavior. If you want
-to reset back to the default, explicitly specify 16.0.
+NOTE: If this option is set to something *other than* ``None`` or ``0.0``, the
+allocation ratio will be overwritten by the value of this option, otherwise,
+the allocation ratio will not change. Once set to a non-default value, it is
+not possible to "unset" the config to get back to the default behavior. If you
+want to reset back to the default, explicitly specify 16.0.
 
 Possible values:
 
 * Any valid positive integer or float value
 """),
     cfg.FloatOpt('ram_allocation_ratio',
-        default=0.0,
+        default=None,
         min=0.0,
         help="""
 This option helps you specify virtual RAM to physical RAM
@@ -421,18 +421,18 @@ This configuration specifies ratio for RamFilter which can be set
 per compute node. For AggregateRamFilter, it will fall back to this
 configuration value if no per-aggregate setting found.
 
-NOTE: This can be set per-compute, or if set to 0.0, the value
-set on the scheduler node(s) or compute node(s) will be used and
-defaulted to 1.5. Once set to a non-default value, it is not possible
-to "unset" the config to get back to the default behavior. If you want
-to reset back to the default, explicitly specify 1.5.
+NOTE: If this option is set to something *other than* ``None`` or ``0.0``, the
+allocation ratio will be overwritten by the value of this option, otherwise,
+the allocation ratio will not change. Once set to a non-default value, it is
+not possible to "unset" the config to get back to the default behavior. If you
+want to reset back to the default, explicitly specify 1.5.
 
 Possible values:
 
 * Any valid positive integer or float value
 """),
     cfg.FloatOpt('disk_allocation_ratio',
-        default=0.0,
+        default=None,
         min=0.0,
         help="""
 This option helps you specify virtual disk to physical disk
@@ -451,11 +451,11 @@ images. It can be set to a value between 0.0 and 1.0 in order
 to preserve a percentage of the disk for uses other than
 instances.
 
-NOTE: This can be set per-compute, or if set to 0.0, the value
-set on the scheduler node(s) or compute node(s) will be used and
-defaulted to 1.0. Once set to a non-default value, it is not possible
-to "unset" the config to get back to the default behavior. If you want
-to reset back to the default, explicitly specify 1.0.
+NOTE: If this option is set to something *other than* ``None`` or ``0.0``, the
+allocation ratio will be overwritten by the value of this option, otherwise,
+the allocation ratio will not change. Once set to a non-default value, it is
+not possible to "unset" the config to get back to the default behavior. If you
+want to reset back to the default, explicitly specify 1.0.
 
 Possible values:
 
