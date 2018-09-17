@@ -213,14 +213,20 @@ use this filter, see :ref:`host-aggregates`. See also :ref:`IoOpsFilter`.
 AggregateMultiTenancyIsolation
 ------------------------------
 
-Ensures that the tenant (or list of tenants) creates all instances only on
-specific :ref:`host-aggregates`. If a host is in an aggregate that has the
-``filter_tenant_id`` metadata key, the host creates instances from only that
-tenant or list of tenants. A host can be in different aggregates. If a host
-does not belong to an aggregate with the metadata key, the host can create
-instances from all tenants. This setting does not isolate the aggregate from
-other tenants. Any other tenant can continue to build instances on the
-specified aggregate.
+Ensures hosts in tenant-isolated :ref:`host-aggregates` will only be available
+to a specified set of tenants. If a host is in an aggregate that has the
+``filter_tenant_id`` metadata key, the host can build instances from only that
+tenant or comma-separated list of tenants. A host can be in different
+aggregates. If a host does not belong to an aggregate with the metadata key,
+the host can build instances from all tenants. This does not restrict the
+tenant from creating servers on hosts outside the tenant-isolated aggregate.
+
+For example, consider there are two available hosts for scheduling, HostA and
+HostB. HostB is in an aggregate isolated to tenant X. A server create request
+from tenant X will result in either HostA *or* HostB as candidates during
+scheduling. A server create request from another tenant Y will result in only
+HostA being a scheduling candidate since HostA is not part of the
+tenant-isolated aggregate.
 
 AggregateNumInstancesFilter
 ---------------------------
