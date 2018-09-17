@@ -95,7 +95,9 @@ class ValidationRegex(test.NoDBTestCase):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.api.validation.parameter_types._get_all_chars',
             _get_all_chars))
-
+        # note that since we use only the ascii range in the tests
+        # we have to clear the cache to recompute them.
+        parameter_types._reset_cache()
         r = parameter_types._build_regex_range(ws=False)
         self.assertEqual(r, re.escape('!') + '-' + re.escape('~'))
 
