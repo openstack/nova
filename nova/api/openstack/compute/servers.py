@@ -723,7 +723,8 @@ class ServersController(wsgi.Controller):
                                            show_extended_attr=False,
                                            show_host_status=False,
                                            show_keypair=False,
-                                           show_srv_usg=False)
+                                           show_srv_usg=False,
+                                           show_sec_grp=False)
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
@@ -997,7 +998,8 @@ class ServersController(wsgi.Controller):
                                        show_extended_attr=False,
                                        show_host_status=False,
                                        show_keypair=show_keypair,
-                                       show_srv_usg=False)
+                                       show_srv_usg=False,
+                                       show_sec_grp=False)
 
         # Add on the admin_password attribute since the view doesn't do it
         # unless instance passwords are disabled

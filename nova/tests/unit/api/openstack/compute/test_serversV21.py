@@ -162,11 +162,22 @@ class ControllerTest(test.TestCase):
     def setUp(self):
         super(ControllerTest, self).setUp()
         self.flags(use_ipv6=False)
+        # Neutron security groups are tested in test_neutron_security_groups.py
+        self.flags(use_neutron=False)
+        fakes.stub_out_nw_api(self)
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
+        security_groups = [
+            {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
+             'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+             'deleted_at': None, 'updated_at': None, 'created_at': None},
+            {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
+             'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+             'deleted_at': None, 'updated_at': None, 'created_at': None}]
         return_server = fakes.fake_compute_get(id=2, availability_zone='nova',
                                                launched_at=None,
-                                               terminated_at=None)
+                                               terminated_at=None,
+                                               security_groups=security_groups)
         return_servers = fakes.fake_compute_get_all()
         # Server sort keys extension is enabled in v21 so sort data is passed
         # to the instance API and the sorted DB API is invoked
@@ -391,7 +402,9 @@ class ServersControllerTest(ControllerTest):
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000002",
                 "key_name": '',
                 "OS-SRV-USG:launched_at": None,
-                "OS-SRV-USG:terminated_at": None
+                "OS-SRV-USG:terminated_at": None,
+                "security_groups": [{'name': 'fake-0-0'},
+                                    {'name': 'fake-0-1'}]
             }
         }
 
@@ -1509,7 +1522,14 @@ class ServersControllerTestV23(ServersControllerTest):
             metadata={"seq": "2"},
             availability_zone='nova',
             launched_at=None,
-            terminated_at=None)
+            terminated_at=None,
+            security_groups=[
+                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None},
+                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
 
     def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
                               status="ACTIVE", progress=100):
@@ -1560,7 +1580,18 @@ class ServersControllerTestV23(ServersControllerTest):
                               metadata={"seq": "2"},
                               availability_zone='nova',
                               launched_at=None,
-                              terminated_at=None)
+                              terminated_at=None,
+                              security_groups=[
+                                  {'name': 'fake-0-0', 'id': 1,
+                                   'description': 'foo',
+                                   'user_id': 'bar', 'project_id': 'baz',
+                                   'deleted': False, 'deleted_at': None,
+                                   'updated_at': None, 'created_at': None},
+                                  {'name': 'fake-0-1', 'id': 1,
+                                   'description': 'foo',
+                                   'user_id': 'bar', 'project_id': 'baz',
+                                   'deleted': False, 'deleted_at': None,
+                                   'updated_at': None, 'created_at': None}])
                 obj_list.append(server)
             return objects.InstanceList(objects=obj_list)
 
@@ -1595,7 +1626,14 @@ class ServersControllerTestV29(ServersControllerTest):
             metadata={"seq": "2"},
             availability_zone='nova',
             launched_at=None,
-            terminated_at=None)
+            terminated_at=None,
+            security_groups=[
+                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None},
+                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
 
     def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
                               status="ACTIVE", progress=100):
@@ -1631,7 +1669,14 @@ class ServersControllerTestV29(ServersControllerTest):
             metadata={"seq": "2"},
             availability_zone='nova',
             launched_at=None,
-            terminated_at=None)
+            terminated_at=None,
+            security_groups=[
+                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None},
+                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
@@ -1671,7 +1716,14 @@ class ServersControllerTestV29(ServersControllerTest):
             metadata={"seq": "2"},
             availability_zone='nova',
             launched_at=None,
-            terminated_at=None)
+            terminated_at=None,
+            security_groups=[
+                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None},
+                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
 
         req = self.req('/fake/servers/detail')
         servers_list = self.controller.detail(req)
@@ -1729,7 +1781,14 @@ class ServersControllerTestV216(ServersControllerTest):
             metadata={"seq": "2"},
             availability_zone='nova',
             launched_at=None,
-            terminated_at=None)
+            terminated_at=None,
+            security_groups=[
+                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None},
+                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
         self.useFixture(fixtures.MockPatchObject(
             compute_api.API, 'get_instance_host_status',
             return_value='UP')).mock
@@ -1784,7 +1843,18 @@ class ServersControllerTestV216(ServersControllerTest):
                               metadata={"seq": "2"},
                               availability_zone='nova',
                               launched_at=None,
-                              terminated_at=None)
+                              terminated_at=None,
+                              security_groups=[
+                                  {'name': 'fake-0-0', 'id': 1,
+                                   'description': 'foo',
+                                   'user_id': 'bar', 'project_id': 'baz',
+                                   'deleted': False, 'deleted_at': None,
+                                   'updated_at': None, 'created_at': None},
+                                  {'name': 'fake-0-1', 'id': 1,
+                                   'description': 'foo',
+                                   'user_id': 'bar', 'project_id': 'baz',
+                                   'deleted': False, 'deleted_at': None,
+                                   'updated_at': None, 'created_at': None}])
                 obj_list.append(server)
             return objects.InstanceList(objects=obj_list)
 
@@ -1819,7 +1889,14 @@ class ServersControllerTestV219(ServersControllerTest):
             metadata={"seq": "2"},
             availability_zone='nova',
             launched_at=None,
-            terminated_at=None)
+            terminated_at=None,
+            security_groups=[
+                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None},
+                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
         self.useFixture(fixtures.MockPatchObject(
             compute_api.API, 'get_instance_host_status',
             return_value='UP')).mock
@@ -1861,7 +1938,14 @@ class ServersControllerTestV219(ServersControllerTest):
             metadata={"seq": "2"},
             availability_zone='nova',
             launched_at=None,
-            terminated_at=None)
+            terminated_at=None,
+            security_groups=[
+                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None},
+                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
@@ -3271,6 +3355,7 @@ class ServerStatusTest(test.TestCase):
 
     def setUp(self):
         super(ServerStatusTest, self).setUp()
+        self.flags(use_neutron=False)
         fakes.stub_out_nw_api(self)
 
         self.controller = servers.ServersController()
@@ -3392,6 +3477,15 @@ class ServersControllerCreateTest(test.TestCase):
                 "task_state": "",
                 "vm_state": "",
                 "root_device_name": inst.get('root_device_name', 'vda'),
+                "security_groups": [
+                    {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
+                     'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                     'deleted_at': None, 'updated_at': None,
+                     'created_at': None},
+                    {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
+                     'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                     'deleted_at': None, 'updated_at': None,
+                     'created_at': None}]
             })
 
             self.instance_cache_by_id[instance['id']] = instance
@@ -3462,6 +3556,9 @@ class ServersControllerCreateTest(test.TestCase):
         self.req = fakes.HTTPRequest.blank('/fake/servers')
         self.req.method = 'POST'
         self.req.headers["content-type"] = "application/json"
+        server = dict(name='server_test', imageRef=FAKE_UUID, flavorRef=2)
+        body = {'server': server}
+        self.req.body = encodeutils.safe_encode(jsonutils.dumps(body))
 
     def _check_admin_password_len(self, server_dict):
         """utility function - check server_dict for admin_password length."""
@@ -6159,6 +6256,9 @@ class ServersViewBuilderTest(test.TestCase):
     def setUp(self):
         super(ServersViewBuilderTest, self).setUp()
         self.flags(use_ipv6=True)
+        # Neutron security groups are tested in test_neutron_security_groups.py
+        self.flags(use_neutron=False)
+        fakes.stub_out_nw_api(self)
         self.flags(group='glance', api_servers=['http://localhost:9292'])
         nw_cache_info = self._generate_nw_cache_info()
         db_inst = fakes.stub_instance(
@@ -6170,7 +6270,14 @@ class ServersViewBuilderTest(test.TestCase):
             availability_zone='nova',
             nw_cache=nw_cache_info,
             launched_at=None,
-            terminated_at=None)
+            terminated_at=None,
+            security_groups=[
+                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None},
+                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
+                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
 
         privates = ['172.19.0.1']
         publics = ['192.168.0.3']
@@ -6351,7 +6458,9 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
                 "key_name": '',
                 "OS-SRV-USG:launched_at": None,
-                "OS-SRV-USG:terminated_at": None
+                "OS-SRV-USG:terminated_at": None,
+                "security_groups": [{'name': 'fake-0-0'},
+                                    {'name': 'fake-0-1'}]
             }
         }
 
@@ -6438,7 +6547,9 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
                 "key_name": '',
                 "OS-SRV-USG:launched_at": None,
-                "OS-SRV-USG:terminated_at": None
+                "OS-SRV-USG:terminated_at": None,
+                "security_groups": [{'name': 'fake-0-0'},
+                                    {'name': 'fake-0-1'}]
 
             }
         }
@@ -6625,7 +6736,9 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
                 "key_name": '',
                 "OS-SRV-USG:launched_at": None,
-                "OS-SRV-USG:terminated_at": None
+                "OS-SRV-USG:terminated_at": None,
+                "security_groups": [{'name': 'fake-0-0'},
+                                    {'name': 'fake-0-1'}]
             }
         }
 
@@ -6709,7 +6822,9 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
                 "key_name": '',
                 "OS-SRV-USG:launched_at": None,
-                "OS-SRV-USG:terminated_at": None
+                "OS-SRV-USG:terminated_at": None,
+                "security_groups": [{'name': 'fake-0-0'},
+                                    {'name': 'fake-0-1'}]
             }
         }
 
