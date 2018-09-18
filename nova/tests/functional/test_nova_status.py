@@ -17,6 +17,7 @@ from six.moves import StringIO
 
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
+from oslo_upgradecheck import upgradecheck
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import placement.db_api
@@ -97,7 +98,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
         self.useFixture(nova_fixtures.Database())
         result = self.cmd._check_resource_providers()
         # this is assumed to be base install so it's OK but with details
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
         self.assertIn('There are no compute resource providers in the '
                       'Placement service nor are there compute nodes in the '
                       'database',
@@ -114,7 +115,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
         # install and not a failure.
         result = self.cmd._check_resource_providers()
         # this is assumed to be base install so it's OK but with details
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
         self.assertIn('There are no compute resource providers in the '
                       'Placement service nor are there compute nodes in the '
                       'database',
@@ -141,7 +142,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
             cpu_info='{"arch": "x86_64"}')
         cn.create()
         result = self.cmd._check_resource_providers()
-        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
+        self.assertEqual(upgradecheck.Code.WARNING, result.code)
         self.assertIn('There are no compute resource providers in the '
                       'Placement service but there are 1 compute nodes in the '
                       'deployment.', result.details)
@@ -192,7 +193,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
         self._create_resource_provider(FAKE_IP_POOL_INVENTORY)
 
         result = self.cmd._check_resource_providers()
-        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
+        self.assertEqual(upgradecheck.Code.WARNING, result.code)
         self.assertIn('There are no compute resource providers in the '
                       'Placement service but there are 1 compute nodes in the '
                       'deployment.', result.details)
@@ -225,7 +226,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
         self._create_resource_provider(FAKE_VCPU_INVENTORY)
 
         result = self.cmd._check_resource_providers()
-        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
+        self.assertEqual(upgradecheck.Code.WARNING, result.code)
         self.assertIn('There are 1 compute resource providers and 2 compute '
                       'nodes in the deployment.', result.details)
 
@@ -285,5 +286,5 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
                       stub_count_compute_nodes)
 
         result = self.cmd._check_resource_providers()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
         self.assertIsNone(result.details)
