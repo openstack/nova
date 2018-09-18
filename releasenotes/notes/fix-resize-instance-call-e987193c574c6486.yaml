@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Fixes an issue with cold migrating (resizing) an instance from
+    ocata to pike compute by correcting parameters order in
+    resize_instance rpcapi call to destination compute.

@@ -4611,6 +4611,26 @@ class ComputeTestCase(BaseTestCase,
         self.compute.terminate_instance(self.context, instance,
                                         bdms=[], reservations=[])
 
+    @mock.patch.object(fake_resource_tracker.FakeResourceTracker,
+                       'disabled', return_value=True)
+    def test_prep_resize_rpcapi_call(self, mock_disabled):
+        """Ensures the order of parameters of resize_instance rpcapi call."""
+        inst_obj = self._create_fake_instance_obj()
+        instance_type = flavors.get_default_flavor()
+
+        with mock.patch.object(
+                self.compute.compute_rpcapi, 'resize_instance') as mock_resize:
+            self.compute.prep_resize(self.context, image=None,
+                                     instance=inst_obj,
+                                     instance_type=instance_type,
+                                     reservations=[], request_spec={},
+                                     filter_properties={}, node=None,
+                                     clean_shutdown=True)
+
+        mock_resize.assert_called_once_with(
+            self.context, inst_obj, mock.ANY, None, instance_type,
+            clean_shutdown=True)
+
     def _stub_out_resize_network_methods(self):
         def fake(cls, ctxt, instance, *args, **kwargs):
             pass

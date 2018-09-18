@@ -3811,7 +3811,7 @@ class ComputeManager(manager.Manager):
             LOG.info('Migrating', instance=instance)
             self.compute_rpcapi.resize_instance(
                     context, instance, claim.migration, image,
-                    instance_type, clean_shutdown)
+                    instance_type, clean_shutdown=clean_shutdown)
 
     @wrap_exception()
     @reverts_task_state
