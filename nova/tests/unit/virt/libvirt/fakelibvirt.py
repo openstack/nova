@@ -783,9 +783,6 @@ class Domain(object):
     def migrateSetMaxDowntime(self, downtime):
         pass
 
-    def migrateSetMaxSpeed(self, bandwidth):
-        pass
-
     def attachDevice(self, xml):
         result = False
         if xml.startswith("<disk"):
