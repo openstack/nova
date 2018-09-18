@@ -177,7 +177,10 @@ class ControllerTest(test.TestCase):
         return_server = fakes.fake_compute_get(id=2, availability_zone='nova',
                                                launched_at=None,
                                                terminated_at=None,
-                                               security_groups=security_groups)
+                                               security_groups=security_groups,
+                                               task_state=None,
+                                               vm_state=vm_states.ACTIVE,
+                                               power_state=1)
         return_servers = fakes.fake_compute_get_all()
         # Server sort keys extension is enabled in v21 so sort data is passed
         # to the instance API and the sorted DB API is invoked
@@ -404,7 +407,10 @@ class ServersControllerTest(ControllerTest):
                 "OS-SRV-USG:launched_at": None,
                 "OS-SRV-USG:terminated_at": None,
                 "security_groups": [{'name': 'fake-0-0'},
-                                    {'name': 'fake-0-1'}]
+                                    {'name': 'fake-0-1'}],
+                "OS-EXT-STS:task_state": None,
+                "OS-EXT-STS:vm_state": vm_states.ACTIVE,
+                "OS-EXT-STS:power_state": 1
             }
         }
 
@@ -1529,7 +1535,10 @@ class ServersControllerTestV23(ServersControllerTest):
                  'deleted_at': None, 'updated_at': None, 'created_at': None},
                 {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
                  'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
+            task_state=None,
+            vm_state=vm_states.ACTIVE,
+            power_state=1)
 
     def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
                               status="ACTIVE", progress=100):
@@ -1548,6 +1557,9 @@ class ServersControllerTestV23(ServersControllerTest):
         server_dict['server']["OS-EXT-SRV-ATTR:reservation_id"] = "r-1"
         server_dict['server']["OS-EXT-SRV-ATTR:root_device_name"] = "/dev/vda"
         server_dict['server']["OS-EXT-SRV-ATTR:user_data"] = "userdata"
+        server_dict['server']["OS-EXT-STS:task_state"] = None
+        server_dict['server']["OS-EXT-STS:vm_state"] = vm_states.ACTIVE
+        server_dict['server']["OS-EXT-STS:power_state"] = 1
         return server_dict
 
     def test_show(self):
@@ -1591,7 +1603,10 @@ class ServersControllerTestV23(ServersControllerTest):
                                    'description': 'foo',
                                    'user_id': 'bar', 'project_id': 'baz',
                                    'deleted': False, 'deleted_at': None,
-                                   'updated_at': None, 'created_at': None}])
+                                   'updated_at': None, 'created_at': None}],
+                              task_state=None,
+                              vm_state=vm_states.ACTIVE,
+                              power_state=1)
                 obj_list.append(server)
             return objects.InstanceList(objects=obj_list)
 
@@ -1633,7 +1648,10 @@ class ServersControllerTestV29(ServersControllerTest):
                  'deleted_at': None, 'updated_at': None, 'created_at': None},
                 {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
                  'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
+            task_state=None,
+            vm_state=vm_states.ACTIVE,
+            power_state=1)
 
     def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
                               status="ACTIVE", progress=100):
@@ -1653,6 +1671,9 @@ class ServersControllerTestV29(ServersControllerTest):
         server_dict['server']["OS-EXT-SRV-ATTR:reservation_id"] = "r-1"
         server_dict['server']["OS-EXT-SRV-ATTR:root_device_name"] = "/dev/vda"
         server_dict['server']["OS-EXT-SRV-ATTR:user_data"] = "userdata"
+        server_dict['server']["OS-EXT-STS:task_state"] = None
+        server_dict['server']["OS-EXT-STS:vm_state"] = vm_states.ACTIVE
+        server_dict['server']["OS-EXT-STS:power_state"] = 1
         return server_dict
 
     def _test_get_server_with_lock(self, locked_by):
@@ -1676,7 +1697,10 @@ class ServersControllerTestV29(ServersControllerTest):
                  'deleted_at': None, 'updated_at': None, 'created_at': None},
                 {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
                  'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
+            task_state=None,
+            vm_state=vm_states.ACTIVE,
+            power_state=1)
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
@@ -1723,7 +1747,10 @@ class ServersControllerTestV29(ServersControllerTest):
                  'deleted_at': None, 'updated_at': None, 'created_at': None},
                 {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
                  'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
+            task_state=None,
+            vm_state=vm_states.ACTIVE,
+            power_state=1)
 
         req = self.req('/fake/servers/detail')
         servers_list = self.controller.detail(req)
@@ -1788,7 +1815,10 @@ class ServersControllerTestV216(ServersControllerTest):
                  'deleted_at': None, 'updated_at': None, 'created_at': None},
                 {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
                  'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
+            task_state=None,
+            vm_state=vm_states.ACTIVE,
+            power_state=1)
         self.useFixture(fixtures.MockPatchObject(
             compute_api.API, 'get_instance_host_status',
             return_value='UP')).mock
@@ -1812,6 +1842,9 @@ class ServersControllerTestV216(ServersControllerTest):
         server_dict['server']["OS-EXT-SRV-ATTR:reservation_id"] = "r-1"
         server_dict['server']["OS-EXT-SRV-ATTR:root_device_name"] = "/dev/vda"
         server_dict['server']["OS-EXT-SRV-ATTR:user_data"] = "userdata"
+        server_dict['server']["OS-EXT-STS:task_state"] = None
+        server_dict['server']["OS-EXT-STS:vm_state"] = vm_states.ACTIVE
+        server_dict['server']["OS-EXT-STS:power_state"] = 1
 
         return server_dict
 
@@ -1854,7 +1887,10 @@ class ServersControllerTestV216(ServersControllerTest):
                                    'description': 'foo',
                                    'user_id': 'bar', 'project_id': 'baz',
                                    'deleted': False, 'deleted_at': None,
-                                   'updated_at': None, 'created_at': None}])
+                                   'updated_at': None, 'created_at': None}],
+                              task_state=None,
+                              vm_state=vm_states.ACTIVE,
+                              power_state=1)
                 obj_list.append(server)
             return objects.InstanceList(objects=obj_list)
 
@@ -1896,7 +1932,10 @@ class ServersControllerTestV219(ServersControllerTest):
                  'deleted_at': None, 'updated_at': None, 'created_at': None},
                 {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
                  'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
+            task_state=None,
+            vm_state=vm_states.ACTIVE,
+            power_state=1)
         self.useFixture(fixtures.MockPatchObject(
             compute_api.API, 'get_instance_host_status',
             return_value='UP')).mock
@@ -1921,6 +1960,9 @@ class ServersControllerTestV219(ServersControllerTest):
         server_dict['server']["OS-EXT-SRV-ATTR:reservation_id"] = "r-1"
         server_dict['server']["OS-EXT-SRV-ATTR:root_device_name"] = "/dev/vda"
         server_dict['server']["OS-EXT-SRV-ATTR:user_data"] = "userdata"
+        server_dict['server']["OS-EXT-STS:task_state"] = None
+        server_dict['server']["OS-EXT-STS:vm_state"] = vm_states.ACTIVE
+        server_dict['server']["OS-EXT-STS:power_state"] = 1
 
         return server_dict
 
@@ -1945,7 +1987,10 @@ class ServersControllerTestV219(ServersControllerTest):
                  'deleted_at': None, 'updated_at': None, 'created_at': None},
                 {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
                  'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
+            task_state=None,
+            vm_state=vm_states.ACTIVE,
+            power_state=1)
 
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
@@ -6277,7 +6322,10 @@ class ServersViewBuilderTest(test.TestCase):
                  'deleted_at': None, 'updated_at': None, 'created_at': None},
                 {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
                  'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}])
+                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
+                task_state=None,
+                vm_state=vm_states.ACTIVE,
+                power_state=1)
 
         privates = ['172.19.0.1']
         publics = ['192.168.0.3']
@@ -6460,7 +6508,10 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-SRV-USG:launched_at": None,
                 "OS-SRV-USG:terminated_at": None,
                 "security_groups": [{'name': 'fake-0-0'},
-                                    {'name': 'fake-0-1'}]
+                                    {'name': 'fake-0-1'}],
+                "OS-EXT-STS:task_state": None,
+                "OS-EXT-STS:vm_state": vm_states.ACTIVE,
+                "OS-EXT-STS:power_state": 1
             }
         }
 
@@ -6549,8 +6600,10 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-SRV-USG:launched_at": None,
                 "OS-SRV-USG:terminated_at": None,
                 "security_groups": [{'name': 'fake-0-0'},
-                                    {'name': 'fake-0-1'}]
-
+                                    {'name': 'fake-0-1'}],
+                "OS-EXT-STS:task_state": None,
+                "OS-EXT-STS:vm_state": vm_states.ERROR,
+                "OS-EXT-STS:power_state": 1
             }
         }
 
@@ -6738,7 +6791,10 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-SRV-USG:launched_at": None,
                 "OS-SRV-USG:terminated_at": None,
                 "security_groups": [{'name': 'fake-0-0'},
-                                    {'name': 'fake-0-1'}]
+                                    {'name': 'fake-0-1'}],
+                "OS-EXT-STS:task_state": None,
+                "OS-EXT-STS:vm_state": vm_states.ACTIVE,
+                "OS-EXT-STS:power_state": 1
             }
         }
 
@@ -6824,7 +6880,10 @@ class ServersViewBuilderTest(test.TestCase):
                 "OS-SRV-USG:launched_at": None,
                 "OS-SRV-USG:terminated_at": None,
                 "security_groups": [{'name': 'fake-0-0'},
-                                    {'name': 'fake-0-1'}]
+                                    {'name': 'fake-0-1'}],
+                "OS-EXT-STS:task_state": None,
+                "OS-EXT-STS:vm_state": vm_states.ACTIVE,
+                "OS-EXT-STS:power_state": 1
             }
         }
 
