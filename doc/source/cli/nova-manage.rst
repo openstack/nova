@@ -60,24 +60,24 @@ Nova Database
 
 ``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose] [--until-complete] [--purge]``
     Move deleted rows from production tables to shadow tables. Note that the
-    corresponding rows in the instance_mappings and request_specs tables of the
+    corresponding rows in the ``instance_mappings`` and ``request_specs`` tables of the
     API database are purged when instance records are archived and thus,
-    CONF.api_database.connection is required in the config file. Specifying
-    --verbose will print the results of the archive operation for any tables that
-    were changed. Specifying --until-complete will make the command run
-    continuously until all deleted rows are archived. Use the --max_rows option,
-    which defaults to 1000, as a batch size for each iteration. Specifying --purge
+    ``CONF.api_database.connection`` is required in the config file. Specifying
+    ``--verbose`` will print the results of the archive operation for any tables that
+    were changed. Specifying ``--until-complete`` will make the command run
+    continuously until all deleted rows are archived. Use the ``--max_rows`` option,
+    which defaults to 1000, as a batch size for each iteration. Specifying ``--purge``
     will cause a `full` DB purge to be completed after archival. If a date range
     is desired for the purge, then run ``nova-manage db purge --before
     <date>`` manually after archiving is complete.
 
 ``nova-manage db purge [--all] [--before <date>] [--verbose] [--all-cells]``
-    Delete rows from shadow tables. Specifying --all will delete all data from
-    all shadow tables. Specifying --before will delete data from all shadow tables
+    Delete rows from shadow tables. Specifying ``--all`` will delete all data from
+    all shadow tables. Specifying ``--before`` will delete data from all shadow tables
     that is older than the date provided. Date strings may be fuzzy, such as
-    ``Oct 21 2015``. Specifying --verbose will cause information to be printed about
-    purged records. Specifying --all-cells will cause the purge to be applied against
-    all cell databases. For --all-cells to work, the api database connection
+    ``Oct 21 2015``. Specifying ``--verbose`` will cause information to be printed about
+    purged records. Specifying ``--all-cells`` will cause the purge to be applied against
+    all cell databases. For ``--all-cells`` to work, the api database connection
     information must be configured. Returns exit code 0 if rows were deleted, 1 if
     required arguments are not provided, 2 if an invalid date is provided, 3 if no
     data was deleted, 4 if the list of cells cannot be obtained.
