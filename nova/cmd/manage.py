@@ -1813,10 +1813,12 @@ class PlacementCommands(object):
         try:
             allocations = placement.get_allocs_for_consumer(
                 ctxt, instance.uuid)
-        except (ks_exc.ClientException,
-                exception.ConsumerAllocationRetrievalFailed) as e:
+        except ks_exc.ClientException as e:
+            raise exception.AllocationUpdateFailed(
+                instance=instance.uuid,
+                error=_("Allocation retrieval failed: %s") % e)
+        except exception.ConsumerAllocationRetrievalFailed as e:
             output(_("Allocation retrieval failed: %s") % e)
-            # TODO(mriedem): Fail fast here, since we can't talk to placement.
             allocations = None
 
         # get_allocations_for_consumer uses safe_connect which will
