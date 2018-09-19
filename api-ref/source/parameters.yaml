@@ -1115,7 +1115,7 @@ server_status_query:
   description: |
     Filters the response by a server status, as a string. For example, ``ACTIVE``.
 
-    Up to microversion 2.37, an empty list is returnd if an invalid status is
+    Up to microversion 2.37, an empty list is returned if an invalid status is
     specified. Starting from microversion 2.38, a 400 error is returned
     in that case.
   in: query
@@ -5014,7 +5014,7 @@ os:scheduler_hints_cidr:
 os:scheduler_hints_different_cell:
   description: |
     A list of cell routes or a cell route (string).
-    Schedule the server in a cell that is not specifiled.
+    Schedule the server in a cell that is not specified.
     It is available when ``DifferentCellFilter`` is available on cloud side
     that is cell v1 environment.
   in: body
@@ -5061,7 +5061,7 @@ os:scheduler_hints_same_host:
   type: array
 os:scheduler_hints_target_cell:
   description: |
-    A target cell name. Schedule the server in a host in the cell specifiled.
+    A target cell name. Schedule the server in a host in the cell specified.
     It is available when ``TargetCellFilter`` is available on cloud side
     that is cell v1 environment.
   in: body
@@ -5693,7 +5693,7 @@ server_description_resp:
   min_version: 2.19
 server_group:
   description: |
-    The server group obejct.
+    The server group object.
   in: body
   required: true
   type: object
