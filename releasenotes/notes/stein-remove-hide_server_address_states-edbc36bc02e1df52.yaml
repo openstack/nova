@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    The ``[api]/hide_server_address_states`` configuration option and
+    ``os_compute_api:os-hide-server-addresses`` policy rule were deprecated
+    in the 17.0.0 Queens release. They have now been removed. If you never
+    changed these values, the API behavior remains unchanged.

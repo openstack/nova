@@ -492,10 +492,6 @@ OS-EXT-STS:power_state, and OS-EXT-STS:task_state attributes.
 The server usage information appears in the OS-SRV-USG:launched_at and
 OS-SRV-USG:terminated_at attributes.
 
-To hide addresses information for instances in a certain state, set
-the osapi_hide_server_address_states configuration option. Set this
-option to a valid VM state in the nova.conf configuration file.
-
 HostId is unique per account and is not globally unique.
 
 Normal response codes: 200
@@ -640,8 +636,6 @@ Includes server details including configuration drive, extended status, and serv
 The extended status information appears in the ``OS-EXT-STS:vm_state``, ``OS-EXT-STS:power_state``, and ``OS-EXT-STS:task_state`` attributes.
 
 The server usage information appears in the ``OS-SRV-USG:launched_at`` and ``OS-SRV-USG:terminated_at`` attributes.
-
-To hide ``addresses`` information for instances in a certain state, set the ``osapi_hide_server_address_states`` configuration option. Set this option to a valid VM state in the ``nova.conf`` configuration file.
 
 HostId is unique per account and is not globally unique.
 

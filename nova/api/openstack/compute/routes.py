@@ -46,7 +46,6 @@ from nova.api.openstack.compute import floating_ip_pools
 from nova.api.openstack.compute import floating_ips
 from nova.api.openstack.compute import floating_ips_bulk
 from nova.api.openstack.compute import fping
-from nova.api.openstack.compute import hide_server_addresses
 from nova.api.openstack.compute import hosts
 from nova.api.openstack.compute import hypervisors
 from nova.api.openstack.compute import image_metadata
@@ -262,10 +261,7 @@ security_group_rules_controller = functools.partial(_create_controller,
 
 
 server_controller = functools.partial(_create_controller,
-    servers.ServersController,
-    [
-        hide_server_addresses.Controller,
-    ],
+    servers.ServersController, [],
     [
         admin_actions.AdminActionsController,
         admin_password.AdminPasswordController,

@@ -24,6 +24,7 @@ from nova.api.openstack.compute.views import flavors as views_flavors
 from nova.api.openstack.compute.views import images as views_images
 from nova import availability_zones as avail_zone
 from nova import compute
+from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
 from nova.network.security_group import openstack_driver
@@ -379,6 +380,9 @@ class ViewBuilder(common.ViewBuilder):
         return utils.generate_hostid(host, project)
 
     def _get_addresses(self, request, instance, extend_address=False):
+        # Hide server addresses while the server is building.
+        if instance.vm_state == vm_states.BUILDING:
+            return {}
         context = request.environ["nova.context"]
         networks = common.get_networks_for_instance(context, instance)
         return self._address_builder.index(networks,
