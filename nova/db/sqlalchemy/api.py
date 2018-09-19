@@ -6081,7 +6081,7 @@ def _archive_if_instance_deleted(table, shadow_table, instances, conn,
             return result_delete.rowcount
     except db_exc.DBReferenceError as ex:
         LOG.warning('Failed to archive %(table)s: %(error)s',
-                    {'table': table.__tablename__,
+                    {'table': table.name,
                      'error': six.text_type(ex)})
         return 0
 
