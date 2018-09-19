@@ -124,6 +124,9 @@ class Service(service.Service):
         self.manager_class_name = manager
         self.servicegroup_api = servicegroup.API()
         manager_class = importutils.import_class(self.manager_class_name)
+        if objects_base.NovaObject.indirection_api:
+            conductor_api = conductor.API()
+            conductor_api.wait_until_ready(context.get_admin_context())
         self.manager = manager_class(host=self.host, *args, **kwargs)
         self.rpcserver = None
         self.report_interval = report_interval
@@ -132,9 +135,6 @@ class Service(service.Service):
         self.periodic_interval_max = periodic_interval_max
         self.saved_args, self.saved_kwargs = args, kwargs
         self.backdoor_port = None
-        if objects_base.NovaObject.indirection_api:
-            conductor_api = conductor.API()
-            conductor_api.wait_until_ready(context.get_admin_context())
         setup_profiler(binary, self.host)
 
     def __repr__(self):
