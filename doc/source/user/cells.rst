@@ -245,6 +245,14 @@ scheduled are relegated to the cell0 database, which is effectively a
 graveyard of instances that failed to start. All successful/running
 instances are stored in "cell1".
 
+
+.. note:: Since Nova services make use of both configuration file and some
+          databases records, starting or restarting those services with an
+          incomplete configuration could lead to an incorrect deployment.
+          Please only restart the services once you are done with the described
+          steps below.
+
+
 First Time Setup
 ~~~~~~~~~~~~~~~~
 
@@ -493,7 +501,7 @@ database yet. This will set up a single cell Nova deployment.
    matches the transport URL for the cell created in step 5, and start the
    nova-compute service. Before step 7, make sure you have compute hosts in the
    database by running::
-  
+
      nova service-list --binary nova-compute
 
 7. Run the ``discover_hosts`` command to map compute hosts to the single cell
