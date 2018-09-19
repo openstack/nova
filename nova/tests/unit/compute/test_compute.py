@@ -7197,9 +7197,81 @@ class ComputeTestCase(BaseTestCase,
         mock_is_older.assert_called_once_with(now,
                     CONF.running_deleted_instance_timeout)
 
+    @mock.patch('nova.network.neutronv2.api.API.list_ports')
+    @mock.patch.object(nova.utils, 'is_neutron')
+    def test_require_nw_info_update_not_neutron(self, mock_is_neutron,
+                                                mock_list_ports):
+        ctxt = context.get_admin_context()
+        instance = self._create_fake_instance_obj()
+        mock_is_neutron.return_value = False
+        val = self.compute._require_nw_info_update(ctxt, instance)
+        self.assertFalse(val)
+        mock_list_ports.assert_not_called()
+
+    @mock.patch('nova.network.neutronv2.api.API.list_ports')
+    @mock.patch.object(nova.utils, 'is_neutron')
+    def test_require_nw_info_update_host_match(self, mock_is_neutron,
+                                               mock_list_ports):
+        ctxt = context.get_admin_context()
+        instance = self._create_fake_instance_obj()
+        mock_is_neutron.return_value = True
+        mock_list_ports.return_value = {'ports': [
+            {'binding:host_id': self.compute.host,
+             'binding:vif_type': 'foo'}
+        ]}
+        search_opts = {'device_id': instance.uuid,
+                       'fields': ['binding:host_id', 'binding:vif_type']}
+
+        val = self.compute._require_nw_info_update(ctxt, instance)
+        # return false since hosts match and vif_type is not unbound or
+        # binding_failed
+        self.assertFalse(val)
+        mock_list_ports.assert_called_once_with(ctxt, **search_opts)
+
+    @mock.patch('nova.network.neutronv2.api.API.list_ports')
+    @mock.patch.object(nova.utils, 'is_neutron')
+    def test_require_nw_info_update_host_mismatch(self, mock_is_neutron,
+                                                  mock_list_ports):
+        ctxt = context.get_admin_context()
+        instance = self._create_fake_instance_obj()
+        mock_is_neutron.return_value = True
+        mock_list_ports.return_value = {'ports': [
+            {'binding:host_id': 'foo', 'binding:vif_type': 'foo'}
+        ]}
+        search_opts = {'device_id': instance.uuid,
+                       'fields': ['binding:host_id', 'binding:vif_type']}
+        val = self.compute._require_nw_info_update(ctxt, instance)
+        self.assertTrue(val)
+        mock_list_ports.assert_called_once_with(ctxt, **search_opts)
+
+    @mock.patch('nova.network.neutronv2.api.API.list_ports')
+    @mock.patch.object(nova.utils, 'is_neutron')
+    def test_require_nw_info_update_failed_vif_types(
+            self, mock_is_neutron, mock_list_ports):
+        ctxt = context.get_admin_context()
+        instance = self._create_fake_instance_obj()
+        mock_is_neutron.return_value = True
+        search_opts = {'device_id': instance.uuid,
+                       'fields': ['binding:host_id', 'binding:vif_type']}
+
+        FAILED_VIF_TYPES = (network_model.VIF_TYPE_UNBOUND,
+                            network_model.VIF_TYPE_BINDING_FAILED)
+
+        for vif_type in FAILED_VIF_TYPES:
+            mock_list_ports.reset_mock()
+            mock_list_ports.return_value = {'ports': [
+                {'binding:host_id': self.compute.host,
+                 'binding:vif_type': vif_type}
+            ]}
+            val = self.compute._require_nw_info_update(ctxt, instance)
+            self.assertTrue(val)
+            mock_list_ports.assert_called_once_with(ctxt, **search_opts)
+
     def _heal_instance_info_cache(self,
                                   _get_instance_nw_info_raise=False,
-                                  _get_instance_nw_info_raise_cache=False):
+                                  _get_instance_nw_info_raise_cache=False,
+                                  _require_nw_info_update=False,
+                                  _task_state_not_none=False):
         # Update on every call for the test
         self.flags(heal_instance_info_cache_interval=-1)
         ctxt = context.get_admin_context()
@@ -7211,10 +7283,13 @@ class ComputeTestCase(BaseTestCase,
             instance_map[inst_uuid] = fake_instance.fake_db_instance(
                 uuid=inst_uuid, host=CONF.host, created_at=None)
             # These won't be in our instance since they're not requested
+            if _task_state_not_none:
+                instance_map[inst_uuid]['task_state'] = 'foo'
             instances.append(instance_map[inst_uuid])
 
         call_info = {'get_all_by_host': 0, 'get_by_uuid': 0,
-                'get_nw_info': 0, 'expected_instance': None}
+                'get_nw_info': 0, 'expected_instance': None,
+                'require_nw_info': 0, 'setup_network': 0}
 
         def fake_instance_get_all_by_host(context, host,
                                           columns_to_join, use_slave=False):
@@ -7231,6 +7306,20 @@ class ComputeTestCase(BaseTestCase,
                               'extra.flavor'],
                              columns_to_join)
             return instance_map[instance_uuid]
+
+        def fake_require_nw_info_update(cls, context, instance):
+            self.assertEqual(call_info['expected_instance']['uuid'],
+                             instance['uuid'])
+            if call_info['expected_instance']['task_state'] is None:
+                call_info['require_nw_info'] += 1
+            return _require_nw_info_update
+
+        def fake_setup_instance_network_on_host(cls, context, instance, host):
+            self.assertEqual(call_info['expected_instance']['uuid'],
+                             instance['uuid'])
+            if call_info['expected_instance']['task_state'] is None and \
+                    _require_nw_info_update:
+                call_info['setup_network'] += 1
 
         # NOTE(comstud): Override the stub in setUp()
         def fake_get_instance_nw_info(cls, context, instance, **kwargs):
@@ -7252,14 +7341,28 @@ class ComputeTestCase(BaseTestCase,
                 fake_instance_get_all_by_host)
         self.stub_out('nova.db.api.instance_get_by_uuid',
                 fake_instance_get_by_uuid)
+
+        self.stub_out('nova.compute.manager.ComputeManager.'
+                      '_require_nw_info_update',
+                fake_require_nw_info_update)
+
         if CONF.use_neutron:
             self.stub_out(
                 'nova.network.neutronv2.api.API.get_instance_nw_info',
                 fake_get_instance_nw_info)
+            self.stub_out(
+                'nova.network.neutronv2.api.API.'
+                'setup_instance_network_on_host',
+                fake_setup_instance_network_on_host)
         else:
             self.stub_out('nova.network.api.API.get_instance_nw_info',
                     fake_get_instance_nw_info)
+            self.stub_out(
+                'nova.network.api.API.setup_instance_network_on_host',
+                fake_setup_instance_network_on_host)
 
+        expected_require_nw_info = 0
+        expect_setup_network = 0
         # Make an instance appear to be still Building
         instances[0]['vm_state'] = vm_states.BUILDING
         # Make an instance appear to be Deleting
@@ -7269,12 +7372,26 @@ class ComputeTestCase(BaseTestCase,
         self.compute._heal_instance_info_cache(ctxt)
         self.assertEqual(1, call_info['get_all_by_host'])
         self.assertEqual(0, call_info['get_by_uuid'])
+        if not _task_state_not_none:
+            expected_require_nw_info += 1
+        self.assertEqual(expected_require_nw_info,
+                         call_info['require_nw_info'])
+        if _require_nw_info_update and not _task_state_not_none:
+            expect_setup_network += 1
+        self.assertEqual(expect_setup_network, call_info['setup_network'])
         self.assertEqual(1, call_info['get_nw_info'])
 
         call_info['expected_instance'] = instances[3]
         self.compute._heal_instance_info_cache(ctxt)
         self.assertEqual(1, call_info['get_all_by_host'])
         self.assertEqual(1, call_info['get_by_uuid'])
+        if not _task_state_not_none:
+            expected_require_nw_info += 1
+        self.assertEqual(expected_require_nw_info,
+                         call_info['require_nw_info'])
+        if _require_nw_info_update and not _task_state_not_none:
+            expect_setup_network += 1
+        self.assertEqual(expect_setup_network, call_info['setup_network'])
         self.assertEqual(2, call_info['get_nw_info'])
 
         # Make an instance switch hosts
@@ -7288,6 +7405,13 @@ class ComputeTestCase(BaseTestCase,
         self.compute._heal_instance_info_cache(ctxt)
         self.assertEqual(1, call_info['get_all_by_host'])
         self.assertEqual(4, call_info['get_by_uuid'])
+        if not _task_state_not_none:
+            expected_require_nw_info += 1
+        self.assertEqual(expected_require_nw_info,
+                         call_info['require_nw_info'])
+        if _require_nw_info_update and not _task_state_not_none:
+            expect_setup_network += 1
+        self.assertEqual(expect_setup_network, call_info['setup_network'])
         self.assertEqual(3, call_info['get_nw_info'])
         # Should be no more left.
         self.assertEqual(0, len(self.compute._instance_uuids_to_heal))
@@ -7303,6 +7427,9 @@ class ComputeTestCase(BaseTestCase,
         # Stays the same because we remove invalid entries from the list
         self.assertEqual(4, call_info['get_by_uuid'])
         # Stays the same because we didn't find anything to process
+        self.assertEqual(expected_require_nw_info,
+                         call_info['require_nw_info'])
+        self.assertEqual(expect_setup_network, call_info['setup_network'])
         self.assertEqual(3, call_info['get_nw_info'])
 
     def test_heal_instance_info_cache(self):
@@ -7313,6 +7440,14 @@ class ComputeTestCase(BaseTestCase,
 
     def test_heal_instance_info_cache_with_info_cache_exception(self):
         self._heal_instance_info_cache(_get_instance_nw_info_raise_cache=True)
+
+    def test_heal_instance_info_cache_with_port_update(self):
+        self._heal_instance_info_cache(_require_nw_info_update=True)
+
+    def test_heal_instance_info_cache_with_port_update_instance_not_steady(
+            self):
+        self._heal_instance_info_cache(_require_nw_info_update=True,
+                                       _task_state_not_none=True)
 
     @mock.patch('nova.objects.InstanceList.get_by_filters')
     @mock.patch('nova.compute.api.API.unrescue')

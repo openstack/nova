@@ -45,6 +45,8 @@ VIF_TYPE_MACVTAP = 'macvtap'
 VIF_TYPE_AGILIO_OVS = 'agilio_ovs'
 VIF_TYPE_BINDING_FAILED = 'binding_failed'
 VIF_TYPE_VIF = 'vif'
+VIF_TYPE_UNBOUND = 'unbound'
+
 
 # Constants for dictionary keys in the 'vif_details' field in the VIF
 # class
