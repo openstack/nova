@@ -3772,7 +3772,8 @@ class ComputeManager(manager.Manager):
 
             instance.vm_state = vm_state
             instance.task_state = None
-            instance.save(expected_task_state=[None, task_states.DELETING])
+            instance.save(expected_task_state=[None, task_states.DELETING,
+                                               task_states.SOFT_DELETING])
 
             self._notify_about_instance_usage(
                 context, instance, "resize.confirm.end",

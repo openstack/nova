@@ -6573,6 +6573,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                 self.migration,
                                                 self.instance.old_flavor,
                                                 self.migration.source_node)
+            mock_save.assert_called_with(expected_task_state=
+                                         [None, task_states.DELETING,
+                                         task_states.SOFT_DELETING])
 
         do_confirm_resize()
 
