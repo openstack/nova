@@ -2486,7 +2486,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.os_type, fields.VMMode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
         self.assertIsNone(cfg.os_root)
-        self.assertEqual(len(cfg.devices), 9)
+        self.assertEqual(len(cfg.devices), 10)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -2504,6 +2504,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[8],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[9],
                               vconfig.LibvirtConfigMemoryBalloon)
         self.assertEqual(len(cfg.metadata), 1)
         self.assertIsInstance(cfg.metadata[0],
@@ -4533,7 +4535,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.os_type, fields.VMMode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
         self.assertIsNone(cfg.os_root)
-        self.assertEqual(len(cfg.devices), 9)
+        self.assertEqual(len(cfg.devices), 10)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -4551,6 +4553,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[8],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[9],
                               vconfig.LibvirtConfigMemoryBalloon)
 
     def test_get_guest_config_with_root_device_name(self):
@@ -5001,7 +5005,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         cfg = self._get_guest_config_with_graphics()
 
-        self.assertEqual(len(cfg.devices), 6)
+        self.assertEqual(len(cfg.devices), 7)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -5013,6 +5017,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[3].type, 'vnc')
@@ -5028,7 +5034,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         cfg = self._get_guest_config_with_graphics()
 
-        self.assertEqual(len(cfg.devices), 7)
+        self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -5042,6 +5048,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[3].type, "tablet")
@@ -5060,7 +5068,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         cfg = self._get_guest_config_with_graphics()
 
-        self.assertEqual(len(cfg.devices), 7)
+        self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -5074,6 +5082,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[3].type, 'tablet')
@@ -5095,7 +5105,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         expect = {"ppc": "vga", "ppc64": "vga",
                   "ppc64le": "vga", "aarch64": "virtio"}
         video_type = expect.get(blockinfo.libvirt_utils.get_arch({}), "qxl")
-        self.assertEqual(len(cfg.devices), 7)
+        self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -5109,6 +5119,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[3].target_name, "com.redhat.spice.0")
@@ -5228,7 +5240,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         cfg = drvr._get_guest_config(instance_ref, [],
                                      image_meta, disk_info)
-        self.assertEqual(7, len(cfg.devices))
+        self.assertEqual(8, len(cfg.devices))
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -5242,6 +5254,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual("tcp", cfg.devices[2].type)
@@ -5262,7 +5276,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         cfg = drvr._get_guest_config(instance_ref, [],
                                      image_meta, disk_info)
-        self.assertEqual(9, len(cfg.devices))
+        self.assertEqual(10, len(cfg.devices))
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -5280,6 +5294,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[8],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[9],
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual("tcp", cfg.devices[2].type)
@@ -5320,7 +5336,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             image_meta)
         cfg = drvr._get_guest_config(instance_ref, [], image_meta,
                                      disk_info)
-        self.assertEqual(9, len(cfg.devices), cfg.devices)
+        self.assertEqual(10, len(cfg.devices), cfg.devices)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -5338,6 +5354,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[8],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[9],
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual("tcp", cfg.devices[2].type)
@@ -5693,7 +5711,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             image_meta)
         cfg = drvr._get_guest_config(instance_ref, [],
                                      image_meta, disk_info)
-        self.assertEqual(len(cfg.devices), 9)
+        self.assertEqual(len(cfg.devices), 10)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -5711,6 +5729,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[8],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[9],
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[3].type, "tablet")
@@ -5733,7 +5753,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             image_meta)
 
         cfg = drvr._get_guest_config(instance_ref, [], image_meta, disk_info)
-        self.assertEqual(len(cfg.devices), 8)
+        self.assertEqual(len(cfg.devices), 9)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -5747,11 +5767,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[6],
-                              vconfig.LibvirtConfigGuestWatchdog)
+                              vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigGuestWatchdog)
+        self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigMemoryBalloon)
 
-        self.assertEqual("none", cfg.devices[6].action)
+        self.assertEqual("none", cfg.devices[7].action)
 
     def _test_get_guest_usb_tablet(self, vnc_enabled, spice_enabled, os_type,
                                    agent_enabled=False, image_meta=None):
@@ -5885,7 +5907,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         cfg = drvr._get_guest_config(instance_ref, [],
                                      image_meta, disk_info)
 
-        self.assertEqual(8, len(cfg.devices))
+        self.assertEqual(9, len(cfg.devices))
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -5899,11 +5921,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[6],
-                              vconfig.LibvirtConfigGuestWatchdog)
+                              vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigGuestWatchdog)
+        self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigMemoryBalloon)
 
-        self.assertEqual("none", cfg.devices[6].action)
+        self.assertEqual("none", cfg.devices[7].action)
 
     def test_get_guest_config_with_watchdog_overrides_flavor(self):
         self.flags(virt_type='kvm', group='libvirt')
@@ -5923,7 +5947,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         cfg = drvr._get_guest_config(instance_ref, [],
                                      image_meta, disk_info)
 
-        self.assertEqual(8, len(cfg.devices))
+        self.assertEqual(9, len(cfg.devices))
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -5937,11 +5961,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[6],
-                              vconfig.LibvirtConfigGuestWatchdog)
+                              vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigGuestWatchdog)
+        self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigMemoryBalloon)
-
-        self.assertEqual("pause", cfg.devices[6].action)
+        self.assertEqual("pause", cfg.devices[7].action)
 
     def test_get_guest_config_with_video_driver_image_meta(self):
         self.flags(virt_type='kvm', group='libvirt')
@@ -5951,38 +5976,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
             "properties": {"hw_video_model": "vmvga"}})
-
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-        cfg = drvr._get_guest_config(instance_ref, [], image_meta, disk_info)
-        self.assertEqual(len(cfg.devices), 7)
-        self.assertIsInstance(cfg.devices[0],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[1],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[2],
-                              vconfig.LibvirtConfigGuestSerial)
-        self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[4],
-                              vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[5],
-                              vconfig.LibvirtConfigGuestVideo)
-        self.assertIsInstance(cfg.devices[6],
-                              vconfig.LibvirtConfigMemoryBalloon)
-
-        self.assertEqual(cfg.devices[4].type, "vnc")
-        self.assertEqual(cfg.devices[5].type, "vmvga")
-
-    def test_get_guest_config_with_qga_through_image_meta(self):
-        self.flags(virt_type='kvm', group='libvirt')
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = objects.ImageMeta.from_dict({
-            "disk_format": "raw",
-            "properties": {"hw_qemu_guest_agent": "yes"}})
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -6002,8 +5995,44 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigMemoryBalloon)
+
+        self.assertEqual(cfg.devices[4].type, "vnc")
+        self.assertEqual(cfg.devices[5].type, "vmvga")
+
+    def test_get_guest_config_with_qga_through_image_meta(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_qemu_guest_agent": "yes"}})
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        cfg = drvr._get_guest_config(instance_ref, [], image_meta, disk_info)
+        self.assertEqual(len(cfg.devices), 9)
+        self.assertIsInstance(cfg.devices[0],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[1],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[2],
+                              vconfig.LibvirtConfigGuestSerial)
+        self.assertIsInstance(cfg.devices[3],
+                              vconfig.LibvirtConfigGuestInput)
+        self.assertIsInstance(cfg.devices[4],
+                              vconfig.LibvirtConfigGuestGraphics)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestChannel)
         self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[3].type, "tablet")
@@ -6050,7 +6079,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         cfg = drvr._get_guest_config(instance_ref, [],
                                      image_meta, disk_info)
-        self.assertEqual(len(cfg.devices), 7)
+        self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -6064,6 +6093,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[4].type, "spice")
@@ -6233,7 +6264,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             instance_ref,
                                             image_meta)
         cfg = drvr._get_guest_config(instance_ref, [], image_meta, disk_info)
-        self.assertEqual(len(cfg.devices), 7)
+        self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -6247,6 +6278,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[3].type, "tablet")
@@ -6258,10 +6291,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.flavor.extra_specs = {'hw_rng:allowed': 'True'}
         image_meta = objects.ImageMeta.from_dict({
-            "disk_format": "raw",
-            "properties": {"hw_rng_model": "virtio"}})
+            "disk_format": "raw"})
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -6296,9 +6327,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.flavor.extra_specs = {'hw_rng:allowed': 'False'}
         image_meta = objects.ImageMeta.from_dict({
-            "disk_format": "raw",
-            "properties": {"hw_rng_model": "virtio"}})
+            "disk_format": "raw"})
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -6326,12 +6357,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.flavor.extra_specs = {'hw_rng:allowed': 'True',
-                                           'hw_rng:rate_bytes': '1024',
+        instance_ref.flavor.extra_specs = {'hw_rng:rate_bytes': '1024',
                                            'hw_rng:rate_period': '2'}
         image_meta = objects.ImageMeta.from_dict({
-            "disk_format": "raw",
-            "properties": {"hw_rng_model": "virtio"}})
+            "disk_format": "raw"})
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -6371,10 +6400,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.flavor.extra_specs = {'hw_rng:allowed': 'True'}
         image_meta = objects.ImageMeta.from_dict({
-            "disk_format": "raw",
-            "properties": {"hw_rng_model": "virtio"}})
+            "disk_format": "raw"})
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -6413,10 +6440,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.flavor.extra_specs = {'hw_rng:allowed': 'True'}
         image_meta = objects.ImageMeta.from_dict({
-            "disk_format": "raw",
-            "properties": {"hw_rng_model": "virtio"}})
+            "disk_format": "raw"})
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -7074,8 +7099,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                      _fake_network_info(self),
                                      image_meta, disk_info)
         self.assertTrue(mock_path_exists.called)
-        mock_path_exists.assert_any_call(
-            libvirt_driver.DEFAULT_UEFI_LOADER_PATH['aarch64'][0])
+        expected = mock.call(libvirt_driver.
+                             DEFAULT_UEFI_LOADER_PATH['aarch64'][0])
+        self.assertIn(expected, mock_path_exists.mock_calls)
         self.assertEqual(cfg.os_mach_type, "virt")
 
         num_ports = 0
@@ -7120,8 +7146,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         cfg = self._get_guest_config_with_graphics()
 
         self.assertTrue(mock_path_exists.called)
-        mock_path_exists.assert_any_call(
-            libvirt_driver.DEFAULT_UEFI_LOADER_PATH['aarch64'][0])
+        expected = mock.call(libvirt_driver.
+                             DEFAULT_UEFI_LOADER_PATH['aarch64'][0])
+        self.assertIn(expected, mock_path_exists.mock_calls)
         self.assertEqual(cfg.os_mach_type, "virt")
 
         usbhost_exists = False

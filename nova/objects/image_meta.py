@@ -359,6 +359,12 @@ class ImageMetaProps(base.NovaObject):
         'hw_rescue_device': fields.BlockDeviceTypeField(),
 
         # name of the RNG device type eg virtio
+        # NOTE(kchamart): Although this is currently not used anymore,
+        # we should not remove / deprecate it yet, as we are likely to
+        # extend this field to allow two more values to support "VirtIO
+        # transitional/non-transitional devices" (refer to the note in
+        # RNGModel() class in nova/objects/fields.py), and thus expose
+        # to the user again.
         'hw_rng_model': fields.RNGModelField(),
 
         # boolean 'true' or 'false' to enable HPET

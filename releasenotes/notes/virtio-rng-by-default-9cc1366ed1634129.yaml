@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    When using the libvirt driver, Nova instances will now get a
+    VirtIO-RNG (Random Number Generator) device by default.  This is to
+    ensure guests are not starved of entropy during boot time.  In case
+    you want to *disallow* setting an RNG device for some reason, it can
+    be done by setting the flavor Extra Spec property ``hw_rng:allowed``
+    to ``False``.
