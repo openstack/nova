@@ -1227,11 +1227,21 @@ class NeutronFixture(fixtures.Fixture):
     def __init__(self, test):
         super(NeutronFixture, self).__init__()
         self.test = test
-        self._ports = [copy.deepcopy(NeutronFixture.port_1)]
-        self._extensions = []
-        self._networks = [NeutronFixture.network_1]
-        self._subnets = [NeutronFixture.subnet_1]
-        self._floatingips = []
+        # The fixture allows port update so we need to deepcopy the class
+        # variables to avoid test case interference.
+        self._ports = {
+            NeutronFixture.port_1['id']: copy.deepcopy(NeutronFixture.port_1)
+        }
+        # The fixture does not allow network update so we don't have to
+        # deepcopy here
+        self._networks = {
+            NeutronFixture.network_1['id']: NeutronFixture.network_1
+        }
+        # The fixture does not allow network update so we don't have to
+        # deepcopy here
+        self._subnets = {
+            NeutronFixture.subnet_1['id']: NeutronFixture.subnet_1
+        }
 
     def setUp(self):
         super(NeutronFixture, self).setUp()
@@ -1268,60 +1278,56 @@ class NeutronFixture(fixtures.Fixture):
         else:
             return None
 
-    def _filter_ports(self, **_params):
-        ports = copy.deepcopy(self._ports)
-        for opt in _params:
-            filtered_ports = [p for p in ports if p.get(opt) == _params[opt]]
-            ports = filtered_ports
-        return {'ports': ports}
-
     def list_extensions(self, *args, **kwargs):
-        return copy.deepcopy({'extensions': self._extensions})
+        return {'extensions': []}
 
     def show_port(self, port_id, **_params):
-        port = self._get_first_id_match(port_id, self._ports)
-        if port is None:
+        if port_id not in self._ports:
             raise exception.PortNotFound(port_id=port_id)
-        return {'port': port}
+        return {'port': copy.deepcopy(self._ports[port_id])}
 
-    def delete_port(self, port, **_params):
-        for current_port in self._ports:
-            if current_port['id'] == port:
-                self._ports.remove(current_port)
+    def delete_port(self, port_id, **_params):
+        if port_id in self._ports:
+            del self._ports[port_id]
 
-    def show_network(self, network, **_params):
-        network = self._get_first_id_match(network, self._networks)
-        if network is None:
+    def show_network(self, network_id, **_params):
+        if network_id not in self._networks:
             raise neutron_client_exc.NetworkNotFoundClient()
-        return {'network': network}
+        return {'network': copy.deepcopy(self._networks[network_id])}
 
     def list_networks(self, retrieve_all=True, **_params):
-        networks = copy.deepcopy(self._networks)
+        networks = self._networks.values()
         if 'id' in _params:
             networks = [x for x in networks if x['id'] in _params['id']]
-        if 'shared' in _params:
-            networks = [x for x in networks if x['shared'] ==
-                        _params['shared']]
-        return {'networks': networks}
+            _params.pop('id')
+        networks = [n for n in networks
+                    if all(n.get(opt) == _params[opt] for opt in _params)]
+        return {'networks': copy.deepcopy(networks)}
 
     def list_ports(self, retrieve_all=True, **_params):
-        return self._filter_ports(**_params)
+        ports = [p for p in self._ports.values()
+                 if all(p.get(opt) == _params[opt] for opt in _params)]
+        return {'ports': copy.deepcopy(ports)}
 
     def list_subnets(self, retrieve_all=True, **_params):
-        return copy.deepcopy({'subnets': self._subnets})
+        # NOTE(gibi): The fixture does not support filtering for subnets
+        return {'subnets': copy.deepcopy(list(self._subnets.values()))}
 
     def list_floatingips(self, retrieve_all=True, **_params):
-        return copy.deepcopy({'floatingips': self._floatingips})
+        return {'floatingips': []}
 
     def create_port(self, body=None):
-        if self._get_first_id_match(NeutronFixture.port_2['id'],
-                                    self._ports) is None:
-            # we need the double copy as port_2 is a class variable but
-            # self._ports is an instance variable
+        # Note(gibi): Some of the test expects that a pre-defined port is
+        # created. This is port_2. So if that port is not created yet then
+        # that is the one created here.
+        if NeutronFixture.port_2['id'] not in self._ports:
             new_port = copy.deepcopy(NeutronFixture.port_2)
-            self._ports.append(new_port)
         else:
-            new_port = copy.deepcopy(NeutronFixture.port_2)
+            # If port_2 is already created then create a new port based on
+            # the request body, the port_2 as a template, and assign new
+            # port_id and mac_address for the new port
+            new_port = copy.deepcopy(body)
+            new_port.update(copy.deepcopy(NeutronFixture.port_2))
             # we need truly random uuids instead of named sentinels as some
             # tests needs more than 3 ports
             new_port.update({
@@ -1329,17 +1335,16 @@ class NeutronFixture(fixtures.Fixture):
                 'mac_address': '00:' + ':'.join(
                     ['%02x' % random.randint(0, 255) for _ in range(5)]),
             })
-            self._ports.append(new_port)
+        self._ports[new_port['id']] = new_port
+        # we need to copy again what we return as nova might modify the
+        # returned port locally and we don't want that it effects the port in
+        # the self._ports dict.
         return {'port': copy.deepcopy(new_port)}
 
     def update_port(self, port_id, body=None):
-        new_port = self._get_first_id_match(port_id, self._ports)
-
-        if body is not None:
-            for k, v in body['port'].items():
-                new_port[k] = v
-
-        return {'port': new_port}
+        port = self._ports[port_id]
+        port.update(body['port'])
+        return {'port': copy.deepcopy(port)}
 
     def show_quota(self, project_id):
         # unlimited quota

@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import six
 
 import mock
@@ -254,18 +255,17 @@ class NUMAAffinityNeutronFixture(nova_fixtures.NeutronFixture):
 
     def __init__(self, test):
         super(NUMAAffinityNeutronFixture, self).__init__(test)
-        self._networks = [self.network_1, self.network_2, self.network_3]
+        self._networks = {
+            self.network_1['id']: self.network_1,
+            self.network_2['id']: self.network_2,
+            self.network_3['id']: self.network_3,
+        }
         self._net1_ports = [self.network_1_port_2, self.network_1_port_3]
 
     def create_port(self, body=None):
-        if not body:
-            # even though 'body' is apparently nullable, body will always be
-            # set here
-            assert('Body should not be None')
-
         network_id = body['port']['network_id']
-        assert network_id in ([n['id'] for n in self._networks]), (
-                'Network %s not in fixture' % network_id)
+        assert network_id in self._networks, ('Network %s not in fixture' %
+                                              network_id)
 
         if network_id == self.network_1['id']:
             port = self._net1_ports.pop(0)
@@ -274,10 +274,14 @@ class NUMAAffinityNeutronFixture(nova_fixtures.NeutronFixture):
         elif network_id == self.network_3['id']:
             port = self.network_3_port_1
 
-        port = port.copy()
+        # this copy is here to avoid modifying class variables like
+        # network_2_port_1 below at the update call
+        port = copy.deepcopy(port)
         port.update(body['port'])
-        self._ports.append(port)
-        return {'port': port}
+        self._ports[port['id']] = port
+        # this copy is here as nova sometimes modifies the returned port
+        # locally and we want to avoid that nova modifies the fixture internals
+        return {'port': copy.deepcopy(port)}
 
 
 class NUMAServersWithNetworksTest(NUMAServersTestBase):
