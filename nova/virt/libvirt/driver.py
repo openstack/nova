@@ -5994,6 +5994,7 @@ class LibvirtDriver(driver.ComputeDriver):
         device = {
             "dev_id": cfgdev.name,
             "types": {},
+            "vendor_id": cfgdev.pci_capability.vendor_id,
         }
         for mdev_cap in cfgdev.pci_capability.mdev_capability:
             for cap in mdev_cap.mdev_types:
@@ -6034,6 +6035,8 @@ class LibvirtDriver(driver.ComputeDriver):
             "dev_id": cfgdev.name,
             # name is like mdev_00ead764_fdc0_46b6_8db9_2963f5c815b4
             "uuid": str(uuid.UUID(cfgdev.name[5:].replace('_', '-'))),
+            # the physical GPU PCI device
+            "parent": cfgdev.parent,
             "type": cfgdev.mdev_information.type,
             "iommu_group": cfgdev.mdev_information.iommu_group,
         }

@@ -20270,6 +20270,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     def test_get_vgpu_total(self, get_mdev_devs, get_mdevs):
         get_mdev_devs.return_value = [
             {'dev_id': 'pci_0000_84_00_0',
+             'vendor_id': 0x10de,
              'types': {'nvidia-11': {'availableInstances': 14,
                                      'name': 'GRID M60-0B',
                                      'deviceAPI': 'vfio-pci'},
@@ -20277,11 +20278,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         get_mdevs.return_value = [
             {'dev_id': 'mdev_4b20d080_1b54_4048_85b3_a6a62d165c01',
              'uuid': "4b20d080-1b54-4048-85b3-a6a62d165c01",
+             'parent': 'pci_0000_84_00_0',
              'type': 'nvidia-11',
              'iommuGroup': 1
             },
             {'dev_id': 'mdev_4b20d080_1b54_4048_85b3_a6a62d165c02',
              'uuid': "4b20d080-1b54-4048-85b3-a6a62d165c02",
+             'parent': 'pci_0000_84_00_0',
              'type': 'nvidia-11',
              'iommuGroup': 1
             },
@@ -20313,6 +20316,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         expected = [{"dev_id": "pci_0000_06_00_0",
+                     "vendor_id": 0x10de,
                      "types": {'nvidia-11': {'availableInstances': 16,
                                              'name': 'GRID M60-0B',
                                              'deviceAPI': 'vfio-pci'},
@@ -20359,6 +20363,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         expected = [{"dev_id": "mdev_4b20d080_1b54_4048_85b3_a6a62d165c01",
                      "uuid": "4b20d080-1b54-4048-85b3-a6a62d165c01",
+                     "parent": "pci_0000_00_02_0",
                      "type": "nvidia-11",
                      "iommu_group": 12
                      }]
@@ -20482,6 +20487,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         unallocated_mdevs.return_value = set()
         get_mdev_capable_devs.return_value = [
             {"dev_id": "pci_0000_06_00_0",
+             "vendor_id": 0x10de,
              "types": {'nvidia-11': {'availableInstances': 16,
                                      'name': 'GRID M60-0B',
                                      'deviceAPI': 'vfio-pci'},
@@ -20517,6 +20523,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # them being assigned
         get_mdev_capable_devs.return_value = [
             {"dev_id": "pci_0000_06_00_0",
+             "vendor_id": 0x10de,
              "types": {'nvidia-11': {'availableInstances': 0,
                                      'name': 'GRID M60-0B',
                                      'deviceAPI': 'vfio-pci'},
@@ -20536,10 +20543,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # there is a total of 2 mdevs, mdev1 and mdev2
         get_mediated_devices.return_value = [{'dev_id': 'mdev_some_uuid1',
                                               'uuid': uuids.mdev1,
+                                              'parent': "pci_some",
                                               'type': 'nvidia-11',
                                               'iommu_group': 1},
                                              {'dev_id': 'mdev_some_uuid2',
                                               'uuid': uuids.mdev2,
+                                              'parent': "pci_some",
                                               'type': 'nvidia-11',
                                               'iommu_group': 1}]
 
@@ -20574,6 +20583,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         exists.side_effect = _exists
         get_mdev_capable_devs.return_value = [
             {"dev_id": "pci_0000_06_00_0",
+             "vendor_id": 0x10de,
              "types": {'nvidia-11': {'availableInstances': 16,
                                      'name': 'GRID M60-0B',
                                      'deviceAPI': 'vfio-pci'},
