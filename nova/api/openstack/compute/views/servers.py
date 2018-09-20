@@ -92,7 +92,7 @@ class ViewBuilder(common.ViewBuilder):
 
     def basic(self, request, instance, show_extra_specs=False,
               show_extended_attr=None, show_host_status=None,
-              show_sec_grp=None):
+              show_sec_grp=None, bdms=None):
         """Generic, non-detailed view of an instance."""
         return {
             "server": {
@@ -128,7 +128,8 @@ class ViewBuilder(common.ViewBuilder):
              show_extra_specs=None, show_AZ=True, show_config_drive=True,
              show_extended_attr=None, show_host_status=None,
              show_keypair=True, show_srv_usg=True, show_sec_grp=True,
-             show_extended_status=True):
+             show_extended_status=True, show_extended_volumes=True,
+             bdms=None):
         """Detailed view of a single instance."""
         ip_v4 = instance.get('access_ip_v4')
         ip_v6 = instance.get('access_ip_v6')
@@ -239,6 +240,18 @@ class ViewBuilder(common.ViewBuilder):
                 # compat with v2.0.
                 key = "%s:%s" % ('OS-EXT-STS', state)
                 server["server"][key] = instance[state]
+        if show_extended_volumes:
+            # NOTE(mriedem): The os-extended-volumes prefix should not be used
+            # for new attributes after v2.1. They are only in v2.1 for backward
+            # compat with v2.0.
+            add_delete_on_termination = api_version_request.is_supported(
+                request, min_version='2.3')
+            if bdms is None:
+                bdms = objects.BlockDeviceMappingList.bdms_by_instance_uuid(
+                    context, [instance["uuid"]])
+            self._add_volumes_attachments(server["server"],
+                                          bdms,
+                                          add_delete_on_termination)
         if (api_version_request.is_supported(request, min_version='2.16')):
             if show_host_status is None:
                 show_host_status = context.can(
@@ -292,6 +305,11 @@ class ViewBuilder(common.ViewBuilder):
         if (api_version_request.is_supported(request, min_version='2.16')):
             show_host_status = context.can(
                 servers_policies.SERVERS % 'show:host_status', fatal=False)
+
+        instance_uuids = [inst['uuid'] for inst in instances]
+        bdms = self._get_instance_bdms_in_multiple_cells(context,
+                                                         instance_uuids)
+
         # NOTE(gmann): pass show_sec_grp=False in _list_view() because
         # security groups for detail method will be added by separate
         # call to self._add_security_grps by passing the all servers
@@ -300,7 +318,8 @@ class ViewBuilder(common.ViewBuilder):
                                        coll_name, show_extra_specs,
                                        show_extended_attr=show_extended_attr,
                                        show_host_status=show_host_status,
-                                       show_sec_grp=False)
+                                       show_sec_grp=False,
+                                       bdms=bdms)
 
         self._add_security_grps(request, list(servers_dict["servers"]),
                                 instances)
@@ -308,7 +327,7 @@ class ViewBuilder(common.ViewBuilder):
 
     def _list_view(self, func, request, servers, coll_name, show_extra_specs,
                    show_extended_attr=None, show_host_status=None,
-                   show_sec_grp=False):
+                   show_sec_grp=False, bdms=None):
         """Provide a view for a list of servers.
 
         :param func: Function used to format the server data
@@ -322,13 +341,14 @@ class ViewBuilder(common.ViewBuilder):
                         the response dict.
         :param show_sec_grp: If the security group should be included in
                         the response dict.
+        :param bdms: Instances bdms info from multiple cells.
         :returns: Server data in dictionary format
         """
         server_list = [func(request, server,
                             show_extra_specs=show_extra_specs,
                             show_extended_attr=show_extended_attr,
                             show_host_status=show_host_status,
-                            show_sec_grp=show_sec_grp)["server"]
+                            show_sec_grp=show_sec_grp, bdms=bdms)["server"]
                        for server in servers]
         servers_links = self._get_collection_links(request,
                                                    servers,
@@ -496,3 +516,53 @@ class ViewBuilder(common.ViewBuilder):
                 # request add default since that is the group it is part of
                 servers[0]['security_groups'] = req_obj['server'].get(
                     'security_groups', [{'name': 'default'}])
+
+    @staticmethod
+    def _get_instance_bdms_in_multiple_cells(ctxt, instance_uuids):
+        inst_maps = objects.InstanceMappingList.get_by_instance_uuids(
+                        ctxt, instance_uuids)
+
+        cell_mappings = {}
+        for inst_map in inst_maps:
+            if (inst_map.cell_mapping is not None and
+                    inst_map.cell_mapping.uuid not in cell_mappings):
+                cell_mappings.update(
+                    {inst_map.cell_mapping.uuid: inst_map.cell_mapping})
+
+        bdms = {}
+        results = nova_context.scatter_gather_cells(
+                        ctxt, cell_mappings.values(),
+                        nova_context.CELL_TIMEOUT,
+                        objects.BlockDeviceMappingList.bdms_by_instance_uuid,
+                        instance_uuids)
+        for cell_uuid, result in results.items():
+            if result is nova_context.raised_exception_sentinel:
+                LOG.warning('Failed to get block device mappings for cell %s',
+                            cell_uuid)
+            elif result is nova_context.did_not_respond_sentinel:
+                LOG.warning('Timeout getting block device mappings for cell '
+                            '%s', cell_uuid)
+            else:
+                bdms.update(result)
+        return bdms
+
+    def _add_volumes_attachments(self, server, bdms,
+                                 add_delete_on_termination):
+        # server['id'] is guaranteed to be in the cache due to
+        # the core API adding it in the 'detail' or 'show' method.
+        # If that instance has since been deleted, it won't be in the
+        # 'bdms' dictionary though, so use 'get' to avoid KeyErrors.
+        instance_bdms = bdms.get(server['id'], [])
+        volumes_attached = []
+        for bdm in instance_bdms:
+            if bdm.get('volume_id'):
+                volume_attached = {'id': bdm['volume_id']}
+                if add_delete_on_termination:
+                    volume_attached['delete_on_termination'] = (
+                        bdm['delete_on_termination'])
+                volumes_attached.append(volume_attached)
+        # NOTE(mriedem): The os-extended-volumes prefix should not be used for
+        # new attributes after v2.1. They are only in v2.1 for backward compat
+        # with v2.0.
+        key = "os-extended-volumes:volumes_attached"
+        server[key] = volumes_attached

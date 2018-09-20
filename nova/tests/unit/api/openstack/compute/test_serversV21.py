@@ -63,6 +63,7 @@ from nova import policy
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
@@ -147,6 +148,40 @@ def fake_compute_get_empty_az(*args, **kwargs):
     return fake_instance.fake_instance_obj(args[1], **inst)
 
 
+def fake_bdms_get_all_by_instance_uuids(*args, **kwargs):
+    return [
+        fake_block_device.FakeDbBlockDeviceDict({
+            'id': 1,
+            'volume_id': 'some_volume_1',
+            'instance_uuid': FAKE_UUID,
+            'source_type': 'volume',
+            'destination_type': 'volume',
+            'delete_on_termination': True,
+        }),
+        fake_block_device.FakeDbBlockDeviceDict({
+            'id': 2,
+            'volume_id': 'some_volume_2',
+            'instance_uuid': FAKE_UUID,
+            'source_type': 'volume',
+            'destination_type': 'volume',
+            'delete_on_termination': False,
+        }),
+    ]
+
+
+def fake_get_inst_mappings_by_instance_uuids_from_db(*args, **kwargs):
+    return [{
+        'id': 1,
+        'instance_uuid': UUID1,
+        'cell_mapping': {
+            'id': 1, 'uuid': uuids.cell1, 'name': 'fake',
+            'transport_url': 'fake://nowhere/', 'updated_at': None,
+            'database_connection': uuids.cell1, 'created_at': None,
+            'disabled': False},
+        'project_id': 'fake-project'
+    }]
+
+
 class MockSetAdminPassword(object):
     def __init__(self):
         self.instance_id = None
@@ -190,6 +225,12 @@ class ControllerTest(test.TestCase):
             compute_api.API, 'get', side_effect=return_server)).mock
         self.stub_out('nova.db.api.instance_update_and_get_original',
                       instance_update_and_get_original)
+        self.stub_out('nova.db.api.'
+                      'block_device_mapping_get_all_by_instance_uuids',
+                      fake_bdms_get_all_by_instance_uuids)
+        self.stub_out('nova.objects.InstanceMappingList.'
+                      '_get_by_instance_uuids_from_db',
+                      fake_get_inst_mappings_by_instance_uuids_from_db)
         self.flags(group='glance', api_servers=['http://localhost:9292'])
 
         self.controller = servers.ServersController()
@@ -410,7 +451,11 @@ class ServersControllerTest(ControllerTest):
                                     {'name': 'fake-0-1'}],
                 "OS-EXT-STS:task_state": None,
                 "OS-EXT-STS:vm_state": vm_states.ACTIVE,
-                "OS-EXT-STS:power_state": 1
+                "OS-EXT-STS:power_state": 1,
+                "os-extended-volumes:volumes_attached": [
+                    {'id': 'some_volume_1'},
+                    {'id': 'some_volume_2'},
+                ]
             }
         }
 
@@ -1560,6 +1605,9 @@ class ServersControllerTestV23(ServersControllerTest):
         server_dict['server']["OS-EXT-STS:task_state"] = None
         server_dict['server']["OS-EXT-STS:vm_state"] = vm_states.ACTIVE
         server_dict['server']["OS-EXT-STS:power_state"] = 1
+        server_dict['server']["os-extended-volumes:volumes_attached"] = [
+            {'id': 'some_volume_1', 'delete_on_termination': True},
+            {'id': 'some_volume_2', 'delete_on_termination': False}]
         return server_dict
 
     def test_show(self):
@@ -1674,6 +1722,9 @@ class ServersControllerTestV29(ServersControllerTest):
         server_dict['server']["OS-EXT-STS:task_state"] = None
         server_dict['server']["OS-EXT-STS:vm_state"] = vm_states.ACTIVE
         server_dict['server']["OS-EXT-STS:power_state"] = 1
+        server_dict['server']["os-extended-volumes:volumes_attached"] = [
+            {'id': 'some_volume_1', 'delete_on_termination': True},
+            {'id': 'some_volume_2', 'delete_on_termination': False}]
         return server_dict
 
     def _test_get_server_with_lock(self, locked_by):
@@ -1845,6 +1896,9 @@ class ServersControllerTestV216(ServersControllerTest):
         server_dict['server']["OS-EXT-STS:task_state"] = None
         server_dict['server']["OS-EXT-STS:vm_state"] = vm_states.ACTIVE
         server_dict['server']["OS-EXT-STS:power_state"] = 1
+        server_dict['server']["os-extended-volumes:volumes_attached"] = [
+            {'id': 'some_volume_1', 'delete_on_termination': True},
+            {'id': 'some_volume_2', 'delete_on_termination': False}]
 
         return server_dict
 
@@ -1963,6 +2017,9 @@ class ServersControllerTestV219(ServersControllerTest):
         server_dict['server']["OS-EXT-STS:task_state"] = None
         server_dict['server']["OS-EXT-STS:vm_state"] = vm_states.ACTIVE
         server_dict['server']["OS-EXT-STS:power_state"] = 1
+        server_dict['server']["os-extended-volumes:volumes_attached"] = [
+            {'id': 'some_volume_1', 'delete_on_termination': True},
+            {'id': 'some_volume_2', 'delete_on_termination': False}]
 
         return server_dict
 
@@ -6309,7 +6366,7 @@ class ServersViewBuilderTest(test.TestCase):
         db_inst = fakes.stub_instance(
             id=1,
             image_ref="5",
-            uuid="deadbeef-feed-edee-beef-d0ea7beefedd",
+            uuid=FAKE_UUID,
             display_name="test_server",
             include_fake_metadata=False,
             availability_zone='nova',
@@ -6339,6 +6396,12 @@ class ServersViewBuilderTest(test.TestCase):
                             'ips': [dict(ip=ip) for ip in privates]})]
 
         fakes.stub_out_nw_api_get_instance_nw_info(self, nw_info)
+        self.stub_out('nova.db.api.'
+                      'block_device_mapping_get_all_by_instance_uuids',
+                      fake_bdms_get_all_by_instance_uuids)
+        self.stub_out('nova.objects.InstanceMappingList.'
+                      '_get_by_instance_uuids_from_db',
+                      fake_get_inst_mappings_by_instance_uuids_from_db)
 
         self.uuid = db_inst['uuid']
         self.view_builder = views.servers.ViewBuilder()
@@ -6392,6 +6455,21 @@ class ServersViewBuilderTest(test.TestCase):
         result = self.view_builder._get_flavor(self.request, self.instance,
                                                False)
         self.assertEqual(result, expected)
+
+    @mock.patch('nova.context.scatter_gather_cells')
+    def test_get_volumes_attached_with_faily_cells(self, mock_sg):
+        bdms = fake_bdms_get_all_by_instance_uuids()
+        # just faking a nova list scenario
+        mock_sg.return_value = {
+            uuids.cell1: bdms[0],
+            uuids.cell2: context.raised_exception_sentinel
+        }
+        ctxt = context.RequestContext('fake', 'fake')
+        result = self.view_builder._get_instance_bdms_in_multiple_cells(
+            ctxt, [self.instance.uuid])
+        # will get the result from cell1
+        self.assertEqual(result, bdms[0])
+        mock_sg.assert_called_once()
 
     def test_build_server(self):
         expected_server = {
@@ -6511,7 +6589,11 @@ class ServersViewBuilderTest(test.TestCase):
                                     {'name': 'fake-0-1'}],
                 "OS-EXT-STS:task_state": None,
                 "OS-EXT-STS:vm_state": vm_states.ACTIVE,
-                "OS-EXT-STS:power_state": 1
+                "OS-EXT-STS:power_state": 1,
+                "os-extended-volumes:volumes_attached": [
+                    {'id': 'some_volume_1'},
+                    {'id': 'some_volume_2'},
+                ]
             }
         }
 
@@ -6603,7 +6685,11 @@ class ServersViewBuilderTest(test.TestCase):
                                     {'name': 'fake-0-1'}],
                 "OS-EXT-STS:task_state": None,
                 "OS-EXT-STS:vm_state": vm_states.ERROR,
-                "OS-EXT-STS:power_state": 1
+                "OS-EXT-STS:power_state": 1,
+                "os-extended-volumes:volumes_attached": [
+                    {'id': 'some_volume_1'},
+                    {'id': 'some_volume_2'},
+                ]
             }
         }
 
@@ -6794,7 +6880,11 @@ class ServersViewBuilderTest(test.TestCase):
                                     {'name': 'fake-0-1'}],
                 "OS-EXT-STS:task_state": None,
                 "OS-EXT-STS:vm_state": vm_states.ACTIVE,
-                "OS-EXT-STS:power_state": 1
+                "OS-EXT-STS:power_state": 1,
+                "os-extended-volumes:volumes_attached": [
+                    {'id': 'some_volume_1'},
+                    {'id': 'some_volume_2'},
+                ]
             }
         }
 
@@ -6883,7 +6973,11 @@ class ServersViewBuilderTest(test.TestCase):
                                     {'name': 'fake-0-1'}],
                 "OS-EXT-STS:task_state": None,
                 "OS-EXT-STS:vm_state": vm_states.ACTIVE,
-                "OS-EXT-STS:power_state": 1
+                "OS-EXT-STS:power_state": 1,
+                "os-extended-volumes:volumes_attached": [
+                    {'id': 'some_volume_1'},
+                    {'id': 'some_volume_2'},
+                ]
             }
         }
 
