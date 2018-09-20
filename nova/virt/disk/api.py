@@ -136,6 +136,15 @@ def resize2fs(image, check_exit_code=False, run_as_root=False):
                       run_as_root=run_as_root)
 
 
+def get_disk_info(path):
+    """Get QEMU info of a disk image
+
+    :param path: Path to the disk image
+    :returns: oslo_utils.imageutils.QemuImgInfo object for the image.
+    """
+    return images.qemu_img_info(path)
+
+
 def get_disk_size(path):
     """Get the (virtual) size of a disk image
 
