@@ -85,6 +85,12 @@ class ComputeNodeTestCase(test.TestCase):
         # Two compute nodes can't have the same tuple (host, node, deleted)
         cn2.host = _HOSTNAME + '2'
         cn2.create()
+        # A deleted compute node
+        cn3 = fake_compute_obj.obj_clone()
+        cn3._context = self.context
+        cn3.host = _HOSTNAME + '3'
+        cn3.create()
+        cn3.destroy()
 
         cns = objects.ComputeNodeList.get_all_by_uuids(self.context, [])
         self.assertEqual(0, len(cns))
@@ -105,6 +111,12 @@ class ComputeNodeTestCase(test.TestCase):
         cns = objects.ComputeNodeList.get_all_by_uuids(self.context,
                                                        [cn1.uuid, cn2.uuid,
                                                         uuidsentinel.noexists])
+        self.assertEqual(2, len(cns))
+
+        # Ensure we don't get the deleted one, even if we ask for it
+        cns = objects.ComputeNodeList.get_all_by_uuids(self.context,
+                                                       [cn1.uuid, cn2.uuid,
+                                                        cn3.uuid])
         self.assertEqual(2, len(cns))
 
     def test_get_by_hypervisor_type(self):
