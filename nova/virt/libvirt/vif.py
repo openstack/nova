@@ -47,8 +47,6 @@ LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
-# vhostuser queues support
-MIN_LIBVIRT_VHOSTUSER_MQ = (1, 2, 17)
 #  vlan tag for macvtap passthrough mode on SRIOV VFs
 MIN_LIBVIRT_MACVTAP_PASSTHROUGH_VLAN = (1, 3, 5)
 # setting interface mtu was intoduced in libvirt 3.3, We also need to
@@ -448,12 +446,6 @@ class LibvirtGenericVIFDriver(object):
         designer.set_vif_host_backend_vhostuser_config(
             conf, mode, sock_path, rx_queue_size, tx_queue_size)
 
-        # (vladikr) Not setting up driver and queues for vhostuser
-        # as queues are not supported in Libvirt until version 1.2.17
-        if not host.has_min_version(MIN_LIBVIRT_VHOSTUSER_MQ):
-            LOG.debug('Queues are not a vhostuser supported feature.')
-            conf.vhost_queues = None
-
         return conf
 
     def _get_virtio_queue_sizes(self, host):
@@ -533,9 +525,6 @@ class LibvirtGenericVIFDriver(object):
         rx_queue_size, tx_queue_size = self._get_virtio_queue_sizes(host)
         designer.set_vif_host_backend_vhostuser_config(
             conf, vif.mode, vif.path, rx_queue_size, tx_queue_size)
-        if not host.has_min_version(MIN_LIBVIRT_VHOSTUSER_MQ):
-            LOG.debug('Queues are not a vhostuser supported feature.')
-            conf.vhost_queues = None
 
     def _set_config_VIFHostDevice(self, instance, vif, conf, host=None):
         if vif.dev_type == osv_fields.VIFHostDeviceDevType.ETHERNET:
