@@ -213,9 +213,20 @@ The order of parameters in the parameter file has to be kept as follows:
 Example
 -------
 
-.. TODO::
+One or more examples should be provided for operations whose request and/or
+response contains a payload. The example should describe what the operation
+is attempting to do and provide a sample payload for the request and/or
+response as appropriate.
+Sample files should be created in the ``doc/api_samples`` directory and inlined
+by inclusion.
 
-  The guideline for request/response JSON bodies should be added.
+When an operation has no payload in the response, a suitable message should be
+included. For example::
+
+  There is no body content for the response of a successful DELETE query.
+
+Examples for multiple microversions should be included in ascending
+microversion order.
 
 Body
 ----
