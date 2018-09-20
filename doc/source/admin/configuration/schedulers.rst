@@ -1073,15 +1073,16 @@ drives if they need access to faster disk I/O, or access to compute hosts that
 have GPU cards to take advantage of GPU-accelerated code.
 
 To configure the scheduler to support host aggregates, the
-``scheduler_default_filters`` configuration option must contain the
-``AggregateInstanceExtraSpecsFilter`` in addition to the other filters used by
-the scheduler. Add the following line to ``/etc/nova/nova.conf`` on the host
-that runs the ``nova-scheduler`` service to enable host aggregates filtering,
+:oslo.config:option:`filter_scheduler.enabled_filters` configuration option must
+contain the ``AggregateInstanceExtraSpecsFilter`` in addition to the other filters
+used by the scheduler. Add the following line to ``/etc/nova/nova.conf`` on the
+host that runs the ``nova-scheduler`` service to enable host aggregates filtering,
 as well as the other filters that are typically enabled:
 
 .. code-block:: ini
 
-   scheduler_default_filters=AggregateInstanceExtraSpecsFilter,RetryFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
+   [filter_scheduler]
+   enabled_filters=AggregateInstanceExtraSpecsFilter,RetryFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
 
 Example: Specify compute hosts with SSDs
 ----------------------------------------
