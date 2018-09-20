@@ -238,6 +238,7 @@ looking parts of our architecture. These are collected below.
    reference/stable-api
    reference/threading
    reference/update-provider-tree
+   reference/upgrade-checks
    reference/vm-states
    reference/scheduler-hints-vs-flavor-extra-specs
    user/index
