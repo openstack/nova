@@ -409,6 +409,7 @@ class TestCase(testtools.TestCase):
             CONF.set_override(k, v, group)
 
     def start_service(self, name, host=None, **kwargs):
+        cell = None
         if name == 'compute' and self.USES_DB:
             # NOTE(danms): We need to create the HostMapping first, because
             # otherwise we'll fail to update the scheduler while running
@@ -424,7 +425,7 @@ class TestCase(testtools.TestCase):
                 # Make sure that CONF.host is relevant to the right hostname
                 self.useFixture(nova_fixtures.ConfPatcher(host=host))
         svc = self.useFixture(
-            nova_fixtures.ServiceFixture(name, host, **kwargs))
+            nova_fixtures.ServiceFixture(name, host, cell=cell, **kwargs))
 
         return svc.service
 
