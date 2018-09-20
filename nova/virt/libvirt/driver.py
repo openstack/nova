@@ -4169,20 +4169,21 @@ class LibvirtDriver(driver.ComputeDriver):
         return mappings
 
     def _get_machine_type(self, image_meta, caps):
-        # The underlying machine type can be set as an image attribute,
-        # or otherwise based on some architecture specific defaults
-
+        # The guest machine type can be set as an image metadata
+        # property, or otherwise based on architecture-specific
+        # defaults.
         mach_type = None
 
         if image_meta.properties.get('hw_machine_type') is not None:
             mach_type = image_meta.properties.hw_machine_type
         else:
-            # For ARM systems we will default to vexpress-a15 for armv7
-            # and virt for aarch64
-            if caps.host.cpu.arch == fields.Architecture.ARMV7:
-                mach_type = "vexpress-a15"
-
-            if caps.host.cpu.arch == fields.Architecture.AARCH64:
+            # NOTE(kchamart): For ARMv7 and AArch64, use the 'virt'
+            # board as the default machine type.  It is the recommended
+            # board, which is designed to be used with virtual machines.
+            # The 'virt' board is more flexible, supports PCI, 'virtio',
+            # has decent RAM limits, etc.
+            if caps.host.cpu.arch in (fields.Architecture.ARMV7,
+                                      fields.Architecture.AARCH64):
                 mach_type = "virt"
 
             if caps.host.cpu.arch in (fields.Architecture.S390,

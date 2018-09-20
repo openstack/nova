@@ -1,0 +1,12 @@
+---
+upgrade:
+  - |
+    The default QEMU machine type for ARMv7 architecture is now changed
+    to ``virt`` (from the older ``vexpress-a15``, which is a particular
+    ARM development board).  The ``virt`` board is the recommended
+    default for ARMv7, which is explicitly designed to be
+    used with virtual machines.  It is more flexible, supports PCI and
+    'virtio' devices, has decent RAM limits, and so forth.  For
+    pre-existing Nova guests on ARMv7 to acquire the ``virt`` machine
+    type: (a) upgrade Nova with this fix; (b) explicitly start and stop
+    the guests, then they will pick up the 'virt' machine type.
