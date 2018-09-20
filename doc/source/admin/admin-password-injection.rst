@@ -45,10 +45,13 @@ the ``/etc/shadow`` file inside the virtual machine instance.
 
    Users can only use :command:`ssh` to access the instance by using the admin
    password if the virtual machine image is a Linux distribution, and it has
-   been configured to allow users to use :command:`ssh` as the root user. This
-   is not the case for `Ubuntu cloud images <http://uec-images.ubuntu.com>`_
+   been configured to allow users to use :command:`ssh` as the root user with
+   password authorization. This is not the case for
+   `Ubuntu cloud images <http://uec-images.ubuntu.com>`_
    which, by default, does not allow users to use :command:`ssh` to access the
-   root account.
+   root account, or
+   `CentOS cloud images <http://cloud.centos.org/centos/>`_ which, by default,
+   does not allow :command:`ssh` access to the instance with password.
 
 .. rubric:: Password injection and XenAPI (XenServer/XCP)
 
