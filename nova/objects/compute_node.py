@@ -19,6 +19,7 @@ from oslo_utils import versionutils
 
 import nova.conf
 from nova import db
+from nova.db.sqlalchemy import api as sa_api
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova import objects
@@ -441,7 +442,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     @staticmethod
     @db.select_db_reader_mode
     def _db_compute_node_get_all_by_uuids(context, compute_uuids):
-        db_computes = context.session.query(models.ComputeNode).filter(
+        db_computes = sa_api.model_query(context, models.ComputeNode).filter(
             models.ComputeNode.uuid.in_(compute_uuids)).all()
         return db_computes
 
