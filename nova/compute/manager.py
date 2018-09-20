@@ -3124,10 +3124,13 @@ class ComputeManager(manager.Manager):
             if on_shared_storage:
                 LOG.info('disk on shared storage, evacuating using'
                          ' existing disk')
-            else:
+            elif instance.image_ref:
                 orig_image_ref = instance.image_ref
-                LOG.info("disk not on shared storage, evacuating from:"
-                         " '%s'", str(orig_image_ref))
+                LOG.info("disk not on shared storage, evacuating from "
+                         "image: '%s'", str(orig_image_ref))
+            else:
+                LOG.info('disk on volume, evacuating using existing '
+                         'volume')
 
         # We check trusted certs capabilities for both evacuate (rebuild on
         # another host) and rebuild (rebuild on the same host) because for
