@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-08-10 21:12+0000\n"
+"POT-Creation-Date: 2018-09-21 04:59+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -78,14 +78,6 @@ msgstr ""
 "%(memsize)d MB Speicher zugewiesen, erwartet werden jedoch %(memtotal)d MB"
 
 #, python-format
-msgid "%(name)s has a minimum character requirement of %(min_length)s."
-msgstr "Für %(name)s sind mindestens %(min_length)s Zeichen erforderlich."
-
-#, python-format
-msgid "%(name)s has more than %(max_length)s characters."
-msgstr "%(name)s hast mehr als %(max_length)s Zeichen."
-
-#, python-format
 msgid "%(path)s is not on local storage: %(reason)s"
 msgstr "%(path)s ist nicht auf dem lokalen Speicher: %(reason)s"
 
@@ -127,10 +119,6 @@ msgstr "%s unterstützt kein Anschließen von Platten im laufenden Betrieb."
 #, python-format
 msgid "%s format is not supported"
 msgstr "%s-Format wird nicht unterstützt"
-
-#, python-format
-msgid "%s is not a string or unicode"
-msgstr "%s ist keine Zeichenkette oder Unicode"
 
 #, python-format
 msgid "%s is not supported."
@@ -769,9 +757,6 @@ msgstr "Abbild %(image_id)s konnte nicht abgerufen werden"
 #, python-format
 msgid "Could not find a handler for %(driver_type)s volume."
 msgstr "Konnte keinen Handler finden für %(driver_type)s Datenträger."
-
-msgid "Could not find another compute"
-msgstr "Es konnte kein anderer Rechenknoten gefunden werden"
 
 #, python-format
 msgid "Could not find binary %(binary)s on host %(host)s."
@@ -1978,9 +1963,6 @@ msgstr "Ungültige volume_size."
 #, python-format
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr "UUID des Ironic-Knotens nicht angegeben für Treiber für Instanz %s."
-
-msgid "Is the appropriate service running?"
-msgstr "Ist der entsprechende Dienst aktiv?"
 
 #, python-format
 msgid ""
@@ -3213,9 +3195,6 @@ msgstr ""
 "Das Format der Option 'reserved_huge_pages' ist ungültig ('%(conf)s' "
 "gefunden). Ziehen Sie die Nova-Konfigurationsreferenz zu Rate."
 
-msgid "The input is not a string or unicode"
-msgstr "Die Eingabe ist keine Zeichenkette oder Unicode"
-
 msgid ""
 "The instance requires a newer hypervisor version than has been provided."
 msgstr ""
@@ -4255,12 +4234,6 @@ msgstr "vlan muss eine Ganzzahl sein"
 #, python-format
 msgid "volume %s already attached"
 msgstr "Datenträger %s ist bereits angehängt"
-
-#, python-format
-msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"
-msgstr ""
-"Status von Datenträger '%(vol)s' muss 'available' lauten. Weist derzeit den "
-"Status '%(status)s' auf"
 
 #, python-format
 msgid ""
