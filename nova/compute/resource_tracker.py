@@ -26,7 +26,7 @@ from oslo_serialization import jsonutils
 
 from nova.compute import claims
 from nova.compute import monitors
-from nova.compute import stats
+from nova.compute import stats as compute_stats
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
@@ -88,7 +88,8 @@ class ResourceTracker(object):
         self.pci_tracker = None
         # Dict of objects.ComputeNode objects, keyed by nodename
         self.compute_nodes = {}
-        self.stats = stats.Stats()
+        # Dict of Stats objects, keyed by nodename
+        self.stats = collections.defaultdict(compute_stats.Stats)
         self.tracked_instances = {}
         self.tracked_migrations = {}
         monitor_handler = monitors.MonitorHandler(self)
@@ -477,10 +478,12 @@ class ResourceTracker(object):
 
     def _copy_resources(self, compute_node, resources):
         """Copy resource values to supplied compute_node."""
+        nodename = resources['hypervisor_hostname']
+        stats = self.stats[nodename]
         # purge old stats and init with anything passed in by the driver
-        self.stats.clear()
-        self.stats.digest_stats(resources.get('stats'))
-        compute_node.stats = copy.deepcopy(self.stats)
+        stats.clear()
+        stats.digest_stats(resources.get('stats'))
+        compute_node.stats = stats
 
         # update the allocation ratios for the related ComputeNode object
         compute_node.ram_allocation_ratio = self.ram_allocation_ratio
@@ -746,7 +749,8 @@ class ResourceTracker(object):
         cn.free_ram_mb = cn.memory_mb - cn.memory_mb_used
         cn.free_disk_gb = cn.local_gb - cn.local_gb_used
 
-        cn.running_vms = self.stats.num_instances
+        stats = self.stats[nodename]
+        cn.running_vms = stats.num_instances
 
         # Calculate the numa usage
         free = sign == -1
@@ -908,8 +912,9 @@ class ResourceTracker(object):
             sign = -1
 
         cn = self.compute_nodes[nodename]
-        self.stats.update_stats_for_instance(instance, is_removed_instance)
-        cn.stats = copy.deepcopy(self.stats)
+        stats = self.stats[nodename]
+        stats.update_stats_for_instance(instance, is_removed_instance)
+        cn.stats = stats
 
         # if it's a new or deleted instance:
         if is_new_instance or is_removed_instance:
@@ -923,7 +928,7 @@ class ResourceTracker(object):
             self._update_usage(self._get_usage_dict(instance), nodename,
                                sign=sign)
 
-        cn.current_workload = self.stats.calculate_workload()
+        cn.current_workload = stats.calculate_workload()
         if self.pci_tracker:
             obj = self.pci_tracker.stats.to_device_pools_obj()
             cn.pci_device_pools = obj
