@@ -3506,10 +3506,6 @@ class API(base.Base):
             else:
                 # Set the host and the node so that the scheduler will
                 # validate them.
-                # TODO(takashin): It will be added to check whether
-                # the specified host is within the same cell as
-                # the instance or not. If not, raise specific error message
-                # that is clear to the caller.
                 request_spec.requested_destination = objects.Destination(
                     host=node.host, node=node.hypervisor_hostname)
 
