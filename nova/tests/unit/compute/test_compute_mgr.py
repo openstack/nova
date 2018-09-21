@@ -1600,6 +1600,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                         use_slave=True)
             mock_spawn.assert_called_once_with(mock.ANY, instance)
 
+    @mock.patch('nova.objects.InstanceList.get_by_host', new=mock.Mock())
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_query_driver_power_state_and_sync',
+                new_callable=mock.NonCallableMock)
+    def test_sync_power_states_virt_driver_not_ready(self, _mock_sync):
+        """"Tests that the periodic task exits early if the driver raises
+        VirtDriverNotReady.
+        """
+        with mock.patch.object(
+                self.compute.driver, 'get_num_instances',
+                side_effect=exception.VirtDriverNotReady) as gni:
+            self.compute._sync_power_states(mock.sentinel.context)
+        gni.assert_called_once_with()
+
     def _get_sync_instance(self, power_state, vm_state, task_state=None,
                            shutdown_terminate=False):
         instance = objects.Instance()
