@@ -738,3 +738,53 @@ class TestNovaManagePlacementSyncAggregates(
             rp_aggregates = self._get_provider_aggregates(rp_uuid)
             self.assertEqual(2, len(rp_aggregates),
                              '%s should be in two provider aggregates' % host)
+
+
+class TestDBArchiveDeletedRows(integrated_helpers._IntegratedTestBase):
+    """Functional tests for the "nova-manage db archive_deleted_rows" CLI."""
+    USE_NEUTRON = True
+    api_major_version = 'v2.1'
+    _image_ref_parameter = 'imageRef'
+    _flavor_ref_parameter = 'flavorRef'
+
+    def setUp(self):
+        super(TestDBArchiveDeletedRows, self).setUp()
+        self.cli = manage.DbCommands()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+
+    def test_archive_instance_group_members(self):
+        """Tests that instance_group_member records in the API DB are deleted
+        when a server group member instance is archived.
+        """
+        # Create a server group.
+        group = self.api.post_server_groups(
+            {'name': 'test_archive_instance_group_members',
+             'policies': ['affinity']})
+        # Create two servers in the group.
+        server = self._build_minimal_create_server_request()
+        server['min_count'] = 2
+        server_req = {
+            'server': server, 'os:scheduler_hints': {'group': group['id']}}
+        # Since we don't pass return_reservation_id=True we get the first
+        # server back in the response. We're also using the CastAsCall fixture
+        # (from the base class) fixture so we don't have to worry about the
+        # server being ACTIVE.
+        server = self.api.post_server(server_req)
+        # Assert we have two group members.
+        self.assertEqual(
+            2, len(self.api.get_server_group(group['id'])['members']))
+        # Now delete one server and then we can archive.
+        server = self.api.get_server(server['id'])
+        self.api.delete_server(server['id'])
+        helper = integrated_helpers.InstanceHelperMixin()
+        helper.api = self.api
+        helper._wait_until_deleted(server)
+        # Now archive.
+        self.cli.archive_deleted_rows(verbose=True)
+        # Assert only one instance_group_member record was deleted.
+        self.assertRegexpMatches(self.output.getvalue(),
+                                 ".*instance_group_member.*\| 1.*")
+        # And that we still have one remaining group member.
+        self.assertEqual(
+            1, len(self.api.get_server_group(group['id'])['members']))
