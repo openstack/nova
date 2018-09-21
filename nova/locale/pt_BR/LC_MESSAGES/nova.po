@@ -19,7 +19,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-08-10 21:12+0000\n"
+"POT-Creation-Date: 2018-09-21 04:59+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -81,14 +81,6 @@ msgid "%(memsize)d MB of memory assigned, but expected %(memtotal)d MB"
 msgstr "%(memsize)d MB de memória designada, mas esperada %(memtotal)d MB"
 
 #, python-format
-msgid "%(name)s has a minimum character requirement of %(min_length)s."
-msgstr "%(name)s tem um requisito de caracteres mínimo de %(min_length)s."
-
-#, python-format
-msgid "%(name)s has more than %(max_length)s characters."
-msgstr "%(name)s possui mais de %(max_length)s caracteres."
-
-#, python-format
 msgid "%(path)s is not on local storage: %(reason)s"
 msgstr "%(path)s não está no armazenamento local: %(reason)s"
 
@@ -127,10 +119,6 @@ msgstr "%s não suporta o hotplug do disco."
 #, python-format
 msgid "%s format is not supported"
 msgstr "O formato %s não é suportado"
-
-#, python-format
-msgid "%s is not a string or unicode"
-msgstr "%s não é uma sequência ou unicode"
 
 #, python-format
 msgid "%s is not supported."
@@ -729,9 +717,6 @@ msgstr "Não foi possível buscar a imagem %(image_id)s"
 msgid "Could not find a handler for %(driver_type)s volume."
 msgstr ""
 "Não foi possível localizar um manipulador para o volume %(driver_type)s."
-
-msgid "Could not find another compute"
-msgstr "Não foi possível localizar outro cálculo"
 
 #, python-format
 msgid "Could not find binary %(binary)s on host %(host)s."
@@ -1906,9 +1891,6 @@ msgstr "volume_size inválido."
 #, python-format
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr "UUID do nó do Ironic não fornecido ao driver para a instância %s."
-
-msgid "Is the appropriate service running?"
-msgstr "O serviço está sendo executado da forma adequada?"
 
 #, python-format
 msgid ""
@@ -3105,9 +3087,6 @@ msgstr "O filtro de firewall para %s não existe"
 msgid "The floating IP request failed with a BadRequest"
 msgstr "A solicitação de IP flutuante falhou com um BadRequest"
 
-msgid "The input is not a string or unicode"
-msgstr "A entrada não é uma sequência ou unicode"
-
 msgid ""
 "The instance requires a newer hypervisor version than has been provided."
 msgstr ""
@@ -4126,12 +4105,6 @@ msgstr "vlan deve ser um número inteiro"
 #, python-format
 msgid "volume %s already attached"
 msgstr "volume %s já conectado"
-
-#, python-format
-msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"
-msgstr ""
-"o volume %(vol)s' de status deve estar 'disponível'. Atualmente em "
-"'%(status)s'"
 
 #, python-format
 msgid ""

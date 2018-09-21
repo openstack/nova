@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-08-10 21:12+0000\n"
+"POT-Creation-Date: 2018-09-21 04:59+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -46,14 +46,6 @@ msgid "%(memsize)d MB of memory assigned, but expected %(memtotal)d MB"
 msgstr "%(memsize)d MB hafıza atanmış, %(memtotal)d MB bekleniyordu"
 
 #, python-format
-msgid "%(name)s has a minimum character requirement of %(min_length)s."
-msgstr "%(name)s'in %(min_length)s asgari karakter gereksinimi vardır."
-
-#, python-format
-msgid "%(name)s has more than %(max_length)s characters."
-msgstr "%(name)s %(max_length)s'den fazla karaktere sahip."
-
-#, python-format
 msgid "%(path)s is not on local storage: %(reason)s"
 msgstr "%(path)s yerel depoda değil: %(reason)s"
 
@@ -84,10 +76,6 @@ msgstr "%s disk canlı takmayı desteklemiyor."
 #, python-format
 msgid "%s format is not supported"
 msgstr "%s biçimi desteklenmiyor"
-
-#, python-format
-msgid "%s is not a string or unicode"
-msgstr "%s bir karakter dizisi veya evrensel kodda değil"
 
 #, python-format
 msgid "%s is not supported."
@@ -556,9 +544,6 @@ msgstr "%(image_id)s imajı getirilemedi"
 #, python-format
 msgid "Could not find a handler for %(driver_type)s volume."
 msgstr "%(driver_type)s bölümü için bir işleyici bulunamadı."
-
-msgid "Could not find another compute"
-msgstr "Başka bir işlem bulunamadı"
 
 #, python-format
 msgid "Could not find binary %(binary)s on host %(host)s."
@@ -1539,9 +1524,6 @@ msgstr "Geçersiz volume_size."
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr "Ironic düğümü uuid'si %s sunucusu için sürücüye sağlanmamış."
 
-msgid "Is the appropriate service running?"
-msgstr "Uygun servis çalışıyor mu?"
-
 #, python-format
 msgid ""
 "It is not allowed to create an interface on external network %(network_uuid)s"
@@ -2508,9 +2490,6 @@ msgstr "Varsayılan PBM ilkesi arka uçta mevcut değil."
 msgid "The firewall filter for %s does not exist"
 msgstr "%s için güvenlik duvarı filtresi mevcut değil"
 
-msgid "The input is not a string or unicode"
-msgstr "Girdi bir karakter dizisi ya da evrensel kodda değil"
-
 msgid ""
 "The instance requires a newer hypervisor version than has been provided."
 msgstr "Örnek şu ankinden daha yeni hypervisor versiyonu gerektirir."
@@ -3331,11 +3310,6 @@ msgstr "vlan tam sayı olmalı"
 #, python-format
 msgid "volume %s already attached"
 msgstr "mantıksal sürücü %s zaten ekli"
-
-#, python-format
-msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"
-msgstr ""
-"mantıksal sürücü '%(vol)s' durumu 'kullanılabilir' olmalı. Şu an '%(status)s'"
 
 #, python-format
 msgid ""

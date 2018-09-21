@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-08-10 21:12+0000\n"
+"POT-Creation-Date: 2018-09-21 04:59+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -79,14 +79,6 @@ msgstr ""
 "Se han asignado %(memsize)d MB de memoria, pero se esperaban %(memtotal)d MB"
 
 #, python-format
-msgid "%(name)s has a minimum character requirement of %(min_length)s."
-msgstr "%(name)s requiere de, al menos, %(min_length)s caracteres."
-
-#, python-format
-msgid "%(name)s has more than %(max_length)s characters."
-msgstr "%(name)s tiene más de %(max_length)s caracteres."
-
-#, python-format
 msgid "%(path)s is not on local storage: %(reason)s"
 msgstr "%(path)s no está en un almacenamiento local: %(reason)s"
 
@@ -127,10 +119,6 @@ msgstr "%s no soporta hotplug de disco."
 #, python-format
 msgid "%s format is not supported"
 msgstr "No se soporta formato %s"
-
-#, python-format
-msgid "%s is not a string or unicode"
-msgstr "%s no es una serie o unicode"
 
 #, python-format
 msgid "%s is not supported."
@@ -740,9 +728,6 @@ msgstr "No se ha podido captar la imagen %(image_id)s"
 msgid "Could not find a handler for %(driver_type)s volume."
 msgstr ""
 "No se ha podido encontrar un manejador para el volumen %(driver_type)s."
-
-msgid "Could not find another compute"
-msgstr "No se ha podido encontrar otro cálculo "
 
 #, python-format
 msgid "Could not find binary %(binary)s on host %(host)s."
@@ -1926,9 +1911,6 @@ msgstr "volume_size invalido."
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr ""
 "No se ha proporcionado nodo uuid Ironic para controlador de instancia %s."
-
-msgid "Is the appropriate service running?"
-msgstr "¿Se está ejecutando el servicio adecuado?"
 
 #, python-format
 msgid ""
@@ -3144,9 +3126,6 @@ msgstr ""
 "La solicitud de la IP flotante ha fallado con BadRequest (Solicitud "
 "incorrecta)"
 
-msgid "The input is not a string or unicode"
-msgstr "La entrada no es una serie o unicode"
-
 msgid ""
 "The instance requires a newer hypervisor version than has been provided."
 msgstr ""
@@ -4182,12 +4161,6 @@ msgstr "vlan debe ser un entero"
 #, python-format
 msgid "volume %s already attached"
 msgstr "volumen %s ya ha sido adjuntado"
-
-#, python-format
-msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"
-msgstr ""
-"estado de volumen '%(vol)s' debe ser 'disponible'. Actualmente en "
-"'%(status)s'"
 
 #, python-format
 msgid ""
