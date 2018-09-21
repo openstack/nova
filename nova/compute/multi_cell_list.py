@@ -19,12 +19,16 @@ import six
 
 from oslo_log import log as logging
 
+import nova.conf
 from nova import context
 from nova import exception
+from nova.i18n import _
 
 LOG = logging.getLogger(__name__)
 CELL_FAIL_SENTINELS = (context.did_not_respond_sentinel,
                        context.raised_exception_sentinel)
+
+CONF = nova.conf.CONF
 
 
 class RecordSortContext(object):
@@ -400,6 +404,10 @@ class CrossCellLister(object):
                 return
 
             if item._db_record in CELL_FAIL_SENTINELS:
+                if not CONF.api.list_records_by_skipping_down_cells:
+                    raise exception.NovaException(
+                        _('Cell %s is not responding but configuration '
+                          'indicates that we should fail.') % item.cell_uuid)
                 LOG.warning('Cell %s is not responding and hence is '
                             'being omitted from the results',
                             item.cell_uuid)

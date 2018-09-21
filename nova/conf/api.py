@@ -321,6 +321,14 @@ Related options:
 * instance_list_cells_batch_strategy
 * max_limit
 """),
+    cfg.BoolOpt("list_records_by_skipping_down_cells",
+        default=True,
+        help="""
+When set to False, this will cause the API to return a 500 error if there is an
+infrastructure failure like non-responsive cells. If you want the API to skip
+the down cells and return the results from the up cells set this option to
+True.
+"""),
 ]
 
 # NOTE(edleafe): I would like to import the value directly from
