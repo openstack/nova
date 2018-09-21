@@ -255,3 +255,40 @@ class InstanceMappingListTestCase(test.NoDBTestCase):
             self.context, uuids + [uuidsentinel.deleted_instance])
         self.assertEqual(sorted(uuids),
                          sorted([m.instance_uuid for m in mappings]))
+
+    def test_get_by_cell_and_project(self):
+        cells = []
+        # Create two cells
+        for uuid in (uuidsentinel.cell1, uuidsentinel.cell2):
+            cm = cell_mapping.CellMapping(context=self.context, uuid=uuid,
+                                          database_connection="fake:///",
+                                          transport_url='fake://')
+            cm.create()
+            cells.append(cm)
+        # With each cell having two instance_mappings of two project_ids.
+        uuids = {cells[0].id: [uuidsentinel.c1i1, uuidsentinel.c1i2],
+                 cells[1].id: [uuidsentinel.c2i1, uuidsentinel.c2i2]}
+        project_ids = ['fake-project-1', 'fake-project-2']
+        for cell_id, uuid in uuids.items():
+            instance_mapping.InstanceMapping._create_in_db(
+                    self.context,
+                    {'project_id': project_ids[0],
+                     'cell_id': cell_id,
+                     'instance_uuid': uuid[0]})
+            instance_mapping.InstanceMapping._create_in_db(
+                    self.context,
+                    {'project_id': project_ids[1],
+                     'cell_id': cell_id,
+                     'instance_uuid': uuid[1]})
+
+        ims = instance_mapping.InstanceMappingList.get_by_cell_and_project(
+            self.context, cells[0].id, 'fake-project-2')
+        self.assertEqual([uuidsentinel.c1i2],
+                         sorted([m.instance_uuid for m in ims]))
+        ims = instance_mapping.InstanceMappingList.get_by_cell_and_project(
+            self.context, cells[1].id, 'fake-project-1')
+        self.assertEqual([uuidsentinel.c2i1],
+                         sorted([m.instance_uuid for m in ims]))
+        ims = instance_mapping.InstanceMappingList.get_by_cell_and_project(
+            self.context, cells[0].id, 'fake-project-3')
+        self.assertEqual([], sorted([m.instance_uuid for m in ims]))
