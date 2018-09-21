@@ -331,47 +331,6 @@ True.
 """),
 ]
 
-# NOTE(edleafe): I would like to import the value directly from
-# nova.compute.vm_states, but that creates a circular import. Since this value
-# is not likely to be changed, I'm copy/pasting it here.
-BUILDING = "building"  # VM only exists in DB
-osapi_hide_opts = [
-    cfg.ListOpt("hide_server_address_states",
-        default=[BUILDING],
-        deprecated_group="DEFAULT",
-        deprecated_name="osapi_hide_server_address_states",
-        deprecated_for_removal=True,
-        deprecated_since="17.0.0",
-        deprecated_reason="This option hide the server address in server "
-                          "representation for configured server states. "
-                          "Which makes GET server API controlled by this "
-                          "config options. Due to this config options, user "
-                          "would not be able to discover the API behavior on "
-                          "different clouds which leads to the interop issue.",
-        help="""
-This option is a list of all instance states for which network address
-information should not be returned from the API.
-
-Possible values:
-
-  A list of strings, where each string is a valid VM state, as defined in
-  nova/compute/vm_states.py. As of the Newton release, they are:
-
-* "active"
-* "building"
-* "paused"
-* "suspended"
-* "stopped"
-* "rescued"
-* "resized"
-* "soft-delete"
-* "deleted"
-* "error"
-* "shelved"
-* "shelved_offloaded"
-""")
-]
-
 os_network_opts = [
     cfg.BoolOpt("use_neutron_default_nets",
         default=False,
@@ -413,7 +372,6 @@ API_OPTS = (auth_opts +
             metadata_opts +
             file_opts +
             osapi_opts +
-            osapi_hide_opts +
             os_network_opts +
             enable_inst_pw_opts)
 

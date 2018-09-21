@@ -431,9 +431,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-availability-zone:list",
 )
 
-        self.non_admin_only_rules = (
-"os_compute_api:os-hide-server-addresses",)
-
         self.allow_all_rules = (
 "os_compute_api:os-quota-sets:defaults",
 )
@@ -451,12 +448,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
                               self.non_admin_context, rule,
                               {'project_id': 'fake', 'user_id': 'fake'})
             policy.authorize(self.admin_context, rule, self.target)
-
-    def test_non_admin_only_rules(self):
-        for rule in self.non_admin_only_rules:
-            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
-                              self.admin_context, rule, self.target)
-            policy.authorize(self.non_admin_context, rule, self.target)
 
     def test_admin_or_owner_rules(self):
         for rule in self.admin_or_owner_rules:
@@ -477,6 +468,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         special_rules = ('admin_api', 'admin_or_owner', 'context_is_admin',
                          'os_compute_api:os-quota-class-sets:show')
         result = set(rules.keys()) - set(self.admin_only_rules +
-            self.admin_or_owner_rules + self.non_admin_only_rules +
+            self.admin_or_owner_rules +
             self.allow_all_rules + special_rules)
         self.assertEqual(set([]), result)
