@@ -23,10 +23,9 @@ Verify operation of the Compute service.
       +----+--------------------+------------+----------+---------+-------+----------------------------+
       | Id | Binary             | Host       | Zone     | Status  | State | Updated At                 |
       +----+--------------------+------------+----------+---------+-------+----------------------------+
-      |  1 | nova-consoleauth   | controller | internal | enabled | up    | 2016-02-09T23:11:15.000000 |
-      |  2 | nova-scheduler     | controller | internal | enabled | up    | 2016-02-09T23:11:15.000000 |
-      |  3 | nova-conductor     | controller | internal | enabled | up    | 2016-02-09T23:11:16.000000 |
-      |  4 | nova-compute       | compute1   | nova     | enabled | up    | 2016-02-09T23:11:20.000000 |
+      |  1 | nova-scheduler     | controller | internal | enabled | up    | 2016-02-09T23:11:15.000000 |
+      |  2 | nova-conductor     | controller | internal | enabled | up    | 2016-02-09T23:11:16.000000 |
+      |  3 | nova-compute       | compute1   | nova     | enabled | up    | 2016-02-09T23:11:20.000000 |
       +----+--------------------+------------+----------+---------+-------+----------------------------+
 
    .. note::
