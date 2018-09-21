@@ -39,11 +39,19 @@ if [[ -z ${subnode} ]]; then
     exit 3
 fi
 
-echo "Creating test server on subnode"
-image=$(openstack image list -f value -c Name | awk 'NR==1{print $1}')
-flavor=$(openstack flavor list -f value -c Name | awk 'NR==1{print $1}')
-openstack server create --image ${image} --flavor ${flavor} \
+image_id=$(openstack image list -f value -c ID | awk 'NR==1{print $1}')
+flavor_id=$(openstack flavor list -f value -c ID | awk 'NR==1{print $1}')
+
+echo "Creating ephemeral test server on subnode"
+openstack server create --image ${image_id} --flavor ${flavor_id} \
 --availability-zone nova:${subnode} --wait evacuate-test
+
+echo "Creating BFV test server on subnode"
+# TODO(mriedem): Use OSC when it supports boot from volume where nova creates
+# the root volume from an image.
+nova boot --flavor ${flavor_id} --poll \
+--block-device id=${image_id},source=image,dest=volume,size=1,bootindex=0,shutdown=remove \
+--availability-zone nova:${subnode} evacuate-bfv-test
 
 echo "Forcing down the subnode so we can evacuate from it"
 openstack --os-compute-api-version 2.11 compute service set --down ${subnode} nova-compute
@@ -57,22 +65,30 @@ sudo systemctl stop libvirt-bin
 # would filter out this host and we'd get NoValidHost. Normally forcing a host
 # during evacuate and bypassing the scheduler is a very bad idea, but we're
 # doing a negative test here.
-# TODO(mriedem): Use OSC when it supports evacuate.
-echo "Forcing evacuate to local host"
-nova evacuate --force evacuate-test ${local_hostname}
-# Wait for the instance to go into ERROR state from the failed evacuate.
-count=0
-status=$(openstack server show evacuate-test -f value -c status)
-while [ "${status}" != "ERROR" ]
-do
-    sleep 1
-    count=$((count+1))
-    if [ ${count} -eq 30 ]; then
-        echo "Timed out waiting for server to go to ERROR status"
-        exit 4
-    fi
-    status=$(openstack server show evacuate-test -f value -c status)
-done
+
+function evacuate_and_wait_for_error() {
+    local server="$1"
+
+    echo "Forcing evacuate of ${server} to local host"
+    # TODO(mriedem): Use OSC when it supports evacuate.
+    nova evacuate --force ${server} ${local_hostname}
+    # Wait for the instance to go into ERROR state from the failed evacuate.
+    count=0
+    status=$(openstack server show ${server} -f value -c status)
+    while [ "${status}" != "ERROR" ]
+    do
+        sleep 1
+        count=$((count+1))
+        if [ ${count} -eq 30 ]; then
+            echo "Timed out waiting for server to go to ERROR status"
+            exit 4
+        fi
+        status=$(openstack server show ${server} -f value -c status)
+    done
+}
+
+evacuate_and_wait_for_error evacuate-test
+evacuate_and_wait_for_error evacuate-bfv-test
 
 echo "Now restart libvirt and perform a successful evacuation"
 sudo systemctl start libvirt-bin
@@ -92,24 +108,37 @@ do
     status=$(openstack compute service list --host ${local_hostname} --service nova-compute -f value -c Status)
 done
 
-nova evacuate evacuate-test
-# Wait for the instance to go into ACTIVE state from the evacuate.
-count=0
-status=$(openstack server show evacuate-test -f value -c status)
-while [ "${status}" != "ACTIVE" ]
-do
-    sleep 1
-    count=$((count+1))
-    if [ ${count} -eq 30 ]; then
-        echo "Timed out waiting for server to go to ACTIVE status"
-        exit 6
+function evacuate_and_wait_for_active() {
+    local server="$1"
+
+    nova evacuate ${server}
+    # Wait for the instance to go into ACTIVE state from the evacuate.
+    count=0
+    status=$(openstack server show ${server} -f value -c status)
+    while [ "${status}" != "ACTIVE" ]
+    do
+        sleep 1
+        count=$((count+1))
+        if [ ${count} -eq 30 ]; then
+            echo "Timed out waiting for server to go to ACTIVE status"
+            exit 6
+        fi
+        status=$(openstack server show ${server} -f value -c status)
+    done
+}
+
+evacuate_and_wait_for_active evacuate-test
+evacuate_and_wait_for_active evacuate-bfv-test
+
+# Make sure the servers moved.
+for server in evacuate-test evacuate-bfv-test; do
+    host=$(openstack server show ${server} -f value -c OS-EXT-SRV-ATTR:host)
+    if [[ ${host} != ${local_hostname} ]]; then
+        echo "Unexpected host ${host} for server ${server} after evacuate."
+        exit 7
     fi
-    status=$(openstack server show evacuate-test -f value -c status)
 done
 
-# Make sure the server moved.
-host=$(openstack server show evacuate-test -f value -c OS-EXT-SRV-ATTR:host)
-if [[ ${host} != ${local_hostname} ]]; then
-    echo "Unexpected host ${host} for server after evacuate."
-    exit 7
-fi
+# Cleanup test servers
+openstack server delete --wait evacuate-test
+openstack server delete --wait evacuate-bfv-test
