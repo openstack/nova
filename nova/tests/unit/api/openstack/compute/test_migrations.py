@@ -336,13 +336,58 @@ class MigrationsTestCaseV259(MigrationsTestCaseV223):
     @mock.patch('nova.compute.api.API.get_migrations',
                 return_value=objects.MigrationList())
     def test_index_with_changes_since_old_microversion(self, get_migrations):
-        """Tests that the changes-since query parameteris ignored before
+        """Tests that the changes-since query parameter is ignored before
         microversion 2.59.
         """
         # Also use a valid filter (instance_uuid) to make sure only
         # changes-since is removed.
         req = fakes.HTTPRequest.blank(
             '/os-migrations?changes-since=2018-01-10T16:59:24.138939&'
+            'instance_uuid=%s' % uuids.instance_uuid,
+            version='2.58', use_admin_context=True)
+        result = self.controller.index(req)
+        self.assertEqual({'migrations': []}, result)
+        get_migrations.assert_called_once_with(
+            req.environ['nova.context'],
+            {'instance_uuid': uuids.instance_uuid})
+
+
+class MigrationTestCaseV266(MigrationsTestCaseV259):
+    wsgi_api_version = '2.66'
+
+    def test_index_with_invalid_changes_before(self):
+        """Tests detail paging with an invalid changes-before value."""
+        req = fakes.HTTPRequest.blank(
+            '/os-migrations?changes-before=wrong_time',
+            version=self.wsgi_api_version, use_admin_context=True)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_index_with_changes_before_old_microversion_failed(self):
+        """Tests that the changes-before query parameter is an error before
+        microversion 2.66.
+        """
+        # Also use a valid filter (instance_uuid) to make sure
+        # changes-before is an additional property.
+        req = fakes.HTTPRequest.blank(
+            '/os-migrations?changes-before=2018-01-10T16:59:24.138939&'
+            'instance_uuid=%s' % uuids.instance_uuid,
+            version='2.65', use_admin_context=True)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.index, req)
+        self.assertIn('Additional properties are not allowed',
+                      six.text_type(ex))
+
+    @mock.patch('nova.compute.api.API.get_migrations',
+                return_value=objects.MigrationList())
+    def test_index_with_changes_before_old_microversion(self, get_migrations):
+        """Tests that the changes-before query parameter is ignored before
+        microversion 2.59.
+        """
+        # Also use a valid filter (instance_uuid) to make sure only
+        # changes-before is removed.
+        req = fakes.HTTPRequest.blank(
+            '/os-migrations?changes-before=2018-01-10T16:59:24.138939&'
             'instance_uuid=%s' % uuids.instance_uuid,
             version='2.58', use_admin_context=True)
         result = self.controller.index(req)

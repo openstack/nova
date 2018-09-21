@@ -292,3 +292,16 @@ class MigrationsSamplesJsonTestV2_59(MigrationsSamplesJsonTestV2_23):
         self._verify_response(
             'migrations-get-with-changes-since',
             {"instance_2": INSTANCE_UUID_2}, response, 200)
+
+
+class MigrationsSamplesJsonTestV2_66(MigrationsSamplesJsonTestV2_59):
+    microversion = '2.66'
+    scenarios = [('v2_66', {'api_major_version': 'v2.1'})]
+
+    def test_get_migrations_with_changes_before(self):
+        response = self._do_get(
+            'os-migrations?changes-before=2016-01-29T11:42:02.000000')
+        self.assertEqual(200, response.status_code)
+        self._verify_response(
+            'migrations-get-with-changes-before',
+            {"instance_1": INSTANCE_UUID_1}, response, 200)

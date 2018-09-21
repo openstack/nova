@@ -1,0 +1,24 @@
+---
+features:
+  - |
+    Microversion 2.66 adds the optional filter parameter ``changes-before``
+    which can be used to get resources changed before or equal to the
+    specified date and time.
+
+    Like the ``changes-since`` filter, the ``changes-before`` filter will
+    also return deleted servers.
+
+    This parameter (``changes-before``) does not change any read-deleted
+    behavior in the os-instance-actions or os-migrations APIs.
+    The os-instance-actions API with the 2.21 microversion allows retrieving
+    instance actions for a deleted server resource. The os-migrations API
+    takes an optional ``instance_uuid`` filter parameter but does not support
+    returning deleted migration records.
+
+    The ``changes-before`` request parameter can be passed to the servers,
+    os-instance-action and os-migrations APIs:
+
+    * ``GET /servers``
+    * ``GET /servers/detail``
+    * ``GET /servers/{server_id}/os-instance-actions``
+    * ``GET /os-migrations``

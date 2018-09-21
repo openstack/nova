@@ -169,6 +169,7 @@ whitelist will be silently ignored.
   - ``status``
   - ``tags`` (New in version 2.26)
   - ``tags-any`` (New in version 2.26)
+  - ``changes-before`` (New in version 2.66)
 
 
 - For admin user, whitelist includes all filter keys mentioned in
@@ -230,6 +231,7 @@ Request
   - not-tags-any: not_tags_any_query
   - tags: tags_query
   - tags-any: tags_any_query
+  - changes-before: changes_before_server
 
 Response
 --------
@@ -552,6 +554,7 @@ Request
   - not-tags-any: not_tags_any_query
   - tags: tags_query
   - tags-any: tags_any_query
+  - changes-before: changes_before_server
 
 Response
 --------

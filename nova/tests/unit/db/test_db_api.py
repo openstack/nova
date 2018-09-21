@@ -1375,6 +1375,19 @@ class MigrationTestCase(test.TestCase):
         self.assertEqual(migrations[0]['uuid'], uuidsentinel.uuid_time2)
         self.assertEqual(migrations[1]['uuid'], uuidsentinel.uuid_time3)
 
+    def test_get_migrations_by_filters_with_changes_before(self):
+        changes_time = timeutils.utcnow(with_timezone=True)
+        self._create_3_migration_after_time(changes_time)
+        after_3day_2hours = datetime.timedelta(days=3, hours=2)
+        filters = {"changes-before": changes_time + after_3day_2hours}
+        migrations = db.migration_get_all_by_filters(
+            self.ctxt, filters,
+            sort_keys=['updated_at'], sort_dirs=['asc'])
+        self.assertEqual(3, len(migrations))
+        self.assertEqual(migrations[0]['uuid'], uuidsentinel.uuid_time1)
+        self.assertEqual(migrations[1]['uuid'], uuidsentinel.uuid_time2)
+        self.assertEqual(migrations[2]['uuid'], uuidsentinel.uuid_time3)
+
 
 class ModelsObjectComparatorMixin(object):
     def _dict_from_object(self, obj, ignored_keys):
@@ -2143,6 +2156,65 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         result = db.instance_get_all_by_filters(self.ctxt,
                                                 filters)
         self._assertEqualListsOfInstances([i2], result)
+
+    def test_instance_get_all_by_filters_changes_before(self):
+        i1 = self.create_instance_with_args(updated_at=
+                                            '2013-12-05T15:03:25.000000')
+        i2 = self.create_instance_with_args(updated_at=
+                                            '2013-12-05T15:03:26.000000')
+        changes_before = iso8601.parse_date('2013-12-05T15:03:26.000000')
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'changes-before':
+                                                 changes_before})
+        self._assertEqualListsOfInstances([i1, i2], result)
+
+        changes_before = iso8601.parse_date('2013-12-05T15:03:25.000000')
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'changes-before':
+                                                 changes_before})
+        self._assertEqualListsOfInstances([i1], result)
+
+        db.instance_destroy(self.ctxt, i2['uuid'])
+        filters = {}
+        filters['changes-before'] = changes_before
+        filters['marker'] = i2['uuid']
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                filters)
+        self._assertEqualListsOfInstances([i1], result)
+
+    def test_instance_get_all_by_filters_changes_time_period(self):
+        i1 = self.create_instance_with_args(updated_at=
+                                            '2013-12-05T15:03:25.000000')
+        i2 = self.create_instance_with_args(updated_at=
+                                            '2013-12-05T15:03:26.000000')
+        i3 = self.create_instance_with_args(updated_at=
+                                            '2013-12-05T15:03:27.000000')
+        changes_since = iso8601.parse_date('2013-12-05T15:03:25.000000')
+        changes_before = iso8601.parse_date('2013-12-05T15:03:27.000000')
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'changes-since':
+                                                 changes_since,
+                                                 'changes-before':
+                                                 changes_before})
+        self._assertEqualListsOfInstances([i1, i2, i3], result)
+
+        changes_since = iso8601.parse_date('2013-12-05T15:03:26.000000')
+        changes_before = iso8601.parse_date('2013-12-05T15:03:27.000000')
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'changes-since':
+                                                 changes_since,
+                                                 'changes-before':
+                                                 changes_before})
+        self._assertEqualListsOfInstances([i2, i3], result)
+
+        db.instance_destroy(self.ctxt, i1['uuid'])
+        filters = {}
+        filters['changes-since'] = changes_since
+        filters['changes-before'] = changes_before
+        filters['marker'] = i1['uuid']
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                filters)
+        self._assertEqualListsOfInstances([i2, i3], result)
 
     def test_instance_get_all_by_filters_exact_match(self):
         instance = self.create_instance_with_args(host='host1')
@@ -3589,6 +3661,35 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.ctxt, uuid1, filters={'changes-since': timestamp})
         self.assertEqual(1, len(actions))
         self._assertEqualListsOfObjects([action2], actions)
+
+    def test_instance_actions_get_with_changes_before(self):
+        """Test list instance actions can support timestamp filter."""
+        uuid1 = uuidsentinel.uuid1
+
+        expected = []
+        extra = {
+            'created_at': timeutils.utcnow()
+        }
+
+        action_values = self._create_action_values(uuid1, extra=extra)
+        action = db.action_start(self.ctxt, action_values)
+        expected.append(action)
+
+        timestamp = timeutils.utcnow()
+        action_values['start_time'] = timestamp
+        action_values['updated_at'] = timestamp
+        action_values['action'] = 'delete'
+        action = db.action_start(self.ctxt, action_values)
+        expected.append(action)
+
+        actions = db.actions_get(self.ctxt, uuid1)
+        self.assertEqual(2, len(actions))
+        self.assertNotEqual(actions[0]['updated_at'],
+                            actions[1]['updated_at'])
+        actions = db.actions_get(
+            self.ctxt, uuid1, filters={'changes-before': timestamp})
+        self.assertEqual(2, len(actions))
+        self._assertEqualListsOfObjects(expected, actions)
 
     def test_instance_actions_get_with_not_found_marker(self):
         self.assertRaises(exception.MarkerNotFound,

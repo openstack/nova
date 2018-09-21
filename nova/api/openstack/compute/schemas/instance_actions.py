@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import copy
+
 from nova.api.validation import parameter_types
 
 list_query_params_v258 = {
@@ -27,3 +29,9 @@ list_query_params_v258 = {
     },
     'additionalProperties': False
 }
+
+list_query_params_v266 = copy.deepcopy(list_query_params_v258)
+list_query_params_v266['properties'].update({
+    'changes-before': parameter_types.single_param(
+            {'type': 'string', 'format': 'date-time'}),
+})

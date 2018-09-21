@@ -41,3 +41,9 @@ list_query_params_v259['properties'].update({
         {'type': 'string', 'format': 'date-time'}),
 })
 list_query_params_v259['additionalProperties'] = False
+
+list_query_params_v266 = copy.deepcopy(list_query_params_v259)
+list_query_params_v266['properties'].update({
+    'changes-before': parameter_types.single_param(
+        {'type': 'string', 'format': 'date-time'}),
+})
