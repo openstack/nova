@@ -1214,6 +1214,7 @@ class ComputeTaskManager(base.Base):
         host_mapping_cache = {}
         cell_mapping_cache = {}
         instances = []
+        host_az = {}  # host=az cache to optimize multi-create
 
         for (build_request, request_spec, host_list) in six.moves.zip(
                 build_requests, request_specs, host_lists):
@@ -1259,9 +1260,11 @@ class ComputeTaskManager(base.Base):
                 rc.delete_allocation_for_instance(context, instance.uuid)
                 continue
             else:
-                instance.availability_zone = (
-                    availability_zones.get_host_availability_zone(
-                        context, host.service_host))
+                if host.service_host not in host_az:
+                    host_az[host.service_host] = (
+                        availability_zones.get_host_availability_zone(
+                            context, host.service_host))
+                instance.availability_zone = host_az[host.service_host]
                 with obj_target_cell(instance, cell):
                     instance.create()
                     instances.append(instance)
