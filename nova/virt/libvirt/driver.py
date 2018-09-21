@@ -237,11 +237,6 @@ MIN_VIRTUOZZO_VERSION = (7, 0, 0)
 # Ability to set the user guest password with parallels
 MIN_LIBVIRT_PARALLELS_SET_ADMIN_PASSWD = (2, 0, 0)
 
-# libvirt < 1.3 reported virt_functions capability
-# only when VFs are enabled.
-# libvirt 1.3 fix f391889f4e942e22b9ef8ecca492de05106ce41e
-MIN_LIBVIRT_PF_WITH_NO_VFS_CAP_VERSION = (1, 3, 0)
-
 # Use the "logd" backend for handling stdout/stderr from QEMU processes.
 MIN_LIBVIRT_VIRTLOGD = (1, 3, 3)
 MIN_QEMU_VIRTLOGD = (2, 7, 0)
@@ -5886,17 +5881,6 @@ class LibvirtDriver(driver.ComputeDriver):
                         'dev_type': fields.PciDeviceType.SRIOV_VF,
                         'parent_addr': phys_address,
                     }
-
-            # Note(moshele): libvirt < 1.3 reported virt_functions capability
-            # only when VFs are enabled. The check below is a workaround
-            # to get the correct report regardless of whether or not any
-            # VFs are enabled for the device.
-            if not self._host.has_min_version(
-                MIN_LIBVIRT_PF_WITH_NO_VFS_CAP_VERSION):
-                is_physical_function = pci_utils.is_physical_function(
-                    *pci_utils.get_pci_address_fields(pci_address))
-                if is_physical_function:
-                    return {'dev_type': fields.PciDeviceType.SRIOV_PF}
 
             return {'dev_type': fields.PciDeviceType.STANDARD}
 
