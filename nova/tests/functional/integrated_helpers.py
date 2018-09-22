@@ -369,6 +369,9 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(nova_fixtures.AllServicesCurrent())
 
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
+
         placement = self.useFixture(nova_fixtures.PlacementFixture())
         self.placement_api = placement.api
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
