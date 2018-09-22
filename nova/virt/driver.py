@@ -134,8 +134,6 @@ class ComputeDriver(object):
         "supports_trusted_certs": False,
     }
 
-    requires_allocation_refresh = False
-
     # Indicates if this driver will rebalance nodes among compute service
     # hosts. This is really here for ironic and should not be used by any
     # other driver.

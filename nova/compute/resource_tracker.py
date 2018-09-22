@@ -1160,7 +1160,7 @@ class ResourceTracker(object):
                 continue
 
     def _update_usage_from_instance(self, context, instance, nodename,
-            is_removed=False, require_allocation_refresh=False):
+            is_removed=False):
         """Update usage for a single instance."""
 
         uuid = instance['uuid']
@@ -1189,10 +1189,6 @@ class ResourceTracker(object):
                 self.pci_tracker.update_pci_for_instance(context,
                                                          instance,
                                                          sign=sign)
-            if require_allocation_refresh:
-                LOG.debug("Auto-correcting allocations.")
-                self.reportclient.update_instance_allocation(context, cn,
-                                                             instance, sign)
             # new instance, update compute node resource usage:
             self._update_usage(self._get_usage_dict(instance), nodename,
                                sign=sign)
@@ -1228,78 +1224,10 @@ class ResourceTracker(object):
         cn.current_workload = 0
         cn.running_vms = 0
 
-        # NOTE(jaypipes): In Pike, we need to be tolerant of Ocata compute
-        # nodes that overwrite placement allocations to look like what the
-        # resource tracker *thinks* is correct. When an instance is
-        # migrated from an Ocata compute node to a Pike compute node, the
-        # Pike scheduler will have created a "doubled-up" allocation that
-        # contains allocated resources against both the source and
-        # destination hosts. The Ocata source compute host, during its
-        # update_available_resource() periodic call will find the instance
-        # in its list of known instances and will call
-        # update_instance_allocation() in the report client. That call will
-        # pull the allocations for the instance UUID which will contain
-        # both the source and destination host providers in the allocation
-        # set. Seeing that this is different from what the Ocata source
-        # host thinks it should be and will overwrite the allocation to
-        # only be an allocation against itself.
-        #
-        # And therefore, here we need to have Pike compute hosts
-        # "correct" the improper healing that the Ocata source host did
-        # during its periodic interval. When the instance is fully migrated
-        # to the Pike compute host, the Ocata compute host will find an
-        # allocation that refers to itself for an instance it no longer
-        # controls and will *delete* all allocations that refer to that
-        # instance UUID, assuming that the instance has been deleted. We
-        # need the destination Pike compute host to recreate that
-        # allocation to refer to its own resource provider UUID.
-        #
-        # For Pike compute nodes that migrate to either a Pike compute host
-        # or a Queens compute host, we do NOT want the Pike compute host to
-        # be "healing" allocation information. Instead, we rely on the Pike
-        # scheduler to properly create allocations during scheduling.
-        #
-        # Pike compute hosts may still rework an
-        # allocation for an instance in a move operation during
-        # confirm_resize() on the source host which will remove the
-        # source resource provider from any allocation for an
-        # instance.
-        #
-        # In Queens and beyond, the scheduler will understand when
-        # a move operation has been requested and instead of
-        # creating a doubled-up allocation that contains both the
-        # source and destination host, the scheduler will take the
-        # original allocation (against the source host) and change
-        # the consumer ID of that allocation to be the migration
-        # UUID and not the instance UUID. The scheduler will
-        # allocate the resources for the destination host to the
-        # instance UUID.
-
-        # Some drivers (ironic) still need the allocations to be
-        # fixed up, as they transition the way their inventory is reported.
-        require_allocation_refresh = self.driver.requires_allocation_refresh
-
-        if require_allocation_refresh:
-            msg_allocation_refresh = (
-                "Compute driver requires allocation refresh. "
-                "Will auto-correct allocations to handle "
-                "Ocata-style assumptions.")
-        else:
-            msg_allocation_refresh = (
-                "Compute driver doesn't require allocation refresh and we're "
-                "on a compute host in a deployment that only has compute "
-                "hosts with Nova versions >=16 (Pike). Skipping "
-                "auto-correction of allocations.")
-
         instance_by_uuid = {}
         for instance in instances:
             if instance.vm_state not in vm_states.ALLOW_RESOURCE_REMOVAL:
-                if msg_allocation_refresh:
-                    LOG.debug(msg_allocation_refresh)
-                    msg_allocation_refresh = False
-
-                self._update_usage_from_instance(context, instance, nodename,
-                    require_allocation_refresh=require_allocation_refresh)
+                self._update_usage_from_instance(context, instance, nodename)
             instance_by_uuid[instance.uuid] = instance
         return instance_by_uuid
 

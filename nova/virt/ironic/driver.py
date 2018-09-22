@@ -142,12 +142,6 @@ class IronicDriver(virt_driver.ComputeDriver):
                     "supports_trusted_certs": False,
                     }
 
-    # Needed for exiting instances to have allocations for custom resource
-    # class resources
-    # TODO(johngarbutt) we should remove this once the resource class
-    # migration has been completed.
-    requires_allocation_refresh = True
-
     # This driver is capable of rebalancing nodes between computes.
     rebalances_nodes = True
 
