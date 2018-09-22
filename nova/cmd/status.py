@@ -120,7 +120,8 @@ class UpgradeCommands(object):
         # released.
         meta = MetaData(bind=db_session.get_engine(context=context))
         compute_nodes = Table('compute_nodes', meta, autoload=True)
-        return select([sqlfunc.count()]).select_from(compute_nodes).scalar()
+        return select([sqlfunc.count()]).select_from(compute_nodes).where(
+                compute_nodes.c.deleted == 0).scalar()
 
     def _check_cellsv2(self):
         """Checks to see if cells v2 has been setup.
