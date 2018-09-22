@@ -1732,26 +1732,6 @@ class SchedulerReportClient(object):
         return allocations.get(
             rp_uuid, {}).get('resources', {})
 
-    def _allocate_for_instance(self, context, rp_uuid, instance):
-        my_allocations = _instance_to_allocations_dict(instance)
-        current_allocations = self.get_allocations_for_consumer_by_provider(
-            context, rp_uuid, instance.uuid)
-        if current_allocations == my_allocations:
-            allocstr = ','.join(['%s=%s' % (k, v)
-                                 for k, v in my_allocations.items()])
-            LOG.debug('Instance %(uuid)s allocations are unchanged: %(alloc)s',
-                      {'uuid': instance.uuid, 'alloc': allocstr})
-            return
-
-        LOG.debug('Sending allocation for instance %s',
-                  my_allocations,
-                  instance=instance)
-        res = self.put_allocations(context, rp_uuid, instance.uuid,
-                                   my_allocations, instance.project_id,
-                                   instance.user_id)
-        if res:
-            LOG.info('Submitted allocation for instance', instance=instance)
-
     # NOTE(jaypipes): Currently, this method is ONLY used in two places:
     # 1. By the scheduler to allocate resources on the selected destination
     #    hosts.
@@ -1759,9 +1739,7 @@ class SchedulerReportClient(object):
     #    destination host. This is a short-term fix for Pike which should be
     #    replaced in Queens by conductor calling the scheduler in the force
     #    host case.
-    # This method should not be called by the resource tracker; instead, the
-    # _allocate_for_instance() method is used which does not perform any
-    # checking that a move operation is in place.
+    # This method should not be called by the resource tracker.
     @safe_connect
     @retries
     def claim_resources(self, context, consumer_uuid, alloc_request,
@@ -1776,9 +1754,9 @@ class SchedulerReportClient(object):
         operations from being scheduled to improperly, we create a "doubled-up"
         allocation that consumes resources on *both* the source and the
         destination host during the move operation. When the move operation
-        completes, the destination host (via _allocate_for_instance()) will
-        end up setting allocations for the instance only on the destination
-        host thereby freeing up resources on the source host appropriately.
+        completes, the destination host will end up setting allocations for the
+        instance only on the destination host thereby freeing up resources on
+        the source host appropriately.
 
         :param context: The security context
         :param consumer_uuid: The instance's UUID.
@@ -2084,13 +2062,6 @@ class SchedulerReportClient(object):
                              'code': r.status_code,
                              'text': r.text})
             return False
-
-    def update_instance_allocation(self, context, compute_node, instance,
-                                   sign):
-        if sign > 0:
-            self._allocate_for_instance(context, compute_node.uuid, instance)
-        else:
-            self.delete_allocation_for_instance(context, instance.uuid)
 
     def get_allocations_for_resource_provider(self, context, rp_uuid):
         """Retrieves the allocations for a specific provider.

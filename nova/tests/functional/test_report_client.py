@@ -221,8 +221,11 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             self.assertTrue(ptree.has_inventory(self.compute_uuid))
 
             # Update allocations with our instance
-            self.client.update_instance_allocation(
-                self.context, self.compute_node, self.instance, 1)
+            alloc_dict = utils.resources_from_flavor(self.instance,
+                                                     self.instance.flavor)
+            self.client.put_allocations(
+                self.context, self.compute_uuid, self.instance_uuid,
+                alloc_dict, self.instance.project_id, self.instance.user_id)
 
             # Check that allocations were made
             resp = self.client.get('/allocations/%s' % self.instance_uuid)
@@ -238,8 +241,8 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             self.assertEqual(2, vcpu_data)
 
             # Delete allocations with our instance
-            self.client.update_instance_allocation(
-                self.context, self.compute_node, self.instance, -1)
+            self.client.delete_allocation_for_instance(self.context,
+                                                       self.instance.uuid)
 
             # No usage
             resp = self.client.get('/resource_providers/%s/usages' %
