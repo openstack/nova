@@ -83,7 +83,7 @@ Contents
     limits
     links_and_references
     paginated_collections
-    polling_changes-since_parameter
+    polling_changes
     request_and_response_formats
 
 .. toctree::

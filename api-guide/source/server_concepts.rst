@@ -200,10 +200,10 @@ For different user roles, the user has different query options set:
 There are also some special query options:
 
 - ``changes-since`` returns the servers updated after the given time.
-  Please see: :doc:`polling_changes-since_parameter`
+  Please see: :doc:`polling_changes`
 
 - ``changes-before`` returns the servers updated before the given time.
-  Please see: :doc:`polling_changes-since_parameter`
+  Please see: :doc:`polling_changes`
 
 - ``deleted`` returns (or excludes) deleted servers
 
