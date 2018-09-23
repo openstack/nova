@@ -18,6 +18,7 @@ policy_data = """
     "context_is_admin": "role:admin or role:administrator",
 
     "os_compute_api:servers:show:host_status": "",
+    "os_compute_api:servers:allow_all_filters": "",
     "os_compute_api:servers:migrations:force_complete": "",
     "os_compute_api:os-admin-actions:inject_network_info": "",
     "os_compute_api:os-admin-actions:reset_network": "",
