@@ -3214,7 +3214,7 @@ class _ComputeAPIUnitTestMixIn(object):
              'device_type': None, 'snapshot_id': '1-snapshot',
              'device_name': '/dev/vda',
              'destination_type': 'volume', 'delete_on_termination': False,
-             'tag': None})
+             'tag': None, 'volume_type': None})
 
         limits_patcher = mock.patch.object(
             self.compute_api.volume_api, 'get_absolute_limits',
@@ -3258,14 +3258,14 @@ class _ComputeAPIUnitTestMixIn(object):
                   'disk_bus': 'ide', 'device_name': '/dev/vdf',
                   'delete_on_termination': True, 'snapshot_id': 'snapshot-2',
                   'volume_id': None, 'volume_size': 100, 'image_id': None,
-                  'no_device': None}])[:255])
+                  'no_device': None, 'volume_type': None}])[:255])
 
         bdm = fake_block_device.FakeDbBlockDeviceDict(
                 {'no_device': False, 'volume_id': None, 'boot_index': -1,
                  'connection_info': 'inf', 'device_name': '/dev/vdh',
                  'source_type': 'blank', 'destination_type': 'local',
                  'guest_format': 'swap', 'delete_on_termination': True,
-                 'tag': None})
+                 'tag': None, 'volume_type': None})
         instance_bdms.append(bdm)
         # The non-volume image mapping will go at the front of the list
         # because the volume BDMs are processed separately.
@@ -3276,7 +3276,7 @@ class _ComputeAPIUnitTestMixIn(object):
              'device_type': None, 'snapshot_id': None,
              'device_name': '/dev/vdh',
              'destination_type': 'local', 'delete_on_termination': True,
-             'tag': None})
+             'tag': None, 'volume_type': None})
 
         quiesced = [False, False]
 
