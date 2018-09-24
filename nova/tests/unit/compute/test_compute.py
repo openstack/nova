@@ -11953,6 +11953,26 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(fake_notifier.NOTIFICATIONS[1].publisher_id,
                          'compute.fake-mini')
 
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_add_host_to_aggregate_raise_not_found_case(self,
+                                                        mock_get_service):
+        # Ensure ComputeHostNotFound is raised when adding a host with a
+        # hostname that doesn't exactly map what we have stored.
+
+        def return_anyway(context, host_name):
+            return objects.Service(host=host_name.upper())
+
+        mock_get_service.side_effect = return_anyway
+
+        aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
+                                         'fake_zone')
+        fake_notifier.NOTIFICATIONS = []
+        values = _create_service_entries(self.context)
+        fake_host = values[0][1][0]
+        self.assertRaises(exception.ComputeHostNotFound,
+                          self.api.add_host_to_aggregate,
+                          self.context, aggr.id, fake_host)
+
     @mock.patch('nova.objects.HostMapping.get_by_host')
     @mock.patch('nova.context.set_target_cell')
     def test_add_host_to_aggregate_raise_cn_not_found(self, mock_st,
@@ -12130,7 +12150,9 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
         agg = objects.Aggregate(name='fake', metadata={})
         agg.add_host = mock.Mock()
         with test.nested(
-                mock.patch.object(objects.Service, 'get_by_compute_host'),
+                mock.patch.object(objects.Service, 'get_by_compute_host',
+                                  return_value=objects.Service(
+                                      host='fakehost')),
                 mock.patch.object(objects.Aggregate, 'get_by_id',
                                   return_value=agg)):
             self.api.add_host_to_aggregate(self.context, 1, 'fakehost')
