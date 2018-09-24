@@ -1654,6 +1654,27 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_lookup.side_effect = lambda x: fakelibvirt.NodeDevice(conn)
         drvr._prepare_pci_devices_for_use(pci_devices)
 
+    @mock.patch('nova.context.get_admin_context')
+    @mock.patch('nova.compute.utils.notify_about_libvirt_connect_error')
+    def test_versioned_notification(self, mock_notify, mock_get):
+        mock_get.return_value = self.context
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        fake_error = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError, "Failed to connect to host",
+            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
+
+        with mock.patch('nova.virt.libvirt.host.Host._get_connection',
+                        side_effect=fake_error):
+            self.assertRaises(exception.HypervisorUnavailable,
+                              drvr._host.get_connection)
+        mock_get.assert_called_once_with()
+        mock_notify.assert_called_once_with(self.context, ip=CONF.my_ip,
+                                            exception=fake_error, tb=mock.ANY)
+        _, kwargs = mock_notify.call_args
+        self.assertIn('Traceback (most recent call last):', kwargs['tb'])
+
     @mock.patch.object(fakelibvirt.virConnect, "nodeDeviceLookupByName")
     @mock.patch.object(fakelibvirt.virNodeDevice, "dettach")
     def test_prepare_pci_device_exception(self, mock_detach, mock_lookup):

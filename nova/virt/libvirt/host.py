@@ -32,6 +32,7 @@ import os
 import socket
 import sys
 import threading
+import traceback
 
 from eventlet import greenio
 from eventlet import greenthread
@@ -45,6 +46,7 @@ from oslo_utils import units
 from oslo_utils import versionutils
 import six
 
+from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context as nova_context
 from nova import exception
@@ -463,9 +465,12 @@ class Host(object):
             payload = dict(ip=CONF.my_ip,
                            method='_connect',
                            reason=ex)
-            rpc.get_notifier('compute').error(nova_context.get_admin_context(),
+            ctxt = nova_context.get_admin_context()
+            rpc.get_notifier('compute').error(ctxt,
                                               'compute.libvirt.error',
                                               payload)
+            compute_utils.notify_about_libvirt_connect_error(
+                ctxt, ip=CONF.my_ip, exception=ex, tb=traceback.format_exc())
             raise exception.HypervisorUnavailable(host=CONF.host)
 
         return conn
