@@ -1156,7 +1156,7 @@ class UnlimitedSemaphore(object):
 
 
 @contextlib.contextmanager
-def notify_about_instance_delete(notifier, context, instance, host,
+def notify_about_instance_delete(notifier, context, instance,
                                  delete_type='delete',
                                  source=fields.NotificationSource.API):
     try:
@@ -1168,7 +1168,7 @@ def notify_about_instance_delete(notifier, context, instance, host,
             notify_about_instance_action(
                 context,
                 instance,
-                host=host,
+                host=CONF.host,
                 source=source,
                 action=delete_type,
                 phase=fields.NotificationPhase.START)
@@ -1181,7 +1181,7 @@ def notify_about_instance_delete(notifier, context, instance, host,
             notify_about_instance_action(
                 context,
                 instance,
-                host=host,
+                host=CONF.host,
                 source=source,
                 action=delete_type,
                 phase=fields.NotificationPhase.END)

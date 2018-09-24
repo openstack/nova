@@ -1419,7 +1419,7 @@ class ComputeTaskManager(base.Base):
             # bdm, tags and instance record.
             with obj_target_cell(instance, cell) as cctxt:
                 with compute_utils.notify_about_instance_delete(
-                        self.notifier, cctxt, instance, CONF.host,
+                        self.notifier, cctxt, instance,
                         source=fields.NotificationSource.CONDUCTOR):
                     try:
                         instance.destroy()
