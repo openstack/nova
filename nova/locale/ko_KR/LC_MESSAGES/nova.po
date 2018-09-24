@@ -15,11 +15,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-09-21 04:59+0000\n"
+"POT-Creation-Date: 2018-09-23 05:27+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2018-09-20 06:43+0000\n"
+"PO-Revision-Date: 2018-09-23 12:50+0000\n"
 "Last-Translator: Lee Dogeon <moreal@dsm.hs.kr>\n"
 "Language: ko_KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -3679,6 +3679,10 @@ msgid "Volume %(volume_id)s could not be attached. Reason: %(reason)s"
 msgstr "%(volume_id)s 볼륨을 연결할 수 없습니다. 이유: %(reason)s"
 
 #, python-format
+msgid "Volume %(volume_id)s could not be detached. Reason: %(reason)s"
+msgstr "%(volume_id)s 볼륨을 분리할 수 없습니다. 이유: %(reason)s"
+
+#, python-format
 msgid "Volume %(volume_id)s could not be found."
 msgstr "%(volume_id)s 볼륨을 찾을 수 없습니다. "
 
@@ -3714,6 +3718,9 @@ msgid ""
 msgstr ""
 "볼륨에서 블록 크기를 설정하지만 현재 libvirt 하이퍼바이저 '%s'이(가) 사용자 "
 "정의 블록 크기를 지원하지 않음"
+
+msgid "Volume size extension is not supported by the hypervisor."
+msgstr "하이퍼바이저에서 볼륨크기 확장을 지원하지 않습니다"
 
 #, python-format
 msgid ""
