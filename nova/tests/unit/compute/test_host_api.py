@@ -721,8 +721,12 @@ class ComputeAggregateAPITestCase(test.TestCase):
             fixtures.MockPatch('nova.objects.HostMapping.get_by_host'))
         self.useFixture(
             fixtures.MockPatch('nova.context.set_target_cell'))
-        self.useFixture(
-            fixtures.MockPatch('nova.objects.Service.get_by_compute_host'))
+        mock_service_get_by_compute_host = (
+            self.useFixture(
+                fixtures.MockPatch(
+                    'nova.objects.Service.get_by_compute_host')).mock)
+        mock_service_get_by_compute_host.return_value = (
+            objects.Service(host='fake-host'))
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
