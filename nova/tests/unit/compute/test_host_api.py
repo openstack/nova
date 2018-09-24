@@ -31,6 +31,7 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit.objects import test_service
+from nova.tests import uuidsentinel as uuids
 import testtools
 
 
@@ -312,12 +313,18 @@ class ComputeHostAPITestCase(test.TestCase):
             get_by_id.assert_called_once_with(self.ctxt, 1)
             destroy.assert_called_once_with()
 
-    def test_service_delete_compute_in_aggregate(self):
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
+    @mock.patch.object(objects.HostMapping, 'get_by_host')
+    def test_service_delete_compute_in_aggregate(self, mock_hm, mock_get_cn):
         compute = self.host_api.db.service_create(self.ctxt,
             {'host': 'fake-compute-host',
              'binary': 'nova-compute',
              'topic': 'compute',
              'report_count': 0})
+        # This is needed because of lazy-loading service.compute_node
+        cn = objects.ComputeNode(uuid=uuids.cn, host="fake-compute-host",
+                                 hypervisor_hostname="fake-compute-host")
+        mock_get_cn.return_value = [cn]
         aggregate = self.aggregate_api.create_aggregate(self.ctxt,
                                                    'aggregate',
                                                    None)
@@ -328,6 +335,7 @@ class ComputeHostAPITestCase(test.TestCase):
         result = self.aggregate_api.get_aggregate(self.ctxt,
                                                   aggregate.id).hosts
         self.assertEqual([], result)
+        mock_hm.return_value.destroy.assert_called_once_with()
 
 
 class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
