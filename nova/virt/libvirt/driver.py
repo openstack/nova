@@ -7857,6 +7857,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # get the real disk size or
             # raise a localized error if image is unavailable
             if disk_type == 'file':
+                qemu_img_info = disk_api.get_disk_info(path)
                 if driver_type == 'ploop':
                     dk_size = 0
                     for dirpath, dirnames, filenames in os.walk(path):
@@ -7864,10 +7865,10 @@ class LibvirtDriver(driver.ComputeDriver):
                             fp = os.path.join(dirpath, f)
                             dk_size += os.path.getsize(fp)
                 else:
-                    dk_size = disk_api.get_allocated_disk_size(path)
+                    dk_size = qemu_img_info.disk_size
 
                 # NOTE(lyarwood): Fetch the virtual size for all file disks.
-                virt_size = disk_api.get_disk_size(path)
+                virt_size = qemu_img_info.virtual_size
 
             elif disk_type == 'block' and block_device_info:
                 # FIXME(lyarwood): There's no reason to use a separate call
