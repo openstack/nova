@@ -11,7 +11,7 @@
             "old_instance_type_id": 1,
             "source_compute": "compute1",
             "source_node": "node1",
-            "status": "Done",
+            "status": "done",
             "updated_at": "2012-10-29T13:42:02.000000"
         },
         {
@@ -25,7 +25,7 @@
             "old_instance_type_id": 5,
             "source_compute": "compute10",
             "source_node": "node10",
-            "status": "Done",
+            "status": "done",
             "updated_at": "2013-10-22T13:42:02.000000"
         }
     ]

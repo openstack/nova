@@ -42,6 +42,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
+  - migrations: migrations
   - created_at: created
   - dest_compute: migrate_dest_compute
   - dest_host: migrate_dest_host
