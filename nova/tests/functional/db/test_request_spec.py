@@ -166,3 +166,45 @@ class RequestSpecInstanceMigrationTestCase(
             self.context, 50)
         self.assertEqual(5, match)
         self.assertEqual(0, done)
+
+    def test_migration_with_missing_marker(self):
+        self._create_instances(old=2, total=5)
+
+        # Start with 2 old (without request_spec) and 3 new instances:
+        # [old, old, new, new, new]
+        match, done = request_spec.migrate_instances_add_request_spec(
+            self.context, 2)
+        # Instance list after session 1:
+        # [upgraded, upgraded<MARKER>, new, new, new]
+        self.assertEqual(2, match)
+        self.assertEqual(2, done)
+
+        # Delete and remove the marker instance from api table while leaving
+        # the spec in request_specs table. This triggers MarkerNotFound
+        # exception in the latter session.
+        self.api.delete_server(self.instances[1].uuid)
+        db.archive_deleted_rows(max_rows=100)
+        # Instance list after deletion: [upgraded, new, new, new]
+
+        # This session of migration hits MarkerNotFound exception and then
+        # starts from the beginning of the list
+        match, done = request_spec.migrate_instances_add_request_spec(
+            self.context, 50)
+        self.assertEqual(4, match)
+        self.assertEqual(0, done)
+
+        # Make sure we ran over all the instances
+        match, done = request_spec.migrate_instances_add_request_spec(
+            self.context, 50)
+        self.assertEqual(0, match)
+        self.assertEqual(0, done)
+
+        # Make sure all instances have now a related RequestSpec
+        for instance in self.instances:
+            uuid = instance.uuid
+            try:
+                spec = objects.RequestSpec.get_by_instance_uuid(
+                    self.context, uuid)
+                self.assertEqual(instance.project_id, spec.project_id)
+            except exception.RequestSpecNotFound:
+                self.fail("RequestSpec not found for instance UUID :%s ", uuid)
