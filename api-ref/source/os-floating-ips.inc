@@ -176,7 +176,7 @@ can change these permissions through the ``policy.json`` file.
 Normal response codes: 202
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
- itemNotFound(404)
+itemNotFound(404)
 
 Request
 -------
