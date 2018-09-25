@@ -645,13 +645,17 @@ def migrate_instances_add_request_spec(context, max_count):
     # Prevent lazy-load of those fields for every instance later.
     attrs = ['system_metadata', 'flavor', 'pci_requests', 'numa_topology',
              'availability_zone']
-    instances = objects.InstanceList.get_by_filters(context,
-                                                    filters={'deleted': False},
-                                                    sort_key='created_at',
-                                                    sort_dir='asc',
-                                                    limit=max_count,
-                                                    marker=marker,
-                                                    expected_attrs=attrs)
+    try:
+        instances = objects.InstanceList.get_by_filters(
+            context, filters={'deleted': False}, sort_key='created_at',
+            sort_dir='asc', limit=max_count, marker=marker,
+            expected_attrs=attrs)
+    except exception.MarkerNotFound:
+        # Instance referenced by marker may have been purged.
+        # Try again but get all instances.
+        instances = objects.InstanceList.get_by_filters(
+            context, filters={'deleted': False}, sort_key='created_at',
+            sort_dir='asc', limit=max_count, expected_attrs=attrs)
     count_all = len(instances)
     count_hit = 0
     for instance in instances:
