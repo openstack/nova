@@ -3222,21 +3222,6 @@ class TestAllocations(SchedulerReportClientTestCase):
         }
         self.assertEqual(expected, result)
 
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete')
-    @mock.patch('nova.scheduler.client.report.LOG')
-    def test_delete_allocation_for_instance_ignore_404(self, mock_log,
-                                                       mock_delete):
-        """Tests that we don't log a warning on a 404 response when trying to
-        delete an allocation record.
-        """
-        mock_delete.return_value = fake_requests.FakeResponse(404)
-        self.client.delete_allocation_for_instance(self.context, uuids.rp_uuid)
-        # make sure we didn't screw up the logic or the mock
-        mock_log.info.assert_not_called()
-        # make sure warning wasn't called for the 404
-        mock_log.warning.assert_not_called()
-
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete")
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."

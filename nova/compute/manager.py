@@ -749,19 +749,18 @@ class ComputeManager(manager.Manager):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
         self._complete_deletion(context,
-                                instance,
-                                bdms)
+                                instance)
+        self._notify_about_instance_usage(context, instance, "delete.end")
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.DELETE,
+                phase=fields.NotificationPhase.END, bdms=bdms)
 
-    def _complete_deletion(self, context, instance, bdms):
+    def _complete_deletion(self, context, instance):
         self._update_resource_tracker(context, instance)
 
         rt = self._get_resource_tracker()
         rt.reportclient.delete_allocation_for_instance(context, instance.uuid)
 
-        self._notify_about_instance_usage(context, instance, "delete.end")
-        compute_utils.notify_about_instance_action(context, instance,
-                self.host, action=fields.NotificationAction.DELETE,
-                phase=fields.NotificationPhase.END, bdms=bdms)
         self._clean_instance_console_tokens(context, instance)
         self._delete_scheduler_instance_info(context, instance.uuid)
 
@@ -2624,11 +2623,17 @@ class ComputeManager(manager.Manager):
         instance.power_state = power_state.NOSTATE
         instance.terminated_at = timeutils.utcnow()
         instance.save()
+
+        self._complete_deletion(context, instance)
+        # only destroy the instance in the db if the _complete_deletion
+        # doesn't raise and therefore allocation is successfully
+        # deleted in placement
         instance.destroy()
 
-        self._complete_deletion(context,
-                                instance,
-                                bdms)
+        self._notify_about_instance_usage(context, instance, "delete.end")
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.DELETE,
+                phase=fields.NotificationPhase.END, bdms=bdms)
 
     @wrap_exception()
     @reverts_task_state

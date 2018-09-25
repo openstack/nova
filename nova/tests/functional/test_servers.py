@@ -20,6 +20,7 @@ import zlib
 import mock
 from oslo_log import log as logging
 from oslo_serialization import base64
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 import six
@@ -40,6 +41,7 @@ from nova.tests.functional import integrated_helpers
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_notifier
+from nova.tests.unit import fake_requests
 import nova.tests.unit.image.fake
 from nova.virt import fake
 from nova import volume
@@ -4529,3 +4531,87 @@ class ServerTestV256RescheduleTestCase(ServerTestV256Common):
         found_server = self.api.get_server(server['id'])
         # Check that rescheduling is not occurred.
         self.assertNotEqual(other_host, found_server['OS-EXT-SRV-ATTR:host'])
+
+
+class ConsumerGenerationConflictTest(
+        integrated_helpers.ProviderUsageBaseTestCase):
+
+    # we need the medium driver to be able to allocate resource not just for
+    # a single instance
+    compute_driver = 'fake.MediumFakeDriver'
+
+    def setUp(self):
+        super(ConsumerGenerationConflictTest, self).setUp()
+        flavors = self.api.get_flavors()
+        self.flavor = flavors[0]
+        self.other_flavor = flavors[1]
+        self.compute1 = self._start_compute('compute1')
+        self.compute2 = self._start_compute('compute2')
+
+    def test_server_delete_fails_due_to_conflict(self):
+        source_hostname = self.compute1.host
+
+        server = self._boot_and_check_allocations(self.flavor, source_hostname)
+
+        rsp = fake_requests.FakeResponse(
+            409, jsonutils.dumps({'text': 'consumer generation conflict'}))
+
+        with mock.patch('keystoneauth1.adapter.Adapter.put',
+                        autospec=True) as mock_put:
+            mock_put.return_value = rsp
+
+            self.api.delete_server(server['id'])
+            server = self._wait_for_state_change(self.admin_api, server,
+                                                 'ERROR')
+            self.assertEqual(1, mock_put.call_count)
+
+        # We still have the allocations as deletion failed
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor, source_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor, source_allocation)
+
+        # retry the delete to make sure that allocations are removed this time
+        self._delete_and_check_allocations(server)
+
+    def test_server_local_delete_fails_due_to_conflict(self):
+        source_hostname = self.compute1.host
+
+        server = self._boot_and_check_allocations(self.flavor, source_hostname)
+        source_compute_id = self.admin_api.get_services(
+            host=self.compute1.host, binary='nova-compute')[0]['id']
+        self.compute1.stop()
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'true'})
+
+        rsp = fake_requests.FakeResponse(
+            409, jsonutils.dumps({'text': 'consumer generation conflict'}))
+
+        with mock.patch('keystoneauth1.adapter.Adapter.put',
+                        autospec=True) as mock_put:
+            mock_put.return_value = rsp
+
+            ex = self.assertRaises(client.OpenStackApiException,
+                                   self.api.delete_server, server['id'])
+            self.assertEqual(409, ex.response.status_code)
+            self.assertIn('Failed to delete allocations for consumer',
+                          jsonutils.loads(ex.response.content)[
+                              'conflictingRequest']['message'])
+            self.assertEqual(1, mock_put.call_count)
+
+        # We still have the allocations as deletion failed
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor, source_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor, source_allocation)
+
+        # retry the delete to make sure that allocations are removed this time
+        self._delete_and_check_allocations(server)
