@@ -1,0 +1,11 @@
+{
+    "event_type":"instance.delete.start",
+    "payload":{
+        "$ref":"common_payloads/InstanceActionPayload.json#",
+        "nova_object.data":{
+            "task_state":"deleting"
+        }
+    },
+    "priority":"INFO",
+    "publisher_id":"nova-api:fake-mini"
+}

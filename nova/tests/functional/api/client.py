@@ -506,3 +506,15 @@ class TestOpenStackClient(object):
     def get_hypervisor_stats(self):
         return self.api_get(
             '/os-hypervisors/statistics').body['hypervisor_statistics']
+
+    def get_service_id(self, binary_name):
+        for service in self.get_services():
+            if service['binary'] == binary_name:
+                return service['id']
+        raise OpenStackApiNotFoundException('Service cannot be found.')
+
+    def put_service_force_down(self, service_id, forced_down):
+        req = {
+            'forced_down': forced_down
+        }
+        return self.api_put('os-services/%s' % service_id, req).body['service']

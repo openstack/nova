@@ -1748,6 +1748,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     @mock.patch('nova.objects.TagList.destroy')
     @mock.patch('nova.objects.TagList.create')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
@@ -1758,6 +1759,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                          br_destroy,
                                                          select_destinations,
                                                          build_and_run,
+                                                         legacy_notify,
                                                          notify,
                                                          taglist_create,
                                                          taglist_destroy):
@@ -1777,10 +1779,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertIsNotNone(taglist_destroy.call_args[0][0].db_connection)
 
         test_utils.assert_instance_delete_notification_by_uuid(
-            notify, self.params['build_requests'][0].instance_uuid,
+            legacy_notify, notify,
+            self.params['build_requests'][0].instance_uuid,
             self.conductor.notifier, test.MatchType(context.RequestContext),
-            expect_targeted_context=True)
+            expect_targeted_context=True, expected_source='nova-conductor',
+            expected_host='host1')
 
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.objects.Instance.destroy')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
@@ -1789,7 +1794,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch('nova.conductor.manager.ComputeTaskManager._bury_in_cell0')
     def test_schedule_and_build_delete_during_scheduling_host_changed(
             self, bury, br_destroy, select_destinations,
-            build_and_run, notify, instance_destroy):
+            build_and_run, legacy_notify, instance_destroy, notify):
 
         br_destroy.side_effect = exc.BuildRequestNotFound(uuid='foo')
         instance_destroy.side_effect = [
@@ -1805,11 +1810,15 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertFalse(bury.called)
         self.assertTrue(br_destroy.called)
         self.assertEqual(2, instance_destroy.call_count)
-        test_utils.assert_instance_delete_notification_by_uuid(
-            notify, self.params['build_requests'][0].instance_uuid,
-            self.conductor.notifier, test.MatchType(context.RequestContext),
-            expect_targeted_context=True)
 
+        test_utils.assert_instance_delete_notification_by_uuid(
+            legacy_notify, notify,
+            self.params['build_requests'][0].instance_uuid,
+            self.conductor.notifier, test.MatchType(context.RequestContext),
+            expect_targeted_context=True, expected_source='nova-conductor',
+            expected_host='host1')
+
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.objects.Instance.destroy')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
@@ -1818,7 +1827,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch('nova.conductor.manager.ComputeTaskManager._bury_in_cell0')
     def test_schedule_and_build_delete_during_scheduling_instance_not_found(
             self, bury, br_destroy, select_destinations,
-            build_and_run, notify, instance_destroy):
+            build_and_run, legacy_notify, instance_destroy, notify):
 
         br_destroy.side_effect = exc.BuildRequestNotFound(uuid='foo')
         instance_destroy.side_effect = [
@@ -1834,9 +1843,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertTrue(br_destroy.called)
         self.assertEqual(1, instance_destroy.call_count)
         test_utils.assert_instance_delete_notification_by_uuid(
-            notify, self.params['build_requests'][0].instance_uuid,
+            legacy_notify, notify,
+            self.params['build_requests'][0].instance_uuid,
             self.conductor.notifier, test.MatchType(context.RequestContext),
-            expect_targeted_context=True)
+            expect_targeted_context=True, expected_source='nova-conductor',
+            expected_host='host1')
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')

@@ -2820,7 +2820,8 @@ class ComputeManager(manager.Manager):
     def soft_delete_instance(self, context, instance):
         """Soft delete an instance on this host."""
         with compute_utils.notify_about_instance_delete(
-                self.notifier, context, instance, 'soft_delete'):
+                self.notifier, context, instance, 'soft_delete',
+                fields.NotificationSource.COMPUTE):
             compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.SOFT_DELETE,
                 phase=fields.NotificationPhase.START)
