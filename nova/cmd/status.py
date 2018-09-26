@@ -287,9 +287,10 @@ class UpgradeCommands(object):
         cell_mappings = self._get_non_cell0_mappings()
         ctxt = nova_context.get_admin_context()
         num_computes = 0
-        for cell_mapping in cell_mappings:
-            with nova_context.target_cell(ctxt, cell_mapping) as cctxt:
-                num_computes += self._count_compute_nodes(cctxt)
+        if cell_mappings:
+            for cell_mapping in cell_mappings:
+                with nova_context.target_cell(ctxt, cell_mapping) as cctxt:
+                    num_computes += self._count_compute_nodes(cctxt)
         else:
             # There are no cell mappings, cells v2 was maybe not deployed in
             # Newton, but placement might have been, so let's check the single
