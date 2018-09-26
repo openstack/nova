@@ -7465,7 +7465,14 @@ class ComputeManager(manager.Manager):
                                                         expected_attrs=[],
                                                         use_slave=True)
 
-        num_vm_instances = self.driver.get_num_instances()
+        try:
+            num_vm_instances = self.driver.get_num_instances()
+        except exception.VirtDriverNotReady as e:
+            # If the virt driver is not ready, like ironic-api not being up
+            # yet in the case of ironic, just log it and exit.
+            LOG.info('Skipping _sync_power_states periodic task due to: %s', e)
+            return
+
         num_db_instances = len(db_instances)
 
         if num_vm_instances != num_db_instances:
