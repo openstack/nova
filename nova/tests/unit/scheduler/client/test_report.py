@@ -902,6 +902,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
                     },
                 },
             },
+            'consumer_generation': 1,
+            'project_id': uuids.project_id,
+            'user_id': uuids.user_id,
         }
         self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=204)
@@ -916,31 +919,24 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_url = "/allocations/%s" % consumer_uuid
         # New allocations should only include the destination...
         expected_payload = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.destination,
-                    },
+            'allocations': {
+                uuids.destination: {
                     'resources': {
                         'VCPU': 1,
                         'MEMORY_MB': 1024,
                     },
                 },
-            ],
+            },
+            'consumer_generation': 1,
+            'project_id': project_id,
+            'user_id': user_id
         }
-        expected_payload['project_id'] = project_id
-        expected_payload['user_id'] = user_id
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
-        sort_by_uuid = lambda x: x['resource_provider']['uuid']
-        expected_allocations = sorted(expected_payload['allocations'],
-                                      key=sort_by_uuid)
-        actual_allocations = sorted(actual_payload['allocations'],
-                                    key=sort_by_uuid)
-        self.assertEqual(expected_allocations, actual_allocations)
+        self.assertEqual(expected_payload, actual_payload)
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.10', json=mock.ANY,
+            expected_url, microversion='1.28', json=mock.ANY,
             headers={'X-Openstack-Request-Id': self.context.global_id})
 
         self.assertTrue(res)
@@ -976,6 +972,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
                     },
                 },
             },
+            'consumer_generation': 1,
+            'project_id': uuids.project_id,
+            'user_id': uuids.user_id,
         }
         self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=204)
@@ -990,39 +989,29 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_url = "/allocations/%s" % consumer_uuid
         # New allocations should only include the destination...
         expected_payload = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.shared_storage,
-                    },
+            'allocations': {
+                uuids.shared_storage: {
                     'resources': {
                         'DISK_GB': 100,
                     },
                 },
-                {
-                    'resource_provider': {
-                        'uuid': uuids.destination,
-                    },
+                uuids.destination: {
                     'resources': {
                         'VCPU': 1,
                         'MEMORY_MB': 1024,
                     },
                 },
-            ],
+            },
+            'consumer_generation': 1,
+            'project_id': project_id,
+            'user_id': user_id
         }
-        expected_payload['project_id'] = project_id
-        expected_payload['user_id'] = user_id
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
-        sort_by_uuid = lambda x: x['resource_provider']['uuid']
-        expected_allocations = sorted(expected_payload['allocations'],
-                                      key=sort_by_uuid)
-        actual_allocations = sorted(actual_payload['allocations'],
-                                    key=sort_by_uuid)
-        self.assertEqual(expected_allocations, actual_allocations)
+        self.assertEqual(expected_payload, actual_payload)
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.10', json=mock.ANY,
+            expected_url, microversion='1.28', json=mock.ANY,
             headers={'X-Openstack-Request-Id': self.context.global_id})
 
         self.assertTrue(res)
@@ -1051,6 +1040,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
                     },
                 },
             },
+            'consumer_generation': 1,
+            'project_id': uuids.project_id,
+            'user_id': uuids.user_id,
         }
         self.ks_adap_mock.get.return_value = get_resp_mock
         consumer_uuid = uuids.consumer_uuid
@@ -1081,6 +1073,41 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         self.ks_adap_mock.get.assert_called()
         self.ks_adap_mock.put.assert_not_called()
+
+        self.assertFalse(res)
+
+    def test_remove_provider_from_inst_alloc_consumer_gen_conflict(self):
+        get_resp_mock = mock.Mock(status_code=200)
+        get_resp_mock.json.return_value = {
+            'allocations': {
+                uuids.source: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                uuids.destination: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+            },
+            'consumer_generation': 1,
+            'project_id': uuids.project_id,
+            'user_id': uuids.user_id,
+        }
+        self.ks_adap_mock.get.return_value = get_resp_mock
+        resp_mock = mock.Mock(status_code=409)
+        self.ks_adap_mock.put.return_value = resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.remove_provider_from_instance_allocation(
+            self.context, consumer_uuid, uuids.source, user_id, project_id,
+            mock.Mock())
 
         self.assertFalse(res)
 

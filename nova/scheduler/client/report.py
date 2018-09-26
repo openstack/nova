@@ -1854,7 +1854,8 @@ class SchedulerReportClient(object):
         url = '/allocations/%s' % consumer_uuid
 
         # Grab the "doubled-up" allocation that we will manipulate
-        r = self.get(url, global_request_id=context.global_id)
+        r = self.get(url, global_request_id=context.global_id,
+                     version=CONSUMER_GENERATION_VERSION)
         if r.status_code != 200:
             LOG.warning("Failed to retrieve allocations for %s. Got HTTP %s",
                         consumer_uuid, r.status_code)
@@ -1865,6 +1866,8 @@ class SchedulerReportClient(object):
             LOG.error("Expected to find current allocations for %s, but "
                       "found none.", consumer_uuid)
             return False
+        else:
+            current_consumer_generation = r.json()['consumer_generation']
 
         # If the host isn't in the current allocation for the instance, don't
         # do anything
@@ -1880,27 +1883,20 @@ class SchedulerReportClient(object):
                   instance_uuid=consumer_uuid)
         LOG.debug('Instance %s has resources on %i compute nodes',
                   consumer_uuid, len(compute_providers))
-
-        new_allocs = [
-            {
-                'resource_provider': {
-                    'uuid': alloc_rp_uuid,
-                },
+        new_allocs = {
+             alloc_rp_uuid: {
                 'resources': alloc['resources'],
             }
             for alloc_rp_uuid, alloc in current_allocs.items()
             if alloc_rp_uuid != rp_uuid
-        ]
+        }
 
         if len(compute_providers) == 1:
             # NOTE(danms): We are in a resize to same host scenario. Since we
             # are the only provider then we need to merge back in the doubled
             # allocation with our part subtracted
             peer_alloc = {
-                'resource_provider': {
-                    'uuid': rp_uuid,
-                },
-                'resources': current_allocs[rp_uuid]['resources']
+                    'resources': current_allocs[rp_uuid]['resources'],
             }
             LOG.debug('Original resources from same-host '
                       'allocation: %s', peer_alloc['resources'])
@@ -1908,15 +1904,16 @@ class SchedulerReportClient(object):
                                             resources, -1)
             LOG.debug('Subtracting old resources from same-host '
                       'allocation: %s', peer_alloc['resources'])
-            new_allocs.append(peer_alloc)
+            new_allocs[rp_uuid] = peer_alloc
 
         payload = {'allocations': new_allocs}
         payload['project_id'] = project_id
         payload['user_id'] = user_id
+        payload['consumer_generation'] = current_consumer_generation
         LOG.debug("Sending updated allocation %s for instance %s after "
                   "removing resources for %s.",
                   new_allocs, consumer_uuid, rp_uuid)
-        r = self.put(url, payload, version='1.10',
+        r = self.put(url, payload, version=CONSUMER_GENERATION_VERSION,
                      global_request_id=context.global_id)
         if r.status_code != 204:
             LOG.warning("Failed to save allocation for %s. Got HTTP %s: %s",
