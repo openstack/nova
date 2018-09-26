@@ -648,6 +648,22 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
             cpu_info='{"arch": "x86_64"}')
         cn.create()
 
+        # create a deleted compute node record (shouldn't count)
+        cn2 = objects.ComputeNode(
+            context=ctxt,
+            deleted=1,
+            host='fakehost',
+            vcpus=4,
+            memory_mb=8 * 1024,
+            local_gb=40,
+            vcpus_used=2,
+            memory_mb_used=2 * 1024,
+            local_gb_used=10,
+            hypervisor_type='fake',
+            hypervisor_version=1,
+            cpu_info='{"arch": "x86_64"}')
+        cn2.create()
+
         # create a single resource provider with some VCPU inventory
         self._create_resource_provider(FAKE_VCPU_INVENTORY)
         # create an externally shared IP allocation pool resource provider
