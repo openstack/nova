@@ -11,7 +11,8 @@ Processing Units (vGPUs) if the hypervisor supports the hardware driver and has
 the capability to create guests using those virtual devices.
 
 This feature is highly dependent on the hypervisor, its version and the
-physical devices present on the host.
+physical devices present on the host. In addition, the vendor's vGPU driver software
+must be installed and configured on the host at the same time.
 
 .. important:: As of the Queens release, there is no upstream continuous
                integration testing with a hardware environment that has virtual
@@ -93,7 +94,8 @@ Depending on your hypervisor:
 - For libvirt, virtual GPUs are seen as mediated devices. Physical PCI devices
   (the graphic card here) supporting virtual GPUs propose mediated device
   (mdev) types. Since mediated devices are supported by the Linux kernel
-  through sysfs files, you can see the required properties as follows:
+  through sysfs files after installing the vendor's virtual GPUs driver
+  software, you can see the required properties as follows:
 
   .. code-block:: console
 
