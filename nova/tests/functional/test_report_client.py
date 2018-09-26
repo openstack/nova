@@ -225,7 +225,8 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                                                      self.instance.flavor)
             self.client.put_allocations(
                 self.context, self.compute_uuid, self.instance_uuid,
-                alloc_dict, self.instance.project_id, self.instance.user_id)
+                alloc_dict, self.instance.project_id, self.instance.user_id,
+                None)
 
             # Check that allocations were made
             resp = self.client.get('/allocations/%s' % self.instance_uuid)
@@ -724,7 +725,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 self.client.put_allocations(
                     self.context, uuids.cn, uuids.consumer,
                     {fields.ResourceClass.SRIOV_NET_VF: 1},
-                    uuids.proj, uuids.user))
+                    uuids.proj, uuids.user, None))
             # ...and trying to delete the provider's VF inventory
             bad_inv = {
                 'CUSTOM_BANDWIDTH': {

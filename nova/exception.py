@@ -2318,7 +2318,7 @@ class AllocationCreateFailed(NovaException):
 
 
 class AllocationUpdateFailed(NovaException):
-    msg_fmt = _('Failed to update allocations for instance %(instance)s. '
+    msg_fmt = _('Failed to update allocations for consumer %(consumer_uuid)s. '
                 'Error: %(error)s')
 
 

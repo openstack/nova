@@ -270,10 +270,11 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         resp = self.client.put_allocations(self.context, rp_uuid,
                                            consumer_uuid, data,
                                            mock.sentinel.project_id,
-                                           mock.sentinel.user_id)
+                                           mock.sentinel.user_id,
+                                           mock.sentinel.consumer_generation)
         self.assertTrue(resp)
         mock_put.assert_called_once_with(
-            expected_url, mock.ANY, version='1.8',
+            expected_url, mock.ANY, version='1.28',
             global_request_id=self.context.global_id)
 
     @mock.patch.object(report.LOG, 'warning')
@@ -288,20 +289,48 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         resp = self.client.put_allocations(self.context, rp_uuid,
                                            consumer_uuid, data,
                                            mock.sentinel.project_id,
-                                           mock.sentinel.user_id)
+                                           mock.sentinel.user_id,
+                                           mock.sentinel.consumer_generation)
         self.assertFalse(resp)
         mock_put.assert_called_once_with(
-            expected_url, mock.ANY, version='1.8',
+            expected_url, mock.ANY, version='1.28',
             global_request_id=self.context.global_id)
         log_msg = mock_warn.call_args[0][0]
         self.assertIn("Unable to submit allocation for instance", log_msg)
 
+    @mock.patch.object(report.LOG, 'warning')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
+    def test_put_allocations_fail_due_to_consumer_generation_conflict(
+            self, mock_put, mock_warn):
+        mock_put.return_value = fake_requests.FakeResponse(
+            status_code=409,
+            content=jsonutils.dumps(
+                {'errors': [{'code': 'placement.concurrent_update',
+                             'detail': 'consumer generation conflict'}]}))
+
+        rp_uuid = mock.sentinel.rp
+        consumer_uuid = mock.sentinel.consumer
+        data = {"MEMORY_MB": 1024}
+        expected_url = "/allocations/%s" % consumer_uuid
+        self.assertRaises(exception.AllocationUpdateFailed,
+                          self.client.put_allocations,
+                          self.context, rp_uuid,
+                          consumer_uuid, data,
+                          mock.sentinel.project_id,
+                          mock.sentinel.user_id,
+                          mock.sentinel.consumer_generation)
+
+        mock_put.assert_called_once_with(
+            expected_url, mock.ANY, version='1.28',
+            global_request_id=self.context.global_id)
+
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
     def test_put_allocations_retries_conflict(self, mock_put):
-
-        failed = mock.MagicMock()
-        failed.status_code = 409
-        failed.text = "concurrently updated"
+        failed = fake_requests.FakeResponse(
+            status_code=409,
+            content=jsonutils.dumps(
+                {'errors': [{'code': 'placement.concurrent_update',
+                             'detail': ''}]}))
 
         succeeded = mock.MagicMock()
         succeeded.status_code = 204
@@ -315,18 +344,21 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         resp = self.client.put_allocations(self.context, rp_uuid,
                                            consumer_uuid, data,
                                            mock.sentinel.project_id,
-                                           mock.sentinel.user_id)
+                                           mock.sentinel.user_id,
+                                           mock.sentinel.consumer_generation)
         self.assertTrue(resp)
         mock_put.assert_has_calls([
-            mock.call(expected_url, mock.ANY, version='1.8',
+            mock.call(expected_url, mock.ANY, version='1.28',
                       global_request_id=self.context.global_id)] * 2)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
     def test_put_allocations_retry_gives_up(self, mock_put):
 
-        failed = mock.MagicMock()
-        failed.status_code = 409
-        failed.text = "concurrently updated"
+        failed = fake_requests.FakeResponse(
+            status_code=409,
+            content=jsonutils.dumps(
+                {'errors': [{'code': 'placement.concurrent_update',
+                             'detail': ''}]}))
 
         mock_put.return_value = failed
 
@@ -337,10 +369,11 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         resp = self.client.put_allocations(self.context, rp_uuid,
                                            consumer_uuid, data,
                                            mock.sentinel.project_id,
-                                           mock.sentinel.user_id)
+                                           mock.sentinel.user_id,
+                                           mock.sentinel.consumer_generation)
         self.assertFalse(resp)
         mock_put.assert_has_calls([
-            mock.call(expected_url, mock.ANY, version='1.8',
+            mock.call(expected_url, mock.ANY, version='1.28',
             global_request_id=self.context.global_id)] * 3)
 
     def test_claim_resources_success_with_old_version(self):
