@@ -114,7 +114,7 @@ using ISO image actually functional.
 
       $ openstack volume list
       +--------------------------+-------------------------+-----------+------+-------------+
-      | ID                       | Display Name            | Status    | Size | Attached to |
+      | ID                       | Name                    | Status    | Size | Attached to |
       +--------------------------+-------------------------+-----------+------+-------------+
       | 8edd7c97-1276-47a5-9563- |dc01d873-d0f1-40b6-bfcc- | available |   10 |             |
       | 1025f4264e4f             | 26a8d955a1d9-blank-vol  |           |      |             |
