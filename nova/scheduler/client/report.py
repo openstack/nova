@@ -2019,7 +2019,9 @@ class SchedulerReportClient(object):
                            consume.
         :param project_id: The project_id associated with the allocations.
         :param user_id: The user_id associated with the allocations.
-        :param consumer_generation: The current generation of the consumer
+        :param consumer_generation: The current generation of the consumer or
+                                    None if this the initial allocation of the
+                                    consumer
         :returns: True if the allocations were created, False otherwise.
         :raises: Retry if the operation should be retried due to a concurrent
                  resource provider update.
@@ -2029,7 +2031,7 @@ class SchedulerReportClient(object):
 
         payload = {
             'allocations': {
-                    rp_uuid: {'resources': alloc_data},
+                rp_uuid: {'resources': alloc_data},
             },
             'project_id': project_id,
             'user_id': user_id,
