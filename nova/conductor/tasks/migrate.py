@@ -57,9 +57,8 @@ def replace_allocation_with_migration(context, instance, migration):
     # FIXME(danms): This method is flawed in that it asssumes allocations
     # against only one provider. So, this may overwite allocations against
     # a shared provider, if we had one.
-    success = reportclient.set_and_clear_allocations(
-        context, source_cn.uuid, migration.uuid, orig_alloc,
-        instance.project_id, instance.user_id, consumer_to_clear=instance.uuid)
+    success = reportclient.move_allocations(context, instance.uuid,
+                                            migration.uuid)
     if not success:
         LOG.error('Unable to replace resource claim on source '
                   'host %(host)s node %(node)s for instance',
@@ -78,8 +77,7 @@ def replace_allocation_with_migration(context, instance, migration):
     return source_cn, orig_alloc
 
 
-def revert_allocation_for_migration(context, source_cn, instance, migration,
-                                    orig_alloc):
+def revert_allocation_for_migration(context, source_cn, instance, migration):
     """Revert an allocation made for a migration back to the instance."""
 
     schedclient = scheduler_client.SchedulerClient()
@@ -88,10 +86,8 @@ def revert_allocation_for_migration(context, source_cn, instance, migration,
     # FIXME(danms): This method is flawed in that it asssumes allocations
     # against only one provider. So, this may overwite allocations against
     # a shared provider, if we had one.
-    success = reportclient.set_and_clear_allocations(
-        context, source_cn.uuid, instance.uuid, orig_alloc,
-        instance.project_id, instance.user_id,
-        consumer_to_clear=migration.uuid)
+    success = reportclient.move_allocations(context, migration.uuid,
+                                            instance.uuid)
     if not success:
         LOG.error('Unable to replace resource claim on source '
                   'host %(host)s node %(node)s for instance',
@@ -320,5 +316,4 @@ class MigrationTask(base.TaskBase):
         # now.
 
         revert_allocation_for_migration(self.context, self._source_cn,
-                                        self.instance, self._migration,
-                                        self._held_allocations)
+                                        self.instance, self._migration)

@@ -1112,10 +1112,10 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.assertFalse(res)
 
 
-class TestSetAndClearAllocations(SchedulerReportClientTestCase):
+class TestMoveAllocations(SchedulerReportClientTestCase):
 
     def setUp(self):
-        super(TestSetAndClearAllocations, self).setUp()
+        super(TestMoveAllocations, self).setUp()
         # We want to reuse the mock throughout the class, but with
         # different return values.
         patcher = mock.patch(
@@ -1126,86 +1126,153 @@ class TestSetAndClearAllocations(SchedulerReportClientTestCase):
         self.rp_uuid = mock.sentinel.rp
         self.consumer_uuid = mock.sentinel.consumer
         self.data = {"MEMORY_MB": 1024}
+        patcher = mock.patch(
+            'nova.scheduler.client.report.SchedulerReportClient.get')
+        self.mock_get = patcher.start()
+        self.addCleanup(patcher.stop)
+
         self.project_id = mock.sentinel.project_id
         self.user_id = mock.sentinel.user_id
+
+        self.mock_post.return_value.status_code = 204
+        self.rp_uuid = mock.sentinel.rp
+        self.source_consumer_uuid = mock.sentinel.source_consumer
+        self.target_consumer_uuid = mock.sentinel.target_consumer
+        self.source_consumer_data = {
+            "allocations": {
+                self.rp_uuid: {
+                    "generation": 1,
+                    "resources": {
+                        "MEMORY_MB": 1024
+                    }
+                }
+            },
+            "consumer_generation": 2,
+            "project_id": self.project_id,
+            "user_id": self.user_id
+        }
+        self.source_rsp = mock.Mock()
+        self.source_rsp.json.return_value = self.source_consumer_data
+        self.target_consumer_data = {
+            "allocations": {
+                self.rp_uuid: {
+                    "generation": 1,
+                    "resources": {
+                        "MEMORY_MB": 2048
+                    }
+                }
+            },
+            "consumer_generation": 1,
+            "project_id": self.project_id,
+            "user_id": self.user_id
+        }
+        self.target_rsp = mock.Mock()
+        self.target_rsp.json.return_value = self.target_consumer_data
+        self.mock_get.side_effect = [self.source_rsp, self.target_rsp]
         self.expected_url = '/allocations'
+        self.expected_microversion = '1.28'
 
     def test_url_microversion(self):
-        expected_microversion = '1.13'
-
-        resp = self.client.set_and_clear_allocations(
-            self.context, self.rp_uuid, self.consumer_uuid, self.data,
-            self.project_id, self.user_id)
+        resp = self.client.move_allocations(
+            self.context, self.source_consumer_uuid, self.target_consumer_uuid)
 
         self.assertTrue(resp)
         self.mock_post.assert_called_once_with(
             self.expected_url, mock.ANY,
-            version=expected_microversion,
+            version=self.expected_microversion,
             global_request_id=self.context.global_id)
 
-    def test_payload_no_clear(self):
+    def test_move_to_empty_target(self):
+        self.target_consumer_data = {"allocations": {}}
+        target_rsp = mock.Mock()
+        target_rsp.json.return_value = self.target_consumer_data
+        self.mock_get.side_effect = [self.source_rsp, target_rsp]
+
         expected_payload = {
-            self.consumer_uuid: {
-                'user_id': self.user_id,
-                'project_id': self.project_id,
-                'allocations': {
+            self.target_consumer_uuid: {
+                "allocations": {
                     self.rp_uuid: {
-                        'resources': {
-                            'MEMORY_MB': 1024
-                        }
+                        "resources": {
+                            "MEMORY_MB": 1024
+                        },
+                        "generation": 1
                     }
-                }
-            }
-        }
-
-        resp = self.client.set_and_clear_allocations(
-            self.context, self.rp_uuid, self.consumer_uuid, self.data,
-            self.project_id, self.user_id)
-
-        self.assertTrue(resp)
-        args, kwargs = self.mock_post.call_args
-        payload = args[1]
-        self.assertEqual(expected_payload, payload)
-
-    def test_payload_with_clear(self):
-        expected_payload = {
-            self.consumer_uuid: {
-                'user_id': self.user_id,
-                'project_id': self.project_id,
-                'allocations': {
-                    self.rp_uuid: {
-                        'resources': {
-                            'MEMORY_MB': 1024
-                        }
-                    }
-                }
+                },
+                "consumer_generation": None,
+                "project_id": self.project_id,
+                "user_id": self.user_id,
             },
-            mock.sentinel.migration_uuid: {
-                'user_id': self.user_id,
-                'project_id': self.project_id,
-                'allocations': {}
+            self.source_consumer_uuid: {
+                "allocations": {},
+                "consumer_generation": 2,
+                "project_id": self.project_id,
+                "user_id": self.user_id,
             }
         }
 
-        resp = self.client.set_and_clear_allocations(
-            self.context, self.rp_uuid, self.consumer_uuid, self.data,
-            self.project_id, self.user_id,
-            consumer_to_clear=mock.sentinel.migration_uuid)
+        resp = self.client.move_allocations(
+            self.context, self.source_consumer_uuid, self.target_consumer_uuid)
 
         self.assertTrue(resp)
-        args, kwargs = self.mock_post.call_args
-        payload = args[1]
-        self.assertEqual(expected_payload, payload)
+        self.mock_post.assert_called_once_with(
+            self.expected_url, expected_payload,
+            version=self.expected_microversion,
+            global_request_id=self.context.global_id)
+
+    def test_move_to_non_empty_target(self):
+        self.mock_get.side_effect = [self.source_rsp, self.target_rsp]
+
+        expected_payload = {
+            self.target_consumer_uuid: {
+                "allocations": {
+                    self.rp_uuid: {
+                        "resources": {
+                            "MEMORY_MB": 1024
+                        },
+                        "generation": 1
+                    }
+                },
+                "consumer_generation": 1,
+                "project_id": self.project_id,
+                "user_id": self.user_id,
+            },
+            self.source_consumer_uuid: {
+                "allocations": {},
+                "consumer_generation": 2,
+                "project_id": self.project_id,
+                "user_id": self.user_id,
+            }
+        }
+
+        resp = self.client.move_allocations(
+            self.context, self.source_consumer_uuid, self.target_consumer_uuid)
+
+        self.assertTrue(resp)
+        self.mock_post.assert_called_once_with(
+            self.expected_url, expected_payload,
+            version=self.expected_microversion,
+            global_request_id=self.context.global_id)
+        self.assertIn('Overwriting current allocation',
+                      self.stdlog.logger.output)
 
     @mock.patch('time.sleep')
-    def test_409_concurrent_update(self, mock_sleep):
-        self.mock_post.return_value.status_code = 409
-        self.mock_post.return_value.text = 'concurrently updated'
+    def test_409_concurrent_provider_update(self, mock_sleep):
+        # there will be 1 normal call and 3 retries
+        self.mock_get.side_effect = [self.source_rsp, self.target_rsp,
+                                     self.source_rsp, self.target_rsp,
+                                     self.source_rsp, self.target_rsp,
+                                     self.source_rsp, self.target_rsp]
+        rsp = fake_requests.FakeResponse(
+            409,
+            jsonutils.dumps(
+                {'errors': [
+                    {'code': 'placement.concurrent_update',
+                     'detail': ''}]}))
 
-        resp = self.client.set_and_clear_allocations(
-            self.context, self.rp_uuid, self.consumer_uuid, self.data,
-            self.project_id, self.user_id,
-            consumer_to_clear=mock.sentinel.migration_uuid)
+        self.mock_post.return_value = rsp
+
+        resp = self.client.move_allocations(
+            self.context, self.source_consumer_uuid, self.target_consumer_uuid)
 
         self.assertFalse(resp)
         # Post was attempted four times.
@@ -1217,10 +1284,8 @@ class TestSetAndClearAllocations(SchedulerReportClientTestCase):
         self.mock_post.return_value.status_code = 503
         self.mock_post.return_value.text = error_message
 
-        resp = self.client.set_and_clear_allocations(
-            self.context, self.rp_uuid, self.consumer_uuid, self.data,
-            self.project_id, self.user_id,
-            consumer_to_clear=mock.sentinel.migration_uuid)
+        resp = self.client.move_allocations(
+            self.context, self.source_consumer_uuid, self.target_consumer_uuid)
 
         self.assertFalse(resp)
         args, kwargs = mock_log.call_args
@@ -1228,6 +1293,17 @@ class TestSetAndClearAllocations(SchedulerReportClientTestCase):
         log_args = args[1]
         self.assertIn('Unable to post allocations', log_message)
         self.assertEqual(error_message, log_args['text'])
+
+    def test_409_concurrent_consumer_update(self):
+        self.mock_post.return_value = fake_requests.FakeResponse(
+            status_code=409,
+            content=jsonutils.dumps(
+                {'errors': [{'code': 'placement.concurrent_update',
+                             'detail': 'consumer generation conflict'}]}))
+
+        self.assertRaises(exception.AllocationMoveFailed,
+            self.client.move_allocations, self.context,
+            self.source_consumer_uuid, self.target_consumer_uuid)
 
 
 class TestProviderOperations(SchedulerReportClientTestCase):

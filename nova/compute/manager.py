@@ -3950,6 +3950,8 @@ class ComputeManager(manager.Manager):
                 # We're reverting (or failed) on the source, so we
                 # need to check if our migration holds a claim and if
                 # so, avoid doing the legacy behavior below.
+                # NOTE(gibi): We are only hitting this in case of reverting
+                # a resize-on-same-host operation
                 mig_allocs = (
                     self.reportclient.get_allocations_for_consumer_by_provider(
                         context, cn_uuid, migration.uuid))
@@ -4098,7 +4100,16 @@ class ComputeManager(manager.Manager):
             instance.node = migration.source_node
             instance.save()
 
-            self._revert_allocation(context, instance, migration)
+            try:
+                self._revert_allocation(context, instance, migration)
+            except exception.AllocationMoveFailed:
+                LOG.error('Reverting allocation in placement for migration '
+                          '%(migration_uuid)s failed. The instance '
+                          '%(instance_uuid)s will be put into ERROR state but '
+                          'the allocation held by the migration is leaked.',
+                          {'instance_uuid': instance.uuid,
+                           'migration_uuid': migration.uuid})
+                raise
 
             self.network_api.setup_networks_on_host(context, instance,
                                                     migration.source_compute)
@@ -4191,9 +4202,6 @@ class ComputeManager(manager.Manager):
         # We only have a claim against one provider, it is the source node
         cn_uuid = list(orig_alloc.keys())[0]
 
-        # Get just the resources part of the one allocation we need below
-        orig_alloc = orig_alloc[cn_uuid].get('resources', {})
-
         # FIXME(danms): This method is flawed in that it asssumes allocations
         # against only one provider. So, this may overwite allocations against
         # a shared provider, if we had one.
@@ -4202,9 +4210,8 @@ class ComputeManager(manager.Manager):
                  {'node': cn_uuid, 'mig': migration.uuid},
                  instance=instance)
         # TODO(cdent): Should we be doing anything with return values here?
-        self.reportclient.set_and_clear_allocations(
-            context, cn_uuid, instance.uuid, orig_alloc, instance.project_id,
-            instance.user_id, consumer_to_clear=migration.uuid)
+        self.reportclient.move_allocations(context, migration.uuid,
+                                           instance.uuid)
         return True
 
     def _prep_resize(self, context, image, instance, instance_type,

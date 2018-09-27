@@ -140,8 +140,7 @@ class LiveMigrationTask(base.TaskBase):
             migrate.revert_allocation_for_migration(self.context,
                                                     self._source_cn,
                                                     self.instance,
-                                                    self.migration,
-                                                    self._held_allocations)
+                                                    self.migration)
 
     def _check_instance_is_active(self):
         if self.instance.power_state not in (power_state.RUNNING,
