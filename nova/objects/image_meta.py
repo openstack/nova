@@ -170,12 +170,15 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.18: Pull signature properties from cursive library
     # Version 1.19: Added 'img_hide_hypervisor_id' type field
     # Version 1.20: Added 'traits_required' list field
-    VERSION = '1.20'
+    # Version 1.21: Added 'hw_time_hpet' field
+    VERSION = '1.21'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 21):
+            primitive.pop('hw_time_hpet', None)
         if target_version < (1, 20):
             primitive.pop('traits_required', None)
         if target_version < (1, 19):
@@ -325,6 +328,9 @@ class ImageMetaProps(base.NovaObject):
 
         # name of the RNG device type eg virtio
         'hw_rng_model': fields.RNGModelField(),
+
+        # boolean 'true' or 'false' to enable HPET
+        'hw_time_hpet': fields.FlexibleBooleanField(),
 
         # number of serial ports to create
         'hw_serial_port_count': fields.IntegerField(),
