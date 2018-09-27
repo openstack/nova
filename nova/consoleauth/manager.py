@@ -139,6 +139,7 @@ class ConsoleAuthManager(manager.Manager):
 
     def delete_tokens_for_instance(self, context, instance_uuid):
         tokens = self._get_tokens_for_instance(instance_uuid)
-        self.mc.delete_multi(
+        if tokens:
+            self.mc.delete_multi(
                 [tok.encode('UTF-8') for tok in tokens])
         self.mc_instance.delete(instance_uuid.encode('UTF-8'))
