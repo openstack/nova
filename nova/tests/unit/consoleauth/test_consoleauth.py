@@ -122,6 +122,23 @@ class ConsoleauthTestCase(test.NoDBTestCase):
             self.assertIsNone(
                 self.manager_api.check_token(self.context, token))
 
+    def test_delete_tokens_for_instance_no_tokens(self):
+        with test.nested(
+            mock.patch.object(self.manager, '_get_tokens_for_instance',
+                              return_value=[]),
+            mock.patch.object(self.manager.mc, 'delete_multi'),
+            mock.patch.object(self.manager.mc_instance, 'delete')
+        ) as (
+            mock_get_tokens, mock_delete_multi, mock_delete
+        ):
+            self.manager.delete_tokens_for_instance(
+                self.context, self.instance_uuid)
+            # Since here were no tokens, we didn't try to clear anything
+            # from the cache.
+            mock_delete_multi.assert_not_called()
+            mock_delete.assert_called_once_with(
+                self.instance_uuid.encode('UTF-8'))
+
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     def test_wrong_token_has_port(self, mock_get):
         mock_get.return_value = None
