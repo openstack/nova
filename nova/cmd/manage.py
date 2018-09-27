@@ -377,15 +377,15 @@ class DbCommands(object):
     # count, which is the maximum batch size requested by the
     # user. They must be idempotent. At most $count records should be
     # migrated. The function must return a tuple of (found, done). The
-    # found value indicates how many unmigrated records existed in the
-    # database prior to the migration (either total, or up to the
-    # $count limit provided), and a nonzero found value tells the user
+    # found value indicates how many unmigrated/candidate records existed in
+    # the database prior to the migration (either total, or up to the
+    # $count limit provided), and a nonzero found value may tell the user
     # that there is still work to do. The done value indicates whether
     # or not any records were actually migrated by the function. Thus
     # if both (found, done) are nonzero, work was done and some work
     # remains. If found is nonzero and done is zero, some records are
-    # not migratable, but all migrations that can complete have
-    # finished.
+    # not migratable (or don't need migrating), but all migrations that can
+    # complete have finished.
     online_migrations = (
         # Added in Newton
         # TODO(mriedem): Remove this in Stein along with the compatibility
@@ -692,6 +692,10 @@ Error: %s""") % six.text_type(e))
                         'migrated') % {'total': found,
                                        'meth': name,
                                        'done': done})
+            # This is the per-migration method result for this batch, and
+            # _run_migration will either continue on to the next migration,
+            # or stop if up to this point we've processed max_count of
+            # records across all migration methods.
             migrations[name] = found, done
             if max_count is not None:
                 ran += done
@@ -723,6 +727,8 @@ Error: %s""") % six.text_type(e))
         while ran is None or ran != 0:
             migrations, exceptions = self._run_migration(ctxt, max_count)
             ran = 0
+            # For each batch of migration method results, build the cumulative
+            # set of results.
             for name in migrations:
                 migration_info.setdefault(name, (0, 0))
                 migration_info[name] = (
@@ -734,7 +740,7 @@ Error: %s""") % six.text_type(e))
                 break
 
         t = prettytable.PrettyTable([_('Migration'),
-                                     _('Total Needed'),
+                                     _('Total Needed'),  # Really: Total Found
                                      _('Completed')])
         for name in sorted(migration_info.keys()):
             info = migration_info[name]
