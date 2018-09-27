@@ -70,6 +70,12 @@ class FakeSnapshot(object):
         self.project_id = 'fake_project'
 
 
+class FakeVolumeType(object):
+    def __init__(self, volume_type_name, volume_type_id):
+        self.id = volume_type_id
+        self.name = volume_type_name
+
+
 class FakeAttachment(object):
 
     def __init__(self):
@@ -894,6 +900,27 @@ class CinderApiTestCase(test.NoDBTestCase):
         mock_cinderclient.assert_called_once_with(self.ctx)
         mock_volume_snapshots.update_snapshot_status.assert_called_once_with(
             'snapshot_id', {'status': 'error', 'progress': '90%'})
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_get_all_volume_types(self, mock_cinderclient):
+        volume_type1 = FakeVolumeType('lvm_1', 'volume_type_id1')
+        volume_type2 = FakeVolumeType('lvm_2', 'volume_type_id2')
+        volume_type_list = [volume_type1, volume_type2]
+
+        mock_volume_types = mock.MagicMock()
+        mock_cinderclient.return_value = mock.MagicMock(
+            volume_types=mock_volume_types)
+        mock_volume_types.list.return_value = volume_type_list
+
+        volume_types = self.api.get_all_volume_types(self.ctx)
+        self.assertEqual(2, len(volume_types))
+        self.assertEqual(['volume_type_id1', 'volume_type_id2'],
+                         [vol_type['id'] for vol_type in volume_types])
+        self.assertEqual(['lvm_1', 'lvm_2'],
+                         [vol_type['name'] for vol_type in volume_types])
+
+        mock_cinderclient.assert_called_once_with(self.ctx)
+        mock_volume_types.list.assert_called_once_with()
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_get_volume_encryption_metadata(self, mock_cinderclient):
