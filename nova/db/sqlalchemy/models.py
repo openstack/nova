@@ -87,7 +87,7 @@ class Service(BASE, NovaBase, models.SoftDeleteMixin):
 
     id = Column(Integer, primary_key=True)
     uuid = Column(String(36), nullable=True)
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
+    host = Column(String(255))
     binary = Column(String(255))
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
@@ -277,7 +277,7 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
 
     # This is not related to hostname, above.  It refers
     #  to the nova node.
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
+    host = Column(String(255))
     # To identify the "ComputeNode" which the instance resides in.
     # This equals to ComputeNode.hypervisor_hostname.
     node = Column(String(255))
@@ -839,7 +839,7 @@ class Network(BASE, NovaBase, models.SoftDeleteMixin):
 
     project_id = Column(String(255))
     priority = Column(Integer)
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
+    host = Column(String(255))
     uuid = Column(String(36))
 
     mtu = Column(Integer)
@@ -941,7 +941,7 @@ class FloatingIp(BASE, NovaBase, models.SoftDeleteMixin):
     address = Column(types.IPAddress())
     fixed_ip_id = Column(Integer)
     project_id = Column(String(255))
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
+    host = Column(String(255))
     auto_assigned = Column(Boolean, default=False)
     # TODO(sshturm) add default in db
     pool = Column(String(255))
