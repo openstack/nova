@@ -3,6 +3,7 @@
     "payload":{
         "$ref":"common_payloads/InstanceActionPayload.json#",
         "nova_object.data":{
+            "availability_zone": null,
             "block_devices":[],
             "host":null,
             "ip_addresses":[],
