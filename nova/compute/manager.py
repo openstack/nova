@@ -663,7 +663,14 @@ class ComputeManager(manager.Manager):
             return
         evacuations = {mig.instance_uuid: mig for mig in evacuations}
 
-        local_instances = self._get_instances_on_driver(context)
+        # The instances might be deleted in which case we need to avoid
+        # InstanceNotFound being raised from lazy-loading fields on the
+        # instances while cleaning up this host.
+        read_deleted_context = context.elevated(read_deleted='yes')
+        # TODO(mriedem): We could optimize by pre-loading the joined fields
+        # we know we'll use, like info_cache and flavor. We can also replace
+        # this with a generic solution: https://review.openstack.org/575190/
+        local_instances = self._get_instances_on_driver(read_deleted_context)
         evacuated = [inst for inst in local_instances
                      if inst.uuid in evacuations]
 
@@ -708,9 +715,13 @@ class ComputeManager(manager.Manager):
                     continue
             cn_uuid = compute_nodes[migration.source_node]
 
-            if not self.reportclient.\
-                    remove_provider_tree_from_instance_allocation(
-                        context, instance.uuid, cn_uuid):
+            # If the instance was deleted in the interim, assume its
+            # allocations were properly cleaned up (either by its hosting
+            # compute service or the API).
+            if (not instance.deleted and
+                    not self.reportclient.
+                        remove_provider_tree_from_instance_allocation(
+                            context, instance.uuid, cn_uuid)):
                 LOG.error("Failed to clean allocation of evacuated instance "
                           "on the source node %s",
                           cn_uuid, instance=instance)
