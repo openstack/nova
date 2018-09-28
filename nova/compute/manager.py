@@ -2823,11 +2823,8 @@ class ComputeManager(manager.Manager):
     def soft_delete_instance(self, context, instance):
         """Soft delete an instance on this host."""
         with compute_utils.notify_about_instance_delete(
-                self.notifier, context, instance, 'soft_delete',
-                fields.NotificationSource.COMPUTE):
-            compute_utils.notify_about_instance_action(context, instance,
-                self.host, action=fields.NotificationAction.SOFT_DELETE,
-                phase=fields.NotificationPhase.START)
+                self.notifier, context, instance, self.host, 'soft_delete',
+                source=fields.NotificationSource.COMPUTE):
             try:
                 self.driver.soft_delete(instance)
             except NotImplementedError:
@@ -2838,10 +2835,6 @@ class ComputeManager(manager.Manager):
             instance.vm_state = vm_states.SOFT_DELETED
             instance.task_state = None
             instance.save(expected_task_state=[task_states.SOFT_DELETING])
-            compute_utils.notify_about_instance_action(
-                context, instance, self.host,
-                action=fields.NotificationAction.SOFT_DELETE,
-                phase=fields.NotificationPhase.END)
 
     @wrap_exception()
     @reverts_task_state
