@@ -59,6 +59,7 @@ from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import fileutils
 from oslo_utils import importutils
+from oslo_utils import netutils as oslo_netutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
@@ -741,6 +742,8 @@ class LibvirtDriver(driver.ComputeDriver):
             'xen': 'xenmigr://%s/system',
             'parallels': 'parallels+tcp://%s/system',
         }
+        dest = oslo_netutils.escape_ipv6(dest)
+
         virt_type = CONF.libvirt.virt_type
         # TODO(pkoniszewski): Remove fetching live_migration_uri in Pike
         uri = CONF.libvirt.live_migration_uri
@@ -760,6 +763,8 @@ class LibvirtDriver(driver.ComputeDriver):
     @staticmethod
     def _migrate_uri(dest):
         uri = None
+        dest = oslo_netutils.escape_ipv6(dest)
+
         # Only QEMU live migrations supports migrate-uri parameter
         virt_type = CONF.libvirt.virt_type
         if virt_type in ('qemu', 'kvm'):

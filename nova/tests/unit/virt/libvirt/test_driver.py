@@ -9264,6 +9264,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                              etree.tostring(config, encoding='unicode'))
 
     def test_live_migration_uri(self):
+        addresses = ('127.0.0.1', '127.0.0.1:4444', '[::1]:4444',
+                    '[0:0:0:0:0:0:0:1]:4444', u'127.0.0.1', u'destination',
+        )
+
         hypervisor_uri_map = (
             ('xen', 'xenmigr://%s/system'),
             ('kvm', 'qemu+tcp://%s/system'),
@@ -9272,17 +9276,42 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             # anything else will return None
             ('lxc', None),
         )
-        dest = 'destination'
-        for hyperv, uri in hypervisor_uri_map:
-            self.flags(virt_type=hyperv, group='libvirt')
-            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-            if uri is not None:
-                uri = uri % dest
-                self.assertEqual(uri, drvr._live_migration_uri(dest))
-            else:
-                self.assertRaises(exception.LiveMigrationURINotAvailable,
-                                  drvr._live_migration_uri,
-                                  dest)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        for dest in addresses:
+            for hyperv, uri in hypervisor_uri_map:
+                self.flags(virt_type=hyperv, group='libvirt')
+                if uri is not None:
+                    uri = uri % dest
+                    self.assertEqual(uri, drvr._live_migration_uri(dest))
+                else:
+                    self.assertRaises(exception.LiveMigrationURINotAvailable,
+                                      drvr._live_migration_uri,
+                                      dest)
+
+    def test_live_migration_uri_ipv6(self):
+        addresses = ('::1', '0:0:0:0:0:0:0:1', u'::1')
+
+        hypervisor_uri_map = (
+            ('xen', 'xenmigr://[%s]/system'),
+            ('kvm', 'qemu+tcp://[%s]/system'),
+            ('qemu', 'qemu+tcp://[%s]/system'),
+            ('parallels', 'parallels+tcp://[%s]/system'),
+            # anything else will return None
+            ('lxc', None),
+        )
+
+        for dest in addresses:
+            for hyperv, uri in hypervisor_uri_map:
+                self.flags(virt_type=hyperv, group='libvirt')
+                drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+                if uri is not None:
+                    uri = uri % dest
+                    self.assertEqual(uri, drvr._live_migration_uri(dest))
+                else:
+                    self.assertRaises(exception.LiveMigrationURINotAvailable,
+                                      drvr._live_migration_uri,
+                                      dest)
 
     def test_live_migration_uri_forced(self):
         dest = 'destination'
@@ -9338,12 +9367,26 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(virt_type='kvm', group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        addresses = ('127.0.0.1', '127.0.0.1:4444',
-                     '0:0:0:0:0:0:0:1', '[0:0:0:0:0:0:0:1]:4444',
-                     u'127.0.0.1', u'destination')
+        addresses = ('127.0.0.1', '127.0.0.1:4444', '[::1]:4444',
+                    '[0:0:0:0:0:0:0:1]:4444', u'127.0.0.1', u'destination',
+        )
+
         for dest in addresses:
+            uri = 'tcp://%s'
             result = drvr._migrate_uri(dest)
-            self.assertEqual('tcp://%s' % dest, result)
+            self.assertEqual(uri % dest, result)
+            self.assertIsInstance(result, str)
+
+    def test_migrate_uri_forced_live_migration_inboud_addr_ipv6(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        addresses = ('::1', '0:0:0:0:0:0:0:1', u'::1')
+
+        for dest in addresses:
+            uri = 'tcp://[%s]'
+            result = drvr._migrate_uri(dest)
+            self.assertEqual(uri % dest, result)
             self.assertIsInstance(result, str)
 
     def test_update_volume_xml_no_serial(self):
