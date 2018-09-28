@@ -426,7 +426,7 @@ class CellDatabases(fixtures.Fixture):
         global DB_SCHEMA
         if not DB_SCHEMA['main']:
             ctxt_mgr = self._ctxt_mgrs[connection_str]
-            engine = ctxt_mgr.get_legacy_facade().get_engine()
+            engine = ctxt_mgr.writer.get_engine()
             conn = engine.connect()
             migration.db_sync(database='main')
             DB_SCHEMA['main'] = "".join(line for line
@@ -535,7 +535,7 @@ class CellDatabases(fixtures.Fixture):
                 'nova.db.sqlalchemy.api.get_context_manager',
                 get_context_manager):
             self._cache_schema(connection_str)
-            engine = ctxt_mgr.get_legacy_facade().get_engine()
+            engine = ctxt_mgr.writer.get_engine()
             engine.dispose()
             conn = engine.connect()
             conn.connection.executescript(DB_SCHEMA['main'])
@@ -567,7 +567,7 @@ class CellDatabases(fixtures.Fixture):
 
     def cleanup(self):
         for ctxt_mgr in self._ctxt_mgrs.values():
-            engine = ctxt_mgr.get_legacy_facade().get_engine()
+            engine = ctxt_mgr.writer.get_engine()
             engine.dispose()
 
 
@@ -591,8 +591,7 @@ class Database(fixtures.Fixture):
             if connection is not None:
                 ctxt_mgr = session.create_context_manager(
                         connection=connection)
-                facade = ctxt_mgr.get_legacy_facade()
-                self.get_engine = facade.get_engine
+                self.get_engine = ctxt_mgr.writer.get_engine
             else:
                 self.get_engine = session.get_engine
         elif database == 'api':

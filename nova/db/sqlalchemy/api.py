@@ -134,11 +134,13 @@ def get_engine(use_slave=False, context=None):
     :param context: The request context that can contain a context manager
     """
     ctxt_mgr = get_context_manager(context)
-    return ctxt_mgr.get_legacy_facade().get_engine(use_slave=use_slave)
+    if use_slave:
+        return ctxt_mgr.reader.get_engine()
+    return ctxt_mgr.writer.get_engine()
 
 
 def get_api_engine():
-    return api_context_manager.get_legacy_facade().get_engine()
+    return api_context_manager.writer.get_engine()
 
 
 _SHADOW_TABLE_PREFIX = 'shadow_'
