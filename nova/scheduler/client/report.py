@@ -776,6 +776,9 @@ class SchedulerReportClient(object):
         resp = self.delete(url)
         if resp:
             LOG.info(_LI("Deleted resource provider %s"), rp_uuid)
+            # clean the caches
+            self._resource_providers.pop(rp_uuid, None)
+            self._provider_aggregate_map.pop(rp_uuid, None)
         else:
             # Check for 404 since we don't need to log a warning if we tried to
             # delete something which doesn"t actually exist.
