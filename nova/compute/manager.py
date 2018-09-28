@@ -90,7 +90,6 @@ from nova.pci import whitelist
 from nova import rpc
 from nova import safe_utils
 from nova.scheduler import client as scheduler_client
-from nova.scheduler import utils as scheduler_utils
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
@@ -709,8 +708,9 @@ class ComputeManager(manager.Manager):
                     continue
             cn_uuid = compute_nodes[migration.source_node]
 
-            if not scheduler_utils.remove_allocation_from_compute(
-                    context, instance, cn_uuid, self.reportclient):
+            if not self.reportclient.\
+                    remove_provider_tree_from_instance_allocation(
+                        context, instance.uuid, cn_uuid):
                 LOG.error("Failed to clean allocation of evacuated instance "
                           "on the source node %s",
                           cn_uuid, instance=instance)

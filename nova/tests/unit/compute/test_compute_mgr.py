@@ -885,15 +885,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     instance_id=deleted_instance['uuid'])),
             mock.patch.object(
                 self.compute.reportclient,
-                'remove_provider_from_instance_allocation')
+                'remove_provider_tree_from_instance_allocation')
         ) as (mock_get_net, mock_remove_allocation):
 
             self.compute.init_host()
 
             mock_remove_allocation.assert_called_once_with(
-                self.context, deleted_instance.uuid, uuids.our_node_uuid,
-                deleted_instance.user_id, deleted_instance.project_id,
-                mock.sentinel.my_resources)
+                self.context, deleted_instance.uuid, uuids.our_node_uuid)
 
         mock_init_host.assert_called_once_with(host=our_host)
         mock_host_get.assert_called_once_with(self.context, our_host,
@@ -3834,7 +3832,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename'),
             mock.patch('nova.scheduler.utils.resources_from_flavor'),
             mock.patch.object(self.compute.reportclient,
-                              'remove_provider_from_instance_allocation')
+                              'remove_provider_tree_from_instance_allocation')
         ) as (_get_instances_on_driver, get_instance_nw_info,
               _get_instance_block_device_info, _is_instance_storage_shared,
               destroy, migration_list, migration_save, get_node,
@@ -3852,8 +3850,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             get_node.assert_called_once_with(
                 self.context, our_host, migration.source_node)
             remove_allocation.assert_called_once_with(
-                self.context, instance_2.uuid, uuids.our_node_uuid,
-                uuids.user_id, uuids.project_id, mock.sentinel.resources)
+                self.context, instance_2.uuid, uuids.our_node_uuid)
 
     def test_destroy_evacuated_instances_node_deleted(self):
         our_host = self.compute.host
@@ -3903,7 +3900,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename'),
             mock.patch('nova.scheduler.utils.resources_from_flavor'),
             mock.patch.object(self.compute.reportclient,
-                              'remove_provider_from_instance_allocation')
+                              'remove_provider_tree_from_instance_allocation')
         ) as (_get_instances_on_driver, get_instance_nw_info,
               _get_instance_block_device_info, _is_instance_storage_shared,
               destroy, migration_list, migration_save, get_node,
@@ -3929,8 +3926,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             # but only instance_2 is deallocated as the compute node for
             # instance_1 is already deleted
             remove_allocation.assert_called_once_with(
-                self.context, instance_2.uuid, uuids.our_node_uuid,
-                uuids.user_id, uuids.project_id, mock.sentinel.resources)
+                self.context, instance_2.uuid, uuids.our_node_uuid)
 
             self.assertEqual(2, get_node.call_count)
 
@@ -8021,7 +8017,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.ComputeNode,
                        'get_first_node_by_host_for_old_compat')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'remove_provider_from_instance_allocation')
+                'remove_provider_tree_from_instance_allocation')
     def test_rollback_live_migration_cinder_v3_api(self, mock_remove_allocs,
                                                    mock_get_node):
         compute = manager.ComputeManager()

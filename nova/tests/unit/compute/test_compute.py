@@ -5664,7 +5664,10 @@ class ComputeTestCase(BaseTestCase,
                 self.context))
         self._test_confirm_resize(power_on=True, numa_topology=numa_topology)
 
-    def test_confirm_resize_with_numa_topology_and_cpu_pinning(self):
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_tree_from_instance_allocation')
+    def test_confirm_resize_with_numa_topology_and_cpu_pinning(
+            self, mock_remove_allocs):
         instance = self._create_fake_instance_obj()
         instance.old_flavor = instance.flavor
         instance.new_flavor = instance.flavor
@@ -5797,7 +5800,7 @@ class ComputeTestCase(BaseTestCase,
                               'free_device'),
             mock.patch.object(self.rt.pci_tracker.stats, 'to_device_pools_obj',
                               return_value=objects.PciDevicePoolList())
-            ) as (mock_setup, mock_migrate, mock_pci_free_device,
+        ) as (mock_setup, mock_migrate, mock_pci_free_device,
                   mock_to_device_pools_obj):
             method(self.context, instance=instance,
                                  migration=migration)
@@ -6047,7 +6050,6 @@ class ComputeTestCase(BaseTestCase,
         self.assertNotEqual(migration.dest_compute, migration.source_compute)
         self.assertNotEqual(migration.dest_node, migration.source_node)
         self.assertEqual(NODENAME2, migration.dest_compute)
-        self.assertEqual(NODENAME2, migration.dest_node)
 
     def test_get_by_flavor_id(self):
         flavor_type = flavors.get_flavor_by_flavor_id(1)
@@ -6249,6 +6251,8 @@ class ComputeTestCase(BaseTestCase,
             migrate_data=test.MatchType(
                             migrate_data_obj.XenapiLiveMigrateData))
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_tree_from_instance_allocation')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'pre_live_migration')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
                        'post_live_migration_at_destination')
@@ -6257,7 +6261,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch('nova.objects.Migration.save')
     def test_live_migration_works_correctly(self, mock_save, mock_event,
-            mock_clear, mock_post, mock_pre):
+            mock_clear, mock_post, mock_pre, mock_remove_allocs):
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
@@ -6304,6 +6308,8 @@ class ComputeTestCase(BaseTestCase,
                                               'host'], 'dest_compute': dest})
         mock_post.assert_called_once_with(c, instance, False, dest)
         mock_clear.assert_called_once_with(mock.ANY)
+        mock_remove_allocs.assert_called_once_with(
+            c, instance.uuid, self.rt.compute_nodes[NODENAME].uuid)
 
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'pre_live_migration')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
@@ -6350,13 +6356,15 @@ class ComputeTestCase(BaseTestCase,
         # cleanup
         instance.destroy()
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_tree_from_instance_allocation')
     @mock.patch.object(fake.FakeDriver, 'unfilter_instance')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
                        'post_live_migration_at_destination')
     @mock.patch.object(compute_manager.InstanceEvents,
                        'clear_events_for_instance')
     def test_post_live_migration_no_shared_storage_working_correctly(self,
-            mock_clear, mock_post, mock_unfilter):
+            mock_clear, mock_post, mock_unfilter, mock_remove_allocs):
         """Confirm post_live_migration() works correctly as expected
            for non shared storage migration.
         """
@@ -6410,9 +6418,14 @@ class ComputeTestCase(BaseTestCase,
         mock_migrate.assert_called_once_with(c, instance, migration)
         mock_post.assert_called_once_with(c, instance, False, dest)
         mock_clear.assert_called_once_with(mock.ANY)
+        mock_remove_allocs.assert_called_once_with(
+            c, instance.uuid, self.rt.compute_nodes[NODENAME].uuid)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_tree_from_instance_allocation')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    def test_post_live_migration_working_correctly(self, mock_notify):
+    def test_post_live_migration_working_correctly(self, mock_notify,
+                                                   mock_remove_allocs):
         # Confirm post_live_migration() works as expected correctly.
         dest = 'desthost'
         srchost = self.compute.host
@@ -6487,6 +6500,8 @@ class ComputeTestCase(BaseTestCase,
             self.assertIn(
                 'Migrating instance to desthost finished successfully.',
                 self.stdlog.logger.output)
+        mock_remove_allocs.assert_called_once_with(
+            c, instance.uuid, self.rt.compute_nodes[NODENAME].uuid)
 
     def test_post_live_migration_exc_on_dest_works_correctly(self):
         """Confirm that post_live_migration() completes successfully
@@ -6584,7 +6599,8 @@ class ComputeTestCase(BaseTestCase,
                               'get_by_instance_uuid'),
             mock.patch.object(self.compute.driver, 'get_volume_connector'),
             mock.patch.object(cinder.API, 'terminate_connection'),
-            mock.patch.object(self.compute, '_delete_allocation_after_move'),
+            mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                       'delete_allocation_for_migrated_instance'),
         ) as (
             migrate_instance_start, post_live_migration_at_destination,
             setup_networks_on_host, clear_events_for_instance,
@@ -7457,6 +7473,8 @@ class ComputeTestCase(BaseTestCase,
         instance = self._create_fake_instance_obj({'host': 'someotherhost'})
         self.compute._instance_update(self.context, instance, vcpus=4)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_tree_from_instance_allocation')
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instances_on_driver')
     @mock.patch.object(compute_manager.ComputeManager,
@@ -7468,7 +7486,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.objects.Migration.save')
     def test_destroy_evacuated_instance_on_shared_storage(self, mock_save,
             mock_get_filter, mock_destroy, mock_is_inst, mock_get_blk,
-            mock_get_inst):
+            mock_get_inst, mock_remove_allocs):
         fake_context = context.get_admin_context()
 
         # instances in central db
@@ -7513,7 +7531,12 @@ class ComputeTestCase(BaseTestCase,
         mock_destroy.assert_called_once_with(fake_context, evacuated_instance,
                                              'fake_network_info',
                                              'fake_bdi', False)
+        mock_remove_allocs.assert_called_once_with(
+            fake_context, evacuated_instance.uuid,
+            self.rt.compute_nodes[NODENAME].uuid)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_tree_from_instance_allocation')
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instances_on_driver')
     @mock.patch.object(compute_manager.ComputeManager,
@@ -7529,7 +7552,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.objects.Migration.save')
     def test_destroy_evacuated_instance_with_disks(self, mock_save,
             mock_get_filter, mock_destroy, mock_check_clean, mock_check,
-            mock_check_local, mock_get_blk, mock_get_drv):
+            mock_check_local, mock_get_blk, mock_get_drv, mock_remove_allocs):
         fake_context = context.get_admin_context()
 
         # instances in central db
@@ -7574,7 +7597,12 @@ class ComputeTestCase(BaseTestCase,
         mock_destroy.assert_called_once_with(fake_context, evacuated_instance,
                                              'fake_network_info', 'fake-bdi',
                                              True)
+        mock_remove_allocs.assert_called_once_with(
+            fake_context, evacuated_instance.uuid,
+            self.rt.compute_nodes[NODENAME].uuid)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_tree_from_instance_allocation')
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instances_on_driver')
     @mock.patch.object(compute_manager.ComputeManager,
@@ -7589,7 +7617,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.objects.Migration.save')
     def test_destroy_evacuated_instance_not_implemented(self, mock_save,
             mock_get_filter, mock_destroy, mock_check_clean, mock_check,
-            mock_check_local, mock_get_blk, mock_get_inst):
+            mock_check_local, mock_get_blk, mock_get_inst, mock_remove_allocs):
         fake_context = context.get_admin_context()
 
         # instances in central db
@@ -8007,8 +8035,10 @@ class ComputeTestCase(BaseTestCase,
                               return_value=fake_rt),
             mock.patch.object(self.compute.network_api,
                               'setup_networks_on_host',
-                              side_effect=fake_setup_networks_on_host)
-        ) as (mock_drop, mock_get, mock_setup):
+                              side_effect=fake_setup_networks_on_host),
+            mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                       'remove_provider_tree_from_instance_allocation')
+        ) as (mock_drop, mock_get, mock_setup, mock_remove_allocs):
             migration = objects.Migration(context=self.context.elevated())
             migration.instance_uuid = instance.uuid
             migration.status = 'finished'
@@ -12835,7 +12865,9 @@ class EvacuateHostTestCase(BaseTestCase):
         instance = db.instance_get(self.context, self.inst.id)
         self.assertEqual(instance['vm_state'], vm_states.STOPPED)
 
-    def test_rebuild_with_wrong_shared_storage(self):
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_tree_from_instance_allocation')
+    def test_rebuild_with_wrong_shared_storage(self, mock_remove_allocs):
         """Confirm evacuate scenario does not update host."""
         with mock.patch.object(self.compute.driver, 'instance_on_disk',
                                side_effect=lambda x: True) as mock_inst:
@@ -12846,6 +12878,8 @@ class EvacuateHostTestCase(BaseTestCase):
             instance = db.instance_get(self.context, self.inst.id)
             self.assertEqual(instance['host'], 'fake_host_2')
             self.assertTrue(mock_inst.called)
+        mock_remove_allocs.assert_called_once_with(
+            mock.ANY, instance.uuid, self.rt.compute_nodes[NODENAME].uuid)
 
     @mock.patch.object(cinder.API, 'detach')
     @mock.patch.object(compute_manager.ComputeManager, '_prep_block_device')
@@ -12943,12 +12977,19 @@ class EvacuateHostTestCase(BaseTestCase):
 
         self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
                        lambda *a, **kw: True)
-        self.assertRaises(exception.InstanceExists,
-                          lambda: self._rebuild(on_shared_storage=True))
+        patch_remove_allocs = mock.patch(
+            'nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_tree_from_instance_allocation')
+        with patch_remove_allocs:
+            self.assertRaises(exception.InstanceExists,
+                              lambda: self._rebuild(on_shared_storage=True))
 
     def test_driver_does_not_support_recreate(self):
+        patch_remove_allocs = mock.patch(
+            'nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_tree_from_instance_allocation')
         with mock.patch.dict(self.compute.driver.capabilities,
-                             supports_evacuate=False):
+                             supports_evacuate=False), patch_remove_allocs:
             self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
                            lambda *a, **kw: True)
             self.assertRaises(exception.InstanceEvacuateNotSupported,
@@ -13024,7 +13065,10 @@ class EvacuateHostTestCase(BaseTestCase):
         patch_claim = mock.patch.object(
             self.compute._resource_tracker, 'rebuild_claim',
             side_effect=exception.ComputeResourcesUnavailable(reason="boom"))
-        with patch_spawn, patch_on_disk, patch_claim:
+        patch_remove_allocs = mock.patch(
+            'nova.scheduler.client.report.SchedulerReportClient.'
+            'remove_provider_tree_from_instance_allocation')
+        with patch_spawn, patch_on_disk, patch_claim, patch_remove_allocs:
             self.assertRaises(exception.BuildAbortException,
                               self._rebuild, migration=migration,
                               send_node=True)
@@ -13042,7 +13086,11 @@ class EvacuateHostTestCase(BaseTestCase):
         patch_rebuild = mock.patch.object(
             self.compute, '_do_rebuild_instance_with_claim',
             side_effect=test.TestingException())
-        with patch_spawn, patch_on_disk, patch_claim, patch_rebuild:
+        patch_remove_allocs = mock.patch(
+            'nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_tree_from_instance_allocation')
+        with patch_spawn, patch_on_disk, patch_claim, patch_rebuild, \
+             patch_remove_allocs:
             self.assertRaises(test.TestingException,
                               self._rebuild, migration=migration,
                               send_node=True)

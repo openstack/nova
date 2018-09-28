@@ -3143,11 +3143,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         self.assertEqual(-1024, cn.free_ram_mb)
         self.assertEqual(-1, cn.free_disk_gb)
 
-    @mock.patch('nova.scheduler.utils.resources_from_flavor')
-    def test_delete_allocation_for_evacuated_instance(
-            self, mock_resource_from_flavor):
-        mock_resource = mock.Mock()
-        mock_resource_from_flavor.return_value = mock_resource
+    def test_delete_allocation_for_evacuated_instance(self):
         instance = _INSTANCE_FIXTURES[0].obj_clone()
         instance.uuid = uuids.inst0
         ctxt = context.get_admin_context()
@@ -3156,10 +3152,9 @@ class TestUpdateUsageFromInstance(BaseTestCase):
             ctxt, instance, _NODENAME)
 
         rc = self.rt.reportclient
-        mock_remove_allocation = rc.remove_provider_from_instance_allocation
-        mock_remove_allocation.assert_called_once_with(
-            ctxt, instance.uuid, self.rt.compute_nodes[_NODENAME].uuid,
-            instance.user_id, instance.project_id, mock_resource)
+        mock_remove_allocs = rc.remove_provider_tree_from_instance_allocation
+        mock_remove_allocs.assert_called_once_with(
+            ctxt, instance.uuid, self.rt.compute_nodes[_NODENAME].uuid)
 
 
 class TestInstanceInResizeState(test.NoDBTestCase):

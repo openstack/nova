@@ -43,7 +43,6 @@ from nova.pci import request as pci_request
 from nova import rc_fields as fields
 from nova import rpc
 from nova.scheduler import client as scheduler_client
-from nova.scheduler import utils as scheduler_utils
 from nova import utils
 from nova.virt import hardware
 
@@ -1362,8 +1361,8 @@ class ResourceTracker(object):
             self, context, instance, node, move_type, node_type='source'):
         # Clean up the instance allocation from this node in placement
         cn_uuid = self.compute_nodes[node].uuid
-        if not scheduler_utils.remove_allocation_from_compute(
-                context, instance, cn_uuid, self.reportclient):
+        if not self.reportclient.remove_provider_tree_from_instance_allocation(
+                context, instance.uuid, cn_uuid):
             LOG.error("Failed to clean allocation of %s "
                       "instance on the %s node %s",
                       move_type, node_type, cn_uuid, instance=instance)
@@ -1380,8 +1379,8 @@ class ResourceTracker(object):
         :param flavor: This is the new_flavor during a resize.
         """
         cn = self.compute_nodes[node]
-        if not scheduler_utils.remove_allocation_from_compute(
-                context, instance, cn.uuid, self.reportclient, flavor):
+        if not self.reportclient.remove_provider_tree_from_instance_allocation(
+                context, instance.uuid, cn.uuid):
             if instance.instance_type_id == flavor.id:
                 operation = 'migration'
             else:

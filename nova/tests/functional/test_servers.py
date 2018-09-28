@@ -4904,30 +4904,6 @@ class ServerMovingTestsWithNestedResourceRequests(
               self).test_live_migrate_force()
 
     @unittest.expectedFailure
-    def test_evacuate(self):
-        # This test shows a bug. It seems that when the source allocation is
-        # dropped after the failed evacuate nova only drops the allocation from
-        # the root RP but not from the child RP.
-        super(ServerMovingTestsWithNestedResourceRequests,
-              self).test_evacuate()
-
-    @unittest.expectedFailure
-    def test_evacuate_rebuild_on_dest_fails(self):
-        # This test shows a bug. It seems that when the rebuild fails on the
-        # destination host only the root RP allocation is deleted on the dest
-        # host.
-        super(ServerMovingTestsWithNestedResourceRequests,
-              self).test_evacuate_rebuild_on_dest_fails()
-
-    @unittest.expectedFailure
-    def test_evacuate_claim_on_dest_fails(self):
-        # This test shows a bug. It seems that when the evacuation fails on the
-        # destination host only the root RP allocation is deleted on the dest
-        # host.
-        super(ServerMovingTestsWithNestedResourceRequests,
-              self).test_evacuate_claim_on_dest_fails()
-
-    @unittest.expectedFailure
     def test_evacuate_forced_host(self):
         # This test shows a bug. When the conductor tries to claim the same
         # resources on the dest host that was on the source host it only
