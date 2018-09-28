@@ -12,7 +12,6 @@
 
 from oslo_log import log as logging
 
-from nova import exception
 from nova.tests.functional import test_servers
 
 LOG = logging.getLogger(__name__)
@@ -128,7 +127,8 @@ class TestEvacuateDeleteServerRestartOriginalCompute(
         instance. Before the bug is fixed, the original compute fails to start
         because lazy-loading the instance.flavor on the deleted instance,
         which is needed to cleanup allocations from the source host, raises
-        InstanceNotFound.
+        InstanceNotFound. After the bug is fixed, the original source host
+        compute service starts up.
         """
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
@@ -176,8 +176,4 @@ class TestEvacuateDeleteServerRestartOriginalCompute(
         self._delete_and_check_allocations(server)
 
         # restart the source compute
-        # FIXME(mriedem): This is bug 1794996 where we try to lazy-load the
-        # instance.flavor from the deleted instance which causes the compute
-        # startup to fail.
-        self.assertRaises(exception.InstanceNotFound,
-                          self.restart_compute_service, self.compute1)
+        self.restart_compute_service(self.compute1)
