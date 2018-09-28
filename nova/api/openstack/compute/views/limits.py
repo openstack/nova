@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.policies import used_limits as ul_policies
+
 
 class ViewBuilder(object):
     """OpenStack API base limits view builder."""
@@ -35,12 +37,17 @@ class ViewBuilder(object):
             "server_group_members": ["maxServerGroupMembers"]
     }
 
-    def build(self, absolute_limits, filtered_limits=None,
+    def build(self, request, quotas, filtered_limits=None,
               max_image_meta=True):
+        filtered_limits = filtered_limits or []
         absolute_limits = self._build_absolute_limits(
-            absolute_limits, filtered_limits,
+            quotas, filtered_limits,
             max_image_meta=max_image_meta)
 
+        used_limits = self._build_used_limits(
+            request, quotas, filtered_limits)
+
+        absolute_limits.update(used_limits)
         output = {
             "limits": {
                 "rate": [],
@@ -50,7 +57,7 @@ class ViewBuilder(object):
 
         return output
 
-    def _build_absolute_limits(self, absolute_limits, filtered_limits=None,
+    def _build_absolute_limits(self, quotas, filtered_limits=None,
                                max_image_meta=True):
         """Builder for absolute limits
 
@@ -60,7 +67,7 @@ class ViewBuilder(object):
         filtered_limits is an optional list of limits to exclude from the
         result set.
         """
-        filtered_limits = filtered_limits or []
+        absolute_limits = {k: v['limit'] for k, v in quotas.items()}
         limits = {}
         for name, value in absolute_limits.items():
             if (name in self.limit_names and
@@ -70,3 +77,30 @@ class ViewBuilder(object):
                         continue
                     limits[limit_name] = value
         return limits
+
+    def _build_used_limits(self, request, quotas, filtered_limits):
+        self._check_requested_project_scope(request)
+        quota_map = {
+            'totalRAMUsed': 'ram',
+            'totalCoresUsed': 'cores',
+            'totalInstancesUsed': 'instances',
+            'totalFloatingIpsUsed': 'floating_ips',
+            'totalSecurityGroupsUsed': 'security_groups',
+            'totalServerGroupsUsed': 'server_groups',
+        }
+        used_limits = {}
+        for display_name, key in quota_map.items():
+            if (key in quotas and key not in filtered_limits):
+                used_limits[display_name] = quotas[key]['in_use']
+
+        return used_limits
+
+    def _check_requested_project_scope(self, request):
+        if 'tenant_id' in request.GET:
+            context = request.environ['nova.context']
+            tenant_id = request.GET.get('tenant_id')
+            target = {
+                'project_id': tenant_id,
+                'user_id': context.user_id
+                }
+            context.can(ul_policies.BASE_POLICY_NAME, target)

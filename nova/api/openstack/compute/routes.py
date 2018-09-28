@@ -82,7 +82,6 @@ from nova.api.openstack.compute import shelve
 from nova.api.openstack.compute import simple_tenant_usage
 from nova.api.openstack.compute import suspend_server
 from nova.api.openstack.compute import tenant_networks
-from nova.api.openstack.compute import used_limits
 from nova.api.openstack.compute import versionsV21
 from nova.api.openstack.compute import virtual_interfaces
 from nova.api.openstack.compute import volumes
@@ -226,7 +225,6 @@ keypairs_controller = functools.partial(
 limits_controller = functools.partial(
     _create_controller, limits.LimitsController,
     [
-        used_limits.UsedLimitsController,
     ],
     [])
 
