@@ -2269,6 +2269,23 @@ device_type:
   in: body
   required: false
   type: string
+device_volume_type:
+  description: |
+    The device ``volume_type``. This can be used to specify the type of volume
+    which the compute service will create and attach to the server.
+    If not specified, the block storage service will provide a default volume
+    type. See the `block storage volume types API <https://developer.openstack.org/api-ref/block-storage/v3/#volume-types-types>`_
+    for more details.
+    There are some restrictions on ``volume_type``:
+
+    - It can be a volume type ID or name.
+    - It is only supported with ``source_type`` of ``blank``, ``image`` or
+      ``snapshot``.
+    - It is only supported with ``destination_type`` of ``volume``.
+  in: body
+  required: false
+  type: string
+  min_version: 2.67
 # Optional input parameter in the body for PUT /os-services/{service_id} added
 # in microversion 2.53.
 disabled_reason_2_53_in:

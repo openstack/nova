@@ -417,7 +417,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_servers.base_create_v242, '2.42', '2.51')
     @validation.schema(schema_servers.base_create_v252, '2.52', '2.56')
     @validation.schema(schema_servers.base_create_v257, '2.57', '2.62')
-    @validation.schema(schema_servers.base_create_v263, '2.63')
+    @validation.schema(schema_servers.base_create_v263, '2.63', '2.66')
+    @validation.schema(schema_servers.base_create_v267, '2.67')
     def create(self, req, body):
         """Creates a new server for a given user."""
         context = req.environ['nova.context']
@@ -646,6 +647,7 @@ class ServersController(wsgi.Controller):
                 exception.InvalidBDMEphemeralSize,
                 exception.InvalidBDMFormat,
                 exception.InvalidBDMSwapSize,
+                exception.VolumeTypeNotFound,
                 exception.AutoDiskConfigDisabledByImage,
                 exception.ImageCPUPinningForbidden,
                 exception.ImageCPUThreadPolicyForbidden,
@@ -673,6 +675,7 @@ class ServersController(wsgi.Controller):
                 exception.NetworkAmbiguous,
                 exception.NoUniqueMatch,
                 exception.MultiattachSupportNotYetAvailable,
+                exception.VolumeTypeSupportNotYetAvailable,
                 exception.CertificateValidationNotYetAvailable) as error:
             raise exc.HTTPConflict(explanation=error.format_message())
 

@@ -1723,6 +1723,13 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                                                    'target_lun': '1'}}}
             return attachment_ref
 
+        def fake_get_all_volume_types(*args, **kwargs):
+            return [{
+                # This is used in the 2.67 API sample test.
+                'id': '5f9204ec-3e94-4f27-9beb-fe7bb73b6eb9',
+                'name': 'lvm-1'
+            }]
+
         self.test.stub_out('nova.volume.cinder.API.attachment_create',
                            fake_attachment_create)
         self.test.stub_out('nova.volume.cinder.API.attachment_delete',
@@ -1746,6 +1753,8 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                            lambda *args, **kwargs: None)
         self.test.stub_out('nova.volume.cinder.API.check_attached',
                            lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.get_all_volume_types',
+                           fake_get_all_volume_types)
 
 
 class PlacementApiClient(object):

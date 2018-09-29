@@ -161,6 +161,14 @@ fields (in addition to the ones that were already there):
   usage is to set it to 0 for the boot device and leave it as None for any
   other devices.
 
+* volume_type - Added in microversion 2.67 to the servers create API to
+  support specifying volume type when booting instances. When we snapshot a
+  volume-backed server, the block_device_mapping_v2 image metadata will
+  include the volume_type from the BDM record so if the user then creates
+  another server from that snapshot, the volume that nova creates from that
+  snapshot will use the same volume_type. If a user wishes to change that
+  volume type in the image metadata, they can do so via the image API.
+
 Valid source / dest combinations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

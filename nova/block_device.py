@@ -173,6 +173,7 @@ class BlockDeviceDict(dict):
             source_type = api_dict.get('source_type')
             device_uuid = api_dict.get('uuid')
             destination_type = api_dict.get('destination_type')
+            volume_type = api_dict.get('volume_type')
 
             if source_type == 'blank' and device_uuid:
                 raise exception.InvalidBDMFormat(
@@ -191,11 +192,23 @@ class BlockDeviceDict(dict):
                     boot_index = -1
                 boot_index = int(boot_index)
 
-                # if this bdm is generated from --image ,then
+                # if this bdm is generated from --image, then
                 # source_type = image and destination_type = local is allowed
                 if not (image_uuid_specified and boot_index == 0):
                     raise exception.InvalidBDMFormat(
                         details=_("Mapping image to local is not supported."))
+
+            if destination_type == 'local' and volume_type:
+                raise exception.InvalidBDMFormat(
+                    details=_("Specifying a volume_type with destination_type="
+                              "local is not supported."))
+
+            # Specifying a volume_type with a pre-existing source volume is
+            # not supported.
+            if source_type == 'volume' and volume_type:
+                raise exception.InvalidBDMFormat(
+                    details=_("Specifying volume type to existing volume is "
+                              "not supported."))
 
         api_dict.pop('uuid', None)
         return cls(api_dict)
