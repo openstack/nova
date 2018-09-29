@@ -298,10 +298,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         log_msg = mock_warn.call_args[0][0]
         self.assertIn("Unable to submit allocation for instance", log_msg)
 
-    @mock.patch.object(report.LOG, 'warning')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
     def test_put_allocations_fail_due_to_consumer_generation_conflict(
-            self, mock_put, mock_warn):
+            self, mock_put):
         mock_put.return_value = fake_requests.FakeResponse(
             status_code=409,
             content=jsonutils.dumps(
