@@ -4576,7 +4576,7 @@ class ConsumerGenerationConflictTest(
 
             post = {'revertResize': None}
             self.api.post_server_action(server['id'], post)
-            server = self._wait_for_state_change(self.api, server, 'ERROR',)
+            server = self._wait_for_state_change(self.api, server, 'ERROR')
 
         self.assertEqual(1, mock_post.call_count)
 

@@ -1928,11 +1928,10 @@ class SchedulerReportClient(object):
 
         Note that this call moves the current allocation from the source
         consumer to the target consumer. If parallel update happens on either
-        or both consumers during this call then Placement will detect that and
-        this code will re-read the new state of the consumers and retry the
-        operation. If you want to move a known piece of allocation from source
-        to target then this function might not be what you want as it always
-        moves what source has in Placement.
+        consumer during this call then Placement will detect that and
+        this code will raise AllocationMoveFailed. If you want to move a known
+        piece of allocation from source to target then this function might not
+        be what you want as it always moves what source has in Placement.
 
         :param context: The security context
         :param source_consumer_uuid: the UUID of the consumer from which
