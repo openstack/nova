@@ -178,7 +178,25 @@
         - neutron-grenade-multinode:
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-linuxbridge:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files:
+              # NOTE(mriedem): This job has its own irrelevant-files section
+              # so that we only run it on changes to networking and libvirt/vif
+              # code; we don't need to run this on all changes, nor do we run
+              # it in the gate.
+              - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
+              - ^(placement-)?api-.*$
+              - ^(test-|)requirements.txt$
+              - ^.*\.rst$
+              - ^.git.*$
+              - ^doc/.*$
+              - ^nova/hacking/.*$
+              - ^nova/locale/.*$
+              - ^nova/tests/.*$
+              - ^releasenotes/.*$
+              - ^setup.cfg$
+              - ^tests-py3.txt$
+              - ^tools/.*$
+              - ^tox.ini$
         - nova-cells-v1
         - nova-live-migration
         - nova-lvm
