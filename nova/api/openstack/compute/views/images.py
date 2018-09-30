@@ -49,6 +49,7 @@ class ViewBuilder(common.ViewBuilder):
             "updated": self._format_date(image.get("updated_at")),
             "status": self._get_status(image),
             "progress": self._get_progress(image),
+            "OS-EXT-IMG-SIZE:size": image.get("size"),
             "links": self._get_links(request,
                                      image["id"],
                                      self._collection_name),

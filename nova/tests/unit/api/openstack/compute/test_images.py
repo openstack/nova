@@ -79,6 +79,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
                       'minDisk': 10,
                       'progress': 100,
                       'minRam': 128,
+                      'OS-EXT-IMG-SIZE:size': 25165824,
                       "links": [{
                                     "rel": "self",
                                     "href": "%s/123" % self.url_prefix
@@ -111,6 +112,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
                       'progress': 25,
                       'minDisk': 0,
                       'minRam': 0,
+                      'OS-EXT-IMG-SIZE:size': 25165824,
                       'server': {
                           'id': self.server_uuid,
                           "links": [{

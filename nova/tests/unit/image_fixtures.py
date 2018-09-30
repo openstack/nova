@@ -51,7 +51,7 @@ def get_image_fixtures():
     # Public image
     add_fixture(id=str(image_id), name='public image', is_public=True,
                 status='active', properties={'key1': 'value1'},
-                min_ram="128", min_disk="10", size='25165824')
+                min_ram="128", min_disk="10", size=25165824)
     image_id += 1
 
     # Snapshot for User 1
@@ -64,16 +64,16 @@ def get_image_fixtures():
 
         add_fixture(id=str(image_id), name='%s snapshot' % status,
                     is_public=False, status=status,
-                    properties=snapshot_properties, size='25165824',
+                    properties=snapshot_properties, size=25165824,
                     deleted=deleted, deleted_at=deleted_at)
         image_id += 1
 
     # Image without a name
     add_fixture(id=str(image_id), is_public=True, status='active',
-                properties={})
+                properties={}, size=25165824)
     # Image for permission tests
     image_id += 1
     add_fixture(id=str(image_id), is_public=True, status='active',
-                properties={}, owner='authorized_fake')
+                properties={}, owner='authorized_fake', size=25165824)
 
     return fixtures

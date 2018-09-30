@@ -49,7 +49,6 @@ from nova.api.openstack.compute import fping
 from nova.api.openstack.compute import hosts
 from nova.api.openstack.compute import hypervisors
 from nova.api.openstack.compute import image_metadata
-from nova.api.openstack.compute import image_size
 from nova.api.openstack.compute import images
 from nova.api.openstack.compute import instance_actions
 from nova.api.openstack.compute import instance_usage_audit_log
@@ -198,7 +197,7 @@ hypervisors_controller = functools.partial(
 
 images_controller = functools.partial(
     _create_controller, images.ImagesController,
-    [image_size.ImageSizeController], [])
+    [], [])
 
 
 image_metadata_controller = functools.partial(
