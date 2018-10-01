@@ -147,10 +147,10 @@ class SchedulerManager(manager.Manager):
                 (alloc_reqs, provider_summaries,
                             allocation_request_version) = res
             if not alloc_reqs:
-                LOG.debug("Got no allocation candidates from the Placement "
-                          "API. This could be due to insufficient resources "
-                          "or a temporary occurrence as compute nodes start "
-                          "up.")
+                LOG.info("Got no allocation candidates from the Placement "
+                         "API. This could be due to insufficient resources "
+                         "or a temporary occurrence as compute nodes start "
+                         "up.")
                 raise exception.NoValidHost(reason="")
             else:
                 # Build a dict of lists of allocation requests, keyed by
