@@ -173,17 +173,6 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.assertEqual({'fake-host': set([1])},
                          self.host_manager.host_aggregates_map)
 
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
-    @mock.patch.object(objects.AggregateList, 'get_all')
-    def test_init_aggregates_one_agg_with_hosts_upper_case(self, agg_get_all,
-                                                           mock_init_info):
-        fake_agg = objects.Aggregate(id=1, hosts=['FAKE-host'])
-        agg_get_all.return_value = [fake_agg]
-        self.host_manager = host_manager.HostManager()
-        self.assertEqual({1: fake_agg}, self.host_manager.aggs_by_id)
-        self.assertEqual({'fake-host': set([1])},
-                         self.host_manager.host_aggregates_map)
-
     def test_update_aggregates(self):
         fake_agg = objects.Aggregate(id=1, hosts=['fake-host'])
         self.host_manager.update_aggregates([fake_agg])
