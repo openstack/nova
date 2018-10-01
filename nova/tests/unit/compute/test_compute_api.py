@@ -1198,8 +1198,11 @@ class _ComputeAPIUnitTestMixIn(object):
                 mock_terminate.assert_called_once_with(
                     self.context, inst, [], delete_type=delete_type)
 
-        if self.cell_type is None or self.cell_type == 'api':
+        if ((self.cell_type is None and CONF.workarounds.enable_consoleauth)
+                or self.cell_type == 'api'):
             mock_del_token.assert_called_once_with(self.context, instance_uuid)
+        else:
+            mock_del_token.assert_not_called()
 
         if is_shelved:
             mock_image_delete.assert_called_once_with(self.context,
@@ -1217,7 +1220,9 @@ class _ComputeAPIUnitTestMixIn(object):
                           task_state=task_states.RESIZE_FINISH,
                           old_flavor=old_flavor)
 
-    def test_delete_in_resized(self):
+    @ddt.data(True, False)
+    def test_delete_in_resized(self, enable_consoleauth):
+        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
         self._test_delete('delete', vm_state=vm_states.RESIZED)
 
     def test_delete_shelved(self):
@@ -1226,7 +1231,9 @@ class _ComputeAPIUnitTestMixIn(object):
                           vm_state=vm_states.SHELVED,
                           system_metadata=fake_sys_meta)
 
-    def test_delete_shelved_offloaded(self):
+    @ddt.data(True, False)
+    def test_delete_shelved_offloaded(self, enable_consoleauth):
+        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
         fake_sys_meta = {'shelved_image_id': SHELVED_IMAGE}
         self._test_delete('delete',
                           vm_state=vm_states.SHELVED_OFFLOADED,
@@ -1244,7 +1251,9 @@ class _ComputeAPIUnitTestMixIn(object):
                           vm_state=vm_states.SHELVED_OFFLOADED,
                           system_metadata=fake_sys_meta)
 
-    def test_delete_shelved_exception(self):
+    @ddt.data(True, False)
+    def test_delete_shelved_exception(self, enable_consoleauth):
+        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
         fake_sys_meta = {'shelved_image_id': SHELVED_IMAGE_EXCEPTION}
         self._test_delete('delete',
                           vm_state=vm_states.SHELVED,
@@ -1259,7 +1268,9 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_delete_soft_in_resized(self):
         self._test_delete('soft_delete', vm_state=vm_states.RESIZED)
 
-    def test_delete_soft(self):
+    @ddt.data(True, False)
+    def test_delete_soft(self, enable_consoleauth):
+        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
         self._test_delete('soft_delete')
 
     def test_delete_forced(self):
