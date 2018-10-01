@@ -1911,12 +1911,11 @@ class API(base.Base):
 
             # NOTE(dtp): cells.enable = False means "use cells v2".
             # Run everywhere except v1 compute cells.
-            if not CONF.cells.enable or self.cell_type == 'api':
-                # TODO(melwitt): In Rocky, we store console authorizations
-                # in both the consoleauth service and the database while
-                # we convert to using the database. Remove the consoleauth
-                # line below when authorizations are no longer being
-                # stored in consoleauth, in Stein.
+            if (not CONF.cells.enable and CONF.workarounds.enable_consoleauth
+               ) or self.cell_type == 'api':
+                # TODO(melwitt): Remove the conditions for running this line
+                # with cells v2, when consoleauth is no longer being used by
+                # cells v2, in Stein.
                 self.consoleauth_rpcapi.delete_tokens_for_instance(
                     context, instance.uuid)
 
@@ -3706,11 +3705,12 @@ class API(base.Base):
         # console authorization in the database in the above method.
         # The following will be removed when everything has been
         # converted to use the database, in Stein.
-        self.consoleauth_rpcapi.authorize_console(context,
-                connect_info['token'], console_type,
-                connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance.uuid,
-                access_url=connect_info['access_url'])
+        if CONF.workarounds.enable_consoleauth:
+            self.consoleauth_rpcapi.authorize_console(context,
+                    connect_info['token'], console_type,
+                    connect_info['host'], connect_info['port'],
+                    connect_info['internal_access_path'], instance.uuid,
+                    access_url=connect_info['access_url'])
 
         return {'url': connect_info['access_url']}
 
@@ -3732,11 +3732,12 @@ class API(base.Base):
         # console authorization in the database in the above method.
         # The following will be removed when everything has been
         # converted to use the database, in Stein.
-        self.consoleauth_rpcapi.authorize_console(context,
-                connect_info['token'], console_type,
-                connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance.uuid,
-                access_url=connect_info['access_url'])
+        if CONF.workarounds.enable_consoleauth:
+            self.consoleauth_rpcapi.authorize_console(context,
+                    connect_info['token'], console_type,
+                    connect_info['host'], connect_info['port'],
+                    connect_info['internal_access_path'], instance.uuid,
+                    access_url=connect_info['access_url'])
 
         return {'url': connect_info['access_url']}
 
@@ -3758,11 +3759,12 @@ class API(base.Base):
         # console authorization in the database in the above method.
         # The following will be removed when everything has been
         # converted to use the database, in Stein.
-        self.consoleauth_rpcapi.authorize_console(context,
-                connect_info['token'], console_type,
-                connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance.uuid,
-                access_url=connect_info['access_url'])
+        if CONF.workarounds.enable_consoleauth:
+            self.consoleauth_rpcapi.authorize_console(context,
+                    connect_info['token'], console_type,
+                    connect_info['host'], connect_info['port'],
+                    connect_info['internal_access_path'], instance.uuid,
+                    access_url=connect_info['access_url'])
 
         return {'url': connect_info['access_url']}
 
@@ -3785,11 +3787,12 @@ class API(base.Base):
         # console authorization in the database in the above method.
         # The following will be removed when everything has been
         # converted to use the database, in Stein.
-        self.consoleauth_rpcapi.authorize_console(context,
-                connect_info['token'], console_type,
-                connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance.uuid,
-                access_url=connect_info['access_url'])
+        if CONF.workarounds.enable_consoleauth:
+            self.consoleauth_rpcapi.authorize_console(context,
+                    connect_info['token'], console_type,
+                    connect_info['host'], connect_info['port'],
+                    connect_info['internal_access_path'], instance.uuid,
+                    access_url=connect_info['access_url'])
         return {'url': connect_info['access_url']}
 
     @check_instance_host
@@ -3810,11 +3813,12 @@ class API(base.Base):
         # console authorization in the database in the above method.
         # The following will be removed when everything has been
         # converted to use the database, in Stein.
-        self.consoleauth_rpcapi.authorize_console(context,
-                connect_info['token'], console_type,
-                connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance.uuid,
-                access_url=connect_info['access_url'])
+        if CONF.workarounds.enable_consoleauth:
+            self.consoleauth_rpcapi.authorize_console(context,
+                    connect_info['token'], console_type,
+                    connect_info['host'], connect_info['port'],
+                    connect_info['internal_access_path'], instance.uuid,
+                    access_url=connect_info['access_url'])
         return {'url': connect_info['access_url']}
 
     @check_instance_host
@@ -4339,13 +4343,14 @@ class API(base.Base):
         self._record_action_start(context, instance,
                                   instance_actions.LIVE_MIGRATION)
 
-        # TODO(melwitt): In Rocky, we store console authorizations
+        # TODO(melwitt): In Rocky, we optionally store console authorizations
         # in both the consoleauth service and the database while
-        # we convert to using the database. Remove the consoleauth
-        # line below when authorizations are no longer being
-        # stored in consoleauth, in Stein.
-        self.consoleauth_rpcapi.delete_tokens_for_instance(
-            context, instance.uuid)
+        # we convert to using the database. Remove the condition for running
+        # this line with cells v2, when consoleauth is no longer being used by
+        # cells v2, in Stein.
+        if CONF.cells.enable or CONF.workarounds.enable_consoleauth:
+            self.consoleauth_rpcapi.delete_tokens_for_instance(
+                context, instance.uuid)
 
         try:
             request_spec = objects.RequestSpec.get_by_instance_uuid(
