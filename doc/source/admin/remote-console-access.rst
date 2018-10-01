@@ -5,7 +5,7 @@ Configure remote console access
 OpenStack provides a number of different methods to interact with your guests:
 VNC, SPICE, Serial, RDP or MKS. If configured, these can be accessed by users
 through the OpenStack dashboard or the command line. This document outlines how
-these different technologies can be configured
+these different technologies can be configured.
 
 
 Overview
@@ -526,6 +526,49 @@ There are some things to keep in mind when configuring these options:
 * :oslo.config:option:`serial_console.proxyclient_address` will be used by the
   :program:`nova-serialproxy` service to determine where to connect to for
   proxying the console interaction.
+
+
+RDP
+---
+
+RDP is a graphical console primarily used with Hyper-V. Nova does not provide a
+console proxy service for RDP - instead, an external proxy service, such as the
+:program:`wsgate` application provided by `FreeRDP-WebConnect`__, should be
+used.
+
+__ https://github.com/FreeRDP/FreeRDP-WebConnect
+
+Configuration
+~~~~~~~~~~~~~
+
+To enable the RDP console service, you must configure both a console proxy
+service like :program:`wsgate` and the :program:`nova-compute` service. All
+options for the latter service are defined in the :oslo.config:group:`rdp`
+group.
+
+Information on configuring an RDP console proxy service, such as
+:program:`wsgate`, is not provided here. However, more information can be found
+at `cloudbase.it`__.
+
+The :program:`nova-compute` service requires the following options to configure
+RDP console support.
+
+- :oslo.config:option:`rdp.enabled`
+- :oslo.config:option:`rdp.html5_proxy_base_url`
+
+For example, to configure this via a ``nova.conf`` file:
+
+.. code-block:: console
+
+   [rdp]
+   enabled = True
+   html5_proxy_base_url = https://IP_ADDRESS:6083/
+
+Replace ``IP_ADDRESS`` with the IP address from which the proxy is accessible
+by the outside world. For example, this may be the management interface IP
+address of the controller or the VIP.
+
+__ https://cloudbase.it/freerdp-html5-proxy-windows/
 
 
 Frequently Asked Questions
