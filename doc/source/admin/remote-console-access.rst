@@ -571,6 +571,35 @@ address of the controller or the VIP.
 __ https://cloudbase.it/freerdp-html5-proxy-windows/
 
 
+MKS
+---
+
+MKS is the protocol used for accessing the console of a virtual machine running
+on VMware vSphere. It is very similar to VNC.  Due to the architecture of the
+VMware vSphere hypervisor, it is not necessary to run a console proxy service.
+
+Configuration
+~~~~~~~~~~~~~
+
+To enable the MKS console service, only the :program:`nova-compute` service
+must be configured. All options are defined in the :oslo.config:group:`mks`
+group.
+
+The :program:`nova-compute` service requires the following options to configure
+MKS console support.
+
+- :oslo.config:option:`mks.enabled`
+- :oslo.config:option:`mks.mksproxy_base_url`
+
+For example, to configure this via a ``nova.conf`` file:
+
+.. code-block:: console
+
+   [mks]
+   enabled = True
+   mksproxy_base_url = https://127.0.0.1:6090/
+
+
 Frequently Asked Questions
 --------------------------
 
