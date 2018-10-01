@@ -261,6 +261,9 @@ class ResponseObject(object):
 
         Utility method for serializing the wrapped object.  Returns a
         webob.Response object.
+
+        Header values are set to the appropriate Python type and
+        encoding demanded by PEP 3333: whatever the native str type is.
         """
 
         serializer = self.serializer
@@ -271,24 +274,24 @@ class ResponseObject(object):
         response = webob.Response(body=body)
         response.status_int = self.code
         for hdr, val in self._headers.items():
-            if not isinstance(val, six.text_type):
-                val = six.text_type(val)
             if six.PY2:
-                # In Py2.X Headers must be byte strings
+                # In Py2.X Headers must be a UTF-8 encode str.
                 response.headers[hdr] = encodeutils.safe_encode(val)
             else:
-                # In Py3.X Headers must be utf-8 strings
+                # In Py3.X Headers must be a str that was first safely
+                # encoded to UTF-8 (to catch any bad encodings) and then
+                # decoded back to a native str.
                 response.headers[hdr] = encodeutils.safe_decode(
                         encodeutils.safe_encode(val))
         # Deal with content_type
         if not isinstance(content_type, six.text_type):
             content_type = six.text_type(content_type)
         if six.PY2:
-            # In Py2.X Headers must be byte strings
+            # In Py2.X Headers must be a UTF-8 encode str.
             response.headers['Content-Type'] = encodeutils.safe_encode(
                 content_type)
         else:
-            # In Py3.X Headers must be utf-8 strings
+            # In Py3.X Headers must be a str.
             response.headers['Content-Type'] = encodeutils.safe_decode(
                     encodeutils.safe_encode(content_type))
         return response
@@ -558,10 +561,10 @@ class Resource(wsgi.Application):
                 if not isinstance(val, six.text_type):
                     val = six.text_type(val)
                 if six.PY2:
-                    # In Py2.X Headers must be byte strings
+                    # In Py2.X Headers must be UTF-8 encoded string
                     response.headers[hdr] = encodeutils.safe_encode(val)
                 else:
-                    # In Py3.X Headers must be utf-8 strings
+                    # In Py3.X Headers must be a string
                     response.headers[hdr] = encodeutils.safe_decode(
                             encodeutils.safe_encode(val))
 
