@@ -5546,10 +5546,10 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
                 from_select(columns, sql.select([table], column.in_(records)))
         delete = table.delete().where(column.in_(records))
         # NOTE(tssurya): In order to facilitate the deletion of records from
-        # instance_mappings and request_specs tables in the nova_api DB, the
-        # rows of deleted instances from the instances table are stored prior
-        # to their deletion. Basically the uuids of the archived instances
-        # are queried and returned.
+        # instance_mappings, request_specs and instance_group_member tables in
+        # the nova_api DB, the rows of deleted instances from the instances
+        # table are stored prior to their deletion. Basically the uuids of the
+        # archived instances are queried and returned.
         if tablename == "instances":
             query_select = sql.select([table.c.uuid], table.c.id.in_(records))
             rows = conn.execute(query_select).fetchall()
