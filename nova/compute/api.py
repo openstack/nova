@@ -5211,13 +5211,22 @@ class AggregateAPI(base.Base):
         try:
             mapping = objects.HostMapping.get_by_host(context, host_name)
             nova_context.set_target_cell(context, mapping.cell_mapping)
-            objects.Service.get_by_compute_host(context, host_name)
+            service = objects.Service.get_by_compute_host(context, host_name)
         except exception.HostMappingNotFound:
             try:
                 # NOTE(danms): This targets our cell
-                _find_service_in_cell(context, service_host=host_name)
+                service = _find_service_in_cell(context,
+                                                service_host=host_name)
             except exception.NotFound:
                 raise exception.ComputeHostNotFound(host=host_name)
+
+        if service.host != host_name:
+            # NOTE(danms): If we found a service but it is not an
+            # exact match, we may have a case-insensitive backend
+            # database (like mysql) which will end up with us
+            # adding the host-aggregate mapping with a
+            # non-matching hostname.
+            raise exception.ComputeHostNotFound(host=host_name)
 
         aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
 
