@@ -102,27 +102,6 @@ class MicroversionsExtendsBaseController(wsgi.Controller):
         return {'base_param': 'base_val'}
 
 
-class MicroversionsExtendsController1(wsgi.Controller):
-    @wsgi.Controller.api_version("2.3")
-    @wsgi.extends
-    def show(self, req, resp_obj, id):
-        resp_obj.obj['extend_ctrlr1'] = 'val_1'
-
-
-class MicroversionsExtendsController2(wsgi.Controller):
-    @wsgi.Controller.api_version("2.4")
-    @wsgi.extends
-    def show(self, req, resp_obj, id):
-        resp_obj.obj['extend_ctrlr2'] = 'val_2'
-
-
-class MicroversionsExtendsController3(wsgi.Controller):
-    @wsgi.Controller.api_version("2.2", "2.3")
-    @wsgi.extends
-    def show(self, req, resp_obj, id):
-        resp_obj.obj['extend_ctrlr3'] = 'val_3'
-
-
 mv_controller = functools.partial(routes._create_controller,
     MicroversionsController, [], [])
 
@@ -140,12 +119,7 @@ mv4_controller = functools.partial(routes._create_controller,
 
 
 mv5_controller = functools.partial(routes._create_controller,
-    MicroversionsExtendsBaseController,
-    [
-        MicroversionsExtendsController1,
-        MicroversionsExtendsController2,
-        MicroversionsExtendsController3
-    ], [])
+    MicroversionsExtendsBaseController, [], [])
 
 
 ROUTES = (

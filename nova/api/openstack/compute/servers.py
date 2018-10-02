@@ -526,6 +526,7 @@ class ServersController(wsgi.Controller):
             # Sets the legacy_bdm flag if we got a legacy block device mapping.
             create_kwargs['legacy_bdm'] = True
         elif block_device_mapping_v2:
+            # Have to check whether --image is given, see bug 1433609
             image_href = server_dict.get('imageRef')
             image_uuid_specified = image_href is not None
             try:

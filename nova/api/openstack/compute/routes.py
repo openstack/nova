@@ -222,10 +222,7 @@ keypairs_controller = functools.partial(
 
 
 limits_controller = functools.partial(
-    _create_controller, limits.LimitsController,
-    [
-    ],
-    [])
+    _create_controller, limits.LimitsController, [], [])
 
 
 migrations_controller = functools.partial(_create_controller,

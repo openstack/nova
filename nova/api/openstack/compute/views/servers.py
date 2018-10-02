@@ -210,10 +210,7 @@ class ViewBuilder(common.ViewBuilder):
             show_extended_attr = context.can(
                 esa_policies.BASE_POLICY_NAME, fatal=False)
         if show_extended_attr:
-            server["server"][
-                "OS-EXT-SRV-ATTR:hypervisor_hostname"] = instance.node
-
-            properties = ['host', 'name']
+            properties = ['host', 'name', 'node']
             if api_version_request.is_supported(request, min_version='2.3'):
                 # NOTE(mriedem): These will use the OS-EXT-SRV-ATTR prefix
                 # below and that's OK for microversion 2.3 which is being
@@ -226,11 +223,13 @@ class ViewBuilder(common.ViewBuilder):
             for attr in properties:
                 if attr == 'name':
                     key = "OS-EXT-SRV-ATTR:instance_%s" % attr
+                elif attr == 'node':
+                    key = "OS-EXT-SRV-ATTR:hypervisor_hostname"
                 else:
                     # NOTE(mriedem): Nothing after microversion 2.3 should use
                     # the OS-EXT-SRV-ATTR prefix for the attribute key name.
                     key = "OS-EXT-SRV-ATTR:%s" % attr
-                server["server"][key] = instance[attr]
+                server["server"][key] = getattr(instance, attr)
         if show_extended_status:
             # NOTE(gmann): Removed 'locked_by' from extended status
             # to make it same as V2. If needed it can be added with
@@ -290,16 +289,15 @@ class ViewBuilder(common.ViewBuilder):
     def detail(self, request, instances):
         """Detailed view of a list of instance."""
         coll_name = self._collection_name + '/detail'
+        context = request.environ['nova.context']
 
         if api_version_request.is_supported(request, min_version='2.47'):
             # Determine if we should show extra_specs in the inlined flavor
             # once before we iterate the list of instances
-            context = request.environ['nova.context']
             show_extra_specs = context.can(fes_policies.POLICY_ROOT % 'index',
                                            fatal=False)
         else:
             show_extra_specs = False
-        context = request.environ['nova.context']
         show_extended_attr = context.can(
             esa_policies.BASE_POLICY_NAME, fatal=False)
         show_host_status = False

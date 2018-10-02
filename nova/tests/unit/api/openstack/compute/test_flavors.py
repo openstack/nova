@@ -67,9 +67,6 @@ class FlavorsTestV21(test.TestCase):
             self._prefix + url, version=self.microversion)
 
     def _set_expected_body(self, expected, flavor):
-        # NOTE(oomichi): On v2.1 API, some extensions of v2.0 are merged
-        # as core features and we can get the following parameters as the
-        # default.
         expected['OS-FLV-EXT-DATA:ephemeral'] = flavor.ephemeral_gb
         expected['OS-FLV-DISABLED:disabled'] = flavor.disabled
         expected['swap'] = flavor.swap

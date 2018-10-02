@@ -454,7 +454,6 @@ class LimitsControllerTestV236(BaseLimitTestSuite):
                         "totalRAMUsed": 256,
                         "totalCoresUsed": 10,
                         "totalInstancesUsed": 2,
-
                     },
                 },
             }
