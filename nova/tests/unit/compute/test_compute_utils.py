@@ -1107,7 +1107,7 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(
             self.context, expected_attrs=('system_metadata',))
         with compute_utils.notify_about_instance_delete(
-            mock.sentinel.notifier, self.context, instance, "fake-mini"):
+            mock.sentinel.notifier, self.context, instance):
             instance.destroy()
         expected_notify_calls = [
             mock.call(mock.sentinel.notifier, self.context, instance,

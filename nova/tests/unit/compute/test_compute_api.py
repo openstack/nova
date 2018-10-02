@@ -1732,7 +1732,7 @@ class _ComputeAPIUnitTestMixIn(object):
             _lookup_instance.assert_called_once_with(
                 self.context, instance.uuid)
             notify_mock.assert_called_once_with(
-                self.compute_api.notifier, self.context, instance, 'fake-mini')
+                self.compute_api.notifier, self.context, instance)
             destroy_mock.assert_called_once_with()
 
     @mock.patch.object(context, 'target_cell')

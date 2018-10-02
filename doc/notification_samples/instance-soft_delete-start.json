@@ -8,5 +8,5 @@
         }
     },
     "priority":"INFO",
-    "publisher_id":"nova-compute:compute"
+    "publisher_id":"nova-compute:fake-mini"
 }

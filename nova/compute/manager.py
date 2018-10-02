@@ -2823,7 +2823,7 @@ class ComputeManager(manager.Manager):
     def soft_delete_instance(self, context, instance):
         """Soft delete an instance on this host."""
         with compute_utils.notify_about_instance_delete(
-                self.notifier, context, instance, self.host, 'soft_delete',
+                self.notifier, context, instance, 'soft_delete',
                 source=fields.NotificationSource.COMPUTE):
             try:
                 self.driver.soft_delete(instance)
