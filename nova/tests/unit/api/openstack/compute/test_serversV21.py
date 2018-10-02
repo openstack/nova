@@ -516,7 +516,7 @@ class ServersControllerTest(ControllerTest):
             expected_attrs=['flavor', 'info_cache', 'metadata',
                             'numa_topology'])
 
-    def test_get_server_addresses_from_cache(self):
+    def _generate_nw_cache_info(self):
         pub0 = ('172.19.0.1', '172.19.0.2',)
         pub1 = ('1.2.3.4',)
         pub2 = ('b33f::fdee:ddff:fecc:bbaa',)
@@ -544,7 +544,10 @@ class ServersControllerTest(ControllerTest):
                          'label': 'private',
                          'subnets': [{'cidr': '192.168.0.0/24',
                                       'ips': [_ip(ip) for ip in priv0]}]}}]
+        return nw_cache
 
+    def test_get_server_addresses_from_cache(self):
+        nw_cache = self._generate_nw_cache_info()
         self.mock_get.side_effect = fakes.fake_compute_get(nw_cache=nw_cache,
             availability_zone='nova')
 
@@ -589,6 +592,102 @@ class ServersControllerTest(ControllerTest):
                           self.ips_controller.index, req, uuids.fake)
         self.mock_get.assert_called_once_with(
             req.environ['nova.context'], uuids.fake, expected_attrs=None)
+
+    def test_show_server_hide_addresses_in_building(self):
+        uuid = FAKE_UUID
+        self.mock_get.side_effect = fakes.fake_compute_get(
+            uuid=uuid, vm_state=vm_states.BUILDING)
+        req = self.req('/v2/fake/servers/%s' % uuid)
+        res_dict = self.controller.show(req, uuid)
+        self.assertEqual({}, res_dict['server']['addresses'])
+
+    def test_show_server_addresses_in_non_building(self):
+        uuid = FAKE_UUID
+        nw_cache = self._generate_nw_cache_info()
+        expected = {
+            'addresses': {
+                'private': [
+                    {'version': 4, 'addr': '192.168.0.3',
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'},
+                    {'version': 4, 'addr': '192.168.0.4',
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'},
+                ],
+                'public': [
+                    {'version': 4, 'addr': '172.19.0.1',
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                    {'version': 4, 'addr': '172.19.0.2',
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                    {'version': 4, 'addr': '1.2.3.4',
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                    {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa',
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                ],
+            },
+        }
+        self.mock_get.side_effect = fakes.fake_compute_get(
+            nw_cache=nw_cache, uuid=uuid, vm_state=vm_states.ACTIVE)
+        req = self.req('/v2/fake/servers/%s' % uuid)
+        res_dict = self.controller.show(req, uuid)
+        self.assertThat(res_dict['server']['addresses'],
+                        matchers.DictMatches(expected['addresses']))
+
+    def test_detail_server_hide_addresses(self):
+        nw_cache = self._generate_nw_cache_info()
+        expected = {
+            'addresses': {
+                'private': [
+                    {'version': 4, 'addr': '192.168.0.3',
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'},
+                    {'version': 4, 'addr': '192.168.0.4',
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'},
+                ],
+                'public': [
+                    {'version': 4, 'addr': '172.19.0.1',
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                    {'version': 4, 'addr': '172.19.0.2',
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                    {'version': 4, 'addr': '1.2.3.4',
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                    {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa',
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                ],
+            },
+        }
+
+        def fake_get_all(context, **kwargs):
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(1,
+                                                 vm_state=vm_states.BUILDING,
+                                                 uuid=uuids.fake,
+                                                 nw_cache=nw_cache),
+                         fakes.stub_instance_obj(2,
+                                                 vm_state=vm_states.ACTIVE,
+                                                 uuid=uuids.fake2,
+                                                 nw_cache=nw_cache)])
+
+        self.mock_get_all.side_effect = fake_get_all
+        req = self.req('/fake/servers?deleted=true',
+                       use_admin_context=True)
+
+        servers = self.controller.detail(req)['servers']
+        for server in servers:
+            if server['OS-EXT-STS:vm_state'] == 'building':
+                self.assertEqual({}, server['addresses'])
+            else:
+                self.assertThat(server['addresses'],
+                                matchers.DictMatches(expected['addresses']))
 
     def test_get_server_list_empty(self):
         self.mock_get_all.side_effect = None
