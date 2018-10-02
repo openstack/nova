@@ -1624,6 +1624,11 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(new_flavor, dest_allocation)
 
+        # Make sure the RequestSpec.flavor matches the new_flavor.
+        ctxt = context.get_admin_context()
+        reqspec = objects.RequestSpec.get_by_instance_uuid(ctxt, server['id'])
+        self.assertEqual(new_flavor['id'], reqspec.flavor.flavorid)
+
     def _test_resize_revert(self, dest_hostname):
         source_hostname = self._other_hostname(dest_hostname)
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
@@ -1639,6 +1644,11 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         post = {'revertResize': None}
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        # Make sure the RequestSpec.flavor matches the original flavor.
+        ctxt = context.get_admin_context()
+        reqspec = objects.RequestSpec.get_by_instance_uuid(ctxt, server['id'])
+        self.assertEqual(self.flavor1['id'], reqspec.flavor.flavorid)
 
         self._run_periodics()
 
