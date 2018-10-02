@@ -1299,7 +1299,7 @@ class API(base_api.NetworkAPI):
         return constants.PORT_BINDING_EXTENDED in self.extensions
 
     def bind_ports_to_host(self, context, instance, host,
-                           vnic_type=None, profile=None):
+                           vnic_types=None, port_profiles=None):
         """Attempts to bind the ports from the instance on the given host
 
         If the ports are already actively bound to another host, like the
@@ -1320,17 +1320,17 @@ class API(base_api.NetworkAPI):
         :param host: the host on which to bind the ports which
                      are attached to the instance
         :type host: str
-        :param vnic_type: optional vnic type string for the host
-                          port binding
-        :type vnic_type: str
-        :param profile: optional vif profile dict for the host port
-                        binding; note that the port binding profile is mutable
+        :param vnic_types: optional dict for the host port binding
+        :type vnic_types: dict of <port_id> : <vnic_type>
+        :param port_profiles: optional dict per port ID for the host port
+                        binding profile.
+                        note that the port binding profile is mutable
                         via the networking "Port Binding" API so callers that
                         pass in a profile should ensure they have the latest
                         version from neutron with their changes merged,
                         which can be determined using the "revision_number"
                         attribute of the port.
-        :type profile: dict
+        :type port_profiles: dict of <port_id> : <port_profile>
         :raises: PortBindingFailed if any of the ports failed to be bound to
                  the destination host
         :returns: dict, keyed by port ID, of a new host port
@@ -1339,31 +1339,36 @@ class API(base_api.NetworkAPI):
         # Get the current ports off the instance. This assumes the cache is
         # current.
         network_info = instance.get_network_info()
-        port_ids = [vif['id'] for vif in network_info]
 
-        if not port_ids:
+        if not network_info:
             # The instance doesn't have any ports so there is nothing to do.
             LOG.debug('Instance does not have any ports.', instance=instance)
             return {}
 
         client = _get_ksa_client(context, admin=True)
 
-        # Now bind each port to the destination host and keep track of each
-        # port that is bound to the resulting binding so we can rollback in
-        # the event of a failure, or return the results if everything is OK.
-        binding = dict(host=host)
-        if vnic_type:
-            binding['vnic_type'] = vnic_type
-        if profile:
-            binding['profile'] = profile
-        data = dict(binding=binding)
-
         # TODO(gibi): To support ports with resource request during server
         # live migrate operation we need to take care of 'allocation' key in
         # the binding profile per binding.
 
         bindings_by_port_id = {}
-        for port_id in port_ids:
+        for vif in network_info:
+            # Now bind each port to the destination host and keep track of each
+            # port that is bound to the resulting binding so we can rollback in
+            # the event of a failure, or return the results if everything is OK
+            port_id = vif['id']
+            binding = dict(host=host)
+            if vnic_types is None or port_id not in vnic_types:
+                binding['vnic_type'] = vif['vnic_type']
+            else:
+                binding['vnic_type'] = vnic_types[port_id]
+
+            if port_profiles is None or port_id not in port_profiles:
+                binding['profile'] = vif['profile']
+            else:
+                binding['profile'] = port_profiles[port_id]
+
+            data = dict(binding=binding)
             resp = self._create_port_binding(client, port_id, data)
             if resp:
                 bindings_by_port_id[port_id] = resp.json()['binding']
