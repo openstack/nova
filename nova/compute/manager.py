@@ -1192,6 +1192,15 @@ class ComputeManager(manager.Manager):
 
         nova.conf.neutron.register_dynamic_opts(CONF)
 
+        # one-time initialization
+        if CONF.compute.max_concurrent_disk_ops != 0:
+            compute_utils.disk_ops_semaphore = \
+                eventlet.semaphore.BoundedSemaphore(
+                    CONF.compute.max_concurrent_disk_ops)
+        else:
+            compute_utils.disk_ops_semaphore = \
+                compute_utils.UnlimitedSemaphore()
+
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
         instances = objects.InstanceList.get_by_host(

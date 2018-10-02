@@ -27,6 +27,7 @@ from oslo_utils import imageutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 
+from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context
 from nova import exception
@@ -673,13 +674,14 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         self.LV = '%s_%s' % (self.INSTANCE['uuid'], self.NAME)
         self.PATH = os.path.join('/dev', self.VG, self.LV)
 
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch.object(imagebackend.lvm, 'create_volume')
     @mock.patch.object(imagebackend.disk, 'get_disk_size',
                        return_value=TEMPLATE_SIZE)
     @mock.patch('nova.privsep.qemu.convert_image')
     def _create_image(self, sparse, mock_convert_image, mock_get, mock_create,
-                      mock_ignored):
+                      mock_ignored, mock_disk_op_sema):
         fn = mock.MagicMock()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -695,6 +697,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         path = '/dev/%s/%s_%s' % (self.VG, self.INSTANCE.uuid, self.NAME)
         mock_convert_image.assert_called_once_with(
             self.TEMPLATE_PATH, path, None, 'raw', CONF.instances_path)
+        mock_disk_op_sema.__enter__.assert_called_once()
 
     @mock.patch.object(imagebackend.lvm, 'create_volume')
     def _create_image_generated(self, sparse, mock_create):
@@ -708,6 +711,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
                                             self.SIZE, sparse=sparse)
         fn.assert_called_once_with(target=self.PATH, ephemeral_size=None)
 
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch.object(imagebackend.disk, 'resize2fs')
     @mock.patch.object(imagebackend.lvm, 'create_volume')
@@ -715,7 +719,8 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
                        return_value=TEMPLATE_SIZE)
     @mock.patch('nova.privsep.qemu.convert_image')
     def _create_image_resize(self, sparse, mock_convert_image, mock_get,
-                             mock_create, mock_resize, mock_ignored):
+                             mock_create, mock_resize, mock_ignored,
+                             mock_disk_op_sema):
         fn = mock.MagicMock()
         fn(target=self.TEMPLATE_PATH)
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -727,6 +732,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         mock_convert_image.assert_called_once_with(
             self.TEMPLATE_PATH, self.PATH, None, 'raw',
             CONF.instances_path)
+        mock_disk_op_sema.__enter__.assert_called_once()
         mock_resize.assert_called_once_with(self.PATH, run_as_root=True)
 
     @mock.patch.object(imagebackend.fileutils, 'ensure_tree')
@@ -945,13 +951,14 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                                   mock.Mock()),
                 mock.patch.object(self.libvirt_utils, 'remove_logical_volumes',
                                   mock.Mock()),
-                mock.patch('nova.privsep.qemu.convert_image')):
+                mock.patch('nova.privsep.qemu.convert_image'),
+                mock.patch.object(compute_utils, 'disk_ops_semaphore')):
             fn = mock.Mock()
 
             image = self.image_class(self.INSTANCE, self.NAME)
             image.create_image(fn, self.TEMPLATE_PATH, self.TEMPLATE_SIZE,
                 context=self.CONTEXT)
-
+            compute_utils.disk_ops_semaphore.__enter__.assert_called_once()
             fn.assert_called_with(context=self.CONTEXT,
                 target=self.TEMPLATE_PATH)
             self.lvm.create_volume.assert_called_with(self.VG,
@@ -1021,13 +1028,14 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                                   mock.Mock()),
                 mock.patch.object(self.libvirt_utils, 'remove_logical_volumes',
                                   mock.Mock()),
-                mock.patch('nova.privsep.qemu.convert_image')):
+                mock.patch('nova.privsep.qemu.convert_image'),
+                mock.patch.object(compute_utils, 'disk_ops_semaphore')):
             fn = mock.Mock()
 
             image = self.image_class(self.INSTANCE, self.NAME)
             image.create_image(fn, self.TEMPLATE_PATH, self.SIZE,
                 context=self.CONTEXT)
-
+            compute_utils.disk_ops_semaphore.__enter__.assert_called_once()
             fn.assert_called_with(context=self.CONTEXT,
                                   target=self.TEMPLATE_PATH)
             self.disk.get_disk_size.assert_called_with(self.TEMPLATE_PATH)

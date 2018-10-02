@@ -25,6 +25,7 @@ from oslo_utils import fileutils
 from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
+from nova.compute import utils as compute_utils
 from nova import context
 from nova import exception
 from nova import objects
@@ -518,7 +519,9 @@ disk size: 4.4M
         finally:
             os.unlink(dst_path)
 
-    def _do_test_extract_snapshot(self, mock_execute, src_format='qcow2',
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore')
+    def _do_test_extract_snapshot(self, mock_execute, mock_disk_op_sema,
+                                  src_format='qcow2',
                                   dest_format='raw', out_format='raw'):
         libvirt_utils.extract_snapshot('/path/to/disk/image', src_format,
                                        '/extracted/snap', dest_format)
@@ -528,6 +531,7 @@ disk size: 4.4M
             qemu_img_cmd += ('-c',)
         qemu_img_cmd += ('/path/to/disk/image', '/extracted/snap')
         mock_execute.assert_called_once_with(*qemu_img_cmd)
+        mock_disk_op_sema.__enter__.assert_called_once()
 
     @mock.patch.object(utils, 'execute')
     def test_extract_snapshot_raw(self, mock_execute):
@@ -636,9 +640,11 @@ disk size: 4.4M
         mock_images.assert_called_once_with(
             _context, image_id, target, trusted_certs)
 
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch('nova.privsep.qemu.unprivileged_convert_image')
-    def test_fetch_raw_image(self, mock_convert_image, mock_direct_io):
+    def test_fetch_raw_image(self, mock_convert_image, mock_direct_io,
+                             mock_disk_op_sema):
 
         def fake_rename(old, new):
             self.executes.append(('mv', old, new))
@@ -693,6 +699,7 @@ disk size: 4.4M
                              ('mv', 't.qcow2.converted', 't.qcow2')]
         images.fetch_to_raw(context, image_id, target)
         self.assertEqual(self.executes, expected_commands)
+        mock_disk_op_sema.__enter__.assert_called_once()
         mock_convert_image.assert_called_with(
             't.qcow2.part', 't.qcow2.converted', 'qcow2', 'raw',
             CONF.instances_path)

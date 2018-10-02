@@ -62,6 +62,7 @@ from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import provider_tree
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 import nova.conf
 from nova import context
@@ -18575,13 +18576,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.drvr._wait_for_running({'name': 'else',
                                                   'uuid': 'other_uuid'})
 
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.utils.execute')
     @mock.patch('os.rename')
-    def test_disk_raw_to_qcow2(self, mock_rename, mock_execute):
+    def test_disk_raw_to_qcow2(self, mock_rename, mock_execute,
+                               mock_disk_op_sema):
         path = '/test/disk'
         _path_qcow = path + '_qcow'
 
         self.drvr._disk_raw_to_qcow2(path)
+        mock_disk_op_sema.__enter__.assert_called_once()
         mock_execute.assert_has_calls([
             mock.call('qemu-img', 'convert', '-f', 'raw',
                       '-O', 'qcow2', path, _path_qcow)])
@@ -21499,6 +21503,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         return mock_domain, guest
 
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch.object(host.Host, "has_min_version",
                        mock.Mock(return_value=True))
     @mock.patch("nova.virt.libvirt.guest.Guest.is_active",
@@ -21507,7 +21512,8 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                 return_value=mock.Mock(file_format="fake_fmt"))
     @mock.patch('nova.utils.execute')
     def test_volume_snapshot_delete_when_dom_not_running(self, mock_execute,
-                                                         mock_qemu_img_info):
+                                                         mock_qemu_img_info,
+                                                         mock_disk_op_sema):
         """Deleting newest snapshot of a file-based image when the domain is
         not running should trigger a blockRebase using qemu-img not libvirt.
         In this test, we rebase the image with another image as backing file.
@@ -21523,11 +21529,13 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                               self.volume_uuid, snapshot_id,
                                               self.delete_info_1)
 
+        mock_disk_op_sema.__enter__.assert_called_once()
         mock_qemu_img_info.assert_called_once_with("snap.img")
         mock_execute.assert_called_once_with('qemu-img', 'rebase',
                                              '-b', 'snap.img', '-F',
                                              'fake_fmt', 'disk1_file')
 
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch.object(host.Host, "has_min_version",
                        mock.Mock(return_value=True))
     @mock.patch("nova.virt.libvirt.guest.Guest.is_active",
@@ -21536,7 +21544,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                 return_value=mock.Mock(file_format="fake_fmt"))
     @mock.patch('nova.utils.execute')
     def test_volume_snapshot_delete_when_dom_not_running_and_no_rebase_base(
-        self, mock_execute, mock_qemu_img_info):
+        self, mock_execute, mock_qemu_img_info, mock_disk_op_sema):
         """Deleting newest snapshot of a file-based image when the domain is
         not running should trigger a blockRebase using qemu-img not libvirt.
         In this test, the image is rebased onto no backing file (i.e.
@@ -21553,6 +21561,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                               self.volume_uuid, snapshot_id,
                                               self.delete_info_3)
 
+        mock_disk_op_sema.__enter__.assert_called_once()
         self.assertEqual(0, mock_qemu_img_info.call_count)
         mock_execute.assert_called_once_with('qemu-img', 'rebase',
                                              '-b', '', 'disk1_file')
@@ -21944,10 +21953,13 @@ class _BaseSnapshotTests(test.NoDBTestCase):
         recv_meta = self.image_service.create(self.context, sent_meta)
         return recv_meta
 
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore',
+                       new_callable=compute_utils.UnlimitedSemaphore)
     @mock.patch.object(host.Host, 'has_min_version')
     @mock.patch.object(imagebackend.Image, 'resolve_driver_format')
     @mock.patch.object(host.Host, '_get_domain')
-    def _snapshot(self, image_id, mock_get_domain, mock_resolve, mock_version):
+    def _snapshot(self, image_id, mock_get_domain, mock_resolve, mock_version,
+                  mock_disk_op_sema):
         mock_get_domain.return_value = FakeVirtDomain()
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         driver.snapshot(self.context, self.instance_ref, image_id,

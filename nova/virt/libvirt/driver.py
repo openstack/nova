@@ -1967,10 +1967,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 update_task_state(task_state=task_states.IMAGE_UPLOADING,
                         expected_state=task_states.IMAGE_PENDING_UPLOAD)
                 with libvirt_utils.file_open(out_path, 'rb') as image_file:
-                    self._image_api.update(context,
-                                           image_id,
-                                           metadata,
-                                           image_file)
+                    # execute operation with disk concurrency semaphore
+                    with compute_utils.disk_ops_semaphore:
+                        self._image_api.update(context,
+                                               image_id,
+                                               metadata,
+                                               image_file)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_("Failed to snapshot image"))
@@ -2425,8 +2427,10 @@ class LibvirtDriver(driver.ComputeDriver):
             qemu_img_extra_arg = ['-F', b_file_fmt]
 
         qemu_img_extra_arg.append(active_disk_object.source_path)
-        utils.execute("qemu-img", "rebase", "-b", backing_file,
-                      *qemu_img_extra_arg)
+        # execute operation with disk concurrency semaphore
+        with compute_utils.disk_ops_semaphore:
+            utils.execute("qemu-img", "rebase", "-b", backing_file,
+                          *qemu_img_extra_arg)
 
     def _volume_snapshot_delete(self, context, instance, volume_id,
                                 snapshot_id, delete_info=None):
@@ -8361,8 +8365,10 @@ class LibvirtDriver(driver.ComputeDriver):
     def _disk_raw_to_qcow2(path):
         """Converts a raw disk to qcow2."""
         path_qcow = path + '_qcow'
-        utils.execute('qemu-img', 'convert', '-f', 'raw',
-                      '-O', 'qcow2', path, path_qcow)
+        # execute operation with disk concurrency semaphore
+        with compute_utils.disk_ops_semaphore:
+            utils.execute('qemu-img', 'convert', '-f', 'raw',
+                          '-O', 'qcow2', path, path_qcow)
         os.rename(path_qcow, path)
 
     def finish_migration(self, context, migration, instance, disk_info,

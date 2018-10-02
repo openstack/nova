@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Introduced a new config option ``[compute]/max_concurrent_disk_ops`` to
+    reduce disk contention by specifying the maximum number of concurrent
+    disk-IO-intensive operations per compute service.  This would include
+    operations such as image download, image format conversion, snapshot
+    extraction, etc.
+    The default value is 0, which means that there is no limit.
