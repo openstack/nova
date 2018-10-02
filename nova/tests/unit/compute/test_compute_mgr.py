@@ -3097,6 +3097,86 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_set.assert_called_once_with(None, 'done')
             mock_rt.assert_called_once_with()
 
+    @mock.patch.object(compute_utils, 'notify_usage_exists')
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch.object(objects.ImageMeta, 'from_instance')
+    @mock.patch.object(objects.Instance, 'save', return_value=None)
+    def test_rebuild_nw_updated_if_recreate(self,
+                                            mock_save,
+                                            mock_image_ref,
+                                            mock_notify,
+                                            mock_notify_exists):
+        with test.nested(
+            mock.patch.object(self.compute,
+                              '_notify_about_instance_usage'),
+            mock.patch.object(self.compute.network_api,
+                              'setup_networks_on_host'),
+            mock.patch.object(self.compute.network_api,
+                              'setup_instance_network_on_host'),
+            mock.patch.object(self.compute.network_api,
+                              'get_instance_nw_info'),
+            mock.patch.object(self.compute,
+                              '_get_instance_block_device_info',
+                              return_value='fake-bdminfo'),
+        ) as(
+             mock_notify_usage,
+             mock_setup,
+             mock_setup_inst,
+             mock_get_nw_info,
+             mock_get_blk
+        ):
+            self.flags(group="glance", api_servers="http://127.0.0.1:9292")
+            instance = fake_instance.fake_instance_obj(self.context)
+            orig_vif = fake_network_cache_model.new_vif(
+                {'profile': {"pci_slot": "0000:01:00.1"}})
+            orig_nw_info = network_model.NetworkInfo([orig_vif])
+            new_vif = fake_network_cache_model.new_vif(
+                {'profile': {"pci_slot": "0000:02:00.1"}})
+            new_nw_info = network_model.NetworkInfo([new_vif])
+
+            info_cache = objects.InstanceInfoCache(network_info=orig_nw_info,
+                                                   instance_uuid=instance.uuid)
+
+            instance.info_cache = info_cache
+            instance.task_state = task_states.REBUILDING
+            instance.migration_context = None
+            instance.numa_topology = None
+            instance.pci_requests = None
+            instance.pci_devices = None
+            orig_image_ref = None
+            image_ref = None
+            injected_files = []
+            new_pass = None
+            orig_sys_metadata = None
+            bdms = []
+            recreate = True
+            on_shared_storage = None
+            preserve_ephemeral = None
+
+            mock_get_nw_info.return_value = new_nw_info
+
+            self.compute._do_rebuild_instance(self.context, instance,
+                                              orig_image_ref, image_ref,
+                                              injected_files, new_pass,
+                                              orig_sys_metadata, bdms,
+                                              recreate, on_shared_storage,
+                                              preserve_ephemeral, {})
+
+            mock_notify_usage.assert_has_calls(
+                [mock.call(self.context, instance, "rebuild.start",
+                           extra_usage_info=mock.ANY),
+                 mock.call(self.context, instance, "rebuild.end",
+                           network_info=new_nw_info,
+                           extra_usage_info=mock.ANY)])
+            self.assertTrue(mock_image_ref.called)
+            self.assertTrue(mock_save.called)
+            self.assertTrue(mock_notify_exists.called)
+            mock_setup.assert_called_once_with(self.context, instance,
+                                               mock.ANY)
+            mock_setup_inst.assert_called_once_with(self.context, instance,
+                                                    mock.ANY, mock.ANY)
+            mock_get_nw_info.assert_called_once_with(self.context, instance)
+
     def test_rebuild_default_impl(self):
         def _detach(context, bdms):
             # NOTE(rpodolyaka): check that instance has been powered off by
