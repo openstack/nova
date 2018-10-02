@@ -17,6 +17,7 @@
 Provides common functionality for integrated unit tests
 """
 
+import collections
 import random
 import string
 import time
@@ -500,18 +501,87 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
             '/resource_providers/%s/aggregates' % rp_uuid, version='1.19',
             body=post_agg_req).body
 
-    def assertFlavorMatchesAllocation(self, flavor, allocation):
-        self.assertEqual(flavor['vcpus'], allocation['VCPU'])
-        self.assertEqual(flavor['ram'], allocation['MEMORY_MB'])
-        self.assertEqual(flavor['disk'], allocation['DISK_GB'])
+    def _get_all_rp_uuids_in_a_tree(self, in_tree_rp_uuid):
+        rps = self.placement_api.get(
+            '/resource_providers?in_tree=%s' % in_tree_rp_uuid,
+            version='1.20').body['resource_providers']
+        return [rp['uuid'] for rp in rps]
 
-    def assertFlavorsMatchAllocation(self, old_flavor, new_flavor, allocation):
-        self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
-                         allocation['VCPU'])
-        self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
-                         allocation['MEMORY_MB'])
-        self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
-                         allocation['DISK_GB'])
+    def assertRequestMatchesUsage(self, requested_resources, root_rp_uuid):
+        # It matches the usages of the whole tree against the request
+        rp_uuids = self._get_all_rp_uuids_in_a_tree(root_rp_uuid)
+        # NOTE(gibi): flattening the placement usages means we cannot
+        # verify the structure here. However I don't see any way to define this
+        # function for nested and non-nested trees in a generic way.
+        total_usage = collections.defaultdict(int)
+        for rp in rp_uuids:
+            usage = self._get_provider_usages(rp)
+            for rc, amount in usage.items():
+                total_usage[rc] += amount
+        # Cannot simply do an assertEqual(expected, actual) as usages always
+        # contain every RC even if the usage is 0 and the flavor could also
+        # contain explicit 0 request for some resources.
+        # So if the flavor contains an explicit 0 resource request (e.g. in
+        # case of ironic resources:VCPU=0) then this code needs to assert that
+        # such resource has 0 usage in the tree. In the other hand if the usage
+        # contains 0 value for some resources that the flavor does not request
+        # then that is totally fine.
+        for rc, value in requested_resources.items():
+            self.assertIn(
+                rc, total_usage,
+                'The requested resource class not found in the total_usage of '
+                'the RP tree')
+            self.assertEqual(
+                value,
+                total_usage[rc],
+                'The requested resource amount does not match with the total '
+                'resource usage of the RP tree')
+        for rc, value in total_usage.items():
+            if value != 0:
+                self.assertEqual(
+                    requested_resources[rc],
+                    value,
+                    'The requested resource amount does not match with the '
+                    'total resource usage of the RP tree')
+
+    def assertFlavorMatchesUsage(self, root_rp_uuid, *flavors):
+        resources = collections.defaultdict(int)
+        for flavor in flavors:
+            res = self._resources_from_flavor(flavor)
+            for rc, value in res.items():
+                resources[rc] += value
+        self.assertRequestMatchesUsage(resources, root_rp_uuid)
+
+    def _resources_from_flavor(self, flavor):
+        resources = collections.defaultdict(int)
+        resources['VCPU'] = flavor['vcpus']
+        resources['MEMORY_MB'] = flavor['ram']
+        resources['DISK_GB'] = flavor['disk']
+        for key, value in flavor['extra_specs'].items():
+            if key.startswith('resources'):
+                resources[key.split(':')[1]] += value
+        return resources
+
+    def assertFlavorMatchesAllocation(self, flavor, consumer_uuid,
+                                      root_rp_uuid):
+        # NOTE(gibi): This function does not handle sharing RPs today.
+        expected_rps = self._get_all_rp_uuids_in_a_tree(root_rp_uuid)
+        allocations = self._get_allocations_by_server_uuid(consumer_uuid)
+        # NOTE(gibi): flattening the placement allocation means we cannot
+        # verify the structure here. However I don't see any way to define this
+        # function for nested and non-nested trees in a generic way.
+        total_allocation = collections.defaultdict(int)
+        for rp, alloc in allocations.items():
+            self.assertIn(rp, expected_rps, 'Unexpected, out of tree RP in the'
+                                            ' allocation')
+            for rc, value in alloc['resources'].items():
+                total_allocation[rc] += value
+
+        self.assertEqual(
+            self._resources_from_flavor(flavor),
+            total_allocation,
+            'The resources requested in the flavor does not match with total '
+            'allocation in the RP tree')
 
     def get_migration_uuid_for_instance(self, instance_uuid):
         # NOTE(danms): This is too much introspection for a test like this, but
@@ -557,27 +627,20 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
 
         # Before we run periodics, make sure that we have allocations/usages
         # only on the source host
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(flavor, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, flavor)
 
         # Check that the other providers has no usage
         for rp_uuid in [self._get_provider_uuid_by_host(hostname)
                         for hostname in self.computes.keys()
                         if hostname != source_hostname]:
-            usages = self._get_provider_usages(rp_uuid)
-            self.assertEqual({'VCPU': 0,
-                              'MEMORY_MB': 0,
-                              'DISK_GB': 0}, usages)
+            self.assertRequestMatchesUsage({'VCPU': 0,
+                                            'MEMORY_MB': 0,
+                                            'DISK_GB': 0}, rp_uuid)
 
         # Check that the server only allocates resource from the host it is
         # booted on
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations),
-                         'No allocation for the server on the host it '
-                         'is booted on')
-        allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(flavor, allocation)
-
+        self.assertFlavorMatchesAllocation(flavor, server['id'],
+                                           source_rp_uuid)
         self._run_periodics()
 
         # After running the periodics but before we start any other operation,
@@ -585,26 +648,20 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         # before running the periodics
 
         # Check usages on the selected host after boot
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(flavor, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, flavor)
 
         # Check that the server only allocates resource from the host it is
         # booted on
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations),
-                         'No allocation for the server on the host it '
-                         'is booted on')
-        allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(flavor, allocation)
+        self.assertFlavorMatchesAllocation(flavor, server['id'],
+                                           source_rp_uuid)
 
         # Check that the other providers has no usage
         for rp_uuid in [self._get_provider_uuid_by_host(hostname)
                         for hostname in self.computes.keys()
                         if hostname != source_hostname]:
-            usages = self._get_provider_usages(rp_uuid)
-            self.assertEqual({'VCPU': 0,
-                              'MEMORY_MB': 0,
-                              'DISK_GB': 0}, usages)
+            self.assertRequestMatchesUsage({'VCPU': 0,
+                                            'MEMORY_MB': 0,
+                                            'DISK_GB': 0}, rp_uuid)
         return server
 
     def _delete_and_check_allocations(self, server):
@@ -625,10 +682,9 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
 
         for rp_uuid in [self._get_provider_uuid_by_host(hostname)
                         for hostname in self.computes.keys()]:
-            usages = self._get_provider_usages(rp_uuid)
-            self.assertEqual({'VCPU': 0,
-                              'MEMORY_MB': 0,
-                              'DISK_GB': 0}, usages)
+            self.assertRequestMatchesUsage({'VCPU': 0,
+                                            'MEMORY_MB': 0,
+                                            'DISK_GB': 0}, rp_uuid)
 
         # and no allocations for the deleted server
         allocations = self._get_allocations_by_server_uuid(server['id'])
@@ -654,24 +710,19 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
 
         def _check_allocation():
-            source_usages = self._get_provider_usages(source_rp_uuid)
-            self.assertFlavorMatchesAllocation(old_flavor, source_usages)
-            dest_usages = self._get_provider_usages(dest_rp_uuid)
-            self.assertFlavorMatchesAllocation(new_flavor, dest_usages)
+            self.assertFlavorMatchesUsage(source_rp_uuid, old_flavor)
+            self.assertFlavorMatchesUsage(dest_rp_uuid, new_flavor)
 
             # The instance should own the new_flavor allocation against the
             # destination host created by the scheduler
-            allocations = self._get_allocations_by_server_uuid(server['id'])
-            self.assertEqual(1, len(allocations))
-            dest_alloc = allocations[dest_rp_uuid]['resources']
-            self.assertFlavorMatchesAllocation(new_flavor, dest_alloc)
+            self.assertFlavorMatchesAllocation(new_flavor, server['id'],
+                                               dest_rp_uuid)
 
             # The migration should own the old_flavor allocation against the
             # source host created by conductor
             migration_uuid = self.get_migration_uuid_for_instance(server['id'])
-            allocations = self._get_allocations_by_server_uuid(migration_uuid)
-            source_alloc = allocations[source_rp_uuid]['resources']
-            self.assertFlavorMatchesAllocation(old_flavor, source_alloc)
+            self.assertFlavorMatchesAllocation(old_flavor, migration_uuid,
+                                               source_rp_uuid)
 
         # OK, so the move operation has run, but we have not yet confirmed or
         # reverted the move operation. Before we run periodics, make sure
@@ -708,42 +759,31 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         self.api.post_server_action(server['id'], resize_req)
         self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
 
-        usages = self._get_provider_usages(rp_uuid)
-        self.assertFlavorsMatchAllocation(old_flavor, new_flavor, usages)
+        self.assertFlavorMatchesUsage(rp_uuid, old_flavor, new_flavor)
 
         # The instance should hold a new_flavor allocation
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(new_flavor, allocation)
+        self.assertFlavorMatchesAllocation(new_flavor, server['id'],
+                                           rp_uuid)
 
         # The migration should hold an old_flavor allocation
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
-        allocations = self._get_allocations_by_server_uuid(migration_uuid)
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(old_flavor, allocation)
+        self.assertFlavorMatchesAllocation(old_flavor, migration_uuid,
+                                           rp_uuid)
 
         # We've resized to the same host and have doubled allocations for both
         # the old and new flavor on the same host. Run the periodic on the
         # compute to see if it tramples on what the scheduler did.
         self._run_periodics()
 
-        usages = self._get_provider_usages(rp_uuid)
-
         # In terms of usage, it's still double on the host because the instance
         # and the migration each hold an allocation for the new and old
         # flavors respectively.
-        self.assertFlavorsMatchAllocation(old_flavor, new_flavor, usages)
+        self.assertFlavorMatchesUsage(rp_uuid, old_flavor, new_flavor)
 
         # The instance should hold a new_flavor allocation
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(new_flavor, allocation)
+        self.assertFlavorMatchesAllocation(new_flavor, server['id'],
+                                           rp_uuid)
 
         # The migration should hold an old_flavor allocation
-        allocations = self._get_allocations_by_server_uuid(migration_uuid)
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(old_flavor, allocation)
+        self.assertFlavorMatchesAllocation(old_flavor, migration_uuid,
+                                           rp_uuid)

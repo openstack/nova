@@ -433,8 +433,7 @@ class TestNovaManagePlacementHealAllocations(
                       'Allocations not found for server %s and compute node '
                       'resource provider. %s\nOutput:%s' %
                       (server['id'], rp_uuid, self.output.getvalue()))
-        self.assertFlavorMatchesAllocation(
-            self.flavor, allocations[rp_uuid]['resources'])
+        self.assertFlavorMatchesAllocation(self.flavor, server['id'], rp_uuid)
 
     def test_heal_allocations_paging(self):
         """This test runs the following scenario:
@@ -633,8 +632,7 @@ class TestNovaManagePlacementHealAllocations(
                          allocations['user_id'])
         allocations = allocations['allocations']
         self.assertIn(rp_uuid, allocations)
-        self.assertFlavorMatchesAllocation(
-            self.flavor, allocations[rp_uuid]['resources'])
+        self.assertFlavorMatchesAllocation(self.flavor, server['id'], rp_uuid)
         # Now run heal_allocations which should update the consumer info.
         result = self.cli.heal_allocations(verbose=True)
         self.assertEqual(0, result, self.output.getvalue())

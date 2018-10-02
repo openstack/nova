@@ -2073,22 +2073,15 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._run_periodics()
 
         # the original host expected to have the old resource allocation
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertEqual({'VCPU': 0,
-                          'MEMORY_MB': 0,
-                          'DISK_GB': 0}, dest_usages,
-                          'Target host %s still has usage after the resize '
-                          'has been reverted' % dest_hostname)
+        self.assertRequestMatchesUsage({'VCPU': 0,
+                                        'MEMORY_MB': 0,
+                                        'DISK_GB': 0}, dest_rp_uuid)
 
         # Check that the server only allocates resource from the original host
-        self.assertEqual(1, len(allocations))
-
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2111,50 +2104,30 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         # After confirming, we should have an allocation only on the
         # destination host
-        allocations = self._get_allocations_by_server_uuid(server['id'])
 
-        # and the server allocates only from the target host
-        self.assertEqual(1, len(allocations))
-
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-
-        # and the target host allocation should be according to the new flavor
-        self.assertFlavorMatchesAllocation(self.flavor2, dest_usages)
-        self.assertEqual({'VCPU': 0,
-                          'MEMORY_MB': 0,
-                          'DISK_GB': 0}, source_usages,
-                         'The source host %s still has usages after the '
-                         'resize has been confirmed' % source_hostname)
+        # The target host usage should be according to the new flavor
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor2)
+        self.assertRequestMatchesUsage({'VCPU': 0,
+                                        'MEMORY_MB': 0,
+                                        'DISK_GB': 0}, source_rp_uuid)
 
         # and the target host allocation should be according to the new flavor
-        self.assertFlavorMatchesAllocation(self.flavor2, dest_usages)
-
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor2, dest_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor2, server['id'],
+                                           dest_rp_uuid)
 
         self._run_periodics()
 
         # Check we're still accurate after running the periodics
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        source_usages = self._get_provider_usages(source_rp_uuid)
-
-        # and the target host allocation should be according to the new flavor
-        self.assertFlavorMatchesAllocation(self.flavor2, dest_usages)
-        self.assertEqual({'VCPU': 0,
-                          'MEMORY_MB': 0,
-                          'DISK_GB': 0}, source_usages,
-                          'The source host %s still has usages after the '
-                          'resize has been confirmed' % source_hostname)
-
-        allocations = self._get_allocations_by_server_uuid(server['id'])
+        # and the target host usage should be according to the new flavor
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor2)
+        self.assertRequestMatchesUsage({'VCPU': 0,
+                                        'MEMORY_MB': 0,
+                                        'DISK_GB': 0}, source_rp_uuid)
 
         # and the server allocates only from the target host
-        self.assertEqual(1, len(allocations))
-
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor2, dest_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor2, server['id'],
+                                           dest_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2180,13 +2153,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._run_periodics()
 
         # after revert only allocations due to the old flavor should remain
-        usages = self._get_provider_usages(rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor2, usages)
+        self.assertFlavorMatchesUsage(rp_uuid, self.flavor2)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor2, allocation)
+        self.assertFlavorMatchesAllocation(self.flavor2, server['id'],
+                                           rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2213,13 +2183,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._run_periodics()
 
         # after confirm only allocations due to the new flavor should remain
-        usages = self._get_provider_usages(rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor3, usages)
+        self.assertFlavorMatchesUsage(rp_uuid, self.flavor3)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor3, allocation)
+        self.assertFlavorMatchesAllocation(self.flavor3, server['id'],
+                                           rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2260,21 +2227,18 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
 
         # only the source host shall have usages after the failed resize
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
         # Check that the other provider has no usage
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertEqual({'VCPU': 0,
-                          'MEMORY_MB': 0,
-                          'DISK_GB': 0}, dest_usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
 
         # Check that the server only allocates resource from the host it is
         # booted on
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2351,16 +2315,12 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._run_periodics()
 
         # Check allocation and usages: should only use resources on source host
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
         zero_usage = {'VCPU': 0, 'DISK_GB': 0, 'MEMORY_MB': 0}
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertEqual(zero_usage, dest_usages)
+        self.assertRequestMatchesUsage(zero_usage, dest_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2393,23 +2353,26 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._run_periodics()
 
         # Expect to have allocation only on source_host
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
         zero_usage = {'VCPU': 0, 'DISK_GB': 0, 'MEMORY_MB': 0}
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertEqual(zero_usage, dest_usages)
+        self.assertRequestMatchesUsage(zero_usage, dest_rp_uuid)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
 
         self._delete_and_check_allocations(server)
+
+    def _check_allocation_during_evacuate(
+            self, flavor, server_uuid, source_root_rp_uuid, dest_root_rp_uuid):
+
+        allocations = self._get_allocations_by_server_uuid(server_uuid)
+        self.assertEqual(2, len(allocations))
+        self.assertFlavorMatchesUsage(source_root_rp_uuid, flavor)
+        self.assertFlavorMatchesUsage(dest_root_rp_uuid, flavor)
 
     def test_evacuate(self):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
-
         server = self._boot_and_check_allocations(
             self.flavor1, source_hostname)
 
@@ -2435,18 +2398,12 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
         dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(2, len(allocations))
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+        self._check_allocation_during_evacuate(
+            self.flavor1, server['id'], source_rp_uuid, dest_rp_uuid)
 
         # restart the source compute
         self.restart_compute_service(self.compute1)
@@ -2460,13 +2417,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
                           'DISK_GB': 0},
                          source_usages)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           dest_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2512,18 +2466,12 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
         dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(2, len(allocations))
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+        self._check_allocation_during_evacuate(
+            self.flavor1, server['id'], source_rp_uuid, dest_rp_uuid)
 
         # restart the source compute
         self.restart_compute_service(self.compute1)
@@ -2541,13 +2489,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         # The usages/allocations should still exist on the destination node
         # after the source node starts back up.
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           dest_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2579,8 +2524,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         # it doesn't appear to for some reason...
         def fake_move_claim(*args, **kwargs):
             # Assert the destination node allocation exists.
-            dest_usages = self._get_provider_usages(dest_rp_uuid)
-            self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+            self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
             raise exception.ComputeResourcesUnavailable(
                     reason='test_evacuate_claim_on_dest_fails')
 
@@ -2599,17 +2543,15 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         # cleaned up.
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertFlavorMatchesAllocation(
-            {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
 
         # restart the source compute
         self.restart_compute_service(self.compute1)
@@ -2621,13 +2563,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         # The source compute shouldn't have cleaned up the allocation for
         # itself since the instance didn't move.
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
 
     def test_evacuate_rebuild_on_dest_fails(self):
         """Tests that the allocations on the destination node are cleaned up
@@ -2652,8 +2591,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         def fake_rebuild(*args, **kwargs):
             # Assert the destination node allocation exists.
-            dest_usages = self._get_provider_usages(dest_rp_uuid)
-            self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+            self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
             raise test.TestingException('test_evacuate_rebuild_on_dest_fails')
 
         with mock.patch.object(
@@ -2672,17 +2610,15 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         # cleaned up.
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertFlavorMatchesAllocation(
-            {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
 
         # restart the source compute
         self.restart_compute_service(self.compute1)
@@ -2694,13 +2630,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         # The source compute shouldn't have cleaned up the allocation for
         # itself since the instance didn't move.
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
 
     def _boot_then_shelve_and_check_allocations(self, hostname, rp_uuid):
         # avoid automatic shelve offloading
@@ -2714,14 +2647,11 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._wait_for_state_change(self.api, server, 'SHELVED')
         # the host should maintain the existing allocation for this instance
         # while the instance is shelved
-        source_usages = self._get_provider_usages(rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(rp_uuid, self.flavor1)
         # Check that the server only allocates resource from the host it is
         # booted on
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           rp_uuid)
         return server
 
     def test_shelve_unshelve(self):
@@ -2737,15 +2667,12 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
         # the host should have resource usage as the instance is ACTIVE
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
         # Check that the server only allocates resource from the host it is
         # booted on
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2795,13 +2722,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         # the host running the instance should have resource usage
         current_rp_uuid = self._get_provider_uuid_by_host(current_hostname)
-        current_usages = self._get_provider_usages(current_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, current_usages)
+        self.assertFlavorMatchesUsage(current_rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[current_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           current_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2833,13 +2757,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         # the host running the instance should have resource usage
         current_rp_uuid = self._get_provider_uuid_by_host(current_hostname)
-        current_usages = self._get_provider_usages(current_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, current_usages)
+        self.assertFlavorMatchesUsage(current_rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[current_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           current_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2866,20 +2787,17 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._run_periodics()
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
         # NOTE(danms): There should be no usage for the source
-        self.assertFlavorMatchesAllocation(
-            {'ram': 0, 'disk': 0, 'vcpus': 0}, source_usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, source_rp_uuid)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
         # the server has an allocation on only the dest node
-        self.assertEqual(1, len(allocations))
-        self.assertNotIn(source_rp_uuid, allocations)
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           dest_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2905,19 +2823,16 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._run_periodics()
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
         # NOTE(danms): There should be no usage for the source
-        self.assertFlavorMatchesAllocation(
-            {'ram': 0, 'disk': 0, 'vcpus': 0}, source_usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, source_rp_uuid)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        self.assertNotIn(source_rp_uuid, allocations)
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           dest_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -2973,23 +2888,20 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         # host.
         self.assertEqual(dest_hostname, self.failed_hostname)
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
         # Since the instance didn't move, assert the allocations are still
         # on the source node.
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
         # Assert the allocations, created by the scheduler, are cleaned up
         # after the migration pre-check error happens.
-        self.assertFlavorMatchesAllocation(
-            {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
         # There should only be 1 allocation for the instance on the source node
-        self.assertEqual(1, len(allocations))
-        self.assertIn(source_rp_uuid, allocations)
         self.assertFlavorMatchesAllocation(
-            self.flavor1, allocations[source_rp_uuid]['resources'])
+            self.flavor1, server['id'], source_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -3013,18 +2925,11 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
                                     network_info, disk_info, migrate_data):
             # Make sure the source node allocations are against the migration
             # record and the dest node allocations are against the instance.
-            _allocations = self._get_allocations_by_server_uuid(
-                migrate_data.migration.uuid)
-            self.assertEqual(1, len(_allocations))
-            self.assertIn(source_rp_uuid, _allocations)
             self.assertFlavorMatchesAllocation(
-                self.flavor1, _allocations[source_rp_uuid]['resources'])
+                self.flavor1, migrate_data.migration.uuid, source_rp_uuid)
 
-            _allocations = self._get_allocations_by_server_uuid(server['id'])
-            self.assertEqual(1, len(_allocations))
-            self.assertIn(dest_rp_uuid, _allocations)
             self.assertFlavorMatchesAllocation(
-                self.flavor1, _allocations[dest_rp_uuid]['resources'])
+                self.flavor1, server['id'], dest_rp_uuid)
             # The actual type of exception here doesn't matter. The point
             # is that the virt driver raised an exception from the
             # pre_live_migration method on the destination host.
@@ -3052,23 +2957,20 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual(source_hostname, migration['source_compute'])
         self.assertEqual(dest_hostname, migration['dest_compute'])
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
         # Since the instance didn't move, assert the allocations are still
         # on the source node.
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
         # Assert the allocations, created by the scheduler, are cleaned up
         # after the rollback happens.
-        self.assertFlavorMatchesAllocation(
-            {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
         # There should only be 1 allocation for the instance on the source node
-        self.assertEqual(1, len(allocations))
-        self.assertIn(source_rp_uuid, allocations)
         self.assertFlavorMatchesAllocation(
-            self.flavor1, allocations[source_rp_uuid]['resources'])
+            self.flavor1, server['id'], source_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -3094,14 +2996,12 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         def fake_prep_resize(*args, **kwargs):
             dest_hostname = self._other_hostname(source_hostname)
             dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
-            dest_usages = self._get_provider_usages(dest_rp_uuid)
-            self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+            self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
             allocations = self._get_allocations_by_server_uuid(server['id'])
             self.assertIn(dest_rp_uuid, allocations)
 
             source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
-            source_usages = self._get_provider_usages(source_rp_uuid)
-            self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+            self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
             migration_uuid = self.get_migration_uuid_for_instance(server['id'])
             allocations = self._get_allocations_by_server_uuid(migration_uuid)
             self.assertIn(source_rp_uuid, allocations)
@@ -3121,15 +3021,15 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         dest_hostname = self._other_hostname(source_hostname)
         dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
 
-        failed_usages = self._get_provider_usages(dest_rp_uuid)
         # Expects no allocation records on the failed host.
-        self.assertFlavorMatchesAllocation(
-           {'vcpus': 0, 'ram': 0, 'disk': 0}, failed_usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
 
         # Ensure the allocation records still exist on the source host.
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
         allocations = self._get_allocations_by_server_uuid(server['id'])
         self.assertIn(source_rp_uuid, allocations)
 
@@ -3150,9 +3050,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         def fake_resize_method(*args, **kwargs):
             # Ensure the allocations are doubled now before we fail.
-            usages = self._get_provider_usages(rp_uuid)
-            self.assertFlavorsMatchAllocation(
-                self.flavor1, self.flavor2, usages)
+            self.assertFlavorMatchesUsage(rp_uuid, self.flavor1, self.flavor2)
             raise test.TestingException('Simulated resize failure.')
 
         # Yes this isn't great in a functional test, but it's simple.
@@ -3173,10 +3071,9 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         # Ensure the allocation records still exist on the host.
         source_rp_uuid = self._get_provider_uuid_by_host(hostname)
-        source_usages = self._get_provider_usages(source_rp_uuid)
         # The new_flavor should have been subtracted from the doubled
         # allocation which just leaves us with the original flavor.
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
     def test_resize_to_same_host_prep_resize_fails(self):
         self._test_resize_to_same_host_instance_fails(
@@ -3252,9 +3149,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             # fail and the server should be in status "ERROR"
             server = self._wait_for_state_change(self.api, created_server,
                     "ERROR")
-            source_usages = self._get_provider_usages(uuid_orig)
             # The usage should be unchanged from the original flavor
-            self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+            self.assertFlavorMatchesUsage(uuid_orig, self.flavor1)
             # There should be no usages on any of the hosts
             target_uuids = (uuid_sel, uuid_alt1, uuid_alt2, uuid_alt3)
             empty_usage = {"VCPU": 0, "MEMORY_MB": 0, "DISK_GB": 0}
@@ -3270,10 +3166,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             expected_host = hosts[fails]["name"]
             self.assertEqual(expected_host, new_server_host)
             uuid_dest = hosts[fails]["uuid"]
-            source_usages = self._get_provider_usages(uuid_orig)
-            dest_usages = self._get_provider_usages(uuid_dest)
             # The usage should match the resized flavor
-            self.assertFlavorMatchesAllocation(self.flavor2, dest_usages)
+            self.assertFlavorMatchesUsage(uuid_dest, self.flavor2)
             # Verify that the other host have no allocations
             target_uuids = (uuid_sel, uuid_alt1, uuid_alt2, uuid_alt3)
             empty_usage = {"VCPU": 0, "MEMORY_MB": 0, "DISK_GB": 0}
@@ -3317,27 +3211,16 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
         def _check_allocation():
-            allocations = self._get_allocations_by_server_uuid(server['id'])
-
-            # and the server allocates only from the target host
-            self.assertEqual(1, len(allocations))
-
-            source_usages = self._get_provider_usages(source_rp_uuid)
-            dest_usages = self._get_provider_usages(dest_rp_uuid)
-
-            # and the target host allocation should be according to the flavor
-            self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
-            self.assertEqual({'VCPU': 0,
-                              'MEMORY_MB': 0,
-                              'DISK_GB': 0}, source_usages,
-                             'The source host %s still has usages after the '
-                             'resize has been confirmed' % source_hostname)
+            # the target host usage should be according to the flavor
+            self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
+            # the source host has no usage
+            self.assertRequestMatchesUsage({'VCPU': 0,
+                                            'MEMORY_MB': 0,
+                                            'DISK_GB': 0}, source_rp_uuid)
 
             # and the target host allocation should be according to the flavor
-            self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
-
-            dest_allocation = allocations[dest_rp_uuid]['resources']
-            self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+            self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                               dest_rp_uuid)
 
         # After confirming, we should have an allocation only on the
         # destination host
@@ -3367,23 +3250,15 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
         def _check_allocation():
-            source_usages = self._get_provider_usages(source_rp_uuid)
-            allocations = self._get_allocations_by_server_uuid(server['id'])
-            self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
-
-            dest_usages = self._get_provider_usages(dest_rp_uuid)
-            self.assertEqual({'VCPU': 0,
-                              'MEMORY_MB': 0,
-                              'DISK_GB': 0}, dest_usages,
-                              'Target host %s still has usage after the '
-                              'resize has been reverted' % dest_hostname)
+            self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
+            self.assertRequestMatchesUsage({'VCPU': 0,
+                                            'MEMORY_MB': 0,
+                                            'DISK_GB': 0}, dest_rp_uuid)
 
             # Check that the server only allocates resource from the original
             # host
-            self.assertEqual(1, len(allocations))
-
-            source_allocation = allocations[source_rp_uuid]['resources']
-            self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+            self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                               source_rp_uuid)
 
         # the original host expected to have the old resource allocation
         _check_allocation()
@@ -3440,19 +3315,14 @@ class ServerLiveMigrateForceAndAbort(
 
         self._run_periodics()
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(
-            {'ram': 0, 'disk': 0, 'vcpus': 0}, source_usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, source_rp_uuid)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
-
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        self.assertNotIn(source_rp_uuid, allocations)
-
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           dest_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -3486,15 +3356,14 @@ class ServerLiveMigrateForceAndAbort(
         self.assertEqual(1, len(allocations))
         self.assertNotIn(dest_rp_uuid, allocations)
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
 
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertFlavorMatchesAllocation(
-           {'ram': 0, 'disk': 0, 'vcpus': 0}, dest_usages)
+        self.assertRequestMatchesUsage({'VCPU': 0,
+                                        'MEMORY_MB': 0,
+                                        'DISK_GB': 0}, dest_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -3544,14 +3413,14 @@ class ServerRescheduleTests(integrated_helpers.ProviderUsageBaseTestCase):
         failed_rp_uuid = self._get_provider_uuid_by_host(failed_hostname)
         dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
 
-        failed_usages = self._get_provider_usages(failed_rp_uuid)
         # Expects no allocation records on the failed host.
-        self.assertFlavorMatchesAllocation(
-           {'vcpus': 0, 'ram': 0, 'disk': 0}, failed_usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, failed_rp_uuid)
 
         # Ensure the allocation records on the destination host.
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
 
 
 class ServerBuildAbortTests(integrated_helpers.ProviderUsageBaseTestCase):
@@ -3587,10 +3456,10 @@ class ServerBuildAbortTests(integrated_helpers.ProviderUsageBaseTestCase):
         failed_hostname = self.compute1.manager.host
 
         failed_rp_uuid = self._get_provider_uuid_by_host(failed_hostname)
-        failed_usages = self._get_provider_usages(failed_rp_uuid)
         # Expects no allocation records on the failed host.
-        self.assertFlavorMatchesAllocation(
-           {'vcpus': 0, 'ram': 0, 'disk': 0}, failed_usages)
+        self.assertRequestMatchesUsage({'VCPU': 0,
+                                        'MEMORY_MB': 0,
+                                        'DISK_GB': 0}, failed_rp_uuid)
 
 
 class ServerUnshelveSpawnFailTests(
@@ -3616,10 +3485,11 @@ class ServerUnshelveSpawnFailTests(
         """
         hostname = self.compute1.manager.host
         rp_uuid = self._get_provider_uuid_by_host(hostname)
-        usages = self._get_provider_usages(rp_uuid)
         # We start with no usages on the host.
-        self.assertFlavorMatchesAllocation(
-           {'vcpus': 0, 'ram': 0, 'disk': 0}, usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, rp_uuid)
 
         server_req = self._build_minimal_create_server_request(
             self.api, 'unshelve-spawn-fail', flavor_id=self.flavor1['id'],
@@ -3630,8 +3500,7 @@ class ServerUnshelveSpawnFailTests(
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
         # assert allocations exist for the host
-        usages = self._get_provider_usages(rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, usages)
+        self.assertFlavorMatchesUsage(rp_uuid, self.flavor1)
 
         # shelve offload the server
         self.flags(shelved_offload_time=0)
@@ -3641,9 +3510,10 @@ class ServerUnshelveSpawnFailTests(
                                'OS-EXT-SRV-ATTR:host': None})
 
         # assert allocations were removed from the host
-        usages = self._get_provider_usages(rp_uuid)
-        self.assertFlavorMatchesAllocation(
-           {'vcpus': 0, 'ram': 0, 'disk': 0}, usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, rp_uuid)
 
         # unshelve the server, which should fail
         self.api.post_server_action(server['id'], {'unshelve': None})
@@ -3651,9 +3521,10 @@ class ServerUnshelveSpawnFailTests(
             server, instance_actions.UNSHELVE, 'compute_unshelve_instance')
 
         # assert allocations were removed from the host
-        usages = self._get_provider_usages(rp_uuid)
-        self.assertFlavorMatchesAllocation(
-           {'vcpus': 0, 'ram': 0, 'disk': 0}, usages)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, rp_uuid)
 
 
 class ServerSoftDeleteTests(integrated_helpers.ProviderUsageBaseTestCase):
@@ -3678,13 +3549,10 @@ class ServerSoftDeleteTests(integrated_helpers.ProviderUsageBaseTestCase):
         # the instance can be restored
         rp_uuid = self._get_provider_uuid_by_host(hostname)
 
-        usages = self._get_provider_usages(rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, usages)
+        self.assertFlavorMatchesUsage(rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           rp_uuid)
 
         # run the periodic reclaim but as time isn't advanced it should not
         # reclaim the instance
@@ -3693,13 +3561,10 @@ class ServerSoftDeleteTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._run_periodics()
 
-        usages = self._get_provider_usages(rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, usages)
+        self.assertFlavorMatchesUsage(rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           rp_uuid)
 
     def test_soft_delete_then_reclaim(self):
         """Asserts that the automatic reclaim of soft deleted instance cleans
@@ -3757,13 +3622,10 @@ class ServerSoftDeleteTests(integrated_helpers.ProviderUsageBaseTestCase):
         server = self._wait_for_state_change(self.api, server, 'ACTIVE')
 
         # after restore the allocations should be kept
-        usages = self._get_provider_usages(rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, usages)
+        self.assertFlavorMatchesUsage(rp_uuid, self.flavor1)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           rp_uuid)
 
         # Now we want a real delete
         self.flags(reclaim_instance_interval=0)
@@ -4520,13 +4382,10 @@ class ConsumerGenerationConflictTest(
         self.assertEqual('ACTIVE', server['status'])
         self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        alloc = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor, alloc)
+        self.assertFlavorMatchesAllocation(self.flavor, server['id'],
+                                           source_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -4570,13 +4429,10 @@ class ConsumerGenerationConflictTest(
         self.assertEqual('ACTIVE', server['status'])
         self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        alloc = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor, alloc)
+        self.assertFlavorMatchesAllocation(self.flavor, server['id'],
+                                           source_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -4835,25 +4691,17 @@ class ConsumerGenerationConflictTest(
         # 1 claim on destination, 1 normal delete on dest that fails,
         self.assertEqual(2, mock_put.call_count)
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
         # As the cleanup on the source host failed Nova leaks the allocation
         # held by the migration.
-        self.assertFlavorMatchesAllocation(self.flavor, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor)
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
-        allocations = self._get_allocations_by_server_uuid(migration_uuid)
-        self.assertEqual(1, len(allocations))
-        self.assertIn(source_rp_uuid, allocations)
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor, source_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor, migration_uuid,
+                                           source_rp_uuid)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor, dest_usages)
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        self.assertNotIn(source_rp_uuid, allocations)
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor, dest_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor, server['id'],
+                                           dest_rp_uuid)
 
         # NOTE(gibi): Nova leaks the allocation held by the migration_uuid even
         # after the instance is deleted. At least nova logs a fat ERROR.
@@ -4867,8 +4715,8 @@ class ConsumerGenerationConflictTest(
         self._wait_until_deleted(server)
         fake_notifier.wait_for_versioned_notifications('instance.delete.end')
 
-        allocations = self._get_allocations_by_server_uuid(migration_uuid)
-        self.assertEqual(1, len(allocations))
+        self.assertFlavorMatchesAllocation(self.flavor, migration_uuid,
+                                           source_rp_uuid)
 
     def _test_evacuate_fails_allocating_on_dest_host(self, force):
         source_hostname = self.compute1.host
@@ -4913,18 +4761,14 @@ class ConsumerGenerationConflictTest(
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
         dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor)
 
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-        self.assertEqual({'VCPU': 0,
-                          'MEMORY_MB': 0,
-                          'DISK_GB': 0}, dest_usages)
+        self.assertRequestMatchesUsage({'VCPU': 0,
+                                        'MEMORY_MB': 0,
+                                        'DISK_GB': 0}, dest_rp_uuid)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor, source_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor, server['id'],
+                                           source_rp_uuid)
 
         self._delete_and_check_allocations(server)
 
@@ -4953,13 +4797,10 @@ class ConsumerGenerationConflictTest(
 
         # We still have the allocations as deletion failed
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor, source_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor, server['id'],
+                                           source_rp_uuid)
 
         # retry the delete to make sure that allocations are removed this time
         self._delete_and_check_allocations(server)
@@ -4991,13 +4832,10 @@ class ConsumerGenerationConflictTest(
 
         # We still have the allocations as deletion failed
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor, source_usages)
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor)
 
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor, source_allocation)
+        self.assertFlavorMatchesAllocation(self.flavor, server['id'],
+                                           source_rp_uuid)
 
         # retry the delete to make sure that allocations are removed this time
         self._delete_and_check_allocations(server)
