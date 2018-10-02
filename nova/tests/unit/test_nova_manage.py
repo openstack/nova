@@ -676,6 +676,7 @@ Error: invalid connection
 
     @mock.patch('nova.context.get_admin_context')
     def test_online_migrations_no_max_count(self, mock_get_context):
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
         total = [120]
         batches = [50, 40, 30, 0]
         runs = []
@@ -685,11 +686,23 @@ Error: invalid connection
             runs.append(count)
             count = batches.pop(0)
             total[0] -= count
-            return total[0], count
+            return count, count
 
         command_cls = self._fake_db_command((fake_migration,))
         command = command_cls()
         command.online_data_migrations(None)
+        expected = """\
+Running batches of 50 until complete
+50 rows matched query fake_migration, 50 migrated
+40 rows matched query fake_migration, 40 migrated
+30 rows matched query fake_migration, 30 migrated
++----------------+--------------+-----------+
+|   Migration    | Total Needed | Completed |
++----------------+--------------+-----------+
+| fake_migration |     120      |    120    |
++----------------+--------------+-----------+
+"""
+        self.assertEqual(expected, sys.stdout.getvalue())
         self.assertEqual([], batches)
         self.assertEqual(0, total[0])
         self.assertEqual([50, 50, 50, 50], runs)
