@@ -103,23 +103,23 @@ class MicroversionsExtendsBaseController(wsgi.Controller):
 
 
 mv_controller = functools.partial(routes._create_controller,
-    MicroversionsController, [], [])
+    MicroversionsController, [])
 
 
 mv2_controller = functools.partial(routes._create_controller,
-    MicroversionsController2, [], [])
+    MicroversionsController2, [])
 
 
 mv3_controller = functools.partial(routes._create_controller,
-    MicroversionsController3, [], [])
+    MicroversionsController3, [])
 
 
 mv4_controller = functools.partial(routes._create_controller,
-    MicroversionsController4, [], [])
+    MicroversionsController4, [])
 
 
 mv5_controller = functools.partial(routes._create_controller,
-    MicroversionsExtendsBaseController, [], [])
+    MicroversionsExtendsBaseController, [])
 
 
 ROUTES = (
