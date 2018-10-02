@@ -3895,7 +3895,8 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.addCleanup(fake_notifier.reset)
         self.api.post_server_action(server['id'], {'shelve': None})
         self._wait_for_state_change(self.api, server, 'SHELVED_OFFLOADED')
-        fake_notifier.wait_for_versioned_notifications('shelve_offload.end')
+        fake_notifier.wait_for_versioned_notifications(
+                'instance.shelve_offload.end')
         # The server should not have any allocations since it's not currently
         # hosted on any compute service.
         allocs = self._get_allocations_by_server_uuid(server['id'])

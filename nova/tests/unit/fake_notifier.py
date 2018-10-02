@@ -13,8 +13,8 @@
 #    under the License.
 
 import collections
-import copy
 import functools
+import pprint
 import threading
 
 import oslo_messaging as messaging
@@ -38,16 +38,28 @@ class _Sub(object):
             self._notifications.append(notification)
             self._cond.notifyAll()
 
-    def wait_n(self, n, timeout=1.0):
+    def wait_n(self, n, event, timeout):
         """Wait until at least n notifications have been received, and return
         them. May return less than n notifications if timeout is reached.
         """
 
         with timeutils.StopWatch(timeout) as timer:
             with self._cond:
-                while len(self._notifications) < n and not timer.expired():
+                while len(self._notifications) < n:
+                    if timer.expired():
+                        notifications = pprint.pformat(
+                            {event: sub._notifications
+                             for event, sub in VERSIONED_SUBS.items()})
+                        raise AssertionError(
+                            "Notification %(event)s hasn't been "
+                            "received. Received:\n%(notifications)s" % {
+                                'event': event,
+                                'notifications': notifications,
+                            })
                     self._cond.wait(timer.leftover())
-                return copy.copy(self._notifications)
+
+                # Return a copy of the notifications list
+                return list(self._notifications)
 
 
 VERSIONED_SUBS = collections.defaultdict(_Sub)
@@ -129,5 +141,5 @@ def stub_notifier(test):
                                                        None)))
 
 
-def wait_for_versioned_notifications(event_type, n_events=1, timeout=1.0):
-    return VERSIONED_SUBS[event_type].wait_n(n_events, timeout=timeout)
+def wait_for_versioned_notifications(event_type, n_events=1, timeout=10.0):
+    return VERSIONED_SUBS[event_type].wait_n(n_events, event_type, timeout)

@@ -235,11 +235,11 @@ class NotificationSampleTestBase(test.TestCase,
                     if notification['event_type'] == event_type]
 
     def _wait_for_notification(self, event_type, timeout=10.0):
-        notifications = fake_notifier.wait_for_versioned_notifications(
+        # NOTE(mdbooth): wait_for_versioned_notifications raises an exception
+        # if it times out since change I017d1a31. Consider removing this
+        # method.
+        fake_notifier.wait_for_versioned_notifications(
             event_type, timeout=timeout)
-        self.assertTrue(
-            len(notifications) > 0,
-            'notification %s hasn\'t been received' % event_type)
 
     def _wait_for_notifications(self, event_type, expected_count,
                                 timeout=10.0):

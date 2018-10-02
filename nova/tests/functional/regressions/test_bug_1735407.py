@@ -48,6 +48,9 @@ class TestParallelEvacuationWithServerGroup(
         # 2.14 is needed for evacuate without onSharedStorage flag
         self.api.microversion = '2.14'
 
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
+
         # the image fake backend needed for image discovery
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
@@ -69,8 +72,6 @@ class TestParallelEvacuationWithServerGroup(
 
         manager_class = nova.compute.manager.ComputeManager
         original_rebuild = manager_class._do_rebuild_instance
-
-        self.addCleanup(fake_notifier.reset)
 
         def fake_rebuild(self_, context, instance, *args, **kwargs):
             # Simulate that the rebuild request of one of the instances
@@ -132,8 +133,11 @@ class TestParallelEvacuationWithServerGroup(
         self.api.post_server_action(server2['id'], post)
 
         # make sure that the rebuild is started and then finished
+        # NOTE(mdbooth): We only get 1 rebuild.start notification here because
+        # we validate server group policy (and therefore fail) before emitting
+        # rebuild.start.
         fake_notifier.wait_for_versioned_notifications(
-            'instance.rebuild.start', n_events=2)
+            'instance.rebuild.start', n_events=1)
         server1 = self._wait_for_server_parameter(
             self.api, server1, {'OS-EXT-STS:task_state': None})
         server2 = self._wait_for_server_parameter(
