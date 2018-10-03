@@ -12,6 +12,7 @@
 
 from oslo_utils import versionutils
 from sqlalchemy.orm import joinedload
+from sqlalchemy.sql import false
 
 from nova import context as nova_context
 from nova.db.sqlalchemy import api as db_api
@@ -252,16 +253,31 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
 
     @staticmethod
     @db_api.api_context_manager.reader
-    def _get_by_cell_and_project_from_db(context, cell_id, project_id):
-        return (context.session.query(api_models.InstanceMapping)
-                .options(joinedload('cell_mapping'))
-                .filter_by(cell_id=cell_id)
-                .filter_by(project_id=project_id)
-                .all())
+    def _get_not_deleted_by_cell_and_project_from_db(context, cell_uuid,
+                                                     project_id, limit):
+        query = (
+            context.session.query(api_models.InstanceMapping)
+            .filter_by(project_id=project_id)
+            .filter_by(queued_for_delete=false())
+            .join('cell_mapping')
+            .options(joinedload('cell_mapping'))
+            .filter(api_models.CellMapping.uuid == cell_uuid))
+        if limit is not None:
+            query = query.limit(limit)
+        return query.all()
 
     @classmethod
-    def get_by_cell_and_project(cls, context, cell_id, project_id):
-        db_mappings = cls._get_by_cell_and_project_from_db(context, cell_id,
-                                                           project_id)
+    def get_not_deleted_by_cell_and_project(cls, context, cell_uuid,
+                                            project_id, limit=None):
+        """Return a limit restricted list of InstanceMapping objects which are
+        mapped to the specified cell_uuid, belong to the specified
+        project_id and are not queued for deletion (note that unlike the other
+        InstanceMappingList query methods which return all mappings
+        irrespective of whether they are queued for deletion this method
+        explicitly queries only for those mappings that are *not* queued for
+        deletion as is evident from the naming of the method).
+        """
+        db_mappings = cls._get_not_deleted_by_cell_and_project_from_db(
+            context, cell_uuid, project_id, limit)
         return base.obj_make_list(context, cls(), objects.InstanceMapping,
                 db_mappings)
