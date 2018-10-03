@@ -15,12 +15,10 @@
 """Utility methods for scheduling."""
 
 import collections
-import functools
 import re
 import sys
 
 from oslo_log import log as logging
-import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from six.moves.urllib import parse
 
@@ -934,37 +932,6 @@ def setup_instance_group(context, request_spec):
         request_spec.instance_group.hosts = list(group_info.hosts)
         request_spec.instance_group.policy = group_info.policy
         request_spec.instance_group.members = group_info.members
-
-
-def retry_on_timeout(retries=1):
-    """Retry the call in case a MessagingTimeout is raised.
-
-    A decorator for retrying calls when a service dies mid-request.
-
-    :param retries: Number of retries
-    :returns: Decorator
-    """
-    def outer(func):
-        @functools.wraps(func)
-        def wrapped(*args, **kwargs):
-            attempt = 0
-            while True:
-                try:
-                    return func(*args, **kwargs)
-                except messaging.MessagingTimeout:
-                    attempt += 1
-                    if attempt <= retries:
-                        LOG.warning(
-                            "Retrying %(name)s after a MessagingTimeout, "
-                            "attempt %(attempt)s of %(retries)s.",
-                            {'attempt': attempt, 'retries': retries,
-                             'name': func.__name__})
-                    else:
-                        raise
-        return wrapped
-    return outer
-
-retry_select_destinations = retry_on_timeout(CONF.scheduler.max_attempts - 1)
 
 
 def request_is_rebuild(spec_obj):
