@@ -154,7 +154,9 @@ class SchedulerAPI(object):
             msg_args['filter_properties'
                      ] = spec_obj.to_legacy_filter_properties_dict()
             version = '4.0'
-        cctxt = self.client.prepare(version=version)
+        cctxt = self.client.prepare(
+            version=version, call_monitor_timeout=CONF.rpc_response_timeout,
+            timeout=CONF.long_rpc_timeout)
         return cctxt.call(ctxt, 'select_destinations', **msg_args)
 
     def update_aggregates(self, ctxt, aggregates):
