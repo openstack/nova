@@ -1060,10 +1060,26 @@ class API(base_api.NetworkAPI):
         """Populate neutron binding:profile.
 
         Populate it with SR-IOV related information
+
+        :raises PciDeviceNotFound: If a claimed PCI device for the given
+            pci_request_id cannot be found on the instance.
         """
         if pci_request_id:
-            pci_dev = pci_manager.get_instance_pci_devs(
-                instance, pci_request_id).pop()
+            pci_devices = pci_manager.get_instance_pci_devs(
+                instance, pci_request_id)
+            if not pci_devices:
+                # The pci_request_id likely won't mean much except for tracing
+                # through the logs since it is generated per request.
+                LOG.error(
+                    _LE('Unable to find PCI device using PCI request ID in '
+                        'list of claimed instance PCI devices: %s. Is the '
+                        '[pci]/passthrough_whitelist configuration correct?'),
+                    # Convert to a primitive list to stringify it.
+                    list(instance.pci_devices), instance=instance)
+                raise exception.PciDeviceNotFound(
+                    _('PCI device not found for request ID %s.') %
+                    pci_request_id)
+            pci_dev = pci_devices.pop()
             profile = self._get_pci_device_profile(pci_dev)
             port_req_body['port'][BINDING_PROFILE] = profile
 
