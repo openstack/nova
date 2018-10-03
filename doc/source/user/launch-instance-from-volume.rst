@@ -208,13 +208,14 @@ the volume to boot an instance.
    Note the ID of the flavor that you want to use to create a volume.
 
 #. To create a bootable volume from an image and launch an instance from
-   this volume, use the ``--block-device`` parameter.
+   this volume, use the ``--block-device`` parameter with the ``nova boot``
+   command.
 
    For example:
 
    .. code-block:: console
 
-      $ openstack server create --flavor FLAVOR --block-device \
+      $ nova boot --flavor FLAVOR --block-device \
         source=SOURCE,id=ID,dest=DEST,size=SIZE,shutdown=PRESERVE,bootindex=INDEX \
         NAME
 
@@ -250,7 +251,14 @@ the volume to boot an instance.
 
    - ``NAME``. The name for the server.
 
-   See :doc:`block-device-mapping` for more details on these parameters.
+   See the `nova boot`_ command documentation and :doc:`block-device-mapping`
+   for more details on these parameters.
+
+   .. note:: As of the Stein release, the ``openstack server create`` command
+      does not support creating a volume-backed server from a source image like
+      the ``nova boot`` command. The next steps will show how to create a
+      bootable volume from an image and then create a server from that boot
+      volume using the ``openstack server create`` command.
 
 #. Create a bootable volume from an image. Cinder makes a volume bootable
    when ``--image`` parameter is passed.
@@ -300,11 +308,14 @@ the volume to boot an instance.
 #. Create a VM from previously created bootable volume. The volume is not
    deleted when the instance is terminated.
 
+   .. note:: The example here uses the ``--volume`` option for simplicity. The
+      ``--block-device`` option could also be used for more granular control
+      over the parameters. See the `openstack server create`_ documentation for
+      details.
+
    .. code-block:: console
 
-      $ openstack server create --flavor 2 --volume VOLUME_ID \
-        --block-device source=volume,id=$VOLUME_ID,dest=volume,size=10,shutdown=preserve,bootindex=0 \
-        myInstanceFromVolume
+      $ openstack server create --flavor 2 --volume VOLUME_ID myInstanceFromVolume
       +--------------------------------------+--------------------------------+
       | Field                                | Value                          |
       +--------------------------------------+--------------------------------+
@@ -352,6 +363,9 @@ the volume to boot an instance.
       | c612f739-8592-44c4- | bootable_volume | in-use |  10  | Attached to myInstanceFromVolume|
       | b7d4-0fee2fe1da0c   |                 |        |      | on /dev/vda                     |
       +---------------------+-----------------+--------+------+---------------------------------+
+
+.. _nova boot: https://docs.openstack.org/python-novaclient/latest/cli/nova.html#nova-boot
+.. _openstack server create: https://docs.openstack.org/python-openstackclient/latest/cli/command-objects/server.html#server-create
 
 .. _Attach_swap_or_ephemeral_disk_to_an_instance:
 
