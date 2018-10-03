@@ -5568,7 +5568,8 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         self.assertEqual(port_req_body, req)
 
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
-    def test_populate_pci_mac_address_no_device(self,
+    @mock.patch('nova.network.neutronv2.api.LOG.error')
+    def test_populate_pci_mac_address_no_device(self, mock_log_error,
                                                 mock_get_instance_pci_devs):
         api = neutronapi.API()
         instance, pf, vf = self._populate_pci_mac_address_fakes()
@@ -5578,6 +5579,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         req = port_req_body.copy()
         api._populate_pci_mac_address(instance, 42, port_req_body)
         self.assertEqual(port_req_body, req)
+        self.assertEqual(42, mock_log_error.call_args[0][1])
 
     def _test_update_port_binding_true(self, expected_bind_host,
                                        func_name, *args):

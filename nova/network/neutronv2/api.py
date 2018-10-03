@@ -1426,7 +1426,7 @@ class API(base_api.NetworkAPI):
                 LOG.error("PCI request %s does not have a "
                           "unique device associated with it. Unable to "
                           "determine MAC address",
-                          pci_request, instance=instance)
+                          pci_request_id, instance=instance)
                 return
             pci_dev = pci_devs[0]
             if pci_dev.dev_type == obj_fields.PciDeviceType.SRIOV_PF:
