@@ -5922,7 +5922,8 @@ class TestAllocateForInstance(test.NoDBTestCase):
         self.assertEqual(requested_networks[0], ordered_networks[0])
         self.assertEqual('net-2', ordered_networks[1].network_id)
 
-    def _assert_validate_requested_port_ids_raises(self, exception, extras):
+    def _assert_validate_requested_port_ids_raises(self, exception, extras,
+                                                   attach=False):
         api = neutronapi.API()
         mock_client = mock.Mock()
         requested_networks = objects.NetworkRequestList(objects=[
@@ -5936,7 +5937,8 @@ class TestAllocateForInstance(test.NoDBTestCase):
         mock_client.show_port.return_value = {"port": port}
 
         self.assertRaises(exception, api._validate_requested_port_ids,
-            self.context, self.instance, mock_client, requested_networks)
+            self.context, self.instance, mock_client, requested_networks,
+            attach=attach)
 
     def test_validate_requested_port_ids_raise_not_usable(self):
         self._assert_validate_requested_port_ids_raises(
@@ -5957,6 +5959,12 @@ class TestAllocateForInstance(test.NoDBTestCase):
         self._assert_validate_requested_port_ids_raises(
             exception.PortBindingFailed,
             {"binding:vif_type": model.VIF_TYPE_BINDING_FAILED})
+
+    def test_validate_requested_port_ids_raise_sriov(self):
+        self._assert_validate_requested_port_ids_raises(
+            exception.AttachSRIOVPortNotSupported,
+            {"binding:vnic_type": model.VNIC_TYPE_DIRECT},
+            attach=True)
 
     def test_validate_requested_network_ids_success_auto_net(self):
         requested_networks = []
