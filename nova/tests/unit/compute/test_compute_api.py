@@ -1746,7 +1746,8 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_confirm_resize_with_migration_ref(self):
         self._test_confirm_resize(mig_ref_passed=True)
 
-    def _test_revert_resize(self):
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
+    def _test_revert_resize(self, mock_get_reqspec):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
         fake_mig = objects.Migration._from_db_object(
@@ -1805,6 +1806,9 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.ReplayAll()
 
         self.compute_api.revert_resize(self.context, fake_inst)
+        mock_get_reqspec.assert_called_once_with(
+            self.context, fake_inst.uuid)
+        mock_get_reqspec.return_value.save.assert_called_once_with()
 
     def test_revert_resize(self):
         self._test_revert_resize()
