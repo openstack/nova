@@ -388,7 +388,7 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(objects.RequestSpec, 'from_primitives')
     def test_build_instances(self, mock_fp, mock_save, mock_getaz,
                              mock_buildreq):
-        fake_spec = objects.RequestSpec
+        fake_spec = objects.RequestSpec()
         mock_fp.return_value = fake_spec
         instance_type = flavors.get_default_flavor()
         # NOTE(danms): Avoid datetime timezone issues with converted flavors
