@@ -5158,6 +5158,19 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
             exception.PciDeviceNotFound, api._populate_neutron_binding_profile,
             instance, pci_req_id, port_req_body)
 
+    @mock.patch.object(pci_manager, 'get_instance_pci_devs', return_value=[])
+    def test_populate_neutron_binding_profile_pci_dev_not_found(
+            self, mock_get_instance_pci_devs):
+        api = neutronapi.API()
+        instance = objects.Instance(pci_devices=objects.PciDeviceList())
+        port_req_body = {'port': {}}
+        pci_req_id = 'my_req_id'
+        self.assertRaises(exception.PciDeviceNotFound,
+                          api._populate_neutron_binding_profile,
+                          instance, pci_req_id, port_req_body)
+        mock_get_instance_pci_devs.assert_called_once_with(
+            instance, pci_req_id)
+
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
     def test_pci_parse_whitelist_called_once(self,
                                              mock_get_instance_pci_devs):
