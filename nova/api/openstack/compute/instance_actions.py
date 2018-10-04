@@ -110,6 +110,12 @@ class InstanceActionsController(wsgi.Controller):
         if 'changes-before' in search_opts:
             search_opts['changes-before'] = timeutils.parse_isotime(
                 search_opts['changes-before'])
+            changes_since = search_opts.get('changes-since')
+            if (changes_since and search_opts['changes-before'] <
+                    search_opts['changes-since']):
+                msg = _('The value of changes-since must be less than '
+                        'or equal to changes-before.')
+                raise exc.HTTPBadRequest(explanation=msg)
 
         limit, marker = common.get_limit_and_marker(req)
         try:
