@@ -13,8 +13,7 @@ or disassociate a fixed or floating IP address from a server.
 You can attach a volume to a server.
 
 You can create an image from a server, create a backup of a server,
-evacuate a server from a failed host to a new host, and force-delete a
-server before deferred cleanup.
+and force-delete a server before deferred cleanup.
 You can lock, pause, reboot, rebuild, rescue, resize, resume, confirm
 the resize of, revert a pending resize for, shelve, shelf-offload,
 unshelve, start, stop, unlock, unpause, and unrescue a server. You can
