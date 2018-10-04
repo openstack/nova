@@ -185,7 +185,8 @@ class NetworkAPI(base.Base):
 
     def allocate_for_instance(self, context, instance, vpn,
                               requested_networks, macs=None,
-                              security_groups=None, bind_host_id=None):
+                              security_groups=None, bind_host_id=None,
+                              attach=False):
         """Allocates all network structures for an instance.
 
         :param context: The request context.
@@ -199,6 +200,8 @@ class NetworkAPI(base.Base):
         :param security_groups: None or security groups to allocate for
             instance.
         :param bind_host_id: the host ID to attach to the ports being created.
+        :param attach: Boolean indicating if a port is being attached to an
+            existing running instance. Should be False during server create.
         :returns: network info as from get_instance_nw_info() below
         """
         raise NotImplementedError()
