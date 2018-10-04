@@ -4000,6 +4000,11 @@ class API(base.Base):
         LOG.debug("Going to try to live migrate instance to %s",
                   host_name or "another host", instance=instance)
 
+        if host_name:
+            # Validate the specified host before changing the instance task
+            # state.
+            nodes = objects.ComputeNodeList.get_all_by_host(context, host_name)
+
         instance.task_state = task_states.MIGRATING
         instance.save(expected_task_state=[None])
 
@@ -4015,7 +4020,6 @@ class API(base.Base):
 
         # NOTE(sbauza): Force is a boolean by the new related API version
         if force is False and host_name:
-            nodes = objects.ComputeNodeList.get_all_by_host(context, host_name)
             # NOTE(sbauza): Unset the host to make sure we call the scheduler
             host_name = None
             # FIXME(sbauza): Since only Ironic driver uses more than one
