@@ -265,7 +265,10 @@ def disable_multicast_snooping(interface):
 @nova.privsep.sys_admin_pctxt.entrypoint
 def disable_ipv6(interface):
     """Disable ipv6 for a bridge."""
-    with open('/proc/sys/net/ipv6/conf/%s/disable_ipv' % interface, 'w') as f:
+    disable_ipv6_path = ('/proc/sys/net/ipv6/conf/%s/disable_ipv6' % interface)
+    if not os.path.exists(disable_ipv6_path):
+        return
+    with open(disable_ipv6_path, 'w') as f:
         f.write('1')
 
 
