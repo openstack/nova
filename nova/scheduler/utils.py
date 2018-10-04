@@ -876,8 +876,7 @@ def _get_instance_group_hosts_all_cells(context, instance_group):
         # is raised while targeting a cell and when a cell does not respond
         # as part of the "handling of a down cell" spec:
         # https://blueprints.launchpad.net/nova/+spec/handling-down-cell
-        if result not in (nova_context.did_not_respond_sentinel,
-                          nova_context.raised_exception_sentinel):
+        if not nova_context.is_cell_failure_sentinel(result):
             hosts.extend(result)
     return hosts
 

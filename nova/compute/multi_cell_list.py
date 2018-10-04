@@ -25,8 +25,6 @@ from nova import exception
 from nova.i18n import _
 
 LOG = logging.getLogger(__name__)
-CELL_FAIL_SENTINELS = (context.did_not_respond_sentinel,
-                       context.raised_exception_sentinel)
 
 CONF = nova.conf.CONF
 
@@ -77,9 +75,9 @@ class RecordWrapper(object):
         # $limit results from good cells before we noticed the failed
         # cells, and would not properly report them as failed for
         # fix-up in the higher layers.
-        if self._db_record in CELL_FAIL_SENTINELS:
+        if context.is_cell_failure_sentinel(self._db_record):
             return True
-        elif other._db_record in CELL_FAIL_SENTINELS:
+        elif context.is_cell_failure_sentinel(other._db_record):
             return False
 
         r = self._sort_ctx.compare_records(self._db_record,
@@ -108,11 +106,11 @@ def query_wrapper(ctx, fn, *args, **kwargs):
             # wrapping the sentinel indicating timeout.
             yield RecordWrapper(ctx, None, context.did_not_respond_sentinel)
             raise StopIteration
-        except Exception:
+        except Exception as e:
             # Here, we yield a RecordWrapper (no sort_ctx needed since
             # we won't call into the implementation's comparison routines)
-            # wrapping the sentinel indicating failure.
-            yield RecordWrapper(ctx, None, context.raised_exception_sentinel)
+            # wrapping the exception object indicating failure.
+            yield RecordWrapper(ctx, None, e.__class__(e.args))
             raise StopIteration
 
 
@@ -403,7 +401,7 @@ class CrossCellLister(object):
             except StopIteration:
                 return
 
-            if item._db_record in CELL_FAIL_SENTINELS:
+            if context.is_cell_failure_sentinel(item._db_record):
                 if not CONF.api.list_records_by_skipping_down_cells:
                     raise exception.NovaException(
                         _('Cell %s is not responding but configuration '
@@ -413,7 +411,7 @@ class CrossCellLister(object):
                             item.cell_uuid)
                 if item._db_record == context.did_not_respond_sentinel:
                     self._cells_timed_out.add(item.cell_uuid)
-                elif item._db_record == context.raised_exception_sentinel:
+                elif isinstance(item._db_record, Exception):
                     self._cells_failed.add(item.cell_uuid)
                 # We might have received one batch but timed out or failed
                 # on a later one, so be sure we fix the accounting.

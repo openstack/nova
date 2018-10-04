@@ -45,9 +45,6 @@ CELL_CACHE = {}
 # NOTE(melwitt): Used for the scatter-gather utility to indicate we timed out
 # waiting for a result from a cell.
 did_not_respond_sentinel = object()
-# NOTE(melwitt): Used for the scatter-gather utility to indicate an exception
-# was raised gathering a result from a cell.
-raised_exception_sentinel = object()
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
 # trigger.
@@ -429,7 +426,7 @@ def scatter_gather_cells(context, cell_mappings, timeout, fn, *args, **kwargs):
     :param kwargs: The kwargs for the function to call for each cell
     :returns: A dict {cell_uuid: result} containing the joined results. The
               did_not_respond_sentinel will be returned if a cell did not
-              respond within the timeout. The raised_exception_sentinel will
+              respond within the timeout. The exception object will
               be returned if the call to a cell raised an exception. The
               exception will be logged.
     """
@@ -442,9 +439,9 @@ def scatter_gather_cells(context, cell_mappings, timeout, fn, *args, **kwargs):
         try:
             with target_cell(context, cell_mapping) as cctxt:
                 result = fn(cctxt, *args, **kwargs)
-        except Exception:
+        except Exception as e:
             LOG.exception('Error gathering result from cell %s', cell_uuid)
-            result = raised_exception_sentinel
+            result = e.__class__(e.args)
         # The queue is already synchronized.
         queue.put((cell_uuid, result))
 
@@ -488,6 +485,11 @@ def load_cells():
         LOG.error('No cells are configured, unable to continue')
 
 
+def is_cell_failure_sentinel(record):
+    return (record is did_not_respond_sentinel or
+            isinstance(record, Exception))
+
+
 def scatter_gather_skip_cell0(context, fn, *args, **kwargs):
     """Target all cells except cell0 in parallel and return their results.
 
@@ -502,7 +504,7 @@ def scatter_gather_skip_cell0(context, fn, *args, **kwargs):
     :param kwargs: The kwargs for the function to call for each cell
     :returns: A dict {cell_uuid: result} containing the joined results. The
               did_not_respond_sentinel will be returned if a cell did not
-              respond within the timeout. The raised_exception_sentinel will
+              respond within the timeout. The exception object will
               be returned if the call to a cell raised an exception. The
               exception will be logged.
     """
@@ -527,7 +529,7 @@ def scatter_gather_single_cell(context, cell_mapping, fn, *args, **kwargs):
     :param kwargs: The kwargs for the function to call for this cell
     :returns: A dict {cell_uuid: result} containing the joined results. The
               did_not_respond_sentinel will be returned if the cell did not
-              respond within the timeout. The raised_exception_sentinel will
+              respond within the timeout. The exception object will
               be returned if the call to the cell raised an exception. The
               exception will be logged.
     """
@@ -549,7 +551,7 @@ def scatter_gather_all_cells(context, fn, *args, **kwargs):
     :param kwargs: The kwargs for the function to call for each cell
     :returns: A dict {cell_uuid: result} containing the joined results. The
               did_not_respond_sentinel will be returned if a cell did not
-              respond within the timeout. The raised_exception_sentinel will
+              respond within the timeout. The exception object will
               be returned if the call to a cell raised an exception. The
               exception will be logged.
     """

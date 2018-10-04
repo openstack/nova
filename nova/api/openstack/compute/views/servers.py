@@ -536,7 +536,7 @@ class ViewBuilder(common.ViewBuilder):
                         objects.BlockDeviceMappingList.bdms_by_instance_uuid,
                         instance_uuids)
         for cell_uuid, result in results.items():
-            if result is nova_context.raised_exception_sentinel:
+            if isinstance(result, Exception):
                 LOG.warning('Failed to get block device mappings for cell %s',
                             cell_uuid)
             elif result is nova_context.did_not_respond_sentinel:

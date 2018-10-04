@@ -123,7 +123,8 @@ class TestUtils(test.NoDBTestCase):
         iw2 = multi_cell_list.RecordWrapper(ctx, sort_ctx,
                                             context.did_not_respond_sentinel)
         iw3 = multi_cell_list.RecordWrapper(ctx, sort_ctx,
-                                            context.raised_exception_sentinel)
+                                            exception.InstanceNotFound(
+                                                instance_id='fake'))
 
         # NOTE(danms): The sentinel wrappers always win
         self.assertTrue(iw2 < iw1)
@@ -157,13 +158,15 @@ class TestUtils(test.NoDBTestCase):
                               mock.MagicMock(), test)])
 
     def test_query_wrapper_fail(self):
-        def test(ctx):
+        def tester(ctx):
             raise test.TestingException
 
-        self.assertEqual([context.raised_exception_sentinel],
-                         [x._db_record for x in
-                          multi_cell_list.query_wrapper(
-                              mock.MagicMock(), test)])
+        self.assertIsInstance(
+            # query_wrapper is a generator so we convert to a list and
+            # check the type on the first and only result
+            [x._db_record for x in multi_cell_list.query_wrapper(
+                mock.MagicMock(), tester)][0],
+            test.TestingException)
 
 
 class TestListContext(multi_cell_list.RecordSortContext):
@@ -351,7 +354,7 @@ class FailureLister(TestLister):
 
         if action == context.did_not_respond_sentinel:
             raise exception.CellTimeout
-        elif action == context.raised_exception_sentinel:
+        elif isinstance(action, Exception):
             raise test.TestingException
         else:
             return super(FailureLister, self).get_by_filters(ctx, *a, **k)
@@ -369,7 +372,11 @@ class TestBaseClass(test.NoDBTestCase):
         # Two of the cells will fail, one with timeout and one
         # with an error
         lister.set_fails(uuids.cell0, [context.did_not_respond_sentinel])
-        lister.set_fails(uuids.cell1, [context.raised_exception_sentinel])
+        # Note that InstanceNotFound exception will never appear during
+        # instance listing, the aim is to only simulate a situation where
+        # there could be some type of exception arising.
+        lister.set_fails(uuids.cell1, exception.InstanceNotFound(
+            instance_id='fake'))
         ctx = context.RequestContext()
         result = lister.get_records_sorted(ctx, {}, 50, None, batch_size=10)
         # We should still have 50 results since there are enough from the
@@ -390,7 +397,11 @@ class TestBaseClass(test.NoDBTestCase):
         # One cell will succeed and then time out, one will fail immediately,
         # and the last will always work
         lister.set_fails(uuids.cell0, [None, context.did_not_respond_sentinel])
-        lister.set_fails(uuids.cell1, [context.raised_exception_sentinel])
+        # Note that BuildAbortException will never appear during instance
+        # listing, the aim is to only simulate a situation where there could
+        # be some type of exception arising.
+        lister.set_fails(uuids.cell1, exception.BuildAbortException(
+            instance_uuid='fake', reason='fake'))
         ctx = context.RequestContext()
         result = lister.get_records_sorted(ctx, {}, 50, None,
                                            batch_size=5)

@@ -5046,8 +5046,7 @@ class HostAPI(base.Base):
             service_dict = nova_context.scatter_gather_all_cells(context,
                 objects.ServiceList.get_all, disabled, set_zones=set_zones)
             for service in service_dict.values():
-                if service not in (nova_context.did_not_respond_sentinel,
-                                   nova_context.raised_exception_sentinel):
+                if not nova_context.is_cell_failure_sentinel(service):
                     services.extend(service)
         else:
             services = objects.ServiceList.get_all(context, disabled,

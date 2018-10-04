@@ -6803,7 +6803,7 @@ class ServersViewBuilderTest(test.TestCase):
         # just faking a nova list scenario
         mock_sg.return_value = {
             uuids.cell1: bdms[0],
-            uuids.cell2: context.raised_exception_sentinel
+            uuids.cell2: exception.BDMNotFound(id='fake')
         }
         ctxt = context.RequestContext('fake', 'fake')
         result = self.view_builder._get_instance_bdms_in_multiple_cells(

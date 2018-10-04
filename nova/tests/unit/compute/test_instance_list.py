@@ -175,7 +175,7 @@ class TestInstanceList(test.NoDBTestCase):
         # creating one up cell and two down cells
         ret_val = {}
         ret_val[uuids.cell0] = instances
-        ret_val[uuids.cell1] = [wrap(nova_context.raised_exception_sentinel)]
+        ret_val[uuids.cell1] = [wrap(exception.BuildRequestNotFound(uuid='f'))]
         ret_val[uuids.cell2] = [wrap(nova_context.did_not_respond_sentinel)]
         mock_sg.return_value = ret_val
 
@@ -201,7 +201,7 @@ class TestInstanceList(test.NoDBTestCase):
         # creating one up cell and two down cells
         ret_val = {}
         ret_val[uuids.cell0] = instances
-        ret_val[uuids.cell1] = [wrap(nova_context.raised_exception_sentinel)]
+        ret_val[uuids.cell1] = [wrap(exception.BuildRequestNotFound(uuid='f'))]
         ret_val[uuids.cell2] = [wrap(nova_context.did_not_respond_sentinel)]
         mock_sg.return_value = ret_val
 

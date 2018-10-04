@@ -54,8 +54,7 @@ class ConsoleAuthTokensController(wsgi.Controller):
             # loop as soon as we find a result because the token is associated
             # with one instance, which can only be in one cell.
             for result in results.values():
-                if result not in (nova_context.did_not_respond_sentinel,
-                                  nova_context.raised_exception_sentinel):
+                if not nova_context.is_cell_failure_sentinel(result):
                     connect_info = result.to_dict()
                     break
 
