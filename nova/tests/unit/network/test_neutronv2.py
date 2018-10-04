@@ -3086,6 +3086,9 @@ class TestNeutronv2(TestNeutronv2Base):
         api = neutronapi.API()
 
         port_data = copy.copy(self.port_data1[0])
+        # add another IP on the same subnet and verify the subnet is deduped
+        port_data['fixed_ips'].append({'ip_address': '10.0.1.3',
+                                       'subnet_id': 'my_subid1'})
         subnet_data1 = copy.copy(self.subnet_data1)
         subnet_data1[0]['host_routes'] = [
             {'destination': '192.168.0.0/24', 'nexthop': '1.0.0.10'}
