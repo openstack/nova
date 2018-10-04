@@ -902,21 +902,6 @@ class IronicDriver(virt_driver.ComputeDriver):
                 return hardware.InstanceInfo(
                     state=map_power_state(ironic_states.NOSTATE))
 
-        properties = self._parse_node_properties(node)
-        memory_kib = properties['memory_mb'] * 1024
-        if memory_kib == 0:
-            LOG.warning("Warning, memory usage is 0 for "
-                        "%(instance)s on baremetal node %(node)s.",
-                        {'instance': instance.uuid,
-                         'node': instance.node})
-
-        num_cpu = properties['cpus']
-        if num_cpu == 0:
-            LOG.warning("Warning, number of cpus is 0 for "
-                        "%(instance)s on baremetal node %(node)s.",
-                        {'instance': instance.uuid,
-                         'node': instance.node})
-
         return hardware.InstanceInfo(state=map_power_state(node.power_state))
 
     def deallocate_networks_on_reschedule(self, instance):
