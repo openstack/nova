@@ -140,14 +140,18 @@ same time.
      ``nova-manage db online_data_migrations --max-count <number>``. Note
      that you can use the ``--max-count`` argument to reduce the load this
      operation will place on the database, which allows you to run a
-     small chunk of the migrations until all of the work is done. Each
-     time it is run, it will show a summary of completed and remaining
-     records. You run this command until you see completed and
-     remaining records as zeros. The chunk size you should use depend
-     on your infrastructure and how much additional load you can
-     impose on the database. To reduce load, perform smaller batches
-     with delays between chunks. To reduce time to completion, run
-     larger batches.
+     small chunk of the migrations until all of the work is done. The chunk size
+     you should use depends on your infrastructure and how much additional load
+     you can impose on the database. To reduce load, perform smaller batches
+     with delays between chunks. To reduce time to completion, run larger batches.
+     Each time it is run, the command will show a summary of completed and remaining
+     records. If using the ``--max-count`` option, the command should be rerun
+     while it returns exit status 1 (which indicates that some migrations took
+     effect, and more work may remain to be done), even if some migrations
+     produce errors. If all possible migrations have completed and some are
+     still producing errors, exit status 2 will be returned. In this case, the
+     cause of the errors should be investigated and resolved. Migrations should be
+     considered successfully completed only when the command returns exit status 0.
 
    * At this point, you must also ensure you update the configuration, to stop
      using any deprecated features or options, and perform any required work
