@@ -131,6 +131,9 @@ class IronicDriver(virt_driver.ComputeDriver):
                     "supports_attach_interface": False
                     }
 
+    # This driver is capable of rebalancing nodes between computes.
+    rebalances_nodes = True
+
     def __init__(self, virtapi, read_only=False):
         super(IronicDriver, self).__init__(virtapi)
         global ironic
