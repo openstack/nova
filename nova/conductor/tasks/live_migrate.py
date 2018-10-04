@@ -106,10 +106,17 @@ class LiveMigrationTask(base.TaskBase):
             # scheduler filters, which honors the 'force' flag in the API.
             # This raises NoValidHost which will be handled in
             # ComputeTaskManager.
+            # NOTE(gibi): consumer_generation = None as we expect that the
+            # source host allocation is held by the migration therefore the
+            # instance is a new, empty consumer for the dest allocation. If
+            # this assumption fails then placement will return consumer
+            # generation conflict and this call raise a AllocationUpdateFailed
+            # exception. We let that propagate here to abort the migration.
             scheduler_utils.claim_resources_on_destination(
                 self.context, self.scheduler_client.reportclient,
                 self.instance, source_node, dest_node,
-                source_node_allocations=self._held_allocations)
+                source_node_allocations=self._held_allocations,
+                consumer_generation=None)
 
             # dest_node is a ComputeNode object, so we need to get the actual
             # node name off it to set in the Migration object below.

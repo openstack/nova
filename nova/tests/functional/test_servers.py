@@ -4451,6 +4451,85 @@ class ConsumerGenerationConflictTest(
         self.compute1 = self._start_compute('compute1')
         self.compute2 = self._start_compute('compute2')
 
+    def test_create_server_fails_as_placement_reports_consumer_conflict(self):
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'some-server', flavor_id=self.flavor['id'],
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none')
+
+        # We cannot pre-create a consumer with the uuid of the instance created
+        # below as that uuid is generated. Instead we have to simulate that
+        # Placement returns 409, consumer generation conflict for the PUT
+        # /allocation request the scheduler does for the instance.
+        with mock.patch('keystoneauth1.adapter.Adapter.put') as mock_put:
+            rsp = fake_requests.FakeResponse(
+                409,
+                jsonutils.dumps(
+                    {'errors': [
+                        {'code': 'placement.concurrent_update',
+                         'detail': 'consumer generation conflict'}]}))
+            mock_put.return_value = rsp
+
+            created_server = self.api.post_server({'server': server_req})
+            server = self._wait_for_state_change(
+                self.admin_api, created_server, 'ERROR')
+
+        # This is not a conflict that the API user can ever resolve. It is a
+        # serious inconsistency in our database or a bug in the scheduler code
+        # doing the claim.
+        self.assertEqual(500, server['fault']['code'])
+        self.assertIn('Failed to update allocations for consumer',
+                      server['fault']['message'])
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(0, len(allocations))
+
+        self._delete_and_check_allocations(server)
+
+    def test_migrate_claim_on_dest_fails(self):
+        source_hostname = self.compute1.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+
+        server = self._boot_and_check_allocations(self.flavor, source_hostname)
+
+        # We have to simulate that Placement returns 409, consumer generation
+        # conflict for the PUT /allocation request the scheduler does on the
+        # destination host for the instance.
+        with mock.patch('keystoneauth1.adapter.Adapter.put') as mock_put:
+            rsp = fake_requests.FakeResponse(
+                409,
+                jsonutils.dumps(
+                    {'errors': [
+                        {'code': 'placement.concurrent_update',
+                         'detail': 'consumer generation conflict'}]}))
+            mock_put.return_value = rsp
+
+            request = {'migrate': None}
+            exception = self.assertRaises(client.OpenStackApiException,
+                                          self.api.post_server_action,
+                                          server['id'], request)
+
+        # I know that HTTP 500 is harsh code but I think this conflict case
+        # signals either a serious db inconsistency or a bug in nova's
+        # claim code.
+        self.assertEqual(500, exception.response.status_code)
+
+        # The migration is aborted so the instance is ACTIVE on the source
+        # host instead of being in VERIFY_RESIZE state.
+        server = self.api.get_server(server['id'])
+        self.assertEqual('ACTIVE', server['status'])
+        self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor, source_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        alloc = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor, alloc)
+
+        self._delete_and_check_allocations(server)
+
     def test_migrate_move_allocation_fails_due_to_conflict(self):
         source_hostname = self.compute1.host
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
@@ -4655,6 +4734,48 @@ class ConsumerGenerationConflictTest(
             migrations[0]['uuid'])
         self.assertEqual(1, len(allocations))
 
+    def test_force_live_migrate_claim_on_dest_fails(self):
+        # Normal live migrate moves source allocation from instance to
+        # migration like a normal migrate tested above.
+        # Normal live migrate claims on dest like a normal boot tested above.
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+
+        server = self._boot_and_check_allocations(
+            self.flavor, source_hostname)
+
+        rsp = fake_requests.FakeResponse(
+            409,
+            jsonutils.dumps(
+                {'errors': [
+                    {'code': 'placement.concurrent_update',
+                     'detail': 'consumer generation conflict'}]}))
+        with mock.patch('keystoneauth1.adapter.Adapter.put',
+                        autospec=True) as mock_put:
+            mock_put.return_value = rsp
+
+            post = {
+                'os-migrateLive': {
+                    'host': dest_hostname,
+                    'block_migration': True,
+                    'force': True,
+                }
+            }
+
+            self.api.post_server_action(server['id'], post)
+            server = self._wait_for_state_change(self.api, server, 'ERROR')
+
+        self.assertEqual(1, mock_put.call_count)
+
+        # This is not a conflict that the API user can ever resolve. It is a
+        # serious inconsistency in our database or a bug in the scheduler code
+        # doing the claim.
+        self.assertEqual(500, server['fault']['code'])
+        # The instance is in ERROR state so the allocations are in limbo but
+        # at least we expect that when the instance is deleted the allocations
+        # are cleaned up properly.
+        self._delete_and_check_allocations(server)
+
     def test_live_migrate_drop_allocation_on_source_fails(self):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
@@ -4748,6 +4869,70 @@ class ConsumerGenerationConflictTest(
 
         allocations = self._get_allocations_by_server_uuid(migration_uuid)
         self.assertEqual(1, len(allocations))
+
+    def _test_evacuate_fails_allocating_on_dest_host(self, force):
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+
+        server = self._boot_and_check_allocations(
+            self.flavor, source_hostname)
+
+        source_compute_id = self.admin_api.get_services(
+            host=source_hostname, binary='nova-compute')[0]['id']
+
+        self.compute1.stop()
+        # force it down to avoid waiting for the service group to time out
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'true'})
+
+        rsp = fake_requests.FakeResponse(
+            409,
+            jsonutils.dumps(
+                {'errors': [
+                    {'code': 'placement.concurrent_update',
+                     'detail': 'consumer generation conflict'}]}))
+
+        with mock.patch('keystoneauth1.adapter.Adapter.put',
+                        autospec=True) as mock_put:
+            mock_put.return_value = rsp
+            post = {
+                'evacuate': {
+                    'force': force
+                }
+            }
+            if force:
+                post['evacuate']['host'] = dest_hostname
+
+            self.api.post_server_action(server['id'], post)
+            server = self._wait_for_state_change(self.api, server, 'ERROR')
+
+        self.assertEqual(1, mock_put.call_count)
+
+        # As nova failed to allocate on the dest host we only expect allocation
+        # on the source
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor, source_usages)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor, source_allocation)
+
+        self._delete_and_check_allocations(server)
+
+    def test_force_evacuate_fails_allocating_on_dest_host(self):
+        self._test_evacuate_fails_allocating_on_dest_host(force=True)
+
+    def test_evacuate_fails_allocating_on_dest_host(self):
+        self._test_evacuate_fails_allocating_on_dest_host(force=False)
 
     def test_server_delete_fails_due_to_conflict(self):
         source_hostname = self.compute1.host

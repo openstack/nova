@@ -757,7 +757,7 @@ class TestUtils(test.NoDBTestCase):
         dest_node = objects.ComputeNode(uuid=uuids.dest_node, host='dest-host')
 
         @mock.patch.object(reportclient,
-                           'get_allocations_for_consumer_by_provider',
+                           'get_allocs_for_consumer',
                            return_value={})
         @mock.patch.object(reportclient,
                            'claim_resources',
@@ -766,7 +766,7 @@ class TestUtils(test.NoDBTestCase):
             utils.claim_resources_on_destination(
                 self.context, reportclient, instance, source_node, dest_node)
             mock_get_allocs.assert_called_once_with(
-                self.context, uuids.source_node, instance.uuid)
+                self.context, instance.uuid)
 
         test()
 
@@ -780,21 +780,35 @@ class TestUtils(test.NoDBTestCase):
             uuid=uuids.source_node, host=instance.host)
         dest_node = objects.ComputeNode(uuid=uuids.dest_node, host='dest-host')
         source_res_allocs = {
-            'VCPU': instance.vcpus,
-            'MEMORY_MB': instance.memory_mb,
-            # This would really include ephemeral and swap too but we're lazy.
-            'DISK_GB': instance.root_gb
+            'allocations': {
+                uuids.source_node: {
+                    'resources': {
+                        'VCPU': instance.vcpus,
+                        'MEMORY_MB': instance.memory_mb,
+                        # This would really include ephemeral and swap too but
+                        # we're lazy.
+                        'DISK_GB': instance.root_gb
+                    }
+                }
+            },
+            'consumer_generation': 1,
+            'project_id': uuids.project_id,
+            'user_id': uuids.user_id
         }
         dest_alloc_request = {
             'allocations': {
                 uuids.dest_node: {
-                    'resources': source_res_allocs
+                    'resources': {
+                        'VCPU': instance.vcpus,
+                        'MEMORY_MB': instance.memory_mb,
+                        'DISK_GB': instance.root_gb
+                    }
                 }
-            }
+            },
         }
 
         @mock.patch.object(reportclient,
-                           'get_allocations_for_consumer_by_provider',
+                           'get_allocs_for_consumer',
                            return_value=source_res_allocs)
         @mock.patch.object(reportclient,
                            'claim_resources', return_value=False)
@@ -806,11 +820,11 @@ class TestUtils(test.NoDBTestCase):
                               self.context, reportclient, instance,
                               source_node, dest_node)
             mock_get_allocs.assert_called_once_with(
-                self.context, uuids.source_node, instance.uuid)
+                self.context, instance.uuid)
             mock_claim.assert_called_once_with(
                 self.context, instance.uuid, dest_alloc_request,
                 instance.project_id, instance.user_id,
-                allocation_request_version='1.12')
+                allocation_request_version='1.28', consumer_generation=1)
 
         test()
 
@@ -830,24 +844,28 @@ class TestUtils(test.NoDBTestCase):
         dest_alloc_request = {
             'allocations': {
                 uuids.dest_node: {
-                    'resources': source_res_allocs
+                    'resources': {
+                        'VCPU': instance.vcpus,
+                        'MEMORY_MB': instance.memory_mb,
+                        'DISK_GB': instance.root_gb
+                    }
                 }
-            }
+            },
         }
 
         @mock.patch.object(reportclient,
-                           'get_allocations_for_consumer_by_provider')
+                           'get_allocations_for_consumer')
         @mock.patch.object(reportclient,
                            'claim_resources', return_value=True)
         def test(mock_claim, mock_get_allocs):
             utils.claim_resources_on_destination(
                 self.context, reportclient, instance, source_node, dest_node,
-                source_res_allocs)
+                source_res_allocs, consumer_generation=None)
             self.assertFalse(mock_get_allocs.called)
             mock_claim.assert_called_once_with(
                 self.context, instance.uuid, dest_alloc_request,
                 instance.project_id, instance.user_id,
-                allocation_request_version='1.12')
+                allocation_request_version='1.28', consumer_generation=None)
 
         test()
 
@@ -869,7 +887,8 @@ class TestUtils(test.NoDBTestCase):
 
         mock_client.claim_resources.assert_called_once_with(
             ctx, uuids.instance, mock.sentinel.alloc_req, uuids.project_id,
-            uuids.user_id, allocation_request_version=None)
+            uuids.user_id, allocation_request_version=None,
+            consumer_generation=None)
         self.assertTrue(res)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
