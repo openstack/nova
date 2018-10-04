@@ -50,7 +50,7 @@ WARN_EVERY = 10
 PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
 RESHAPER_VERSION = '1.30'
 CONSUMER_GENERATION_VERSION = '1.28'
-GRANULAR_AC_VERSION = '1.25'
+NESTED_AC_VERSION = '1.29'
 ALLOW_RESERVED_EQUAL_TOTAL_INVENTORY_VERSION = '1.26'
 POST_RPS_RETURNS_PAYLOAD_API_VERSION = '1.20'
 AGGREGATE_GENERATION_VERSION = '1.19'
@@ -350,10 +350,9 @@ class SchedulerReportClient(object):
             "Candidates are in either 'foo' or 'bar', but definitely in 'baz'"
 
         """
-        # NOTE(gibi): claim_resources will use the this version as well so to
-        # support consumer generations we need to do the allocation candidate
-        # query with high enough version as well.
-        version = CONSUMER_GENERATION_VERSION
+        # Note that claim_resources() will use this version as well to
+        # make allocations by `PUT /allocations/{consumer_uuid}`
+        version = NESTED_AC_VERSION
         qparams = resources.to_querystring()
         url = "/allocation_candidates?%s" % qparams
         resp = self.get(url, version=version,
