@@ -666,6 +666,38 @@ class MediumFakeDriver(FakeDriver):
     local_gb = 1028
 
 
+class MediumFakeDriverWithNestedCustomResources(MediumFakeDriver):
+    # A MediumFakeDriver variant that also reports CUSTOM_MAGIC resources on
+    # a nested resource provider
+    vcpus = 10
+    memory_mb = 8192
+    local_gb = 1028
+    child_resources = {
+            'CUSTOM_MAGIC': {
+                'total': 10,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 10,
+                'step_size': 1,
+                'allocation_ratio': 1,
+            }
+    }
+
+    def update_provider_tree(self, provider_tree, nodename, allocations=None):
+        super(
+            MediumFakeDriverWithNestedCustomResources,
+            self).update_provider_tree(
+                provider_tree, nodename,
+                allocations=allocations)
+
+        if not provider_tree.exists(nodename + '-child'):
+            provider_tree.new_child(name=nodename + '-child',
+                                    parent=nodename)
+
+        provider_tree.update_inventory(nodename + '-child',
+                                       self.child_resources)
+
+
 class FakeRescheduleDriver(FakeDriver):
     """FakeDriver derivative that triggers a reschedule on the first spawn
     attempt. This is expected to only be used in tests that have more than

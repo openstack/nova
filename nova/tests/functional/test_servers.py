@@ -13,8 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import datetime
 import time
+import unittest
 import zlib
 
 from keystoneauth1 import adapter
@@ -4839,3 +4841,97 @@ class ConsumerGenerationConflictTest(
 
         # retry the delete to make sure that allocations are removed this time
         self._delete_and_check_allocations(server)
+
+
+class ServerMovingTestsWithNestedComputes(ServerMovingTests):
+    """Runs all the server moving tests while the computes have nested trees.
+    The servers still do not request resources from any child provider though.
+    """
+    compute_driver = 'fake.MediumFakeDriverWithNestedCustomResources'
+
+
+class ServerMovingTestsWithNestedResourceRequests(
+    ServerMovingTestsWithNestedComputes):
+    """Runs all the server moving tests while the computes have nested trees.
+    The servers also request resources from child providers.
+    """
+
+    def setUp(self):
+        super(ServerMovingTestsWithNestedResourceRequests, self).setUp()
+        # modify the flavors used in the ServerMoving test base class to
+        # require one piece of CUSTOM_MAGIC resource as well.
+
+        for flavor in [self.flavor1, self.flavor2, self.flavor3]:
+            self.api.post_extra_spec(
+                flavor['id'], {'extra_specs': {'resources:CUSTOM_MAGIC': 1}})
+            # save the extra_specs in the flavor stored in the test case as
+            # well
+            flavor['extra_specs'] = {'resources:CUSTOM_MAGIC': 1}
+
+    def _check_allocation_during_evacuate(
+            self, flavor, server_uuid, source_root_rp_uuid, dest_root_rp_uuid):
+        # NOTE(gibi): evacuate is the only case when the same consumer has
+        # allocation from two different RP trees so we need a special check
+        # here.
+        allocations = self._get_allocations_by_server_uuid(server_uuid)
+        source_rps = self._get_all_rp_uuids_in_a_tree(source_root_rp_uuid)
+        dest_rps = self._get_all_rp_uuids_in_a_tree(dest_root_rp_uuid)
+
+        self.assertEqual(set(source_rps + dest_rps), set(allocations))
+
+        total_source_allocation = collections.defaultdict(int)
+        total_dest_allocation = collections.defaultdict(int)
+        for rp, alloc in allocations.items():
+            for rc, value in alloc['resources'].items():
+                if rp in source_rps:
+                    total_source_allocation[rc] += value
+                else:
+                    total_dest_allocation[rc] += value
+
+        self.assertEqual(
+            self._resources_from_flavor(flavor), total_source_allocation)
+        self.assertEqual(
+            self._resources_from_flavor(flavor), total_dest_allocation)
+
+    @unittest.expectedFailure
+    def test_live_migrate_force(self):
+        # This test shows a bug. The replace_allocation_with_migration() call
+        # only returns the allocation on the compute RP and therefore the
+        # LiveMigrationTask._held_migration only stores and reapplies that
+        # during the move. Therefore the allocation on the child RP is lost
+        # during the force live migration
+        super(ServerMovingTestsWithNestedResourceRequests,
+              self).test_live_migrate_force()
+
+    @unittest.expectedFailure
+    def test_evacuate(self):
+        # This test shows a bug. It seems that when the source allocation is
+        # dropped after the failed evacuate nova only drops the allocation from
+        # the root RP but not from the child RP.
+        super(ServerMovingTestsWithNestedResourceRequests,
+              self).test_evacuate()
+
+    @unittest.expectedFailure
+    def test_evacuate_rebuild_on_dest_fails(self):
+        # This test shows a bug. It seems that when the rebuild fails on the
+        # destination host only the root RP allocation is deleted on the dest
+        # host.
+        super(ServerMovingTestsWithNestedResourceRequests,
+              self).test_evacuate_rebuild_on_dest_fails()
+
+    @unittest.expectedFailure
+    def test_evacuate_claim_on_dest_fails(self):
+        # This test shows a bug. It seems that when the evacuation fails on the
+        # destination host only the root RP allocation is deleted on the dest
+        # host.
+        super(ServerMovingTestsWithNestedResourceRequests,
+              self).test_evacuate_claim_on_dest_fails()
+
+    @unittest.expectedFailure
+    def test_evacuate_forced_host(self):
+        # This test shows a bug. When the conductor tries to claim the same
+        # resources on the dest host that was on the source host it only
+        # considers the root RP allocations therefore the child RP allocation
+        # isn't replicated on the dest host.
+        super(ServerMovingTestsWithNestedResourceRequests,
+              self).test_evacuate_forced_host()
