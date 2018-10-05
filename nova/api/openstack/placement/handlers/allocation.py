@@ -51,7 +51,8 @@ ALLOCATION_SCHEMA = {
                         "type": "object",
                         "patternProperties": {
                             "^[0-9A-Z_]+$": {
-                                "type": "integer"
+                                "type": "integer",
+                                "minimum": 1,
                             }
                         },
                         "additionalProperties": False
