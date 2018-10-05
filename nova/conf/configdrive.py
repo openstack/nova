@@ -17,22 +17,20 @@ from oslo_config import cfg
 config_drive_opts = [
     cfg.StrOpt('config_drive_format',
         default='iso9660',
-        choices=('iso9660', 'vfat'),
+        choices=[
+            ('iso9660', 'A file system image standard that is widely '
+             'supported across operating systems.'),
+            ('vfat', 'Provided for legacy reasons and to enable live '
+             'migration with the libvirt driver and non-shared storage')],
         help="""
 Configuration drive format
 
 Configuration drive format that will contain metadata attached to the
 instance when it boots.
 
-Possible values:
-
-* iso9660: A file system image standard that is widely supported across
-  operating systems. NOTE: Mind the libvirt bug
-  (https://bugs.launchpad.net/nova/+bug/1246201) - If your hypervisor
-  driver is libvirt, and you want live migrate to work without shared storage,
-  then use VFAT.
-* vfat: For legacy reasons, you can configure the configuration drive to
-  use VFAT format instead of ISO 9660.
+Due to a `libvirt bug <https://bugs.launchpad.net/nova/+bug/1246201>`_, you
+should use ``vfat`` if you wish to live migrate and are not using shared
+storage.
 
 Related options:
 

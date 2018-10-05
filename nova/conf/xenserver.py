@@ -162,7 +162,11 @@ session, which allows you to make concurrent XenAPI connections.
 xenapi_vm_utils_opts = [
     cfg.StrOpt('cache_images',
         default='all',
-        choices=('all', 'some', 'none'),
+        choices=[
+            ('all', 'Will cache all images'),
+            ('some', 'Will only cache images that have the image_property '
+             '``cache_in_nova=True``'),
+            ('none', 'Turns off caching entirely')],
         help="""
 Cache glance images locally.
 
@@ -170,13 +174,6 @@ The value for this option must be chosen from the choices listed
 here. Configuring a value other than these will default to 'all'.
 
 Note: There is nothing that deletes these images.
-
-Possible values:
-
-* `all`: will cache all images.
-* `some`: will only cache images that have the
-  image_property `cache_in_nova=True`.
-* `none`: turns off caching entirely.
 """),
     cfg.IntOpt('image_compression_level',
         min=1,
@@ -438,27 +435,28 @@ GlanceStore.
 """),
     cfg.StrOpt('image_handler',
         default='direct_vhd',
-        choices=('direct_vhd', 'vdi_local_dev', 'vdi_remote_stream'),
+        choices=[
+            ('direct_vhd', 'This plugin directly processes the VHD files in '
+             'XenServer SR(Storage Repository). So this plugin only works '
+             'when the host\'s SR type is file system based e.g. ext, nfs.'),
+            ('vdi_local_dev', 'This plugin implements an image handler which '
+             'attaches the instance\'s VDI as a local disk to the VM where '
+             'the OpenStack Compute service runs in. It uploads the raw disk '
+             'to glance when creating image; when booting an instance from a '
+             'glance image, it downloads the image and streams it into the '
+             'disk which is attached to the compute VM.'),
+            ('vdi_remote_stream', 'This plugin implements an image handler '
+             'which works as a proxy between glance and XenServer. The VHD '
+             'streams to XenServer via a remote import API supplied by XAPI '
+             'for image download; and for image upload, the VHD streams from '
+             'XenServer via a remote export API supplied by XAPI. This '
+             'plugin works for all SR types supported by XenServer.'),
+        ],
         help="""
 The plugin used to handle image uploads and downloads.
 
 Provide a short name representing an image driver required to
 handle the image between compute host and glance.
-
-Description for the allowed values:
-* ``direct_vhd``: This plugin directly processes the VHD files in XenServer
-SR(Storage Repository). So this plugin only works when the host's SR
-type is file system based e.g. ext, nfs.
-* ``vdi_local_dev``: This plugin implements an image handler which attaches
-the instance's VDI as a local disk to the VM where the OpenStack Compute
-service runs in. It uploads the raw disk to glance when creating image;
-When booting an instance from a glance image, it downloads the image and
-streams it into the disk which is attached to the compute VM.
-* ``vdi_remote_stream``: This plugin implements an image handler which works
-as a proxy between glance and XenServer. The VHD streams to XenServer via
-a remote import API supplied by XAPI for image download; and for image
-upload, the VHD streams from XenServer via a remote export API supplied
-by XAPI. This plugin works for all SR types supported by XenServer.
 """),
 ]
 

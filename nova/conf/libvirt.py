@@ -451,21 +451,17 @@ Related options:
     * live_migration_permit_post_copy
 """),
     cfg.StrOpt('snapshot_image_format',
-               choices=('raw', 'qcow2', 'vmdk', 'vdi'),
-               help="""
+        choices=[
+            ('raw', 'RAW disk format'),
+            ('qcow2', 'KVM default disk format'),
+            ('vmdk', 'VMWare default disk format'),
+            ('vdi', 'VirtualBox default disk format'),
+        ],
+        help="""
 Determine the snapshot image format when sending to the image service.
 
 If set, this decides what format is used when sending the snapshot to the
-image service.
-If not set, defaults to same type as source image.
-
-Possible values:
-
-* ``raw``: RAW disk format
-* ``qcow2``: KVM default disk format
-* ``vmdk``: VMWare default disk format
-* ``vdi``: VirtualBox default disk format
-* If not set, defaults to same type as source image.
+image service. If not set, defaults to same type as source image.
 """),
     cfg.StrOpt('disk_prefix',
                help="""
@@ -491,22 +487,20 @@ Related options:
                     ' soft reboot request is made. We fall back to hard reboot'
                     ' if instance does not shutdown within this window.'),
     cfg.StrOpt('cpu_mode',
-               choices=('host-model', 'host-passthrough', 'custom', 'none'),
-               help="""
+        choices=[
+            ('host-model', 'Clones the host CPU feature flags'),
+            ('host-passthrough', 'Use the host CPU model exactly'),
+            ('custom', 'Use the CPU model in ``[libvirt]cpu_model``'),
+            ('none', "Don't set a specific CPU model. For instances with "
+             "``[libvirt] virt_type`` as KVM/QEMU, the default CPU model from "
+             "QEMU will be used, which provides a basic set of CPU features "
+             "that are compatible with most hosts"),
+        ],
+        help="""
 Is used to set the CPU mode an instance should have.
 
-If virt_type="kvm|qemu", it will default to "host-model", otherwise it will
-default to "none".
-
-Possible values:
-
-* ``host-model``: Clones the host CPU feature flags
-* ``host-passthrough``: Use the host CPU model exactly
-* ``custom``: Use a named CPU model
-* ``none``: Don't set a specific CPU model. For instances with
-  ``virt_type`` as KVM/QEMU, the default CPU model from QEMU will be used,
-  which provides a basic set of CPU features that are compatible with most
-  hosts.
+If ``virt_type="kvm|qemu"``, it will default to ``host-model``, otherwise it
+will default to ``none``.
 
 Related options:
 
@@ -875,17 +869,15 @@ libvirt_imagecache_opts = [
 
 libvirt_lvm_opts = [
     cfg.StrOpt('volume_clear',
-               default='zero',
-               choices=('none', 'zero', 'shred'),
-               help="""
+        default='zero',
+        choices=[
+            ('zero', 'Overwrite volumes with zeroes'),
+            ('shred', 'Overwrite volume repeatedly'),
+            ('none', 'Do not wipe deleted volumes'),
+        ],
+        help="""
 Method used to wipe ephemeral disks when they are deleted. Only takes effect
 if LVM is set as backing storage.
-
-Possible values:
-
-* none - do not wipe deleted volumes
-* zero - overwrite volumes with zeroes
-* shred - overwrite volume repeatedly
 
 Related options:
 

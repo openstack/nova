@@ -225,9 +225,10 @@ Related options:
 """),
     cfg.ListOpt(
         'auth_schemes',
-        item_type=types.String(
-            choices=['none', 'vencrypt']
-        ),
+        item_type=types.String(choices=(
+            ('none', 'Allow connection without authentication'),
+            ('vencrypt', 'Use VeNCrypt authentication scheme'),
+        )),
         default=['none'],
         help="""
 The authentication schemes to use with the compute node.
@@ -236,11 +237,6 @@ Control what RFB authentication schemes are permitted for connections between
 the proxy and the compute host. If multiple schemes are enabled, the first
 matching scheme will be used, thus the strongest schemes should be listed
 first.
-
-Possible values:
-
-* ``none``: allow connection without authentication
-* ``vencrypt``: use VeNCrypt authentication scheme
 
 Related options:
 
