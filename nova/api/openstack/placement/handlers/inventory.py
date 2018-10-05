@@ -33,23 +33,28 @@ BASE_INVENTORY_SCHEMA = {
         },
         "total": {
             "type": "integer",
-            "maximum": db.MAX_INT
+            "maximum": db.MAX_INT,
+            "minimum": 1,
         },
         "reserved": {
             "type": "integer",
-            "maximum": db.MAX_INT
+            "maximum": db.MAX_INT,
+            "minimum": 0,
         },
         "min_unit": {
             "type": "integer",
-            "maximum": db.MAX_INT
+            "maximum": db.MAX_INT,
+            "minimum": 1
         },
         "max_unit": {
             "type": "integer",
-            "maximum": db.MAX_INT
+            "maximum": db.MAX_INT,
+            "minimum": 1
         },
         "step_size": {
             "type": "integer",
-            "maximum": db.MAX_INT
+            "maximum": db.MAX_INT,
+            "minimum": 1
         },
         "allocation_ratio": {
             "type": "number",
@@ -104,8 +109,8 @@ OUTPUT_INVENTORY_FIELDS = [
 ]
 INVENTORY_DEFAULTS = {
     'reserved': 0,
-    'min_unit': 0,
-    'max_unit': 0,
+    'min_unit': 1,
+    'max_unit': db.MAX_INT,
     'step_size': 1,
     'allocation_ratio': 1.0
 }
