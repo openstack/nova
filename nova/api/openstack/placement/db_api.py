@@ -36,7 +36,7 @@ def configure(conf):
 
 
 def get_placement_engine():
-    return placement_context_manager.get_legacy_facade().get_engine()
+    return placement_context_manager.writer.get_engine()
 
 
 @enginefacade.transaction_context_provider
