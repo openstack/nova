@@ -4350,12 +4350,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             [mock.call(host='127.0.0.1', port=10000),
              mock.call(host='127.0.0.1', port=10001)])
 
-    @mock.patch('nova.virt.disk.api.get_disk_info',
-                return_value=mock.Mock(disk_size=0))
+    @mock.patch('os.stat', return_value=mock.Mock(st_blocks=0))
+    @mock.patch('os.path.getsize', return_value=0)
     @mock.patch('nova.virt.libvirt.storage.lvm.get_volume_size',
                 return_value='fake-size')
     def test_detach_encrypted_volumes(self, mock_get_volume_size,
-                                      mock_getsize):
+                                      mock_getsize, mock_stat):
         """Test that unencrypted volumes are not disconnected with dmcrypt."""
         instance = objects.Instance(**self.test_instance)
         xml = """
@@ -8845,9 +8845,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             return mock_virDomain
         mock_lookup.side_effect = mock_lookup_side_effect
 
-        mock_qemu_img_info = mock.Mock(disk_size=10737418240,
-                                       virtual_size=10737418240)
-        return (mock_qemu_img_info, mock_lookup)
+        mock_qemu_img_info = mock.Mock()
+        mock_qemu_img_info.return_value = mock.Mock(disk_size=10737418240,
+                                                    virtual_size=10737418240)
+        mock_stat = mock.Mock()
+        mock_stat.return_value = mock.Mock(st_blocks=20971520)
+        mock_get_size = mock.Mock()
+        mock_get_size.return_value = 10737418240
+
+        return (mock_stat, mock_get_size, mock_qemu_img_info, mock_lookup)
 
     def test_is_shared_block_storage_rbd(self):
         self.flags(images_type='rbd', group='libvirt')
@@ -8940,7 +8946,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                   {'connection_info': 'info', 'mount_device': '/dev/vda'}]}
         instance = objects.Instance(**self.test_instance)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        (mock_qemu_img_info, mock_lookup) =\
+        (mock_stat, mock_get_size, mock_qemu_img_info, mock_lookup) =\
             self._is_shared_block_storage_test_create_mocks(disks)
         data = objects.LibvirtLiveMigrateData(is_volume_backed=True,
                                               is_shared_instance_path=False)
@@ -8964,18 +8970,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                   {'connection_info': 'info', 'mount_device': '/dev/vda'}]}
         instance = objects.Instance(**self.test_instance)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        (mock_qemu_img_info, mock_lookup) =\
+        (mock_stat, mock_get_size, mock_qemu_img_info, mock_lookup) =\
             self._is_shared_block_storage_test_create_mocks(disks)
         data = objects.LibvirtLiveMigrateData(is_volume_backed=True,
                                               is_shared_instance_path=False)
         with test.nested(
+                mock.patch('os.stat', mock_stat),
+                mock.patch('os.path.getsize', mock_get_size),
                 mock.patch.object(libvirt_driver.disk_api,
                                   'get_disk_info', mock_qemu_img_info),
                 mock.patch.object(host.Host, '_get_domain', mock_lookup)):
             self.assertFalse(drvr._is_shared_block_storage(
                                     instance, data,
                                     block_device_info = bdi))
-        mock_qemu_img_info.assert_called_once_with('/instance/disk.local')
+        mock_stat.assert_called_once_with('/instance/disk.local')
+        mock_get_size.assert_called_once_with('/instance/disk.local')
         mock_lookup.assert_called_once_with(instance)
 
     def test_is_shared_block_storage_nfs(self):
@@ -11528,8 +11537,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                       migrate_data=migrate_data)
         self.assertEqual(['cmt'], res.supported_perf_events)
 
+    @mock.patch('os.stat')
+    @mock.patch('os.path.getsize')
     @mock.patch('nova.virt.disk.api.get_disk_info')
-    def test_get_instance_disk_info_works_correctly(self, mock_qemu_img_info):
+    def test_get_instance_disk_info_works_correctly(self, mock_qemu_img_info,
+                                                    mock_get_size, mock_stat):
         # Test data
         instance = objects.Instance(**self.test_instance)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
@@ -11546,10 +11558,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         vdmock = mock.Mock(autospec=fakelibvirt.virDomain)
         vdmock.XMLDesc.return_value = dummyxml
 
-        mock_qemu_img_info.side_effect = [
-            mock.Mock(disk_size=10737418240, virtual_size=10737418240),
-            mock.Mock(disk_size=3328599655, virtual_size=21474836480)
-        ]
+        mock_qemu_img_info.return_value = mock.Mock(disk_size=3328599655,
+                                                    virtual_size=21474836480)
+        mock_stat.return_value = mock.Mock(st_blocks=20971520)
+        mock_get_size.return_value = 10737418240
 
         def fake_lookup(_uuid):
             if _uuid == instance.uuid:
@@ -11566,18 +11578,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(info[0]['type'], 'raw')
         self.assertEqual(info[0]['path'], '/test/disk')
         self.assertEqual(info[0]['disk_size'], 10737418240)
+        self.assertEqual(info[0]['virt_disk_size'], 10737418240)
         self.assertEqual(info[0]['backing_file'], "")
         self.assertEqual(info[0]['over_committed_disk_size'], 0)
         self.assertEqual(info[1]['type'], 'qcow2')
         self.assertEqual(info[1]['path'], '/test/disk.local')
+        self.assertEqual(info[1]['disk_size'], 3328599655)
         self.assertEqual(info[1]['virt_disk_size'], 21474836480)
         self.assertEqual(info[1]['backing_file'], "file")
         self.assertEqual(info[1]['over_committed_disk_size'], 18146236825)
 
         vdmock.XMLDesc.assert_called_once_with(0)
-        mock_qemu_img_info.assert_has_calls([mock.call('/test/disk'),
-                                             mock.call('/test/disk.local')])
-        self.assertEqual(2, mock_qemu_img_info.call_count)
+        mock_qemu_img_info.called_once_with('/test/disk.local')
+        mock_stat.called_once_with('/test/disk')
+        mock_get_size.called_once_with('/test/disk')
 
     def test_post_live_migration(self):
         vol = {'block_device_mapping': [
@@ -11664,9 +11678,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                     instance)
         _test()
 
+    @mock.patch('os.stat')
+    @mock.patch('os.path.getsize')
     @mock.patch('nova.virt.disk.api.get_disk_info')
     def test_get_instance_disk_info_excludes_volumes(
-            self, mock_qemu_img_info):
+            self, mock_qemu_img_info, mock_get_size, mock_stat):
         # Test data
         instance = objects.Instance(**self.test_instance)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
@@ -11689,10 +11705,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         vdmock = mock.Mock(autospec=fakelibvirt.virDomain)
         vdmock.XMLDesc.return_value = dummyxml
 
-        mock_qemu_img_info.side_effect = [
-            mock.Mock(disk_size=10737418240, virtual_size=10737418240),
-            mock.Mock(disk_size=3328599655, virtual_size=21474836480)
-        ]
+        mock_qemu_img_info.return_value = mock.Mock(disk_size=3328599655,
+                                                    virtual_size=21474836480)
+        mock_stat.return_value = mock.Mock(st_blocks=20971520)
+        mock_get_size.return_value = 10737418240
 
         def fake_lookup(_uuid):
             if _uuid == instance.uuid:
@@ -11723,12 +11739,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(info[1]['over_committed_disk_size'], 18146236825)
 
         vdmock.XMLDesc.assert_called_once_with(0)
-        mock_qemu_img_info.assert_has_calls([mock.call('/test/disk'),
-                                             mock.call('/test/disk.local')])
-        self.assertEqual(2, mock_qemu_img_info.call_count)
+        mock_qemu_img_info.assert_called_once_with('/test/disk.local')
+        mock_stat.assert_called_once_with('/test/disk')
+        mock_get_size.assert_called_once_with('/test/disk')
 
-    @mock.patch('nova.virt.disk.api.get_disk_info')
-    def test_get_instance_disk_info_no_bdinfo_passed(self, mock_qemu_img_info):
+    @mock.patch('os.stat')
+    @mock.patch('os.path.getsize')
+    def test_get_instance_disk_info_no_bdinfo_passed(self, mock_get_size,
+                                                     mock_stat):
         # NOTE(ndipanov): _get_disk_overcomitted_size_total calls this method
         # without access to Nova's block device information. We want to make
         # sure that we guess volumes mostly correctly in that case as well
@@ -11749,8 +11767,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         vdmock = mock.Mock(autospec=fakelibvirt.virDomain)
         vdmock.XMLDesc.return_value = dummyxml
 
-        mock_qemu_img_info.return_value = mock.Mock(disk_size=10737418240,
-                                                    virtual_size=10737418240)
+        mock_stat.return_value = mock.Mock(st_blocks=20971520)
+        mock_get_size.return_value = 10737418240
 
         def fake_lookup(_uuid):
             if _uuid == instance.uuid:
@@ -11770,7 +11788,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(info[0]['over_committed_disk_size'], 0)
 
         vdmock.XMLDesc.assert_called_once_with(0)
-        mock_qemu_img_info.assert_called_once_with(path)
+        mock_stat.assert_called_once_with(path)
+        mock_get_size.assert_called_once_with(path)
 
     def test_spawn_with_network_info(self):
         def fake_getLibVersion():

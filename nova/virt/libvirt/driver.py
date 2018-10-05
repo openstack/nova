@@ -7861,41 +7861,41 @@ class LibvirtDriver(driver.ComputeDriver):
                 driver_type = device.driver_format
             # get the real disk size or
             # raise a localized error if image is unavailable
-            if disk_type == 'file':
+            if disk_type == 'file' and driver_type == 'ploop':
+                dk_size = 0
+                for dirpath, dirnames, filenames in os.walk(path):
+                    for f in filenames:
+                        fp = os.path.join(dirpath, f)
+                        dk_size += os.path.getsize(fp)
                 qemu_img_info = disk_api.get_disk_info(path)
-                if driver_type == 'ploop':
-                    dk_size = 0
-                    for dirpath, dirnames, filenames in os.walk(path):
-                        for f in filenames:
-                            fp = os.path.join(dirpath, f)
-                            dk_size += os.path.getsize(fp)
-                else:
-                    dk_size = qemu_img_info.disk_size
-
-                # NOTE(lyarwood): Fetch the virtual size for all file disks.
                 virt_size = qemu_img_info.virtual_size
+                backing_file = libvirt_utils.get_disk_backing_file(path)
+                over_commit_size = int(virt_size) - dk_size
+
+            elif disk_type == 'file' and driver_type == 'qcow2':
+                qemu_img_info = disk_api.get_disk_info(path)
+                dk_size = qemu_img_info.disk_size
+                virt_size = qemu_img_info.virtual_size
+                backing_file = libvirt_utils.get_disk_backing_file(path)
+                over_commit_size = int(virt_size) - dk_size
+
+            elif disk_type == 'file':
+                dk_size = os.stat(path).st_blocks * 512
+                virt_size = os.path.getsize(path)
+                backing_file = ""
+                over_commit_size = 0
 
             elif disk_type == 'block' and block_device_info:
-                # FIXME(lyarwood): There's no reason to use a separate call
-                # here, once disk_api uses privsep this should be removed along
-                # with the surrounding conditionals to simplify this mess.
                 dk_size = lvm.get_volume_size(path)
-                # NOTE(lyarwood): As above, we should be using disk_api to
-                # fetch the virt-size but can't as it currently runs qemu-img
-                # as an unprivileged user, causing a failure for block devices.
                 virt_size = dk_size
+                backing_file = ""
+                over_commit_size = 0
+
             else:
                 LOG.debug('skipping disk %(path)s (%(target)s) - unable to '
                           'determine if volume',
                           {'path': path, 'target': target})
                 continue
-
-            if driver_type in ("qcow2", "ploop"):
-                backing_file = libvirt_utils.get_disk_backing_file(path)
-                over_commit_size = int(virt_size) - dk_size
-            else:
-                backing_file = ""
-                over_commit_size = 0
 
             disk_info.append({'type': driver_type,
                               'path': path,
