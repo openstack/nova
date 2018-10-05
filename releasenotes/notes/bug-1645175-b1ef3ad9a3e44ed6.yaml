@@ -1,0 +1,11 @@
+---
+other:
+  - |
+     ``instance.shutdown.end`` versioned notification will
+     have an empty ``ip_addresses`` field since the network
+     resources associated with the instance are deallocated
+     before this notification is sent, which is actually
+     more accurate. Consumers should rely on the
+     instance.shutdown.start notification if they need the
+     network information for the instance when it is being
+     deleted.
