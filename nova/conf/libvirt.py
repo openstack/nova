@@ -112,10 +112,6 @@ use.
 The choice of this type must match the underlying virtualization strategy
 you have chosen for this host.
 
-Possible values:
-
-* See the predefined set of case-sensitive values.
-
 Related options:
 
 * ``connection_uri``: depends on this
@@ -485,7 +481,7 @@ Related options:
                     ' if instance does not shutdown within this window.'),
     cfg.StrOpt('cpu_mode',
         choices=[
-            ('host-model', 'Clones the host CPU feature flags'),
+            ('host-model', 'Clone the host CPU feature flags'),
             ('host-passthrough', 'Use the host CPU model exactly'),
             ('custom', 'Use the CPU model in ``[libvirt]cpu_model``'),
             ('none', "Don't set a specific CPU model. For instances with "
@@ -869,7 +865,7 @@ libvirt_lvm_opts = [
         default='zero',
         choices=[
             ('zero', 'Overwrite volumes with zeroes'),
-            ('shred', 'Overwrite volume repeatedly'),
+            ('shred', 'Overwrite volumes repeatedly'),
             ('none', 'Do not wipe deleted volumes'),
         ],
         help="""
