@@ -48,6 +48,7 @@ from nova.db import api as db
 from nova import exception
 from nova.network import api as network_api
 from nova.network import model as network_model
+from nova.network.neutronv2 import api as neutronv2_api
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields
@@ -94,8 +95,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_sync_instance_power_state')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     @mock.patch.object(objects.Migration, 'get_by_instance_and_status')
-    @mock.patch.object(nova.network.neutronv2.api.API,
-                       'migrate_instance_start')
+    @mock.patch.object(neutronv2_api.API, 'migrate_instance_start')
     def _test_handle_lifecycle_event(self, migrate_instance_start,
                                      mock_get_migration, mock_get,
                                      mock_sync, mock_get_power_state,
