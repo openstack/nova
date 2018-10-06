@@ -1,0 +1,8 @@
+---
+deprecations:
+  - |
+    The ``config_drive_format`` config option has been deprecated. This was
+    necessary to workaround an issue with libvirt that was later resolved in
+    libvirt v1.2.17. For more information refer to `bug #1246201`__.
+
+    __ https://bugs.launchpad.net/nova/+bug/1246201
