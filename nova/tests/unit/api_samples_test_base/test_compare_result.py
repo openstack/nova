@@ -43,7 +43,7 @@ class TestCompareResult(test.NoDBTestCase):
 
         # required by ApiSampleTestBase
         ast_instance.api_major_version = 'v2'
-        ast_instance._project_id = 'True'
+        ast_instance._use_project_id = 'True'
 
         # automagically create magic methods usually handled by test classes
         ast_instance.compute = mock.MagicMock()
