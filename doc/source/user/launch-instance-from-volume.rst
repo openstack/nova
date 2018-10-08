@@ -87,7 +87,7 @@ system.
 
       $ openstack volume list
       +--------------------------------------+--------------+-----------+------+-------------+
-      | ID                                   | Display Name | Status    | Size | Attached to |
+      | ID                                   | Name         | Status    | Size | Attached to |
       +--------------------------------------+--------------+-----------+------+-------------+
       | b8f7bbec-6274-4cd7-90e7-60916a5e75d4 | my-volume    | available |    8 |             |
       +--------------------------------------+--------------+-----------+------+-------------+
@@ -347,7 +347,7 @@ the volume to boot an instance.
 
       $ openstack volume list
       +---------------------+-----------------+--------+------+---------------------------------+
-      | ID                  | Display Name    | Status | Size | Attached to                     |
+      | ID                  | Name            | Status | Size | Attached to                     |
       +---------------------+-----------------+--------+------+---------------------------------+
       | c612f739-8592-44c4- | bootable_volume | in-use |  10  | Attached to myInstanceFromVolume|
       | b7d4-0fee2fe1da0c   |                 |        |      | on /dev/vda                     |
