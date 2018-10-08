@@ -2564,7 +2564,6 @@ class LibvirtConfigNodeDevice(LibvirtConfigObject):
                                                 **kwargs)
         self.name = None
         self.parent = None
-        self.driver = None
         self.pci_capability = None
         self.mdev_information = None
 
