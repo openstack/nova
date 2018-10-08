@@ -501,3 +501,13 @@ class PowerVMLiveMigrateData(LiveMigrateData):
         for field in self.fields:
             if field in legacy:
                 setattr(self, field, legacy[field])
+
+
+@obj_base.NovaObjectRegistry.register
+class VMwareLiveMigrateData(LiveMigrateData):
+    VERSION = '1.0'
+
+    fields = {
+        'cluster_name': fields.StringField(nullable=False),
+        'datastore_regex': fields.StringField(nullable=False),
+    }
