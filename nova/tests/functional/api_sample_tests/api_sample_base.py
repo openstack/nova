@@ -62,7 +62,7 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
     # any additional fixtures needed for this scenario
     _additional_fixtures = []
     sample_dir = None
-    _project_id = True
+    _use_project_id = True
 
     scenarios = [
         # test v2 with the v2.1 compatibility stack
@@ -74,7 +74,7 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
         # test v2.18 code without project id
         ('v2_1_noproject_id', {
             'api_major_version': 'v2.1',
-            '_project_id': False,
+            '_use_project_id': False,
             '_additional_fixtures': [
                 api_paste_fixture.ApiPasteNoProjectId]})
     ]
