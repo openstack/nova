@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    The ``os-simple-tenant-usage`` pagination has been fixed. In some cases,
+    nova usage-list would have returned incorrect results because of this.
+    See bug https://launchpad.net/bugs/1796689 for details.

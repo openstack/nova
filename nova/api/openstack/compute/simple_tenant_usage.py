@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import datetime
 
 import iso8601
@@ -141,7 +142,7 @@ class SimpleTenantUsageController(wsgi.Controller):
         instances = self._get_instances_all_cells(context, period_start,
                                                   period_stop, tenant_id,
                                                   limit, marker)
-        rval = {}
+        rval = collections.OrderedDict()
         flavors = {}
         all_server_usages = []
 
