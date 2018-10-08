@@ -2404,9 +2404,7 @@ class TestResize(BaseTestCase):
         instance.migration_context.new_pci_devices = objects.PciDeviceList(
             objects=pci_devs)
 
-        self.rt.tracked_instances = {
-            instance.uuid: obj_base.obj_to_primitive(instance)
-        }
+        self.rt.tracked_instances = set([instance.uuid])
 
         # not using mock.sentinel.ctx because drop_move_claim calls elevated
         ctx = mock.MagicMock()
@@ -2835,9 +2833,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # Stub out the is_bfv cache to make sure we remove the instance
         # from it after updating usage.
         self.rt.is_bfv[self.instance.uuid] = False
-        self.rt.tracked_instances = {
-            self.instance.uuid: obj_base.obj_to_primitive(self.instance)
-        }
+        self.rt.tracked_instances = set([self.instance.uuid])
         self.rt._update_usage_from_instance(mock.sentinel.ctx, self.instance,
                                             _NODENAME)
         # The instance should have been removed from the is_bfv cache.
@@ -2865,9 +2861,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
     def test_deleted(self, mock_update_usage, mock_check_bfv):
         mock_check_bfv.return_value = False
         self.instance.vm_state = vm_states.DELETED
-        self.rt.tracked_instances = {
-                self.instance.uuid: obj_base.obj_to_primitive(self.instance)
-        }
+        self.rt.tracked_instances = set([self.instance.uuid])
         self.rt._update_usage_from_instance(mock.sentinel.ctx,
                                             self.instance, _NODENAME, True)
 
@@ -2879,7 +2873,6 @@ class TestUpdateUsageFromInstance(BaseTestCase):
     def test_remove_deleted_instances_allocations_deleted_instance(self,
             mock_inst_get):
         rc = self.rt.reportclient
-        self.rt.tracked_instances = {}
         allocs = report.ProviderAllocInfo(
             allocations={uuids.deleted: "fake_deleted_instance"})
         rc.get_allocations_for_resource_provider = mock.MagicMock(
@@ -2905,7 +2898,6 @@ class TestUpdateUsageFromInstance(BaseTestCase):
     def test_remove_deleted_instances_allocations_building_instance(self,
             mock_inst_get):
         rc = self.rt.reportclient
-        self.rt.tracked_instances = {}
         allocs = report.ProviderAllocInfo(
             allocations={uuids.deleted: "fake_deleted_instance"})
         rc.get_allocations_for_resource_provider = mock.MagicMock(
@@ -2925,7 +2917,6 @@ class TestUpdateUsageFromInstance(BaseTestCase):
     def test_remove_deleted_instances_allocations_ignores_migrations(self,
             mock_inst_get):
         rc = self.rt.reportclient
-        self.rt.tracked_instances = {}
         allocs = report.ProviderAllocInfo(
             allocations={uuids.deleted: "fake_deleted_instance",
                          uuids.migration: "fake_migration"})
@@ -2950,7 +2941,6 @@ class TestUpdateUsageFromInstance(BaseTestCase):
     def test_remove_deleted_instances_allocations_scheduled_instance(self,
             mock_inst_get):
         rc = self.rt.reportclient
-        self.rt.tracked_instances = {}
         allocs = report.ProviderAllocInfo(
             allocations={uuids.scheduled: "fake_scheduled_instance"})
         rc.get_allocations_for_resource_provider = mock.MagicMock(
@@ -2977,7 +2967,6 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         """Test that we do NOT delete allocations for instances that are
         currently undergoing move operations.
         """
-        self.rt.tracked_instances = {}
         # Create 1 instance
         instance = _INSTANCE_FIXTURES[0].obj_clone()
         instance.uuid = uuids.moving_instance
@@ -2999,8 +2988,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         given node do not have their allocations removed.
         """
         rc = self.rt.reportclient
-        self.rt.tracked_instances = {
-            uuids.known: objects.Instance(uuid=uuids.known)}
+        self.rt.tracked_instances = set([uuids.known])
         allocs = report.ProviderAllocInfo(
             allocations={
                 uuids.known: {
@@ -3017,9 +3005,10 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         rc.delete_allocation_for_instance = mock.MagicMock()
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.MagicMock()
+        instance_by_uuid = {uuids.known: objects.Instance(uuid=uuids.known)}
         # Call the method.
         self.rt._remove_deleted_instances_allocations(ctx, cn, [],
-            self.rt.tracked_instances)
+            instance_by_uuid)
         # We don't delete the allocation because the node is tracking the
         # instance and has allocations for it.
         rc.delete_allocation_for_instance.assert_not_called()
@@ -3036,7 +3025,6 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         mock_inst_get.return_value = instance
         rc = self.rt.reportclient
         # No tracked instances on this node.
-        self.rt.tracked_instances = {}
         # But there is an allocation for an instance on this node.
         allocs = report.ProviderAllocInfo(
             allocations={
@@ -3056,7 +3044,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         ctx = mock.MagicMock()
         # Call the method.
         self.rt._remove_deleted_instances_allocations(
-            ctx, cn, [], self.rt.tracked_instances)
+            ctx, cn, [], {})
         # We don't delete the allocation because we're not sure what to do.
         # NOTE(mriedem): This is not actually the behavior we want. This is
         # testing the current behavior but in the future when we get smart
@@ -3085,7 +3073,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         for _ in side_effects:
             # If we didn't no op, this would blow up at 'ctx'.elevated()
             self.rt._remove_deleted_instances_allocations(
-                'ctx', cn, [], self.rt.tracked_instances)
+                'ctx', cn, [], {})
             rc.get_allocations_for_resource_provider.assert_called_once_with(
                 'ctx', cn.uuid)
             rc.get_allocations_for_resource_provider.reset_mock()

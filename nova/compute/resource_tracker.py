@@ -141,7 +141,8 @@ class ResourceTracker(object):
         self.compute_nodes = {}
         # Dict of Stats objects, keyed by nodename
         self.stats = collections.defaultdict(compute_stats.Stats)
-        self.tracked_instances = {}
+        # Set of UUIDs of instances tracked on this host.
+        self.tracked_instances = set()
         self.tracked_migrations = {}
         self.is_bfv = {}  # dict, keyed by instance uuid, to is_bfv boolean
         monitor_handler = monitors.MonitorHandler(self)
@@ -470,7 +471,7 @@ class ResourceTracker(object):
         # NOTE(lbeliveau): On resize on the same node, the instance is
         # included in both tracked_migrations and tracked_instances.
         elif (instance['uuid'] in self.tracked_instances):
-            self.tracked_instances.pop(instance['uuid'])
+            self.tracked_instances.remove(instance['uuid'])
             self._drop_pci_devices(instance, nodename, prefix)
             # TODO(lbeliveau): Validate if numa needs the same treatment.
 
@@ -1034,7 +1035,7 @@ class ResourceTracker(object):
                     migration.source_node == nodename)
         same_node = (incoming and outbound)
 
-        record = self.tracked_instances.get(uuid, None)
+        tracked = uuid in self.tracked_instances
         itype = None
         numa_topology = None
         sign = 0
@@ -1065,7 +1066,7 @@ class ResourceTracker(object):
                 numa_topology = self._get_migration_context_resource(
                     'numa_topology', instance, prefix='old_')
 
-        elif incoming and not record:
+        elif incoming and not tracked:
             # instance has not yet migrated here:
             itype = self._get_instance_type(context, instance, 'new_',
                     migration)
@@ -1074,7 +1075,7 @@ class ResourceTracker(object):
             # Allocate pci device(s) for the instance.
             sign = 1
 
-        elif outbound and not record:
+        elif outbound and not tracked:
             # instance migrated, but record usage for a possible revert:
             itype = self._get_instance_type(context, instance, 'old_',
                     migration)
@@ -1171,11 +1172,11 @@ class ResourceTracker(object):
             instance['vm_state'] in vm_states.ALLOW_RESOURCE_REMOVAL)
 
         if is_new_instance:
-            self.tracked_instances[uuid] = obj_base.obj_to_primitive(instance)
+            self.tracked_instances.add(uuid)
             sign = 1
 
         if is_removed_instance:
-            self.tracked_instances.pop(uuid)
+            self.tracked_instances.remove(uuid)
             sign = -1
 
         cn = self.compute_nodes[nodename]
@@ -1240,7 +1241,6 @@ class ResourceTracker(object):
         # operations for when allocations should be deleted when things didn't
         # happen according to the normal flow of events where the scheduler
         # always creates allocations for an instance
-        known_instances = set(self.tracked_instances.keys())
         try:
             # pai: report.ProviderAllocInfo namedtuple
             pai = self.reportclient.get_allocations_for_resource_provider(
@@ -1257,7 +1257,7 @@ class ResourceTracker(object):
             return
         read_deleted_context = context.elevated(read_deleted='yes')
         for consumer_uuid, alloc in allocations.items():
-            if consumer_uuid in known_instances:
+            if consumer_uuid in self.tracked_instances:
                 LOG.debug("Instance %s actively managed on this compute host "
                           "and has allocations in placement: %s.",
                           consumer_uuid, alloc)
@@ -1393,7 +1393,7 @@ class ResourceTracker(object):
         usage calculations to guard against potential out of memory
         errors.
         """
-        uuids1 = frozenset(self.tracked_instances.keys())
+        uuids1 = frozenset(self.tracked_instances)
         uuids2 = frozenset(self.tracked_migrations.keys())
         uuids = uuids1 | uuids2
 
