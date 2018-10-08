@@ -457,7 +457,7 @@ class ResourceTracker(object):
                 numa_topology = self._get_migration_context_resource(
                     'numa_topology', instance, prefix=prefix)
                 usage = self._get_usage_dict(
-                        instance_type, numa_topology=numa_topology)
+                        instance_type, instance, numa_topology=numa_topology)
                 self._drop_pci_devices(instance, nodename, prefix)
                 self._update_usage(usage, nodename, sign=-1)
 
@@ -1066,7 +1066,7 @@ class ResourceTracker(object):
         if itype:
             cn = self.compute_nodes[nodename]
             usage = self._get_usage_dict(
-                        itype, numa_topology=numa_topology)
+                        itype, instance, numa_topology=numa_topology)
             if self.pci_tracker and sign:
                 self.pci_tracker.update_pci_for_instance(
                     context, instance, sign=sign)
@@ -1176,8 +1176,8 @@ class ResourceTracker(object):
                 self.reportclient.update_instance_allocation(context, cn,
                                                              instance, sign)
             # new instance, update compute node resource usage:
-            self._update_usage(self._get_usage_dict(instance), nodename,
-                               sign=sign)
+            self._update_usage(self._get_usage_dict(instance, instance),
+                               nodename, sign=sign)
 
         # Stop tracking removed instances in the is_bfv cache. This needs to
         # happen *after* calling _get_usage_dict() since that relies on the
@@ -1486,13 +1486,16 @@ class ResourceTracker(object):
             # them. In that case - just get the instance flavor.
             return instance.flavor
 
-    def _get_usage_dict(self, object_or_dict, **updates):
+    def _get_usage_dict(self, object_or_dict, instance, **updates):
         """Make a usage dict _update methods expect.
 
         Accepts a dict or an Instance or Flavor object, and a set of updates.
         Converts the object to a dict and applies the updates.
 
         :param object_or_dict: instance or flavor as an object or just a dict
+        :param instance: nova.objects.Instance for the related operation; this
+                         is needed to determine if the instance is
+                         volume-backed
         :param updates: key-value pairs to update the passed object.
                         Currently only considers 'numa_topology', all other
                         keys are ignored.
@@ -1500,15 +1503,20 @@ class ResourceTracker(object):
         :returns: a dict with all the information from object_or_dict updated
                   with updates
         """
-        usage = {}
-        if isinstance(object_or_dict, objects.Instance):
+
+        def _is_bfv():
             # Check to see if we have the is_bfv value cached.
-            if object_or_dict.uuid in self.is_bfv:
-                is_bfv = self.is_bfv[object_or_dict.uuid]
+            if instance.uuid in self.is_bfv:
+                is_bfv = self.is_bfv[instance.uuid]
             else:
                 is_bfv = compute_utils.is_volume_backed_instance(
-                    object_or_dict._context, object_or_dict)
-                self.is_bfv[object_or_dict.uuid] = is_bfv
+                    instance._context, instance)
+                self.is_bfv[instance.uuid] = is_bfv
+            return is_bfv
+
+        usage = {}
+        if isinstance(object_or_dict, objects.Instance):
+            is_bfv = _is_bfv()
             usage = {'memory_mb': object_or_dict.flavor.memory_mb,
                      'swap': object_or_dict.flavor.swap,
                      'vcpus': object_or_dict.flavor.vcpus,
@@ -1518,6 +1526,8 @@ class ResourceTracker(object):
                      'numa_topology': object_or_dict.numa_topology}
         elif isinstance(object_or_dict, objects.Flavor):
             usage = obj_base.obj_to_primitive(object_or_dict)
+            if _is_bfv():
+                usage['root_gb'] = 0
         else:
             usage.update(object_or_dict)
 

@@ -23,9 +23,9 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         response = self.admin_api.api_get('/os-hypervisors/statistics')
         return response.body['hypervisor_statistics']
 
-    def _verify_zero_local_gb_used(self, expected=0):
+    def _verify_zero_local_gb_used(self):
         stats = self._get_hypervisor_stats()
-        self.assertEqual(expected, stats['local_gb_used'])
+        self.assertEqual(0, stats['local_gb_used'])
 
     def _verify_instance_flavor_not_zero(self, instance_uuid):
         # We are trying to avoid saving instance records with root_gb=0
@@ -88,8 +88,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         self._wait_for_state_change(self.api, created_server, 'VERIFY_RESIZE')
 
         # Check that hypervisor local disk reporting is still 0
-        # FIXME(mriedem): Expect 0 once bug 1796737 is fixed.
-        self._verify_zero_local_gb_used(expected=16384)
+        self._verify_zero_local_gb_used()
         # Check that instance has not been saved with 0 root_gb
         self._verify_instance_flavor_not_zero(server_id)
         # Check that request spec has not been saved with 0 root_gb
@@ -101,8 +100,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         self._wait_for_state_change(self.api, created_server, 'ACTIVE')
 
         # Check that hypervisor local disk reporting is still 0
-        # FIXME(mriedem): Expect 0 once bug 1796737 is fixed.
-        self._verify_zero_local_gb_used(expected=8192)
+        self._verify_zero_local_gb_used()
         # Check that instance has not been saved with 0 root_gb
         self._verify_instance_flavor_not_zero(server_id)
         # Check that request spec has not been saved with 0 root_gb
@@ -115,8 +113,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
                                     'SHELVED_OFFLOADED')
 
         # Check that hypervisor local disk reporting is still 0
-        # FIXME(mriedem): Expect 0 once bug 1796737 is fixed.
-        self._verify_zero_local_gb_used(expected=8192)
+        self._verify_zero_local_gb_used()
         # Check that instance has not been saved with 0 root_gb
         self._verify_instance_flavor_not_zero(server_id)
         # Check that request spec has not been saved with 0 root_gb
@@ -128,8 +125,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         self._wait_for_state_change(self.api, created_server, 'ACTIVE')
 
         # Check that hypervisor local disk reporting is still 0
-        # FIXME(mriedem): Expect 0 once bug 1796737 is fixed.
-        self._verify_zero_local_gb_used(expected=8192)
+        self._verify_zero_local_gb_used()
         # Check that instance has not been saved with 0 root_gb
         self._verify_instance_flavor_not_zero(server_id)
         # Check that request spec has not been saved with 0 root_gb
@@ -144,8 +140,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         self._wait_for_state_change(self.api, created_server, 'ACTIVE')
 
         # Check that hypervisor local disk reporting is still 0
-        # FIXME(mriedem): Expect 0 once bug 1796737 is fixed.
-        self._verify_zero_local_gb_used(expected=8192)
+        self._verify_zero_local_gb_used()
         # Check that instance has not been saved with 0 root_gb
         self._verify_instance_flavor_not_zero(server_id)
         # Check that request spec has not been saved with 0 root_gb
