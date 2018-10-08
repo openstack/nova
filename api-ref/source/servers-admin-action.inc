@@ -8,7 +8,8 @@ Enables administrators to perform an action on a server. Specify the
 action in the request body.
 
 You can inject network information into, migrate, live-migrate,
-reset networking on, and reset the state of a server.
+reset networking on, reset the state of a server,
+and evacuate a server from a failed host to a new host.
 
 
 Inject Network Information (injectNetworkInfo Action)
