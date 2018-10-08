@@ -1227,7 +1227,7 @@ v2.10."""),
 
 libvirt_volume_nvmeof_opts = [
     cfg.IntOpt('num_nvme_discover_tries',
-               default=3,
+               default=5,
                help="""
 Number of times to rediscover NVMe target to find volume
 
