@@ -839,6 +839,49 @@ class IronicDriverTestCase(test.NoDBTestCase):
                        '_node_resources_unavailable', return_value=False)
     @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
     @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
+    def test_update_provider_tree_no_report_standard_res_classes(
+            self, mock_nfc, mock_nr, mock_res_unavail, mock_res_used):
+        """Ensures that if
+        [workarounds]/report_ironic_standard_resource_class_inventory=False we
+        only report the custom resource class inventory.
+        """
+        self.flags(report_ironic_standard_resource_class_inventory=False,
+                   group='workarounds')
+        mock_nr.return_value = {
+            'vcpus': 24,
+            'vcpus_used': 0,
+            'memory_mb': 1024,
+            'memory_mb_used': 0,
+            'local_gb': 100,
+            'local_gb_used': 0,
+            'resource_class': 'iron-nfv',
+        }
+
+        self.driver.update_provider_tree(self.ptree, mock.sentinel.nodename)
+
+        expected = {
+            'CUSTOM_IRON_NFV': {
+                'total': 1,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+        }
+        mock_nfc.assert_called_once_with(mock.sentinel.nodename)
+        mock_nr.assert_called_once_with(mock_nfc.return_value)
+        mock_res_used.assert_called_once_with(mock_nfc.return_value)
+        mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
+        result = self.ptree.data(mock.sentinel.nodename).inventory
+        self.assertEqual(expected, result)
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_node_resources_used', return_value=False)
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_node_resources_unavailable', return_value=False)
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
     def test_update_provider_tree_only_rc(self, mock_nfc, mock_nr,
                                           mock_res_unavail, mock_res_used):
         """Ensure that when node.resource_class is present, that we return the
