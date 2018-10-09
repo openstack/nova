@@ -1303,3 +1303,12 @@ def monkey_patch():
     # be green. To workaround this, reload the module after calling
     # monkey_patch()
     reload_module(importutils.import_module('oslo_context.context'))
+
+
+if six.PY2:
+    nested_contexts = contextlib.nested
+else:
+    @contextlib.contextmanager
+    def nested_contexts(*contexts):
+        with contextlib.ExitStack() as stack:
+            yield [stack.enter_context(c) for c in contexts]

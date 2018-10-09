@@ -25,7 +25,6 @@ import eventlet  # noqa
 eventlet.monkey_patch(os=False)
 
 import abc
-import contextlib
 import copy
 import datetime
 import inspect
@@ -76,13 +75,8 @@ _TRUE_VALUES = ('True', 'true', '1', 'yes')
 CELL1_NAME = 'cell1'
 
 
-if six.PY2:
-    nested = contextlib.nested
-else:
-    @contextlib.contextmanager
-    def nested(*contexts):
-        with contextlib.ExitStack() as stack:
-            yield [stack.enter_context(c) for c in contexts]
+# For compatibility with the large number of tests which use test.nested
+nested = utils.nested_contexts
 
 
 class SampleNetworks(fixtures.Fixture):
