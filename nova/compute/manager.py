@@ -2585,7 +2585,7 @@ class ComputeManager(manager.Manager):
         # NOTE(mikal): cache the keystone roles associated with the instance
         # at boot time for later reference
         instance.system_metadata.update(
-            {'boot_roles': ','.join(context.roles)})
+            {'boot_roles': ','.join(context.roles)[:255]})
 
         self._check_device_tagging(requested_networks, block_device_mapping)
         self._check_trusted_certs(instance)
