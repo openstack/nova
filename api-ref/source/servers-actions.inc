@@ -10,7 +10,6 @@ in the request body.
 
 You can associate a fixed or floating IP address with a server,
 or disassociate a fixed or floating IP address from a server.
-You can attach a volume to a server.
 
 You can create an image from a server, create a backup of a server,
 and force-delete a server before deferred cleanup.
