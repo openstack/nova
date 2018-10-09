@@ -184,19 +184,6 @@
               # code; we don't need to run this on all changes, nor do we run
               # it in the gate.
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
-              - ^(placement-)?api-.*$
-              - ^(test-|)requirements.txt$
-              - ^.*\.rst$
-              - ^.git.*$
-              - ^doc/.*$
-              - ^nova/hacking/.*$
-              - ^nova/locale/.*$
-              - ^nova/tests/.*$
-              - ^releasenotes/.*$
-              - ^setup.cfg$
-              - ^tests-py3.txt$
-              - ^tools/.*$
-              - ^tox.ini$
         - nova-cells-v1
         - nova-live-migration
         - nova-lvm
