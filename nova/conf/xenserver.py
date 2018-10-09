@@ -441,7 +441,7 @@ GlanceStore.
              'when the host\'s SR type is file system based e.g. ext, nfs.'),
             ('vdi_local_dev', 'This plugin implements an image handler which '
              'attaches the instance\'s VDI as a local disk to the VM where '
-             'the OpenStack Compute service runs in. It uploads the raw disk '
+             'the OpenStack Compute service runs. It uploads the raw disk '
              'to glance when creating image; when booting an instance from a '
              'glance image, it downloads the image and streams it into the '
              'disk which is attached to the compute VM.'),

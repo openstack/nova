@@ -31,11 +31,11 @@ ALL_OPTS = [
         'notify_on_state_change',
         choices=[
             (None, 'no notifications'),
-            ('vm_state', 'notifications are sent with VM state transition '
+            ('vm_state', 'Notifications are sent with VM state transition '
              'information in the ``old_state`` and ``state`` fields. The '
              '``old_task_state`` and ``new_task_state`` fields will be set to '
              'the current task_state of the instance'),
-            ('vm_and_task_state', 'notifications are sent with VM and task '
+            ('vm_and_task_state', 'Notifications are sent with VM and task '
              'state transition information'),
         ],
         deprecated_group='DEFAULT',

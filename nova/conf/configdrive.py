@@ -15,6 +15,11 @@
 from oslo_config import cfg
 
 config_drive_opts = [
+    # TODO(stephenfin): We should deprecate this, given that it was originally
+    # added to workaround [1] which was fixed in libvirt v1.2.17 [2]
+    #
+    # [1] https://bugs.launchpad.net/nova/+bug/1246201
+    # [2] https://bugzilla.redhat.com/show_bug.cgi?id=1203032
     cfg.StrOpt('config_drive_format',
         default='iso9660',
         choices=[
@@ -27,10 +32,6 @@ Configuration drive format
 
 Configuration drive format that will contain metadata attached to the
 instance when it boots.
-
-Due to a `libvirt bug <https://bugs.launchpad.net/nova/+bug/1246201>`_, you
-should use ``vfat`` if you wish to live migrate and are not using shared
-storage.
 
 Related options:
 

@@ -74,12 +74,12 @@ Possible values:
 """),
     cfg.ListOpt('vendordata_providers',
         item_type=cfg.types.String(choices=[
-            ('StaticJSON', 'Loads a JSON file from the path configured by '
-             '``[DEFAULT] vendordata_jsonfile_path`` and use this as the '
-             'source for ``vendora_data.json`` and ``vendor_data2.json``.'),
+            ('StaticJSON', 'Load a JSON file from the path configured by '
+             '``vendordata_jsonfile_path`` and use this as the source for '
+             '``vendora_data.json`` and ``vendor_data2.json``.'),
             ('DynamicJSON', 'Build a JSON file using values defined in '
-             '``vendordata_dynamic_targets``, which is documented separately '
-             'and uses this as the source for ``vendor_data2.json``.'),
+             '``vendordata_dynamic_targets`` and use this as the source '
+             'for ``vendor_data2.json``.'),
         ]),
         default=['StaticJSON'],
         deprecated_group="DEFAULT",
@@ -264,15 +264,15 @@ small subset of those cells, this should be True.
     cfg.StrOpt("instance_list_cells_batch_strategy",
         default="distributed",
         choices=[
-            ("distributed", "``distributed`` will attempt to divide the "
+            ("distributed", "Divide the "
              "limit requested by the user by the number of cells in the "
              "system. This requires counting the cells in the system "
              "initially, which will not be refreshed until service restart "
              "or SIGHUP. The actual batch size will be increased by 10% "
              "over the result of ($limit / $num_cells)."),
-            ("fixed", "``fixed`` will simply request fixed-size batches from "
-             "each cell, as defined by ``instance_list_cells_batch_fixed_"
-             "size``. If the limit is smaller than the batch size, the limit "
+            ("fixed", "Request fixed-size batches from each cell, as defined "
+             "by ``instance_list_cells_batch_fixed_size``. "
+             "If the limit is smaller than the batch size, the limit "
              "will be used instead. If you do not wish batching to be used "
              "at all, setting the fixed size equal to the ``max_limit`` "
              "value will cause only one request per cell database to be "
