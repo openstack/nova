@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-07-13 03:26+0000\n"
+"POT-Creation-Date: 2018-10-08 07:25+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -775,9 +775,6 @@ msgstr "Не удалось создать сети"
 msgid "Creation of virtual interface with unique mac address failed"
 msgstr ""
 "Не удалось создать виртуальный интерфейс с помощью уникального MAC-адреса"
-
-msgid "DNS entries not found."
-msgstr "Записи DNS не найдены."
 
 msgid "DNS1"
 msgstr "DNS1"
@@ -1652,9 +1649,6 @@ msgstr "Копия в состоянии режима восстановлени
 
 msgid "Instance is not a member of specified network"
 msgstr "Копия не является участником заданной сети"
-
-msgid "Instance recreate is not supported."
-msgstr "Повторное создание экземпляра не поддерживается."
 
 #, python-format
 msgid "Instance rollback performed due to: %s"
@@ -3352,9 +3346,6 @@ msgstr "Невозможно ликвидировать VBD %s"
 msgid "Unable to destroy VDI %s"
 msgstr "Невозможно ликвидировать VDI %s"
 
-msgid "Unable to detach from guest transient domain."
-msgstr "Не удается отключиться от гостевого временного домена."
-
 #, python-format
 msgid "Unable to determine disk bus for '%s'"
 msgstr "Невозможно определить шину диска для '%s'"
@@ -4126,9 +4117,3 @@ msgid ""
 msgstr ""
 "xenapi.fake не имеет реализации для %s или был вызван с использованием "
 "неправильным числом аргументов"
-
-msgid "you can not pass av_zone if the scope is public"
-msgstr "Нельзя запустить av_zone, если область является общедоступной"
-
-msgid "you can not pass project if the scope is private"
-msgstr "Нельзя запустить проект, если область является частной"

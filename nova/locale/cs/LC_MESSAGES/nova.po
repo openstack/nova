@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-07-13 03:26+0000\n"
+"POT-Creation-Date: 2018-10-08 07:25+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -701,9 +701,6 @@ msgstr "Vytvoření sítí selhalo"
 
 msgid "Creation of virtual interface with unique mac address failed"
 msgstr "Vytváření virtuálního rozhraní s jedinečnou mac adresou selhalo"
-
-msgid "DNS entries not found."
-msgstr "Záznamy DNS nenalezeny."
 
 msgid "DNS1"
 msgstr "DNS1"
@@ -1504,9 +1501,6 @@ msgstr "Instance již je v záchranném režimu: %s"
 
 msgid "Instance is not a member of specified network"
 msgstr "Instance není členem zadané sítě"
-
-msgid "Instance recreate is not supported."
-msgstr "Znovu vytvoření instance není podporováno."
 
 #, python-format
 msgid "Instance rollback performed due to: %s"
@@ -3078,9 +3072,6 @@ msgstr "Nelze zničit VBD %s"
 msgid "Unable to destroy VDI %s"
 msgstr "Nelze zničit VDI %s"
 
-msgid "Unable to detach from guest transient domain."
-msgstr "Nelze odpojit z přechodné domény hosta."
-
 #, python-format
 msgid "Unable to determine disk bus for '%s'"
 msgstr "Nelze zjistit řadič disku pro '%s'"
@@ -3805,9 +3796,3 @@ msgid ""
 "with the wrong number of arguments"
 msgstr ""
 "xenapi.fake nemá zavedeno %s, nebo byl zavolán se špatným počtem argumentů"
-
-msgid "you can not pass av_zone if the scope is public"
-msgstr "nemůžete předat av_zone, pokud je zaměření veřejné"
-
-msgid "you can not pass project if the scope is private"
-msgstr "nemůžete předat projekt, pokud je zaměření soukromé"

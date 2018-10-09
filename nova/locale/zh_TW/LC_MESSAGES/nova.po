@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-07-13 03:26+0000\n"
+"POT-Creation-Date: 2018-10-08 07:25+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -695,9 +695,6 @@ msgstr "建立網路失敗"
 
 msgid "Creation of virtual interface with unique mac address failed"
 msgstr "使用唯一 MAC 位址來建立虛擬介面失敗"
-
-msgid "DNS entries not found."
-msgstr "找不到 DNS 項目。"
 
 msgid "DNS1"
 msgstr "DNS1"
@@ -1502,9 +1499,6 @@ msgstr "實例已處於救援模式：%s"
 
 msgid "Instance is not a member of specified network"
 msgstr "實例不是所指定網路的成員"
-
-msgid "Instance recreate is not supported."
-msgstr "不支援重建實例。"
 
 #, python-format
 msgid "Instance rollback performed due to: %s"
@@ -3121,9 +3115,6 @@ msgstr "無法毀損 VBD %s"
 msgid "Unable to destroy VDI %s"
 msgstr "無法毀損 VDI %s"
 
-msgid "Unable to detach from guest transient domain."
-msgstr "無法從訪客暫時網域分離"
-
 #, python-format
 msgid "Unable to determine disk bus for '%s'"
 msgstr "無法判定 '%s' 的磁碟匯流排"
@@ -3853,9 +3844,3 @@ msgid ""
 "xenapi.fake does not have an implementation for %s or it has been called "
 "with the wrong number of arguments"
 msgstr "xenapi.fake 沒有 %s 的實作，或者已使用錯誤的引數數目進行呼叫"
-
-msgid "you can not pass av_zone if the scope is public"
-msgstr "如果範圍是公用的，則您無法傳遞 av_zone"
-
-msgid "you can not pass project if the scope is private"
-msgstr "如果範圍是專用的，則您無法傳遞專案"

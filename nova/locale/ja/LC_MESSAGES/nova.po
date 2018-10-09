@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-07-13 03:26+0000\n"
+"POT-Creation-Date: 2018-10-08 07:25+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -766,9 +766,6 @@ msgstr "ネットワークの作成に失敗しました"
 
 msgid "Creation of virtual interface with unique mac address failed"
 msgstr "一意な MAC アドレスを持つ仮想インターフェースを作成できませんでした"
-
-msgid "DNS entries not found."
-msgstr "DNS エントリーが見つかりません。"
 
 msgid "DNS1"
 msgstr "DNS1"
@@ -1650,9 +1647,6 @@ msgstr "インスタンスは既にレスキューモードです: %s"
 
 msgid "Instance is not a member of specified network"
 msgstr "インスタンスは指定されたネットワークのメンバーではありません"
-
-msgid "Instance recreate is not supported."
-msgstr "インスタンスの再作成はサポートされていません。"
 
 #, python-format
 msgid "Instance rollback performed due to: %s"
@@ -3382,9 +3376,6 @@ msgstr "VBD %s を削除できません"
 msgid "Unable to destroy VDI %s"
 msgstr "VDI %s を破棄できません"
 
-msgid "Unable to detach from guest transient domain."
-msgstr "ゲストの一時ドメインから切り離すことができません。"
-
 #, python-format
 msgid "Unable to determine disk bus for '%s'"
 msgstr "ディスク '%s' のバスを判別できません"
@@ -4161,9 +4152,3 @@ msgid ""
 "xenapi.fake does not have an implementation for %s or it has been called "
 "with the wrong number of arguments"
 msgstr "xenapi.fake に %s の実装がないか、引数の数が誤っています。"
-
-msgid "you can not pass av_zone if the scope is public"
-msgstr "スコープがパブリックの場合、av_zone を渡すことはできません"
-
-msgid "you can not pass project if the scope is private"
-msgstr "スコープがプライベートである場合、プロジェクトを渡すことはできません"

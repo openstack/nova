@@ -10,16 +10,17 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 # Jongwon Lee <tothebinaryworld@gmail.com>, 2016. #zanata
 # Ian Y. Choi <ianyrchoi@gmail.com>, 2017. #zanata
+# Lee Dogeon <moreal@dsm.hs.kr>, 2018. #zanata
 msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-07-13 03:26+0000\n"
+"POT-Creation-Date: 2018-10-08 07:25+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2017-03-02 12:00+0000\n"
-"Last-Translator: Ian Y. Choi <ianyrchoi@gmail.com>\n"
+"PO-Revision-Date: 2018-09-20 06:43+0000\n"
+"Last-Translator: Lee Dogeon <moreal@dsm.hs.kr>\n"
 "Language: ko_KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -571,6 +572,10 @@ msgid ""
 msgstr "변경하면 다음 자원에 대한 사용량이 0보다 작아집니다: %(unders)s"
 
 #, python-format
+msgid "Cinder API version %(version)s is not available."
+msgstr "Cinder API 버전 %(version)s 을 찾을 수 없습니다."
+
+#, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
 msgstr "%(class_name)s 클래스를 찾을 수 없음: %(exception)s"
 
@@ -745,9 +750,6 @@ msgstr "네트워크 작성 실패"
 
 msgid "Creation of virtual interface with unique mac address failed"
 msgstr "고유 MAC 주소가 있는 가상 인터페이 생성에 실패했습니다"
-
-msgid "DNS entries not found."
-msgstr "DNS 항목을 찾을 수 없습니다. "
 
 msgid "DNS1"
 msgstr "DNS1"
@@ -1037,6 +1039,10 @@ msgstr "텍스트를 암호화하지 못했습니다: %(reason)s"
 
 msgid "Failed to find bridge for vif"
 msgstr "vif 브릿지 검색에 실패함"
+
+#, python-format
+msgid "Failed to get resource provider with UUID %(uuid)s"
+msgstr "UUID로 리소스 공급자 가져오기 실패: %(uuid)s"
 
 #, python-format
 msgid "Failed to launch instances: %(reason)s"
@@ -1627,9 +1633,6 @@ msgstr "인스턴스가 지정된 네트워크의 멤버가 아님"
 msgid "Instance network is not ready yet"
 msgstr "인스턴스 네트워크가 아직 준비 되지 않았습니다."
 
-msgid "Instance recreate is not supported."
-msgstr "인스턴스 재작성이 지원되지 않습니다."
-
 #, python-format
 msgid "Instance rollback performed due to: %s"
 msgstr "인스턴스 롤백이 수행됨. 원인: %s"
@@ -1927,6 +1930,9 @@ msgstr "키 쌍 이름에 안전하지 않은 문자가 들어있음"
 
 msgid "Keypair name must be string and between 1 and 255 characters long"
 msgstr "키 쌍 이름은 문자열이고 길이가 1 - 255자 범위에 속해야 함"
+
+msgid "Libguestfs does not have permission to read host kernel."
+msgstr "Libguestfs에게는 커널 호스트를 읽어올 수 있는 권한이 없습니다"
 
 msgid "Limits only supported from vCenter 6.0 and above"
 msgstr "vCenter 6.0 이상에서만 지원되는 한계"
@@ -3360,9 +3366,6 @@ msgstr "VBD %s을(를) 영구 삭제할 수 없음"
 msgid "Unable to destroy VDI %s"
 msgstr "VDI %s을(를) 영구 삭제할 수 없음"
 
-msgid "Unable to detach from guest transient domain."
-msgstr "게스트 임시 도메인에서 연결을 해제할 수 없습니다."
-
 #, python-format
 msgid "Unable to determine disk bus for '%s'"
 msgstr "'%s'의 디스크 버스를 판별할 수 없음"
@@ -4124,9 +4127,3 @@ msgid ""
 "with the wrong number of arguments"
 msgstr ""
 "xenapi.fake에 %s에 대한 구현이 없거나 잘못된 수의 인수를 사용하여 호출됨"
-
-msgid "you can not pass av_zone if the scope is public"
-msgstr "공용 범위인 경우 av_zone을 전달할 수 없음"
-
-msgid "you can not pass project if the scope is private"
-msgstr "개인용 범위인 경우 프로젝트를 전달할 수 없음"

@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-07-13 03:26+0000\n"
+"POT-Creation-Date: 2018-10-08 07:25+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -599,9 +599,6 @@ msgstr "Ağ oluşturma başarısız"
 
 msgid "Creation of virtual interface with unique mac address failed"
 msgstr "Benzersiz mac adresine sahip sanal arayüzün oluşturulması başarısız"
-
-msgid "DNS entries not found."
-msgstr "DNS girdileri bulunamadı."
 
 msgid "DNS1"
 msgstr "DNS1"
@@ -1292,9 +1289,6 @@ msgstr "Sunucu zaten Kurtarma Kipinde: %s"
 
 msgid "Instance is not a member of specified network"
 msgstr "Örnek belirlenmiş ağın bir üyesi değil"
-
-msgid "Instance recreate is not supported."
-msgstr "Sunucu yeniden oluşturma desteklenmiyor."
 
 #, python-format
 msgid "Instance rollback performed due to: %s"
@@ -3361,9 +3355,3 @@ msgid ""
 msgstr ""
 "xenapi.fake'in %s için bir uygulaması yok veya yanlış sayıda bağımsız "
 "değişken ile çağrılmış"
-
-msgid "you can not pass av_zone if the scope is public"
-msgstr "kapsam genelse av_zone geçiremezsiniz"
-
-msgid "you can not pass project if the scope is private"
-msgstr "kapsam özel ise proje geçiremezsiniz"
