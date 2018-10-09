@@ -239,6 +239,22 @@ Related options:
   spice agent is disabled, the config value of ``use_usb_tablet`` will have
   an effect.
 """),
+    cfg.StrOpt('live_migration_scheme',
+               help="""
+URI scheme used for live migration.
+
+Override the default libvirt live migration scheme (which is dependent on
+virt_type). If this option is set to None, nova will automatically choose a
+sensible default based on the hypervisor. It is not recommended that you change
+this unless you are very sure that hypervisor supports a particular scheme.
+
+Related options:
+
+* ``virt_type``: This option is meaningful only when ``virt_type`` is set to
+  `kvm` or `qemu`.
+* ``live_migration_uri``: If ``live_migration_uri`` value is not None, the
+  scheme used for live migration is taken from ``live_migration_uri`` instead.
+"""),
     cfg.StrOpt('live_migration_inbound_addr',
                help="""
 The IP address or hostname to be used as the target for live migration traffic.
@@ -292,22 +308,6 @@ Related options:
   the uri for live migration.
 * ``live_migration_scheme``: If ``live_migration_uri`` is not set, the scheme
   used for live migration is taken from ``live_migration_scheme`` instead.
-"""),
-    cfg.StrOpt('live_migration_scheme',
-               help="""
-URI scheme used for live migration.
-
-Override the default libvirt live migration scheme (which is dependent on
-virt_type). If this option is set to None, nova will automatically choose a
-sensible default based on the hypervisor. It is not recommended that you change
-this unless you are very sure that hypervisor supports a particular scheme.
-
-Related options:
-
-* ``virt_type``: This option is meaningful only when ``virt_type`` is set to
-  `kvm` or `qemu`.
-* ``live_migration_uri``: If ``live_migration_uri`` value is not None, the
-  scheme used for live migration is taken from ``live_migration_uri`` instead.
 """),
     cfg.BoolOpt('live_migration_tunnelled',
                 default=False,
