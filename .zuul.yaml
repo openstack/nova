@@ -232,7 +232,7 @@
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-tempest-dsvm-multinode-full:
             irrelevant-files: *dsvm-irrelevant-files
-        - legacy-tempest-dsvm-neutron-full-opensuse-423:
+        - tempest-full-py3-opensuse150:
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-tempest-dsvm-neutron-pg-full:
             irrelevant-files: *dsvm-irrelevant-files
