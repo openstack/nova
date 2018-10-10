@@ -4622,6 +4622,23 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             expected_reqspec_hints, self.compute._get_scheduler_hints(
                 filter_properties, reqspec))
 
+    def test_notify_volume_usage_detach_no_block_stats(self):
+        """Tests the case that the virt driver returns None from the
+        block_stats() method and no notification is sent, similar to the
+        virt driver raising NotImplementedError.
+        """
+        self.flags(volume_usage_poll_interval=60)
+        fake_instance = objects.Instance()
+        fake_bdm = objects.BlockDeviceMapping(device_name='/dev/vda')
+        with mock.patch.object(self.compute.driver, 'block_stats',
+                               return_value=None) as block_stats:
+            # Assert a notification isn't sent.
+            with mock.patch.object(self.compute.notifier, 'info',
+                                   new_callable=mock.NonCallableMock):
+                self.compute._notify_volume_usage_detach(
+                    self.context, fake_instance, fake_bdm)
+        block_stats.assert_called_once_with(fake_instance, 'vda')
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):

@@ -5335,13 +5335,14 @@ class ComputeManager(manager.Manager):
         if CONF.volume_usage_poll_interval <= 0:
             return
 
-        vol_stats = []
         mp = bdm.device_name
         # Handle bootable volumes which will not contain /dev/
         if '/dev/' in mp:
             mp = mp[5:]
         try:
             vol_stats = self.driver.block_stats(instance, mp)
+            if vol_stats is None:
+                return
         except NotImplementedError:
             return
 
