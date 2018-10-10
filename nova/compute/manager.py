@@ -5750,8 +5750,18 @@ class ComputeManager(manager.Manager):
             # remove the volume connection without detaching from hypervisor
             # because the instance is not running anymore on the current host
             if bdm.is_volume:
-                self.volume_api.terminate_connection(ctxt, bdm.volume_id,
-                                                     connector)
+                # Detaching volumes is a call to an external API that can fail.
+                # If it does, we need to handle it gracefully so that the call
+                # to post_live_migration_at_destination - where we set instance
+                # host and task state - still happens.
+                try:
+                    self.volume_api.terminate_connection(ctxt, bdm.volume_id,
+                                                         connector)
+                except Exception as e:
+                    LOG.error('Connection for volume %s not terminated on '
+                              'source host %s during post_live_migration: %s',
+                              bdm.volume_id, self.host, six.text_type(e),
+                              instance=instance)
 
         # Releasing vlan.
         # (not necessary in current implementation?)
