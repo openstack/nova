@@ -286,14 +286,13 @@ class ServersController(wsgi.Controller):
             response = self._view_builder.detail(req, instance_list)
         else:
             response = self._view_builder.index(req, instance_list)
-        req.cache_db_instances(instance_list)
         return response
 
     def _get_server(self, context, req, instance_uuid, is_detail=False):
         """Utility function for looking up an instance by uuid.
 
         :param context: request context for auth
-        :param req: HTTP request. The instance is cached in this request.
+        :param req: HTTP request.
         :param instance_uuid: UUID of the server instance to get
         :param is_detail: True if you plan on showing the details of the
             instance in the response, False otherwise.
@@ -309,7 +308,6 @@ class ServersController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context,
                                        instance_uuid,
                                        expected_attrs=expected_attrs)
-        req.cache_db_instance(instance)
         return instance
 
     @staticmethod
@@ -683,7 +681,6 @@ class ServersController(wsgi.Controller):
         if return_reservation_id:
             return wsgi.ResponseObject({'reservation_id': resv_id})
 
-        req.cache_db_instances(instances)
         server = self._view_builder.create(req, instances[0])
 
         if CONF.api.enable_instance_password:

@@ -50,7 +50,6 @@ class FlavorsController(wsgi.Controller):
         """Return all flavors in detail."""
         context = req.environ['nova.context']
         limited_flavors = self._get_flavors(req)
-        req.cache_db_flavors(limited_flavors)
         include_extra_specs = False
         if api_version_request.is_supported(
                 req, flavors_view.FLAVOR_EXTRA_SPECS_MICROVERSION):
@@ -65,7 +64,6 @@ class FlavorsController(wsgi.Controller):
         context = req.environ['nova.context']
         try:
             flavor = flavors.get_flavor_by_flavor_id(id, ctxt=context)
-            req.cache_db_flavor(flavor)
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 

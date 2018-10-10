@@ -106,7 +106,6 @@ class FlavorManageController(wsgi.Controller):
                                     description=description)
             # NOTE(gmann): For backward compatibility, non public flavor
             # access is not being added for created tenant. Ref -bug/1209101
-            req.cache_db_flavor(flavor)
         except (exception.FlavorExists,
                 exception.FlavorIdExists) as err:
             raise webob.exc.HTTPConflict(explanation=err.format_message())
@@ -141,9 +140,6 @@ class FlavorManageController(wsgi.Controller):
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
-        # Cache the flavor so the flavor_access and flavor_rxtx extensions
-        # can add stuff to the response.
-        req.cache_db_flavor(flavor)
         include_extra_specs = False
         if api_version_request.is_supported(
                 req, flavors_view.FLAVOR_EXTRA_SPECS_MICROVERSION):

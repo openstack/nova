@@ -89,7 +89,6 @@ class ImagesController(wsgi.Controller):
             explanation = _("Image not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
 
-        req.cache_db_items('images', [image], 'id')
         return self._view_builder.show(req, image)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
@@ -149,5 +148,4 @@ class ImagesController(wsgi.Controller):
         except exception.Invalid as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
-        req.cache_db_items('images', images, 'id')
         return self._view_builder.detail(req, images)
