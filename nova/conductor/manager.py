@@ -937,7 +937,11 @@ class ComputeTaskManager(base.Base):
                                  'task_state': None}, ex, request_spec)
                             LOG.warning('Rebuild failed: %s',
                                         six.text_type(ex), instance=instance)
-
+                    except exception.NoValidHost:
+                        with excutils.save_and_reraise_exception():
+                            if migration:
+                                migration.status = 'error'
+                                migration.save()
             else:
                 # At this point, the user is either:
                 #

@@ -16,7 +16,6 @@
 import collections
 import datetime
 import time
-import unittest
 import zlib
 
 from keystoneauth1 import adapter
@@ -2498,6 +2497,78 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
+    def test_evacuate_host_specified_but_not_forced(self):
+        """Evacuating a server with a host but using the scheduler to create
+        the allocations against the destination node. This test recreates the
+        scenarios and asserts the allocations on the source and destination
+        nodes are as expected.
+        """
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        source_compute_id = self.admin_api.get_services(
+            host=source_hostname, binary='nova-compute')[0]['id']
+
+        self.compute1.stop()
+        # force it down to avoid waiting for the service group to time out
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'true'})
+
+        # evacuate the server specify the target but do not force the
+        # destination host to use the scheduler to validate the target host
+        post = {
+            'evacuate': {
+                'host': dest_hostname,
+                'force': False
+            }
+        }
+        self.api.post_server_action(server['id'], post)
+        expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
+                           'status': 'ACTIVE'}
+        server = self._wait_for_server_parameter(self.api, server,
+                                                 expected_params)
+
+        # Run the periodics to show those don't modify allocations.
+        self._run_periodics()
+
+        # Expect to have allocation and usages on both computes as the
+        # source compute is still down
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
+
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
+
+        self._check_allocation_during_evacuate(
+            self.flavor1, server['id'], source_rp_uuid, dest_rp_uuid)
+
+        # restart the source compute
+        self.restart_compute_service(self.compute1)
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'false'})
+
+        # Run the periodics again to show they don't change anything.
+        self._run_periodics()
+
+        # When the source node starts up, the instance has moved so the
+        # ResourceTracker should cleanup allocations for the source node.
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertEqual(
+            {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}, source_usages)
+
+        # The usages/allocations should still exist on the destination node
+        # after the source node starts back up.
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
+
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           dest_rp_uuid)
+
+        self._delete_and_check_allocations(server)
+
     def test_evacuate_claim_on_dest_fails(self):
         """Tests that the allocations on the destination node are cleaned up
         when the rebuild move claim fails due to insufficient resources.
@@ -4893,21 +4964,485 @@ class ServerMovingTestsWithNestedResourceRequests(
         self.assertEqual(
             self._resources_from_flavor(flavor), total_dest_allocation)
 
-    @unittest.expectedFailure
     def test_live_migrate_force(self):
-        # This test shows a bug. The replace_allocation_with_migration() call
-        # only returns the allocation on the compute RP and therefore the
-        # LiveMigrationTask._held_migration only stores and reapplies that
-        # during the move. Therefore the allocation on the child RP is lost
-        # during the force live migration
-        super(ServerMovingTestsWithNestedResourceRequests,
-              self).test_live_migrate_force()
+        # Nova intentionally does not support force live-migrating server
+        # with nested allocations.
 
-    @unittest.expectedFailure
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+        post = {
+            'os-migrateLive': {
+                'host': dest_hostname,
+                'block_migration': True,
+                'force': True,
+            }
+        }
+
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_migration_status(server, ['error'])
+        self._wait_for_server_parameter(self.api, server,
+            {'OS-EXT-SRV-ATTR:host': source_hostname,
+             'status': 'ACTIVE'})
+        self.assertIn('Unable to move instance %s to host host2. The instance '
+                      'has complex allocations on the source host so move '
+                      'cannot be forced.' %
+                      server['id'],
+                      self.stdlog.logger.output)
+
+        self._run_periodics()
+
+        # NOTE(danms): There should be no usage for the dest
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
+
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
+
+        # the server has an allocation on only the source node
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
+
+        self._delete_and_check_allocations(server)
+
     def test_evacuate_forced_host(self):
-        # This test shows a bug. When the conductor tries to claim the same
-        # resources on the dest host that was on the source host it only
-        # considers the root RP allocations therefore the child RP allocation
-        # isn't replicated on the dest host.
-        super(ServerMovingTestsWithNestedResourceRequests,
-              self).test_evacuate_forced_host()
+        # Nova intentionally does not support force evacuating server
+        # with nested allocations.
+
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        source_compute_id = self.admin_api.get_services(
+            host=source_hostname, binary='nova-compute')[0]['id']
+
+        self.compute1.stop()
+        # force it down to avoid waiting for the service group to time out
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'true'})
+
+        # evacuate the server and force the destination host which bypasses
+        # the scheduler
+        post = {
+            'evacuate': {
+                'host': dest_hostname,
+                'force': True
+            }
+        }
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_migration_status(server, ['error'])
+        expected_params = {'OS-EXT-SRV-ATTR:host': source_hostname,
+                           'status': 'ACTIVE'}
+        server = self._wait_for_server_parameter(self.api, server,
+                                                 expected_params)
+        self.assertIn('Unable to move instance %s to host host2. The instance '
+                      'has complex allocations on the source host so move '
+                      'cannot be forced.' %
+                      server['id'],
+                      self.stdlog.logger.output)
+
+        # Run the periodics to show those don't modify allocations.
+        self._run_periodics()
+
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
+
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
+
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
+
+        # restart the source compute
+        self.restart_compute_service(self.compute1)
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'false'})
+
+        # Run the periodics again to show they don't change anything.
+        self._run_periodics()
+
+        # When the source node starts up nothing should change as the
+        # evacuation failed
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
+
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
+
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
+
+        self._delete_and_check_allocations(server)
+
+
+class ServerMovingTestsFromFlatToNested(
+        integrated_helpers.ProviderUsageBaseTestCase):
+    """Tests trying to move servers from a compute with a flat RP tree to a
+    compute with a nested RP tree and assert that the blind allocation copy
+    fails cleanly.
+    """
+
+    REQUIRES_LOCKING = True
+    compute_driver = 'fake.MediumFakeDriver'
+
+    def setUp(self):
+        super(ServerMovingTestsFromFlatToNested, self).setUp()
+        flavors = self.api.get_flavors()
+        self.flavor1 = flavors[0]
+        self.api.post_extra_spec(
+            self.flavor1['id'], {'extra_specs': {'resources:CUSTOM_MAGIC': 1}})
+        self.flavor1['extra_specs'] = {'resources:CUSTOM_MAGIC': 1}
+
+    def test_force_live_migrate_from_flat_to_nested(self):
+        # first compute will start with the flat RP tree but we add
+        # CUSTOM_MAGIC inventory to the root compute RP
+        orig_update_provider_tree = fake.MediumFakeDriver.update_provider_tree
+
+        def stub_update_provider_tree(self, provider_tree, nodename,
+                                      allocations=None):
+            # do the regular inventory update
+            orig_update_provider_tree(
+                self, provider_tree, nodename, allocations)
+            if nodename == 'host1':
+                # add the extra resource
+                inv = provider_tree.data(nodename).inventory
+                inv['CUSTOM_MAGIC'] = {
+                    'total': 10,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': 10,
+                    'step_size': 1,
+                    'allocation_ratio': 1,
+                }
+                provider_tree.update_inventory(nodename, inv)
+
+        self.stub_out('nova.virt.fake.FakeDriver.update_provider_tree',
+                      stub_update_provider_tree)
+        self.compute1 = self._start_compute(host='host1')
+        source_rp_uuid = self._get_provider_uuid_by_host('host1')
+
+        server = self._boot_and_check_allocations(self.flavor1, 'host1')
+        # start the second compute with nested RP tree
+        self.flags(
+            compute_driver='fake.MediumFakeDriverWithNestedCustomResources')
+        self.compute2 = self._start_compute(host='host2')
+
+        # try to force live migrate from flat to nested.
+        post = {
+            'os-migrateLive': {
+                'host': 'host2',
+                'block_migration': True,
+                'force': True,
+            }
+        }
+
+        self.api.post_server_action(server['id'], post)
+        # We expect that the migration will fail as force migrate tries to
+        # blindly copy the source allocation to the destination but on the
+        # destination there is no inventory of CUSTOM_MAGIC on the compute node
+        # provider as that resource is reported on a child provider.
+        self._wait_for_server_parameter(self.api, server,
+            {'OS-EXT-SRV-ATTR:host': 'host1',
+             'status': 'ACTIVE'})
+
+        migration = self._wait_for_migration_status(server, ['error'])
+        self.assertEqual('host1', migration['source_compute'])
+        self.assertEqual('host2', migration['dest_compute'])
+
+        # Nova fails the migration because it ties to allocation CUSTOM_MAGIC
+        # from the dest node root RP and placement rejects the that allocation.
+        self.assertIn("Unable to allocate inventory: Inventory for "
+                      "'CUSTOM_MAGIC'", self.stdlog.logger.output)
+        self.assertIn('No valid host was found. Unable to move instance %s to '
+                      'host host2. There is not enough capacity on the host '
+                      'for the instance.' % server['id'],
+                      self.stdlog.logger.output)
+
+        dest_rp_uuid = self._get_provider_uuid_by_host('host2')
+
+        # There should be no usage for the dest
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
+
+        # and everything stays at the source
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
+
+        self._delete_and_check_allocations(server)
+
+    def test_force_evacuate_from_flat_to_nested(self):
+        # first compute will start with the flat RP tree but we add
+        # CUSTOM_MAGIC inventory to the root compute RP
+        orig_update_provider_tree = fake.MediumFakeDriver.update_provider_tree
+
+        def stub_update_provider_tree(self, provider_tree, nodename,
+                                      allocations=None):
+            # do the regular inventory update
+            orig_update_provider_tree(
+                self, provider_tree, nodename, allocations)
+            if nodename == 'host1':
+                # add the extra resource
+                inv = provider_tree.data(nodename).inventory
+                inv['CUSTOM_MAGIC'] = {
+                    'total': 10,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': 10,
+                    'step_size': 1,
+                    'allocation_ratio': 1,
+                }
+                provider_tree.update_inventory(nodename, inv)
+
+        self.stub_out('nova.virt.fake.FakeDriver.update_provider_tree',
+                      stub_update_provider_tree)
+        self.compute1 = self._start_compute(host='host1')
+        source_rp_uuid = self._get_provider_uuid_by_host('host1')
+
+        server = self._boot_and_check_allocations(self.flavor1, 'host1')
+        # start the second compute with nested RP tree
+        self.flags(
+            compute_driver='fake.MediumFakeDriverWithNestedCustomResources')
+        self.compute2 = self._start_compute(host='host2')
+
+        source_compute_id = self.admin_api.get_services(
+            host='host1', binary='nova-compute')[0]['id']
+        self.compute1.stop()
+        # force it down to avoid waiting for the service group to time out
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'true'})
+
+        # try to force evacuate from flat to nested.
+        post = {
+            'evacuate': {
+                'host': 'host2',
+                'force': True,
+            }
+        }
+
+        self.api.post_server_action(server['id'], post)
+        # We expect that the evacuation will fail as force evacuate tries to
+        # blindly copy the source allocation to the destination but on the
+        # destination there is no inventory of CUSTOM_MAGIC on the compute node
+        # provider as that resource is reported on a child provider.
+        self._wait_for_server_parameter(self.api, server,
+            {'OS-EXT-SRV-ATTR:host': 'host1',
+             'status': 'ACTIVE'})
+
+        migration = self._wait_for_migration_status(server, ['error'])
+        self.assertEqual('host1', migration['source_compute'])
+        self.assertEqual('host2', migration['dest_compute'])
+
+        # Nova fails the migration because it ties to allocation CUSTOM_MAGIC
+        # from the dest node root RP and placement rejects the that allocation.
+        self.assertIn("Unable to allocate inventory: Inventory for "
+                      "'CUSTOM_MAGIC'", self.stdlog.logger.output)
+        self.assertIn('No valid host was found. Unable to move instance %s to '
+                      'host host2. There is not enough capacity on the host '
+                      'for the instance.' % server['id'],
+                      self.stdlog.logger.output)
+
+        dest_rp_uuid = self._get_provider_uuid_by_host('host2')
+
+        # There should be no usage for the dest
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
+
+        # and everything stays at the source
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
+
+        self._delete_and_check_allocations(server)
+
+
+class ServerMovingTestsFromNestedToFlat(
+        integrated_helpers.ProviderUsageBaseTestCase):
+    """Tests trying to move servers with nested allocation to a compute
+    with a single root RP and assert that nova rejects such move cleanly.
+    """
+
+    REQUIRES_LOCKING = True
+    compute_driver = 'fake.MediumFakeDriverWithNestedCustomResources'
+
+    def setUp(self):
+        super(ServerMovingTestsFromNestedToFlat, self).setUp()
+        flavors = self.api.get_flavors()
+        self.flavor1 = flavors[0]
+        self.api.post_extra_spec(
+            self.flavor1['id'], {'extra_specs': {'resources:CUSTOM_MAGIC': 1}})
+        self.flavor1['extra_specs'] = {'resources:CUSTOM_MAGIC': 1}
+
+    def test_force_live_migrate_from_nested_to_flat(self):
+        # first compute will start with the nested RP tree
+        orig_update_provider_tree = fake.MediumFakeDriver.update_provider_tree
+
+        # but make sure that the second compute will come up with a flat tree
+        # that also has CUSTOM_MAGIC resource on the root RP
+        def stub_update_provider_tree(self, provider_tree, nodename,
+                                      allocations=None):
+            # do the regular inventory update
+            orig_update_provider_tree(
+                self, provider_tree, nodename, allocations)
+            if nodename == 'host2':
+                # add the extra resource
+                inv = provider_tree.data(nodename).inventory
+                inv['CUSTOM_MAGIC'] = {
+                    'total': 10,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': 10,
+                    'step_size': 1,
+                    'allocation_ratio': 1,
+                }
+                provider_tree.update_inventory(nodename, inv)
+
+        self.stub_out('nova.virt.fake.FakeDriver.update_provider_tree',
+                      stub_update_provider_tree)
+        self.compute1 = self._start_compute(host='host1')
+        source_rp_uuid = self._get_provider_uuid_by_host('host1')
+
+        server = self._boot_and_check_allocations(self.flavor1, 'host1')
+        # start the second compute with single root RP
+        self.flags(
+            compute_driver='fake.MediumFakeDriver')
+        self.compute2 = self._start_compute(host='host2')
+
+        # try to force live migrate from flat to nested.
+        post = {
+            'os-migrateLive': {
+                'host': 'host2',
+                'block_migration': True,
+                'force': True,
+            }
+        }
+
+        self.api.post_server_action(server['id'], post)
+        # We expect that the migration will fail as force migrate detects that
+        # the source allocation is complex and rejects the migration
+        self._wait_for_server_parameter(self.api, server,
+            {'OS-EXT-SRV-ATTR:host': 'host1',
+             'status': 'ACTIVE'})
+
+        migration = self._wait_for_migration_status(server, ['error'])
+        self.assertEqual('host1', migration['source_compute'])
+        self.assertEqual('host2', migration['dest_compute'])
+
+        self.assertIn('Unable to move instance %s to host host2. The instance '
+                      'has complex allocations on the source host so move '
+                      'cannot be forced.' %
+                      server['id'],
+                      self.stdlog.logger.output)
+
+        dest_rp_uuid = self._get_provider_uuid_by_host('host2')
+
+        # There should be no usage for the dest
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
+
+        # and everything stays at the source
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
+
+        self._delete_and_check_allocations(server)
+
+    def test_force_evacuate_from_nested_to_flat(self):
+        # first compute will start with the nested RP tree
+        orig_update_provider_tree = fake.MediumFakeDriver.update_provider_tree
+
+        # but make sure that the second compute will come up with a flat tree
+        # that also has CUSTOM_MAGIC resource on the root RP
+        def stub_update_provider_tree(self, provider_tree, nodename,
+                                      allocations=None):
+            # do the regular inventory update
+            orig_update_provider_tree(
+                self, provider_tree, nodename, allocations)
+            if nodename == 'host2':
+                # add the extra resource
+                inv = provider_tree.data(nodename).inventory
+                inv['CUSTOM_MAGIC'] = {
+                    'total': 10,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': 10,
+                    'step_size': 1,
+                    'allocation_ratio': 1,
+                }
+                provider_tree.update_inventory(nodename, inv)
+
+        self.stub_out('nova.virt.fake.FakeDriver.update_provider_tree',
+                      stub_update_provider_tree)
+        self.compute1 = self._start_compute(host='host1')
+        source_rp_uuid = self._get_provider_uuid_by_host('host1')
+
+        server = self._boot_and_check_allocations(self.flavor1, 'host1')
+        # start the second compute with single root RP
+        self.flags(
+            compute_driver='fake.MediumFakeDriver')
+        self.compute2 = self._start_compute(host='host2')
+
+        source_compute_id = self.admin_api.get_services(
+            host='host1', binary='nova-compute')[0]['id']
+        self.compute1.stop()
+        # force it down to avoid waiting for the service group to time out
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'true'})
+
+        # try to force evacuate from nested to flat.
+        post = {
+            'evacuate': {
+                'host': 'host2',
+                'force': True,
+            }
+        }
+
+        self.api.post_server_action(server['id'], post)
+        # We expect that the evacuation will fail as force evacuate detects
+        # that the source allocation is complex and rejects the migration
+        self._wait_for_server_parameter(self.api, server,
+            {'OS-EXT-SRV-ATTR:host': 'host1',
+             'status': 'ACTIVE'})
+
+        migration = self._wait_for_migration_status(server, ['error'])
+        self.assertEqual('host1', migration['source_compute'])
+        self.assertEqual('host2', migration['dest_compute'])
+
+        self.assertIn('Unable to move instance %s to host host2. The instance '
+                      'has complex allocations on the source host so move '
+                      'cannot be forced.' %
+                      server['id'],
+                      self.stdlog.logger.output)
+
+        dest_rp_uuid = self._get_provider_uuid_by_host('host2')
+
+        # There should be no usage for the dest
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0,
+             'MEMORY_MB': 0,
+             'DISK_GB': 0}, dest_rp_uuid)
+
+        # and everything stays at the source
+        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
+        self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
+                                           source_rp_uuid)
+
+        self._delete_and_check_allocations(server)

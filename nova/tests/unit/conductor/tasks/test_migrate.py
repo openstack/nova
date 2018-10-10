@@ -216,11 +216,11 @@ class MigrationTaskAllocationUtils(test.NoDBTestCase):
                                         instance.host, instance.node)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_allocations_for_consumer_by_provider')
+                'get_allocs_for_consumer')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     def test_replace_allocation_with_migration_no_allocs(self, mock_cn,
                                                          mock_ga):
-        mock_ga.return_value = None
+        mock_ga.return_value = {'allocations': {}}
         migration = objects.Migration(uuid=uuids.migration)
         instance = objects.Instance(uuid=uuids.instance,
                                     host='host', node='node')
@@ -232,7 +232,7 @@ class MigrationTaskAllocationUtils(test.NoDBTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put_allocations')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_allocations_for_consumer_by_provider')
+                'get_allocs_for_consumer')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     def test_replace_allocation_with_migration_allocs_fail(self, mock_cn,
                                                            mock_ga, mock_pa):

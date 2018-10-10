@@ -473,7 +473,7 @@ def resources_from_request_spec(spec_obj):
 # some sort of skip_filters flag.
 def claim_resources_on_destination(
         context, reportclient, instance, source_node, dest_node,
-        source_node_allocations=None, consumer_generation=None):
+        source_allocations=None, consumer_generation=None):
     """Copies allocations from source node to dest node in Placement
 
     Normally the scheduler will allocate resources on a chosen destination
@@ -492,8 +492,8 @@ def claim_resources_on_destination(
                         lives
     :param dest_node: destination ComputeNode where the instance is being
                       moved
-    :param source_node_allocations: The consumer's current  allocation on the
-                                    source compute
+    :param source_allocations: The consumer's current allocations on the
+                               source compute
     :param consumer_generation: The expected generation of the consumer.
                                 None if a new consumer is expected
     :raises NoValidHost: If the allocation claim on the destination
@@ -505,7 +505,7 @@ def claim_resources_on_destination(
                                      consumer
     """
     # Get the current allocations for the source node and the instance.
-    if not source_node_allocations:
+    if not source_allocations:
         # NOTE(gibi): This is the forced evacuate case where the caller did not
         # provide any allocation request. So we ask placement here for the
         # current allocation and consumer generation and use that for the new
@@ -518,8 +518,7 @@ def claim_resources_on_destination(
         # cache at least the consumer generation of the instance.
         allocations = reportclient.get_allocs_for_consumer(
             context, instance.uuid)
-        source_node_allocations = allocations.get(
-            'allocations', {}).get(source_node.uuid, {}).get('resources')
+        source_allocations = allocations.get('allocations', {})
         consumer_generation = allocations.get('consumer_generation')
     else:
         # NOTE(gibi) This is the live migrate case. The caller provided the
@@ -527,11 +526,28 @@ def claim_resources_on_destination(
         # expected consumer_generation of the consumer (which is the instance).
         pass
 
-    if source_node_allocations:
+    if source_allocations:
         # Generate an allocation request for the destination node.
+        # NOTE(gibi): if the source allocation allocates from more than one RP
+        # then we need to fail as the dest allocation might also need to be
+        # complex (e.g. nested) and we cannot calculate that allocation request
+        # properly without a placement allocation candidate call.
+        # Alternatively we could sum up the source allocation and try to
+        # allocate that from the root RP of the dest host. It would only work
+        # if the dest host would not require nested allocation for this server
+        # which is really a rare case.
+        if len(source_allocations) > 1:
+            reason = (_('Unable to move instance %(instance_uuid)s to '
+                        'host %(host)s. The instance has complex allocations '
+                        'on the source host so move cannot be forced.') %
+                      {'instance_uuid': instance.uuid,
+                       'host': dest_node.host})
+            raise exception.NoValidHost(reason=reason)
         alloc_request = {
             'allocations': {
-                dest_node.uuid: {'resources': source_node_allocations}
+                dest_node.uuid: {
+                    'resources':
+                        source_allocations[source_node.uuid]['resources']}
             },
         }
         # import locally to avoid cyclic import
