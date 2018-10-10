@@ -554,6 +554,8 @@ class ResourceTracker(object):
 
         :param context: security context
         :param resources: initial values
+        :returns: True if a new compute_nodes table record was created,
+            False otherwise
         """
         nodename = resources['hypervisor_hostname']
 
@@ -563,7 +565,7 @@ class ResourceTracker(object):
             cn = self.compute_nodes[nodename]
             self._copy_resources(cn, resources)
             self._setup_pci_tracker(context, cn, resources)
-            return
+            return False
 
         # now try to get the compute node record from the
         # database. If we get one we use resources to initialize
@@ -572,10 +574,10 @@ class ResourceTracker(object):
             self.compute_nodes[nodename] = cn
             self._copy_resources(cn, resources)
             self._setup_pci_tracker(context, cn, resources)
-            return
+            return False
 
         if self._check_for_nodes_rebalance(context, resources, nodename):
-            return
+            return False
 
         # there was no local copy and none in the database
         # so we need to create a new compute node. This needs
@@ -590,6 +592,7 @@ class ResourceTracker(object):
                  {'host': self.host, 'node': nodename, 'uuid': cn.uuid})
 
         self._setup_pci_tracker(context, cn, resources)
+        return True
 
     def _setup_pci_tracker(self, context, compute_node, resources):
         if not self.pci_tracker:
@@ -745,7 +748,7 @@ class ResourceTracker(object):
 
         # initialize the compute node object, creating it
         # if it does not already exist.
-        self._init_compute_node(context, resources)
+        is_new_compute_node = self._init_compute_node(context, resources)
 
         nodename = resources['hypervisor_hostname']
 
@@ -772,9 +775,13 @@ class ResourceTracker(object):
         self._pair_instances_to_migrations(migrations, instance_by_uuid)
         self._update_usage_from_migrations(context, migrations, nodename)
 
-        self._remove_deleted_instances_allocations(
-            context, self.compute_nodes[nodename], migrations,
-            instance_by_uuid)
+        # A new compute node means there won't be a resource provider yet since
+        # that would be created via the _update() call below, and if there is
+        # no resource provider then there are no allocations against it.
+        if not is_new_compute_node:
+            self._remove_deleted_instances_allocations(
+                context, self.compute_nodes[nodename], migrations,
+                instance_by_uuid)
 
         # Detect and account for orphaned instances that may exist on the
         # hypervisor, but are not in the DB:
