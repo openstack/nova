@@ -14,7 +14,9 @@
 #    under the License.
 
 from oslo_db.sqlalchemy.compat import utils as compat_utils
+from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_base
+from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import utils as oslodbutils
 from oslo_utils import uuidutils
 from sqlalchemy import Integer, String
@@ -26,6 +28,7 @@ from sqlalchemy.types import UserDefinedType
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import utils
 from nova import exception
+from nova import test
 from nova.tests import fixtures as nova_fixtures
 
 SA_VERSION = compat_utils.SQLA_VERSION
@@ -44,7 +47,8 @@ class CustomType(UserDefinedType):
 # a fixture.
 
 
-class TestMigrationUtilsSQLite(test_base.DbTestCase):
+class TestMigrationUtilsSQLite(
+        test_fixtures.OpportunisticDBTestMixin, test.NoDBTestCase):
     """Class for testing utils that are used in db migrations."""
 
     def setUp(self):
@@ -54,6 +58,7 @@ class TestMigrationUtilsSQLite(test_base.DbTestCase):
         # test output.
         self.useFixture(nova_fixtures.StandardLogging())
         super(TestMigrationUtilsSQLite, self).setUp()
+        self.engine = enginefacade.writer.get_engine()
         self.meta = MetaData(bind=self.engine)
 
     def test_delete_from_select(self):
@@ -221,11 +226,9 @@ class TestMigrationUtilsSQLite(test_base.DbTestCase):
                           self.engine, table_name=table_name)
 
 
-class TestMigrationUtilsPostgreSQL(TestMigrationUtilsSQLite,
-                                   test_base.PostgreSQLOpportunisticTestCase):
-    pass
+class TestMigrationUtilsPostgreSQL(TestMigrationUtilsSQLite):
+    FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
 
 
-class TestMigrationUtilsMySQL(TestMigrationUtilsSQLite,
-                              test_base.MySQLOpportunisticTestCase):
-    pass
+class TestMigrationUtilsMySQL(TestMigrationUtilsSQLite):
+    FIXTURE = test_fixtures.MySQLOpportunisticFixture

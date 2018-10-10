@@ -32,7 +32,8 @@ import os
 
 from migrate.versioning import repository
 import mock
-from oslo_db.sqlalchemy import test_base
+from oslo_db.sqlalchemy import enginefacade
+from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
 from oslo_db.sqlalchemy import utils as db_utils
 from oslo_serialization import jsonutils
@@ -50,6 +51,10 @@ from nova.tests import fixtures as nova_fixtures
 
 class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
     """Test that the models match the database after migrations are run."""
+
+    def setUp(self):
+        super(NovaAPIModelsSync, self).setUp()
+        self.engine = enginefacade.writer.get_engine()
 
     def db_sync(self, engine):
         with mock.patch.object(sa_migration, 'get_engine',
@@ -122,20 +127,20 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
 
 
 class TestNovaAPIMigrationsSQLite(NovaAPIModelsSync,
-                                  test_base.DbTestCase,
+                                  test_fixtures.OpportunisticDBTestMixin,
                                   test.NoDBTestCase):
     pass
 
 
 class TestNovaAPIMigrationsMySQL(NovaAPIModelsSync,
-                                 test_base.MySQLOpportunisticTestCase,
+                                 test_fixtures.OpportunisticDBTestMixin,
                                  test.NoDBTestCase):
-    pass
+    FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
 
 class TestNovaAPIMigrationsPostgreSQL(NovaAPIModelsSync,
-        test_base.PostgreSQLOpportunisticTestCase, test.NoDBTestCase):
-    pass
+        test_fixtures.OpportunisticDBTestMixin, test.NoDBTestCase):
+    FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
 
 
 class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
@@ -146,6 +151,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         # test output.
         self.useFixture(nova_fixtures.StandardLogging())
         super(NovaAPIMigrationsWalk, self).setUp()
+        self.engine = enginefacade.writer.get_engine()
 
     @property
     def INIT_VERSION(self):
@@ -722,17 +728,17 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
 
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
-                                      test_base.DbTestCase,
+                                      test_fixtures.OpportunisticDBTestMixin,
                                       test.NoDBTestCase):
     pass
 
 
 class TestNovaAPIMigrationsWalkMySQL(NovaAPIMigrationsWalk,
-                                     test_base.MySQLOpportunisticTestCase,
+                                     test_fixtures.OpportunisticDBTestMixin,
                                      test.NoDBTestCase):
-    pass
+    FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
 
 class TestNovaAPIMigrationsWalkPostgreSQL(NovaAPIMigrationsWalk,
-        test_base.PostgreSQLOpportunisticTestCase, test.NoDBTestCase):
-    pass
+        test_fixtures.OpportunisticDBTestMixin, test.NoDBTestCase):
+    FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
