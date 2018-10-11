@@ -1,0 +1,10 @@
+dumb-init
+python-memcached
+pymemcache
+python-ironicclient
+
+-e git+https://github.com/sapcc/raven-python.git@ccloud#egg=raven
+-e git+https://github.com/sapcc/openstack-watcher-middleware.git#egg=watcher-middleware
+-e git+https://github.com/sapcc/openstack-audit-middleware.git#egg=audit-middleware
+-e git+https://github.com/sapcc/python-agentliveness.git#egg=agentliveness
+-e git+https://github.com/sapcc/oslo.vmware.git@stable/2023.2-m3#egg=oslo.vmware
