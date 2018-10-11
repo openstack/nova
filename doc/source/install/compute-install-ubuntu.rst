@@ -152,13 +152,6 @@ Install and configure components
         # ...
         lock_path = /var/lib/nova/tmp
 
-.. todo::
-
-   https://bugs.launchpad.net/ubuntu/+source/nova/+bug/1506667
-
-   * Due to a packaging bug, remove the ``log_dir`` option from the
-     ``[DEFAULT]`` section.
-
    *  In the ``[placement]`` section, configure the Placement API:
 
       .. path /etc/nova/nova.conf
