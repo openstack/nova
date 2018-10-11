@@ -466,3 +466,19 @@ class ContextTestCase(test.NoDBTestCase):
         mock_scatter.assert_called_once_with(
             ctxt, [mapping1], 60, objects.InstanceList.get_by_filters, filters,
             sort_dir='foo')
+
+    @mock.patch('nova.context.scatter_gather_cells')
+    def test_scatter_gather_single_cell(self, mock_scatter):
+        ctxt = context.get_context()
+        mapping0 = objects.CellMapping(database_connection='fake://db0',
+                                       transport_url='none:///',
+                                       uuid=objects.CellMapping.CELL0_UUID)
+
+        filters = {'deleted': False}
+        context.scatter_gather_single_cell(ctxt, mapping0,
+            objects.InstanceList.get_by_filters, filters, sort_dir='foo')
+
+        mock_scatter.assert_called_once_with(
+            ctxt, [mapping0], context.CELL_TIMEOUT,
+            objects.InstanceList.get_by_filters, filters,
+            sort_dir='foo')
