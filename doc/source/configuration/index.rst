@@ -11,8 +11,8 @@ Configuration
 -------------
 
 * :doc:`Configuration Guide </admin/configuration/index>`: Detailed
-  configuration guides for various parts of you Nova system. Helpful reference
-  for setting up specific hypervisor backends.
+  configuration guides for various parts of your Nova system. Helpful
+  reference for setting up specific hypervisor backends.
 
 * :doc:`Config Reference <config>`: A complete reference of all
   configuration options available in the ``nova.conf`` file.
