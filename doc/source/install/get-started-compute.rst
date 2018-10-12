@@ -82,6 +82,11 @@ OpenStack Compute consists of the following areas and their components:
   Provides a proxy for accessing running instances through a VNC connection.
   Supports an OpenStack-specific Java client.
 
+  .. deprecated:: 19.0.0
+
+     :program:`nova-xvpvnxproxy` is deprecated since 19.0.0 (Stein) and will be
+     removed in an upcoming release.
+
 The queue
   A central hub for passing messages between daemons. Usually implemented with
   `RabbitMQ <https://www.rabbitmq.com/>`__, also can be implemented with

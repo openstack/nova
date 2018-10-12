@@ -50,7 +50,6 @@ daemonize correctly after starting up.
    nova-scheduler
    nova-serialproxy
    nova-spicehtml5proxy
-   nova-xvpvncproxy
 
 WSGI Services
 -------------
@@ -91,3 +90,4 @@ deployments, but are documented for existing ones.
    nova-network
    nova-consoleauth
    nova-console
+   nova-xvpvncproxy

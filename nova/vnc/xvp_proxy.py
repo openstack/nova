@@ -165,6 +165,10 @@ def get_wsgi_server():
     LOG.info(_LI("Starting nova-xvpvncproxy node (version %s)"),
               version.version_string_with_package())
 
+    LOG.warning('The nova-xvpvncproxy service is deprecated as it is Xen '
+                'specific and has effectively been replaced by noVNC '
+                'and the nova-novncproxy service.')
+
     return wsgi.Server("XCP VNC Proxy",
                        XCPVNCProxy(),
                        protocol=SafeHttpProtocol,
