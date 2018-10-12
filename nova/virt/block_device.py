@@ -265,7 +265,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
     _valid_source = 'volume'
     _valid_destination = 'volume'
 
-    _proxy_as_attr_inherited = set(['volume_size', 'volume_id'])
+    _proxy_as_attr_inherited = set(['volume_size', 'volume_id', 'volume_type'])
     _update_on_save = {'disk_bus': None,
                        'device_name': 'mount_device',
                        'device_type': None}
@@ -286,6 +286,10 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                 self._bdm_obj.connection_info)
         except TypeError:
             self['connection_info'] = None
+        # volume_type might not be set on the internal bdm object so default
+        # to None if not set
+        self['volume_type'] = (
+            self.volume_type if 'volume_type' in self._bdm_obj else None)
 
     def _preserve_multipath_id(self, connection_info):
         if self['connection_info'] and 'data' in self['connection_info']:
@@ -710,7 +714,8 @@ class DriverVolSnapshotBlockDevice(DriverVolumeBlockDevice):
             snapshot = volume_api.get_snapshot(context,
                                                self.snapshot_id)
             vol = volume_api.create(context, self.volume_size, '', '',
-                                    snapshot, availability_zone=av_zone)
+                                    snapshot, volume_type=self.volume_type,
+                                    availability_zone=av_zone)
             if wait_func:
                 self._call_wait_func(context, wait_func, volume_api, vol['id'])
 
@@ -735,6 +740,7 @@ class DriverVolImageBlockDevice(DriverVolumeBlockDevice):
             av_zone = _get_volume_create_az_value(instance)
             vol = volume_api.create(context, self.volume_size,
                                     '', '', image_id=self.image_id,
+                                    volume_type=self.volume_type,
                                     availability_zone=av_zone)
             if wait_func:
                 self._call_wait_func(context, wait_func, volume_api, vol['id'])
@@ -759,6 +765,7 @@ class DriverVolBlankBlockDevice(DriverVolumeBlockDevice):
             vol_name = instance.uuid + '-blank-vol'
             av_zone = _get_volume_create_az_value(instance)
             vol = volume_api.create(context, self.volume_size, vol_name, '',
+                                    volume_type=self.volume_type,
                                     availability_zone=av_zone)
             if wait_func:
                 self._call_wait_func(context, wait_func, volume_api, vol['id'])
