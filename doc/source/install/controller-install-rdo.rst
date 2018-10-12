@@ -276,8 +276,8 @@ Install and configure components
    .. code-block:: console
 
       # yum install openstack-nova-api openstack-nova-conductor \
-        openstack-nova-console openstack-nova-novncproxy \
-        openstack-nova-scheduler openstack-nova-placement-api
+        openstack-nova-novncproxy openstack-nova-scheduler \
+        openstack-nova-placement-api
 
 #. Edit the ``/etc/nova/nova.conf`` file and complete the following actions:
 

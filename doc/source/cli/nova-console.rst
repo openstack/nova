@@ -25,6 +25,11 @@ Description
 service, which is a console proxy to set up multi-tenant VM console access,
 e.g. with *XVP*.
 
+.. deprecated:: 19.0.0
+
+   :program:`nova-console` is deprecated since 19.0.0 (Stein) and will be
+   removed in an upcoming release.
+
 Options
 =======
 
