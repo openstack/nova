@@ -106,6 +106,7 @@ CINDER_V3_ATTACH_MIN_COMPUTE_VERSION = 24
 MIN_COMPUTE_MULTIATTACH = 27
 MIN_COMPUTE_TRUSTED_CERTS = 31
 MIN_COMPUTE_ABORT_QUEUED_LIVE_MIGRATION = 34
+MIN_COMPUTE_VOLUME_TYPE = 36
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -1359,6 +1360,36 @@ class API(base.Base):
 
             bdm.update_or_create()
 
+    @staticmethod
+    def _check_requested_volume_type(bdm, volume_type_id_or_name,
+                                     volume_types):
+        """If we are specifying a volume type, we need to get the
+        volume type details from Cinder and make sure the ``volume_type``
+        is available.
+        """
+
+        # NOTE(brinzhang): Verify that the specified volume type exists.
+        # And save the volume type name internally for consistency in the
+        # BlockDeviceMapping object.
+        for vol_type in volume_types:
+            if (volume_type_id_or_name == vol_type['id'] or
+                        volume_type_id_or_name == vol_type['name']):
+                bdm.volume_type = vol_type['name']
+                break
+        else:
+            raise exception.VolumeTypeNotFound(
+                id_or_name=volume_type_id_or_name)
+
+    @staticmethod
+    def _check_compute_supports_volume_type(context):
+        # NOTE(brinzhang): Checking the minimum nova-compute service
+        # version across the deployment. Just make sure the volume
+        # type can be supported when the bdm.volume_type is requested.
+        min_compute_version = objects.service.get_minimum_version_all_cells(
+            context, ['nova-compute'])
+        if min_compute_version < MIN_COMPUTE_VOLUME_TYPE:
+            raise exception.VolumeTypeSupportNotYetAvailable()
+
     def _validate_bdm(self, context, instance, instance_type,
                       block_device_mappings, supports_multiattach=False):
         # Make sure that the boot indexes make sense.
@@ -1379,7 +1410,32 @@ class API(base.Base):
                       instance=instance)
             raise exception.InvalidBDMBootSequence()
 
+        volume_types = None
+        volume_type_is_supported = False
         for bdm in block_device_mappings:
+            volume_type = bdm.volume_type
+            if volume_type:
+                if not volume_type_is_supported:
+                    # The following method raises
+                    # VolumeTypeSupportNotYetAvailable if the minimum
+                    # nova-compute service version across the deployment is
+                    # not new enough to support creating volumes with a
+                    # specific type.
+                    self._check_compute_supports_volume_type(context)
+                    # Set the flag to avoid calling
+                    # _check_compute_supports_volume_type more than once in
+                    # this for loop.
+                    volume_type_is_supported = True
+
+                if not volume_types:
+                    # In order to reduce the number of hit cinder APIs,
+                    # initialize our cache of volume types.
+                    volume_types = self.volume_api.get_all_volume_types(
+                        context)
+                # NOTE(brinzhang): Ensure the validity of volume_type.
+                self._check_requested_volume_type(bdm, volume_type,
+                                                  volume_types)
+
             # NOTE(vish): For now, just make sure the volumes are accessible.
             # Additionally, check that the volume can be attached to this
             # instance.

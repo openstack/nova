@@ -4481,6 +4481,92 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.context, objects.Instance(), objects.Flavor(),
                           bdms)
 
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
+                       return_value=compute_api.MIN_COMPUTE_VOLUME_TYPE)
+    def test_validate_bdm_with_volume_type_name_is_specified(
+            self, mock_get_min_version):
+        """Test _check_requested_volume_type and
+        _check_compute_supports_volume_type methods are used.
+        """
+        instance = self._create_instance_obj()
+        instance_type = self._create_flavor()
+
+        volume_type = 'fake_lvm_1'
+        volume_types = [{'id': 'fake_volume_type_id_1', 'name': 'fake_lvm_1'},
+                        {'id': 'fake_volume_type_id_2', 'name': 'fake_lvm_2'}]
+
+        bdm1 = objects.BlockDeviceMapping(
+            **fake_block_device.AnonFakeDbBlockDeviceDict(
+                {
+                    'uuid': uuids.image_id,
+                    'source_type': 'image',
+                    'destination_type': 'volume',
+                    'device_name': 'vda',
+                    'boot_index': 0,
+                    'volume_size': 3,
+                    'volume_type': 'fake_lvm_1'
+                }))
+        bdm2 = objects.BlockDeviceMapping(
+            **fake_block_device.AnonFakeDbBlockDeviceDict(
+                {
+                    'uuid': uuids.image_id,
+                    'source_type': 'snapshot',
+                    'destination_type': 'volume',
+                    'device_name': 'vdb',
+                    'boot_index': 1,
+                    'volume_size': 3,
+                    'volume_type': 'fake_lvm_1'
+                }))
+        bdms = [bdm1, bdm2]
+
+        with test.nested(
+                mock.patch.object(cinder.API, 'get_all_volume_types',
+                                  return_value=volume_types),
+                mock.patch.object(compute_api.API,
+                                  '_check_compute_supports_volume_type'),
+                mock.patch.object(compute_api.API,
+                                  '_check_requested_volume_type')) as (
+                get_all_vol_types, vol_type_supported, vol_type_requested):
+
+            self.compute_api._validate_bdm(self.context, instance,
+                                           instance_type, bdms)
+
+            vol_type_supported.assert_called_once_with(self.context)
+            get_all_vol_types.assert_called_once_with(self.context)
+
+            vol_type_requested.assert_any_call(bdms[0], volume_type,
+                                               volume_types)
+            vol_type_requested.assert_any_call(bdms[1], volume_type,
+                                               volume_types)
+
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
+                       return_value=compute_api.MIN_COMPUTE_VOLUME_TYPE)
+    def test_the_specified_volume_type_id_assignment_to_name(
+            self, mock_get_min_version):
+        """Test _check_requested_volume_type method is called, if the user
+        is using the volume type ID, assign volume_type to volume type name.
+        """
+        volume_type = 'fake_volume_type_id_1'
+        volume_types = [{'id': 'fake_volume_type_id_1', 'name': 'fake_lvm_1'},
+                        {'id': 'fake_volume_type_id_2', 'name': 'fake_lvm_2'}]
+
+        bdms = [objects.BlockDeviceMapping(
+            **fake_block_device.AnonFakeDbBlockDeviceDict(
+                {
+                    'uuid': uuids.image_id,
+                    'source_type': 'image',
+                    'destination_type': 'volume',
+                    'device_name': 'vda',
+                    'boot_index': 0,
+                    'volume_size': 3,
+                    'volume_type': 'fake_volume_type_id_1'
+                }))]
+
+        self.compute_api._check_requested_volume_type(bdms[0],
+                                                      volume_type,
+                                                      volume_types)
+        self.assertEqual(bdms[0].volume_type, volume_types[0]['name'])
+
     def _test_provision_instances_with_cinder_error(self,
                                                     expected_exception):
         @mock.patch('nova.compute.utils.check_num_instances_quota')
@@ -6232,6 +6318,41 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             self.assertRaises(exception.MultiattachToShelvedNotSupported,
                               self.compute_api.attach_volume,
                               self.context, instance, uuids.volumeid)
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_VOLUME_TYPE - 1)
+    def test_check_compute_supports_volume_type_new_inst_old_compute(
+            self, get_min_version):
+        """Tests that _check_compute_supports_volume_type fails if trying to
+        specify a volume type to create a new instance but the nova-compute
+        service version are not all upgraded yet.
+        """
+        self.assertRaises(exception.VolumeTypeSupportNotYetAvailable,
+                          self.compute_api._check_compute_supports_volume_type,
+                          self.context)
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_VOLUME_TYPE)
+    def test_validate_bdm_check_volume_type_raise_not_found(
+            self, get_min_version):
+        """Tests that _validate_bdm will fail if the requested volume type
+        name or id does not match the volume types in Cinder.
+        """
+        volume_types = [{'id': 'fake_volume_type_id_1', 'name': 'fake_lvm_1'},
+                        {'id': 'fake_volume_type_id_2', 'name': 'fake_lvm_2'}]
+        bdm = objects.BlockDeviceMapping(
+            **fake_block_device.FakeDbBlockDeviceDict(
+                {
+                    'uuid': uuids.image_id,
+                    'source_type': 'image',
+                    'destination_type': 'volume',
+                    'device_name': 'vda',
+                    'boot_index': 0,
+                    'volume_size': 3,
+                    'volume_type': 'lvm-1'}))
+        self.assertRaises(exception.VolumeTypeNotFound,
+                          self.compute_api._check_requested_volume_type,
+                          bdm, 'lvm-1', volume_types)
 
     @mock.patch.object(neutron_api.API, 'has_substr_port_filtering_extension')
     @mock.patch.object(neutron_api.API, 'list_ports')

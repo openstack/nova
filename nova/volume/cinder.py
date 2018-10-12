@@ -328,6 +328,16 @@ def _untranslate_volume_summary_view(context, vol):
     return d
 
 
+def _untranslate_volume_type_view(volume_type):
+    """Maps keys for volume type view."""
+    v = {}
+
+    v['id'] = volume_type.id
+    v['name'] = volume_type.name
+
+    return v
+
+
 def _untranslate_snapshot_summary_view(context, snapshot):
     """Maps keys for snapshots summary view."""
     d = {}
@@ -685,6 +695,16 @@ class API(object):
     @translate_snapshot_exception
     def delete_snapshot(self, context, snapshot_id):
         cinderclient(context).volume_snapshots.delete(snapshot_id)
+
+    @translate_cinder_exception
+    def get_all_volume_types(self, context):
+        items = cinderclient(context).volume_types.list()
+        rvals = []
+
+        for item in items:
+            rvals.append(_untranslate_volume_type_view(item))
+
+        return rvals
 
     @translate_cinder_exception
     def get_volume_encryption_metadata(self, context, volume_id):

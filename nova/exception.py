@@ -283,6 +283,14 @@ class MultiattachNotSupportedOldMicroversion(Invalid):
                 'compute API version 2.60.')
 
 
+class VolumeTypeSupportNotYetAvailable(NovaException):
+    # This exception indicates the deployment is not yet new enough to support
+    # volume type, so a 409 HTTPConflict response is generally used
+    # for handling this in the API.
+    msg_fmt = _("Volume type support is not yet available.")
+    code = 409
+
+
 class MultiattachToShelvedNotSupported(Invalid):
     msg_fmt = _("Attaching multiattach volumes is not supported for "
                 "shelved-offloaded instances.")
@@ -629,6 +637,10 @@ class VolumeAttachmentNotFound(NotFound):
 
 class VolumeNotFound(NotFound):
     msg_fmt = _("Volume %(volume_id)s could not be found.")
+
+
+class VolumeTypeNotFound(NotFound):
+    msg_fmt = _("Volume type %(id_or_name)s could not be found.")
 
 
 class UndefinedRootBDM(NovaException):
