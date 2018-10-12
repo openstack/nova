@@ -234,7 +234,7 @@
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-full-py3-opensuse150:
             irrelevant-files: *dsvm-irrelevant-files
-        - legacy-tempest-dsvm-neutron-pg-full:
+        - tempest-pg-full:
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-tempest-dsvm-neutron-src-oslo.versionedobjects:
             irrelevant-files: *dsvm-irrelevant-files
