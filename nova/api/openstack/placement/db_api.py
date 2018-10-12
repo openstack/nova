@@ -13,17 +13,21 @@
 own file so the nova db_api (which has cascading imports) is not imported.
 """
 
-
 from oslo_db.sqlalchemy import enginefacade
+from oslo_log import log as logging
 
+from nova.utils import run_once
 
 placement_context_manager = enginefacade.transaction_context()
+LOG = logging.getLogger(__name__)
 
 
 def _get_db_conf(conf_group):
     return dict(conf_group.items())
 
 
+@run_once("TransactionFactory already started, not reconfiguring.",
+          LOG.warning)
 def configure(conf):
     # If [placement_database]/connection is not set in conf, then placement
     # data will be stored in the nova_api database.
