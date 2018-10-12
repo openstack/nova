@@ -1009,6 +1009,11 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertColumnExists(engine, 'shadow_instance_extra',
                                 'trusted_certs')
 
+    def _check_391(self, engine, data):
+        self.assertColumnExists(engine, 'block_device_mapping', 'volume_type')
+        self.assertColumnExists(engine, 'shadow_block_device_mapping',
+                                'volume_type')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,

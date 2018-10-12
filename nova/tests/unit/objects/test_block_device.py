@@ -425,6 +425,17 @@ class _TestBlockDeviceMappingObject(object):
         self.assertNotIn('uuid', primitive)
         self.assertIn('volume_id', primitive)
 
+    def test_obj_make_compatible_pre_1_20(self):
+        values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
+                  'destination_type': 'volume',
+                  'instance_uuid': uuids.instance,
+                  'volume_type': 'fake-lvm-1'}
+        bdm = objects.BlockDeviceMapping(context=self.context, **values)
+        data = lambda x: x['nova_object.data']
+        primitive = data(bdm.obj_to_primitive(target_version='1.19'))
+        self.assertNotIn('volume_type', primitive)
+        self.assertIn('volume_id', primitive)
+
 
 class TestBlockDeviceMappingUUIDMigration(test.TestCase):
     def setUp(self):
