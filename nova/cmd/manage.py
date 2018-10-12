@@ -59,6 +59,7 @@ from nova.i18n import _
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import build_request as build_request_obj
+from nova.objects import compute_node as compute_node_obj
 from nova.objects import host_mapping as host_mapping_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_mapping as instance_mapping_obj
@@ -418,6 +419,8 @@ class DbCommands(object):
         consumer_obj.create_incomplete_consumers,
         # Added in Rocky
         instance_mapping_obj.populate_queued_for_delete,
+        # Added in Stein
+        compute_node_obj.migrate_empty_ratio,
     )
 
     def __init__(self):
