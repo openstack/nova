@@ -16,6 +16,7 @@
 
 import copy
 import os
+import tempfile
 
 from oslo_log import log as logging
 from oslo_utils import excutils
@@ -41,7 +42,6 @@ _LLA_SUBNET = "fe80::/64"
 # TODO(efried): CONF these (maybe)
 _VOPT_VG = 'rootvg'
 _VOPT_SIZE_GB = 1
-_VOPT_TMPDIR = '/tmp/cfgdrv/'
 
 
 class ConfigDrivePowerVM(object):
@@ -84,7 +84,7 @@ class ConfigDrivePowerVM(object):
         return network_info
 
     def _create_cfg_dr_iso(self, instance, injected_files, network_info,
-                           admin_pass=None):
+                           iso_path, admin_pass=None):
         """Creates an ISO file that contains the injected files.
 
         Used for config drive.
@@ -93,9 +93,8 @@ class ConfigDrivePowerVM(object):
         :param injected_files: A list of file paths that will be injected into
                                the ISO.
         :param network_info: The network_info from the nova spawn method.
+        :param iso_path: The absolute file path for the new ISO
         :param admin_pass: Optional password to inject for the VM.
-        :return iso_path: The path to the ISO
-        :return file_name: The file name for the ISO
         """
         LOG.info("Creating config drive.", instance=instance)
         extra_md = {}
@@ -110,13 +109,6 @@ class ConfigDrivePowerVM(object):
                                                      extra_md=extra_md,
                                                      network_info=network_info)
 
-        if not os.path.exists(_VOPT_TMPDIR):
-            os.mkdir(_VOPT_TMPDIR)
-
-        file_name = pvm_util.sanitize_file_name_for_api(
-            instance.name, prefix='cfg_', suffix='.iso',
-            max_len=pvm_const.MaxLen.VOPT_NAME)
-        iso_path = os.path.join(_VOPT_TMPDIR, file_name)
         with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
             LOG.info("Config drive ISO being built in %s.", iso_path,
                      instance=instance)
@@ -127,9 +119,9 @@ class ConfigDrivePowerVM(object):
                 exc, OSError), stop_max_attempt_number=2)
             def _make_cfg_drive(iso_path):
                 cdb.make_drive(iso_path)
+
             try:
                 _make_cfg_drive(iso_path)
-                return iso_path, file_name
             except OSError:
                 with excutils.save_and_reraise_exception(logger=LOG):
                     LOG.exception("Config drive ISO could not be built",
@@ -153,17 +145,18 @@ class ConfigDrivePowerVM(object):
             network_info = copy.deepcopy(network_info)
             network_info.append(self._mgmt_cna_to_vif(mgmt_cna))
 
-        iso_path, file_name = self._create_cfg_dr_iso(
-            instance, injected_files, network_info, admin_pass=admin_pass)
+        # Pick a file name for when we upload the media to VIOS
+        file_name = pvm_util.sanitize_file_name_for_api(
+            instance.uuid.replace('-', ''), prefix='cfg_', suffix='.iso',
+            max_len=pvm_const.MaxLen.VOPT_NAME)
 
-        # Upload the media
-        with open(iso_path, 'rb') as d_stream:
+        # Create and upload the media
+        with tempfile.NamedTemporaryFile(mode='rb') as fh:
+            self._create_cfg_dr_iso(instance, injected_files, network_info,
+                                    fh.name, admin_pass=admin_pass)
             vopt, f_uuid = tsk_stg.upload_vopt(
-                self.adapter, self.vios_uuid, d_stream, file_name,
-                os.path.getsize(iso_path))
-
-        # The media can be removed now that the upload is complete
-        os.remove(iso_path)
+                self.adapter, self.vios_uuid, fh, file_name,
+                os.path.getsize(fh.name))
 
         # Define the function to build and add the mapping
         def add_func(vios_w):
