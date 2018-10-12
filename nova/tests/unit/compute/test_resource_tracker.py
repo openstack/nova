@@ -585,11 +585,14 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
-    def test_startup_makes_it_through(self, get_mock, migr_mock, get_cn_mock,
-                                      pci_mock, instance_pci_mock):
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_remove_deleted_instances_allocations')
+    def test_startup_makes_it_through(self, rdia, get_mock, migr_mock,
+                                      get_cn_mock, pci_mock,
+                                      instance_pci_mock):
         """Just make sure the startup kwarg makes it from
            _update_available_resource all the way down the call stack to
-           _update.
+           _update. In this case a compute node record already exists.
         """
         self._setup_rt()
 
@@ -599,6 +602,40 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources(startup=True)
         update_mock.assert_called_once_with(mock.ANY, mock.ANY, startup=True)
+        rdia.assert_called_once_with(
+            mock.ANY, get_cn_mock.return_value,
+            [], {})
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList())
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_init_compute_node', return_value=True)
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_remove_deleted_instances_allocations')
+    def test_startup_new_compute(self, rdia, get_mock, migr_mock, init_cn_mock,
+                                 pci_mock, instance_pci_mock):
+        """Just make sure the startup kwarg makes it from
+           _update_available_resource all the way down the call stack to
+           _update. In this case a new compute node record is created.
+        """
+        self._setup_rt()
+        cn = _COMPUTE_NODE_FIXTURES[0]
+        self.rt.compute_nodes[cn.hypervisor_hostname] = cn
+        mock_pci_tracker = mock.MagicMock()
+        mock_pci_tracker.stats.to_device_pools_obj.return_value = (
+            objects.PciDevicePoolList())
+        self.rt.pci_tracker = mock_pci_tracker
+
+        get_mock.return_value = []
+        migr_mock.return_value = []
+
+        update_mock = self._update_available_resources(startup=True)
+        update_mock.assert_called_once_with(mock.ANY, mock.ANY, startup=True)
+        rdia.assert_not_called()
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -1025,7 +1062,8 @@ class TestInitComputeNode(BaseTestCase):
         compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         self.rt.compute_nodes[_NODENAME] = compute_node
 
-        self.rt._init_compute_node(mock.sentinel.ctx, resources)
+        self.assertFalse(
+            self.rt._init_compute_node(mock.sentinel.ctx, resources))
 
         self.assertFalse(service_mock.called)
         self.assertFalse(get_mock.called)
@@ -1050,7 +1088,8 @@ class TestInitComputeNode(BaseTestCase):
         get_mock.side_effect = fake_get_node
         resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
 
-        self.rt._init_compute_node(mock.sentinel.ctx, resources)
+        self.assertFalse(
+            self.rt._init_compute_node(mock.sentinel.ctx, resources))
 
         get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
                                          _NODENAME)
@@ -1078,7 +1117,8 @@ class TestInitComputeNode(BaseTestCase):
         get_by_hypervisor_mock.side_effect = fake_get_all
         resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
 
-        self.rt._init_compute_node(mock.sentinel.ctx, resources)
+        self.assertFalse(
+            self.rt._init_compute_node(mock.sentinel.ctx, resources))
 
         get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
                                          _NODENAME)
@@ -1206,7 +1246,8 @@ class TestInitComputeNode(BaseTestCase):
             cn.uuid = uuids.compute_node_uuid
 
         create_mock.side_effect = set_cn_id
-        self.rt._init_compute_node(mock.sentinel.ctx, resources)
+        self.assertTrue(
+            self.rt._init_compute_node(mock.sentinel.ctx, resources))
 
         cn = self.rt.compute_nodes[_NODENAME]
         get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
@@ -3091,12 +3132,10 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         cn = objects.ComputeNode(memory_mb=1024, local_gb=10)
         self.rt.compute_nodes['foo'] = cn
 
-        @mock.patch.object(self.rt,
-                           '_remove_deleted_instances_allocations')
         @mock.patch.object(self.rt, '_update_usage_from_instance')
         @mock.patch('nova.objects.Service.get_minimum_version',
                     return_value=22)
-        def test(version_mock, uufi, rdia):
+        def test(version_mock, uufi):
             self.rt._update_usage_from_instances('ctxt', [], 'foo')
 
         test()
