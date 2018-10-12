@@ -594,6 +594,7 @@ class _TestRequestSpecObject(object):
         self.assertIsNone(serialized_obj.instance_group.members)
         self.assertIsNone(serialized_obj.instance_group.hosts)
         self.assertIsNone(serialized_obj.retry)
+        self.assertIsNone(serialized_obj.requested_destination)
 
     def test_create(self):
         req_obj = fake_request_spec.fake_spec_obj(remove_id=True)
@@ -616,6 +617,9 @@ class _TestRequestSpecObject(object):
 
     def test_save(self):
         req_obj = fake_request_spec.fake_spec_obj()
+        # Make sure the requested_destination is not persisted since it is
+        # only valid per request/operation.
+        req_obj.requested_destination = objects.Destination(host='fake')
 
         def _test_save_args(self2, context, instance_uuid, changes):
             self._check_update_primitive(req_obj, changes)
