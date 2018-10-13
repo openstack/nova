@@ -1,0 +1,11 @@
+---
+features:
+  - Microversion 2.67 adds the optional parameter ``volume_type`` to
+    block_device_mapping_v2, which can be used to specify ``volume_type``
+    when creating a server.
+
+    This would only apply to BDMs with ``source_type`` of `blank`, `image` and
+    `snapshot` and ``destination_type`` of `volume`.
+
+    The compute API will reject server create requests with a specified
+    ``volume_type`` until all nova-compute services are upgraded to Stein.

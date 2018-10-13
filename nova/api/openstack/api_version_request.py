@@ -162,6 +162,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              ``updated_at`` time to filter nova resources, the resources
              include the servers API, os-instance-action API and
              os-migrations API.
+    * 2.67 - Adds the optional ``volume_type`` field to the
+             ``block_device_mapping_v2`` parameter when creating a server.
 """
 
 # The minimum and maximum versions of the API supported
@@ -170,7 +172,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.66"
+_MAX_API_VERSION = "2.67"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

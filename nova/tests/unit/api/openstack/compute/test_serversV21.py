@@ -6508,6 +6508,92 @@ class ServersControllerCreateTestV263(ServersControllerCreateTest):
                       six.text_type(ex))
 
 
+class ServersControllerCreateTestV267(ServersControllerCreateTest):
+    def setUp(self):
+        super(ServersControllerCreateTestV267, self).setUp()
+
+        self.block_device_mapping_v2 = [
+            {'uuid': '70a599e0-31e7-49b7-b260-868f441e862b',
+             'source_type': 'image',
+             'destination_type': 'volume',
+             'boot_index': 0,
+             'volume_size': '1',
+             'volume_type': 'fake-lvm-1'
+            }]
+
+    def _test_create_extra(self, *args, **kwargs):
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.67')
+        return super(ServersControllerCreateTestV267, self)._test_create_extra(
+            *args, **kwargs)
+
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=compute_api.MIN_COMPUTE_VOLUME_TYPE)
+    def test_create_server_with_trusted_volume_type_pre_2_67_fails(self,
+            get_min_ver):
+        """Make sure we can't use volume_type before 2.67"""
+        self.body['server'].update(
+            {'block_device_mapping_v2': self.block_device_mapping_v2})
+        self.req.body = jsonutils.dump_as_bytes(self.block_device_mapping_v2)
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.66')
+        ex = self.assertRaises(
+            exception.ValidationError, self.controller.create, self.req,
+            body=self.body)
+        self.assertIn("'volume_type' was unexpected", six.text_type(ex))
+
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.VolumeTypeNotFound(
+                           id_or_name='fake-lvm-1'))
+    def test_create_instance_with_volume_type_not_found(self, mock_create):
+        """Trying to boot from volume with a volume type that does not exist
+        will result in a 400 error.
+        """
+        params = {'block_device_mapping_v2': self.block_device_mapping_v2}
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self._test_create_extra, params)
+        self.assertIn('Volume type fake-lvm-1 could not be found',
+                      six.text_type(ex))
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_VOLUME_TYPE - 1)
+    def test_check_volume_type_new_inst_old_compute(self, get_min_version):
+        """Trying to boot from volume with a volume_type but not all computes
+        are upgraded will result in a 409 error.
+        """
+        params = {'block_device_mapping_v2': self.block_device_mapping_v2}
+        ex = self.assertRaises(webob.exc.HTTPConflict,
+                               self._test_create_extra, params)
+        self.assertIn('Volume type support is not yet available',
+                      six.text_type(ex))
+
+    def test_create_instance_with_volume_type_empty_string(self):
+        """Test passing volume_type='' which is accepted but not used."""
+        self.block_device_mapping_v2[0]['volume_type'] = ''
+        params = {'block_device_mapping_v2': self.block_device_mapping_v2}
+        self._test_create_extra(params)
+
+    def test_create_instance_with_none_volume_type(self):
+        """Test passing volume_type=None which is accepted but not used."""
+        self.block_device_mapping_v2[0]['volume_type'] = None
+        params = {'block_device_mapping_v2': self.block_device_mapping_v2}
+        self._test_create_extra(params)
+
+    def test_create_instance_without_volume_type(self):
+        """Test passing without volume_type which is accepted but not used."""
+        self.block_device_mapping_v2[0].pop('volume_type')
+        params = {'block_device_mapping_v2': self.block_device_mapping_v2}
+        self._test_create_extra(params)
+
+    def test_create_instance_with_volume_type_too_long(self):
+        """Tests the maxLength schema validation on volume_type."""
+        self.block_device_mapping_v2[0]['volume_type'] = 'X' * 256
+        params = {'block_device_mapping_v2': self.block_device_mapping_v2}
+        ex = self.assertRaises(exception.ValidationError,
+                               self._test_create_extra, params)
+        self.assertIn('is too long', six.text_type(ex))
+
+
 class ServersControllerCreateTestWithMock(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
     flavor_ref = 'http://localhost/123/flavors/3'

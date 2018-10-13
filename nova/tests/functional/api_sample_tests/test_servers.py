@@ -21,6 +21,7 @@ import six
 
 from nova.api.openstack import api_version_request as avr
 import nova.conf
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
@@ -351,6 +352,18 @@ class ServersSampleJson266Test(ServersSampleBase):
         subs['id'] = uuid
         self._verify_response(
             'servers-details-with-changes-before', subs, response, 200)
+
+
+class ServersSampleJson267Test(ServersSampleBase):
+    microversion = '2.67'
+    scenarios = [('v2_67', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(ServersSampleJson267Test, self).setUp()
+        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+
+    def test_servers_post(self):
+        return self._post_server(use_common_server_api_samples=False)
 
 
 class ServersUpdateSampleJsonTest(ServersSampleBase):

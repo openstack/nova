@@ -349,6 +349,13 @@ base_create_v263['properties']['server']['properties'][
     'trusted_image_certificates'] = parameter_types.trusted_certs
 
 
+# Add volume type in block_device_mapping_v2.
+base_create_v267 = copy.deepcopy(base_create_v263)
+base_create_v267['properties']['server']['properties'][
+    'block_device_mapping_v2']['items'][
+    'properties']['volume_type'] = parameter_types.volume_type
+
+
 base_update = {
     'type': 'object',
     'properties': {

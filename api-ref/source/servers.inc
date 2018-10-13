@@ -363,6 +363,7 @@ Request
   - block_device_mapping_v2.uuid: block_device_uuid
   - block_device_mapping_v2.volume_size: volume_size
   - block_device_mapping_v2.tag: device_tag_bdm
+  - block_device_mapping_v2.volume_type: device_volume_type
   - config_drive: config_drive
   - imageRef: imageRef
   - key_name: key_name
