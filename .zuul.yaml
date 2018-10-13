@@ -161,6 +161,16 @@
       devstack_localrc:
         TEMPEST_COMPUTE_TYPE: compute_legacy
 
+- job:
+    name: nova-tempest-full-oslo.versionedobjects
+    parent: tempest-full
+    description: |
+      Run test with git version of oslo.versionedobjects to check that
+      changes to nova will work with the next released version of
+      that library.
+    required-projects:
+      - openstack/oslo.versionedobjects
+
 - project:
     # Please try to keep the list of job names sorted alphabetically.
     templates:
@@ -251,7 +261,7 @@
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-pg-full:
             irrelevant-files: *dsvm-irrelevant-files
-        - legacy-tempest-dsvm-neutron-src-oslo.versionedobjects:
+        - nova-tempest-full-oslo.versionedobjects:
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-tempest-dsvm-nova-libvirt-kvm-apr:
             irrelevant-files: *dsvm-irrelevant-files
