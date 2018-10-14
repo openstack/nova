@@ -854,3 +854,9 @@ following APIs to filter by changes before or equal to the resource
 * ``GET /servers/detail``
 * ``GET /servers/{server_id}/os-instance-actions``
 * ``GET /os-migrations``
+
+2.67
+----
+
+Adds the ``volume_type`` parameter to ``block_device_mapping_v2``, which can
+be used to specify cinder ``volume_type`` when creating a server.

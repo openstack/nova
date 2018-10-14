@@ -600,8 +600,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertEqual(retexp,
                          block_device.BlockDeviceDict.from_api(api_dict, True))
 
-    def test_from_api_invalid_oneof_image_id_or_destination_local_mapping(
-            self):
+    def test_from_api_invalid_image_to_destination_local_mapping(self):
         api_dict = {'id': 1,
                     'source_type': 'image',
                     'destination_type': 'local',
