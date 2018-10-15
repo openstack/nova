@@ -21778,6 +21778,32 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertIn('the device is no longer found on the guest',
                       six.text_type(mock_log.warning.call_args[0]))
 
+    @mock.patch('nova.virt.libvirt.driver.LOG')
+    def test_detach_interface_guest_not_found_after_detach(self, mock_log):
+        # Asserts that we don't raise an exception when the guest is gone
+        # after a libvirt error during detach.
+        instance = self._create_instance()
+        vif = _fake_network_info(self, 1)[0]
+        guest = mock.MagicMock()
+        guest.get_power_state.return_value = power_state.RUNNING
+        guest.get_interface_by_cfg.return_value = (
+            vconfig.LibvirtConfigGuestInterface())
+        get_guest_mock = mock.Mock()
+        # Host.get_guest should be called twice: the first time it is found,
+        # the second time it is gone.
+        get_guest_mock.side_effect = (
+            guest, exception.InstanceNotFound(instance_id=instance.uuid))
+        self.drvr._host.get_guest = get_guest_mock
+        error = fakelibvirt.libvirtError(
+            'internal error: End of file from qemu monitor')
+        error.err = (fakelibvirt.VIR_ERR_OPERATION_FAILED,)
+        guest.detach_device_with_retry.side_effect = error
+        self.drvr.detach_interface(self.context, instance, vif)
+        self.assertEqual(1, mock_log.info.call_count)
+        self.assertIn('Instance disappeared while detaching interface',
+                      mock_log.info.call_args[0][0])
+        get_guest_mock.assert_has_calls([mock.call(instance)] * 2)
+
     @mock.patch.object(FakeVirtDomain, 'info')
     @mock.patch.object(FakeVirtDomain, 'detachDeviceFlags')
     @mock.patch.object(host.Host, '_get_domain')
