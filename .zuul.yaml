@@ -146,6 +146,21 @@
     run: playbooks/legacy/nova-next/run.yaml
     post-run: playbooks/legacy/nova-next/post.yaml
 
+- job:
+    name: tempest-nova-v2-api
+    parent: devstack-tempest
+    branches:
+      - master
+    description: |
+      This job runs the Tempest compute tests against v2.0 endpoint.
+      Former names for this job was:
+        * legacy-tempest-dsvm-nova-v20-api
+    vars:
+      tox_envlist: all
+      tempest_test_regex: api.*compute
+      devstack_localrc:
+        TEMPEST_COMPUTE_TYPE: compute_legacy
+
 - project:
     # Please try to keep the list of job names sorted alphabetically.
     templates:
@@ -240,7 +255,7 @@
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-tempest-dsvm-nova-libvirt-kvm-apr:
             irrelevant-files: *dsvm-irrelevant-files
-        - legacy-tempest-dsvm-nova-v20-api:
+        - tempest-nova-v2-api:
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-tempest-dsvm-neutron-dvr-multinode-full:
             irrelevant-files: *dsvm-irrelevant-files
