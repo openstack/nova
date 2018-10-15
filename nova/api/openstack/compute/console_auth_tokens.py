@@ -16,9 +16,14 @@
 import webob
 
 from nova.api.openstack import wsgi
+import nova.conf
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
+from nova import context as nova_context
 from nova.i18n import _
+from nova import objects
 from nova.policies import console_auth_tokens as cat_policies
+
+CONF = nova.conf.CONF
 
 
 class ConsoleAuthTokensController(wsgi.Controller):
@@ -36,7 +41,24 @@ class ConsoleAuthTokensController(wsgi.Controller):
             msg = _("token not provided")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        connect_info = self._consoleauth_rpcapi.check_token(context, token)
+        connect_info = None
+        if CONF.workarounds.enable_consoleauth:
+            connect_info = self._consoleauth_rpcapi.check_token(context, token)
+        else:
+            results = nova_context.scatter_gather_skip_cell0(
+                context, objects.ConsoleAuthToken.validate, token)
+            # NOTE(melwitt): Console token auths are stored in cell databases,
+            # but with only the token as a request param, we can't know which
+            # cell database contains the token's corresponding connection info.
+            # So, we must query all cells for the info and we can break the
+            # loop as soon as we find a result because the token is associated
+            # with one instance, which can only be in one cell.
+            for result in results.values():
+                if result not in (nova_context.did_not_respond_sentinel,
+                                  nova_context.raised_exception_sentinel):
+                    connect_info = result.to_dict()
+                    break
+
         if not connect_info:
             raise webob.exc.HTTPNotFound(explanation=_("Token not found"))
 
