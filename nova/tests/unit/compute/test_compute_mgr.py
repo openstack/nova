@@ -6933,9 +6933,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
             mock_notify_about_inst.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini',
-                          action='live_migration_pre', phase='start'),
+                          action='live_migration_pre', phase='start',
+                          bdms=mock_get_bdms.return_value),
                 mock.call(self.context, instance, 'fake-mini',
-                          action='live_migration_pre', phase='end')])
+                          action='live_migration_pre', phase='end',
+                          bdms=mock_get_bdms.return_value)])
             self.assertIsInstance(r, migrate_data_obj.LiveMigrateData)
             self.assertIsInstance(mock_plm.call_args_list[0][0][5],
                                   migrate_data_obj.LiveMigrateData)
@@ -6985,6 +6987,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
         @mock.patch.object(vol1_bdm, 'save')
         @mock.patch.object(compute, '_notify_about_instance_usage')
+        @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(compute, 'network_api')
         @mock.patch.object(compute.driver, 'pre_live_migration')
         @mock.patch.object(compute, '_get_instance_block_device_info')
@@ -6994,8 +6997,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(compute.volume_api, 'attachment_delete')
         @mock.patch.object(compute.volume_api, 'attachment_create')
         def _test(mock_attach_create, mock_attach_delete, mock_get_bdms,
-                  mock_ivbi, mock_gibdi, mock_plm, mock_nwapi, mock_notify,
-                  mock_bdm_save, mock_exception):
+                  mock_ivbi, mock_gibdi, mock_plm, mock_nwapi, mock_ver_notify,
+                  mock_notify, mock_bdm_save, mock_exception):
             new_attachment_id = uuids.attachment3
             mock_attach_create.side_effect = [{'id': new_attachment_id},
                                               test.TestingException]
