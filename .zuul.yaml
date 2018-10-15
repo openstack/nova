@@ -68,6 +68,21 @@
     run: playbooks/legacy/nova-live-migration/run.yaml
     post-run: playbooks/legacy/nova-live-migration/post.yaml
 
+- job:
+    name: tempest-nova-v2-api
+    parent: devstack-tempest
+    branches:
+      - master
+    description: |
+      This job runs the Tempest compute tests against v2.0 endpoint.
+      Former names for this job was:
+        * legacy-tempest-dsvm-nova-v20-api
+    vars:
+      tox_envlist: all
+      tempest_test_regex: api.*compute
+      devstack_localrc:
+        TEMPEST_COMPUTE_TYPE: compute_legacy
+
 - project:
     templates:
       - openstack-python-jobs
@@ -285,7 +300,7 @@
         - openstack-tox-cover
     experimental:
       jobs:
-        - legacy-tempest-dsvm-nova-v20-api:
+        - tempest-nova-v2-api:
             irrelevant-files:
               - ^(placement-)?api-.*$
               - ^(test-|)requirements.txt$
