@@ -6132,6 +6132,15 @@ class ComputeManager(manager.Manager):
         migrate_data.old_vol_attachment_ids = {}
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
             context, instance.uuid)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
+        self._notify_about_instance_usage(
+            context, instance, "live_migration.pre.start",
+            network_info=network_info)
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_PRE,
+            phase=fields.NotificationPhase.START, bdms=bdms)
+
         try:
             connector = self.driver.get_volume_connector(instance)
             for bdm in bdms:
@@ -6175,15 +6184,6 @@ class ComputeManager(manager.Manager):
         block_device_info = self._get_instance_block_device_info(
                             context, instance, refresh_conn_info=True,
                             bdms=bdms)
-
-        network_info = self.network_api.get_instance_nw_info(context, instance)
-        self._notify_about_instance_usage(
-                     context, instance, "live_migration.pre.start",
-                     network_info=network_info)
-        compute_utils.notify_about_instance_action(
-            context, instance, self.host,
-            action=fields.NotificationAction.LIVE_MIGRATION_PRE,
-            phase=fields.NotificationPhase.START)
 
         # The driver pre_live_migration will plug vifs on the host.
         # We call plug_vifs before calling ensure_filtering_rules_for_instance,
@@ -6229,7 +6229,7 @@ class ComputeManager(manager.Manager):
         compute_utils.notify_about_instance_action(
             context, instance, self.host,
             action=fields.NotificationAction.LIVE_MIGRATION_PRE,
-            phase=fields.NotificationPhase.END)
+            phase=fields.NotificationPhase.END, bdms=bdms)
 
         LOG.debug('pre_live_migration result data is %s', migrate_data)
         return migrate_data
