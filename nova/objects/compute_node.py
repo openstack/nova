@@ -351,6 +351,11 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                 "disk_available_least", "host_ip", "uuid"]
         for key in keys:
             if key in resources:
+                # The uuid field is read-only so it should only be set when
+                # creating the compute node record for the first time. Ignore
+                # it otherwise.
+                if key == 'uuid' and 'uuid' in self:
+                    continue
                 setattr(self, key, resources[key])
 
         # supported_instances has a different name in compute_node
