@@ -8361,6 +8361,13 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             is_shared_instance_path=True)
         do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
             migrate_data)
+        self.assertTrue(do_cleanup)
+        self.assertFalse(destroy_disks)
+
+    def test_live_migration_cleanup_flags_other(self):
+        migrate_data = mock.Mock()
+        do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
+            migrate_data)
         self.assertFalse(do_cleanup)
         self.assertFalse(destroy_disks)
 
