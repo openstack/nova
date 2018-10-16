@@ -121,6 +121,9 @@ Upgrade
   **19.0.0 (Stein)**
 
   * Checks for the Placement API are modified to require version 1.30.
+  * Checks are added for the **nova-consoleauth** service to warn and provide
+    additional instructions to set **[workarounds]enable_consoleauth = True**
+    while performing a live/rolling upgrade.
 
 See Also
 ========
