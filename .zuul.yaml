@@ -230,8 +230,6 @@
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-tempest-dsvm-full-devstack-plugin-nfs:
             irrelevant-files: *dsvm-irrelevant-files
-        - legacy-tempest-dsvm-multinode-full:
-            irrelevant-files: *dsvm-irrelevant-files
         - tempest-full-py3-opensuse150:
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-tempest-dsvm-neutron-pg-full:
