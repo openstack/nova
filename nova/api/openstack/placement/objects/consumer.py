@@ -55,6 +55,10 @@ def create_incomplete_consumers(ctx, batch_size):
     sel = sa.select(cols)
     sel = sel.select_from(alloc_to_consumer)
     sel = sel.where(CONSUMER_TBL.c.id.is_(None))
+    # NOTE(mnaser): It is possible to have multiple consumers having many
+    #               allocations to the same resource provider, which would
+    #               make the INSERT FROM SELECT fail due to duplicates.
+    sel = sel.group_by(_ALLOC_TBL.c.consumer_id)
     sel = sel.limit(batch_size)
     target_cols = ['uuid', 'project_id', 'user_id']
     ins_stmt = CONSUMER_TBL.insert().from_select(target_cols, sel)
