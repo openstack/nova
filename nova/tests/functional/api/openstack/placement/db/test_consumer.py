@@ -11,7 +11,6 @@
 #    under the License.
 
 from oslo_config import cfg
-from oslo_db import exception as db_exc
 from oslo_utils.fixture import uuidsentinel as uuids
 import sqlalchemy as sa
 
@@ -232,20 +231,14 @@ class CreateIncompleteConsumersTestCase(base.TestCase):
         # Run the online data migration to migrate one consumer. The batch size
         # needs to be large enough to hit more than one consumer for this test
         # where each consumer has two allocations.
-        # FIXME(mriedem): This should not raise a UniqueConstraint error once
-        # bug 1798163 is fixed.
-        # res = consumer_obj.create_incomplete_consumers(self.ctx, 2)
-        # self.assertEqual((2, 2), res)
-        self.assertRaises(db_exc.DBDuplicateEntry,
-                          consumer_obj.create_incomplete_consumers,
-                          self.ctx, 2)
+        res = consumer_obj.create_incomplete_consumers(self.ctx, 2)
+        self.assertEqual((2, 2), res)
         # Migrate the rest by listing allocations on the resource provider.
         rp1 = rp_obj.ResourceProvider(self.ctx, id=1)
-        # FIXME(mriedem): This should not raise a UniqueConstraint error once
-        # bug 1798163 is fixed.
-        self.assertRaises(db_exc.DBDuplicateEntry,
-                          rp_obj.AllocationList.get_all_by_resource_provider,
-                          self.ctx, rp1)
+        rp_obj.AllocationList.get_all_by_resource_provider(self.ctx, rp1)
+        self._check_incomplete_consumers(self.ctx)
+        res = consumer_obj.create_incomplete_consumers(self.ctx, 10)
+        self.assertEqual((0, 0), res)
 
 
 class DeleteConsumerIfNoAllocsTestCase(tb.PlacementDbBaseTestCase):
