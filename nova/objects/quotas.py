@@ -349,13 +349,19 @@ class Quotas(base.NovaObject):
                 continue
             count = cls.count_as_dict(context, resource, *count_args,
                                       **count_kwargs)
+            # Initialize counts if not yet counted!
+            for custom_key in deltas:
+                if 'project' in count and custom_key not in count['project']:
+                    count['project'][custom_key] = 0
+                if 'user' in count and custom_key not in count['user']:
+                    count['user'][custom_key] = 0
             for res in count.get('project', {}):
                 if res in deltas:
-                    total = count['project'][res] + deltas[res]
+                    total = count['project'][res] + deltas.get(res, 0)
                     check_kwargs['project_values'][res] = total
             for res in count.get('user', {}):
                 if res in deltas:
-                    total = count['user'][res] + deltas[res]
+                    total = count['user'][res] + deltas.get(res, 0)
                     check_kwargs['user_values'][res] = total
         if check_project_id is not None:
             check_kwargs['project_id'] = check_project_id
@@ -399,6 +405,10 @@ class Quotas(base.NovaObject):
         else:
             raise exception.QuotaClassExists(class_name=class_name,
                                              resource=resource)
+
+    @classmethod
+    def delete_class(cls, context, class_name):
+        raise NotImplementedError()
 
     @classmethod
     def update_class(cls, context, class_name, resource, limit):

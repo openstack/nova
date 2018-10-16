@@ -18,9 +18,9 @@
 """
 A connection to the VMware vCenter platform.
 """
-
 import os
 import re
+from six.moves import urllib
 
 import os_resource_classes as orc
 from oslo_log import log as logging
@@ -55,6 +55,7 @@ from nova.virt.vmwareapi import volumeops
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
+RPC_TOPIC = 'vmware-vspc'
 
 TIME_BETWEEN_API_CALL_RETRIES = 1.0
 MAX_CONSOLE_BYTES = 100 * units.Ki
@@ -355,8 +356,26 @@ class VMwareVCDriver(driver.ComputeDriver):
         return self._vmops.get_mks_console(instance)
 
     def get_console_output(self, context, instance):
+        """request specific log from VSPC."""
+
+        if CONF.vmware.serial_log_uri:
+            try:
+                print("%s/console_log/%s" % (
+                    CONF.vmware.serial_log_uri,
+                    instance.uuid))
+                read_log_data = urllib.request.urlopen("%s/console_log/%s" % (
+                    CONF.vmware.serial_log_uri,
+                    instance.uuid))
+                return read_log_data.read()
+            except IOError:
+                LOG.exception('Unable to obtain serial console log for '
+                              'VM %(vm_uuid)s with server details: '
+                              '%(server)s.', {'vm_uuid': instance.uuid,
+                              'server': CONF.vmware.serial_log_uri})
+
         if not CONF.vmware.serial_log_dir:
-            LOG.error("The 'serial_log_dir' config option is not set!")
+            LOG.error("Neither the 'serial_log_dir' nor 'serial_log_uri' "
+                      "config option is set!")
             return
         fname = instance.uuid.replace('-', '')
         path = os.path.join(CONF.vmware.serial_log_dir, fname)

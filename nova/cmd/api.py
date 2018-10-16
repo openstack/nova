@@ -31,6 +31,7 @@ from nova.conf import remote_debug
 from nova import config
 from nova import exception
 from nova import objects
+from nova import quota
 from nova import service
 from nova import version
 
@@ -53,6 +54,7 @@ def main():
 
     launcher = service.process_launcher()
     started = 0
+    quota.QUOTAS.initialize()
     for api in CONF.enabled_apis:
         should_use_ssl = api in CONF.enabled_ssl_apis
         try:

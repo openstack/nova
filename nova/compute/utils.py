@@ -1041,22 +1041,76 @@ def get_machine_ips():
     return addresses
 
 
-def upsize_quota_delta(new_flavor, old_flavor):
-    """Calculate deltas required to adjust quota for an instance upsize.
+def resize_quota_delta(new_flavor, old_flavor, sense, compare):
+    """Calculate any quota adjustment required at a particular point
+    in the resize cycle.
 
+    :param context: the request context
     :param new_flavor: the target instance type
     :param old_flavor: the original instance type
+    :param sense: the sense of the adjustment, 1 indicates a
+                  forward adjustment, whereas -1 indicates a
+                  reversal of a prior adjustment
+    :param compare: the direction of the comparison, 1 indicates
+                    we're checking for positive deltas, whereas
+                    -1 indicates negative deltas
     """
     def _quota_delta(resource):
-        return (new_flavor[resource] - old_flavor[resource])
+        old_reserve = old_flavor.get('extra_specs', {}).get(
+            'quota:instance_only', 'false') != 'true'
+        new_reserve = new_flavor.get('extra_specs', {}).get(
+            'quota:instance_only', 'false') != 'true'
+        old_factor = 1 if old_reserve else 0
+        new_factor = 1 if new_reserve else 0
+        return sense * (new_flavor[resource] * new_factor -
+            old_flavor[resource] * old_factor)
 
     deltas = {}
-    if _quota_delta('vcpus') > 0:
-        deltas['cores'] = _quota_delta('vcpus')
-    if _quota_delta('memory_mb') > 0:
-        deltas['ram'] = _quota_delta('memory_mb')
+
+    def add_delta(resource, delta):
+        if compare * delta > 0:
+            deltas[resource] = delta
+
+    add_delta('cores', _quota_delta('vcpus'))
+    add_delta('ram', _quota_delta('memory_mb'))
+
+    old_separate = old_flavor.get('extra_specs', {}).get(
+        'quota:separate', 'false') == 'true'
+    new_separate = new_flavor.get('extra_specs', {}).get(
+        'quota:separate', 'false') == 'true'
+    if old_separate and not new_separate:
+        add_delta('instances_' + old_flavor['name'], -1 * sense)
+        add_delta('instances', +1 * sense)
+    if not old_separate and new_separate:
+        add_delta('instances', -1 * sense)
+        add_delta('instances_' + new_flavor['name'], +1 * sense)
+    if old_separate and new_separate:
+        add_delta('instances_' + old_flavor['name'], -1 * sense)
+        add_delta('instances_' + new_flavor['name'], +1 * sense)
 
     return deltas
+
+
+def upsize_quota_delta(new_flavor, old_flavor):
+    """Calculate deltas required to adjust quota for an instance upsize.
+    """
+    return resize_quota_delta(new_flavor, old_flavor, 1, 1)
+
+
+def reverse_upsize_quota_delta(instance):
+    """Calculate deltas required to reverse a prior upsizing
+    quota adjustment.
+    """
+    return resize_quota_delta(instance.new_flavor,
+                              instance.old_flavor, -1, -1)
+
+
+def downsize_quota_delta(instance):
+    """Calculate deltas required to adjust quota for an instance downsize.
+    """
+    old_flavor = instance.get_flavor('old')
+    new_flavor = instance.get_flavor('new')
+    return resize_quota_delta(new_flavor, old_flavor, 1, -1)
 
 
 def get_headroom(quotas, usages, deltas):
@@ -1105,6 +1159,18 @@ def check_num_instances_quota(
     req_ram = max_count * flavor.memory_mb
     deltas = {'instances': max_count, 'cores': req_cores, 'ram': req_ram}
 
+    quota_key_instances = 'instances'
+    if flavor.get('extra_specs', {}).get('quota:separate', 'false') == 'true':
+        quota_key_instances = 'instances_' + flavor.name
+        deltas[quota_key_instances] = max_count
+        deltas['instances'] = 0
+        deltas['cores'] = 0
+        deltas['ram'] = 0
+    reserve_cpu_ram = flavor.get('extra_specs', {}).get(
+        'quota:instance_only', 'false') != 'true'
+    if reserve_cpu_ram:
+        deltas.update(cores=req_cores, ram=req_ram)
+
     try:
         objects.Quotas.check_deltas(context, deltas,
                                     project_id, user_id=user_id,
@@ -1118,10 +1184,10 @@ def check_num_instances_quota(
         if min_count == max_count == 0:
             # orig_num_req is the original number of instances requested in the
             # case of a recheck quota, for use in the over quota exception.
-            req_cores = orig_num_req * flavor.vcpus
-            req_ram = orig_num_req * flavor.memory_mb
-            requested = {'instances': orig_num_req, 'cores': req_cores,
-                         'ram': req_ram}
+            requested = {quota_key_instances: orig_num_req}
+            if reserve_cpu_ram:
+                requested['cores'] = orig_num_req * flavor.vcpus
+                requested['ram'] = orig_num_req * flavor.memory_mb
             (overs, reqs, total_alloweds, useds) = get_over_quota_detail(
                 deltas, overs, quotas, requested)
             msg = "Cannot run any more instances of this type."
@@ -1135,11 +1201,11 @@ def check_num_instances_quota(
         # OK, we exceeded quota; let's figure out why...
         headroom = get_headroom(quotas, usages, deltas)
 
-        allowed = headroom.get('instances', 1)
+        allowed = headroom.get(quota_key_instances, 1)
         # Reduce 'allowed' instances in line with the cores & ram headroom
-        if flavor.vcpus:
+        if flavor.vcpus and 'cores' in headroom:
             allowed = min(allowed, headroom['cores'] // flavor.vcpus)
-        if flavor.memory_mb:
+        if flavor.memory_mb and 'ram' in headroom:
             allowed = min(allowed, headroom['ram'] // flavor.memory_mb)
 
         # Convert to the appropriate exception message
@@ -1155,8 +1221,9 @@ def check_num_instances_quota(
 
         num_instances = (str(min_count) if min_count == max_count else
             "%s-%s" % (min_count, max_count))
-        requested = dict(instances=num_instances, cores=req_cores,
-                         ram=req_ram)
+        requested = {quota_key_instances: num_instances}
+        if reserve_cpu_ram:
+            requested.update(cores=req_cores, ram=req_ram)
         (overs, reqs, total_alloweds, useds) = get_over_quota_detail(
             headroom, overs, quotas, requested)
         params = {'overs': overs, 'pid': project_id,

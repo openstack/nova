@@ -284,6 +284,7 @@ def check_img_metadata_properties_quota(context, metadata):
     if not metadata:
         return
     try:
+        QUOTAS.initialize()
         QUOTAS.limit_check(context, metadata_items=len(metadata))
     except exception.OverQuota:
         expl = _("Image metadata limit exceeded")

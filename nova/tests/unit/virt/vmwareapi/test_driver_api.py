@@ -1889,6 +1889,15 @@ class VMwareAPIVMTestCase(test.TestCase,
                                                     driver.MAX_CONSOLE_BYTES)
         self.assertEqual(b'fira', output)
 
+    def test_get_console_output_uri(self):
+        self.flags(serial_log_uri='https://httpstat.us:443', group='vmware')
+        self._create_instance()
+        with mock.patch('six.moves.urllib.request.urlopen') as fake_urlopen:
+            fake_urlopen.return_value = mock.Mock()
+            fake_urlopen.return_value.read = mock.Mock(return_value=b'fira')
+            output = self.conn.get_console_output(self.context, self.instance)
+        self.assertEqual(b'fira', output)
+
     @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
     def test_get_volume_connector(self, mock_update_cached_instances):
         self._create_vm()

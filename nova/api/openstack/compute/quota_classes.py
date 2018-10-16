@@ -45,8 +45,6 @@ FILTERED_QUOTAS_2_57.extend(['injected_files', 'injected_file_content_bytes',
 
 class QuotaClassSetsController(wsgi.Controller):
 
-    supported_quotas = []
-
     def __init__(self):
         super(QuotaClassSetsController, self).__init__()
         self.supported_quotas = QUOTAS.resources
@@ -73,6 +71,10 @@ class QuotaClassSetsController(wsgi.Controller):
             if resource in quota_set:
                 result[resource] = quota_set[resource]
 
+        # Custom Quota Support
+        if quota_class != 'default':
+            result = copy.copy(quota_set)
+
         return dict(quota_class_set=result)
 
     @wsgi.Controller.api_version('2.1', '2.49')
@@ -92,6 +94,7 @@ class QuotaClassSetsController(wsgi.Controller):
 
     def _show(self, req, id, filtered_quotas=None,
               exclude_server_groups=False):
+        QUOTAS.initialize()
         context = req.environ['nova.context']
         context.can(qcs_policies.POLICY_ROOT % 'show', target={})
         values = QUOTAS.get_class_quotas(context, id)
@@ -118,6 +121,7 @@ class QuotaClassSetsController(wsgi.Controller):
 
     def _update(self, req, id, body, filtered_quotas=None,
                 exclude_server_groups=False):
+        QUOTAS.initialize()
         context = req.environ['nova.context']
         context.can(qcs_policies.POLICY_ROOT % 'update', target={})
         try:
@@ -138,3 +142,26 @@ class QuotaClassSetsController(wsgi.Controller):
         values = QUOTAS.get_class_quotas(context, quota_class)
         return self._format_quota_set(None, values, filtered_quotas,
                                       exclude_server_groups)
+
+    @wsgi.Controller.api_version('2.1')
+    @wsgi.response(201)
+    @wsgi.expected_errors((400))
+    def create(self, req, id, body):
+        context = req.environ['nova.context']
+        class_set = body['quota_class_set']
+
+        for key, value in class_set.items():
+            try:
+                objects.Quotas.create_class(context, id, key, value)
+            except exception.QuotaClassExists:
+                pass
+
+        values = QUOTAS.get_class_quotas(context, id)
+        return self._format_quota_set(None, values, None)
+
+    @wsgi.Controller.api_version('2.1')
+    @wsgi.response(204)
+    @wsgi.expected_errors((404, 409))
+    def delete(self, req, id, body):
+        context = req.environ['nova.context']
+        objects.Quotas.delete_class(context, id)

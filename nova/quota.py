@@ -32,6 +32,7 @@ from nova import objects
 from nova.scheduler.client import report
 from nova import utils
 
+
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 # Lazy-loaded on first access.
@@ -86,9 +87,25 @@ class DbQuotaDriver(object):
         quotas = {}
         class_quotas = objects.Quotas.get_all_class_by_name(context,
                                                             quota_class)
+
+        # Custom Resource Classess, provide flavors for default
+        if quota_class == 'default':
+            flavor_quotas = objects.Quotas.get_all_class_by_name(context,
+                                                                 'flavors')
+        else:
+            flavor_quotas = class_quotas
+
+        for resource_key, val in flavor_quotas.items():
+            if resource_key == 'class_name':
+                continue
+
+            # Set custom resources default quota to 0
+            quotas[resource_key] = flavor_quotas.get(resource_key, 0)
+
         for resource in resources.values():
-            quotas[resource.name] = class_quotas.get(resource.name,
-                                                     resource.default)
+            if (quota_class == 'default') or resource.name in class_quotas:
+                quotas[resource.name] = class_quotas.get(resource.name,
+                                                         resource.default)
 
         return quotas
 
@@ -100,8 +117,8 @@ class DbQuotaDriver(object):
         # matches the one in the context, we use the quota_class from
         # the context, otherwise, we use the provided quota_class (if
         # any)
-        if project_id == context.project_id:
-            quota_class = context.quota_class
+        # if project_id == context.project_id:
+        #     quota_class = context.quota_class
         if quota_class:
             class_quotas = objects.Quotas.get_all_class_by_name(context,
                                                                 quota_class)
@@ -771,7 +788,7 @@ class NoopQuotaDriver(object):
 class BaseResource(object):
     """Describe a single resource for quota checking."""
 
-    def __init__(self, name, flag=None):
+    def __init__(self, name, flag=None, default=None):
         """Initializes a Resource.
 
         :param name: The name of the resource, i.e., "instances".
@@ -782,11 +799,14 @@ class BaseResource(object):
 
         self.name = name
         self.flag = flag
+        self.default_value = default
 
     @property
     def default(self):
         """Return the default value of the quota."""
-        return CONF.quota[self.flag] if self.flag else -1
+
+        return CONF.quota[self.flag] if self.flag else \
+            (self.default_value if self.default_value is not None else -1)
 
 
 class AbsoluteResource(BaseResource):
@@ -799,7 +819,7 @@ class CountableResource(AbsoluteResource):
     project ID.
     """
 
-    def __init__(self, name, count_as_dict, flag=None):
+    def __init__(self, name, count_as_dict, flag=None, default=None):
         """Initializes a CountableResource.
 
         Countable resources are those resources which directly
@@ -848,7 +868,8 @@ class CountableResource(AbsoluteResource):
                      for this resource.
         """
 
-        super(CountableResource, self).__init__(name, flag=flag)
+        super(CountableResource, self).__init__(name, flag=flag,
+                                                default=default)
         self.count_as_dict = count_as_dict
 
 
@@ -870,6 +891,27 @@ class QuotaEngine(object):
         # NOTE(mriedem): quota_driver is ever only supplied in tests with a
         # fake driver.
         self.__driver = quota_driver
+        self._initialized = False
+        self._class_resources = {}
+
+    def initialize(self):
+        pass
+        return
+
+        objects.register_all()
+        # construct resources for each flavor that has a separate quota
+        # (also for deleted flavors that still have running instances)
+        ctxt = nova_context.get_admin_context()
+        for flavor in objects.FlavorList.get_all(
+            ctxt, filters={'disabled': False, 'is_public': True}):
+            if flavor['extra_specs'].get('quota:separate', 'false') == 'true':
+                self.register_resource(CountableResource(
+                    'instances_' + flavor.name,
+                    _instances_cores_ram_count,
+                    flag=None, default=0,
+                ))
+        self._initialized = True
+        LOG.info("Initialized flavor quotas")
 
     @property
     def _driver(self):
@@ -910,10 +952,13 @@ class QuotaEngine(object):
         :param usages: If True, the current counts will also be returned.
         """
 
-        return self._driver.get_user_quotas(context, self._resources,
-                                            project_id, user_id,
-                                            quota_class=quota_class,
-                                            usages=usages)
+        quota = self._driver.get_user_quotas(
+            context, self._resources, project_id, user_id,
+            quota_class=quota_class, usages=usages)
+        quota.update(self._driver.get_user_quotas(
+            context, self.class_resources(context, 'flavors'),
+            project_id, user_id, quota_class='flavors', usages=usages))
+        return quota
 
     def get_project_quotas(self, context, project_id, quota_class=None,
                            usages=True, remains=False):
@@ -929,11 +974,13 @@ class QuotaEngine(object):
                         will be returned.
         """
 
-        return self._driver.get_project_quotas(context, self._resources,
-                                              project_id,
-                                              quota_class=quota_class,
-                                              usages=usages,
-                                              remains=remains)
+        quota = self._driver.get_project_quotas(
+            context, self._resources, project_id,
+            quota_class=quota_class, usages=usages)
+        quota.update(self._driver.get_project_quotas(
+            context, self.class_resources(context, 'flavors'),
+            project_id, quota_class='flavors', usages=usages))
+        return quota
 
     def get_settable_quotas(self, context, project_id, user_id=None):
         """Given a list of resources, retrieve the range of settable quotas for
@@ -943,10 +990,12 @@ class QuotaEngine(object):
         :param project_id: The ID of the project to return quotas for.
         :param user_id: The ID of the user to return quotas for.
         """
-
-        return self._driver.get_settable_quotas(context, self._resources,
-                                                project_id,
-                                                user_id=user_id)
+        settable_quotas = self._driver.get_settable_quotas(
+            context,
+            self.combined_resources(context),
+            project_id,
+            user_id=user_id)
+        return settable_quotas
 
     def count_as_dict(self, context, resource, *args, **kwargs):
         """Count a resource and return a dict.
@@ -967,7 +1016,7 @@ class QuotaEngine(object):
         """
 
         # Get the resource
-        res = self._resources.get(resource)
+        res = self.combined_resources(context).get(resource)
         if not res or not hasattr(res, 'count_as_dict'):
             raise exception.QuotaResourceUnknown(unknown=[resource])
 
@@ -1003,8 +1052,9 @@ class QuotaEngine(object):
                         common user.
         """
 
-        return self._driver.limit_check(context, self._resources, values,
-                                        project_id=project_id, user_id=user_id)
+        return self._driver.limit_check(
+            context, self.combined_resources(context),
+            values, project_id=project_id, user_id=user_id)
 
     def limit_check_project_and_user(self, context, project_values=None,
                                      user_values=None, project_id=None,
@@ -1036,12 +1086,30 @@ class QuotaEngine(object):
                         different user than in the context
         """
         return self._driver.limit_check_project_and_user(
-            context, self._resources, project_values=project_values,
-            user_values=user_values, project_id=project_id, user_id=user_id)
+            context, self.combined_resources(context),
+            project_values=project_values,
+            user_values=user_values, project_id=project_id,
+            user_id=user_id)
 
     @property
     def resources(self):
         return sorted(self._resources.keys())
+
+    def class_resources(self, context, quota_class):
+        if quota_class not in self._class_resources:
+            resources = {}
+            quotas = self._driver.get_class_quotas(context, {}, quota_class)
+            for key, val in quotas.items():
+                resources[key] = CountableResource(key,
+                    _instances_cores_ram_count, default=val)
+
+            self._class_resources[quota_class] = resources
+        return self._class_resources[quota_class]
+
+    def combined_resources(self, context):
+        resources = copy.copy(self._resources)
+        resources.update(self.class_resources(context, 'flavors'))
+        return resources
 
     def get_reserved(self):
         if isinstance(self._driver, NoopQuotaDriver):
@@ -1206,10 +1274,12 @@ def _instances_cores_ram_count_legacy(context, project_id, user_id=None):
     for result in results.values():
         if not nova_context.is_cell_failure_sentinel(result):
             for resource, count in result['project'].items():
-                total_counts['project'][resource] += count
+                total_counts['project'][resource] = \
+                    total_counts['project'].get(resource, 0) + count
             if user_id:
                 for resource, count in result['user'].items():
-                    total_counts['user'][resource] += count
+                    total_counts['user'][resource] = \
+                        total_counts['user'].get(resource, 0) + count
     return total_counts
 
 
