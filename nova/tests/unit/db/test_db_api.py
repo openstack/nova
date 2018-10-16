@@ -681,15 +681,15 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         self.assertEqual('|', filter('|'))
         self.assertEqual('LIKE', op)
 
-    @mock.patch.object(sqlalchemy_api.main_context_manager._factory,
-                       'get_legacy_facade')
-    def test_get_engine(self, mock_create_facade):
-        mock_facade = mock.MagicMock()
-        mock_create_facade.return_value = mock_facade
-
+    @mock.patch.object(sqlalchemy_api, 'main_context_manager')
+    def test_get_engine(self, mock_ctxt_mgr):
         sqlalchemy_api.get_engine()
-        mock_create_facade.assert_called_once_with()
-        mock_facade.get_engine.assert_called_once_with(use_slave=False)
+        mock_ctxt_mgr.writer.get_engine.assert_called_once_with()
+
+    @mock.patch.object(sqlalchemy_api, 'main_context_manager')
+    def test_get_engine_use_slave(self, mock_ctxt_mgr):
+        sqlalchemy_api.get_engine(use_slave=True)
+        mock_ctxt_mgr.reader.get_engine.assert_called_once_with()
 
     def test_get_db_conf_with_connection(self):
         mock_conf_group = mock.MagicMock()
@@ -698,15 +698,10 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
                                               connection='fake://')
         self.assertEqual('fake://', db_conf['connection'])
 
-    @mock.patch.object(sqlalchemy_api.api_context_manager._factory,
-                       'get_legacy_facade')
-    def test_get_api_engine(self, mock_create_facade):
-        mock_facade = mock.MagicMock()
-        mock_create_facade.return_value = mock_facade
-
+    @mock.patch.object(sqlalchemy_api, 'api_context_manager')
+    def test_get_api_engine(self, mock_ctxt_mgr):
         sqlalchemy_api.get_api_engine()
-        mock_create_facade.assert_called_once_with()
-        mock_facade.get_engine.assert_called_once_with()
+        mock_ctxt_mgr.writer.get_engine.assert_called_once_with()
 
     @mock.patch.object(sqlalchemy_api, '_instance_get_by_uuid')
     @mock.patch.object(sqlalchemy_api, '_instances_fill_metadata')
