@@ -7,6 +7,8 @@ control over how instances run on hypervisor CPUs and the topology of virtual
 CPUs available to instances. These features help minimize latency and maximize
 performance.
 
+.. include:: /common/numa-live-migration-warning.txt
+
 SMP, NUMA, and SMT
 ~~~~~~~~~~~~~~~~~~
 

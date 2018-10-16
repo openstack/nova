@@ -19,7 +19,8 @@ This document covers live migrations using the
 .. note::
 
    Not all Compute service hypervisor drivers support live-migration, or
-   support all live-migration features.
+   support all live-migration features. Similarly not all compute service
+   features are supported.
 
    Consult :doc:`/user/support-matrix` to determine which hypervisors
    support live-migration.

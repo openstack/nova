@@ -20,6 +20,8 @@ vital. In these cases, instances can be expected to deliver near-native
 performance. The Compute service provides features to improve individual
 instance for these kind of workloads.
 
+.. include:: /common/numa-live-migration-warning.txt
+
 .. toctree::
    :maxdepth: 2
 

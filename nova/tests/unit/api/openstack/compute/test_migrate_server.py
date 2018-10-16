@@ -138,7 +138,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
 
     def _test_migrate_live_succeeded(self, param):
         self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
-        instance = self._stub_instance_get()
+        instance = self._stub_instance_get('_migrate_live')
         self.compute_api.live_migrate(self.context, instance, False,
                                       self.disk_over_commit, 'hostname',
                                       self.force, self.async)
@@ -211,7 +211,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                                          check_response=True):
         self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
 
-        instance = self._stub_instance_get(uuid=uuid)
+        instance = self._stub_instance_get('_migrate_live', uuid=uuid)
         self.compute_api.live_migrate(self.context, instance, False,
                                       self.disk_over_commit,
                                       'hostname', self.force, self.async
@@ -438,7 +438,7 @@ class MigrateServerTestsV234(MigrateServerTestsV230):
                 reason="Compute host %(host)s could not be found.",
                 host='hostname')
         self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
-        instance = self._stub_instance_get()
+        instance = self._stub_instance_get('_migrate_live')
         self.compute_api.live_migrate(self.context, instance, None,
                                       self.disk_over_commit, 'hostname',
                                       self.force, self.async).AndRaise(exc)
@@ -455,7 +455,7 @@ class MigrateServerTestsV234(MigrateServerTestsV230):
         exc = exception.InvalidHypervisorType(
                 reason="The supplied hypervisor type of is invalid.")
         self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
-        instance = self._stub_instance_get()
+        instance = self._stub_instance_get('_migrate_live')
         self.compute_api.live_migrate(self.context, instance, None,
                                       self.disk_over_commit, 'hostname',
                                       self.force, self.async).AndRaise(exc)
