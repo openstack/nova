@@ -65,6 +65,8 @@ create a particular service. It is common for this workloads needing
 bare metal like performance, i.e. low latency and close to line speed
 performance.
 
+.. include:: /common/numa-live-migration-warning.txt
+
 .. feature_matrix:: feature-matrix-nfv.ini
 
 .. _matrix-hpc:
