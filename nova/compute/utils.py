@@ -43,6 +43,7 @@ from nova.notifications.objects import keypair as keypair_notification
 from nova.notifications.objects import libvirt as libvirt_notification
 from nova.notifications.objects import metrics as metrics_notification
 from nova.notifications.objects import server_group as sg_notification
+from nova.notifications.objects import volume as volume_notification
 from nova import objects
 from nova.objects import fields
 from nova import rpc
@@ -834,6 +835,28 @@ def notify_about_libvirt_connect_error(context, ip, exception, tb):
     notification.emit(context)
 
 
+@rpc.if_notifications_enabled
+def notify_about_volume_usage(context, vol_usage, host):
+    """Send versioned notification about the volume usage
+
+    :param context: the request context
+    :param vol_usage: the volume usage object
+    :param host: the host emitting the notification
+    """
+    payload = volume_notification.VolumeUsagePayload(
+            vol_usage=vol_usage)
+    notification = volume_notification.VolumeUsageNotification(
+            context=context,
+            priority=fields.NotificationPriority.INFO,
+            publisher=notification_base.NotificationPublisher(
+                host=host, source=fields.NotificationSource.COMPUTE),
+            event_type=notification_base.EventType(
+                object='volume',
+                action=fields.NotificationAction.USAGE),
+            payload=payload)
+    notification.emit(context)
+
+
 def refresh_info_cache_for_instance(context, instance):
     """Refresh the info cache for an instance.
 
@@ -847,37 +870,6 @@ def refresh_info_cache_for_instance(context, instance):
         except exception.InstanceInfoCacheNotFound:
             LOG.debug("Can not refresh info_cache because instance "
                       "was not found", instance=instance)
-
-
-def usage_volume_info(vol_usage):
-    def null_safe_str(s):
-        return str(s) if s else ''
-
-    tot_refreshed = vol_usage.tot_last_refreshed
-    curr_refreshed = vol_usage.curr_last_refreshed
-    if tot_refreshed and curr_refreshed:
-        last_refreshed_time = max(tot_refreshed, curr_refreshed)
-    elif tot_refreshed:
-        last_refreshed_time = tot_refreshed
-    else:
-        # curr_refreshed must be set
-        last_refreshed_time = curr_refreshed
-
-    usage_info = dict(
-          volume_id=vol_usage.volume_id,
-          tenant_id=vol_usage.project_id,
-          user_id=vol_usage.user_id,
-          availability_zone=vol_usage.availability_zone,
-          instance_id=vol_usage.instance_uuid,
-          last_refreshed=null_safe_str(last_refreshed_time),
-          reads=vol_usage.tot_reads + vol_usage.curr_reads,
-          read_bytes=vol_usage.tot_read_bytes +
-                vol_usage.curr_read_bytes,
-          writes=vol_usage.tot_writes + vol_usage.curr_writes,
-          write_bytes=vol_usage.tot_write_bytes +
-                vol_usage.curr_write_bytes)
-
-    return usage_info
 
 
 def get_reboot_type(task_state, current_power_state):

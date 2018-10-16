@@ -41,6 +41,32 @@ class VolumeUsage(base.NovaPersistentObject, base.NovaObject):
         'curr_write_bytes': fields.IntegerField()
     }
 
+    @property
+    def last_refreshed(self):
+        if self.tot_last_refreshed and self.curr_last_refreshed:
+            return max(self.tot_last_refreshed, self.curr_last_refreshed)
+        elif self.tot_last_refreshed:
+            return self.tot_last_refreshed
+        else:
+            # curr_last_refreshed must be set
+            return self.curr_last_refreshed
+
+    @property
+    def reads(self):
+        return self.tot_reads + self.curr_reads
+
+    @property
+    def read_bytes(self):
+        return self.tot_read_bytes + self.curr_read_bytes
+
+    @property
+    def writes(self):
+        return self.tot_writes + self.curr_writes
+
+    @property
+    def write_bytes(self):
+        return self.tot_write_bytes + self.curr_write_bytes
+
     @staticmethod
     def _from_db_object(context, vol_usage, db_vol_usage):
         for field in vol_usage.fields:
@@ -57,3 +83,18 @@ class VolumeUsage(base.NovaPersistentObject, base.NovaObject):
             self.instance_uuid, self.project_id, self.user_id,
             self.availability_zone, update_totals=update_totals)
         self._from_db_object(self._context, self, db_vol_usage)
+
+    def to_dict(self):
+        return {
+            'volume_id': self.volume_id,
+            'tenant_id': self.project_id,
+            'user_id': self.user_id,
+            'availability_zone': self.availability_zone,
+            'instance_id': self.instance_uuid,
+            'last_refreshed': str(
+                self.last_refreshed) if self.last_refreshed else '',
+            'reads': self.reads,
+            'read_bytes': self.read_bytes,
+            'writes': self.writes,
+            'write_bytes': self.write_bytes
+        }

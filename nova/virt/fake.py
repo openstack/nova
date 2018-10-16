@@ -409,6 +409,15 @@ class FakeDriver(driver.ComputeDriver):
            a given host.
         """
         volusage = []
+        if compute_host_bdms:
+            volusage = [{'volume': compute_host_bdms[0][
+                                       'instance_bdms'][0]['volume_id'],
+                         'instance': compute_host_bdms[0]['instance'],
+                         'rd_bytes': 0,
+                         'rd_req': 0,
+                         'wr_bytes': 0,
+                         'wr_req': 0}]
+
         return volusage
 
     def get_host_cpu_stats(self):
