@@ -88,6 +88,12 @@ Specifies the directory where the Virtual Serial Port Concentrator is
 storing console log files. It should match the 'serial_log_dir' config
 value of VSPC.
 """),
+    cfg.StrOpt('serial_log_uri',
+               help="""
+Specifies the server where the Virtual Serial Port Concentrator is
+storing console log files and responding to get requests.
+If defined it will override serial_log_dir.
+"""),
 ]
 
 vmwareapi_opts = [

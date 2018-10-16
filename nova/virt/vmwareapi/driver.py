@@ -21,6 +21,7 @@ A connection to the VMware vCenter platform.
 
 import os
 import re
+import urllib.request
 
 import os_resource_classes as orc
 from oslo_log import log as logging
@@ -359,8 +360,23 @@ class VMwareVCDriver(driver.ComputeDriver):
         raise exception.ConsoleTypeUnavailable(console_type='mks')
 
     def get_console_output(self, context, instance):
+        """request specific log from VSPC."""
+
+        if CONF.vmware.serial_log_uri:
+            try:
+                serial_log_uri = CONF.vmware.serial_log_uri
+                url = f"{serial_log_uri}/console_log/{instance.uuid}"
+                read_log_data = urllib.request.urlopen(url)
+                return read_log_data.read()
+            except IOError:
+                LOG.exception('Unable to obtain serial console log for '
+                              'VM %(vm_uuid)s with server details: '
+                              '%(server)s.', {'vm_uuid': instance.uuid,
+                              'server': CONF.vmware.serial_log_uri})
+
         if not CONF.vmware.serial_log_dir:
-            LOG.error("The 'serial_log_dir' config option is not set!")
+            LOG.error("Neither the 'serial_log_dir' nor 'serial_log_uri' "
+                      "config option is set!")
             return
         fname = instance.uuid.replace('-', '')
         path = os.path.join(CONF.vmware.serial_log_dir, fname)

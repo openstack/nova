@@ -1695,6 +1695,15 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                                                     driver.MAX_CONSOLE_BYTES)
         self.assertEqual(b'fira', output)
 
+    def test_get_console_output_uri(self):
+        self.flags(serial_log_uri='https://httpstat.us:443', group='vmware')
+        self._create_instance()
+        with mock.patch('urllib.request.urlopen') as fake_urlopen:
+            fake_urlopen.return_value = mock.Mock()
+            fake_urlopen.return_value.read = mock.Mock(return_value=b'fira')
+            output = self.conn.get_console_output(self.context, self.instance)
+        self.assertEqual(b'fira', output)
+
     def test_get_volume_connector(self):
         self._create_vm()
         connector_dict = self.conn.get_volume_connector(self.instance)
