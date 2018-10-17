@@ -1954,6 +1954,10 @@ def _create_incomplete_consumers_for_provider(ctx, rp_id):
             sa.and_(
                 _ALLOC_TBL.c.resource_provider_id == rp_id,
                 consumer_obj.CONSUMER_TBL.c.id.is_(None)))
+        # NOTE(mnaser): It is possible to have multiple consumers having many
+        #               allocations to the same resource provider, which would
+        #               make the INSERT FROM SELECT fail due to duplicates.
+        sel = sel.group_by(_ALLOC_TBL.c.consumer_id)
         target_cols = ['uuid', 'project_id', 'user_id']
         ins_stmt = consumer_obj.CONSUMER_TBL.insert().from_select(
             target_cols, sel)
