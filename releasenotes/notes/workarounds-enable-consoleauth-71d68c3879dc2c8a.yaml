@@ -2,21 +2,32 @@
 upgrade:
   - |
     The ``nova-consoleauth`` service has been deprecated and new consoles will
-    have their token authorizations stored in cell databases, in addition to
-    the ``nova-consoleauth`` service backend, in Rocky. With this, console
-    proxies are required to be deployed per cell. All existing consoles will be
-    reset. For most operators, this should be a minimal disruption as the
-    default TTL of a console token is 10 minutes.
+    have their token authorizations stored in cell databases. With this,
+    console proxies are required to be deployed per cell. All existing consoles
+    will be reset. For most operators, this should be a minimal disruption as
+    the default TTL of a console token is 10 minutes.
 
-    Operators that have configured a much longer token TTL or otherwise wish to
-    avoid immediately resetting all existing consoles can use the new
-    configuration option ``[workarounds]/enable_consoleauth`` to fall back on
-    the ``nova-consoleauth`` service for locating existing console
-    authorizations. The option defaults to False. Once all of the existing
-    consoles have naturally expired, operators may unset the configuration
-    option. For example, if a deployment has configured a token TTL of one
-    hour, the operator may disable the ``[workarounds]/enable_consoleauth``
-    option, one hour after deploying the new code.
+    There is a new configuration option ``[workarounds]/enable_consoleauth``
+    for use by operators who:
+
+    * Are performing a live, rolling upgrade and all compute hosts are not
+      currently running Rocky code
+    * Have not yet deployed console proxies per cell
+    * Have configured a much longer token TTL
+    * Otherwise wish to avoid immediately resetting all existing consoles
+
+    When the option is set to True, the console proxy will fall back on the
+    ``nova-consoleauth`` service to locate existing console authorizations.
+    The option defaults to False.
+
+    Operators may unset the configuration option when:
+
+    * The live, rolling upgrade has all compute hosts running Rocky code
+    * Console proxies have been deployed per cell
+    * All of the existing consoles have expired. For example, if a deployment
+      has configured a token TTL of one hour, the operator may disable the
+      ``[workarounds]/enable_consoleauth`` option, one hour after deploying the
+      new code.
 
     .. note:: Cells v1 was not converted to use the database backend for
       console token authorizations. Cells v1 console token authorizations will
