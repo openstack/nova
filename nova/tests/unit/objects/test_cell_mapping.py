@@ -247,6 +247,23 @@ class _TestCellMappingObject(object):
         self.assertEqual(varurl, mapping_obj.database_connection)
         self.assertEqual(varurl, mapping_obj.transport_url)
 
+    @mock.patch.object(cell_mapping.CellMapping, '_get_by_uuid_from_db')
+    @mock.patch.object(cell_mapping.CellMapping, '_format_url')
+    def test_non_formatted_url_with_no_base(self, mock_format, mock_get):
+        # Make sure we just pass through the template URL if the base
+        # URLs are not set, i.e. we don't try to format the URL to a template.
+        url = 'foo'
+        self.flags(transport_url=None)
+        self.flags(connection=None, group='database')
+        db_mapping = get_db_mapping(transport_url=url,
+                                    database_connection=url)
+        mock_get.return_value = db_mapping
+        mapping_obj = objects.CellMapping().get_by_uuid(self.context,
+                db_mapping['uuid'])
+        self.assertEqual(url, mapping_obj.database_connection)
+        self.assertEqual(url, mapping_obj.transport_url)
+        mock_format.assert_not_called()
+
 
 class TestCellMappingObject(test_objects._LocalTest,
                             _TestCellMappingObject):

@@ -129,9 +129,10 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
 
     @staticmethod
     def _format_db_url(url):
-        if CONF.database.connection is None and '{' in url:
-            LOG.error('Cell mapping database_connection is a template, but '
-                      '[database]/connection is not set')
+        if CONF.database.connection is None:
+            if '{' in url:
+                LOG.error('Cell mapping database_connection is a template, '
+                          'but [database]/connection is not set')
             return url
         try:
             return CellMapping._format_url(url, CONF.database.connection)
@@ -142,9 +143,10 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
 
     @staticmethod
     def _format_mq_url(url):
-        if CONF.transport_url is None and '{' in url:
-            LOG.error('Cell mapping transport_url is a template, but '
-                      '[DEFAULT]/transport_url is not set')
+        if CONF.transport_url is None:
+            if '{' in url:
+                LOG.error('Cell mapping transport_url is a template, but '
+                          '[DEFAULT]/transport_url is not set')
             return url
         try:
             return CellMapping._format_url(url, CONF.transport_url)
