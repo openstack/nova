@@ -671,7 +671,7 @@ http://man7.org/linux/man-pages/man7/random.7.html.
                      'a default machine type per host architecture. '
                      'You can find a list of supported machine types '
                      'in your environment by checking the output of '
-                     'the "virsh capabilities"command. The format of the '
+                     'the "virsh capabilities" command. The format of the '
                      'value for this config option is host-arch=machine-type. '
                      'For example: x86_64=machinetype1,armv7l=machinetype2'),
     cfg.StrOpt('sysinfo_serial',
