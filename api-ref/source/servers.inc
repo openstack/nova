@@ -273,7 +273,7 @@ When you create a server, the response shows only the server ID, its
 links, and the admin password. You can get additional attributes
 through subsequent ``GET`` requests on the server.
 
-Include the ``block-device-mapping-v2`` parameter in the create
+Include the ``block_device_mapping_v2`` parameter in the create
 request body to boot a server from a volume.
 
 Include the ``key_name`` parameter in the create request body to add a
