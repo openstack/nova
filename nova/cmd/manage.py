@@ -75,6 +75,8 @@ from nova.virt import ironic
 
 CONF = nova.conf.CONF
 
+LOG = logging.getLogger(__name__)
+
 QUOTAS = quota.QUOTAS
 
 # Keep this list sorted and one entry per line for readability.
@@ -670,14 +672,18 @@ Error: %s""") % six.text_type(e))
 
     def _run_migration(self, ctxt, max_count):
         ran = 0
+        exceptions = False
         migrations = {}
         for migration_meth in self.online_migrations:
             count = max_count - ran
             try:
                 found, done = migration_meth(ctxt, count)
             except Exception:
-                print(_("Error attempting to run %(method)s") % dict(
-                      method=migration_meth))
+                msg = (_("Error attempting to run %(method)s") % dict(
+                       method=migration_meth))
+                print(msg)
+                LOG.exception(msg)
+                exceptions = True
                 found = done = 0
 
             name = migration_meth.__name__
@@ -691,7 +697,7 @@ Error: %s""") % six.text_type(e))
                 ran += done
                 if ran >= max_count:
                     break
-        return migrations
+        return migrations, exceptions
 
     @args('--max-count', metavar='<number>', dest='max_count',
           help='Maximum number of objects to consider')
@@ -713,8 +719,9 @@ Error: %s""") % six.text_type(e))
 
         ran = None
         migration_info = {}
+        exceptions = False
         while ran is None or ran != 0:
-            migrations = self._run_migration(ctxt, max_count)
+            migrations, exceptions = self._run_migration(ctxt, max_count)
             ran = 0
             for name in migrations:
                 migration_info.setdefault(name, (0, 0))
@@ -733,6 +740,18 @@ Error: %s""") % six.text_type(e))
             info = migration_info[name]
             t.add_row([name, info[0], info[1]])
         print(t)
+
+        # NOTE(imacdonn): In the "unlimited" case, the loop above will only
+        # terminate when all possible migrations have been effected. If we're
+        # still getting exceptions, there's a problem that requires
+        # intervention. In the max-count case, exceptions are only considered
+        # fatal if no work was done by any other migrations ("not ran"),
+        # because otherwise work may still remain to be done, and that work
+        # may resolve dependencies for the failing migrations.
+        if exceptions and (unlimited or not ran):
+            print(_("Some migrations failed unexpectedly. Check log for "
+                    "details."))
+            return 2
 
         # TODO(mriedem): Potentially add another return code for
         # "there are more migrations, but not completable right now"

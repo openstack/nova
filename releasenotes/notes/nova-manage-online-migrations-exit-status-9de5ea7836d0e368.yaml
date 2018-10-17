@@ -1,0 +1,13 @@
+---
+upgrade:
+  - |
+    The ``nova-manage db online_data_migrations`` command now returns exit
+    status 2 in the case where some migrations failed (raised exceptions) and
+    no others were completed successfully from the last batch attempted. This
+    should be considered a fatal condition that requires intervention. Exit
+    status 1 will be returned in the case where the ``--max-count`` option was
+    used and some migrations failed but others succeeded (updated at least one
+    row), because more work may remain for the non-failing migrations, and
+    their completion may be a dependency for the failing ones. The command
+    should be reiterated while it returns exit status 1, and considered
+    completed successfully only when it returns exit status 0.

@@ -799,13 +799,38 @@ Running batches of 50 until complete
         self.assertEqual(0, total[0])
         self.assertEqual([50, 50, 50, 50], runs)
 
-    def test_online_migrations_error(self):
-        fake_migration = mock.MagicMock()
-        fake_migration.side_effect = Exception
-        fake_migration.__name__ = 'fake'
-        command_cls = self._fake_db_command((fake_migration,))
+    @mock.patch('nova.context.get_admin_context')
+    def test_online_migrations_error(self, mock_get_context):
+        good_remaining = [50]
+
+        def good_migration(context, count):
+            self.assertEqual(mock_get_context.return_value, context)
+            found = good_remaining[0]
+            done = min(found, count)
+            good_remaining[0] -= done
+            return found, done
+
+        bad_migration = mock.MagicMock()
+        bad_migration.side_effect = test.TestingException
+        bad_migration.__name__ = 'bad'
+
+        command_cls = self._fake_db_command((bad_migration, good_migration))
         command = command_cls()
-        command.online_data_migrations(None)
+
+        # bad_migration raises an exception, but it could be because
+        # good_migration had not completed yet. We should get 1 in this case,
+        # because some work was done, and the command should be reiterated.
+        self.assertEqual(1, command.online_data_migrations(max_count=50))
+
+        # When running this for the second time, there's no work left for
+        # good_migration to do, but bad_migration still fails - should
+        # get 2 this time.
+        self.assertEqual(2, command.online_data_migrations(max_count=50))
+
+        # When --max-count is not used, we should get 2 if all possible
+        # migrations completed but some raise exceptions
+        good_remaining = [125]
+        self.assertEqual(2, command.online_data_migrations(None))
 
     def test_online_migrations_bad_max(self):
         self.assertEqual(127,
@@ -817,19 +842,19 @@ Running batches of 50 until complete
 
     def test_online_migrations_no_max(self):
         with mock.patch.object(self.commands, '_run_migration') as rm:
-            rm.return_value = {}
+            rm.return_value = {}, False
             self.assertEqual(0,
                              self.commands.online_data_migrations())
 
     def test_online_migrations_finished(self):
         with mock.patch.object(self.commands, '_run_migration') as rm:
-            rm.return_value = {}
+            rm.return_value = {}, False
             self.assertEqual(0,
                              self.commands.online_data_migrations(max_count=5))
 
     def test_online_migrations_not_finished(self):
         with mock.patch.object(self.commands, '_run_migration') as rm:
-            rm.return_value = {'mig': (10, 5)}
+            rm.return_value = {'mig': (10, 5)}, False
             self.assertEqual(1,
                              self.commands.online_data_migrations(max_count=5))
 
