@@ -72,14 +72,6 @@
     timeout: 3600
 
 - job:
-    name: nova-caching-scheduler
-    parent: nova-dsvm-base
-    description: |
-      Run non-slow Tempest API and scenario tests using the CachingScheduler.
-    run: playbooks/legacy/nova-caching-scheduler/run.yaml
-    post-run: playbooks/legacy/nova-caching-scheduler/post.yaml
-
-- job:
     name: nova-cells-v1
     parent: nova-dsvm-base
     run: playbooks/legacy/nova-cells-v1/run.yaml
@@ -245,8 +237,6 @@
         - legacy-tempest-dsvm-neutron-dvr-multinode-full:
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-dvr-ha-multinode-full:
-            irrelevant-files: *dsvm-irrelevant-files
-        - nova-caching-scheduler:
             irrelevant-files: *dsvm-irrelevant-files
         - os-vif-ovs:
             irrelevant-files: *dsvm-irrelevant-files

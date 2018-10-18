@@ -369,10 +369,6 @@ class TestNovaManagePlacementHealAllocations(
     NUMBER_OF_CELLS = 2
 
     def setUp(self):
-        # Since the CachingScheduler does not use Placement, we want to use
-        # the CachingScheduler to create instances and then we can heal their
-        # allocations via the CLI.
-        self.flags(driver='caching_scheduler', group='scheduler')
         super(TestNovaManagePlacementHealAllocations, self).setUp()
         self.cli = manage.PlacementCommands()
         # We need to start a compute in each non-cell0 cell.
@@ -387,8 +383,11 @@ class TestNovaManagePlacementHealAllocations(
         self.flavor = self.api.get_flavors()[0]
         self.output = StringIO()
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
-        # Restart the scheduler to reset the host state cache.
-        self.restart_scheduler_service(self.scheduler_service)
+        # We need to mock the FilterScheduler to not use Placement so that
+        # allocations won't be created during scheduling and then we can heal
+        # them in the CLI.
+        self.scheduler_service.manager.driver.USES_ALLOCATION_CANDIDATES = \
+            False
 
     def _boot_and_assert_no_allocations(self, flavor, hostname):
         """Creates a server on the given host and asserts neither have usage
@@ -417,14 +416,14 @@ class TestNovaManagePlacementHealAllocations(
             self.assertEqual(
                 0, usage,
                 'Compute node resource provider %s should not have %s '
-                'usage when using the CachingScheduler.' %
+                'usage; something must be wrong in test setup.' %
                 (hostname, resource_class))
 
         # Check that the server has no allocations.
         allocations = self._get_allocations_by_server_uuid(server['id'])
         self.assertEqual({}, allocations,
-                         'Server should not have allocations when using '
-                         'the CachingScheduler.')
+                         'Server should not have allocations; something must '
+                         'be wrong in test setup.')
         return server, rp_uuid
 
     def _assert_healed(self, server, rp_uuid):
@@ -597,7 +596,7 @@ class TestNovaManagePlacementHealAllocations(
         1.8 when consumer (project_id and user_id) were not required so the
         consumer information is using sentinel values from config.
 
-        Since the CachingScheduler used in this test class won't actually
+        Since the hacked scheduler used in this test class won't actually
         create allocations during scheduling, we have to create the allocations
         out-of-band and then run our heal routine to see they get updated with
         the instance project and user information.

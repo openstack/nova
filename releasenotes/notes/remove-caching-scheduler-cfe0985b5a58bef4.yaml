@@ -1,0 +1,46 @@
+---
+upgrade:
+  - |
+    The ``caching_scheduler`` scheduler driver, which was deprecated in the
+    16.0.0 Pike release, has now been removed. Unlike the default
+    ``filter_scheduler`` scheduler driver which creates resource allocations
+    in the placement service during scheduling, the ``caching_scheduler``
+    driver did not interface with the placement service. As more and more
+    functionality within nova relies on managing (sometimes complex) resource
+    allocations in the placement service, compatibility with the
+    ``caching_scheduler`` driver is difficult to maintain, and seldom tested.
+    The original reasons behind the need for the CachingScheduler should now
+    be resolved with the FilterScheduler and the placement service, notably:
+
+    * resource claims (allocations) are made atomically during scheduling to
+      alleviate the potential for racing to concurrently build servers on the
+      same compute host which could lead to failures
+    * because of the atomic allocation claims made during scheduling by the
+      ``filter_scheduler`` driver, it is safe [1]_ to run multiple scheduler
+      workers and scale horizontally
+
+      .. [1] There are still known race issues with concurrently building some
+        types of resources and workloads, such as anything that requires
+        PCI/NUMA or (anti-)affinity groups. However, those races also existed
+        with the ``caching_scheduler`` driver.
+
+    To migrate from the CachingScheduler to the FilterScheduler, operators can
+    leverage the ``nova-manage placement heal_allocations`` command:
+
+    https://docs.openstack.org/nova/latest/cli/nova-manage.html#placement
+
+    Finally, it is still technically possible to load an out-of-tree scheduler
+    driver using the ``nova.scheduler.driver`` entry-point. However,
+    out-of-tree driver interfaces are not guaranteed to be stable:
+
+    https://docs.openstack.org/nova/latest/contributor/policies.html#out-of-tree-support
+
+    And as noted above, as more of the code base evolves to rely on resource
+    allocations being tracked in the placement service (created during
+    scheduling), out-of-tree scheduler driver support may be severely impacted.
+
+    If you rely on the ``caching_scheduler`` driver or your own out-of-tree
+    driver which sets ``USES_ALLOCATION_CANDIDATES = False`` to bypass the
+    placement service, please communicate with the nova development team in
+    the openstack-dev mailing list and/or #openstack-nova freenode IRC channel
+    to determine what prevents you from using the ``filter_scheduler`` driver.

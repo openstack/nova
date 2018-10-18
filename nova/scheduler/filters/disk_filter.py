@@ -33,12 +33,10 @@ class DiskFilter(filters.BaseHostFilter):
             LOG.warning('The DiskFilter is deprecated since the 19.0.0 Stein '
                         'release. DISK_GB filtering is performed natively '
                         'using the Placement service when using the '
-                        'filter_scheduler driver. Users of the '
-                        'caching_scheduler driver may still rely on this '
-                        'filter but the caching_scheduler driver is itself '
-                        'deprecated. Furthermore, enabling DiskFilter may '
-                        'incorrectly filter out baremetal nodes which must be '
-                        'scheduled using custom resource classes.')
+                        'filter_scheduler driver. Furthermore, enabling '
+                        'DiskFilter may incorrectly filter out baremetal '
+                        'nodes which must be scheduled using custom resource '
+                        'classes.')
 
     def _get_disk_allocation_ratio(self, host_state, spec_obj):
         return host_state.disk_allocation_ratio

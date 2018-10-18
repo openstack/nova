@@ -83,9 +83,7 @@ class CoreFilter(BaseCoreFilter):
         LOG.warning('The CoreFilter is deprecated since the 19.0.0 Stein '
                     'release. VCPU filtering is performed natively using the '
                     'Placement service when using the filter_scheduler '
-                    'driver. Users of the caching_scheduler driver may still '
-                    'rely on this filter but the caching_scheduler driver is '
-                    'itself deprecated. Furthermore, enabling CoreFilter '
+                    'driver. Furthermore, enabling CoreFilter '
                     'may incorrectly filter out baremetal nodes which must be '
                     'scheduled using custom resource classes.')
 

@@ -36,9 +36,6 @@ class TestServerResizeReschedule(integrated_helpers.ProviderUsageBaseTestCase):
         self.compute3 = self._start_compute(host='host3')
         self.compute4 = self._start_compute(host='host4')
 
-        # Restart the scheduler to reset the host state cache.
-        self.restart_scheduler_service(self.scheduler_service)
-
         flavors = self.api.get_flavors()
         self.flavor1 = flavors[0]
         self.flavor2 = flavors[1]
@@ -83,10 +80,15 @@ class TestServerResizeReschedule(integrated_helpers.ProviderUsageBaseTestCase):
                          server['flavor']['original_name'])
 
 
-class TestServerResizeRescheduleWithCachingScheduler(
+class TestServerResizeRescheduleWithNoAllocations(
         TestServerResizeReschedule):
-    """Tests the reschedule scenario using the CachingScheduler."""
+    """Tests the reschedule scenario using a scheduler driver which does not
+    use Placement.
+    """
 
     def setUp(self):
-        self.flags(driver='caching_scheduler', group='scheduler')
-        super(TestServerResizeRescheduleWithCachingScheduler, self).setUp()
+        super(TestServerResizeRescheduleWithNoAllocations, self).setUp()
+        # We need to mock the FilterScheduler to not use Placement so that
+        # allocations won't be created during scheduling.
+        self.scheduler_service.manager.driver.USES_ALLOCATION_CANDIDATES = \
+            False
