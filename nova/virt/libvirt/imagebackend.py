@@ -180,11 +180,17 @@ class Image(object):
         return info
 
     def disk_scsi(self, info, disk_unit):
-        # The driver is responsible to create the SCSI controller
-        # at index 0.
-        info.device_addr = vconfig.LibvirtConfigGuestDeviceAddressDrive()
-        info.device_addr.controller = 0
+        # NOTE(melwitt): We set the device address unit number manually in the
+        # case of the virtio-scsi controller, in order to allow attachment of
+        # up to 256 devices. So, we should only be setting the address tag
+        # if we intend to set the unit number. Otherwise, we will let libvirt
+        # handle autogeneration of the address tag.
+        # See https://bugs.launchpad.net/nova/+bug/1792077 for details.
         if disk_unit is not None:
+            # The driver is responsible to create the SCSI controller
+            # at index 0.
+            info.device_addr = vconfig.LibvirtConfigGuestDeviceAddressDrive()
+            info.device_addr.controller = 0
             # In order to allow up to 256 disks handled by one
             # virtio-scsi controller, the device addr should be
             # specified.
