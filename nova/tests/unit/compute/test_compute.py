@@ -4685,6 +4685,7 @@ class ComputeTestCase(BaseTestCase,
         for operation in actions:
             if 'revert_resize' in operation:
                 migration.source_compute = 'fake-mini'
+                migration.source_node = 'fake-mini'
 
             def fake_migration_save(*args, **kwargs):
                 raise test.TestingException()
@@ -5349,7 +5350,7 @@ class ComputeTestCase(BaseTestCase,
                           instance_type=instance_type, image={},
                           request_spec={},
                           filter_properties={}, node=None,
-                          clean_shutdown=True, migration=None,
+                          clean_shutdown=True, migration=mock.Mock(),
                           host_list=[])
         self.compute.terminate_instance(self.context, instance, [])
 
@@ -12566,25 +12567,24 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         self.instance_type = flavors.get_flavor_by_name(
                 "m1.tiny")
 
-    @mock.patch.object(db, 'migration_create')
+    @mock.patch('nova.compute.manager.ComputeManager._prep_resize',
+                side_effect=test.TestingException)
     @mock.patch.object(compute_manager.ComputeManager,
                        '_reschedule_resize_or_reraise')
-    def test_reschedule_resize_or_reraise_called(self, mock_res, mock_mig):
+    def test_reschedule_resize_or_reraise_called(self, mock_res, mock_prep):
         """Verify the rescheduling logic gets called when there is an error
         during prep_resize.
         """
         inst_obj = self._create_fake_instance_obj()
-        mock_mig.side_effect = test.TestingException("Original")
 
         self.compute.prep_resize(self.context, image=None,
                                  instance=inst_obj,
                                  instance_type=self.instance_type,
                                  request_spec={},
-                                 filter_properties={}, migration=None,
+                                 filter_properties={}, migration=mock.Mock(),
                                  node=None,
                                  clean_shutdown=True, host_list=None)
 
-        mock_mig.assert_called_once_with(mock.ANY, mock.ANY)
         mock_res.assert_called_once_with(mock.ANY, None, inst_obj, mock.ANY,
                                          self.instance_type, {}, {}, None)
 

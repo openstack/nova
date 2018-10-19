@@ -6664,6 +6664,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             dest_compute=None,
             dest_node=None,
             dest_host=None,
+            source_node='source_node',
             status='migrating')
         self.migration.save = mock.MagicMock()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
@@ -6903,7 +6904,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                     'drop_move_claim')
-        @mock.patch.object(self.compute, '_delete_allocation_after_move')
         @mock.patch('nova.compute.rpcapi.ComputeAPI.finish_revert_resize')
         @mock.patch.object(self.instance, 'revert_migration_context')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
@@ -6932,7 +6932,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                              mock_get_instance_nw_info,
                              mock_revert_migration_context,
                              mock_finish_revert,
-                             mock_delete_allocation,
                              mock_drop_move_claim):
 
             self.instance.migration_context = objects.MigrationContext()
@@ -6944,9 +6943,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                        instance=self.instance)
             mock_drop_move_claim.assert_called_once_with(self.context,
                 self.instance, self.instance.node)
-            mock_delete_allocation.assert_called_once_with(
-                self.context, self.instance, self.migration,
-                self.instance.flavor, self.instance.node)
             self.assertIsNotNone(self.instance.migration_context)
 
         # Three fake BDMs:
@@ -7034,144 +7030,28 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.compute._confirm_resize(self.context, self.instance,
                                          self.migration)
             mock_delete.assert_called_once_with(self.context, self.instance,
-                                                self.migration,
-                                                self.instance.old_flavor,
-                                                self.migration.source_node)
+                                                self.migration)
             mock_save.assert_called_with(expected_task_state=
                                          [None, task_states.DELETING,
                                          task_states.SOFT_DELETING])
 
         do_confirm_resize()
 
-    @mock.patch('nova.scheduler.utils.resources_from_flavor')
-    def test_delete_allocation_after_move_legacy(self, mock_resources):
-        @mock.patch.object(self.compute, '_get_resource_tracker')
-        @mock.patch.object(self.compute, 'reportclient')
-        def do_it(mock_rc, mock_grt):
-            instance = mock.MagicMock()
-            migration = mock.MagicMock()
-            self.compute._delete_allocation_after_move(self.context,
-                                                       instance,
-                                                       migration,
-                                                       mock.sentinel.flavor,
-                                                       mock.sentinel.node)
-            mock_resources.assert_called_once_with(instance,
-                                                   mock.sentinel.flavor)
-            rt = mock_grt.return_value
-            rt.get_node_uuid.assert_called_once_with(mock.sentinel.node)
-            remove = mock_rc.remove_provider_from_instance_allocation
-            remove.assert_called_once_with(
-                self.context, instance.uuid, rt.get_node_uuid.return_value,
-                instance.user_id, instance.project_id,
-                mock_resources.return_value)
-        do_it()
-
-    @mock.patch('nova.scheduler.utils.resources_from_flavor')
-    def test_delete_allocation_after_move_confirm_by_migration(self, mock_rff):
-        mock_rff.return_value = {}
-
-        @mock.patch.object(self.compute, '_get_resource_tracker')
-        @mock.patch.object(self.compute, 'reportclient')
-        def doit(new_rules, mock_report, mock_rt):
-            mock_report.delete_allocation_for_instance.return_value = new_rules
-            self.migration.source_node = 'src'
-            self.migration.uuid = uuids.migration
-            self.migration.status = 'confirmed'
+    def test_delete_allocation_after_move_confirm_by_migration(self):
+        with mock.patch.object(self.compute, 'reportclient') as mock_report:
+            mock_report.delete_allocation_for_instance.return_value = True
             self.compute._delete_allocation_after_move(self.context,
                                                        self.instance,
-                                                       self.migration,
-                                                       mock.sentinel.flavor,
-                                                       'src')
-            mock_report.delete_allocation_for_instance.assert_called_once_with(
-                self.context, self.migration.uuid)
-
-            old = mock_report.remove_provider_from_instance_allocation
-            if new_rules:
-                self.assertFalse(old.called)
-            else:
-                self.assertTrue(old.called)
-
-        # Allocations by migration, no legacy cleanup
-        doit(True)
-
-        # No allocations by migration, legacy cleanup
-        doit(False)
-
-    @mock.patch('nova.scheduler.utils.resources_from_flavor')
-    def test_delete_allocation_after_move_fail_by_migration(self, mock_rff):
-        mock_rff.return_value = {}
-
-        @mock.patch.object(self.compute, '_get_resource_tracker')
-        @mock.patch.object(self.compute, 'reportclient')
-        def doit(new_rules, mock_report, mock_rt):
-            ga = mock_report.get_allocations_for_consumer_by_provider
-            ga.return_value = new_rules
-            self.migration.source_node = 'src'
-            self.migration.uuid = uuids.migration
-            self.migration.status = 'failed'
-            self.compute._delete_allocation_after_move(self.context,
-                                                       self.instance,
-                                                       self.migration,
-                                                       mock.sentinel.flavor,
-                                                       'src')
-            self.assertFalse(mock_report.delete_allocation_for_instance.called)
-            ga.assert_called_once_with(
-                self.context, mock_rt().get_node_uuid.return_value,
-                self.migration.uuid)
-
-            old = mock_report.remove_provider_from_instance_allocation
-            if new_rules:
-                self.assertFalse(old.called)
-            else:
-                self.assertTrue(old.called)
-
-        # Allocations by migration, no legacy cleanup
-        doit(True)
-
-        # No allocations by migration, legacy cleanup
-        doit(False)
-
-    @mock.patch('nova.scheduler.utils.resources_from_flavor')
-    def test_delete_allocation_after_move_revert_by_migration(self, mock_rff):
-        mock_rff.return_value = {}
-
-        @mock.patch.object(self.compute, '_get_resource_tracker')
-        @mock.patch.object(self.compute, 'reportclient')
-        def doit(new_rules, mock_report, mock_rt):
-            a = new_rules and {'fake'} or {}
-            ga = mock_report.get_allocations_for_consumer
-            ga.return_value = a
-            self.migration.source_node = 'src'
-            self.migration.dest_node = 'dst'
-            self.migration.uuid = uuids.migration
-            self.compute._delete_allocation_after_move(self.context,
-                                                       self.instance,
-                                                       self.migration,
-                                                       mock.sentinel.flavor,
-                                                       'dst')
-            self.assertFalse(mock_report.delete_allocation_for_instance.called)
-            ga.assert_called_once_with(self.context, self.migration.uuid)
-
-            old = mock_report.remove_provider_from_instance_allocation
-            if new_rules:
-                self.assertFalse(old.called)
-            else:
-                self.assertTrue(old.called)
-
-        # Allocations by migration, no legacy cleanup
-        doit(True)
-
-        # No allocations by migration, legacy cleanup
-        doit(False)
+                                                       self.migration)
+        mock_report.delete_allocation_for_instance.assert_called_once_with(
+            self.context, self.migration.uuid)
 
     def test_revert_allocation(self):
         """New-style migration-based allocation revert."""
 
-        @mock.patch.object(self.compute, '_get_resource_tracker')
         @mock.patch.object(self.compute, 'reportclient')
-        def doit(mock_report, mock_rt):
+        def doit(mock_report):
             cu = uuids.node
-            mock_rt.return_value.compute_nodes[self.instance.node].uuid = cu
             a = {cu: {'resources': {'DISK_GB': 1}}}
             mock_report.get_allocations_for_consumer.return_value = a
             self.migration.uuid = uuids.migration
@@ -7945,9 +7825,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             # ...so we should have called the new style delete
             mock_delete.assert_called_once_with(self.context,
                                                 self.instance,
-                                                migration,
-                                                self.instance.flavor,
-                                                self.instance.node)
+                                                migration)
 
     def test_post_live_migration_old_allocations(self):
         # We have a migrate_data with a migration...
@@ -8479,22 +8357,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             # Make sure we set migration status to error
             self.assertEqual(migration.status, 'error')
 
-            # Run it again with migration=None and make sure we don't choke
-            self.assertRaises(test.TestingException,
-                              self.compute.prep_resize,
-                              self.context, mock.sentinel.image,
-                              instance, flavor,
-                              mock.sentinel.request_spec,
-                              {}, 'node', False,
-                              None, [])
-
-            # Make sure we only called save once (kinda obviously must be true)
             migration.save.assert_called_once_with()
             mock_notify_resize.assert_has_calls([
-                mock.call(self.context, instance, 'fake-mini',
-                          'start', flavor),
-                mock.call(self.context, instance, 'fake-mini',
-                          'end', flavor),
                 mock.call(self.context, instance, 'fake-mini',
                           'start', flavor),
                 mock.call(self.context, instance, 'fake-mini',

@@ -2209,9 +2209,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
     @mock.patch.object(migrate.MigrationTask, 'rollback')
+    @mock.patch.object(migrate.MigrationTask, '_preallocate_migration')
     def test_cold_migrate_no_valid_host_back_in_active_state(
-            self, rollback_mock, notify_mock, select_dest_mock,
-            metadata_mock, sig_mock, spec_fc_mock, im_mock):
+            self, _preallocate_migration, rollback_mock, notify_mock,
+            select_dest_mock, metadata_mock, sig_mock, spec_fc_mock, im_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
@@ -2259,9 +2260,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
     @mock.patch.object(migrate.MigrationTask, 'rollback')
+    @mock.patch.object(migrate.MigrationTask, '_preallocate_migration')
     def test_cold_migrate_no_valid_host_back_in_stopped_state(
-            self, rollback_mock, notify_mock, select_dest_mock,
-            metadata_mock, spec_fc_mock, sig_mock, im_mock):
+            self, _preallocate_migration, rollback_mock, notify_mock,
+            select_dest_mock, metadata_mock, spec_fc_mock, sig_mock, im_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
@@ -2385,9 +2387,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                        '_set_vm_state_and_notify')
     @mock.patch.object(migrate.MigrationTask, 'rollback')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
+    @mock.patch.object(migrate.MigrationTask, '_preallocate_migration')
     def test_cold_migrate_exception_host_in_error_state_and_raise(
-            self, prep_resize_mock, rollback_mock, notify_mock,
-            select_dest_mock, metadata_mock, spec_fc_mock,
+            self, _preallocate_migration, prep_resize_mock, rollback_mock,
+            notify_mock, select_dest_mock, metadata_mock, spec_fc_mock,
             sig_mock, im_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         inst_obj = objects.Instance(
@@ -2436,7 +2439,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 [inst_obj.uuid], return_objects=True, return_alternates=True)
         prep_resize_mock.assert_called_once_with(
             self.context, inst_obj, legacy_request_spec['image'],
-            flavor, hosts[0]['host'], None,
+            flavor, hosts[0]['host'], _preallocate_migration.return_value,
             request_spec=legacy_request_spec,
             filter_properties=legacy_filter_props,
             node=hosts[0]['nodename'], clean_shutdown=True, host_list=[])
