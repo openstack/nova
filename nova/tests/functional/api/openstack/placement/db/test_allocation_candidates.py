@@ -433,6 +433,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         )
         conn.execute(ins_rptbl)
 
+        # This is needed for _validate_allocation_requests() at the end
+        self.rp_uuid_to_name[uuids.rp1] = 'cn1'
+
         # Add VCPU(resource_class_id=0) inventory to the provider.
         ins_invtbl = inv_tbl.insert().values(
             id=1,
@@ -457,31 +460,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         )
         conn.execute(ins_alloctbl)
 
-        # TODO(tetsuro): Bug#1799892: Fix this not to raise the KeyError
-        # alloc_cands = self._get_allocation_candidates(
-        #     {'': placement_lib.RequestGroup(
-        #         use_same_provider=False,
-        #         resources={
-        #             fields.ResourceClass.VCPU: 1
-        #         }
-        #     )}
-        # )
-        #
-        # expected = [
-        #     [('cn1', fields.ResourceClass.VCPU, 1)]
-        # ]
-        # self._validate_allocation_requests(expected, alloc_cands)
-        #
-        # expected = {
-        #     'cn1': set([
-        #         (fields.ResourceClass.VCPU, 8, 4)
-        #     ]),
-        # }
-        # self._validate_provider_summary_resources(expected, alloc_cands)
-
-        self.assertRaises(
-            KeyError,
-            self._get_allocation_candidates,
+        alloc_cands = self._get_allocation_candidates(
             {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
@@ -489,6 +468,53 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                 }
             )}
         )
+
+        expected = [
+            [('cn1', fields.ResourceClass.VCPU, 1)]
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 8, 4)
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
+        # NOTE(tetsuro): Getting allocation candidates goes through a
+        # different path when sharing/nested providers exist, let's test
+        # that case and the path creating a new sharing provider.
+        # We omit the direct database insertion of 'ss1' here since 'cn1',
+        # which has no root id in the database, is the actual target of the
+        # following test.
+        ss1 = self._create_provider('ss1', uuids.agg1)
+        tb.set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss1, fields.ResourceClass.VCPU, 8)
+
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    fields.ResourceClass.VCPU: 1
+                }
+            )}
+        )
+
+        expected = [
+            [('cn1', fields.ResourceClass.VCPU, 1)],
+            [('ss1', fields.ResourceClass.VCPU, 1)]
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 8, 4)
+            ]),
+            'ss1': set([
+                (fields.ResourceClass.VCPU, 8, 0)
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
     def test_all_local(self):
         """Create some resource providers that can satisfy the request for
