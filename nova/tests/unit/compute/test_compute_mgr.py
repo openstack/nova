@@ -7896,55 +7896,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                 self.instance,
                                                 migration)
 
-    def test_post_live_migration_old_allocations(self):
-        # We have a migrate_data with a migration...
-        migration = objects.Migration(uuid=uuids.migration)
-        migration.save = mock.MagicMock()
-        md = objects.LibvirtLiveMigrateData(migration=migration,
-                                            is_shared_instance_path=False,
-                                            is_shared_block_storage=False)
-        with test.nested(
-                mock.patch.object(self.compute.scheduler_client,
-                                  'reportclient'),
-                mock.patch.object(self.compute,
-                                  '_delete_allocation_after_move'),
-                mock.patch.object(self.compute,
-                                  '_get_resource_tracker'),
-        ) as (
-            mock_report, mock_delete, mock_rt,
-        ):
-            # ...and that migration does not have allocations...
-            mock_report.get_allocations_for_consumer.return_value = None
-            self._call_post_live_migration(migrate_data=md)
-            # ...so we should have called the old style delete
-            mock_delete.assert_not_called()
-            fn = mock_rt.return_value.delete_allocation_for_migrated_instance
-            fn.assert_called_once_with(self.context, self.instance,
-                                       self.instance.node)
-
-    def test_post_live_migration_legacy(self):
-        # We have no migrate_data...
-        md = None
-        with test.nested(
-                mock.patch.object(self.compute.scheduler_client,
-                                  'reportclient'),
-                mock.patch.object(self.compute,
-                                  '_delete_allocation_after_move'),
-                mock.patch.object(self.compute,
-                                  '_get_resource_tracker'),
-        ) as (
-            mock_report, mock_delete, mock_rt,
-        ):
-            self._call_post_live_migration(migrate_data=md)
-            # ...without migrate_data, no migration allocations check...
-            ga = mock_report.get_allocations_for_consumer
-            self.assertFalse(ga.called)
-            # ...so we should have called the old style delete
-            mock_delete.assert_not_called()
-            fn = mock_rt.return_value.delete_allocation_for_migrated_instance
-            fn.assert_called_once_with(self.context, self.instance,
-                                       self.instance.node)
-
     def test_post_live_migration_cinder_v3_api(self):
         # Because live migration has succeeded, _post_live_migration
         # should call attachment_delete with the original/old attachment_id

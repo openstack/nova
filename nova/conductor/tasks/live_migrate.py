@@ -30,12 +30,6 @@ LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
 
-def should_do_migration_allocation(context):
-    minver = objects.Service.get_minimum_version_multi(context,
-                                                       ['nova-compute'])
-    return minver >= 25
-
-
 def supports_extended_port_binding(context, host):
     """Checks if the compute host service is new enough to support the neutron
     port binding-extended details.
@@ -73,15 +67,14 @@ class LiveMigrationTask(base.TaskBase):
         self._check_instance_is_active()
         self._check_host_is_up(self.source)
 
-        if should_do_migration_allocation(self.context):
-            self._source_cn, self._held_allocations = (
-                # NOTE(danms): This may raise various exceptions, which will
-                # propagate to the API and cause a 500. This is what we
-                # want, as it would indicate internal data structure corruption
-                # (such as missing migrations, compute nodes, etc).
-                migrate.replace_allocation_with_migration(self.context,
-                                                          self.instance,
-                                                          self.migration))
+        self._source_cn, self._held_allocations = (
+            # NOTE(danms): This may raise various exceptions, which will
+            # propagate to the API and cause a 500. This is what we
+            # want, as it would indicate internal data structure corruption
+            # (such as missing migrations, compute nodes, etc).
+            migrate.replace_allocation_with_migration(self.context,
+                                                      self.instance,
+                                                      self.migration))
 
         if not self.destination:
             # Either no host was specified in the API request and the user

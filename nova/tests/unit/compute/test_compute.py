@@ -6256,8 +6256,6 @@ class ComputeTestCase(BaseTestCase,
             migrate_data=test.MatchType(
                             migrate_data_obj.XenapiLiveMigrateData))
 
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'remove_provider_tree_from_instance_allocation')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'pre_live_migration')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
                        'post_live_migration_at_destination')
@@ -6266,7 +6264,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch('nova.objects.Migration.save')
     def test_live_migration_works_correctly(self, mock_save, mock_event,
-            mock_clear, mock_post, mock_pre, mock_remove_allocs):
+            mock_clear, mock_post, mock_pre):
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
@@ -6313,8 +6311,6 @@ class ComputeTestCase(BaseTestCase,
                                               'host'], 'dest_compute': dest})
         mock_post.assert_called_once_with(c, instance, False, dest)
         mock_clear.assert_called_once_with(mock.ANY)
-        mock_remove_allocs.assert_called_once_with(
-            c, instance.uuid, self.rt.compute_nodes[NODENAME].uuid)
 
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'pre_live_migration')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
@@ -6361,15 +6357,13 @@ class ComputeTestCase(BaseTestCase,
         # cleanup
         instance.destroy()
 
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'remove_provider_tree_from_instance_allocation')
     @mock.patch.object(fake.FakeDriver, 'unfilter_instance')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
                        'post_live_migration_at_destination')
     @mock.patch.object(compute_manager.InstanceEvents,
                        'clear_events_for_instance')
     def test_post_live_migration_no_shared_storage_working_correctly(self,
-            mock_clear, mock_post, mock_unfilter, mock_remove_allocs):
+            mock_clear, mock_post, mock_unfilter):
         """Confirm post_live_migration() works correctly as expected
            for non shared storage migration.
         """
@@ -6423,14 +6417,9 @@ class ComputeTestCase(BaseTestCase,
         mock_migrate.assert_called_once_with(c, instance, migration)
         mock_post.assert_called_once_with(c, instance, False, dest)
         mock_clear.assert_called_once_with(mock.ANY)
-        mock_remove_allocs.assert_called_once_with(
-            c, instance.uuid, self.rt.compute_nodes[NODENAME].uuid)
 
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'remove_provider_tree_from_instance_allocation')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    def test_post_live_migration_working_correctly(self, mock_notify,
-                                                   mock_remove_allocs):
+    def test_post_live_migration_working_correctly(self, mock_notify):
         # Confirm post_live_migration() works as expected correctly.
         dest = 'desthost'
         srchost = self.compute.host
@@ -6505,8 +6494,6 @@ class ComputeTestCase(BaseTestCase,
             self.assertIn(
                 'Migrating instance to desthost finished successfully.',
                 self.stdlog.logger.output)
-        mock_remove_allocs.assert_called_once_with(
-            c, instance.uuid, self.rt.compute_nodes[NODENAME].uuid)
 
     def test_post_live_migration_exc_on_dest_works_correctly(self):
         """Confirm that post_live_migration() completes successfully

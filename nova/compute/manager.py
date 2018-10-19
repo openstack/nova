@@ -6647,33 +6647,19 @@ class ComputeManager(manager.Manager):
         if migrate_data and migrate_data.obj_attr_is_set('migration'):
             migrate_data.migration.status = 'completed'
             migrate_data.migration.save()
-            migration = migrate_data.migration
-            rc = self.scheduler_client.reportclient
-            # Check to see if our migration has its own allocations
-            allocs = rc.get_allocations_for_consumer(ctxt, migration.uuid)
-        else:
-            # We didn't have data on a migration, which means we can't
-            # look up to see if we had new-style migration-based
-            # allocations. This should really only happen in cases of
-            # a buggy virt driver or some really old component in the
-            # system. Log a warning so we know it happened.
-            allocs = None
-            LOG.warning('Live migration ended with no migrate_data '
-                        'record. Unable to clean up migration-based '
-                        'allocations which is almost certainly not '
-                        'an expected situation.')
-
-        if allocs:
-            # We had a migration-based allocation that we need to handle
             self._delete_allocation_after_move(ctxt,
                                                instance,
                                                migrate_data.migration)
         else:
-            # No migration-based allocations, so do the old thing and
-            # attempt to clean up any doubled per-instance allocation
-            rt = self._get_resource_tracker()
-            rt.delete_allocation_for_migrated_instance(
-                ctxt, instance, source_node)
+            # We didn't have data on a migration, which means we can't
+            # look up to see if we had new-style migration-based
+            # allocations. This should really only happen in cases of
+            # a buggy virt driver. Log a warning so we know it happened.
+            LOG.warning('Live migration ended with no migrate_data '
+                        'record. Unable to clean up migration-based '
+                        'allocations for node %s which is almost certainly '
+                        'not an expected situation.', source_node,
+                        instance=instance)
 
     def _consoles_enabled(self):
         """Returns whether a console is enable."""
@@ -6805,8 +6791,8 @@ class ComputeManager(manager.Manager):
 
         if migration:
             # Remove allocations created in Placement for the dest node.
-            # If migration is None, we must be so old we don't have placement,
-            # so no need to do something else.
+            # If migration is None, the virt driver didn't pass it which is
+            # a bug.
             self._revert_allocation(context, instance, migration)
         else:
             LOG.error('Unable to revert allocations during live migration '
