@@ -92,8 +92,6 @@ class ColdMigrateTargetHostThenLiveMigrateTest(
             'os-migrateLive': {'host': None, 'block_migration': 'auto'}}
         self.admin_api.post_server_action(server['id'], live_migrate_req)
         server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
-
-        # FIXME(mriedem): Until bug 1797580 is resolved the migration will
-        # fail during scheduling.
-        migration = self._wait_for_migration_status(server, ['error'])
-        self.assertEqual('live-migration', migration['migration_type'])
+        # The live migration should have been successful and the server is now
+        # back on the original host.
+        self.assertEqual(original_host, server['OS-EXT-SRV-ATTR:host'])
