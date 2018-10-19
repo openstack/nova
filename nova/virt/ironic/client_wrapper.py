@@ -122,7 +122,7 @@ class IronicClientWrapper(object):
 
         try:
             cli = ironic.client.get_client(IRONIC_API_VERSION[0],
-                                           ironic_url=ironic_url,
+                                           endpoint=ironic_url,
                                            session=sess, **kwargs)
             # Cache the client so we don't have to reconstruct and
             # reauthenticate it every time we need it.
