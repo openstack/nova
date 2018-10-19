@@ -409,6 +409,87 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         }
         self._validate_provider_summary_resources(expected, alloc_cands)
 
+    def test_get_allc_req_old_records(self):
+        """Simulate an old resource provider record in the database that has no
+        root_provider_uuid set and ensure that we still get that candidate
+        returned.
+        """
+        # Passing a non-existing resource provider UUID should return an empty
+        # list
+        rp_tbl = rp_obj._RP_TBL
+        inv_tbl = rp_obj._INV_TBL
+        alloc_tbl = rp_obj._ALLOC_TBL
+        conn = self.placement_db.get_engine().connect()
+
+        # First, set up a record for an "old-style" resource provider with no
+        # root provider UUID.
+        ins_rptbl = rp_tbl.insert().values(
+            id=1,
+            uuid=uuids.rp1,
+            name='cn1',
+            root_provider_id=None,
+            parent_provider_id=None,
+            generation=42,
+        )
+        conn.execute(ins_rptbl)
+
+        # Add VCPU(resource_class_id=0) inventory to the provider.
+        ins_invtbl = inv_tbl.insert().values(
+            id=1,
+            resource_provider_id=1,
+            resource_class_id=0,
+            total=8,
+            reserved=0,
+            min_unit=1,
+            max_unit=8,
+            step_size=1,
+            allocation_ratio=1.0,
+        )
+        conn.execute(ins_invtbl)
+
+        # Consume VCPU inventory
+        ins_alloctbl = alloc_tbl.insert().values(
+            id=1,
+            resource_provider_id=1,
+            consumer_id=uuids.consumer,
+            resource_class_id=0,
+            used=4
+        )
+        conn.execute(ins_alloctbl)
+
+        # TODO(tetsuro): Bug#1799892: Fix this not to raise the KeyError
+        # alloc_cands = self._get_allocation_candidates(
+        #     {'': placement_lib.RequestGroup(
+        #         use_same_provider=False,
+        #         resources={
+        #             fields.ResourceClass.VCPU: 1
+        #         }
+        #     )}
+        # )
+        #
+        # expected = [
+        #     [('cn1', fields.ResourceClass.VCPU, 1)]
+        # ]
+        # self._validate_allocation_requests(expected, alloc_cands)
+        #
+        # expected = {
+        #     'cn1': set([
+        #         (fields.ResourceClass.VCPU, 8, 4)
+        #     ]),
+        # }
+        # self._validate_provider_summary_resources(expected, alloc_cands)
+
+        self.assertRaises(
+            KeyError,
+            self._get_allocation_candidates,
+            {'': placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    fields.ResourceClass.VCPU: 1
+                }
+            )}
+        )
+
     def test_all_local(self):
         """Create some resource providers that can satisfy the request for
         resources with local (non-shared) resources and verify that the
