@@ -495,6 +495,20 @@ class _TestComputeNodeObject(object):
         expected.uuid = uuidsentinel.node_uuid
         self.assertTrue(base.obj_equal_prims(expected, compute))
 
+    def test_update_from_virt_driver_uuid_already_set(self):
+        """Tests update_from_virt_driver where the compute node object already
+        has a uuid value so the uuid from the virt driver is ignored.
+        """
+        # copy in case the update has a side effect
+        resources = copy.deepcopy(fake_resources)
+        # Emulate the ironic driver which adds a uuid field.
+        resources['uuid'] = uuidsentinel.node_uuid
+        compute = compute_node.ComputeNode(uuid=uuidsentinel.something_else)
+        compute.update_from_virt_driver(resources)
+        expected = fake_compute_with_resources.obj_clone()
+        expected.uuid = uuidsentinel.something_else
+        self.assertTrue(base.obj_equal_prims(expected, compute))
+
     def test_update_from_virt_driver_missing_field(self):
         # NOTE(pmurray): update_from_virt_driver does not require
         # all fields to be present in resources. Validation of the
