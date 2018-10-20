@@ -76,27 +76,6 @@ class RequestTest(MicroversionedTest):
         result = request.best_match_content_type()
         self.assertEqual(result, "application/json")
 
-    def test_cache_and_retrieve_instances(self):
-        request = wsgi.Request.blank('/foo')
-        instances = []
-        for x in range(3):
-            instances.append({'uuid': 'uuid%s' % x})
-        # Store 2
-        request.cache_db_instances(instances[:2])
-        # Store 1
-        request.cache_db_instance(instances[2])
-        self.assertEqual(request.get_db_instance('uuid0'),
-                instances[0])
-        self.assertEqual(request.get_db_instance('uuid1'),
-                instances[1])
-        self.assertEqual(request.get_db_instance('uuid2'),
-                instances[2])
-        self.assertIsNone(request.get_db_instance('uuid3'))
-        self.assertEqual(request.get_db_instances(),
-                {'uuid0': instances[0],
-                 'uuid1': instances[1],
-                 'uuid2': instances[2]})
-
     def test_from_request(self):
         request = wsgi.Request.blank('/')
         accepted = 'bogus;q=1, en-gb;q=0.7,en-us,en;q=0.5,*;q=0.7'

@@ -103,9 +103,6 @@ class FakeRequest(object):
     environ = {"nova.context": context.get_admin_context()}
     api_version_request = api_version.APIVersionRequest("2.1")
 
-    def get_db_flavor(self, flavor_id):
-        return INSTANCE_TYPES[flavor_id]
-
     def is_legacy_v2(self):
         return False
 

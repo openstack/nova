@@ -18,10 +18,6 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 
 
-def fake_get_db_flavor(req, flavorid):
-    return fakes.FLAVORS[flavorid]
-
-
 class FlavorDisabledTestV21(test.NoDBTestCase):
     base_url = '/v2/fake/flavors'
     content_type = 'application/json'
@@ -32,8 +28,6 @@ class FlavorDisabledTestV21(test.NoDBTestCase):
         fakes.stub_out_nw_api(self)
         fakes.stub_out_flavor_get_all(self)
         fakes.stub_out_flavor_get_by_flavor_id(self)
-        self.stub_out('nova.api.openstack.wsgi.Request.get_db_flavor',
-                      fake_get_db_flavor)
 
     def _make_request(self, url):
         req = fakes.HTTPRequest.blank(url)

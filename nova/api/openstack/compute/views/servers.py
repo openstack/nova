@@ -483,8 +483,6 @@ class ViewBuilder(common.ViewBuilder):
         return fault_dict
 
     def _add_security_grps(self, req, servers, instances):
-        # TODO(arosen) this function should be refactored to reduce duplicate
-        # code and use get_instance_security_groups instead of get_db_instance.
         if not len(servers):
             return
         if not openstack_driver.is_neutron_security_groups():

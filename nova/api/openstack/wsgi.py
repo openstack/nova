@@ -74,77 +74,13 @@ def get_supported_content_types():
     return _SUPPORTED_CONTENT_TYPES
 
 
-# NOTE(rlrossit): This function allows a get on both a dict-like and an
-# object-like object. cache_db_items() is used on both versioned objects and
-# dicts, so the function can't be totally changed over to [] syntax, nor
-# can it be changed over to use getattr().
-def item_get(item, item_key):
-    if hasattr(item, '__getitem__'):
-        return item[item_key]
-    else:
-        return getattr(item, item_key)
-
-
 class Request(wsgi.Request):
     """Add some OpenStack API-specific logic to the base webob.Request."""
 
     def __init__(self, *args, **kwargs):
         super(Request, self).__init__(*args, **kwargs)
-        self._extension_data = {'db_items': {}}
         if not hasattr(self, 'api_version_request'):
             self.api_version_request = api_version.APIVersionRequest()
-
-    def cache_db_items(self, key, items, item_key='id'):
-        """Allow API methods to store objects from a DB query to be
-        used by API extensions within the same API request.
-
-        An instance of this class only lives for the lifetime of a
-        single API request, so there's no need to implement full
-        cache management.
-        """
-        db_items = self._extension_data['db_items'].setdefault(key, {})
-        for item in items:
-            db_items[item_get(item, item_key)] = item
-
-    def get_db_items(self, key):
-        """Allow an API extension to get previously stored objects within
-        the same API request.
-
-        Note that the object data will be slightly stale.
-        """
-        return self._extension_data['db_items'][key]
-
-    def get_db_item(self, key, item_key):
-        """Allow an API extension to get a previously stored object
-        within the same API request.
-
-        Note that the object data will be slightly stale.
-        """
-        return self.get_db_items(key).get(item_key)
-
-    def cache_db_instances(self, instances):
-        self.cache_db_items('instances', instances, 'uuid')
-
-    def cache_db_instance(self, instance):
-        self.cache_db_items('instances', [instance], 'uuid')
-
-    def get_db_instances(self):
-        return self.get_db_items('instances')
-
-    def get_db_instance(self, instance_uuid):
-        return self.get_db_item('instances', instance_uuid)
-
-    def cache_db_flavors(self, flavors):
-        self.cache_db_items('flavors', flavors, 'flavorid')
-
-    def cache_db_flavor(self, flavor):
-        self.cache_db_items('flavors', [flavor], 'flavorid')
-
-    def get_db_flavors(self):
-        return self.get_db_items('flavors')
-
-    def get_db_flavor(self, flavorid):
-        return self.get_db_item('flavors', flavorid)
 
     def best_match_content_type(self):
         """Determine the requested response content-type."""
