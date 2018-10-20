@@ -676,7 +676,18 @@ http://man7.org/linux/man-pages/man7/random.7.html.
                      'For example: x86_64=machinetype1,armv7l=machinetype2'),
     cfg.StrOpt('sysinfo_serial',
                default='auto',
-               choices=('none', 'os', 'hardware', 'auto'),
+               choices=(
+                   ('none', 'A serial number entry is not added to the guest '
+                            'domain xml.'),
+                   ('os', 'A UUID serial number is generated from the host '
+                          '``/etc/machine-id`` file.'),
+                   ('hardware', 'A UUID for the host hardware as reported by '
+                                'libvirt. This is typically from the host '
+                                'SMBIOS data, unless it has been overridden '
+                                'in ``libvirtd.conf``.'),
+                   ('auto', 'Uses the "os" source if possible, else '
+                            '"hardware".'),
+               ),
                help='The data source used to the populate the host "serial" '
                     'UUID exposed to guest in the virtual BIOS.'),
     cfg.IntOpt('mem_stats_period_seconds',
