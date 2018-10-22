@@ -826,6 +826,15 @@ class WarningsFixture(fixtures.Fixture):
         # prevent adding violations.
         warnings.filterwarnings('error', message=".*invalid UUID.*")
 
+        # NOTE(mriedem): Avoid adding anything which tries to convert an
+        # object to a primitive which jsonutils.to_primitive() does not know
+        # how to handle (or isn't given a fallback callback).
+        warnings.filterwarnings(
+            'error',
+            message="Cannot convert <oslo_db.sqlalchemy.enginefacade"
+                    "._Default object at ",
+            category=UserWarning)
+
         self.addCleanup(warnings.resetwarnings)
 
 
