@@ -67,7 +67,6 @@ def objectify(data):
 
 
 class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
-    all_extensions = True
     sample_dir = None
     microversion = None
     _use_common_server_api_samples = False
