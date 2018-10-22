@@ -160,7 +160,8 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
         self._wait_for_volume_attach(server_id, volume_id)
         # Check to see that the fixture is tracking the server and volume
         # attachment.
-        self.assertIn(volume_id, self.cinder.attachments[server_id])
+        self.assertIn(volume_id,
+                      self.cinder.volume_ids_for_instance(server_id))
 
         # At this point the instance.host is no longer set, so deleting
         # the server will take the local delete path in the API.
@@ -172,7 +173,8 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
         LOG.info('Validating that volume %s was detached from server %s.',
                  volume_id, server_id)
         # Now that the bug is fixed, assert the volume was detached.
-        self.assertNotIn(volume_id, self.cinder.attachments[server_id])
+        self.assertNotIn(volume_id,
+                         self.cinder.volume_ids_for_instance(server_id))
 
 
 @mock.patch('nova.objects.Service.get_minimum_version',
