@@ -328,12 +328,12 @@ class ComputeAPI(object):
         * 4.15 - Add tag argument to reserve_block_device_name()
         * 4.16 - Add tag argument to attach_interface()
         * 4.17 - Add new_attachment_id to swap_volume.
-        * 4.18 - Add migration to prep_resize()
 
-        ... Pike supports messaging version 4.18. So any changes to existing
+        ... Pike supports messaging version 4.17. So any changes to existing
         methods in 4.x after that point should be done so that they can handle
-        the version_cap being set to 4.18.
+        the version_cap being set to 4.17.
 
+        * 4.18 - Add migration to prep_resize()
         * 4.19 - build_and_run_instance() now gets a 'host_list' parameter
                  representing potential alternate hosts for retries within a
                  cell.
@@ -358,7 +358,7 @@ class ComputeAPI(object):
         'mitaka': '4.11',
         'newton': '4.13',
         'ocata': '4.13',
-        'pike': '4.18',
+        'pike': '4.17',
         'queens': '5.0',
     }
 
