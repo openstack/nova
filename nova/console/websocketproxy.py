@@ -113,25 +113,6 @@ class NovaProxyRequestHandlerBase(object):
 
         return origin_proto in expected_protos
 
-    @staticmethod
-    def _console_auth_token_obj_to_dict(obj):
-        """Convert to a dict representation."""
-        # NOTE(PaulMurray) For compatibility while there is code that
-        # expects the dict representation returned by consoleauth.
-        # TODO(PaulMurray) Remove this function when the code no
-        # longer expects the consoleauth dict representation
-        connect_info = {}
-        connect_info['token'] = obj.token,
-        connect_info['instance_uuid'] = obj.instance_uuid
-        connect_info['console_type'] = obj.console_type
-        connect_info['host'] = obj.host
-        connect_info['port'] = obj.port
-        if 'internal_access_path' in obj:
-            connect_info['internal_access_path'] = obj.internal_access_path
-        if 'access_url_base' in obj:
-            connect_info['access_url'] = obj.access_url
-        return connect_info
-
     def _check_console_port(self, ctxt, instance_uuid, port, console_type):
 
         try:
@@ -155,8 +136,7 @@ class NovaProxyRequestHandlerBase(object):
         # NOTE(PaulMurray) ConsoleAuthToken.validate validates the token.
         # We call the compute manager directly to check the console port
         # is correct.
-        connect_info = self._console_auth_token_obj_to_dict(
-            objects.ConsoleAuthToken.validate(ctxt, token))
+        connect_info = objects.ConsoleAuthToken.validate(ctxt, token).to_dict()
 
         valid_port = self._check_console_port(
             ctxt, connect_info['instance_uuid'], connect_info['port'],
