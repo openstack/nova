@@ -775,8 +775,8 @@ class TestDBArchiveDeletedRows(integrated_helpers._IntegratedTestBase):
         # Now archive.
         self.cli.archive_deleted_rows(verbose=True)
         # Assert only one instance_group_member record was deleted.
-        self.assertRegexpMatches(self.output.getvalue(),
-                                 ".*instance_group_member.*\| 1.*")
+        self.assertRegex(self.output.getvalue(),
+                         ".*instance_group_member.*\| 1.*")
         # And that we still have one remaining group member.
         self.assertEqual(
             1, len(self.api.get_server_group(group['id'])['members']))
