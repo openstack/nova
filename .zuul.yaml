@@ -147,7 +147,7 @@
     post-run: playbooks/legacy/nova-next/post.yaml
 
 - job:
-    name: tempest-nova-v2-api
+    name: nova-tempest-v2-api
     parent: devstack-tempest
     branches:
       - master
@@ -263,7 +263,7 @@
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-tempest-dsvm-nova-libvirt-kvm-apr:
             irrelevant-files: *dsvm-irrelevant-files
-        - tempest-nova-v2-api:
+        - nova-tempest-v2-api:
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-tempest-dsvm-neutron-dvr-multinode-full:
             irrelevant-files: *dsvm-irrelevant-files
