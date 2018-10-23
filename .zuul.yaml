@@ -237,7 +237,7 @@
             irrelevant-files: *dsvm-irrelevant-files
         - ironic-tempest-dsvm-ipa-wholedisk-agent_ipmitool-tinyipa-multinode:
             irrelevant-files: *dsvm-irrelevant-files
-        - legacy-barbican-simple-crypto-dsvm-tempest-nova:
+        - barbican-simple-crypto-devstack-tempest:
             irrelevant-files: *dsvm-irrelevant-files
         - devstack-plugin-ceph-tempest-py3:
             irrelevant-files: *dsvm-irrelevant-files
