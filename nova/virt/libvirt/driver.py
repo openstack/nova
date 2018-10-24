@@ -6443,22 +6443,26 @@ class LibvirtDriver(driver.ComputeDriver):
         # TODO(sbauza): Use traits to make a better world.
         vgpus = self._get_vgpu_total()
 
-        # NOTE(jaypipes): We leave some fields like allocation_ratio and
-        # reserved out of the returned dicts here because, for now at least,
-        # the RT injects those values into the inventory dict based on the
-        # compute_nodes record values.
+        # TODO(mriedem): The allocation_ratio config usage will change with
+        # blueprint initial-allocation-ratios. For now, the allocation ratio
+        # config values all default to 0.0 and the ComputeNode provides a
+        # facade for giving the real defaults, so we have to mimic that here.
         result = {
             rc_fields.ResourceClass.VCPU: {
                 'total': vcpus,
                 'min_unit': 1,
                 'max_unit': vcpus,
                 'step_size': 1,
+                'allocation_ratio': CONF.cpu_allocation_ratio or 16.0,
+                'reserved': CONF.reserved_host_cpus,
             },
             rc_fields.ResourceClass.MEMORY_MB: {
                 'total': memory_mb,
                 'min_unit': 1,
                 'max_unit': memory_mb,
                 'step_size': 1,
+                'allocation_ratio': CONF.ram_allocation_ratio or 1.5,
+                'reserved': CONF.reserved_host_memory_mb,
             },
         }
 
@@ -6474,6 +6478,8 @@ class LibvirtDriver(driver.ComputeDriver):
             'min_unit': 1,
             'max_unit': disk_gb,
             'step_size': 1,
+            'allocation_ratio': CONF.disk_allocation_ratio or 1.0,
+            'reserved': self._get_reserved_host_disk_gb_from_config(),
         }
 
         if vgpus > 0:
