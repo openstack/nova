@@ -281,29 +281,6 @@ class FakeDriver(object):
         self.by_class = by_class or {}
         self.reservations = reservations or []
 
-    def get_by_project_and_user(self, context, project_id, user_id, resource):
-        self.called.append(('get_by_project_and_user',
-                            context, project_id, user_id, resource))
-        try:
-            return self.by_user[user_id][resource]
-        except KeyError:
-            raise exception.ProjectUserQuotaNotFound(project_id=project_id,
-                                                     user_id=user_id)
-
-    def get_by_project(self, context, project_id, resource):
-        self.called.append(('get_by_project', context, project_id, resource))
-        try:
-            return self.by_project[project_id][resource]
-        except KeyError:
-            raise exception.ProjectQuotaNotFound(project_id=project_id)
-
-    def get_by_class(self, context, quota_class, resource):
-        self.called.append(('get_by_class', context, quota_class, resource))
-        try:
-            return self.by_class[quota_class][resource]
-        except KeyError:
-            raise exception.QuotaClassNotFound(class_name=quota_class)
-
     def get_defaults(self, context, resources):
         self.called.append(('get_defaults', context, resources))
         return resources
@@ -445,45 +422,6 @@ class QuotaEngineTestCase(test.TestCase):
                 test_resource2=resources[1],
                 test_resource3=resources[2],
                 ))
-
-    def test_get_by_project_and_user(self):
-        context = FakeContext('test_project', 'test_class')
-        driver = FakeDriver(by_user=dict(
-                fake_user=dict(test_resource=42)))
-        quota_obj = quota.QuotaEngine(quota_driver=driver)
-        result = quota_obj.get_by_project_and_user(context, 'test_project',
-                                       'fake_user', 'test_resource')
-
-        self.assertEqual(driver.called, [
-                ('get_by_project_and_user', context, 'test_project',
-                 'fake_user', 'test_resource'),
-                ])
-        self.assertEqual(result, 42)
-
-    def test_get_by_project(self):
-        context = FakeContext('test_project', 'test_class')
-        driver = FakeDriver(by_project=dict(
-                test_project=dict(test_resource=42)))
-        quota_obj = quota.QuotaEngine(quota_driver=driver)
-        result = quota_obj.get_by_project(context, 'test_project',
-                                          'test_resource')
-
-        self.assertEqual(driver.called, [
-                ('get_by_project', context, 'test_project', 'test_resource'),
-                ])
-        self.assertEqual(result, 42)
-
-    def test_get_by_class(self):
-        context = FakeContext('test_project', 'test_class')
-        driver = FakeDriver(by_class=dict(
-                test_class=dict(test_resource=42)))
-        quota_obj = quota.QuotaEngine(quota_driver=driver)
-        result = quota_obj.get_by_class(context, 'test_class', 'test_resource')
-
-        self.assertEqual(driver.called, [
-                ('get_by_class', context, 'test_class', 'test_resource'),
-                ])
-        self.assertEqual(result, 42)
 
     def _make_quota_obj(self, driver):
         quota_obj = quota.QuotaEngine(quota_driver=driver)
@@ -965,17 +903,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                 test_resource=dict(in_use=20),
                 )
         self.stub_out('nova.db.api.quota_get', fake_quota_get)
-
-    def test_get_by_project_and_user(self):
-        self._stub_get_by_project_and_user_specific()
-        result = self.driver.get_by_project_and_user(
-            FakeContext('test_project', 'test_class'),
-            'test_project', 'fake_user', 'test_resource')
-
-        self.assertEqual(self.calls, ['quota_get'])
-        self.assertEqual(result, dict(
-            test_resource=dict(in_use=20),
-            ))
 
     def _stub_get_by_project(self):
         def fake_qgabp(context, project_id):
