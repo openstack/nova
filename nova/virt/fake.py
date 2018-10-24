@@ -503,27 +503,21 @@ class FakeDriver(driver.ComputeDriver):
         inventory = {
             'VCPU': {
                 'total': self.vcpus,
-                'reserved': 0,
                 'min_unit': 1,
                 'max_unit': self.vcpus,
                 'step_size': 1,
-                'allocation_ratio': 16,
             },
             'MEMORY_MB': {
                 'total': self.memory_mb,
-                'reserved': 512,
                 'min_unit': 1,
                 'max_unit': self.memory_mb,
                 'step_size': 1,
-                'allocation_ratio': 1.5,
             },
             'DISK_GB': {
                 'total': self.local_gb,
-                'reserved': 0,
                 'min_unit': 1,
                 'max_unit': self.local_gb,
                 'step_size': 1,
-                'allocation_ratio': 1,
             },
         }
         provider_tree.update_inventory(nodename, inventory)
