@@ -6098,7 +6098,10 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch.object(fake.FakeDriver, 'ensure_filtering_rules_for_instance')
     @mock.patch.object(fake.FakeDriver, 'pre_live_migration')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    def test_pre_live_migration_works_correctly(self, mock_notify,
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid',
+                return_value=objects.BlockDeviceMappingList())
+    def test_pre_live_migration_works_correctly(self, mock_get_bdms,
+                                                mock_notify,
                                                 mock_pre, mock_ensure):
         # Confirm setup_compute_volume is called when volume is mounted.
         def stupid(*args, **kwargs):
@@ -6136,9 +6139,11 @@ class ComputeTestCase(BaseTestCase,
 
         mock_notify.assert_has_calls([
             mock.call(c, instance, 'fake-mini',
-                      action='live_migration_pre', phase='start'),
+                      action='live_migration_pre', phase='start',
+                      bdms=mock_get_bdms.return_value),
             mock.call(c, instance, 'fake-mini',
-                      action='live_migration_pre', phase='end')])
+                      action='live_migration_pre', phase='end',
+                      bdms=mock_get_bdms.return_value)])
 
         mock_pre.assert_called_once_with(
             test.MatchType(nova.context.RequestContext),
