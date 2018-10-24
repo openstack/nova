@@ -5938,8 +5938,8 @@ class ComputeManager(manager.Manager):
             action=fields.NotificationAction.LIVE_MIGRATION_PRE,
             phase=fields.NotificationPhase.START, bdms=bdms)
 
+        connector = self.driver.get_volume_connector(instance)
         try:
-            connector = self.driver.get_volume_connector(instance)
             for bdm in bdms:
                 if bdm.is_volume and bdm.attachment_id is not None:
                     # This bdm uses the new cinder v3.44 API.
@@ -5964,6 +5964,31 @@ class ComputeManager(manager.Manager):
                     # update the bdm with the new attachment_id.
                     bdm.attachment_id = attach_ref['id']
                     bdm.save()
+
+            block_device_info = self._get_instance_block_device_info(
+                                context, instance, refresh_conn_info=True,
+                                bdms=bdms)
+
+            migrate_data = self.driver.pre_live_migration(context,
+                                           instance,
+                                           block_device_info,
+                                           network_info,
+                                           disk,
+                                           migrate_data)
+            LOG.debug('driver pre_live_migration data is %s', migrate_data)
+
+            # NOTE(tr3buchet): setup networks on destination host
+            self.network_api.setup_networks_on_host(context, instance,
+                                                             self.host)
+
+            # Creating filters to hypervisors and firewalls.
+            # An example is that nova-instance-instance-xxx,
+            # which is written to libvirt.xml(Check "virsh nwfilter-list")
+            # This nwfilter is necessary on the destination host.
+            # In addition, this method is creating filtering rule
+            # onto destination host.
+            self.driver.ensure_filtering_rules_for_instance(instance,
+                                                network_info)
         except Exception:
             # If we raise, migrate_data with the updated attachment ids
             # will not be returned to the source host for rollback.
@@ -5978,37 +6003,12 @@ class ComputeManager(manager.Manager):
                         bdm.attachment_id = old_attachments[bdm.volume_id]
                         bdm.save()
 
-        block_device_info = self._get_instance_block_device_info(
-                            context, instance, refresh_conn_info=True,
-                            bdms=bdms)
-
-        migrate_data = self.driver.pre_live_migration(context,
-                                       instance,
-                                       block_device_info,
-                                       network_info,
-                                       disk,
-                                       migrate_data)
-        LOG.debug('driver pre_live_migration data is %s', migrate_data)
-
         # Volume connections are complete, tell cinder that all the
         # attachments have completed.
         for bdm in bdms:
             if bdm.is_volume and bdm.attachment_id is not None:
                 self.volume_api.attachment_complete(context,
                                                     bdm.attachment_id)
-
-        # NOTE(tr3buchet): setup networks on destination host
-        self.network_api.setup_networks_on_host(context, instance,
-                                                         self.host)
-
-        # Creating filters to hypervisors and firewalls.
-        # An example is that nova-instance-instance-xxx,
-        # which is written to libvirt.xml(Check "virsh nwfilter-list")
-        # This nwfilter is necessary on the destination host.
-        # In addition, this method is creating filtering rule
-        # onto destination host.
-        self.driver.ensure_filtering_rules_for_instance(instance,
-                                            network_info)
 
         self._notify_about_instance_usage(
                      context, instance, "live_migration.pre.end",

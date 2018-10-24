@@ -6989,21 +6989,17 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(compute, '_notify_about_instance_usage')
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(compute, 'network_api')
-        @mock.patch.object(compute.driver, 'pre_live_migration')
-        @mock.patch.object(compute, '_get_instance_block_device_info')
-        @mock.patch.object(compute_utils, 'is_volume_backed_instance')
         @mock.patch.object(objects.BlockDeviceMappingList,
                            'get_by_instance_uuid')
         @mock.patch.object(compute.volume_api, 'attachment_delete')
         @mock.patch.object(compute.volume_api, 'attachment_create')
         def _test(mock_attach_create, mock_attach_delete, mock_get_bdms,
-                  mock_ivbi, mock_gibdi, mock_plm, mock_nwapi, mock_ver_notify,
-                  mock_notify, mock_bdm_save, mock_exception):
+                  mock_nwapi, mock_ver_notify, mock_notify, mock_bdm_save,
+                  mock_exception):
             new_attachment_id = uuids.attachment3
             mock_attach_create.side_effect = [{'id': new_attachment_id},
                                               test.TestingException]
             mock_get_bdms.return_value = [vol1_bdm, vol2_bdm]
-            mock_plm.return_value = migrate_data
 
             self.assertRaises(test.TestingException,
                               compute.pre_live_migration,
@@ -7014,6 +7010,80 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertEqual(mock_attach_create.call_count, 2)
             mock_attach_delete.assert_called_once_with(self.context,
                                                        new_attachment_id)
+
+            # Meta: ensure un-asserted mocks are still required
+            for m in (mock_nwapi, mock_get_bdms, mock_ver_notify, mock_notify,
+                      mock_bdm_save, mock_exception):
+                # NOTE(artom) This is different from assert_called() because
+                # mock_calls contains the calls to a mock's method as well
+                # (which is what we want for network_api.get_instance_nw_info
+                # for example), whereas assert_called() only asserts
+                # calls to the mock itself.
+                self.assertGreater(len(m.mock_calls), 0)
+        _test()
+
+    def test_pre_live_migration_exceptions_delete_attachments(self):
+        # The instance in this test has 2 attachments. The call to
+        # driver.pre_live_migration will raise an exception. This will test
+        # that the attachments are restored after the exception is thrown.
+        compute = manager.ComputeManager()
+
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   uuid=uuids.instance)
+        vol1_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': uuids.vol1, 'device_name': '/dev/vdb',
+             'instance_uuid': instance.uuid,
+             'connection_info': '{"test": "test"}'})
+        vol1_bdm.attachment_id = uuids.vol1_attach_orig
+
+        vol2_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': uuids.vol2, 'device_name': '/dev/vdc',
+             'instance_uuid': instance.uuid,
+             'connection_info': '{"test": "test"}'})
+        vol2_bdm.attachment_id = uuids.vol2_attach_orig
+
+        migrate_data = migrate_data_obj.LiveMigrateData()
+        migrate_data.old_vol_attachment_ids = {}
+
+        @mock.patch.object(manager, 'compute_utils', autospec=True)
+        @mock.patch.object(compute, 'network_api', autospec=True)
+        @mock.patch.object(compute, 'volume_api', autospec=True)
+        @mock.patch.object(objects.BlockDeviceMapping, 'save')
+        @mock.patch.object(objects.BlockDeviceMappingList,
+                           'get_by_instance_uuid')
+        @mock.patch.object(compute.driver, 'pre_live_migration', autospec=True)
+        def _test(mock_plm, mock_bdms_get, mock_bdm_save, mock_vol_api,
+                  mock_net_api, mock_compute_utils):
+            mock_vol_api.attachment_create.side_effect = [
+                    {'id': uuids.vol1_attach_new},
+                    {'id': uuids.vol2_attach_new}]
+            mock_bdms_get.return_value = [vol1_bdm, vol2_bdm]
+            mock_plm.side_effect = test.TestingException
+
+            self.assertRaises(test.TestingException,
+                              compute.pre_live_migration,
+                              self.context, instance, False, {}, migrate_data)
+
+            self.assertEqual(2, mock_vol_api.attachment_create.call_count)
+
+            # Assert BDMs have original attachments restored
+            self.assertEqual(uuids.vol1_attach_orig, vol1_bdm.attachment_id)
+            self.assertEqual(uuids.vol2_attach_orig, vol2_bdm.attachment_id)
+
+            # Assert attachment cleanup
+            self.assertEqual(2, mock_vol_api.attachment_delete.call_count)
+            mock_vol_api.attachment_delete.assert_has_calls(
+                    [mock.call(self.context, uuids.vol1_attach_new),
+                     mock.call(self.context, uuids.vol2_attach_new)],
+                    any_order=True)
+
+            # Meta: ensure un-asserted mocks are still required
+            for m in (mock_net_api, mock_compute_utils):
+                self.assertGreater(len(m.mock_calls), 0)
         _test()
 
     def test_get_neutron_events_for_live_migration_empty(self):
