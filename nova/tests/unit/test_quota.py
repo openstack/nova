@@ -317,13 +317,6 @@ class FakeDriver(object):
         self.called.append(('limit_check_project_and_user', context, resources,
                             project_values, user_values, project_id, user_id))
 
-    def destroy_all_by_project_and_user(self, context, project_id, user_id):
-        self.called.append(('destroy_all_by_project_and_user', context,
-                            project_id, user_id))
-
-    def destroy_all_by_project(self, context, project_id):
-        self.called.append(('destroy_all_by_project', context, project_id))
-
 
 class BaseResourceTestCase(test.TestCase):
     def test_no_flag(self):
@@ -566,28 +559,6 @@ class QuotaEngineTestCase(test.TestCase):
                           dict(test_resource3=2, test_resource4=1),
                           None, None)],
                          driver.called)
-
-    def test_destroy_all_by_project_and_user(self):
-        context = FakeContext(None, None)
-        driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
-        quota_obj.destroy_all_by_project_and_user(context,
-                                                  'test_project', 'fake_user')
-
-        self.assertEqual(driver.called, [
-                ('destroy_all_by_project_and_user', context, 'test_project',
-                 'fake_user'),
-                ])
-
-    def test_destroy_all_by_project(self):
-        context = FakeContext(None, None)
-        driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
-        quota_obj.destroy_all_by_project(context, 'test_project')
-
-        self.assertEqual(driver.called, [
-                ('destroy_all_by_project', context, 'test_project'),
-                ])
 
     def test_resources(self):
         quota_obj = self._make_quota_obj(None)
