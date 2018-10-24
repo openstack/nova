@@ -168,8 +168,12 @@ class _Provider(object):
         """
         self._update_generation(generation, 'update_inventory')
         if self.has_inventory_changed(inventory):
+            LOG.debug('Updating inventory in ProviderTree for provider %s '
+                      'with inventory: %s', self.uuid, inventory)
             self.inventory = copy.deepcopy(inventory)
             return True
+        LOG.debug('Inventory has not changed in ProviderTree for provider: %s',
+                  self.uuid)
         return False
 
     def have_traits_changed(self, new):
