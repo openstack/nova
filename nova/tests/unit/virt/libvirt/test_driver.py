@@ -7125,6 +7125,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                      None,
                                      (expec_val,))
 
+    def test_xml_disk_bus_sata(self):
+        # NOTE(sean-k-mooney): here we assert that when
+        # root_device_name is set in the block_device_info
+        # and hw_disk_bus is set in the image properties,
+        # we use the property value
+        expected = ("disk", "sata", "vda")
+
+        image_meta = objects.ImageMeta.from_dict({"properties": {
+            "hw_disk_bus": "sata"}})
+        block_device_info = {'root_device_name': "vda"}
+        self._check_xml_and_disk_bus(image_meta,
+                                     block_device_info,
+                                     (expected,))
+
     def test_xml_disk_bus_ide_and_virtio(self):
         # It's necessary to check if the architecture is power, because
         # power doesn't have support to ide, and so libvirt translate
