@@ -61,8 +61,7 @@ class DbQuotaDriver(object):
 
         return quotas
 
-    def get_class_quotas(self, context, resources, quota_class,
-                         defaults=True):
+    def get_class_quotas(self, context, resources, quota_class):
         """Given a list of resources, retrieve the quotas for the given
         quota class.
 
@@ -70,18 +69,14 @@ class DbQuotaDriver(object):
         :param resources: A dictionary of the registered resources.
         :param quota_class: The name of the quota class to return
                             quotas for.
-        :param defaults: If True, the default value will be reported
-                         if there is no specific value for the
-                         resource.
         """
 
         quotas = {}
         class_quotas = objects.Quotas.get_all_class_by_name(context,
                                                             quota_class)
         for resource in resources.values():
-            if defaults or resource.name in class_quotas:
-                quotas[resource.name] = class_quotas.get(resource.name,
-                                                         resource.default)
+            quotas[resource.name] = class_quotas.get(resource.name,
+                                                     resource.default)
 
         return quotas
 
@@ -632,8 +627,7 @@ class NoopQuotaDriver(object):
             quotas[resource.name] = -1
         return quotas
 
-    def get_class_quotas(self, context, resources, quota_class,
-                         defaults=True):
+    def get_class_quotas(self, context, resources, quota_class):
         """Given a list of resources, retrieve the quotas for the given
         quota class.
 
@@ -641,9 +635,6 @@ class NoopQuotaDriver(object):
         :param resources: A dictionary of the registered resources.
         :param quota_class: The name of the quota class to return
                             quotas for.
-        :param defaults: If True, the default value will be reported
-                         if there is no specific value for the
-                         resource.
         """
         quotas = {}
         for resource in resources.values():
@@ -913,19 +904,16 @@ class QuotaEngine(object):
 
         return self._driver.get_defaults(context, self._resources)
 
-    def get_class_quotas(self, context, quota_class, defaults=True):
+    def get_class_quotas(self, context, quota_class):
         """Retrieve the quotas for the given quota class.
 
         :param context: The request context, for access checks.
         :param quota_class: The name of the quota class to return
                             quotas for.
-        :param defaults: If True, the default value will be reported
-                         if there is no specific value for the
-                         resource.
         """
 
         return self._driver.get_class_quotas(context, self._resources,
-                                             quota_class, defaults=defaults)
+                                             quota_class)
 
     def get_user_quotas(self, context, project_id, user_id, quota_class=None,
                         defaults=True, usages=True):
