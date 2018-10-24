@@ -1029,7 +1029,7 @@ Possible values:
 """),
     cfg.IntOpt("shutdown_timeout",
         default=60,
-        min=1,
+        min=0,
         help="""
 Total time to wait in seconds for an instance to perform a clean
 shutdown.
@@ -1038,7 +1038,8 @@ It determines the overall period (in seconds) a VM is allowed to
 perform a clean shutdown. While performing stop, rescue and shelve,
 rebuild operations, configuring this option gives the VM a chance
 to perform a controlled shutdown before the instance is powered off.
-The default timeout is 60 seconds.
+The default timeout is 60 seconds. A value of 0 (zero) means the guest
+will be powered off immediately with no opportunity for guest OS clean-up.
 
 The timeout value can be overridden on a per image basis by means
 of os_shutdown_timeout that is an image metadata setting allowing
@@ -1047,7 +1048,7 @@ need to shut down cleanly.
 
 Possible values:
 
-* Any positive integer in seconds (default value is 60).
+* A positive integer or 0 (default value is 60).
 """)
 ]
 
