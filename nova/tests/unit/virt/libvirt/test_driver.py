@@ -17962,18 +17962,24 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 'min_unit': 1,
                 'max_unit': self.vcpus,
                 'step_size': 1,
+                'allocation_ratio': 16.0,
+                'reserved': 0,
             },
             rc_fields.ResourceClass.MEMORY_MB: {
                 'total': self.memory_mb,
                 'min_unit': 1,
                 'max_unit': self.memory_mb,
                 'step_size': 1,
+                'allocation_ratio': 1.5,
+                'reserved': 512,
             },
             rc_fields.ResourceClass.DISK_GB: {
                 'total': self.disk_gb,
                 'min_unit': 1,
                 'max_unit': self.disk_gb,
                 'step_size': 1,
+                'allocation_ratio': 1.0,
+                'reserved': 0,
             },
         }
 

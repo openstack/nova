@@ -944,6 +944,10 @@ class ResourceTracker(object):
             # compute_node record if not set by the virt driver) because the
             # virt driver does not and will not have access to the compute_node
             inv_data = prov_tree.data(nodename).inventory
+            # TODO(mriedem): Stop calling _normalize_inventory_from_cn_obj when
+            # a virt driver implements update_provider_tree() since we expect
+            # the driver to manage the allocation ratios and reserved resource
+            # amounts.
             _normalize_inventory_from_cn_obj(inv_data, compute_node)
             prov_tree.update_inventory(nodename, inv_data)
             # Flush any changes. If we processed ReshapeNeeded above, allocs is
