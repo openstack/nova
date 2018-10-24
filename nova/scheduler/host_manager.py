@@ -376,7 +376,7 @@ class HostManager(object):
         for agg in aggs:
             self.aggs_by_id[agg.id] = agg
             for host in agg.hosts:
-                self.host_aggregates_map[host.lower()].add(agg.id)
+                self.host_aggregates_map[host].add(agg.id)
 
     def update_aggregates(self, aggregates):
         """Updates internal HostManager information about aggregates."""
@@ -395,7 +395,7 @@ class HostManager(object):
         for host in self.host_aggregates_map:
             if (aggregate.id in self.host_aggregates_map[host]
                     and host not in aggregate.hosts):
-                self.host_aggregates_map[host.lower()].remove(aggregate.id)
+                self.host_aggregates_map[host].remove(aggregate.id)
 
     def delete_aggregate(self, aggregate):
         """Deletes internal HostManager information about a specific aggregate.
@@ -714,7 +714,7 @@ class HostManager(object):
 
     def _get_aggregates_info(self, host):
         return [self.aggs_by_id[agg_id] for agg_id in
-                self.host_aggregates_map[host.lower()]]
+                self.host_aggregates_map[host]]
 
     def _get_instances_by_host(self, context, host_name):
         try:
