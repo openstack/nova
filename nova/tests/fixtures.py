@@ -435,27 +435,83 @@ class CellDatabases(fixtures.Fixture):
 
     @contextmanager
     def _wrap_target_cell(self, context, cell_mapping):
-        with self._cell_lock.write_lock():
-            if cell_mapping is None:
-                # NOTE(danms): The real target_cell untargets with a
-                # cell_mapping of None. Since we're controlling our
-                # own targeting in this fixture, we need to call this out
-                # specifically and avoid switching global database state
+        # NOTE(danms): This method is responsible for switching global
+        # database state in a safe way such that code that doesn't
+        # know anything about cell targeting (i.e. compute node code)
+        # can continue to operate when called from something that has
+        # targeted a specific cell. In order to make this safe from a
+        # dining-philosopher-style deadlock, we need to be able to
+        # support multiple threads talking to the same cell at the
+        # same time and potentially recursion within the same thread
+        # from code that would otherwise be running on separate nodes
+        # in real life, but where we're actually recursing in the
+        # tests.
+        #
+        # The basic logic here is:
+        #  1. Grab a reader lock to see if the state is already pointing at
+        #     the cell we want. If it is, we can yield and return without
+        #     altering the global state further. The read lock ensures that
+        #     global state won't change underneath us, and multiple threads
+        #     can be working at the same time, as long as they are looking
+        #     for the same cell.
+        #  2. If we do need to change the global state, grab a writer lock
+        #     to make that change, which assumes that nothing else is looking
+        #     at a cell right now. We do only non-schedulable things while
+        #     holding that lock to avoid the deadlock mentioned above.
+        #  3. We then re-lock with a reader lock just as step #1 above and
+        #     yield to do the actual work. We can do schedulable things
+        #     here and not exclude other threads from making progress.
+        #     If an exception is raised, we capture that and save it.
+        #  4. If we changed state in #2, we need to change it back. So we grab
+        #     a writer lock again and do that.
+        #  5. Finally, if an exception was raised in #3 while state was
+        #     changed, we raise it to the caller.
+
+        if cell_mapping:
+            desired = self._ctxt_mgrs[cell_mapping.database_connection]
+        else:
+            desired = self._default_ctxt_mgr
+
+        with self._cell_lock.read_lock():
+            if self._last_ctxt_mgr == desired:
                 with self._real_target_cell(context, cell_mapping) as c:
                     yield c
-                return
-            ctxt_mgr = self._ctxt_mgrs[cell_mapping.database_connection]
-            # This assumes the next local DB access is the same cell that
-            # was targeted last time.
-            self._last_ctxt_mgr = ctxt_mgr
+                    return
+
+        raised_exc = None
+
+        with self._cell_lock.write_lock():
+            if cell_mapping is not None:
+                # This assumes the next local DB access is the same cell that
+                # was targeted last time.
+                self._last_ctxt_mgr = desired
+
+        with self._cell_lock.read_lock():
+            if self._last_ctxt_mgr != desired:
+                # NOTE(danms): This is unlikely to happen, but it's possible
+                # another waiting writer changed the state between us letting
+                # it go and re-acquiring as a reader. If lockutils supported
+                # upgrading and downgrading locks, this wouldn't be a problem.
+                # Regardless, assert that it is still as we left it here
+                # so we don't hit the wrong cell. If this becomes a problem,
+                # we just need to retry the write section above until we land
+                # here with the cell we want.
+                raise RuntimeError('Global DB state changed underneath us')
+
             try:
                 with self._real_target_cell(context, cell_mapping) as ccontext:
                     yield ccontext
-            finally:
-                # Once we have returned from the context, we need
-                # to restore the default context manager for any
-                # subsequent calls
-                self._last_ctxt_mgr = self._default_ctxt_mgr
+            except Exception as exc:
+                raised_exc = exc
+
+        with self._cell_lock.write_lock():
+            # Once we have returned from the context, we need
+            # to restore the default context manager for any
+            # subsequent calls
+            self._last_ctxt_mgr = self._default_ctxt_mgr
+
+        if raised_exc:
+            raise raised_exc
 
     def _wrap_create_context_manager(self, connection=None):
         ctxt_mgr = self._ctxt_mgrs[connection]
