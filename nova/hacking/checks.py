@@ -100,6 +100,8 @@ return_not_followed_by_space = re.compile(r"^\s*return(?:\(|{|\"|'|#).*$")
 uuid4_re = re.compile(r"uuid4\(\)($|[^\.]|\.hex)")
 redundant_import_alias_re = re.compile(r"import (?:.*\.)?(.+) as \1$")
 yield_not_followed_by_space = re.compile(r"^\s*yield(?:\(|{|\[|\"|').*$")
+asse_regexpmatches = re.compile(
+    r"(assertRegexpMatches|assertNotRegexpMatches)\(")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -838,6 +840,17 @@ def yield_followed_by_space(logical_line):
                "N360: Yield keyword should be followed by a space.")
 
 
+def assert_regexpmatches(logical_line):
+    """Check for usage of deprecated assertRegexpMatches/assertNotRegexpMatches
+
+    N361
+    """
+    res = asse_regexpmatches.search(logical_line)
+    if res:
+        yield (0, "N361: assertRegex/assertNotRegex must be used instead "
+                  "of assertRegexpMatches/assertNotRegexpMatches.")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -881,3 +894,4 @@ def factory(register):
     register(return_followed_by_space)
     register(no_redundant_import_alias)
     register(yield_followed_by_space)
+    register(assert_regexpmatches)
