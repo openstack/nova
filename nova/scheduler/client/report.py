@@ -1846,8 +1846,11 @@ class SchedulerReportClient(object):
                     CONSUMER_GENERATION_VERSION)):
             payload['consumer_generation'] = consumer_generation
 
-        r = self.put(url, payload, version=allocation_request_version,
-                     global_request_id=context.global_id)
+        r = self._put_allocations(
+            context,
+            consumer_uuid,
+            payload,
+            version=allocation_request_version)
         if r.status_code != 204:
             err = r.json()['errors'][0]
             if err['code'] == 'placement.concurrent_update':
@@ -1869,109 +1872,71 @@ class SchedulerReportClient(object):
                           'involved in our attempt to put allocations for '
                           'consumer %s' % consumer_uuid)
                 raise Retry('claim_resources', reason)
-            else:
-                LOG.warning(
-                    'Unable to submit allocation for instance '
-                    '%(uuid)s (%(code)i %(text)s)',
-                    {'uuid': consumer_uuid,
-                     'code': r.status_code,
-                     'text': r.text})
         return r.status_code == 204
 
-    @safe_connect
-    def remove_provider_from_instance_allocation(self, context, consumer_uuid,
-                                                 rp_uuid, user_id, project_id,
-                                                 resources):
-        """Grabs an allocation for a particular consumer UUID, strips parts of
-        the allocation that refer to a supplied resource provider UUID, and
-        then PUTs the resulting allocation back to the placement API for the
-        consumer.
+    def remove_provider_tree_from_instance_allocation(self, context,
+                                                      consumer_uuid,
+                                                      root_rp_uuid):
+        """Removes every allocation from the consumer that is on the
+        specified provider tree.
 
-        This is used to reconcile the "doubled-up" allocation that the
-        scheduler constructs when claiming resources against the destination
-        host during a move operation.
-
-        If the move was between hosts, the entire allocation for rp_uuid will
-        be dropped. If the move is a resize on the same host, then we will
-        subtract resources from the single allocation to ensure we do not
-        exceed the reserved or max_unit amounts for the resource on the host.
+        Note that this function does not try to remove allocations from sharing
+        providers.
 
         :param context: The security context
-        :param consumer_uuid: The instance/consumer UUID
-        :param rp_uuid: The UUID of the provider whose resources we wish to
-                        remove from the consumer's allocation
-        :param user_id: The instance's user
-        :param project_id: The instance's project
-        :param resources: The resources to be dropped from the allocation
+        :param consumer_uuid: The UUID of the consumer to manipulate
+        :param root_rp_uuid: The root of the provider tree
+        :raises: keystoneauth1.exceptions.base.ClientException on failure to
+                 communicate with the placement API
+        :raises: ConsumerAllocationRetrievalFailed if this call cannot read
+                 the current state of the allocations from placement
+        :raises: ResourceProviderRetrievalFailed if it cannot collect the RPs
+                 in the tree specified by root_rp_uuid.
         """
-        url = '/allocations/%s' % consumer_uuid
-
-        # Grab the "doubled-up" allocation that we will manipulate
-        r = self.get(url, global_request_id=context.global_id,
-                     version=CONSUMER_GENERATION_VERSION)
-        if r.status_code != 200:
-            LOG.warning("Failed to retrieve allocations for %s. Got HTTP %s",
-                        consumer_uuid, r.status_code)
-            return False
-
-        current_allocs = r.json()['allocations']
-        if not current_allocs:
+        current_allocs = self.get_allocs_for_consumer(context, consumer_uuid)
+        if not current_allocs['allocations']:
             LOG.error("Expected to find current allocations for %s, but "
                       "found none.", consumer_uuid)
+            # TODO(gibi): do not return False as none of the callers
+            # do anything with the return value except log
             return False
-        else:
-            current_consumer_generation = r.json()['consumer_generation']
 
-        # If the host isn't in the current allocation for the instance, don't
-        # do anything
-        if rp_uuid not in current_allocs:
-            LOG.warning("Expected to find allocations referencing resource "
-                        "provider %s for %s, but found none.",
-                        rp_uuid, consumer_uuid)
+        rps = self._get_providers_in_tree(context, root_rp_uuid)
+        rp_uuids = [rp['uuid'] for rp in rps]
+
+        # go through the current allocations and remove every RP from it that
+        # belongs to the RP tree identified by the root_rp_uuid parameter
+        has_changes = False
+        for rp_uuid in rp_uuids:
+            changed = bool(
+                current_allocs['allocations'].pop(rp_uuid, None))
+            has_changes = has_changes or changed
+
+        # If nothing changed then don't do anything
+        if not has_changes:
+            LOG.warning(
+                "Expected to find allocations referencing resource "
+                "provider tree rooted at %s for %s, but found none.",
+                root_rp_uuid, consumer_uuid)
+            # TODO(gibi): do not return a value as none of the callers
+            # do anything with the return value except logging
             return True
 
-        compute_providers = [uuid for uuid, alloc in current_allocs.items()
-                             if 'VCPU' in alloc['resources']]
-        LOG.debug('Current allocations for instance: %s', current_allocs,
-                  instance_uuid=consumer_uuid)
-        LOG.debug('Instance %s has resources on %i compute nodes',
-                  consumer_uuid, len(compute_providers))
-        new_allocs = {
-             alloc_rp_uuid: {
-                'resources': alloc['resources'],
-            }
-            for alloc_rp_uuid, alloc in current_allocs.items()
-            if alloc_rp_uuid != rp_uuid
-        }
+        r = self._put_allocations(context, consumer_uuid, current_allocs)
+        # TODO(gibi): do not return a value as none of the callers
+        # do anything with the return value except logging
+        return r.status_code == 204
 
-        if len(compute_providers) == 1:
-            # NOTE(danms): We are in a resize to same host scenario. Since we
-            # are the only provider then we need to merge back in the doubled
-            # allocation with our part subtracted
-            peer_alloc = {
-                    'resources': current_allocs[rp_uuid]['resources'],
-            }
-            LOG.debug('Original resources from same-host '
-                      'allocation: %s', peer_alloc['resources'])
-            scheduler_utils.merge_resources(peer_alloc['resources'],
-                                            resources, -1)
-            LOG.debug('Subtracting old resources from same-host '
-                      'allocation: %s', peer_alloc['resources'])
-            new_allocs[rp_uuid] = peer_alloc
-
-        payload = {'allocations': new_allocs}
-        payload['project_id'] = project_id
-        payload['user_id'] = user_id
-        payload['consumer_generation'] = current_consumer_generation
-        LOG.debug("Sending updated allocation %s for instance %s after "
-                  "removing resources for %s.",
-                  new_allocs, consumer_uuid, rp_uuid)
-        r = self.put(url, payload, version=CONSUMER_GENERATION_VERSION,
+    def _put_allocations(
+            self, context, consumer_uuid, payload,
+            version=CONSUMER_GENERATION_VERSION):
+        url = '/allocations/%s' % consumer_uuid
+        r = self.put(url, payload, version=version,
                      global_request_id=context.global_id)
         if r.status_code != 204:
             LOG.warning("Failed to save allocation for %s. Got HTTP %s: %s",
                         consumer_uuid, r.status_code, r.text)
-        return r.status_code == 204
+        return r
 
     @safe_connect
     @retries
@@ -2089,9 +2054,7 @@ class SchedulerReportClient(object):
             'user_id': user_id,
             'consumer_generation': consumer_generation
         }
-        url = '/allocations/%s' % consumer_uuid
-        r = self.put(url, payload, version=CONSUMER_GENERATION_VERSION,
-                     global_request_id=context.global_id)
+        r = self._put_allocations(context, consumer_uuid, payload)
         if r.status_code != 204:
             err = r.json()['errors'][0]
             # NOTE(jaypipes): Yes, it sucks doing string comparison like this
@@ -2109,13 +2072,6 @@ class SchedulerReportClient(object):
                           'involved in our attempt to put allocations for '
                           'consumer %s' % consumer_uuid)
                 raise Retry('put_allocations', reason)
-            else:
-                LOG.warning(
-                    'Unable to submit allocation for instance '
-                    '%(uuid)s (%(code)i %(text)s)',
-                    {'uuid': consumer_uuid,
-                     'code': r.status_code,
-                     'text': r.text})
         return r.status_code == 204
 
     @safe_connect

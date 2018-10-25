@@ -296,7 +296,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             expected_url, mock.ANY, version='1.28',
             global_request_id=self.context.global_id)
         log_msg = mock_warn.call_args[0][0]
-        self.assertIn("Unable to submit allocation for instance", log_msg)
+        self.assertIn("Failed to save allocation for", log_msg)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
     def test_put_allocations_fail_due_to_consumer_generation_conflict(
@@ -1142,7 +1142,8 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         /allocations/{consumer_uuid} call.
         """
         get_resp_mock = mock.Mock(status_code=200)
-        get_resp_mock.json.return_value = {
+        get_resp_mock.json.side_effect = [
+            {
             'allocations': {
                 uuids.source: {
                     'resource_provider_generation': 42,
@@ -1162,22 +1163,32 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'consumer_generation': 1,
             'project_id': uuids.project_id,
             'user_id': uuids.user_id,
-        }
+            },
+            # the second get is for resource providers in the compute tree,
+            # return just the compute
+            {
+                "resource_providers": [
+                    {
+                        "uuid": uuids.source,
+                    },
+                ]
+            },
+        ]
         self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=204)
         self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         project_id = uuids.project_id
         user_id = uuids.user_id
-        res = self.client.remove_provider_from_instance_allocation(
-            self.context, consumer_uuid, uuids.source, user_id, project_id,
-            mock.Mock())
+        res = self.client.remove_provider_tree_from_instance_allocation(
+            self.context, consumer_uuid, uuids.source)
 
         expected_url = "/allocations/%s" % consumer_uuid
         # New allocations should only include the destination...
         expected_payload = {
             'allocations': {
                 uuids.destination: {
+                    'resource_provider_generation': 42,
                     'resources': {
                         'VCPU': 1,
                         'MEMORY_MB': 1024,
@@ -1206,7 +1217,8 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         call.
         """
         get_resp_mock = mock.Mock(status_code=200)
-        get_resp_mock.json.return_value = {
+        get_resp_mock.json.side_effect = [
+            {
             'allocations': {
                 uuids.source: {
                     'resource_provider_generation': 42,
@@ -1232,27 +1244,38 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'consumer_generation': 1,
             'project_id': uuids.project_id,
             'user_id': uuids.user_id,
-        }
+            },
+            # the second get is for resource providers in the compute tree,
+            # return just the compute
+            {
+                "resource_providers": [
+                    {
+                        "uuid": uuids.source,
+                    },
+                ]
+            },
+        ]
         self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=204)
         self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         project_id = uuids.project_id
         user_id = uuids.user_id
-        res = self.client.remove_provider_from_instance_allocation(
-            self.context, consumer_uuid, uuids.source, user_id, project_id,
-            mock.Mock())
+        res = self.client.remove_provider_tree_from_instance_allocation(
+            self.context, consumer_uuid, uuids.source)
 
         expected_url = "/allocations/%s" % consumer_uuid
         # New allocations should only include the destination...
         expected_payload = {
             'allocations': {
                 uuids.shared_storage: {
+                    'resource_provider_generation': 42,
                     'resources': {
                         'DISK_GB': 100,
                     },
                 },
                 uuids.destination: {
+                    'resource_provider_generation': 42,
                     'resources': {
                         'VCPU': 1,
                         'MEMORY_MB': 1024,
@@ -1274,14 +1297,15 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.assertTrue(res)
 
     def test_remove_provider_from_inst_alloc_no_source(self):
-        """Tests that if remove_provider_from_instance_allocation() fails to
-        find any allocations for the source host, it just returns True and
+        """Tests that if remove_provider_tree_from_instance_allocation() fails
+        to find any allocations for the source host, it just returns True and
         does not attempt to rewrite the allocation for the consumer.
         """
         get_resp_mock = mock.Mock(status_code=200)
-        # Act like the allocations already did not include the source host for
-        # some reason
-        get_resp_mock.json.return_value = {
+        get_resp_mock.json.side_effect = [
+            # Act like the allocations already did not include the source host
+            # for some reason
+            {
             'allocations': {
                 uuids.shared_storage: {
                     'resource_provider_generation': 42,
@@ -1300,14 +1324,21 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'consumer_generation': 1,
             'project_id': uuids.project_id,
             'user_id': uuids.user_id,
-        }
+            },
+            # the second get is for resource providers in the compute tree,
+            # return just the compute
+            {
+                "resource_providers": [
+                    {
+                        "uuid": uuids.source,
+                    },
+                ]
+            },
+        ]
         self.ks_adap_mock.get.return_value = get_resp_mock
         consumer_uuid = uuids.consumer_uuid
-        project_id = uuids.project_id
-        user_id = uuids.user_id
-        res = self.client.remove_provider_from_instance_allocation(
-            self.context, consumer_uuid, uuids.source, user_id, project_id,
-            mock.Mock())
+        res = self.client.remove_provider_tree_from_instance_allocation(
+            self.context, consumer_uuid, uuids.source)
 
         self.ks_adap_mock.get.assert_called()
         self.ks_adap_mock.put.assert_not_called()
@@ -1315,27 +1346,21 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.assertTrue(res)
 
     def test_remove_provider_from_inst_alloc_fail_get_allocs(self):
-        """Tests that we gracefully exit with False from
-        remove_provider_from_instance_allocation() if the call to get the
-        existing allocations fails for some reason
-        """
-        get_resp_mock = mock.Mock(status_code=500)
-        self.ks_adap_mock.get.return_value = get_resp_mock
+        self.ks_adap_mock.get.return_value = fake_requests.FakeResponse(
+            status_code=500)
         consumer_uuid = uuids.consumer_uuid
-        project_id = uuids.project_id
-        user_id = uuids.user_id
-        res = self.client.remove_provider_from_instance_allocation(
-            self.context, consumer_uuid, uuids.source, user_id, project_id,
-            mock.Mock())
+        self.assertRaises(
+            exception.ConsumerAllocationRetrievalFailed,
+            self.client.remove_provider_tree_from_instance_allocation,
+            self.context, consumer_uuid, uuids.source)
 
         self.ks_adap_mock.get.assert_called()
         self.ks_adap_mock.put.assert_not_called()
 
-        self.assertFalse(res)
-
     def test_remove_provider_from_inst_alloc_consumer_gen_conflict(self):
         get_resp_mock = mock.Mock(status_code=200)
-        get_resp_mock.json.return_value = {
+        get_resp_mock.json.side_effect = [
+            {
             'allocations': {
                 uuids.source: {
                     'resource_provider_generation': 42,
@@ -1355,18 +1380,123 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'consumer_generation': 1,
             'project_id': uuids.project_id,
             'user_id': uuids.user_id,
-        }
+            },
+            # the second get is for resource providers in the compute tree,
+            # return just the compute
+            {
+                "resource_providers": [
+                    {
+                        "uuid": uuids.source,
+                    },
+                ]
+            },
+        ]
         self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=409)
         self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
-        project_id = uuids.project_id
-        user_id = uuids.user_id
-        res = self.client.remove_provider_from_instance_allocation(
-            self.context, consumer_uuid, uuids.source, user_id, project_id,
-            mock.Mock())
+        res = self.client.remove_provider_tree_from_instance_allocation(
+            self.context, consumer_uuid, uuids.source)
 
         self.assertFalse(res)
+
+    def test_remove_provider_tree_from_inst_alloc_nested(self):
+        self.ks_adap_mock.get.side_effect = [
+            fake_requests.FakeResponse(
+                status_code=200,
+                content=jsonutils.dumps(
+                    {
+                        'allocations': {
+                            uuids.source_compute: {
+                                'resource_provider_generation': 42,
+                                'resources': {
+                                    'VCPU': 1,
+                                    'MEMORY_MB': 1024,
+                                },
+                            },
+                            uuids.source_nested: {
+                                'resource_provider_generation': 42,
+                                'resources': {
+                                    'CUSTOM_MAGIC': 1
+                                },
+                            },
+                            uuids.destination: {
+                                'resource_provider_generation': 42,
+                                'resources': {
+                                    'VCPU': 1,
+                                    'MEMORY_MB': 1024,
+                                },
+                            },
+                        },
+                        'consumer_generation': 1,
+                        'project_id': uuids.project_id,
+                        'user_id': uuids.user_id,
+                    })),
+            # the second get is for resource providers in the compute tree,
+            # return both RPs in the source compute tree
+            fake_requests.FakeResponse(
+                status_code=200,
+                content=jsonutils.dumps(
+                    {
+                        "resource_providers": [
+                            {
+                                "uuid": uuids.source_compute,
+                            },
+                            {
+                                "uuid": uuids.source_nested,
+                            },
+                        ]
+                    }))
+        ]
+        self.ks_adap_mock.put.return_value = fake_requests.FakeResponse(
+            status_code=204)
+        consumer_uuid = uuids.consumer_uuid
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.remove_provider_tree_from_instance_allocation(
+            self.context, consumer_uuid, uuids.source_compute)
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        # New allocations should only include the destination...
+        expected_payload = {
+            'allocations': {
+                uuids.destination: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+            },
+            'consumer_generation': 1,
+            'project_id': project_id,
+            'user_id': user_id
+        }
+
+        self.assertEqual(
+            [
+                mock.call(
+                    '/allocations/%s' % consumer_uuid,
+                    headers=mock.ANY,
+                    microversion='1.28'
+                ),
+                mock.call(
+                    '/resource_providers?in_tree=%s' % uuids.source_compute,
+                    headers=mock.ANY,
+                    microversion='1.14'
+                )
+            ],
+            self.ks_adap_mock.get.mock_calls)
+
+        # We have to pull the json body from the mock call_args to validate
+        # it separately otherwise hash seed issues get in the way.
+        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
+        self.assertEqual(expected_payload, actual_payload)
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.28', json=mock.ANY,
+            headers={'X-Openstack-Request-Id': self.context.global_id})
+
+        self.assertTrue(res)
 
 
 class TestMoveAllocations(SchedulerReportClientTestCase):

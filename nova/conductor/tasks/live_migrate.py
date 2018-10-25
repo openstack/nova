@@ -423,19 +423,13 @@ class LiveMigrationTask(base.TaskBase):
                      instance=self.instance)
             return
 
-        # Calculate the resource class amounts to subtract from the allocations
-        # on the node based on the instance flavor.
-        resources = scheduler_utils.resources_from_flavor(
-            self.instance, self.instance.flavor)
-
         # Now remove the allocations for our instance against that node.
         # Note that this does not remove allocations against any other node
         # or shared resource provider, it's just undoing what the scheduler
         # allocated for the given (destination) node.
         self.scheduler_client.reportclient.\
-            remove_provider_from_instance_allocation(
-                self.context, self.instance.uuid, compute_node.uuid,
-                self.instance.user_id, self.instance.project_id, resources)
+            remove_provider_tree_from_instance_allocation(
+            self.context, self.instance.uuid, compute_node.uuid)
 
     def _check_not_over_max_retries(self, attempted_hosts):
         if CONF.migrate_max_retries == -1:
