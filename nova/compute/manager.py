@@ -3889,10 +3889,7 @@ class ComputeManager(manager.Manager):
             rt = self._get_resource_tracker()
             rt.drop_move_claim(context, instance, migration.source_node,
                                old_instance_type, prefix='old_')
-            self._delete_allocation_after_move(context, instance,
-                                               migration,
-                                               old_instance_type,
-                                               migration.source_node)
+            self._delete_allocation_after_move(context, instance, migration)
             instance.drop_migration_context()
 
             # NOTE(mriedem): The old_vm_state could be STOPPED but the user
@@ -3923,89 +3920,25 @@ class ComputeManager(manager.Manager):
                    self.host, action=fields.NotificationAction.RESIZE_CONFIRM,
                    phase=fields.NotificationPhase.END)
 
-    def _delete_allocation_after_move(self, context, instance, migration,
-                                      flavor, nodename):
-        rt = self._get_resource_tracker()
-        cn_uuid = rt.get_node_uuid(nodename)
-
-        if migration.source_node == nodename:
-            if migration.status in ('confirmed', 'completed'):
-                try:
-                    # NOTE(danms): We're finishing on the source node, so try
-                    # to delete the allocation based on the migration uuid
-                    deleted = self.reportclient.delete_allocation_for_instance(
-                        context, migration.uuid)
-                    if deleted:
-                        LOG.info(_('Source node %(node)s confirmed migration '
-                                   '%(mig)s; deleted migration-based '
-                                   'allocation'),
-                                 {'node': nodename, 'mig': migration.uuid})
-                        # NOTE(danms): We succeeded, which means we do not
-                        # need to do the complex double allocation dance
-                        return
-                except exception.AllocationDeleteFailed:
-                    LOG.error('Deleting allocation in placement for migration '
-                              '%(migration_uuid)s failed. The instance '
-                              '%(instance_uuid)s will be put to ERROR state '
-                              'but the allocation held by the migration is '
-                              'leaked.',
-                              {'instance_uuid': instance.uuid,
-                               'migration_uuid': migration.uuid})
-                    raise
-            else:
-                # We're reverting (or failed) on the source, so we
-                # need to check if our migration holds a claim and if
-                # so, avoid doing the legacy behavior below.
-                # NOTE(gibi): We are only hitting this in case of reverting
-                # a resize-on-same-host operation
-                mig_allocs = (
-                    self.reportclient.get_allocations_for_consumer_by_provider(
-                        context, cn_uuid, migration.uuid))
-                if mig_allocs:
-                    LOG.info(_('Source node %(node)s reverted migration '
-                               '%(mig)s; not deleting migration-based '
-                               'allocation'),
-                             {'node': nodename, 'mig': migration.uuid})
-                    return
-        elif migration.dest_node == nodename:
-            # NOTE(danms): We're reverting on the destination node
-            # (and we must not be doing a same-host migration if we
-            # made it past the check above), so we need to check to
-            # see if the source did migration-based allocation
-            # accounting
-            allocs = self.reportclient.get_allocations_for_consumer(
+    def _delete_allocation_after_move(self, context, instance, migration):
+        """Deletes resource allocations held by the migration record against
+        the source compute node resource provider after a confirmed cold /
+        successful live migration.
+        """
+        try:
+            # NOTE(danms): We're finishing on the source node, so try
+            # to delete the allocation based on the migration uuid
+            self.reportclient.delete_allocation_for_instance(
                 context, migration.uuid)
-            if allocs:
-                # NOTE(danms): The source did migration-based allocation
-                # accounting, so we should let the source node rejigger
-                # the allocations in finish_resize_revert()
-                LOG.info(_('Destination node %(node)s reverted migration '
-                           '%(mig)s; not deleting migration-based '
-                           'allocation'),
-                         {'node': nodename, 'mig': migration.uuid})
-                return
-
-        # TODO(danms): Remove below this line when we remove compatibility
-        # for double-accounting migrations (likely rocky)
-        LOG.info(_('Doing legacy allocation math for migration %(mig)s after '
-                   'instance move'),
-                 {'mig': migration.uuid},
-                 instance=instance)
-
-        # NOTE(jaypipes): This sucks, but due to the fact that confirm_resize()
-        # only runs on the source host and revert_resize() runs on the
-        # destination host, we need to do this here. Basically, what we're
-        # doing here is grabbing the existing allocations for this instance
-        # from the placement API, dropping the resources in the doubled-up
-        # allocation set that refer to the source host UUID and calling PUT
-        # /allocations back to the placement API. The allocation that gets
-        # PUT'd back to placement will only include the destination host and
-        # any shared providers in the case of a confirm_resize operation and
-        # the source host and shared providers for a revert_resize operation..
-        if not scheduler_utils.remove_allocation_from_compute(
-                context, instance, cn_uuid, self.reportclient, flavor):
-            LOG.error("Failed to save manipulated allocation",
-                      instance=instance)
+        except exception.AllocationDeleteFailed:
+            LOG.error('Deleting allocation in placement for migration '
+                      '%(migration_uuid)s failed. The instance '
+                      '%(instance_uuid)s will be put to ERROR state '
+                      'but the allocation held by the migration is '
+                      'leaked.',
+                      {'instance_uuid': instance.uuid,
+                       'migration_uuid': migration.uuid})
+            raise
 
     @wrap_exception()
     @reverts_task_state
@@ -4064,9 +3997,6 @@ class ComputeManager(manager.Manager):
 
             rt = self._get_resource_tracker()
             rt.drop_move_claim(context, instance, instance.node)
-            self._delete_allocation_after_move(context, instance, migration,
-                                               instance.flavor,
-                                               instance.node)
 
             # RPC cast back to the source host to finish the revert there.
             self.compute_rpcapi.finish_revert_resize(context, instance,
@@ -4184,13 +4114,10 @@ class ComputeManager(manager.Manager):
         orig_alloc = self.reportclient.get_allocations_for_consumer(
             context, migration.uuid)
         if not orig_alloc:
-            # NOTE(danms): This migration did not do per-migration allocation
-            # accounting, so nothing to do here.
-            LOG.info('Old-style migration %(mig)s is being reverted; '
-                     'no migration claims found on original node '
-                     'to swap.',
-                     {'mig': migration.uuid},
-                     instance=instance)
+            LOG.error('Did not find resource allocations for migration '
+                      '%s on source node %s. Unable to revert source node '
+                      'allocations back to the instance.',
+                      migration.uuid, migration.source_node, instance=instance)
             return False
 
         if len(orig_alloc) > 1:
@@ -4198,7 +4125,7 @@ class ComputeManager(manager.Manager):
             # against other providers that need to be held by the migration
             # as well. Perhaps something like shared storage resources that
             # will actually be duplicated during a resize type operation.
-            LOG.error('New-style migration %(mig)s has allocations against '
+            LOG.error('Migration %(mig)s has allocations against '
                       'more than one provider %(rps)s. This should not be '
                       'possible, but reverting it anyway.',
                       {'mig': migration.uuid,
@@ -4299,18 +4226,7 @@ class ComputeManager(manager.Manager):
                 # Since we hit a failure, we're either rescheduling or dead
                 # and either way we need to cleanup any allocations created
                 # by the scheduler for the destination node.
-                if migration and not self._revert_allocation(
-                        context, instance, migration):
-                    # We did not do a migration-based
-                    # allocation. Note that for a resize to the
-                    # same host, the scheduler will merge the
-                    # flavors, so here we'd be subtracting the new
-                    # flavor from the allocated resources on this
-                    # node.
-                    # FIXME(danms): Remove this in Rocky
-                    rt = self._get_resource_tracker()
-                    rt.delete_allocation_for_failed_resize(
-                        context, instance, node, instance_type)
+                self._revert_allocation(context, instance, migration)
                 # try to re-schedule the resize elsewhere:
                 exc_info = sys.exc_info()
                 self._reschedule_resize_or_reraise(context, image, instance,
@@ -6751,9 +6667,7 @@ class ComputeManager(manager.Manager):
             # We had a migration-based allocation that we need to handle
             self._delete_allocation_after_move(ctxt,
                                                instance,
-                                               migrate_data.migration,
-                                               instance.flavor,
-                                               source_node)
+                                               migrate_data.migration)
         else:
             # No migration-based allocations, so do the old thing and
             # attempt to clean up any doubled per-instance allocation

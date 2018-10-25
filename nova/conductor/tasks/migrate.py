@@ -99,12 +99,6 @@ def revert_allocation_for_migration(context, source_cn, instance, migration):
                   {'inst': instance.uuid, 'rp': source_cn.uuid})
 
 
-def should_do_migration_allocation(context):
-    minver = objects.Service.get_minimum_version_multi(context,
-                                                       ['nova-compute'])
-    return minver >= 23
-
-
 class MigrationTask(base.TaskBase):
     def __init__(self, context, instance, flavor,
                  request_spec, clean_shutdown, compute_rpcapi,
@@ -126,11 +120,6 @@ class MigrationTask(base.TaskBase):
         self._source_cn = None
 
     def _preallocate_migration(self):
-        if not should_do_migration_allocation(self.context):
-            # NOTE(danms): We can't pre-create the migration since we have
-            # old computes. Let the compute do it (legacy behavior).
-            return None
-
         # If this is a rescheduled migration, don't create a new record.
         migration_type = ("resize" if self.instance.flavor.id != self.flavor.id
                 else "migration")

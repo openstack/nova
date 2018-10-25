@@ -67,35 +67,6 @@ class MigrationTaskTestCase(test.NoDBTestCase):
                                      scheduler_client.SchedulerClient(),
                                      host_list=None)
 
-    @mock.patch('nova.objects.Service.get_minimum_version_multi')
-    @mock.patch('nova.availability_zones.get_host_availability_zone')
-    @mock.patch.object(scheduler_utils, 'setup_instance_group')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
-    @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
-    def test_execute_legacy_no_pre_create_migration(self, prep_resize_mock,
-                                                    sel_dest_mock, sig_mock,
-                                                    az_mock, gmv_mock):
-        sel_dest_mock.return_value = self.host_lists
-        az_mock.return_value = 'myaz'
-        task = self._generate_task()
-        legacy_request_spec = self.request_spec.to_legacy_request_spec_dict()
-        gmv_mock.return_value = 22
-        task.execute()
-
-        sig_mock.assert_called_once_with(self.context, self.request_spec)
-        task.scheduler_client.select_destinations.assert_called_once_with(
-            self.context, self.request_spec, [self.instance.uuid],
-            return_objects=True, return_alternates=True)
-        selection = self.host_lists[0][0]
-        prep_resize_mock.assert_called_once_with(
-            self.context, self.instance, legacy_request_spec['image'],
-            self.flavor, selection.service_host, None,
-            request_spec=legacy_request_spec,
-            filter_properties=self.filter_properties, node=selection.nodename,
-            clean_shutdown=self.clean_shutdown, host_list=[])
-        az_mock.assert_called_once_with(self.context, 'host1')
-        self.assertIsNone(task._migration)
-
     @mock.patch.object(objects.MigrationList, 'get_by_filters')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
