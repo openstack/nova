@@ -311,10 +311,9 @@ CoreFilter
 
    ``CoreFilter`` is deprecated since the 19.0.0 Stein release. VCPU
    filtering is performed natively using the Placement service when using the
-   ``filter_scheduler`` driver. Users of the ``caching_scheduler`` driver may
-   still rely on this filter but the ``caching_scheduler`` driver is itself
-   deprecated. Furthermore, enabling CoreFilter may incorrectly filter out
-   `baremetal nodes`_ which must be scheduled using custom resource classes.
+   ``filter_scheduler`` driver. Furthermore, enabling CoreFilter may
+   incorrectly filter out `baremetal nodes`_ which must be scheduled using
+   custom resource classes.
 
 Only schedules instances on hosts if sufficient CPU cores are available.  If
 this filter is not set, the scheduler might over-provision a host based on
@@ -390,10 +389,9 @@ DiskFilter
 
    ``DiskFilter`` is deprecated since the 19.0.0 Stein release. DISK_GB
    filtering is performed natively using the Placement service when using the
-   ``filter_scheduler`` driver. Users of the ``caching_scheduler`` driver may
-   still rely on this filter but the ``caching_scheduler`` driver is itself
-   deprecated. Furthermore, enabling DiskFilter may incorrectly filter out
-   `baremetal nodes`_ which must be scheduled using custom resource classes.
+   ``filter_scheduler`` driver. Furthermore, enabling DiskFilter may
+   incorrectly filter out `baremetal nodes`_ which must be scheduled using
+   custom resource classes.
 
 Only schedules instances on hosts if there is sufficient disk space available
 for root and ephemeral storage.
@@ -640,10 +638,9 @@ RamFilter
 
    ``RamFilter`` is deprecated since the 19.0.0 Stein release. MEMORY_MB
    filtering is performed natively using the Placement service when using the
-   ``filter_scheduler`` driver. Users of the ``caching_scheduler`` driver may
-   still rely on this filter but the ``caching_scheduler`` driver is itself
-   deprecated. Furthermore, enabling RamFilter may incorrectly filter out
-   `baremetal nodes`_ which must be scheduled using custom resource classes.
+   ``filter_scheduler`` driver. Furthermore, enabling RamFilter may
+   incorrectly filter out `baremetal nodes`_ which must be scheduled using
+   custom resource classes.
 
 .. _baremetal nodes: https://docs.openstack.org/ironic/latest/install/configure-nova-flavors.html
 

@@ -34,9 +34,6 @@ used.
 
 Other options are:
 
-* 'caching_scheduler' which aggressively caches the system state for better
-  individual scheduler performance at the risk of more retries when running
-  multiple schedulers. [DEPRECATED]
 * 'fake_scheduler' which is used for testing.
 
 Possible values:
@@ -44,7 +41,6 @@ Possible values:
 * Any of the drivers included in Nova:
 
   * filter_scheduler
-  * caching_scheduler
   * fake_scheduler
 
 * You may also set this to the entry point name of a custom scheduler driver,
@@ -62,8 +58,8 @@ Periodic task interval.
 
 This value controls how often (in seconds) to run periodic tasks in the
 scheduler. The specific tasks that are run for each period are determined by
-the particular scheduler being used. Currently the only in-tree scheduler
-driver that uses this option is the ``caching_scheduler``.
+the particular scheduler being used. Currently there are no in-tree scheduler
+driver that use this option.
 
 If this is larger than the nova-service 'service_down_time' setting, the
 ComputeFilter (if enabled) may think the compute service is down. As each

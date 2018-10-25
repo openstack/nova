@@ -196,8 +196,6 @@ class LiveMigrationTask(base.TaskBase):
         # TODO(mriedem): This method can be removed when the forced host
         # scenario is calling select_destinations() in the scheduler because
         # Placement will be used to filter allocation candidates by MEMORY_MB.
-        # We likely can't remove it until the CachingScheduler is gone though
-        # since the CachingScheduler does not use Placement.
         compute = self._get_compute_info(self.destination)
         free_ram_mb = compute.free_ram_mb
         total_ram_mb = compute.memory_mb

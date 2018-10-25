@@ -433,19 +433,9 @@ class TestCase(testtools.TestCase):
     def restart_scheduler_service(scheduler):
         """Restart a scheduler service in a realistic way.
 
-        Deals with resetting the host state cache in the case of using the
-        CachingScheduler driver.
-
         :param scheduler: The nova-scheduler service to be restarted.
         """
         scheduler.stop()
-        if hasattr(scheduler.manager.driver, 'all_host_states'):
-            # On startup, the CachingScheduler runs a periodic task to pull
-            # the initial set of compute nodes out of the database which it
-            # then puts into a cache (hence the name of the driver). This can
-            # race with actually starting the compute services so we need to
-            # restart the scheduler to refresh the cache.
-            scheduler.manager.driver.all_host_states = None
         scheduler.start()
 
     def assertJsonEqual(self, expected, observed, message=''):

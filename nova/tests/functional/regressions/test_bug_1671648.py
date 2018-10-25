@@ -79,9 +79,7 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
         self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host2')
 
-        # Start the scheduler after the compute nodes are created in the DB
-        # in the case of using the CachingScheduler.
-        self.start_service('scheduler')
+        self.scheduler_service = self.start_service('scheduler')
 
         self.useFixture(cast_as_call.CastAsCall(self))
 
@@ -153,9 +151,14 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
         self.assertEqual(2, self.attempts)
 
 
-class TestRetryBetweenComputeNodeBuildsCachingScheduler(
+class TestRetryBetweenComputeNodeBuildsNoAllocations(
         TestRetryBetweenComputeNodeBuilds):
-    """Tests the reschedule scenario using the CachingScheduler."""
+    """Tests the reschedule scenario using a scheduler driver which does
+    not use Placement.
+    """
     def setUp(self):
-        self.flags(driver='caching_scheduler', group='scheduler')
-        super(TestRetryBetweenComputeNodeBuildsCachingScheduler, self).setUp()
+        super(TestRetryBetweenComputeNodeBuildsNoAllocations, self).setUp()
+        # We need to mock the FilterScheduler to not use Placement so that
+        # allocations won't be created during scheduling.
+        self.scheduler_service.manager.driver.USES_ALLOCATION_CANDIDATES = \
+            False
