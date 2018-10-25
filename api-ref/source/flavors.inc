@@ -244,7 +244,7 @@ Response
 
    - flavor: flavor
    - name: flavor_name
-   - description: flavor_description_resp
+   - description: flavor_description_resp_no_min
    - id: flavor_id_body
    - ram: flavor_ram
    - disk: flavor_disk
