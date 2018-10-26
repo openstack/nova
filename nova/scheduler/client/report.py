@@ -409,7 +409,6 @@ class SchedulerReportClient(object):
         LOG.error(msg, args)
         raise exception.ResourceProviderAggregateRetrievalFailed(uuid=rp_uuid)
 
-    @safe_connect
     def _get_provider_traits(self, context, rp_uuid):
         """Queries the placement API for a resource provider's traits.
 
@@ -422,6 +421,8 @@ class SchedulerReportClient(object):
         :raise: ResourceProviderTraitRetrievalFailed on errors.  In particular,
                 we raise this exception (as opposed to returning None or the
                 empty set()) if the specified resource provider does not exist.
+        :raise: keystoneauth1.exceptions.ClientException if placement API
+                communication fails.
         """
         resp = self.get("/resource_providers/%s/traits" % rp_uuid,
                         version='1.6', global_request_id=context.global_id)
@@ -790,6 +791,8 @@ class SchedulerReportClient(object):
                 - ResourceProviderAggregateRetrievalFailed
                 - ResourceProviderTraitRetrievalFailed
                 - ResourceProviderRetrievalFailed
+        :raise: keystoneauth1.exceptions.ClientException if placement API
+                communication fails.
         """
         if force or self._associations_stale(rp_uuid):
             # Refresh aggregates
@@ -808,8 +811,6 @@ class SchedulerReportClient(object):
 
             # Refresh traits
             trait_info = self._get_provider_traits(context, rp_uuid)
-            # If @safe_connect makes the above return None, this will raise
-            # TypeError. Good.
             traits, generation = trait_info.traits, trait_info.generation
             msg = ("Refreshing trait associations for resource provider %s, "
                    "traits: %s")
