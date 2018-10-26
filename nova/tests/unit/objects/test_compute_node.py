@@ -22,6 +22,7 @@ from oslo_utils import timeutils
 from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
 
+from nova import conf
 from nova.db import api as db
 from nova import exception
 from nova import objects
@@ -130,6 +131,8 @@ fake_compute_with_resources = objects.ComputeNode(
     host_ip=netaddr.IPAddress(fake_resources['host_ip']),
     supported_hv_specs=fake_supported_hv_specs,
 )
+
+CONF = conf.CONF
 
 
 class _TestComputeNodeObject(object):
@@ -550,7 +553,13 @@ class _TestComputeNodeObject(object):
         primitive = compute.obj_to_primitive(target_version='1.15')
         self.assertNotIn('disk_allocation_ratio', primitive)
 
-    def test_compat_allocation_ratios_old_compute(self):
+    @mock.patch('nova.db.api.compute_node_update')
+    def test_compat_allocation_ratios_old_compute(self, mock_update):
+        """Tests the scenario that allocation ratios are overridden in config
+        and the legacy compute node record from the database has None set for
+        the allocation ratio values. The result is that the migrated record
+        allocation ratios should reflect the config overrides.
+        """
         self.flags(cpu_allocation_ratio=2.0, ram_allocation_ratio=3.0,
                    disk_allocation_ratio=0.9)
         compute_dict = fake_compute_node.copy()
@@ -565,7 +574,19 @@ class _TestComputeNodeObject(object):
         self.assertEqual(3.0, compute.ram_allocation_ratio)
         self.assertEqual(0.9, compute.disk_allocation_ratio)
 
-    def test_compat_allocation_ratios_zero_conf(self):
+        mock_update.assert_called_once_with(
+            self.context, 123, {'cpu_allocation_ratio': 2.0,
+                                'ram_allocation_ratio': 3.0,
+                                'disk_allocation_ratio': 0.9})
+
+    @mock.patch('nova.db.api.compute_node_update')
+    def test_compat_allocation_ratios_zero_conf(self, mock_update):
+        """Tests that the override allocation ratios are set to 0.0 for
+        whatever reason (maybe an old nova.conf sample file is being used)
+        and the legacy compute node record has None for allocation ratios,
+        so the resulting data migration makes the record allocation ratios
+        use the CONF.initial_*_allocation_ratio values.
+        """
         self.flags(cpu_allocation_ratio=0.0, ram_allocation_ratio=0.0,
                    disk_allocation_ratio=0.0)
         compute_dict = fake_compute_node.copy()
@@ -576,11 +597,25 @@ class _TestComputeNodeObject(object):
         cls = objects.ComputeNode
         compute = cls._from_db_object(self.context, cls(), compute_dict)
 
-        self.assertEqual(16.0, compute.cpu_allocation_ratio)
-        self.assertEqual(1.5, compute.ram_allocation_ratio)
-        self.assertEqual(1.0, compute.disk_allocation_ratio)
+        self.assertEqual(
+            CONF.initial_cpu_allocation_ratio, compute.cpu_allocation_ratio)
+        self.assertEqual(
+            CONF.initial_ram_allocation_ratio, compute.ram_allocation_ratio)
+        self.assertEqual(
+            CONF.initial_disk_allocation_ratio, compute.disk_allocation_ratio)
 
-    def test_compat_allocation_ratios_None_conf_zero_values(self):
+        mock_update.assert_called_once_with(
+            self.context, 123, {'cpu_allocation_ratio': 16.0,
+                                'ram_allocation_ratio': 1.5,
+                                'disk_allocation_ratio': 1.0})
+
+    @mock.patch('nova.db.api.compute_node_update')
+    def test_compat_allocation_ratios_None_conf_zero_values(self, mock_update):
+        """Tests the scenario that the CONF.*_allocation_ratio overrides are
+        left to the default (None) and the compute node record allocation
+        ratio values in the DB are 0.0, so they will be migrated to the
+        CONF.initial_*_allocation_ratio values.
+        """
         # the CONF.x_allocation_ratio is None by default
         compute_dict = fake_compute_node.copy()
         # the computes provide allocation ratios 0.0
@@ -590,11 +625,25 @@ class _TestComputeNodeObject(object):
         cls = objects.ComputeNode
         compute = cls._from_db_object(self.context, cls(), compute_dict)
 
-        self.assertEqual(16.0, compute.cpu_allocation_ratio)
-        self.assertEqual(1.5, compute.ram_allocation_ratio)
-        self.assertEqual(1.0, compute.disk_allocation_ratio)
+        self.assertEqual(
+            CONF.initial_cpu_allocation_ratio, compute.cpu_allocation_ratio)
+        self.assertEqual(
+            CONF.initial_ram_allocation_ratio, compute.ram_allocation_ratio)
+        self.assertEqual(
+            CONF.initial_disk_allocation_ratio, compute.disk_allocation_ratio)
 
-    def test_compat_allocation_ratios_None_conf_None_values(self):
+        mock_update.assert_called_once_with(
+            self.context, 123, {'cpu_allocation_ratio': 16.0,
+                                'ram_allocation_ratio': 1.5,
+                                'disk_allocation_ratio': 1.0})
+
+    @mock.patch('nova.db.api.compute_node_update')
+    def test_compat_allocation_ratios_None_conf_None_values(self, mock_update):
+        """Tests the scenario that the override CONF.*_allocation_ratio options
+        are the default values (None), the compute node record from the DB has
+        None values for allocation ratios, so the resulting migrated record
+        will have the CONF.initial_*_allocation_ratio values.
+        """
         # the CONF.x_allocation_ratio is None by default
         compute_dict = fake_compute_node.copy()
         # # the computes provide allocation ratios None
@@ -604,9 +653,17 @@ class _TestComputeNodeObject(object):
         cls = objects.ComputeNode
         compute = cls._from_db_object(self.context, cls(), compute_dict)
 
-        self.assertEqual(16.0, compute.cpu_allocation_ratio)
-        self.assertEqual(1.5, compute.ram_allocation_ratio)
-        self.assertEqual(1.0, compute.disk_allocation_ratio)
+        self.assertEqual(
+            CONF.initial_cpu_allocation_ratio, compute.cpu_allocation_ratio)
+        self.assertEqual(
+            CONF.initial_ram_allocation_ratio, compute.ram_allocation_ratio)
+        self.assertEqual(
+            CONF.initial_disk_allocation_ratio, compute.disk_allocation_ratio)
+
+        mock_update.assert_called_once_with(
+            self.context, 123, {'cpu_allocation_ratio': 16.0,
+                                'ram_allocation_ratio': 1.5,
+                                'disk_allocation_ratio': 1.0})
 
     def test_get_all_by_not_mapped(self):
         for mapped in (1, 0, 1, 3):

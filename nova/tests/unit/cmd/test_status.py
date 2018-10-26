@@ -654,7 +654,6 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
         # create a deleted compute node record (shouldn't count)
         cn2 = objects.ComputeNode(
             context=ctxt,
-            deleted=1,
             host='fakehost',
             vcpus=4,
             memory_mb=8 * 1024,
@@ -666,6 +665,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
             hypervisor_version=1,
             cpu_info='{"arch": "x86_64"}')
         cn2.create()
+        cn2.destroy()
 
         # create a single resource provider with some VCPU inventory
         self._create_resource_provider(FAKE_VCPU_INVENTORY)

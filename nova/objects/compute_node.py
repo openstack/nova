@@ -173,6 +173,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
             'pci_device_pools',
             ])
         fields = set(compute.fields) - special_cases
+        online_updates = {}
         for key in fields:
             value = db_compute[key]
             # NOTE(sbauza): Since all compute nodes don't possibly run the
@@ -184,35 +185,30 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
             # the next release (Newton) where the opt default values will be
             # restored for both cpu (16.0), ram (1.5) and disk (1.0)
             # allocation ratios.
-            # TODO(sbauza): Remove that in the next major version bump where
-            # we break compatibility with old Liberty computes
-            if (key == 'cpu_allocation_ratio' or key == 'ram_allocation_ratio'
-                or key == 'disk_allocation_ratio'):
-                if value == 0.0:
-                    # Operator has not yet provided a new value for that ratio
-                    # on the compute node
-                    value = None
-                if value is None:
-                    # ResourceTracker is not updating the value (old node)
-                    # or the compute node is updated but the default value has
-                    # not been changed
-                    value = getattr(CONF, key)
-                    if value in (0.0, None) \
-                            and key == 'cpu_allocation_ratio':
-                        # It's not specified either on the controller
-                        value = 16.0
-                    if value in (0.0, None) \
-                            and key == 'ram_allocation_ratio':
-                        # It's not specified either on the controller
-                        value = 1.5
-                    if value in (0.0, None) \
-                            and key == 'disk_allocation_ratio':
-                        # It's not specified either on the controller
-                        value = 1.0
+            # TODO(yikun): Remove this online migration code when all ratio
+            # values are NOT 0.0 or NULL
+            ratio_keys = ['cpu_allocation_ratio', 'ram_allocation_ratio',
+                          'disk_allocation_ratio']
+            if key in ratio_keys and value in (None, 0.0):
+                # ResourceTracker is not updating the value (old node)
+                # or the compute node is updated but the default value has
+                # not been changed
+                r = getattr(CONF, key)
+                # NOTE(yikun): If the allocation ratio record is not set, the
+                # allocation ratio will be changed to the
+                # CONF.x_allocation_ratio value if x_allocation_ratio is
+                # set, and fallback to use the CONF.initial_x_allocation_ratio
+                # otherwise.
+                init_x_ratio = getattr(CONF, 'initial_%s' % key)
+                value = r if r else init_x_ratio
+                online_updates[key] = value
             elif key == 'mapped':
                 value = 0 if value is None else value
 
             setattr(compute, key, value)
+
+        if online_updates:
+            db.compute_node_update(context, compute.id, online_updates)
 
         stats = db_compute['stats']
         if stats:
