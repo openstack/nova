@@ -839,3 +839,17 @@ class HackingTestCase(test.NoDBTestCase):
                   yieldx_func(a, b)
                """
         self._assert_has_no_errors(code, checks.yield_followed_by_space)
+
+    def test_assert_regexpmatches(self):
+        code = """
+                   self.assertRegexpMatches("Test", output)
+                   self.assertNotRegexpMatches("Notmatch", output)
+               """
+        errors = [(x + 1, 0, 'N361') for x in range(2)]
+        self._assert_has_errors(code, checks.assert_regexpmatches,
+                                expected_errors=errors)
+        code = """
+                   self.assertRegexpMatchesfoo("Test", output)
+                   self.assertNotRegexpMatchesbar("Notmatch", output)
+               """
+        self._assert_has_no_errors(code, checks.assert_regexpmatches)

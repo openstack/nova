@@ -68,6 +68,8 @@ Nova Specific Commandments
 - [N358] Return must always be followed by a space when returning a value.
 - [N359] Check for redundant import aliases.
 - [N360] Yield must always be followed by a space when yielding a value.
+- [N361] Check for usage of deprecated assertRegexpMatches and
+  assertNotRegexpMatches
 
 Creating Unit Tests
 -------------------
