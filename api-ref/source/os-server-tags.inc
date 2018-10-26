@@ -47,7 +47,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - tags: tags
+  - tags: tags_no_min
 
 **Example List Tags:**
 
@@ -71,7 +71,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - server_id: server_id_path
-  - tags: tags
+  - tags: tags_no_min
 
 **Example Replace Tags:**
 
@@ -83,7 +83,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - tags: tags
+  - tags: tags_no_min
 
 **Example Replace Tags:**
 

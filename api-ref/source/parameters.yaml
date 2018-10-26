@@ -25,7 +25,6 @@ tag_location:
   in: header
   required: true
   type: string
-  min_version: 2.26
 x-compute-request-id_resp:
   description: |
     The local request ID, which is a unique ID generated automatically
@@ -324,7 +323,6 @@ tag:
   in: path
   required: true
   type: string
-  min_version: 2.26
 tenant_id:
   description: |
     The UUID of the tenant in a multi-tenancy cloud.
@@ -2772,7 +2770,6 @@ flavor_description_required:
   type: string
   in: body
   required: true
-  min_version: 2.55
   description: |
     A free form description of the flavor. Limited to 65535 characters
     in length. Only printable characters are allowed.
@@ -2783,6 +2780,12 @@ flavor_description_resp:
   required: true
   type: string
   min_version: 2.55
+flavor_description_resp_no_min:
+  description: |
+    The description of the flavor.
+  in: body
+  required: true
+  type: string
 flavor_disabled:
   in: body
   required: false
@@ -3147,7 +3150,6 @@ force_migration_complete:
   in: body
   required: true
   type: none
-  min_version: 2.22
 force_snapshot:
   description: |
     Indicates whether to create a snapshot, even if the volume is attached.
@@ -6310,6 +6312,12 @@ tags:
   required: true
   type: array
   min_version: 2.26
+tags_no_min:
+  description: |
+    A list of tags. The maximum count of tags in this list is 50.
+  in: body
+  required: true
+  type: array
 tenant_id_body:
   description: |
     The UUID of the tenant in a multi-tenancy cloud.
