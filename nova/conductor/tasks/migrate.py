@@ -28,6 +28,17 @@ LOG = logging.getLogger(__name__)
 def replace_allocation_with_migration(context, instance, migration):
     """Replace instance's allocation with one for a migration.
 
+    :raises: keystoneauth1.exceptions.base.ClientException on failure to
+             communicate with the placement API
+    :raises: ConsumerAllocationRetrievalFailed if reading the current
+             allocation from placement fails
+    :raises: ComputeHostNotFound if the host of the instance is not found in
+             the databse
+    :raises: AllocationMoveFailed if moving the allocation from the
+             instance.uuid to the migration.uuid fails due to parallel
+             placement operation on the instance consumer
+    :raises: NoValidHost if placement rejectes the update for other reasons
+             (e.g. not enough resources)
     :returns: (source_compute_node, migration_allocation)
     """
     try:
@@ -45,9 +56,10 @@ def replace_allocation_with_migration(context, instance, migration):
     schedclient = scheduler_client.SchedulerClient()
     reportclient = schedclient.reportclient
 
-    orig_alloc = reportclient.get_allocations_for_consumer_by_provider(
-        context, source_cn.uuid, instance.uuid)
-    if not orig_alloc:
+    orig_alloc = reportclient.get_allocs_for_consumer(
+        context, instance.uuid)['allocations']
+    root_alloc = orig_alloc.get(source_cn.uuid, {}).get('resources', {})
+    if not root_alloc:
         LOG.debug('Unable to find existing allocations for instance on '
                   'source compute node: %s. This is normal if you are not '
                   'using the FilterScheduler.', source_cn.uuid,

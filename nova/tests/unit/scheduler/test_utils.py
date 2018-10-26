@@ -836,10 +836,15 @@ class TestUtils(test.NoDBTestCase):
             uuid=uuids.source_node, host=instance.host)
         dest_node = objects.ComputeNode(uuid=uuids.dest_node, host='dest-host')
         source_res_allocs = {
-            'VCPU': instance.vcpus,
-            'MEMORY_MB': instance.memory_mb,
-            # This would really include ephemeral and swap too but we're lazy.
-            'DISK_GB': instance.root_gb
+            uuids.source_node: {
+                'resources': {
+                    'VCPU': instance.vcpus,
+                    'MEMORY_MB': instance.memory_mb,
+                    # This would really include ephemeral and swap too but
+                    # we're lazy.
+                    'DISK_GB': instance.root_gb
+                }
+            }
         }
         dest_alloc_request = {
             'allocations': {
@@ -854,7 +859,7 @@ class TestUtils(test.NoDBTestCase):
         }
 
         @mock.patch.object(reportclient,
-                           'get_allocations_for_consumer')
+                           'get_allocs_for_consumer')
         @mock.patch.object(reportclient,
                            'claim_resources', return_value=True)
         def test(mock_claim, mock_get_allocs):

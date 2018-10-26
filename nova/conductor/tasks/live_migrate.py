@@ -115,7 +115,7 @@ class LiveMigrationTask(base.TaskBase):
             scheduler_utils.claim_resources_on_destination(
                 self.context, self.scheduler_client.reportclient,
                 self.instance, source_node, dest_node,
-                source_node_allocations=self._held_allocations,
+                source_allocations=self._held_allocations,
                 consumer_generation=None)
 
             # dest_node is a ComputeNode object, so we need to get the actual

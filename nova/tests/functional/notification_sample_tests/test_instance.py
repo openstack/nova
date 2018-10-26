@@ -259,7 +259,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             'os-migrateLive': {
                 'host': 'host2',
                 'block_migration': True,
-                'force': True,
+                'force': False,
             }
         }
         self.admin_api.post_server_action(server['id'], post)
