@@ -881,8 +881,8 @@ class TestUtils(test.NoDBTestCase):
         call the placement client to claim resources for the instance.
         """
         mock_is_rebuild.return_value = False
-        ctx = mock.Mock(user_id=uuids.user_id)
-        spec_obj = mock.Mock(project_id=uuids.project_id)
+        ctx = nova_context.RequestContext(user_id=uuids.user_id)
+        spec_obj = objects.RequestSpec(project_id=uuids.project_id)
         instance_uuid = uuids.instance
         alloc_req = mock.sentinel.alloc_req
         mock_client.claim_resources.return_value = True
@@ -895,6 +895,16 @@ class TestUtils(test.NoDBTestCase):
             uuids.user_id, allocation_request_version=None,
             consumer_generation=None)
         self.assertTrue(res)
+
+        # Now do it again but with RequestSpec.user_id set.
+        spec_obj.user_id = uuids.spec_user_id
+        mock_client.reset_mock()
+        utils.claim_resources(ctx, mock_client, spec_obj, instance_uuid,
+                              alloc_req)
+        mock_client.claim_resources.assert_called_once_with(
+            ctx, uuids.instance, mock.sentinel.alloc_req, uuids.project_id,
+            uuids.spec_user_id, allocation_request_version=None,
+            consumer_generation=None)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
     @mock.patch('nova.scheduler.utils.request_is_rebuild')

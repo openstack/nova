@@ -1014,11 +1014,12 @@ def claim_resources(ctx, client, spec_obj, instance_uuid, alloc_req,
 
     project_id = spec_obj.project_id
 
-    # NOTE(jaypipes): So, the RequestSpec doesn't store the user_id,
-    # only the project_id, so we need to grab the user information from
-    # the context. Perhaps we should consider putting the user ID in
-    # the spec object?
-    user_id = ctx.user_id
+    # We didn't start storing the user_id in the RequestSpec until Rocky so
+    # if it's not set on an old RequestSpec, use the user_id from the context.
+    if 'user_id' in spec_obj and spec_obj.user_id:
+        user_id = spec_obj.user_id
+    else:
+        user_id = ctx.user_id
 
     # NOTE(gibi): this could raise AllocationUpdateFailed which means there is
     # a serious issue with the instance_uuid as a consumer. Every caller of
