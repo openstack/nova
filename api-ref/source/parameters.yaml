@@ -465,6 +465,9 @@ changes_before_instance_action:
     The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
     For example, ``2015-08-27T09:49:58-05:00``.
     If you omit the time zone, the UTC time zone is assumed.
+    When both ``changes-since`` and ``changes-before`` are specified,
+    the value of the ``changes-before`` must be later than or equal to
+    the value of the ``changes-since`` otherwise API will return 400.
   in: query
   required: false
   type: string
@@ -525,6 +528,9 @@ changes_since_instance_action:
     The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
     For example, ``2015-08-27T09:49:58-05:00``.
     If you omit the time zone, the UTC time zone is assumed.
+    When both ``changes-since`` and ``changes-before`` are specified,
+    the value of the ``changes-since`` must be earlier than or equal to
+    the value of the ``changes-before`` otherwise API will return 400.
   in: query
   required: false
   type: string

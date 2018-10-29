@@ -14,7 +14,9 @@
 #    under the License.
 
 import copy
+import datetime
 
+import iso8601
 import mock
 from oslo_policy import policy as oslo_policy
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -30,6 +32,7 @@ from nova import objects
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 
 
@@ -339,6 +342,40 @@ class InstanceActionsTestV266(InstanceActionsTestV258):
                                self.controller.index, req)
         self.assertIn('Invalid input for query parameters changes-before',
                       six.text_type(ex))
+
+    @mock.patch('nova.compute.api.InstanceActionAPI.actions_get')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_get_action_with_changes_since_and_changes_before(
+            self, mock_get_instance, mock_action_get):
+        param = 'changes-since=2012-12-05T00:00:00Z&' \
+                'changes-before=2012-12-05T01:00:00Z'
+        req = self._get_http_req_with_version('os-instance-actions?%s' %
+                                              param, use_admin_context=True,
+                                              version=self.wsgi_api_version)
+        instance = fake_instance.fake_instance_obj(req.environ['nova.context'])
+        mock_get_instance.return_value = instance
+
+        self.controller.index(req, FAKE_UUID)
+        filters = {'changes-since': datetime.datetime(
+                       2012, 12, 5, 0, 0, tzinfo=iso8601.iso8601.UTC),
+                   'changes-before': datetime.datetime(
+                       2012, 12, 5, 1, 0, tzinfo=iso8601.iso8601.UTC)}
+        mock_action_get.assert_called_once_with(req.environ['nova.context'],
+                                                instance, limit=1000,
+                                                marker=None,
+                                                filters=filters)
+
+    def test_instance_actions_filters_with_distinct_changes_time_bad_request(
+            self):
+        changes_since = '2018-09-04T05:45:27Z'
+        changes_before = '2018-09-03T05:45:27Z'
+        req = self._get_http_req('os-instance-actions?'
+                                 'changes-since=%s&changes-before=%s' %
+                                 (changes_since, changes_before))
+        ex = self.assertRaises(exc.HTTPBadRequest, self.controller.index,
+                               req, FAKE_UUID)
+        self.assertIn('The value of changes-since must be less than '
+                      'or equal to changes-before', six.text_type(ex))
 
     def test_get_action_with_changes_before_old_microversion(self):
         """Tests that the changes-before query parameter is an error before
