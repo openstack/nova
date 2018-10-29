@@ -28,6 +28,8 @@ echo '1. test with all local storage (use default for volumes)'
 echo 'NOTE: test_volume_backed_live_migration is skipped due to https://bugs.launchpad.net/nova/+bug/1524898'
 run_tempest "block migration test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
 
+# TODO(mriedem): Run $BASE/new/nova/gate/test_evacuate.sh for local storage
+
 #all tests bellow this line use shared storage, need to update tempest.conf
 echo 'disabling block_migration in tempest'
 $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a "dest=$BASE/new/tempest/etc/tempest.conf section=compute-feature-enabled option=block_migration_for_live_migration value=False"
