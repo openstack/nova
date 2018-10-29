@@ -3497,7 +3497,7 @@ class IronicDriverConsoleTestCase(test.NoDBTestCase):
             temp_data['target_mode'] = mode
 
         def _fake_log_error(msg, *args, **kwargs):
-            regex = r'Invalid Socat console URL .*'
+            regex = r'Invalid Socat or Shellinabox console URL .*'
             self.assertThat(msg, matchers.MatchesRegex(regex))
 
         mock_node.get_console.side_effect = _fake_get_console
@@ -3524,7 +3524,7 @@ class IronicDriverConsoleTestCase(test.NoDBTestCase):
             temp_data['target_mode'] = mode
 
         def _fake_log_error(msg, *args, **kwargs):
-            regex = r'Invalid Socat console URL .*'
+            regex = r'Invalid Socat or Shellinabox console URL .*'
             self.assertThat(msg, matchers.MatchesRegex(regex))
 
         mock_node.get_console.side_effect = _fake_get_console
@@ -3588,12 +3588,12 @@ class IronicDriverConsoleTestCase(test.NoDBTestCase):
         self.assertEqual('::1', result.host)
         self.assertEqual(10000, result.port)
 
-    def test_get_serial_console_shellinabox(self, mock_node):
+    def test_get_serial_console_serial(self, mock_node):
         temp_data = {'target_mode': True}
 
         def _fake_get_console(node_uuid):
             return self._create_console_data(enabled=temp_data['target_mode'],
-                                             console_type='shellinabox')
+                                             console_type='serial')
 
         def _fake_set_console_mode(node_uuid, mode):
             temp_data['target_mode'] = mode

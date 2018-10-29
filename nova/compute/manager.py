@@ -7444,6 +7444,13 @@ class ComputeManager(manager.Manager):
         if not CONF.serial_console.enabled:
             raise exception.ConsoleTypeUnavailable(console_type=console_type)
 
+        if console_type == 'serial':
+            base_url = CONF.serial_console.base_url
+        elif console_type == 'shellinabox':
+            base_url = CONF.shellinabox.base_url
+        else:
+            raise exception.ConsoleTypeInvalid(console_type=console_type)
+
         context = context.elevated()
 
         try:
@@ -7457,7 +7464,7 @@ class ComputeManager(manager.Manager):
                 port=console.port,
                 internal_access_path=console.internal_access_path,
                 instance_uuid=instance.uuid,
-                access_url_base=CONF.serial_console.base_url,
+                access_url_base=base_url,
             )
             console_auth.authorize(CONF.consoleauth.token_ttl)
             connect_info = console.get_connection_info(
@@ -7480,7 +7487,7 @@ class ComputeManager(manager.Manager):
             console_info = self.driver.get_spice_console(ctxt, instance)
         elif console_type == "rdp-html5":
             console_info = self.driver.get_rdp_console(ctxt, instance)
-        elif console_type == "serial":
+        elif console_type in ("serial", "shellinabox"):
             console_info = self.driver.get_serial_console(ctxt, instance)
         elif console_type == "webmks":
             console_info = self.driver.get_mks_console(ctxt, instance)
