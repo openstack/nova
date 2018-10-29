@@ -16,6 +16,7 @@ from oslo_utils import timeutils
 from oslo_utils import versionutils
 
 from nova.db import api as db
+from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -27,7 +28,8 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject,
                      base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
-    VERSION = '1.1'
+    # Version 1.2: Add create() method.
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -97,6 +99,19 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject,
         db_action = db.action_finish(self._context, values)
         self._from_db_object(self._context, self, db_action)
 
+    # NOTE(mriedem): In most cases, the action_start() method should be used
+    # to create new InstanceAction records. This method should only be used
+    # in specific exceptional cases like when cloning actions from one cell
+    # database to another.
+    @base.remotable
+    def create(self):
+        if 'id' in self:
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
+        updates = self.obj_get_changes()
+        db_action = db.action_start(self._context, updates)
+        self._from_db_object(self._context, self, db_action)
+
 
 @base.NovaObjectRegistry.register
 class InstanceActionList(base.ObjectListBase, base.NovaObject):
@@ -122,7 +137,8 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
     # Version 1.0: Initial version
     # Version 1.1: event_finish_with_failure decorated with serialize_args
     # Version 1.2: Add 'host' field
-    VERSION = '1.2'
+    # Version 1.3: Add create() method.
+    VERSION = '1.3'
     fields = {
         'id': fields.IntegerField(),
         'event': fields.StringField(nullable=True),
@@ -217,6 +233,26 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
     @base.remotable
     def finish(self):
         self.finish_with_failure(self._context, exc_val=None, exc_tb=None)
+
+    # NOTE(mriedem): In most cases, the event_start() method should be used
+    # to create new InstanceActionEvent records. This method should only be
+    # used in specific exceptional cases like when cloning events from one cell
+    # database to another.
+    @base.remotable
+    def create(self, instance_uuid, request_id):
+        if 'id' in self:
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
+        updates = self.obj_get_changes()
+        # The instance_uuid and request_id uniquely identify the "parent"
+        # InstanceAction for this event and are used in action_event_start().
+        # TODO(mriedem): This could be optimized if we just didn't use
+        # db.action_event_start and inserted the record ourselves and passed
+        # in the action_id.
+        updates['instance_uuid'] = instance_uuid
+        updates['request_id'] = request_id
+        db_event = db.action_event_start(self._context, updates)
+        self._from_db_object(self._context, self, db_event)
 
 
 @base.NovaObjectRegistry.register
