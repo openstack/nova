@@ -56,6 +56,7 @@ class MigrationsController(wsgi.Controller):
             del obj['deleted']
             del obj['deleted_at']
             del obj['hidden']
+            del obj['cross_cell_move']
             if not add_uuid:
                 del obj['uuid']
             if 'memory_total' in obj:

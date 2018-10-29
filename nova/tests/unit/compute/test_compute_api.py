@@ -4188,7 +4188,8 @@ class _ComputeAPIUnitTestMixIn(object):
                           'disk_total': None, 'disk_processed': None,
                           'disk_remaining': None, 'deleted': False,
                           'hidden': False, 'created_at': None,
-                          'updated_at': None, 'deleted_at': None}
+                          'updated_at': None, 'deleted_at': None,
+                          'cross_cell_move': False}
 
         def migration_get(context, id):
             return migrations[id]

@@ -56,6 +56,7 @@ fake_migrations = [
         'deleted_at': None,
         'deleted': False,
         'uuid': uuids.migration1,
+        'cross_cell_move': False,
     },
     {
         'id': 5678,
@@ -81,6 +82,7 @@ fake_migrations = [
         'deleted_at': None,
         'deleted': False,
         'uuid': uuids.migration2,
+        'cross_cell_move': False,
     }
 ]
 
