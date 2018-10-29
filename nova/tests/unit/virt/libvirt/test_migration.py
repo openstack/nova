@@ -781,11 +781,6 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         <mac address="DE:AD:BE:EF:CA:FE"/>
         <model type="virtio"/>
         <source bridge="qbra188171c-ea"/>
-        <!--
-            NOTE(mnaser): This should not be here, remove when fixed
-                          https://bugs.launchpad.net/nova/+bug/1800511
-        -->
-        <mtu size="9000"/>
         <target dev="tapa188171c-ea"/>
         <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
                  function='0x0'/>
