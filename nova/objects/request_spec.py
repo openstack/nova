@@ -878,7 +878,8 @@ class Destination(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add cell field
     # Version 1.2: Add aggregates field
-    VERSION = '1.2'
+    # Version 1.3: Add allow_cross_cell_move field.
+    VERSION = '1.3'
 
     fields = {
         'host': fields.StringField(),
@@ -892,11 +893,17 @@ class Destination(base.NovaObject):
         # are passed to placement.  See require_aggregates() below.
         'aggregates': fields.ListOfStringsField(nullable=True,
                                                 default=None),
+        # NOTE(mriedem): allow_cross_cell_move defaults to False so that the
+        # scheduler by default selects hosts from the cell specified in the
+        # cell field.
+        'allow_cross_cell_move': fields.BooleanField(default=False),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(Destination, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 3) and 'allow_cross_cell_move' in primitive:
+            del primitive['allow_cross_cell_move']
         if target_version < (1, 2):
             if 'aggregates' in primitive:
                 del primitive['aggregates']
