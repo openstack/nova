@@ -671,7 +671,7 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
   </memoryBacking>
 </domain>"""))
 
-    def test_update_vif_xml(self):
+    def _test_update_vif_xml(self, conf, original_xml, expected_xml):
         """Simulates updating the guest xml for live migrating from a host
         using OVS to a host using vhostuser as the networking backend.
         """
@@ -695,6 +695,22 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         ]
         data = objects.LibvirtLiveMigrateData(vifs=migrate_vifs)
 
+        get_vif_config = mock.MagicMock(return_value=conf)
+        doc = etree.fromstring(original_xml)
+        updated_xml = etree.tostring(
+            migration._update_vif_xml(doc, data, get_vif_config),
+            encoding='unicode')
+        self.assertThat(updated_xml, matchers.XMLMatches(expected_xml))
+
+    def test_update_vif_xml_to_vhostuser(self):
+        conf = vconfig.LibvirtConfigGuestInterface()
+        conf.net_type = "vhostuser"
+        conf.vhostuser_type = "unix"
+        conf.vhostuser_mode = "server"
+        conf.mac_addr = "DE:AD:BE:EF:CA:FE"
+        conf.vhostuser_path = "/vhost-user/test.sock"
+        conf.model = "virtio"
+
         original_xml = """<domain>
  <uuid>3de6550a-8596-4937-8046-9d862036bca5</uuid>
  <devices>
@@ -711,21 +727,6 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
     </interface>
  </devices>
 </domain>""" % uuids.ovs
-
-        conf = vconfig.LibvirtConfigGuestInterface()
-        conf.net_type = "vhostuser"
-        conf.vhostuser_type = "unix"
-        conf.vhostuser_mode = "server"
-        conf.mac_addr = "DE:AD:BE:EF:CA:FE"
-        conf.vhostuser_path = "/vhost-user/test.sock"
-        conf.model = "virtio"
-
-        get_vif_config = mock.MagicMock(return_value=conf)
-        doc = etree.fromstring(original_xml)
-        updated_xml = etree.tostring(
-            migration._update_vif_xml(doc, data, get_vif_config),
-            encoding='unicode')
-
         # Note that <target> and <virtualport> are dropped from the ovs source
         # interface xml since they aren't applicable to the vhostuser
         # destination interface xml. The type attribute value changes and the
@@ -742,7 +743,102 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
     </interface>
  </devices>
 </domain>"""
-        self.assertThat(updated_xml, matchers.XMLMatches(expected_xml))
+        self._test_update_vif_xml(conf, original_xml, expected_xml)
+
+    def test_update_vif_xml_to_bridge_without_mtu(self):
+        """This test validates _update_vif_xml to make sure it does not add
+        MTU to the interface if it does not exist in the source XML.
+        """
+        conf = vconfig.LibvirtConfigGuestInterface()
+        conf.net_type = "bridge"
+        conf.source_dev = "qbra188171c-ea"
+        conf.target_dev = "tapa188171c-ea"
+        conf.mac_addr = "DE:AD:BE:EF:CA:FE"
+        conf.vhostuser_path = "/vhost-user/test.sock"
+        conf.model = "virtio"
+        conf.mtu = 9000
+
+        original_xml = """<domain>
+ <uuid>3de6550a-8596-4937-8046-9d862036bca5</uuid>
+ <devices>
+    <interface type="bridge">
+        <mac address="DE:AD:BE:EF:CA:FE"/>
+        <model type="virtio"/>
+        <source bridge="qbra188171c-ea"/>
+        <target dev="tapa188171c-ea"/>
+        <virtualport type="openvswitch">
+            <parameters interfaceid="%s"/>
+        </virtualport>
+        <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
+                 function='0x0'/>
+    </interface>
+ </devices>
+</domain>""" % uuids.ovs
+        expected_xml = """<domain>
+ <uuid>3de6550a-8596-4937-8046-9d862036bca5</uuid>
+ <devices>
+    <interface type="bridge">
+        <mac address="DE:AD:BE:EF:CA:FE"/>
+        <model type="virtio"/>
+        <source bridge="qbra188171c-ea"/>
+        <!--
+            NOTE(mnaser): This should not be here, remove when fixed
+                          https://bugs.launchpad.net/nova/+bug/1800511
+        -->
+        <mtu size="9000"/>
+        <target dev="tapa188171c-ea"/>
+        <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
+                 function='0x0'/>
+    </interface>
+ </devices>
+</domain>"""
+        self._test_update_vif_xml(conf, original_xml, expected_xml)
+
+    def test_update_vif_xml_to_bridge_with_mtu(self):
+        """This test validates _update_vif_xml to make sure it maintains the
+        interface MTU if it exists in the source XML
+        """
+        conf = vconfig.LibvirtConfigGuestInterface()
+        conf.net_type = "bridge"
+        conf.source_dev = "qbra188171c-ea"
+        conf.target_dev = "tapa188171c-ea"
+        conf.mac_addr = "DE:AD:BE:EF:CA:FE"
+        conf.vhostuser_path = "/vhost-user/test.sock"
+        conf.model = "virtio"
+        conf.mtu = 9000
+
+        original_xml = """<domain>
+ <uuid>3de6550a-8596-4937-8046-9d862036bca5</uuid>
+ <devices>
+    <interface type="bridge">
+        <mac address="DE:AD:BE:EF:CA:FE"/>
+        <model type="virtio"/>
+        <source bridge="qbra188171c-ea"/>
+        <target dev="tapa188171c-ea"/>
+        <mtu size="9000"/>
+        <virtualport type="openvswitch">
+            <parameters interfaceid="%s"/>
+        </virtualport>
+        <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
+                 function='0x0'/>
+    </interface>
+ </devices>
+</domain>""" % uuids.ovs
+        expected_xml = """<domain>
+ <uuid>3de6550a-8596-4937-8046-9d862036bca5</uuid>
+ <devices>
+    <interface type="bridge">
+        <mac address="DE:AD:BE:EF:CA:FE"/>
+        <model type="virtio"/>
+        <source bridge="qbra188171c-ea"/>
+        <mtu size="9000"/>
+        <target dev="tapa188171c-ea"/>
+        <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
+                 function='0x0'/>
+    </interface>
+ </devices>
+</domain>"""
+        self._test_update_vif_xml(conf, original_xml, expected_xml)
 
     def test_update_vif_xml_no_mac_address_in_xml(self):
         """Tests that the <mac address> is not found in the <interface> XML
