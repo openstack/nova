@@ -317,9 +317,10 @@ def _update_vif_xml(xml_doc, migrate_data, get_vif_config):
         LOG.debug('Updating guest XML with vif config: %s', conf_xml,
                   instance_uuid=instance_uuid)
         dest_interface_elem = etree.XML(conf_xml, parser)
-        # Save off the hw address presented to the guest since that can't
-        # change during live migration.
+        # Save off the hw address and MTU presented to the guest since that
+        # can't change during live migration.
         address = interface_dev.find('address')
+        mtu = interface_dev.find('mtu')
         # Now clear the interface's current elements and insert everything
         # from the destination vif config xml.
         interface_dev.clear()
@@ -328,6 +329,10 @@ def _update_vif_xml(xml_doc, migrate_data, get_vif_config):
             interface_dev.set(attr_name, attr_value)
         # Insert sub-elements.
         for index, dest_interface_subelem in enumerate(dest_interface_elem):
+            # NOTE(mnaser): If we don't have an MTU, don't define one, else
+            #               the live migration will crash.
+            if dest_interface_subelem.tag == 'mtu' and mtu is None:
+                continue
             interface_dev.insert(index, dest_interface_subelem)
         # And finally re-insert the hw address.
         interface_dev.insert(index + 1, address)
