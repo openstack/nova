@@ -1551,6 +1551,11 @@ class FakeLibvirtFixture(fixtures.Fixture):
         self.useFixture(
             fixtures.MockPatch('nova.virt.libvirt.utils.get_fs_info'))
 
+        # Don't assume that the system running tests has a valid machine-id
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '._get_host_sysinfo_serial_os', return_value=uuids.machine_id))
+
         disable_event_thread(self)
 
         if self.stub_os_vif:
