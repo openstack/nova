@@ -29,11 +29,13 @@ import six
 from taskflow.patterns import linear_flow as tf_lf
 
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 from nova import conf as cfg
 from nova.console import type as console_type
 from nova import exception as exc
 from nova.i18n import _
 from nova import image
+from nova import rc_fields
 from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt.powervm import host as pvm_host
@@ -156,6 +158,9 @@ class PowerVMDriver(driver.ComputeDriver):
         #               custom-resource-classes-pike
         # Do this here so it refreshes each time this method is called.
         self.host_wrapper = pvm_ms.System.get(self.adapter)[0]
+        return self._get_available_resource()
+
+    def _get_available_resource(self):
         # Get host information
         data = pvm_host.build_host_resource_from_ms(self.host_wrapper)
 
@@ -164,6 +169,62 @@ class PowerVMDriver(driver.ComputeDriver):
         data["local_gb_used"] = self.disk_dvr.capacity_used
 
         return data
+
+    def update_provider_tree(self, provider_tree, nodename):
+        """Update a ProviderTree with current provider and inventory data.
+
+        :param nova.compute.provider_tree.ProviderTree provider_tree:
+            A nova.compute.provider_tree.ProviderTree object representing all
+            the providers in the tree associated with the compute node, and any
+            sharing providers (those with the ``MISC_SHARES_VIA_AGGREGATE``
+            trait) associated via aggregate with any of those providers (but
+            not *their* tree- or aggregate-associated providers), as currently
+            known by placement.
+        :param nodename:
+            String name of the compute node (i.e.
+            ComputeNode.hypervisor_hostname) for which the caller is requesting
+            updated provider information.
+        """
+        # Get (legacy) resource information. Same as get_available_resource,
+        # but we don't need to refresh self.host_wrapper as it was *just*
+        # refreshed by get_available_resource in the resource tracker's
+        # update_available_resource flow.
+        data = self._get_available_resource()
+
+        # TODO(efried): Fix these to reflect something like reality
+        # For now, duplicate the logic the resource tracker uses via
+        # update_compute_node when get_inventory/update_provider_tree is not
+        # implemented.
+        cpu_alloc_ratio = CONF.cpu_allocation_ratio or 16.0
+        cpu_reserved = CONF.reserved_host_cpus
+        mem_alloc_ratio = CONF.ram_allocation_ratio or 1.5
+        mem_reserved = CONF.reserved_host_memory_mb
+        disk_alloc_ratio = CONF.disk_allocation_ratio or 1.0
+        disk_reserved = compute_utils.convert_mb_to_ceil_gb(
+            CONF.reserved_host_disk_mb)
+
+        inventory = {
+            rc_fields.ResourceClass.VCPU: {
+                'total': data['vcpus'],
+                'max_unit': data['vcpus'],
+                'allocation_ratio': cpu_alloc_ratio,
+                'reserved': cpu_reserved,
+            },
+            rc_fields.ResourceClass.MEMORY_MB: {
+                'total': data['memory_mb'],
+                'max_unit': data['memory_mb'],
+                'allocation_ratio': mem_alloc_ratio,
+                'reserved': mem_reserved,
+            },
+            rc_fields.ResourceClass.DISK_GB: {
+                # TODO(efried): Proper DISK_GB sharing when SSP driver in play
+                'total': int(data['local_gb']),
+                'max_unit': int(data['local_gb']),
+                'allocation_ratio': disk_alloc_ratio,
+                'reserved': disk_reserved,
+            },
+        }
+        provider_tree.update_inventory(nodename, inventory)
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
