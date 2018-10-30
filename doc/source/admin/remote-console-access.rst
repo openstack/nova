@@ -36,9 +36,8 @@ console connection for example:
 
 #. The browser or client connects to the proxy.
 
-#. The proxy talks to :program:`nova-consoleauth` to authorize the token for
-   the user, and maps the token to the *private* host and port of the VNC
-   server for an instance.
+#. The proxy authorizes the token for the user, and maps the token to the
+   *private* host and port of the VNC server for an instance.
 
    The compute host specifies the address that the proxy should use to connect
    through the :oslo.config:option:`vnc.server_proxyclient_address` option. In
@@ -51,9 +50,6 @@ console connection for example:
 This means a typical deployment with noVNC-based VNC consoles will have the
 following components:
 
-- An instance of the :program:`nova-consoleauth` service. Typically runs on the
-  controller host.
-
 - One or more :program:`nova-novncproxy` service. Supports browser-based noVNC
   clients. For simple deployments, this service typically runs on the same
   machine as :program:`nova-api` because it operates as a proxy between the
@@ -62,35 +58,22 @@ following components:
 - One or more :program:`nova-compute` services. Hosts the instances for which
   consoles are provided.
 
+.. note::
+
+   Previously, the :program:`nova-consoleauth` application was necessary for
+   token authorization. This is no longer the case since nova 18.0.0
+   (Rocky). See :ref:`below <about-nova-consoleauth>` for more information.
+
+.. todo::
+
+   The below diagram references :program:`nova-consoleauth` and needs to be
+   updated.
+
 This particular example is illustrated below.
 
 .. figure:: figures/SCH_5009_V00_NUAC-VNC_OpenStack.png
    :alt: noVNC process
    :width: 95%
-
-
-.. _about-nova-consoleauth:
-
-About ``nova-consoleauth``
---------------------------
-
-The :doc:`/cli/nova-consoleauth` service provides a shared service to manage
-token authentication that the client proxies outlined below can leverage. This
-service must be running for either proxy to work. Many proxies of either type
-can be run against a single :program:`nova-consoleauth` service in a cluster
-configuration.
-
-.. important::
-
-   Do not confuse the :program:`nova-consoleauth` shared service with
-   :doc:`/cli/nova-console` service, which is a XenAPI-specific service that
-   most recent VNC proxy architectures do not use.
-
-.. deprecated:: 18.0.0
-
-   ``nova-consoleauth`` is deprecated since 18.0.0 (Rocky) and will be removed
-   in an upcoming release. See
-   :oslo.config:option:`workarounds.enable_consoleauth` for details.
 
 
 noVNC-based VNC console
@@ -135,12 +118,6 @@ In addition, if using the libvirt compute driver and enabling
 - :oslo.config:option:`vnc.vencrypt_client_cert`
 - :oslo.config:option:`vnc.vencrypt_ca_certs`
 
-Similarly, if using the VMware compute driver, the following additional options
-are accepted.
-
-- :oslo.config:option:`vmware.vnc_port`
-- :oslo.config:option:`vmware.vnc_port_total`
-
 For example, to configure this via a ``nova-novncproxy.conf`` file:
 
 .. code-block:: console
@@ -162,6 +139,12 @@ noVNC-based VNC console support.
 - :oslo.config:option:`vnc.server_listen`
 - :oslo.config:option:`vnc.server_proxyclient_address`
 - :oslo.config:option:`vnc.keymap`
+
+If using the VMware compute driver, the following additional options are
+relevant.
+
+- :oslo.config:option:`vmware.vnc_port`
+- :oslo.config:option:`vmware.vnc_port_total`
 
 For example, to configure this via a ``nova.conf`` file:
 
@@ -310,68 +293,6 @@ be told where to find them. This requires editing :file:`nova.conf` to set.
   vencrypt_ca_certs=/etc/pki/nova-novncproxy/ca-cert.pem
 
 
-XVP-based VNC console
----------------------
-
-VNC is a graphical console with wide support among many hypervisors and
-clients. Xen VNC Proxy (XVP) provides VNC support via a simple Java client.
-
-.. deprecated:: 19.0.0
-
-   :program:`nova-xvpvnxproxy` is deprecated since 19.0.0 (Stein) and will be
-   removed in an upcoming release.
-
-Configuration
-~~~~~~~~~~~~~
-
-To enable the XVP VNC console service, you must configure both the
-:program:`nova-xvpvncproxy` service and the :program:`nova-compute` service.
-Most options are defined in the :oslo.config:group:`vnc` group.
-
-The :program:`nova-xvpvncproxy` service accepts the following options.
-
-- :oslo.config:option:`daemon`
-- :oslo.config:option:`ssl_only`
-- :oslo.config:option:`source_is_ipv6`
-- :oslo.config:option:`cert`
-- :oslo.config:option:`key`
-- :oslo.config:option:`web`
-- :oslo.config:option:`vnc.xvpvncproxy_host`
-- :oslo.config:option:`vnc.xvpvncproxy_port`
-
-For example, to configure this via a ``nova-xvpvncproxy.conf`` file:
-
-.. code-block:: console
-
-   [vnc]
-   xvpvncproxy_host = 0.0.0.0
-   xvpvncproxy_port = 6081
-
-The :program:`nova-compute` service requires the following options to configure
-XVP-based VNC support.
-
-- :oslo.config:option:`vnc.enabled`
-- :oslo.config:option:`vnc.xvpvncproxy_base_url`
-- :oslo.config:option:`vnc.server_listen`
-- :oslo.config:option:`vnc.server_proxyclient_address`
-- :oslo.config:option:`vnc.keymap`
-
-For example, to configure this via a ``nova.conf`` file:
-
-.. code-block:: console
-
-   [vnc]
-   enabled = True
-   xvpvncproxy_base_url = http://IP_ADDRESS:6081/console
-   server_listen = 127.0.0.1
-   server_proxyclient_address = 127.0.0.1
-   keymap = en-us
-
-Replace ``IP_ADDRESS`` with the IP address from which the proxy is accessible
-by the outside world. For example, this may be the management interface IP
-address of the controller or the VIP.
-
-
 SPICE console
 -------------
 
@@ -470,7 +391,8 @@ Here's the general flow of actions:
    :program:`nova-serialproxy` service.
 4. The :program:`nova-serialproxy` service then proxies the console interaction
    to the port of the compute node where the instance is running. That port
-   gets forwarded by the hypervisor into the KVM guest.
+   gets forwarded by the hypervisor (or ironic conductor, for ironic) to the
+   guest.
 
 Configuration
 ~~~~~~~~~~~~~
@@ -604,6 +526,92 @@ For example, to configure this via a ``nova.conf`` file:
    [mks]
    enabled = True
    mksproxy_base_url = https://127.0.0.1:6090/
+
+
+XVP-based VNC console
+---------------------
+
+VNC is a graphical console with wide support among many hypervisors and
+clients. Xen VNC Proxy (XVP) provides VNC support via a simple Java client.
+
+.. deprecated:: 19.0.0
+
+   :program:`nova-xvpvnxproxy` is deprecated since 19.0.0 (Stein) and will be
+   removed in an upcoming release.
+
+Configuration
+~~~~~~~~~~~~~
+
+To enable the XVP VNC console service, you must configure both the
+:program:`nova-xvpvncproxy` service and the :program:`nova-compute` service.
+Most options are defined in the :oslo.config:group:`vnc` group.
+
+The :program:`nova-xvpvncproxy` service accepts the following options.
+
+- :oslo.config:option:`daemon`
+- :oslo.config:option:`ssl_only`
+- :oslo.config:option:`source_is_ipv6`
+- :oslo.config:option:`cert`
+- :oslo.config:option:`key`
+- :oslo.config:option:`web`
+- :oslo.config:option:`vnc.xvpvncproxy_host`
+- :oslo.config:option:`vnc.xvpvncproxy_port`
+
+For example, to configure this via a ``nova-xvpvncproxy.conf`` file:
+
+.. code-block:: console
+
+   [vnc]
+   xvpvncproxy_host = 0.0.0.0
+   xvpvncproxy_port = 6081
+
+The :program:`nova-compute` service requires the following options to configure
+XVP-based VNC support.
+
+- :oslo.config:option:`vnc.enabled`
+- :oslo.config:option:`vnc.xvpvncproxy_base_url`
+- :oslo.config:option:`vnc.server_listen`
+- :oslo.config:option:`vnc.server_proxyclient_address`
+- :oslo.config:option:`vnc.keymap`
+
+For example, to configure this via a ``nova.conf`` file:
+
+.. code-block:: console
+
+   [vnc]
+   enabled = True
+   xvpvncproxy_base_url = http://IP_ADDRESS:6081/console
+   server_listen = 127.0.0.1
+   server_proxyclient_address = 127.0.0.1
+   keymap = en-us
+
+Replace ``IP_ADDRESS`` with the IP address from which the proxy is accessible
+by the outside world. For example, this may be the management interface IP
+address of the controller or the VIP.
+
+
+.. _about-nova-consoleauth:
+
+About ``nova-consoleauth``
+--------------------------
+
+The deprecated :doc:`/cli/nova-consoleauth` service provides a shared service
+to manage token authentication that the client proxies outlined below can
+leverage. This service must be running for either proxy to work. Many proxies
+of either type can be run against a single :program:`nova-consoleauth` service
+in a cluster configuration.
+
+.. important::
+
+   Do not confuse the :program:`nova-consoleauth` shared service with
+   :doc:`/cli/nova-console` service, which is a XenAPI-specific service that
+   most recent VNC proxy architectures do not use.
+
+.. deprecated:: 18.0.0
+
+   ``nova-consoleauth`` is deprecated since 18.0.0 (Rocky) and will be removed
+   in an upcoming release. See
+   :oslo.config:option:`workarounds.enable_consoleauth` for details.
 
 
 Frequently Asked Questions
