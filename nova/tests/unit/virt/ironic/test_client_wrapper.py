@@ -77,7 +77,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         ironicclient = client_wrapper.IronicClientWrapper()
         # dummy call to have _get_client() called
         ironicclient.call("node.list")
-        # With no api_endpoint in the conf, ironic_url is retrieved from
+        # With no api_endpoint in the conf, endpoint is retrieved from
         # nova.utils.get_ksa_adapter().get_endpoint()
         self.get_ksa_adapter.assert_called_once_with(
             'baremetal', ksa_auth=self.get_auth_plugin.return_value,
@@ -87,7 +87,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
             'max_retries': CONF.ironic.api_max_retries,
             'retry_interval': CONF.ironic.api_retry_interval,
             'os_ironic_api_version': ['1.38', '1.37'],
-            'ironic_url':
+            'endpoint':
                 self.get_ksa_adapter.return_value.get_endpoint.return_value}
         mock_ir_cli.assert_called_once_with(1, **expected)
 
@@ -102,7 +102,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         ironicclient = client_wrapper.IronicClientWrapper()
         # dummy call to have _get_client() called
         ironicclient.call("node.list")
-        # With no api_endpoint in the conf, ironic_url is retrieved from
+        # With no api_endpoint in the conf, endpoint is retrieved from
         # nova.utils.get_endpoint_data
         self.get_ksa_adapter.assert_called_once_with(
             'baremetal', ksa_auth=self.get_auth_plugin.return_value,
@@ -113,7 +113,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
                     'max_retries': CONF.ironic.api_max_retries,
                     'retry_interval': CONF.ironic.api_retry_interval,
                     'os_ironic_api_version': ['1.38', '1.37'],
-                    'ironic_url': None}
+                    'endpoint': None}
         mock_ir_cli.assert_called_once_with(1, **expected)
 
     @mock.patch.object(keystoneauth1.session, 'Session')
@@ -131,7 +131,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
                     'max_retries': CONF.ironic.api_max_retries,
                     'retry_interval': CONF.ironic.api_retry_interval,
                     'os_ironic_api_version': ['1.38', '1.37'],
-                    'ironic_url': endpoint}
+                    'endpoint': endpoint}
         mock_ir_cli.assert_called_once_with(1, **expected)
 
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')

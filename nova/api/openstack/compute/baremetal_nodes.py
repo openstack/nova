@@ -56,7 +56,7 @@ def _get_ironic_client():
               'os_service_type': 'baremetal',
               'os_endpoint_type': 'public',
               'insecure': 'true',
-              'ironic_url': CONF.ironic.api_endpoint}
+              'endpoint': CONF.ironic.api_endpoint}
     # NOTE(mriedem): The 1 api_version arg here is the only valid value for
     # the client, but it's not even used so it doesn't really matter. The
     # ironic client wrapper in the virt driver actually uses a hard-coded
