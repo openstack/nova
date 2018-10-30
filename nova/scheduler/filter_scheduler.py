@@ -215,8 +215,8 @@ class FilterScheduler(driver.Scheduler):
                 cn_uuid = host.uuid
                 if cn_uuid not in alloc_reqs_by_rp_uuid:
                     msg = ("A host state with uuid = '%s' that did not have a "
-                          "matching allocation_request was encountered while "
-                          "scheduling. This host was skipped.")
+                           "matching allocation_request was encountered while "
+                           "scheduling. This host was skipped.")
                     LOG.debug(msg, cn_uuid)
                     continue
 
@@ -308,11 +308,6 @@ class FilterScheduler(driver.Scheduler):
         """
         # The list of hosts selected for each instance
         selected_hosts = []
-        # This the overall list of values to be returned. There will be one
-        # item per instance, and each item will be a list of Selection objects
-        # representing the selected host along with zero or more alternates
-        # from the same cell.
-        selections_to_return = []
 
         for num in range(num_instances):
             instance_uuid = instance_uuids[num] if instance_uuids else None
@@ -336,6 +331,10 @@ class FilterScheduler(driver.Scheduler):
         # raise a NoValidHost exception.
         self._ensure_sufficient_hosts(context, selected_hosts, num_instances)
 
+        # This the overall list of values to be returned. There will be one
+        # item per instance, and each item will be a list of Selection objects
+        # representing the selected host along with zero or more alternates
+        # from the same cell.
         selections_to_return = self._get_alternate_hosts(selected_hosts,
                 spec_obj, hosts, num, num_alts)
         return selections_to_return

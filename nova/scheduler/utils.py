@@ -1019,6 +1019,11 @@ def claim_resources(ctx, client, spec_obj, instance_uuid, alloc_req,
     if 'user_id' in spec_obj and spec_obj.user_id:
         user_id = spec_obj.user_id
     else:
+        # FIXME(mriedem): This would actually break accounting if we relied on
+        # the allocations for something like counting quota usage because in
+        # the case of migrating or evacuating an instance, the user here is
+        # likely the admin, not the owner of the instance, so the allocation
+        # would be tracked against the wrong user.
         user_id = ctx.user_id
 
     # NOTE(gibi): this could raise AllocationUpdateFailed which means there is
