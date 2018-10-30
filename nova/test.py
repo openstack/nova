@@ -429,15 +429,6 @@ class TestCase(testtools.TestCase):
         compute.manager._resource_tracker = None
         compute.start()
 
-    @staticmethod
-    def restart_scheduler_service(scheduler):
-        """Restart a scheduler service in a realistic way.
-
-        :param scheduler: The nova-scheduler service to be restarted.
-        """
-        scheduler.stop()
-        scheduler.start()
-
     def assertJsonEqual(self, expected, observed, message=''):
         """Asserts that 2 complex data structures are json equivalent.
 
