@@ -871,9 +871,18 @@ class CountableResource(AbsoluteResource):
 class QuotaEngine(object):
     """Represent the set of recognized quotas."""
 
-    def __init__(self, quota_driver=None):
-        """Initialize a Quota object."""
-        self._resources = {}
+    def __init__(self, quota_driver=None, resources=None):
+        """Initialize a Quota object.
+
+        :param quota_driver: a QuotaDriver object (only used in testing. if
+                             None (default), instantiates a driver from the
+                             CONF.quota.driver option)
+        :param resources: iterable of Resource objects
+        """
+        resources = resources or []
+        self._resources = {
+            resource.name: resource for resource in resources
+        }
         # NOTE(mriedem): quota_driver is ever only supplied in tests with a
         # fake driver.
         self.__driver = quota_driver
@@ -889,12 +898,6 @@ class QuotaEngine(object):
         """Register a resource."""
 
         self._resources[resource.name] = resource
-
-    def register_resources(self, resources):
-        """Register a list of resources."""
-
-        for resource in resources:
-            self.register_resource(resource)
 
     def get_defaults(self, context):
         """Retrieve the default quotas.
@@ -1209,36 +1212,40 @@ def _security_group_rule_count_by_group(context, security_group_id):
     return {'user': {'security_group_rules': count}}
 
 
-QUOTAS = QuotaEngine()
-
-
-resources = [
-    CountableResource('instances', _instances_cores_ram_count, 'instances'),
-    CountableResource('cores', _instances_cores_ram_count, 'cores'),
-    CountableResource('ram', _instances_cores_ram_count, 'ram'),
-    CountableResource('security_groups', _security_group_count,
-                      'security_groups'),
-    CountableResource('fixed_ips', _fixed_ip_count, 'fixed_ips'),
-    CountableResource('floating_ips', _floating_ip_count,
-                      'floating_ips'),
-    AbsoluteResource('metadata_items', 'metadata_items'),
-    AbsoluteResource('injected_files', 'injected_files'),
-    AbsoluteResource('injected_file_content_bytes',
-                     'injected_file_content_bytes'),
-    AbsoluteResource('injected_file_path_bytes',
-                     'injected_file_path_length'),
-    CountableResource('security_group_rules',
-                      _security_group_rule_count_by_group,
-                      'security_group_rules'),
-    CountableResource('key_pairs', _keypair_get_count_by_user, 'key_pairs'),
-    CountableResource('server_groups', _server_group_count, 'server_groups'),
-    CountableResource('server_group_members',
-                      _server_group_count_members_by_user,
-                      'server_group_members'),
-    ]
-
-
-QUOTAS.register_resources(resources)
+QUOTAS = QuotaEngine(
+    resources=[
+        CountableResource(
+            'instances', _instances_cores_ram_count, 'instances'),
+        CountableResource(
+            'cores', _instances_cores_ram_count, 'cores'),
+        CountableResource(
+            'ram', _instances_cores_ram_count, 'ram'),
+        CountableResource(
+            'security_groups', _security_group_count, 'security_groups'),
+        CountableResource(
+            'fixed_ips', _fixed_ip_count, 'fixed_ips'),
+        CountableResource(
+            'floating_ips', _floating_ip_count, 'floating_ips'),
+        AbsoluteResource(
+            'metadata_items', 'metadata_items'),
+        AbsoluteResource(
+            'injected_files', 'injected_files'),
+        AbsoluteResource(
+            'injected_file_content_bytes', 'injected_file_content_bytes'),
+        AbsoluteResource(
+            'injected_file_path_bytes', 'injected_file_path_length'),
+        CountableResource(
+            'security_group_rules', _security_group_rule_count_by_group,
+            'security_group_rules'),
+        CountableResource(
+            'key_pairs', _keypair_get_count_by_user, 'key_pairs'),
+        CountableResource(
+            'server_groups', _server_group_count, 'server_groups'),
+        CountableResource(
+            'server_group_members', _server_group_count_members_by_user,
+            'server_group_members'),
+    ],
+)
 
 
 def _valid_method_call_check_resource(name, method, resources):
