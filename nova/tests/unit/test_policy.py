@@ -16,6 +16,7 @@
 """Test of Policy Engine For Nova."""
 
 import os.path
+import subprocess
 
 import mock
 from oslo_policy import policy as oslo_policy
@@ -472,3 +473,18 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
             self.admin_or_owner_rules +
             self.allow_all_rules + special_rules)
         self.assertEqual(set([]), result)
+
+
+class GeneratePolicyFileTestCase(test.NoDBTestCase):
+
+    def test_policy_generator_from_command_line(self):
+        # This test ensures nova.policy:get_enforcer ignores unexpected
+        # arguments before handing them off to oslo.config, which will fail and
+        # prevent users from generating policy files.
+        ret_val = subprocess.Popen(
+            ['oslopolicy-policy-generator', '--namespace', 'nova'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        ret_val.communicate()
+        self.assertEqual(0, ret_val.returncode)

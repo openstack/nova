@@ -16,7 +16,6 @@
 """Policy Engine For Nova."""
 import copy
 import re
-import sys
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -208,21 +207,9 @@ def register_rules(enforcer):
 
 
 def get_enforcer():
-    # This method is for use by oslopolicy CLI scripts. Those scripts need the
-    # 'output-file' and 'namespace' options, but having those in sys.argv means
-    # loading the Nova config options will fail as those are not expected to
-    # be present. So we pass in an arg list with those stripped out.
-    conf_args = []
-    # Start at 1 because cfg.CONF expects the equivalent of sys.argv[1:]
-    i = 1
-    while i < len(sys.argv):
-        if sys.argv[i].strip('-') in ['namespace', 'output-file']:
-            i += 2
-            continue
-        conf_args.append(sys.argv[i])
-        i += 1
-
-    cfg.CONF(conf_args, project='nova')
+    # This method is used by oslopolicy CLI scripts in order to generate policy
+    # files from overrides on disk and defaults in code.
+    cfg.CONF([], project='nova')
     init()
     return _ENFORCER
 
