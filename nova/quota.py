@@ -41,22 +41,6 @@ class DbQuotaDriver(object):
     """
     UNLIMITED_VALUE = -1
 
-    def get_by_project_and_user(self, context, project_id, user_id, resource):
-        """Get a specific quota by project and user."""
-
-        return objects.Quotas.get(context, project_id, resource,
-                                  user_id=user_id)
-
-    def get_by_project(self, context, project_id, resource):
-        """Get a specific quota by project."""
-
-        return objects.Quotas.get(context, project_id, resource)
-
-    def get_by_class(self, context, quota_class, resource):
-        """Get a specific quota by quota class."""
-
-        return objects.Quotas.get_class(context, quota_class, resource)
-
     def get_defaults(self, context, resources):
         """Given a list of resources, retrieve the default quotas.
         Use the class quotas named `_DEFAULT_QUOTA_NAME` as default quotas,
@@ -657,21 +641,6 @@ class NoopQuotaDriver(object):
     should not.
     """
 
-    def get_by_project_and_user(self, context, project_id, user_id, resource):
-        """Get a specific quota by project and user."""
-        # Unlimited
-        return -1
-
-    def get_by_project(self, context, project_id, resource):
-        """Get a specific quota by project."""
-        # Unlimited
-        return -1
-
-    def get_by_class(self, context, quota_class, resource):
-        """Get a specific quota by quota class."""
-        # Unlimited
-        return -1
-
     def get_defaults(self, context, resources):
         """Given a list of resources, retrieve the default quotas.
 
@@ -972,22 +941,6 @@ class QuotaEngine(object):
 
         for resource in resources:
             self.register_resource(resource)
-
-    def get_by_project_and_user(self, context, project_id, user_id, resource):
-        """Get a specific quota by project and user."""
-
-        return self._driver.get_by_project_and_user(context, project_id,
-                                                    user_id, resource)
-
-    def get_by_project(self, context, project_id, resource):
-        """Get a specific quota by project."""
-
-        return self._driver.get_by_project(context, project_id, resource)
-
-    def get_by_class(self, context, quota_class, resource):
-        """Get a specific quota by quota class."""
-
-        return self._driver.get_by_class(context, quota_class, resource)
 
     def get_defaults(self, context):
         """Retrieve the default quotas.
