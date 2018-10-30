@@ -7,6 +7,9 @@ The static configuration for nova lives in two main files: ``nova.conf`` and
 configuring nova to solve specific problems, refer to the :doc:`Nova Admin
 Guide </admin/index>`.
 
+For Placement configuration,
+see :placement-doc:`Placement Configuration Guide <configuration>`.
+
 Configuration
 -------------
 
@@ -20,8 +23,8 @@ Configuration
 * :doc:`Sample Config File <sample-config>`: A sample config
   file with inline documentation.
 
-Nova Policy
------------
+Policy
+------
 
 Nova, like most OpenStack projects, uses a policy language to restrict
 permissions on REST API actions.
@@ -31,19 +34,6 @@ permissions on REST API actions.
 
 * :doc:`Sample Policy File <sample-policy>`: A sample nova
   policy file with inline documentation.
-
-Placement Policy
-----------------
-
-Placement, like most OpenStack projects, uses a policy language to restrict
-permissions on REST API actions.
-
-* :doc:`Policy Reference <placement-policy>`: A complete
-  reference of all policy points in placement and what they impact.
-
-* :doc:`Sample Policy File <sample-placement-policy>`: A sample
-  placement policy file with inline documentation.
-
 
 .. # NOTE(mriedem): This is the section where we hide things that we don't
    # actually want in the table of contents but sphinx build would fail if
@@ -55,5 +45,3 @@ permissions on REST API actions.
    sample-config
    policy
    sample-policy
-   placement-policy
-   sample-placement-policy

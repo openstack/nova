@@ -100,6 +100,6 @@ Major subsystems in nova have different needs; some of those are documented
 here. If you are contributing to one of these please read the subsystem guide
 before diving in.
 
-* :doc:`/contributor/placement`
+* :placement-doc:`Placement API Developer Notes <contributor/index>`
 
 * :doc:`/user/conductor`
