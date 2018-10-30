@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    A new check is added to the ``nova-status upgrade check`` CLI to check for
+    use of the ``nova-consoleauth`` service to warn and provide additional
+    instructions to set ``[workarounds]enable_consoleauth = True`` while
+    performing a live/rolling upgrade.
