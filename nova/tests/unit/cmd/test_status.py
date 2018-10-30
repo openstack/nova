@@ -37,7 +37,7 @@ from nova import context
 # NOTE(mriedem): We only use objects as a convenience to populate the database
 # in the tests, we don't use them in the actual CLI.
 from nova import objects
-from nova.objects import request_spec as reqspec_obj
+from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 
@@ -710,6 +710,19 @@ class TestUpgradeCheckAPIServiceVersion(test.NoDBTestCase):
         self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
 
 
+def _create_minimal_request_spec(ctxt, instance):
+    request_spec = objects.RequestSpec.from_components(
+        ctxt, instance.uuid, instance.image_meta,
+        instance.flavor, instance.numa_topology,
+        instance.pci_requests,
+        {}, None, instance.availability_zone,
+        project_id=instance.project_id,
+        user_id=instance.user_id
+    )
+    scheduler_utils.setup_instance_group(ctxt, request_spec)
+    request_spec.create()
+
+
 class TestUpgradeCheckRequestSpecMigration(test.NoDBTestCase):
     """Tests for the nova-status upgrade check for request spec migration."""
 
@@ -748,7 +761,7 @@ class TestUpgradeCheckRequestSpecMigration(test.NoDBTestCase):
             inst.pci_requests = None
             inst.project_id = 'fake-project'
             inst.user_id = 'fake-user'
-            reqspec_obj._create_minimal_request_spec(ctxt, inst)
+            _create_minimal_request_spec(ctxt, inst)
 
         return inst
 
