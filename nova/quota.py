@@ -869,52 +869,6 @@ class BaseResource(object):
         self.name = name
         self.flag = flag
 
-    def quota(self, driver, context, **kwargs):
-        """Given a driver and context, obtain the quota for this
-        resource.
-
-        :param driver: A quota driver.
-        :param context: The request context.
-        :param project_id: The project to obtain the quota value for.
-                           If not provided, it is taken from the
-                           context.  If it is given as None, no
-                           project-specific quota will be searched
-                           for.
-        :param quota_class: The quota class corresponding to the
-                            project, or for which the quota is to be
-                            looked up.  If not provided, it is taken
-                            from the context.  If it is given as None,
-                            no quota class-specific quota will be
-                            searched for.  Note that the quota class
-                            defaults to the value in the context,
-                            which may not correspond to the project if
-                            project_id is not the same as the one in
-                            the context.
-        """
-
-        # Get the project ID
-        project_id = kwargs.get('project_id', context.project_id)
-
-        # Ditto for the quota class
-        quota_class = kwargs.get('quota_class', context.quota_class)
-
-        # Look up the quota for the project
-        if project_id:
-            try:
-                return driver.get_by_project(context, project_id, self.name)
-            except exception.ProjectQuotaNotFound:
-                pass
-
-        # Try for the quota class
-        if quota_class:
-            try:
-                return driver.get_by_class(context, quota_class, self.name)
-            except exception.QuotaClassNotFound:
-                pass
-
-        # OK, return the default
-        return self.default
-
     @property
     def default(self):
         """Return the default value of the quota."""
