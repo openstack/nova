@@ -49,7 +49,11 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
     def setUp(self):
         # Use our custom weigher defined above to make sure that we have
         # a predictable scheduling sort order during server create.
-        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
+        weight_classes = [
+            __name__ + '.HostNameWeigher',
+            'nova.scheduler.weights.cross_cell.CrossCellWeigher'
+        ]
+        self.flags(weight_classes=weight_classes,
                    group='filter_scheduler')
         super(TestMultiCellMigrate, self).setUp()
         self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
@@ -790,11 +794,28 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             'host3', cell_name=self.host_to_cell_mappings['host1'])
         self._resize_and_validate(target_host='host2')
 
-    # TODO(mriedem): Test cross-cell list where the source cell has two
-    # hosts so the CrossCellWeigher picks the other host in the source cell
-    # and we do a traditional resize. Add a variant on this where the flavor
-    # being resized to is only available, via aggregate, on the host in the
-    # other cell so the CrossCellWeigher is overruled by the filters.
+    def test_cold_migrate_cross_cell_weigher_stays_in_source_cell(self):
+        """Tests cross-cell cold migrate where the source cell has two hosts
+        so the CrossCellWeigher picks the other host in the source cell and we
+        do a traditional resize. Note that in this case, HostNameWeigher will
+        actually weigh host2 (in cell2) higher than host3 (in cell1) but the
+        CrossCellWeigher will weigh host2 much lower than host3 since host3 is
+        in the same cell as the source host (host1).
+        """
+        # Create the server first (should go in host1).
+        server = self._create_server(self.api.get_flavors()[0])
+        # Start another compute host service in cell1.
+        self._start_compute(
+            'host3', cell_name=self.host_to_cell_mappings['host1'])
+        # Cold migrate the server which should move the server to host3.
+        self.admin_api.post_server_action(server['id'], {'migrate': None})
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
+        self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])
+
+    # TODO(mriedem): Add a variant of
+    # test_cold_migrate_cross_cell_weigher_stays_in_source_cell where the
+    # flavor being resized to is only available, via aggregate, on the host in
+    # the other cell so the CrossCellWeigher is overruled by the filters.
 
     # TODO(mriedem): Test a bunch of rollback scenarios.
 

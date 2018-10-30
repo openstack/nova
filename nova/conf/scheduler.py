@@ -534,6 +534,35 @@ Related options:
 * [compute]/consecutive_build_service_disable_threshold - Must be nonzero
   for a compute to report data considered by this weigher.
 """),
+    cfg.FloatOpt(
+        "cross_cell_move_weight_multiplier",
+        default=1000000.0,
+        help="""
+Multiplier used for weighing hosts during a cross-cell move.
+
+This option determines how much weight is placed on a host which is within the
+same source cell when moving a server, for example during cross-cell resize.
+By default, when moving an instance, the scheduler will prefer hosts within
+the same cell since cross-cell move operations can be slower and riskier due to
+the complicated nature of cross-cell migrations.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Similarly, if your cloud is
+not configured to support cross-cell migrations, then this option has no
+effect.
+
+The value of this configuration option can be overridden per host aggregate
+by setting the aggregate metadata key with the same name
+(cross_cell_move_weight_multiplier).
+
+Possible values:
+
+* An integer or float value, where the value corresponds to the multiplier
+  ratio for this weigher. Positive values mean the weigher will prefer
+  hosts within the same cell in which the instance is currently running.
+  Negative values mean the weigher will prefer hosts in *other* cells from
+  which the instance is currently running.
+"""),
     cfg.BoolOpt(
         "shuffle_best_same_weighed_hosts",
         default=False,

@@ -529,6 +529,16 @@ The Filter Scheduler weighs hosts based on the config option
   If more than one value is found for a host in aggregate metadata, the
   minimum value will be used.
 
+* |CrossCellWeigher| Weighs hosts based on which cell they are in. "Local"
+  cells are preferred when moving an instance. Use configuration option
+  :oslo.config:option:`filter_scheduler.cross_cell_move_weight_multiplier` to
+  control the weight. If per-aggregate value with the key
+  `cross_cell_move_weight_multiplier` is found, this value would be chosen
+  as the cross-cell move weight multiplier. Otherwise, it will fall back to the
+  :oslo.config:option:`filter_scheduler.cross_cell_move_weight_multiplier`.
+  If more than one value is found for a host in aggregate metadata, the
+  minimum value will be used.
+
 Filter Scheduler makes a local list of acceptable hosts by repeated filtering and
 weighing. Each time it chooses a host, it virtually consumes resources on it,
 so subsequent selections can adjust accordingly. It is useful if the customer
@@ -580,3 +590,4 @@ in :mod:`nova.tests.scheduler`.
 .. |ServerGroupSoftAntiAffinityWeigher| replace:: :class:`ServerGroupSoftAntiAffinityWeigher <nova.scheduler.weights.affinity.ServerGroupSoftAntiAffinityWeigher>`
 .. |DiskWeigher| replace:: :class:`DiskWeigher <nova.scheduler.weights.disk.DiskWeigher>`
 .. |BuildFailureWeigher| replace:: :class:`BuildFailureWeigher <nova.scheduler.weights.compute.BuildFailureWeigher>`
+.. |CrossCellWeigher| replace:: :class:`CrossCellWeigher <nova.scheduler.weights.cross_cell.CrossCellWeigher>`
