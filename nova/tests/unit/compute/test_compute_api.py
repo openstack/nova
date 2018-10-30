@@ -1908,7 +1908,8 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch('nova.objects.Quotas.check_deltas')
     @mock.patch('nova.objects.Migration.get_by_instance_and_status')
     @mock.patch('nova.context.RequestContext.elevated')
-    def test_revert_resize_concurrent_fail(self, mock_elevated,
+    @mock.patch('nova.objects.RequestSpec')
+    def test_revert_resize_concurrent_fail(self, mock_reqspec, mock_elevated,
                                            mock_get_migration, mock_check):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
@@ -2056,10 +2057,17 @@ class _ComputeAPIUnitTestMixIn(object):
                                     host_name=host_name,
                                     **extra_kwargs)
         else:
-            self.compute_api.resize(self.context, fake_inst,
-                                    clean_shutdown=clean_shutdown,
-                                    host_name=host_name,
-                                    **extra_kwargs)
+            if request_spec:
+                self.compute_api.resize(self.context, fake_inst,
+                                        clean_shutdown=clean_shutdown,
+                                        host_name=host_name,
+                                        **extra_kwargs)
+            else:
+                self.assertRaises(exception.RequestSpecNotFound,
+                                  self.compute_api.resize,
+                                  self.context, fake_inst,
+                                  clean_shutdown=clean_shutdown,
+                                  host_name=host_name, **extra_kwargs)
 
         if request_spec:
             if allow_same_host:
@@ -2106,10 +2114,12 @@ class _ComputeAPIUnitTestMixIn(object):
                 mock_inst_save.assert_called_once_with(
                     expected_task_state=[None])
 
-            if self.cell_type == 'api':
+            if self.cell_type == 'api' and request_spec:
                 mock_migration.assert_called_once_with(context=self.context)
                 mock_elevated.assert_called_once_with()
                 mig.create.assert_called_once_with()
+            else:
+                mock_migration.assert_not_called()
 
             mock_get_by_instance_uuid.assert_called_once_with(self.context,
                                                               fake_inst.uuid)
@@ -2118,15 +2128,21 @@ class _ComputeAPIUnitTestMixIn(object):
                 mock_record.assert_called_once_with(self.context, fake_inst,
                                                     'resize')
             else:
-                mock_record.assert_called_once_with(self.context, fake_inst,
-                                                    'migrate')
+                if request_spec:
+                    mock_record.assert_called_once_with(
+                        self.context, fake_inst, 'migrate')
+                else:
+                    mock_record.assert_not_called()
 
-            mock_resize.assert_called_once_with(
-                self.context, fake_inst, extra_kwargs,
-                scheduler_hint=scheduler_hint,
-                flavor=test.MatchType(objects.Flavor),
-                clean_shutdown=clean_shutdown,
-                request_spec=fake_spec)
+            if request_spec:
+                mock_resize.assert_called_once_with(
+                    self.context, fake_inst, extra_kwargs,
+                    scheduler_hint=scheduler_hint,
+                    flavor=test.MatchType(objects.Flavor),
+                    clean_shutdown=clean_shutdown,
+                    request_spec=fake_spec)
+            else:
+                mock_resize.assert_not_called()
 
     def _test_migrate(self, *args, **kwargs):
         self._test_resize(*args, flavor_id_passed=False, **kwargs)
@@ -2197,34 +2213,6 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_migrate_request_spec_not_found(self):
         self._test_migrate(request_spec=False)
-
-    @mock.patch.object(objects.Migration, 'create')
-    @mock.patch.object(objects.InstanceAction, 'action_start')
-    @mock.patch.object(objects.Instance, 'save')
-    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
-    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host',
-                       return_value=[objects.ComputeNode(
-                           host='target_host',
-                           hypervisor_hostname='hypervisor_host')])
-    def test_migrate_request_spec_not_found_with_target_host(
-            self, mock_get_all_by_host, mock_get_by_instance_uuid, mock_save,
-            mock_action_start, mock_migration_create):
-        fake_inst = self._create_instance_obj()
-        mock_get_by_instance_uuid.side_effect = (
-            exception.RequestSpecNotFound(instance_uuid=fake_inst.uuid))
-        self.assertRaises(exception.CannotMigrateWithTargetHost,
-                          self.compute_api.resize, self.context,
-                          fake_inst, host_name='target_host')
-        mock_get_all_by_host.assert_called_once_with(
-            self.context, 'target_host', True)
-        mock_get_by_instance_uuid.assert_called_once_with(self.context,
-                                                          fake_inst.uuid)
-        mock_save.assert_called_once_with(expected_task_state=[None])
-        mock_action_start.assert_called_once_with(
-            self.context, fake_inst.uuid, instance_actions.MIGRATE,
-            want_result=False)
-        if self.cell_type == 'api':
-            mock_migration_create.assert_called_once_with()
 
     def test_migrate_with_requested_destination(self):
         # RequestSpec has requested_destination

@@ -83,6 +83,18 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.context = self.req.environ['nova.context']
 
         self.image_api = image.API()
+        # Assume that anything that hits the compute API and looks for a
+        # RequestSpec doesn't care about it, since testing logic that deep
+        # should be done in nova.tests.unit.compute.test_compute_api.
+        mock_reqspec = mock.patch('nova.objects.RequestSpec')
+        mock_reqspec.start()
+        self.addCleanup(mock_reqspec.stop)
+        # Similarly we shouldn't care about anything hitting conductor from
+        # these tests.
+        mock_conductor = mock.patch.object(
+            self.controller.compute_api, 'compute_task_api')
+        mock_conductor.start()
+        self.addCleanup(mock_conductor.stop)
 
     def _get_controller(self):
         return self.servers.ServersController()
@@ -565,11 +577,20 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         def return_image_meta(*args, **kwargs):
             image_meta_table = {
-                '1': {'id': 1, 'status': 'active', 'container_format': 'aki'},
-                '2': {'id': 2, 'status': 'active', 'container_format': 'ari'},
+                uuids.kernel_image_id: {
+                    'id': uuids.kernel_image_id,
+                    'status': 'active',
+                    'container_format': 'aki'},
+                uuids.ramdisk_image_id: {
+                    'id': uuids.ramdisk_image_id,
+                    'status': 'active',
+                    'container_format': 'ari'},
                 '155d900f-4e14-4e4c-a73d-069cbf4541e6':
-                     {'id': 3, 'status': 'active', 'container_format': 'raw',
-                      'properties': {'kernel_id': 1, 'ramdisk_id': 2}},
+                     {'id': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                      'status': 'active',
+                      'container_format': 'raw',
+                      'properties': {'kernel_id': uuids.kernel_image_id,
+                                     'ramdisk_id': uuids.ramdisk_image_id}},
             }
             image_id = args[2]
             try:
@@ -589,8 +610,8 @@ class ServerActionsControllerTestV21(test.TestCase):
             },
         }
         self.controller._action_rebuild(self.req, FAKE_UUID, body=body).obj
-        self.assertEqual(instance_meta['kernel_id'], '1')
-        self.assertEqual(instance_meta['ramdisk_id'], '2')
+        self.assertEqual(instance_meta['kernel_id'], uuids.kernel_image_id)
+        self.assertEqual(instance_meta['ramdisk_id'], uuids.ramdisk_image_id)
 
     @mock.patch.object(compute_api.API, 'rebuild')
     def test_rebuild_instance_raise_auto_disk_config_exc(self, mock_rebuild):
