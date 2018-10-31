@@ -275,7 +275,7 @@ class QuotaSetsController(wsgi.Controller):
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
         if user_id:
-            QUOTAS.destroy_all_by_project_and_user(context,
-                                                   id, user_id)
+            objects.Quotas.destroy_all_by_project_and_user(
+                context, id, user_id)
         else:
-            QUOTAS.destroy_all_by_project(context, id)
+            objects.Quotas.destroy_all_by_project(context, id)

@@ -275,7 +275,7 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         body = {'quota_set': self.default_quotas}
         self._quotas_update_bad_request_case(body)
 
-    @mock.patch.object(quota.QUOTAS, 'destroy_all_by_project')
+    @mock.patch('nova.objects.Quotas.destroy_all_by_project')
     def test_quotas_delete(self, mock_destroy_all_by_project):
         req = self._get_http_request()
         res = self.controller.delete(req, 1234)
@@ -470,7 +470,7 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body=body)
 
-    @mock.patch.object(quota.QUOTAS, "destroy_all_by_project_and_user")
+    @mock.patch('nova.objects.Quotas.destroy_all_by_project_and_user')
     def test_user_quotas_delete(self, mock_destroy_all_by_project_and_user):
         url = '/v2/fake4/os-quota-sets/1234?user_id=1'
         req = self._get_http_request(url)

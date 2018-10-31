@@ -612,26 +612,6 @@ class DbQuotaDriver(object):
                                       quotas=quotas_exceeded, usages={},
                                       headroom=headroom)
 
-    def destroy_all_by_project_and_user(self, context, project_id, user_id):
-        """Destroy all quotas associated with a project and user.
-
-        :param context: The request context, for access checks.
-        :param project_id: The ID of the project being deleted.
-        :param user_id: The ID of the user being deleted.
-        """
-
-        objects.Quotas.destroy_all_by_project_and_user(context, project_id,
-                                                       user_id)
-
-    def destroy_all_by_project(self, context, project_id):
-        """Destroy all quotas associated with a project.
-
-        :param context: The request context, for access checks.
-        :param project_id: The ID of the project being deleted.
-        """
-
-        objects.Quotas.destroy_all_by_project(context, project_id)
-
 
 class NoopQuotaDriver(object):
     """Driver that turns quotas calls into no-ops and pretends that quotas
@@ -802,23 +782,6 @@ class NoopQuotaDriver(object):
                            different project than in the context
         :param user_id: Optional user_id for scoping the limit check to a
                         different user than in the context
-        """
-        pass
-
-    def destroy_all_by_project_and_user(self, context, project_id, user_id):
-        """Destroy all quotas associated with a project and user.
-
-        :param context: The request context, for access checks.
-        :param project_id: The ID of the project being deleted.
-        :param user_id: The ID of the user being deleted.
-        """
-        pass
-
-    def destroy_all_by_project(self, context, project_id):
-        """Destroy all quotas associated with a project.
-
-        :param context: The request context, for access checks.
-        :param project_id: The ID of the project being deleted.
         """
         pass
 
@@ -1115,28 +1078,6 @@ class QuotaEngine(object):
         return self._driver.limit_check_project_and_user(
             context, self._resources, project_values=project_values,
             user_values=user_values, project_id=project_id, user_id=user_id)
-
-    def destroy_all_by_project_and_user(self, context, project_id, user_id):
-        """Destroy all quotas, usages, and reservations associated with a
-        project and user.
-
-        :param context: The request context, for access checks.
-        :param project_id: The ID of the project being deleted.
-        :param user_id: The ID of the user being deleted.
-        """
-
-        self._driver.destroy_all_by_project_and_user(context,
-                                                     project_id, user_id)
-
-    def destroy_all_by_project(self, context, project_id):
-        """Destroy all quotas, usages, and reservations associated with a
-        project.
-
-        :param context: The request context, for access checks.
-        :param project_id: The ID of the project being deleted.
-        """
-
-        self._driver.destroy_all_by_project(context, project_id)
 
     @property
     def resources(self):
