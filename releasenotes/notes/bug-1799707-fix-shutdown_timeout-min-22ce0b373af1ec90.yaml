@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    The ``[DEFAULT]/shutdown_timeout`` configuration option minimum value has
+    been fixed to be 0 rather than 1 to align with the corresponding
+    ``os_shutdown_timeout`` image property. See bug
+    https://launchpad.net/bugs/1799707 for details.
