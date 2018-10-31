@@ -29,7 +29,6 @@ import six
 from taskflow.patterns import linear_flow as tf_lf
 
 from nova.compute import task_states
-from nova.compute import utils as compute_utils
 from nova import conf as cfg
 from nova.console import type as console_type
 from nova import exception as exc
@@ -170,7 +169,7 @@ class PowerVMDriver(driver.ComputeDriver):
 
         return data
 
-    def update_provider_tree(self, provider_tree, nodename):
+    def update_provider_tree(self, provider_tree, nodename, allocations=None):
         """Update a ProviderTree with current provider and inventory data.
 
         :param nova.compute.provider_tree.ProviderTree provider_tree:
@@ -184,6 +183,7 @@ class PowerVMDriver(driver.ComputeDriver):
             String name of the compute node (i.e.
             ComputeNode.hypervisor_hostname) for which the caller is requesting
             updated provider information.
+        :param allocations: Currently ignored by this driver.
         """
         # Get (legacy) resource information. Same as get_available_resource,
         # but we don't need to refresh self.host_wrapper as it was *just*
@@ -200,8 +200,7 @@ class PowerVMDriver(driver.ComputeDriver):
         mem_alloc_ratio = CONF.ram_allocation_ratio or 1.5
         mem_reserved = CONF.reserved_host_memory_mb
         disk_alloc_ratio = CONF.disk_allocation_ratio or 1.0
-        disk_reserved = compute_utils.convert_mb_to_ceil_gb(
-            CONF.reserved_host_disk_mb)
+        disk_reserved = self._get_reserved_host_disk_gb_from_config()
 
         inventory = {
             rc_fields.ResourceClass.VCPU: {
