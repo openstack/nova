@@ -12,7 +12,7 @@
       - openstack/nova
       - openstack/tempest
     irrelevant-files: &dsvm-irrelevant-files
-      - ^(placement-)?api-.*$
+      - ^api-.*$
       - ^(test-|)requirements.txt$
       - ^.*\.rst$
       - ^.git.*$
@@ -53,7 +53,6 @@
       - ^api-.*$
       - ^doc/source/.*$
       - ^nova/locale/.*$
-      - ^placement-api-ref/.*$
       - ^releasenotes/.*$
     vars:
       tox_envlist: functional
@@ -100,7 +99,7 @@
     # playbook and tempest rc files so this can be self-testing).
     irrelevant-files:
       - ^(?!.zuul.yaml)(?!playbooks/legacy/nova-lvm/)(?!devstack/tempest-dsvm-lvm-rc)(?!nova/virt/libvirt/).*$
-      - ^(placement-)?api-.*$
+      - ^api-.*$
       - ^(test-|)requirements.txt$
       - ^.*\.rst$
       - ^.git.*$
