@@ -500,24 +500,34 @@ class FakeDriver(driver.ComputeDriver):
         return host_status
 
     def update_provider_tree(self, provider_tree, nodename, allocations=None):
+        # TODO(mriedem): The allocation_ratio config usage will change with
+        # blueprint initial-allocation-ratios. For now, the allocation ratio
+        # config values all default to 0.0 and the ComputeNode provides a
+        # facade for giving the real defaults, so we have to mimic that here.
         inventory = {
             'VCPU': {
                 'total': self.vcpus,
                 'min_unit': 1,
                 'max_unit': self.vcpus,
                 'step_size': 1,
+                'allocation_ratio': CONF.cpu_allocation_ratio or 16.0,
+                'reserved': CONF.reserved_host_cpus,
             },
             'MEMORY_MB': {
                 'total': self.memory_mb,
                 'min_unit': 1,
                 'max_unit': self.memory_mb,
                 'step_size': 1,
+                'allocation_ratio': CONF.ram_allocation_ratio or 1.5,
+                'reserved': CONF.reserved_host_memory_mb,
             },
             'DISK_GB': {
                 'total': self.local_gb,
                 'min_unit': 1,
                 'max_unit': self.local_gb,
                 'step_size': 1,
+                'allocation_ratio': CONF.disk_allocation_ratio or 1.0,
+                'reserved': self._get_reserved_host_disk_gb_from_config(),
             },
         }
         provider_tree.update_inventory(nodename, inventory)

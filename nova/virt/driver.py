@@ -857,6 +857,11 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    @staticmethod
+    def _get_reserved_host_disk_gb_from_config():
+        import nova.compute.utils as compute_utils  # avoid circular import
+        return compute_utils.convert_mb_to_ceil_gb(CONF.reserved_host_disk_mb)
+
     def update_provider_tree(self, provider_tree, nodename, allocations=None):
         """Update a ProviderTree object with current resource provider and
         inventory information.
@@ -868,6 +873,12 @@ class ComputeDriver(object):
 
         This method supersedes get_inventory(): if this method is implemented,
         get_inventory() is not used.
+
+        Implementors of this interface are expected to set ``allocation_ratio``
+        and ``reserved`` values for inventory records, which may be based on
+        configuration options, e.g. ``[DEFAULT]/cpu_allocation_ratio``,
+        depending on the driver and resource class. If not provided, allocation
+        ratio defaults to 1.0 and reserved defaults to 0 in placement.
 
         :note: Renaming the root provider (by deleting it from provider_tree
         and re-adding it with a different name) is not supported at this time.
