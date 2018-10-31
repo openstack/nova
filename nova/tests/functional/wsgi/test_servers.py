@@ -308,7 +308,8 @@ class ServersPreSchedulingTestCase(test.TestCase,
 
         # Since _IntegratedTestBase uses the CastAsCall fixture, when we
         # get the server back we know all of the volume stuff should be done.
-        self.assertIn(volume_id, cinder.attachments[server['id']])
+        self.assertIn(volume_id,
+                      cinder.volume_ids_for_instance(server['id']))
 
         # Now delete the server, which should go through the "local delete"
         # code in the API, find the build request and delete it along with
@@ -317,7 +318,8 @@ class ServersPreSchedulingTestCase(test.TestCase,
 
         # The volume should no longer have any attachments as instance delete
         # should have removed them.
-        self.assertNotIn(volume_id, cinder.attachments[server['id']])
+        self.assertNotIn(volume_id,
+                         cinder.volume_ids_for_instance(server['id']))
 
     def test_instance_list_build_request_marker_ip_filter(self):
         """Tests listing instances with a marker that is in the build_requests
