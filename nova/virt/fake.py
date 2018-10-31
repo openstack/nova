@@ -723,6 +723,11 @@ class FakeRescheduleDriver(FakeDriver):
             admin_password, allocations, network_info, block_device_info)
 
 
+class FakeRescheduleDriverWithNestedCustomResources(
+        FakeRescheduleDriver, MediumFakeDriverWithNestedCustomResources):
+    pass
+
+
 class FakeBuildAbortDriver(FakeDriver):
     """FakeDriver derivative that always fails on spawn() with a
     BuildAbortException so no reschedule is attempted.
@@ -732,6 +737,11 @@ class FakeBuildAbortDriver(FakeDriver):
               block_device_info=None):
         raise exception.BuildAbortException(
             instance_uuid=instance.uuid, reason='FakeBuildAbortDriver')
+
+
+class FakeBuildAbortDriverWithNestedCustomResources(
+    FakeBuildAbortDriver, MediumFakeDriverWithNestedCustomResources):
+    pass
 
 
 class FakeUnshelveSpawnFailDriver(FakeDriver):
@@ -748,6 +758,11 @@ class FakeUnshelveSpawnFailDriver(FakeDriver):
         super(FakeUnshelveSpawnFailDriver, self).spawn(
             context, instance, image_meta, injected_files,
             admin_password, allocations, network_info, block_device_info)
+
+
+class FakeUnshelveSpawnFailDriverWithNestedCustomResources(
+    FakeUnshelveSpawnFailDriver, MediumFakeDriverWithNestedCustomResources):
+    pass
 
 
 class FakeLiveMigrateDriver(FakeDriver):
@@ -794,3 +809,8 @@ class FakeLiveMigrateDriver(FakeDriver):
                             migrate_data=None):
         if instance.uuid in self.instances:
             del self.instances[instance.uuid]
+
+
+class FakeLiveMigrateDriverWithNestedCustomResources(
+        FakeLiveMigrateDriver, MediumFakeDriverWithNestedCustomResources):
+    pass

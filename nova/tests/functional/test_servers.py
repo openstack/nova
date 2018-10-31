@@ -3430,7 +3430,6 @@ class ServerLiveMigrateForceAndAbort(
         self._run_periodics()
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
         self.assertNotIn(dest_rp_uuid, allocations)
 
         self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
@@ -3443,6 +3442,23 @@ class ServerLiveMigrateForceAndAbort(
                                         'DISK_GB': 0}, dest_rp_uuid)
 
         self._delete_and_check_allocations(server)
+
+
+class ServerLiveMigrateForceAndAbortWithNestedResourcesRequest(
+        ServerLiveMigrateForceAndAbort):
+    compute_driver = 'fake.FakeLiveMigrateDriverWithNestedCustomResources'
+
+    def setUp(self):
+        super(ServerLiveMigrateForceAndAbortWithNestedResourcesRequest,
+              self).setUp()
+        # modify the flavor used in the test base class to require one piece of
+        # CUSTOM_MAGIC resource as well.
+
+        self.api.post_extra_spec(
+            self.flavor1['id'], {'extra_specs': {'resources:CUSTOM_MAGIC': 1}})
+        # save the extra_specs in the flavor stored in the test case as
+        # well
+        self.flavor1['extra_specs'] = {'resources:CUSTOM_MAGIC': 1}
 
 
 class ServerRescheduleTests(integrated_helpers.ProviderUsageBaseTestCase):
@@ -3500,6 +3516,21 @@ class ServerRescheduleTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
 
 
+class ServerRescheduleTestsWithNestedResourcesRequest(ServerRescheduleTests):
+    compute_driver = 'fake.FakeRescheduleDriverWithNestedCustomResources'
+
+    def setUp(self):
+        super(ServerRescheduleTestsWithNestedResourcesRequest, self).setUp()
+        # modify the flavor used in the test base class to require one piece of
+        # CUSTOM_MAGIC resource as well.
+
+        self.api.post_extra_spec(
+            self.flavor1['id'], {'extra_specs': {'resources:CUSTOM_MAGIC': 1}})
+        # save the extra_specs in the flavor stored in the test case as
+        # well
+        self.flavor1['extra_specs'] = {'resources:CUSTOM_MAGIC': 1}
+
+
 class ServerBuildAbortTests(integrated_helpers.ProviderUsageBaseTestCase):
     """Tests server create scenarios which trigger a build abort during
     a server build and validates that allocations in Placement
@@ -3537,6 +3568,21 @@ class ServerBuildAbortTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertRequestMatchesUsage({'VCPU': 0,
                                         'MEMORY_MB': 0,
                                         'DISK_GB': 0}, failed_rp_uuid)
+
+
+class ServerBuildAbortTestsWithNestedResourceRequest(ServerBuildAbortTests):
+    compute_driver = 'fake.FakeBuildAbortDriverWithNestedCustomResources'
+
+    def setUp(self):
+        super(ServerBuildAbortTestsWithNestedResourceRequest, self).setUp()
+        # modify the flavor used in the test base class to require one piece of
+        # CUSTOM_MAGIC resource as well.
+
+        self.api.post_extra_spec(
+            self.flavor1['id'], {'extra_specs': {'resources:CUSTOM_MAGIC': 1}})
+        # save the extra_specs in the flavor stored in the test case as
+        # well
+        self.flavor1['extra_specs'] = {'resources:CUSTOM_MAGIC': 1}
 
 
 class ServerUnshelveSpawnFailTests(
@@ -3602,6 +3648,24 @@ class ServerUnshelveSpawnFailTests(
             {'VCPU': 0,
              'MEMORY_MB': 0,
              'DISK_GB': 0}, rp_uuid)
+
+
+class ServerUnshelveSpawnFailTestsWithNestedResourceRequest(
+    ServerUnshelveSpawnFailTests):
+    compute_driver = ('fake.'
+                      'FakeUnshelveSpawnFailDriverWithNestedCustomResources')
+
+    def setUp(self):
+        super(ServerUnshelveSpawnFailTestsWithNestedResourceRequest,
+              self).setUp()
+        # modify the flavor used in the test base class to require one piece of
+        # CUSTOM_MAGIC resource as well.
+
+        self.api.post_extra_spec(
+            self.flavor1['id'], {'extra_specs': {'resources:CUSTOM_MAGIC': 1}})
+        # save the extra_specs in the flavor stored in the test case as
+        # well
+        self.flavor1['extra_specs'] = {'resources:CUSTOM_MAGIC': 1}
 
 
 class ServerSoftDeleteTests(integrated_helpers.ProviderUsageBaseTestCase):
@@ -3707,6 +3771,21 @@ class ServerSoftDeleteTests(integrated_helpers.ProviderUsageBaseTestCase):
         # Now we want a real delete
         self.flags(reclaim_instance_interval=0)
         self._delete_and_check_allocations(server)
+
+
+class ServerSoftDeleteTestsWithNestedResourceRequest(ServerSoftDeleteTests):
+    compute_driver = 'fake.MediumFakeDriverWithNestedCustomResources'
+
+    def setUp(self):
+        super(ServerSoftDeleteTestsWithNestedResourceRequest, self).setUp()
+        # modify the flavor used in the test base class to require one piece of
+        # CUSTOM_MAGIC resource as well.
+
+        self.api.post_extra_spec(
+            self.flavor1['id'], {'extra_specs': {'resources:CUSTOM_MAGIC': 1}})
+        # save the extra_specs in the flavor stored in the test case as
+        # well
+        self.flavor1['extra_specs'] = {'resources:CUSTOM_MAGIC': 1}
 
 
 class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
