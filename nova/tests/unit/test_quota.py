@@ -285,10 +285,9 @@ class FakeDriver(object):
         self.called.append(('get_defaults', context, resources))
         return resources
 
-    def get_class_quotas(self, context, resources, quota_class,
-                         defaults=True):
+    def get_class_quotas(self, context, resources, quota_class):
         self.called.append(('get_class_quotas', context, resources,
-                            quota_class, defaults))
+                            quota_class))
         return resources
 
     def get_user_quotas(self, context, resources, project_id, user_id,
@@ -444,16 +443,12 @@ class QuotaEngineTestCase(test.TestCase):
         driver = FakeDriver()
         quota_obj = self._make_quota_obj(driver)
         result1 = quota_obj.get_class_quotas(context, 'test_class')
-        result2 = quota_obj.get_class_quotas(context, 'test_class', False)
 
         self.assertEqual(driver.called, [
                 ('get_class_quotas', context, quota_obj._resources,
-                 'test_class', True),
-                ('get_class_quotas', context, quota_obj._resources,
-                 'test_class', False),
+                 'test_class'),
                 ])
         self.assertEqual(result1, quota_obj._resources)
-        self.assertEqual(result2, quota_obj._resources)
 
     def test_get_user_quotas(self):
         context = FakeContext(None, None)
@@ -665,19 +660,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                 key_pairs=100,
                 server_groups=10,
                 server_group_members=10,
-                ))
-
-    def test_get_class_quotas_no_defaults(self):
-        self._stub_quota_class_get_all_by_name()
-        result = self.driver.get_class_quotas(None, quota.QUOTAS._resources,
-                                              'test_class', False)
-
-        self.assertEqual(self.calls, ['quota_class_get_all_by_name'])
-        self.assertEqual(result, dict(
-                instances=5,
-                ram=25 * 1024,
-                metadata_items=64,
-                injected_file_content_bytes=5 * 1024,
                 ))
 
     def _stub_get_by_project_and_user(self):
@@ -2018,13 +2000,6 @@ class NoopQuotaDriverTestCase(test.TestCase):
         result = self.driver.get_class_quotas(None,
                                               quota.QUOTAS._resources,
                                               'test_class')
-        self.assertEqual(self.expected_without_dict, result)
-
-    def test_get_class_quotas_no_defaults(self):
-        result = self.driver.get_class_quotas(None,
-                                              quota.QUOTAS._resources,
-                                              'test_class',
-                                              False)
         self.assertEqual(self.expected_without_dict, result)
 
     def test_get_project_quotas(self):
