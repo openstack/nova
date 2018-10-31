@@ -117,6 +117,9 @@ Upgrade
     See https://bugs.launchpad.net/nova/+bug/1759316 for details.
   * Checks that existing instances have been migrated to have a matching
     request spec in the API DB.
+  * Checks are added for the **nova-consoleauth** service to warn and provide
+    additional instructions to set **[workarounds]enable_consoleauth = True**
+    while performing a live/rolling upgrade.
 
 See Also
 ========
