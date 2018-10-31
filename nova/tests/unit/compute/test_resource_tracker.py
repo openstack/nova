@@ -1412,18 +1412,24 @@ class TestUpdateComputeNode(BaseTestCase):
                 'min_unit': 1,
                 'max_unit': 2,
                 'step_size': 1,
+                'allocation_ratio': 16.0,
+                'reserved': 1,
             },
             rc_fields.ResourceClass.MEMORY_MB: {
                 'total': 4096,
                 'min_unit': 1,
                 'max_unit': 4096,
                 'step_size': 1,
+                'allocation_ratio': 1.5,
+                'reserved': 512,
             },
             rc_fields.ResourceClass.DISK_GB: {
                 'total': 500,
                 'min_unit': 1,
                 'max_unit': 500,
                 'step_size': 1,
+                'allocation_ratio': 1.0,
+                'reserved': 1,
             },
         }
 
@@ -1431,24 +1437,13 @@ class TestUpdateComputeNode(BaseTestCase):
             self.assertIsNone(allocations)
             ptree.update_inventory(nodename, fake_inv)
 
-        # These will get set on ptree by _normalize_inventory_from_cn_obj
-        self.flags(reserved_host_disk_mb=1024,
-                   reserved_host_memory_mb=512,
-                   reserved_host_cpus=1)
-
         self._setup_rt()
 
         # Emulate a driver that has implemented the update_from_provider_tree()
         # virt driver method
         self.driver_mock.update_provider_tree.side_effect = fake_upt
 
-        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
-        # TODO(efried): These are being overwritten to 0.0 on the global
-        # somewhere else in this module. Find and fix that, and remove these:
-        orig_compute.cpu_allocation_ratio = 16.0
-        orig_compute.ram_allocation_ratio = 1.5
-        orig_compute.disk_allocation_ratio = 1.0
-
+        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()        #
         self.rt.compute_nodes[_NODENAME] = orig_compute
         self.rt.old_resources[_NODENAME] = orig_compute
 
@@ -1474,14 +1469,11 @@ class TestUpdateComputeNode(BaseTestCase):
             mock.sentinel.ctx, ptree, allocations=None)
         self.sched_client_mock.update_compute_node.assert_not_called()
         self.sched_client_mock.set_inventory_for_provider.assert_not_called()
-        # _normalize_inventory_from_cn_obj should have set allocation ratios
-        # and reserved values
         exp_inv = copy.deepcopy(fake_inv)
-        # These ratios come from the compute node fixture
+        # These ratios and reserved amounts come from fake_upt
         exp_inv[rc_fields.ResourceClass.VCPU]['allocation_ratio'] = 16.0
         exp_inv[rc_fields.ResourceClass.MEMORY_MB]['allocation_ratio'] = 1.5
         exp_inv[rc_fields.ResourceClass.DISK_GB]['allocation_ratio'] = 1.0
-        # and these come from the conf values set above
         exp_inv[rc_fields.ResourceClass.VCPU]['reserved'] = 1
         exp_inv[rc_fields.ResourceClass.MEMORY_MB]['reserved'] = 512
         # 1024MB in GB

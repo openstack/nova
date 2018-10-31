@@ -938,17 +938,6 @@ class ResourceTracker(object):
                 self.driver.update_provider_tree(prov_tree, nodename,
                                                  allocations=allocs)
 
-            # We need to normalize inventory data for the compute node provider
-            # (inject allocation ratio and reserved amounts from the
-            # compute_node record if not set by the virt driver) because the
-            # virt driver does not and will not have access to the compute_node
-            inv_data = prov_tree.data(nodename).inventory
-            # TODO(mriedem): Stop calling _normalize_inventory_from_cn_obj when
-            # a virt driver implements update_provider_tree() since we expect
-            # the driver to manage the allocation ratios and reserved resource
-            # amounts.
-            _normalize_inventory_from_cn_obj(inv_data, compute_node)
-            prov_tree.update_inventory(nodename, inv_data)
             # Flush any changes. If we processed ReshapeNeeded above, allocs is
             # not None, and this will hit placement's POST /reshaper route.
             reportclient.update_from_provider_tree(context, prov_tree,
