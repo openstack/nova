@@ -30,6 +30,7 @@ import mock
 from neutronclient.common import exceptions as neutron_client_exc
 from oslo_concurrency import lockutils
 from oslo_config import cfg
+from oslo_db import exception as db_exc
 import oslo_messaging as messaging
 from oslo_messaging import conffixture as messaging_conffixture
 from oslo_privsep import daemon as privsep_daemon
@@ -41,6 +42,7 @@ from wsgi_intercept import interceptor
 from nova.api.openstack.compute import tenant_networks
 from nova.api.openstack import wsgi_app
 from nova.api import wsgi
+from nova.compute import multi_cell_list
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova.db import migration
@@ -1891,3 +1893,91 @@ class NoopQuotaDriverFixture(fixtures.Fixture):
         # When using self.flags, the concurrent test failures returned.
         CONF.set_override('driver', 'nova.quota.NoopQuotaDriver', 'quota')
         self.addCleanup(CONF.clear_override, 'driver', 'quota')
+
+
+class DownCellFixture(fixtures.Fixture):
+    """A fixture to simulate when a cell is down either due to error or timeout
+
+    This fixture will stub out the scatter_gather_cells routine used in various
+    cells-related API operations like listing/showing server details to return
+    a ``oslo_db.exception.DBError`` per cell in the results. Therefore
+    it is best used with a test scenario like this:
+
+    1. Create a server successfully.
+    2. Using the fixture, list/show servers. Depending on the microversion
+       used, the API should either return minimal results or by default skip
+       the results from down cells.
+
+    Example usage::
+
+        with nova_fixtures.DownCellFixture():
+            # List servers with down cells.
+            self.api.get_servers()
+            # Show a server in a down cell.
+            self.api.get_server(server['id'])
+            # List services with down cells.
+            self.admin_api.api_get('/os-services')
+    """
+    def __init__(self, down_cell_mappings=None):
+        self.down_cell_mappings = down_cell_mappings
+
+    def setUp(self):
+        super(DownCellFixture, self).setUp()
+
+        def stub_scatter_gather_cells(ctxt, cell_mappings, timeout, fn, *args,
+                                      **kwargs):
+            # Return a dict with an entry per cell mapping where the results
+            # are some kind of exception.
+            up_cell_mappings = objects.CellMappingList()
+            if not self.down_cell_mappings:
+                # User has not passed any down cells explicitly, so all cells
+                # are considered as down cells.
+                self.down_cell_mappings = cell_mappings
+            else:
+                # User has passed down cell mappings, so the rest of the cells
+                # should be up meaning we should return the right results.
+                # We assume that down cells will be a subset of the
+                # cell_mappings.
+                down_cell_uuids = [cell.uuid
+                    for cell in self.down_cell_mappings]
+                up_cell_mappings.objects = [cell
+                    for cell in cell_mappings
+                        if cell.uuid not in down_cell_uuids]
+
+            def wrap(cell_uuid, thing):
+                # We should embed the cell_uuid into the context before
+                # wrapping since its used to calcualte the cells_timed_out and
+                # cells_failed properties in the object.
+                ctxt.cell_uuid = cell_uuid
+                return multi_cell_list.RecordWrapper(ctxt, sort_ctx, thing)
+
+            if fn is multi_cell_list.query_wrapper:
+                # If the function called through scatter-gather utility is the
+                # multi_cell_list.query_wrapper, we should wrap the exception
+                # object into the multi_cell_list.RecordWrapper. This is
+                # because unlike the other functions where the exception object
+                # is returned directly, the query_wrapper wraps this into the
+                # RecordWrapper object format. So if we do not wrap it will
+                # blow up at the point of generating results from heapq further
+                # down the stack.
+                sort_ctx = multi_cell_list.RecordSortContext([], [])
+                ret1 = {
+                    cell_mapping.uuid: [wrap(cell_mapping.uuid,
+                        db_exc.DBError())]
+                    for cell_mapping in self.down_cell_mappings
+                }
+            else:
+                ret1 = {
+                    cell_mapping.uuid: db_exc.DBError()
+                    for cell_mapping in self.down_cell_mappings
+                }
+            ret2 = {}
+            for cell in up_cell_mappings:
+                with context.target_cell(ctxt, cell) as cctxt:
+                    ctxt.cell_uuid = cell.uuid
+                    result = fn(cctxt, *args, **kwargs)
+                ret2[cell.uuid] = result
+            return dict(list(ret1.items()) + list(ret2.items()))
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.context.scatter_gather_cells', stub_scatter_gather_cells))

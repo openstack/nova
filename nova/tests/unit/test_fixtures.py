@@ -20,6 +20,7 @@ import sys
 import fixtures as fx
 import mock
 from oslo_config import cfg
+from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
@@ -38,6 +39,7 @@ from nova.objects import service as service_obj
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import conf_fixture
+from nova.tests.unit import fake_instance
 from nova import utils
 
 CONF = cfg.CONF
@@ -512,3 +514,65 @@ class TestWarningsFixture(test.TestCase):
         invalid_migration_kwargs["uuid"] = "fake_id"
         self.assertRaises(FutureWarning, objects.migration.Migration,
                           **invalid_migration_kwargs)
+
+
+class TestDownCellFixture(test.TestCase):
+
+    def test_fixture(self):
+        # The test setup creates two cell mappings (cell0 and cell1) by
+        # default. Let's first list servers across all cells while they are
+        # "up" to make sure that works as expected. We'll create a single
+        # instance in cell1.
+        ctxt = context.get_admin_context()
+        cell1 = self.cell_mappings[test.CELL1_NAME]
+        with context.target_cell(ctxt, cell1) as cctxt:
+            inst = fake_instance.fake_instance_obj(cctxt)
+            if 'id' in inst:
+                delattr(inst, 'id')
+            inst.create()
+
+        # Now list all instances from all cells (should get one back).
+        results = context.scatter_gather_all_cells(
+            ctxt, objects.InstanceList.get_all)
+        self.assertEqual(2, len(results))
+        self.assertEqual(0, len(results[objects.CellMapping.CELL0_UUID]))
+        self.assertEqual(1, len(results[cell1.uuid]))
+
+        # Now do the same but with the DownCellFixture which should result
+        # in exception results from both cells.
+        with fixtures.DownCellFixture():
+            results = context.scatter_gather_all_cells(
+                ctxt, objects.InstanceList.get_all)
+            self.assertEqual(2, len(results))
+            for result in results.values():
+                self.assertIsInstance(result, db_exc.DBError)
+
+    def test_fixture_when_explicitly_passing_down_cell_mappings(self):
+        # The test setup creates two cell mappings (cell0 and cell1) by
+        # default. We'll create one instance per cell and pass cell0 as
+        # the down cell. We should thus get db_exc.DBError for cell0 and
+        # correct InstanceList object from cell1.
+        ctxt = context.get_admin_context()
+        cell0 = self.cell_mappings['cell0']
+        cell1 = self.cell_mappings['cell1']
+        with context.target_cell(ctxt, cell0) as cctxt:
+            inst1 = fake_instance.fake_instance_obj(cctxt)
+            if 'id' in inst1:
+                delattr(inst1, 'id')
+            inst1.create()
+        with context.target_cell(ctxt, cell1) as cctxt:
+            inst2 = fake_instance.fake_instance_obj(cctxt)
+            if 'id' in inst2:
+                delattr(inst2, 'id')
+            inst2.create()
+        with fixtures.DownCellFixture([cell0]):
+            results = context.scatter_gather_all_cells(
+                ctxt, objects.InstanceList.get_all)
+            self.assertEqual(2, len(results))
+            for cell_uuid, result in results.items():
+                if cell_uuid == cell0.uuid:
+                    self.assertIsInstance(result, db_exc.DBError)
+                else:
+                    self.assertIsInstance(result, objects.InstanceList)
+                    self.assertEqual(1, len(result))
+                    self.assertEqual(inst2.uuid, result[0].uuid)
