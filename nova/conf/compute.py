@@ -669,9 +669,10 @@ Defines which physical CPUs (pCPUs) will be used for best-effort guest vCPU
 resources.
 
 Currently only used by libvirt driver to place guest emulator threads when
-hw:emulator_threads_policy:share.
+the flavor extra spec is set to ``hw:emulator_threads_policy=share``.
 
-::
+For example::
+
     cpu_shared_set = "4-12,^8,15"
 """),
     cfg.BoolOpt('live_migration_wait_for_vif_plug',
