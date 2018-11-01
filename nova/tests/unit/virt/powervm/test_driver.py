@@ -146,7 +146,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
         self.assertEqual('sys', self.drv.host_wrapper)
 
     @contextlib.contextmanager
-    def _update_provider_tree(self):
+    def _update_provider_tree(self, allocations=None):
         """Host resource dict gets converted properly to provider tree inv."""
 
         with mock.patch('nova.virt.powervm.host.'
@@ -182,7 +182,8 @@ class TestPowerVMDriver(test.NoDBTestCase):
             ptree.new_root('compute_host', uuids.cn)
             # Let the caller muck with these
             yield ptree, exp_inv
-            self.drv.update_provider_tree(ptree, 'compute_host')
+            self.drv.update_provider_tree(ptree, 'compute_host',
+                                          allocations=allocations)
             self.assertEqual(exp_inv, ptree.data('compute_host').inventory)
             mock_bhrfm.assert_called_once_with('host_wrapper')
 
@@ -190,6 +191,10 @@ class TestPowerVMDriver(test.NoDBTestCase):
         # Basic: no inventory already on the provider, no extra providers, no
         # aggregates or traits.
         with self._update_provider_tree():
+            pass
+
+    def test_update_provider_tree_ignore_allocations(self):
+        with self._update_provider_tree(allocations="This is ignored"):
             pass
 
     def test_update_provider_tree_conf_overrides(self):
