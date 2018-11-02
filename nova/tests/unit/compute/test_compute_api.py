@@ -5856,12 +5856,11 @@ class _ComputeAPIUnitTestMixIn(object):
                                                       'security_groups',
                                                       'info_cache'])
 
-    @mock.patch.object(objects.Service, 'get_minimum_version', return_value=15)
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_get_instance_not_in_cell(self, mock_get_inst, mock_get_build_req,
-                mock_get_inst_map, mock_get_min_service):
+                mock_get_inst_map):
         build_req_obj = fake_build_request.fake_req_obj(self.context)
         mock_get_inst_map.return_value = objects.InstanceMapping(
                 cell_mapping=None)
@@ -5881,8 +5880,6 @@ class _ComputeAPIUnitTestMixIn(object):
                 expected_attrs=['metadata', 'system_metadata',
                                 'security_groups', 'info_cache'])
         self.assertEqual(instance, inst_from_build_req)
-        mock_get_min_service.assert_called_once_with(self.context,
-                                                     'nova-osapi_compute')
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')

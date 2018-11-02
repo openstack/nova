@@ -2439,33 +2439,9 @@ class API(base.Base):
 
     def _get_instance(self, context, instance_uuid, expected_attrs,
                       cell_down_support=False):
-        # Before service version 15 the BuildRequest is not cleaned up during
-        # a delete request so there is no reason to look it up here as we can't
-        # trust that it's not referencing a deleted instance. Also even if
-        # there is an instance mapping we don't need to honor it for older
-        # service versions.
-        service_version = objects.Service.get_minimum_version(
-            context, 'nova-osapi_compute')
-        # If we're on cellsv1, we also need to consult the top-level
-        # merged replica instead of the cell directly, so fall through
-        # here in that case as well.
-        if service_version < 15 or CONF.cells.enable:
-            # If not using cells v1, we need to log a warning about the API
-            # service version being less than 15 (that check was added in
-            # newton), which indicates there is some lingering data during the
-            # transition to cells v2 which could cause an InstanceNotFound
-            # here. The warning message is a sort of breadcrumb.
-            # This can all go away once we drop cells v1 and assert that all
-            # deployments have upgraded from a base cells v2 setup with
-            # mappings.
-            if not CONF.cells.enable:
-                LOG.warning('The nova-osapi_compute service version is from '
-                            'before Ocata and may cause problems looking up '
-                            'instances in a cells v2 setup. Check your '
-                            'nova-api service configuration and cell '
-                            'mappings. You may need to remove stale '
-                            'nova-osapi_compute service records from the cell '
-                            'database.')
+        # If we're on cellsv1, we need to consult the top-level
+        # merged replica instead of the cell directly.
+        if CONF.cells.enable:
             return objects.Instance.get_by_uuid(context, instance_uuid,
                                                 expected_attrs=expected_attrs)
         inst_map = self._get_instance_map_or_none(context, instance_uuid)
@@ -2491,6 +2467,13 @@ class API(base.Base):
                 else:
                     raise exception.InstanceNotFound(instance_id=instance_uuid)
         else:
+            # If we got here, we don't have an instance mapping, but we aren't
+            # sure why. The instance mapping might be missing because the
+            # upgrade is incomplete (map_instances wasn't run). Or because the
+            # instance was deleted and the DB was archived at which point the
+            # mapping is deleted. The former case is bad, but because of the
+            # latter case we can't really log any kind of warning/error here
+            # since it might be normal.
             raise exception.InstanceNotFound(instance_id=instance_uuid)
 
         return instance
