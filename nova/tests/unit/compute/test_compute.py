@@ -11560,7 +11560,7 @@ class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
         # Limit is not supplied to the DB when using an IP filter
         with mock.patch('nova.compute.instance_list.'
                         'get_instance_objects_sorted') as m_get:
-            m_get.return_value = objects.InstanceList(objects=[])
+            m_get.return_value = objects.InstanceList(objects=[]), list()
             self.compute_api.get_all(c, search_opts={'ip': '.10'}, limit=1)
             self.assertEqual(1, m_get.call_count)
             args = m_get.call_args[0]
@@ -11575,7 +11575,7 @@ class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
         # No IP filter, verify that the limit is passed
         with mock.patch('nova.compute.instance_list.'
                         'get_instance_objects_sorted') as m_get:
-            m_get.return_value = objects.InstanceList(objects=[])
+            m_get.return_value = objects.InstanceList(objects=[]), list()
             self.compute_api.get_all(c, search_opts={}, limit=1)
             self.assertEqual(1, m_get.call_count)
             args = m_get.call_args[0]

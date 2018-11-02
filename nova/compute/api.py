@@ -2339,6 +2339,43 @@ class API(base.Base):
 
         self.compute_rpcapi.trigger_crash_dump(context, instance)
 
+    def _generate_minimal_construct_for_down_cells(self, context,
+                                                   down_cell_uuids,
+                                                   project, limit):
+        """Generate a list of minimal instance constructs for a given list of
+        cells that did not respond to a list operation. This will list
+        every instance mapping in the affected cells and return a minimal
+        objects.Instance for each (non-queued-for-delete) mapping.
+
+        :param context: RequestContext
+        :param down_cell_uuids: A list of cell UUIDs that did not respond
+        :param project: A project ID to filter mappings
+        :param limit: A numeric limit on the number of results, or None
+        :returns: An InstanceList() of partial Instance() objects
+        """
+        unavailable_servers = objects.InstanceList()
+        for cell_uuid in down_cell_uuids:
+            LOG.warning("Cell %s is not responding and hence only "
+                        "partial results are available from this "
+                        "cell if any.", cell_uuid)
+            instance_mappings = (objects.InstanceMappingList.
+                get_not_deleted_by_cell_and_project(context, cell_uuid,
+                                                    project, limit=limit))
+            for im in instance_mappings:
+                unavailable_servers.objects.append(
+                    objects.Instance(
+                        context=context,
+                        uuid=im.instance_uuid,
+                        project_id=im.project_id,
+                        created_at=im.created_at
+                    )
+                )
+            if limit is not None:
+                limit -= len(instance_mappings)
+                if limit <= 0:
+                    break
+        return unavailable_servers
+
     def _get_instance_map_or_none(self, context, instance_uuid):
         try:
             inst_map = objects.InstanceMapping.get_by_instance_uuid(
@@ -2435,7 +2472,8 @@ class API(base.Base):
         return instance
 
     def get_all(self, context, search_opts=None, limit=None, marker=None,
-                expected_attrs=None, sort_keys=None, sort_dirs=None):
+                expected_attrs=None, sort_keys=None, sort_dirs=None,
+                cell_down_support=False):
         """Get all instances filtered by one of the given parameters.
 
         If there is no filter and the context is an admin, it will retrieve
@@ -2449,6 +2487,13 @@ class API(base.Base):
         secondary sort ket, etc.). For each sort key, the associated sort
         direction is based on the list of sort directions in the 'sort_dirs'
         parameter.
+
+        :param cell_down_support: True if the API (and caller) support
+                                  returning a minimal instance
+                                  construct if the relevant cell is
+                                  down. If False, instances from
+                                  unreachable cells will be omitted.
+
         """
         if search_opts is None:
             search_opts = {}
@@ -2577,7 +2622,7 @@ class API(base.Base):
                 context, filters, limit, marker, fields, sort_keys,
                 sort_dirs)
         else:
-            insts = instance_list.get_instance_objects_sorted(
+            insts, down_cell_uuids = instance_list.get_instance_objects_sorted(
                 context, filters, limit, marker, fields, sort_keys, sort_dirs)
 
         def _get_unique_filter_method():
@@ -2603,6 +2648,15 @@ class API(base.Base):
 
         if filter_ip:
             instances = self._ip_filter(instances, filters, orig_limit)
+
+        if cell_down_support:
+            # API and client want minimal construct instances for any cells
+            # that didn't return, so generate and prefix those to the actual
+            # results.
+            project = search_opts.get('project_id', context.project_id)
+            limit = (orig_limit - len(instances)) if limit else limit
+            return (self._generate_minimal_construct_for_down_cells(context,
+                down_cell_uuids, project, limit) + instances)
 
         return instances
 

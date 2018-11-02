@@ -80,9 +80,9 @@ class InstanceListTestCase(test.TestCase):
         columns = []
         sort_keys = ['uuid']
         sort_dirs = ['asc']
-        insts = instance_list.get_instances_sorted(self.context, filters,
-                                                   limit, marker, columns,
-                                                   sort_keys, sort_dirs)
+        obj, insts = instance_list.get_instances_sorted(self.context, filters,
+                                                        limit, marker, columns,
+                                                        sort_keys, sort_dirs)
         uuids = [inst['uuid'] for inst in insts]
         self.assertEqual(sorted(uuids), uuids)
         self.assertEqual(len(self.instances), len(uuids))
@@ -94,9 +94,9 @@ class InstanceListTestCase(test.TestCase):
         columns = []
         sort_keys = ['uuid']
         sort_dirs = ['desc']
-        insts = instance_list.get_instances_sorted(self.context, filters,
-                                                   limit, marker, columns,
-                                                   sort_keys, sort_dirs)
+        obj, insts = instance_list.get_instances_sorted(self.context, filters,
+                                                        limit, marker, columns,
+                                                        sort_keys, sort_dirs)
         uuids = [inst['uuid'] for inst in insts]
         self.assertEqual(list(reversed(sorted(uuids))), uuids)
         self.assertEqual(len(self.instances), len(uuids))
@@ -108,9 +108,9 @@ class InstanceListTestCase(test.TestCase):
         columns = []
         sort_keys = ['uuid']
         sort_dirs = ['asc']
-        insts = instance_list.get_instances_sorted(self.context, filters,
-                                                   limit, marker, columns,
-                                                   sort_keys, sort_dirs)
+        obj, insts = instance_list.get_instances_sorted(self.context, filters,
+                                                        limit, marker, columns,
+                                                        sort_keys, sort_dirs)
         uuids = [inst['uuid'] for inst in insts]
         expected = [inst['uuid'] for inst in self.instances
                     if inst['instance_type_id'] == 1]
@@ -123,35 +123,35 @@ class InstanceListTestCase(test.TestCase):
         columns = []
         sort_keys = None
         sort_dirs = None
-        insts = instance_list.get_instances_sorted(self.context, filters,
-                                                   limit, marker, columns,
-                                                   sort_keys, sort_dirs)
+        obj, insts = instance_list.get_instances_sorted(self.context, filters,
+                                                        limit, marker, columns,
+                                                        sort_keys, sort_dirs)
         uuids = set([inst['uuid'] for inst in insts])
         expected = set([inst['uuid'] for inst in self.instances])
         self.assertEqual(expected, uuids)
 
     def test_get_sorted_with_limit(self):
-        insts = instance_list.get_instances_sorted(self.context, {},
-                                                   5, None,
-                                                   [], ['uuid'], ['asc'])
+        obj, insts = instance_list.get_instances_sorted(self.context, {},
+                                                        5, None,
+                                                        [], ['uuid'], ['asc'])
         uuids = [inst['uuid'] for inst in insts]
         had_uuids = [inst.uuid for inst in self.instances]
         self.assertEqual(sorted(had_uuids)[:5], uuids)
         self.assertEqual(5, len(uuids))
 
     def test_get_sorted_with_large_limit(self):
-        insts = instance_list.get_instances_sorted(self.context, {},
-                                                   5000, None,
-                                                   [], ['uuid'], ['asc'])
+        obj, insts = instance_list.get_instances_sorted(self.context, {},
+                                                        5000, None,
+                                                        [], ['uuid'], ['asc'])
         uuids = [inst['uuid'] for inst in insts]
         self.assertEqual(sorted(uuids), uuids)
         self.assertEqual(len(self.instances), len(uuids))
 
     def test_get_sorted_with_large_limit_batched(self):
-        insts = instance_list.get_instances_sorted(self.context, {},
-                                                   5000, None,
-                                                   [], ['uuid'], ['asc'],
-                                                   batch_size=2)
+        obj, insts = instance_list.get_instances_sorted(self.context, {},
+                                                        5000, None,
+                                                        [], ['uuid'], ['asc'],
+                                                        batch_size=2)
         uuids = [inst['uuid'] for inst in insts]
         self.assertEqual(sorted(uuids), uuids)
         self.assertEqual(len(self.instances), len(uuids))
@@ -191,7 +191,8 @@ class InstanceListTestCase(test.TestCase):
             batch = list(
                 instance_list.get_instances_sorted(self.context, {},
                                                    limit, marker,
-                                                   [], [sort_by], [sort_dir]))
+                                                   [], [sort_by],
+                                                   [sort_dir])[1])
             if not batch:
                 # This should only happen when we've pulled the last empty
                 # page because we used the marker of the last instance. If
@@ -295,14 +296,14 @@ class InstanceListTestCase(test.TestCase):
         before = list(
             instance_list.get_instances_sorted(self.context, {},
                                                None, marker,
-                                               [], None, None))
+                                               [], None, None)[1])
 
         db.instance_destroy(self.context, marker)
 
         after = list(
             instance_list.get_instances_sorted(self.context, {},
                                                None, marker,
-                                               [], None, None))
+                                               [], None, None)[1])
 
         self.assertEqual(before, after)
 
@@ -310,7 +311,7 @@ class InstanceListTestCase(test.TestCase):
         self.assertRaises(exception.MarkerNotFound,
                           list, instance_list.get_instances_sorted(
                               self.context, {}, None, 'not-a-marker',
-                              [], None, None))
+                              [], None, None)[1])
 
     def test_get_sorted_with_purged_instance(self):
         """Test that we handle a mapped but purged instance."""
@@ -323,7 +324,7 @@ class InstanceListTestCase(test.TestCase):
         self.assertRaises(exception.MarkerNotFound,
                           list, instance_list.get_instances_sorted(
                               self.context, {}, None, uuids.missing,
-                              [], None, None))
+                              [], None, None)[1])
 
     def _test_get_paginated_with_filter(self, filters):
 
@@ -337,7 +338,7 @@ class InstanceListTestCase(test.TestCase):
                                                    filters,
                                                    1, marker, [],
                                                    ['hostname'],
-                                                   ['asc']))
+                                                   ['asc'])[1])
             if not batch:
                 break
             found_uuids.extend([x['uuid'] for x in batch])
@@ -401,7 +402,7 @@ class InstanceListTestCase(test.TestCase):
             instance_list.get_instances_sorted(self.context, {},
                                                None, None,
                                                ['fault'],
-                                               ['hostname'], ['asc']))
+                                               ['hostname'], ['asc'])[1])
 
         # Two of the instances in each cell have faults (0th and 2nd)
         expected_faults = self.NUMBER_OF_CELLS * 2
@@ -425,7 +426,7 @@ class InstanceListTestCase(test.TestCase):
                 instance_list.get_instances_sorted(self.context, {},
                                                    1, marker,
                                                    ['fault'],
-                                                   ['hostname'], ['asc']))
+                                                   ['hostname'], ['asc'])[1])
             if not batch:
                 break
             insts.extend(batch)
@@ -448,7 +449,8 @@ class InstanceListTestCase(test.TestCase):
             instance_list.get_instances_sorted(self.context, {},
                                                None, None, [],
                                                ['uuid'], ['asc'],
-                                               cell_mappings=self.cells[:-1]))
+                                               cell_mappings=self.cells[:-1])
+                                               [1])
         found_uuids = [inst['hostname'] for inst in instances]
         had_uuids = [inst['hostname'] for inst in self.instances
                      if inst['uuid'] not in last_cell_uuids]
@@ -511,7 +513,7 @@ class TestInstanceListObjects(test.TestCase):
         expected_attrs = []
         sort_keys = ['uuid']
         sort_dirs = ['asc']
-        insts = instance_list.get_instance_objects_sorted(
+        insts, down_cell_uuids = instance_list.get_instance_objects_sorted(
             self.context, filters, limit, marker, expected_attrs,
             sort_keys, sort_dirs)
         found_uuids = [x.uuid for x in insts]
@@ -529,7 +531,7 @@ class TestInstanceListObjects(test.TestCase):
         expected_attrs = ['fault']
         sort_keys = ['uuid']
         sort_dirs = ['asc']
-        insts = instance_list.get_instance_objects_sorted(
+        insts, down_cell_uuids = instance_list.get_instance_objects_sorted(
             self.context, filters, limit, marker, expected_attrs,
             sort_keys, sort_dirs)
         found_uuids = [x.uuid for x in insts]
@@ -549,11 +551,11 @@ class TestInstanceListObjects(test.TestCase):
         have a stable ordering, even when we only claim to care about
         created_at.
         """
-        instp1 = instance_list.get_instance_objects_sorted(
+        instp1, down_cell_uuids = instance_list.get_instance_objects_sorted(
             self.context, {}, None, None, [],
             ['created_at'], ['asc'])
         self.assertEqual(len(self.instances), len(instp1))
-        instp2 = instance_list.get_instance_objects_sorted(
+        instp2, down_cell_uuids = instance_list.get_instance_objects_sorted(
             self.context, {}, None, instp1[-1]['uuid'], [],
             ['created_at'], ['asc'])
         self.assertEqual(0, len(instp2))
