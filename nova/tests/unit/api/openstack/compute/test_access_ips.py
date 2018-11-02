@@ -38,8 +38,9 @@ class AccessIPsAPIValidationTestV21(test.TestCase):
         fakes.stub_out_nw_api(self)
         self._set_up_controller()
         fake.stub_out_image_service(self)
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      fakes.fake_instance_get())
+        self.stub_out('nova.compute.api.API.get',
+                      # This project_id matches fakes.HTTPRequest.blank.
+                      fakes.fake_compute_get(project_id='fake'))
         self.stub_out('nova.objects.instance.Instance.save', fake_save)
         self.stub_out('nova.compute.api.API.rebuild', fake_rebuild)
 
