@@ -299,65 +299,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
                 services.c.deleted == 0,
                 services.c.forced_down == false())).scalar()
 
-    def _check_api_service_version(self):
-        """Checks nova-osapi_compute service versions across cells.
-
-        For non-cellsv1 deployments, based on how the [database]/connection
-        is configured for the nova-api service, the nova-osapi_compute service
-        versions before 15 will only attempt to lookup instances from the
-        local database configured for the nova-api service directly.
-
-        This can cause issues if there are newer API service versions in cell1
-        after the upgrade to Ocata, but lingering older API service versions
-        in an older database.
-
-        This check will scan all cells looking for a minimum nova-osapi_compute
-        service version less than 15 and if found, emit a warning that those
-        service entries likely need to be cleaned up.
-        """
-        # If we're using cells v1 then we don't care about this.
-        if CONF.cells.enable:
-            return upgradecheck.Result(upgradecheck.Code.SUCCESS)
-
-        meta = MetaData(bind=db_session.get_api_engine())
-        cell_mappings = Table('cell_mappings', meta, autoload=True)
-        mappings = cell_mappings.select().execute().fetchall()
-
-        if not mappings:
-            # There are no cell mappings so we can't determine this, just
-            # return a warning. The cellsv2 check would have already failed
-            # on this.
-            msg = (_('Unable to determine API service versions without '
-                     'cell mappings.'))
-            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
-
-        ctxt = nova_context.get_admin_context()
-        cells_with_old_api_services = []
-        for mapping in mappings:
-            with nova_context.target_cell(ctxt, mapping) as cctxt:
-                # Get the minimum nova-osapi_compute service version in this
-                # cell.
-                min_version = self._get_min_service_version(
-                    cctxt, 'nova-osapi_compute')
-                if min_version is not None and min_version < 15:
-                    cells_with_old_api_services.append(mapping['uuid'])
-
-        # If there are any cells with older API versions, we report it as a
-        # warning since we don't know how the actual nova-api service is
-        # configured, but we need to give the operator some indication that
-        # they have something to investigate/cleanup.
-        if cells_with_old_api_services:
-            msg = (_("The following cells have 'nova-osapi_compute' services "
-                     "with version < 15 which may cause issues when querying "
-                     "instances from the API: %s. Depending on how nova-api "
-                     "is configured, this may not be a problem, but is worth "
-                     "investigating and potentially cleaning up those older "
-                     "records. See "
-                     "https://bugs.launchpad.net/nova/+bug/1759316 for "
-                     "details.") % ', '.join(cells_with_old_api_services))
-            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
-        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
-
     def _check_request_spec_migration(self):
         """Checks to make sure request spec migrations are complete.
 
@@ -513,8 +454,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         (_('Placement API'), _check_placement),
         # Added in Rocky (but also useful going back to Pike)
         (_('Ironic Flavor Migration'), _check_ironic_flavor_migration),
-        # Added in Rocky (but is backportable to Ocata)
-        (_('API Service Version'), _check_api_service_version),
         # Added in Rocky
         (_('Request Spec Migration'), _check_request_spec_migration),
         # Added in Stein (but also useful going back to Rocky)
