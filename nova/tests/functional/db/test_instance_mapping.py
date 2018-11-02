@@ -256,7 +256,7 @@ class InstanceMappingListTestCase(test.NoDBTestCase):
         self.assertEqual(sorted(uuids),
                          sorted([m.instance_uuid for m in mappings]))
 
-    def test_get_by_cell_and_project(self):
+    def test_get_not_deleted_by_cell_and_project(self):
         cells = []
         # Create two cells
         for uuid in (uuidsentinel.cell1, uuidsentinel.cell2):
@@ -265,30 +265,87 @@ class InstanceMappingListTestCase(test.NoDBTestCase):
                                           transport_url='fake://')
             cm.create()
             cells.append(cm)
-        # With each cell having two instance_mappings of two project_ids.
-        uuids = {cells[0].id: [uuidsentinel.c1i1, uuidsentinel.c1i2],
-                 cells[1].id: [uuidsentinel.c2i1, uuidsentinel.c2i2]}
-        project_ids = ['fake-project-1', 'fake-project-2']
-        for cell_id, uuid in uuids.items():
-            instance_mapping.InstanceMapping._create_in_db(
-                    self.context,
-                    {'project_id': project_ids[0],
-                     'cell_id': cell_id,
-                     'instance_uuid': uuid[0]})
-            instance_mapping.InstanceMapping._create_in_db(
-                    self.context,
-                    {'project_id': project_ids[1],
-                     'cell_id': cell_id,
-                     'instance_uuid': uuid[1]})
 
-        ims = instance_mapping.InstanceMappingList.get_by_cell_and_project(
-            self.context, cells[0].id, 'fake-project-2')
+        uuids = {cells[0]: [uuidsentinel.c1i1, uuidsentinel.c1i2],
+                 cells[1]: [uuidsentinel.c2i1, uuidsentinel.c2i2]}
+        project_ids = ['fake-project-1', 'fake-project-2']
+        # Create five instance_mappings such that:
+        for cell, uuid in uuids.items():
+            # Both the cells contain a mapping belonging to fake-project-1
+            im1 = instance_mapping.InstanceMapping(context=self.context,
+                project_id=project_ids[0], cell_mapping=cell,
+                instance_uuid=uuid[0], queued_for_delete=False)
+            im1.create()
+            # Both the cells contain a mapping belonging to fake-project-2
+            im2 = instance_mapping.InstanceMapping(context=self.context,
+                project_id=project_ids[1], cell_mapping=cell,
+                instance_uuid=uuid[1], queued_for_delete=False)
+            im2.create()
+            # The second cell has a third mapping that is queued for deletion
+            # which belongs to fake-project-1.
+            if cell.uuid == uuidsentinel.cell2:
+                im3 = instance_mapping.InstanceMapping(context=self.context,
+                    project_id=project_ids[0], cell_mapping=cell,
+                    instance_uuid=uuidsentinel.qfd, queued_for_delete=True)
+                im3.create()
+
+        # Get not queued for deletion mappings from cell1 belonging to
+        # fake-project-2.
+        ims = (instance_mapping.InstanceMappingList.
+               get_not_deleted_by_cell_and_project(
+               self.context, cells[0].uuid, 'fake-project-2'))
+        # This will give us one mapping from cell1
         self.assertEqual([uuidsentinel.c1i2],
                          sorted([m.instance_uuid for m in ims]))
-        ims = instance_mapping.InstanceMappingList.get_by_cell_and_project(
-            self.context, cells[1].id, 'fake-project-1')
+        self.assertIn('cell_mapping', ims[0])
+        # Get not queued for deletion mappings from cell2 belonging to
+        # fake-project-1.
+        ims = (instance_mapping.InstanceMappingList.
+               get_not_deleted_by_cell_and_project(
+               self.context, cells[1].uuid, 'fake-project-1'))
+        # This will give us one mapping from cell2. Note that even if
+        # there are two mappings belonging to fake-project-1 inside cell2,
+        # only the one not queued for deletion is returned.
         self.assertEqual([uuidsentinel.c2i1],
                          sorted([m.instance_uuid for m in ims]))
-        ims = instance_mapping.InstanceMappingList.get_by_cell_and_project(
-            self.context, cells[0].id, 'fake-project-3')
+        # Try getting a mapping belonging to a non-existing project_id.
+        ims = (instance_mapping.InstanceMappingList.
+               get_not_deleted_by_cell_and_project(
+               self.context, cells[0].uuid, 'fake-project-3'))
+        # Since no mappings belong to fake-project-3, nothing is returned.
         self.assertEqual([], sorted([m.instance_uuid for m in ims]))
+
+    def test_get_not_deleted_by_cell_and_project_limit(self):
+        cm = cell_mapping.CellMapping(context=self.context,
+                                      uuid=uuidsentinel.cell,
+                                      database_connection='fake:///',
+                                      transport_url='fake://')
+        cm.create()
+        pid = self.context.project_id
+        for uuid in (uuidsentinel.uuid2, uuidsentinel.inst2):
+            im = instance_mapping.InstanceMapping(context=self.context,
+                                                  project_id=pid,
+                                                  cell_mapping=cm,
+                                                  instance_uuid=uuid,
+                                                  queued_for_delete=False)
+            im.create()
+
+        ims = (instance_mapping.InstanceMappingList.
+               get_not_deleted_by_cell_and_project(self.context,
+                                                   cm.uuid,
+                                                   pid))
+        self.assertEqual(2, len(ims))
+
+        ims = (instance_mapping.InstanceMappingList.
+               get_not_deleted_by_cell_and_project(self.context,
+                                                   cm.uuid,
+                                                   pid,
+                                                   limit=10))
+        self.assertEqual(2, len(ims))
+
+        ims = (instance_mapping.InstanceMappingList.
+               get_not_deleted_by_cell_and_project(self.context,
+                                                   cm.uuid,
+                                                   pid,
+                                                   limit=1))
+        self.assertEqual(1, len(ims))
