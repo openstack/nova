@@ -3892,10 +3892,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if 'unit' in disk_mapping and disk_info['bus'] == 'scsi':
             disk_unit = disk_mapping['unit']
             disk_mapping['unit'] += 1  # Increments for the next disk added
-        conf = disk.libvirt_info(disk_info['bus'],
-                                 disk_info['dev'],
-                                 disk_info['type'],
-                                 self.disk_cachemode,
+        conf = disk.libvirt_info(disk_info, self.disk_cachemode,
                                  inst_type['extra_specs'],
                                  self._host.get_version(),
                                  disk_unit=disk_unit)
