@@ -21,6 +21,7 @@ import fixtures
 import iso8601
 import mock
 import os_traits as ot
+from oslo_limit import exception as limit_exceptions
 from oslo_messaging import exceptions as oslo_exceptions
 from oslo_serialization import jsonutils
 from oslo_utils import fixture as utils_fixture
@@ -42,6 +43,7 @@ from nova import context
 from nova.db.main import api as db
 from nova import exception
 from nova.image import glance as image_api
+from nova.limit import placement as placement_limit
 from nova.network import constants
 from nova.network import model
 from nova.network import neutron as neutron_api
@@ -1851,6 +1853,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, objects.Migration(),
                 test_migration.fake_db_migration())
         fake_reqspec = objects.RequestSpec()
+        fake_reqspec.is_bfv = False
         fake_reqspec.flavor = fake_inst.flavor
         fake_numa_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
@@ -2210,6 +2213,8 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_resize_allow_cross_cell_resize_true(self):
         self._test_resize(allow_cross_cell_resize=True)
 
+    @mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                       new=mock.Mock(return_value=False))
     @mock.patch('nova.servicegroup.api.API.service_is_up',
                 new=mock.Mock(return_value=True))
     @mock.patch('nova.compute.flavors.get_flavor_by_flavor_id')
@@ -2425,6 +2430,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
         do_test()
 
+    @mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                       new=mock.Mock(return_value=False))
     @mock.patch('nova.servicegroup.api.API.service_is_up',
                 new=mock.Mock(return_value=True))
     @mock.patch.object(objects.Instance, 'save')
@@ -2483,6 +2490,8 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_record.assert_not_called()
         mock_resize.assert_not_called()
 
+    @mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                       new=mock.Mock(return_value=False))
     @mock.patch('nova.servicegroup.api.API.service_is_up',
                 new=mock.Mock(return_value=True))
     @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
@@ -2510,6 +2519,8 @@ class _ComputeAPIUnitTestMixIn(object):
                               fake_inst, flavor_id='flavor-id')
             self.assertFalse(mock_save.called)
 
+    @mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                       new=mock.Mock(return_value=False))
     @mock.patch('nova.servicegroup.api.API.service_is_up',
                 new=mock.Mock(return_value=True))
     @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
@@ -2542,6 +2553,32 @@ class _ComputeAPIUnitTestMixIn(object):
                                                     read_deleted="no")
         else:
             self.fail("Exception not raised")
+
+    @mock.patch.object(placement_limit, 'enforce_num_instances_and_flavor')
+    @mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                       new=mock.Mock(return_value=False))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
+    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
+    def test_resize_instance_quota_exceeds_with_multiple_resources_ul(
+            self, mock_get_flavor, mock_enforce):
+        self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
+        mock_enforce.side_effect = limit_exceptions.ProjectOverLimit(
+            self.context.project_id, [limit_exceptions.OverLimitInfo(
+            resource_name='servers', limit=1, current_usage=1, delta=1)])
+        mock_get_flavor.return_value = self._create_flavor(id=333,
+                                                           vcpus=3,
+                                                           memory_mb=1536)
+
+        self.assertRaises(limit_exceptions.ProjectOverLimit,
+                          self.compute_api.resize,
+                          self.context, self._create_instance_obj(),
+                          'fake_flavor_id')
+
+        mock_get_flavor.assert_called_once_with('fake_flavor_id',
+                                                read_deleted="no")
+        mock_enforce.assert_called_once_with(
+            self.context, "fake", mock_get_flavor.return_value, False, 1, 1)
 
     # TODO(huaqiang): Remove in Wallaby
     @mock.patch('nova.servicegroup.api.API.service_is_up',
@@ -4363,6 +4400,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch('nova.objects.Quotas.get_all_by_project_and_user',
                 new=mock.MagicMock())
+    @mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                       new=mock.Mock(return_value=False))
     @mock.patch('nova.objects.Quotas.count_as_dict')
     @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
     @mock.patch('nova.objects.Instance.save')
@@ -4405,6 +4444,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch('nova.objects.Quotas.get_all_by_project_and_user',
                 new=mock.MagicMock())
+    @mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                       new=mock.Mock(return_value=False))
     @mock.patch('nova.objects.Quotas.count_as_dict')
     @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
     @mock.patch('nova.objects.Instance.save')

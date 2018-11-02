@@ -60,6 +60,7 @@ from nova import exception_wrapper
 from nova.i18n import _
 from nova.image import glance
 from nova.limit import local as local_limit
+from nova.limit import placement as placement_limits
 from nova.network import constants
 from nova.network import model as network_model
 from nova.network import neutron
@@ -1346,6 +1347,25 @@ class API:
         # Check quotas
         num_instances = compute_utils.check_num_instances_quota(
             context, flavor, min_count, max_count)
+
+        # Find out whether or not we are a BFV instance
+        if block_device_mapping:
+            root = block_device_mapping.root_bdm()
+            is_bfv = bool(root and root.is_volume)
+        else:
+            # If we have no BDMs, we're clearly not BFV
+            is_bfv = False
+
+        # NOTE(johngarbutt) when unified limits not used, this just
+        #   returns num_instances back again
+        # NOTE: If we want to enforce quota on port or cyborg resources in the
+        # future, this enforce call will need to move after we have populated
+        # the RequestSpec with all of the requested resources and use the real
+        # RequestSpec to get the overall resource usage of the instance.
+        num_instances = placement_limits.enforce_num_instances_and_flavor(
+                context, context.project_id, flavor,
+                is_bfv, min_count, num_instances)
+
         security_groups = security_group_api.populate_security_groups(
             security_groups)
         port_resource_requests = base_options.pop('port_resource_requests')
@@ -1388,14 +1408,7 @@ class API:
                     security_groups=security_groups,
                     port_resource_requests=port_resource_requests,
                     request_level_params=req_lvl_params)
-
-                if block_device_mapping:
-                    # Record whether or not we are a BFV instance
-                    root = block_device_mapping.root_bdm()
-                    req_spec.is_bfv = bool(root and root.is_volume)
-                else:
-                    # If we have no BDMs, we're clearly not BFV
-                    req_spec.is_bfv = False
+                req_spec.is_bfv = is_bfv
 
                 # NOTE(danms): We need to record num_instances on the request
                 # spec as this is how the conductor knows how many were in this
@@ -2660,6 +2673,9 @@ class API:
         project_id, user_id = quotas_obj.ids_from_instance(context, instance)
         compute_utils.check_num_instances_quota(context, flavor, 1, 1,
                 project_id=project_id, user_id=user_id)
+        is_bfv = compute_utils.is_volume_backed_instance(context, instance)
+        placement_limits.enforce_num_instances_and_flavor(context, project_id,
+                                                         flavor, is_bfv, 1, 1)
 
         self._record_action_start(context, instance, instance_actions.RESTORE)
 
@@ -3777,9 +3793,22 @@ class API:
         # TODO(sean-k-mooney): add PCI NUMA affinity policy check.
 
     @staticmethod
-    def _check_quota_for_upsize(context, instance, current_flavor, new_flavor):
+    def _check_quota_for_upsize(context, instance, current_flavor,
+                                new_flavor, is_bfv, is_revert):
         project_id, user_id = quotas_obj.ids_from_instance(context,
                                                            instance)
+        # NOTE(johngarbutt) for resize, check for sum of existing usage
+        # plus the usage from new flavor, as it will be claimed in
+        # placement that way, even if there is no change in flavor
+        # But for revert resize, we are just removing claims in placement
+        # so we can ignore the quota check
+        if not is_revert:
+            placement_limits.enforce_num_instances_and_flavor(context,
+                                                              project_id,
+                                                              new_flavor,
+                                                              is_bfv, 1, 1)
+
+        # Old quota system only looks at the change in size.
         # Deltas will be empty if the resize is not an upsize.
         deltas = compute_utils.upsize_quota_delta(new_flavor,
                                                   current_flavor)
@@ -3821,8 +3850,11 @@ class API:
             elevated, instance.uuid, 'finished')
 
         # If this is a resize down, a revert might go over quota.
+        reqspec = objects.RequestSpec.get_by_instance_uuid(
+            context, instance.uuid)
         self._check_quota_for_upsize(context, instance, instance.flavor,
-                                     instance.old_flavor)
+                                     instance.old_flavor, reqspec.is_bfv,
+                                     is_revert=True)
 
         # The AZ for the server may have changed when it was migrated so while
         # we are in the API and have access to the API DB, update the
@@ -3846,8 +3878,6 @@ class API:
         # the scheduler will be using the wrong values. There's no need to do
         # this if the flavor hasn't changed though and we're migrating rather
         # than resizing.
-        reqspec = objects.RequestSpec.get_by_instance_uuid(
-            context, instance.uuid)
         if reqspec.flavor['id'] != instance.old_flavor['id']:
             reqspec.flavor = instance.old_flavor
             reqspec.numa_topology = hardware.numa_get_constraints(
@@ -4149,9 +4179,16 @@ class API:
 
         # ensure there is sufficient headroom for upsizes
         if flavor_id:
+            # Figure out if the instance is volume-backed but only if we didn't
+            # already figure that out above (avoid the extra db hit).
+            if volume_backed is None:
+                # TODO(johngarbutt) should we just use the request spec?
+                volume_backed = compute_utils.is_volume_backed_instance(
+                    context, instance)
             self._check_quota_for_upsize(context, instance,
                                          current_flavor,
-                                         new_flavor)
+                                         new_flavor, volume_backed,
+                                         is_revert=False)
 
         if not same_flavor:
             image = utils.get_image_from_system_metadata(

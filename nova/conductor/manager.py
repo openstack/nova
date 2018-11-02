@@ -23,6 +23,7 @@ import sys
 
 from oslo_config import cfg
 from oslo_db import exception as db_exc
+from oslo_limit import exception as limit_exceptions
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -45,6 +46,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.image import glance
+from nova.limit import placement as placement_limits
 from nova import manager
 from nova.network import neutron
 from nova import notifications
@@ -1632,7 +1634,11 @@ class ComputeTaskManager:
                 compute_utils.check_num_instances_quota(
                     context, instance.flavor, 0, 0,
                     orig_num_req=len(build_requests))
-            except exception.TooManyInstances as exc:
+                placement_limits.enforce_num_instances_and_flavor(
+                    context, context.project_id, instance.flavor,
+                    request_specs[0].is_bfv, 0, 0)
+            except (exception.TooManyInstances,
+                    limit_exceptions.ProjectOverLimit) as exc:
                 with excutils.save_and_reraise_exception():
                     self._cleanup_build_artifacts(context, exc, instances,
                                                   build_requests,
