@@ -364,8 +364,7 @@ def fake_instance_get(**kwargs):
 
 
 def fake_compute_get(**kwargs):
-    def _return_server_obj(context, uuid, expected_attrs=None,
-                           cell_down_support=False):
+    def _return_server_obj(context, *a, **kw):
         return stub_instance_obj(context, **kwargs)
     return _return_server_obj
 
