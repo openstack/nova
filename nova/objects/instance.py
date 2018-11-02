@@ -321,29 +321,31 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         # Before we stored flavors in instance_extra, certain fields, defined
         # in nova.compute.flavors.system_metadata_flavor_props, were stored
         # in the instance.system_metadata for the embedded instance.flavor.
-        # The "disabled" field wasn't one of those keys, however, so really
-        # old instances that had their embedded flavor converted to the
-        # serialized instance_extra form won't have the disabled attribute
-        # set and we need to default those here so callers don't explode trying
-        # to load instance.flavor.disabled.
-        def _default_disabled(flavor):
+        # The "disabled" and "is_public" fields weren't one of those keys,
+        # however, so really old instances that had their embedded flavor
+        # converted to the serialized instance_extra form won't have the
+        # disabled attribute set and we need to default those here so callers
+        # don't explode trying to load instance.flavor.disabled.
+        def _default_flavor_values(flavor):
             if 'disabled' not in flavor:
                 flavor.disabled = False
+            if 'is_public' not in flavor:
+                flavor.is_public = True
 
         flavor_info = jsonutils.loads(db_flavor)
 
         self.flavor = objects.Flavor.obj_from_primitive(flavor_info['cur'])
-        _default_disabled(self.flavor)
+        _default_flavor_values(self.flavor)
         if flavor_info['old']:
             self.old_flavor = objects.Flavor.obj_from_primitive(
                 flavor_info['old'])
-            _default_disabled(self.old_flavor)
+            _default_flavor_values(self.old_flavor)
         else:
             self.old_flavor = None
         if flavor_info['new']:
             self.new_flavor = objects.Flavor.obj_from_primitive(
                 flavor_info['new'])
-            _default_disabled(self.new_flavor)
+            _default_flavor_values(self.new_flavor)
         else:
             self.new_flavor = None
         self.obj_reset_changes(['flavor', 'old_flavor', 'new_flavor'])
