@@ -615,6 +615,10 @@ def resources_from_flavor(instance, flavor):
     """
     is_bfv = compute_utils.is_volume_backed_instance(instance._context,
                                                      instance)
+    return _get_resources(flavor, is_bfv)
+
+
+def _get_resources(flavor, is_bfv):
     # create a fake RequestSpec as a wrapper to the caller
     req_spec = objects.RequestSpec(flavor=flavor, is_bfv=is_bfv)
 
@@ -626,6 +630,11 @@ def resources_from_flavor(instance, flavor):
     res_req = ResourceRequest.from_request_spec(req_spec)
 
     return res_req.merged_resources()
+
+
+def resources_for_limits(flavor, is_bfv):
+    """Work out what unified limits may be exceeded."""
+    return _get_resources(flavor, is_bfv)
 
 
 def resources_from_request_spec(ctxt, spec_obj, host_manager,

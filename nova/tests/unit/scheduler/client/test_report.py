@@ -4637,3 +4637,31 @@ class TestUsages(SchedulerReportClientTestCase):
         expected = {'project': {'cores': 4, 'ram': 0},
                     'user': {'cores': 4, 'ram': 0}}
         self.assertDictEqual(expected, counts)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
+    def test_get_usages_counts_for_limits(self, mock_get):
+        fake_responses = fake_requests.FakeResponse(
+            200,
+            content=jsonutils.dumps({'usages': {orc.VCPU: 2, orc.PCPU: 2}}))
+        mock_get.return_value = fake_responses
+
+        counts = self.client.get_usages_counts_for_limits(
+            self.context, 'fake-project')
+
+        expected = {orc.VCPU: 2, orc.PCPU: 2}
+        self.assertDictEqual(expected, counts)
+        self.assertEqual(1, mock_get.call_count)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
+    def test_get_usages_counts_for_limits_fails(self, mock_get):
+        fake_failure_response = fake_requests.FakeResponse(500)
+        mock_get.side_effect = [ks_exc.ConnectFailure, fake_failure_response]
+
+        e = self.assertRaises(exception.UsagesRetrievalFailed,
+                              self.client.get_usages_counts_for_limits,
+                              self.context, 'fake-project')
+
+        expected = "Failed to retrieve usages for project 'fake-project' " \
+                   "and user 'N/A'."
+        self.assertEqual(expected, str(e))
+        self.assertEqual(2, mock_get.call_count)

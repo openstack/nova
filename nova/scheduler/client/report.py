@@ -2486,6 +2486,30 @@ class SchedulerReportClient(object):
         return self.get(url, version=GET_USAGES_VERSION,
                         global_request_id=context.global_id)
 
+    def get_usages_counts_for_limits(self, context, project_id):
+        """Get the usages counts for the purpose of enforcing unified limits
+
+        The response from placement will not contain a resource class if
+        there is no usage. i.e. if there is no usage, you get an empty dict.
+
+        Note resources are counted as placement sees them, as such note
+        that VCPUs and PCPUs will be counted independently.
+
+        :param context: The request context
+        :param project_id: The project_id to count across
+        :return: A dict containing the project-scoped counts, for example:
+                {'VCPU': 2, 'MEMORY_MB': 1024}
+        :raises: `exception.UsagesRetrievalFailed` if a placement API call
+                 fails
+        """
+        LOG.debug('Getting usages for project_id %s from placement',
+                  project_id)
+        resp = self._get_usages(context, project_id)
+        if resp:
+            data = resp.json()
+            return data['usages']
+        self._handle_usages_error_from_placement(resp, project_id)
+
     def get_usages_counts_for_quota(self, context, project_id, user_id=None):
         """Get the usages counts for the purpose of counting quota usage.
 
