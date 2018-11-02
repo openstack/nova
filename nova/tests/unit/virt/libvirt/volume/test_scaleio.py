@@ -44,10 +44,8 @@ class LibvirtScaleIOVolumeDriverTestCase(
 
     def test_libvirt_scaleio_driver_get_config(self):
         sio = scaleio.LibvirtScaleIOVolumeDriver(self.fake_host)
-        disk_info = {'path': '/dev/vol01', 'name': 'vol01', 'type': 'raw',
-                     'dev': 'vda1', 'bus': 'pci0', 'device_path': '/dev/vol01'}
-        conn = {'data': disk_info}
-        conf = sio.get_config(conn, disk_info)
+        conn = {'data': {'device_path': '/dev/vol01'}}
+        conf = sio.get_config(conn, self.disk_info)
         self.assertEqual('block', conf.source_type)
         self.assertEqual('/dev/vol01', conf.source_path)
 
