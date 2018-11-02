@@ -162,15 +162,13 @@ class TestNeutronSecurityGroupsV21(
         net = self._create_network()
         self._create_port(
             network_id=net['network']['id'], security_groups=[sg['id']],
-            device_id=test_security_groups.FAKE_UUID1)
+            device_id=test_security_groups.UUID_SERVER)
         expected = [{'rules': [], 'tenant_id': 'fake', 'id': sg['id'],
                     'name': 'test', 'description': 'test-description'}]
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      test_security_groups.return_server_by_uuid)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/os-security-groups'
-                                      % test_security_groups.FAKE_UUID1)
+                                      % test_security_groups.UUID_SERVER)
         res_dict = self.server_controller.index(
-            req, test_security_groups.FAKE_UUID1)['security_groups']
+            req, test_security_groups.UUID_SERVER)['security_groups']
         self.assertEqual(expected, res_dict)
 
     def test_get_security_group_by_id(self):
@@ -232,8 +230,6 @@ class TestNeutronSecurityGroupsV21(
             network_id=net['network']['id'], security_groups=[sg['id']],
             device_id=UUID_SERVER)
 
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/action' %
@@ -250,8 +246,6 @@ class TestNeutronSecurityGroupsV21(
             network_id=net['network']['id'], security_groups=[sg1['id']],
             device_id=UUID_SERVER)
 
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="sg1"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/action' %
@@ -268,8 +262,6 @@ class TestNeutronSecurityGroupsV21(
             port_security_enabled=True,
             device_id=UUID_SERVER)
 
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/action' %
@@ -283,8 +275,6 @@ class TestNeutronSecurityGroupsV21(
             network_id=net['network']['id'], port_security_enabled=False,
             device_id=UUID_SERVER)
 
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/action' %
@@ -301,8 +291,6 @@ class TestNeutronSecurityGroupsV21(
             port_security_enabled=True, ip_allocation='deferred',
             device_id=UUID_SERVER)
 
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      test_security_groups.return_server)
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/action' %
@@ -310,8 +298,6 @@ class TestNeutronSecurityGroupsV21(
         self.manager._addSecurityGroup(req, UUID_SERVER, body)
 
     def test_disassociate_by_non_existing_security_group_name(self):
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      test_security_groups.return_server)
         body = dict(removeSecurityGroup=dict(name='non-existing'))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/action' %
@@ -339,8 +325,6 @@ class TestNeutronSecurityGroupsV21(
             network_id=net['network']['id'], security_groups=[sg['id']],
             device_id=UUID_SERVER)
 
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      test_security_groups.return_server)
         body = dict(removeSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/action' %
