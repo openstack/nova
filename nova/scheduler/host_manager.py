@@ -630,7 +630,7 @@ class HostManager(object):
         compute_nodes = collections.defaultdict(list)
         services = {}
         for cell_uuid, result in results.items():
-            if result is context_module.raised_exception_sentinel:
+            if isinstance(result, Exception):
                 LOG.warning('Failed to get computes for cell %s', cell_uuid)
             elif result is context_module.did_not_respond_sentinel:
                 LOG.warning('Timeout getting computes for cell %s', cell_uuid)

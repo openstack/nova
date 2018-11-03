@@ -519,7 +519,7 @@ def get_minimum_version_all_cells(context, binaries, require_all=False):
                         'service version', cell_uuid)
             if require_all:
                 raise exception.CellTimeout()
-        elif result is nova_context.raised_exception_sentinel:
+        elif isinstance(result, Exception):
             LOG.warning('Failed to get minimum service version for cell %s',
                         cell_uuid)
             if require_all:

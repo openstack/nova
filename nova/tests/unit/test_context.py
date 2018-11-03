@@ -335,6 +335,14 @@ class ContextTestCase(test.NoDBTestCase):
         mock_create_cm.assert_not_called()
         mock_create_tport.assert_not_called()
 
+    def test_is_cell_failure_sentinel(self):
+        record = context.did_not_respond_sentinel
+        self.assertTrue(context.is_cell_failure_sentinel(record))
+        record = TypeError()
+        self.assertTrue(context.is_cell_failure_sentinel(record))
+        record = objects.Instance()
+        self.assertFalse(context.is_cell_failure_sentinel(record))
+
     @mock.patch('nova.context.target_cell')
     @mock.patch('nova.objects.InstanceList.get_by_filters')
     def test_scatter_gather_cells(self, mock_get_inst, mock_target_cell):
@@ -422,7 +430,7 @@ class ContextTestCase(test.NoDBTestCase):
             ctxt, mappings, 30, objects.InstanceList.get_by_filters)
         self.assertEqual(2, len(results))
         self.assertIn(mock.sentinel.instances, results.values())
-        self.assertIn(context.raised_exception_sentinel, results.values())
+        isinstance(results.values(), Exception)
         self.assertTrue(mock_log_exception.called)
 
     @mock.patch('nova.context.scatter_gather_cells')

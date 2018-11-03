@@ -192,7 +192,7 @@ class ComputeHostAPITestCase(test.TestCase):
                                   host='host-%s' % uuids.cell1)
         mock_sg.return_value = {
             uuids.cell1: [service],
-            uuids.cell2: context.raised_exception_sentinel
+            uuids.cell2: context.did_not_respond_sentinel
         }
         services = self.host_api.service_get_all(self.ctxt, all_cells=True)
         # returns the results from cell1 and ignores cell2.

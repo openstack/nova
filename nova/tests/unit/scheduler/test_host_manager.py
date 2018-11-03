@@ -1039,7 +1039,7 @@ class HostManagerTestCase(test.NoDBTestCase):
             uuids.cell1: ([mock.MagicMock(host='a'), mock.MagicMock(host='b')],
                           [mock.sentinel.c1n1, mock.sentinel.c1n2]),
             uuids.cell2: nova_context.did_not_respond_sentinel,
-            uuids.cell3: nova_context.raised_exception_sentinel,
+            uuids.cell3: exception.ComputeHostNotFound(host='c'),
         }
         context = nova_context.RequestContext('fake', 'fake')
         cns, srv = self.host_manager._get_computes_for_cells(context, [])
