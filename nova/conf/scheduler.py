@@ -301,6 +301,9 @@ Related options:
 * enabled_filters
 """),
     cfg.ListOpt("enabled_filters",
+        # NOTE(artom) If we change the defaults here, we should also update
+        # Tempest's scheduler_enabled_filters to keep the default values in
+        # sync.
         default=[
           "RetryFilter",
           "AvailabilityZoneFilter",
