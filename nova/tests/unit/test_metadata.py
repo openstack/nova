@@ -1413,6 +1413,52 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertEqual(200, response.status_int)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def _metadata_handler_with_provider_id(self, hnd, mock_get_client):
+        # with X-Metadata-Provider
+        proxy_lb_id = 'edge-x'
+
+        mock_client = mock_get_client()
+        mock_client.list_ports.return_value = {
+            'ports': [{'device_id': 'a-b-c-d', 'tenant_id': 'test'}]}
+        mock_client.list_subnets.return_value = {
+            'subnets': [{'network_id': 'f-f-f-f'}]}
+
+        response = fake_request(
+            self, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            app=hnd,
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Metadata-Provider': proxy_lb_id})
+
+        self.assertEqual(200, response.status_int)
+        self.assertEqual(base64.decode_as_bytes(self.instance['user_data']),
+                         response.body)
+
+    @mock.patch.object(base, 'get_metadata_by_instance_id')
+    def _test__handler_with_provider_id(self,
+                                        expected_calls,
+                                        get_by_uuid):
+        get_by_uuid.return_value = self.mdinst
+        hnd = handler.MetadataRequestHandler()
+        with mock.patch.object(hnd, '_get_instance_id_from_lb',
+                               return_value=('a-b-c-d',
+                                             'test')) as _get_id_from_lb:
+            self._metadata_handler_with_provider_id(hnd)
+            self._metadata_handler_with_provider_id(hnd)
+            self.assertEqual(expected_calls, _get_id_from_lb.call_count)
+
+    def test_metadata_handler_with_provider_id(self):
+        self.flags(service_metadata_proxy=True, group='neutron')
+        self.flags(metadata_cache_expiration=15, group='api')
+        self._test__handler_with_provider_id(1)
+
+    def test_metadata_handler_with_provider_id_no_cache(self):
+        self.flags(service_metadata_proxy=True, group='neutron')
+        self.flags(metadata_cache_expiration=0, group='api')
+        self._test__handler_with_provider_id(2)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_metadata_lb_proxy_chain(self, mock_get_client):
 
         self.flags(service_metadata_proxy=True, group='neutron')

@@ -258,10 +258,19 @@ class MetadataRequestHandler(wsgi.Application):
             self._validate_shared_secret(provider_id, signature,
                                          instance_address)
 
-        instance_id, tenant_id = self._get_instance_id_from_lb(
-            provider_id, instance_address)
-        LOG.debug('Instance %s with address %s matches provider %s',
-                  instance_id, remote_address, provider_id)
+        cache_key = 'provider-%s-%s' % (provider_id, instance_address)
+        data = self._cache.get(cache_key)
+        if data:
+            LOG.debug("Using cached metadata for %s for %s",
+                      provider_id, instance_address)
+            instance_id, tenant_id = data
+        else:
+            instance_id, tenant_id = self._get_instance_id_from_lb(
+                provider_id, instance_address)
+            if CONF.api.metadata_cache_expiration > 0:
+                self._cache.set(cache_key, (instance_id, tenant_id))
+            LOG.debug('Instance %s with address %s matches provider %s',
+                      instance_id, remote_address, provider_id)
         return self._get_meta_by_instance_id(instance_id, tenant_id,
                                              instance_address)
 
