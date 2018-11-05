@@ -2688,6 +2688,28 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
+    def test_resize_delete_while_verify(self):
+        """Test scenario where the server is deleted while in the
+        VERIFY_RESIZE state and ensures the allocations are properly
+        cleaned up from the source and target compute node resource providers.
+        The _confirm_resize_on_deleting() method in the API is actually
+        responsible for making sure the migration-based allocations get
+        cleaned up by confirming the resize on the source host before deleting
+        the server from the target host.
+        """
+        dest_hostname = 'host2'
+        source_hostname = self._other_hostname(dest_hostname)
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(self.flavor1,
+                                                  source_hostname)
+
+        self._resize_and_check_allocations(server, self.flavor1, self.flavor2,
+                                           source_rp_uuid, dest_rp_uuid)
+
+        self._delete_and_check_allocations(server)
+
     def _wait_for_notification_event_type(self, event_type, max_retries=50):
         retry_counter = 0
         while True:

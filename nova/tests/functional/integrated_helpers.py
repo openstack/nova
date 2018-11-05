@@ -40,6 +40,7 @@ from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
+from nova import utils
 from nova.virt import fake
 
 
@@ -714,8 +715,25 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
     def _delete_and_check_allocations(self, server):
         """Delete the instance and asserts that the allocations are cleaned
 
+        If the server was moved (resized or live migrated), also checks that
+        migration-based allocations are also cleaned up.
+
         :param server: The API representation of the instance to be deleted
         """
+
+        # First check to see if there is a related migration record so we can
+        # assert its allocations (if any) are not leaked.
+        with utils.temporary_mutation(self.admin_api, microversion='2.59'):
+            migrations = self.admin_api.api_get(
+                '/os-migrations?instance_uuid=%s' %
+                server['id']).body['migrations']
+        if migrations:
+            # If there is more than one migration, they are sorted by
+            # created_at in descending order so we'll get the last one
+            # which is probably what we'd always want anyway.
+            migration_uuid = migrations[0]['uuid']
+        else:
+            migration_uuid = None
 
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
@@ -736,6 +754,11 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         # and no allocations for the deleted server
         allocations = self._get_allocations_by_server_uuid(server['id'])
         self.assertEqual(0, len(allocations))
+
+        if migration_uuid:
+            # and no allocations for the delete migration
+            allocations = self._get_allocations_by_server_uuid(migration_uuid)
+            self.assertEqual(0, len(allocations))
 
     def _run_periodics(self):
         """Run the update_available_resource task on every compute manager
