@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    The configuration option
+    ``[compute]resource_provider_association_refresh`` can now
+    be set to zero to disable refresh entirely. This follows on from `bug
+    1767309`_ allowing more aggressive reduction in the amount of traffic to
+    the placement service.
+
+    .. _`bug 1767309`: https://bugs.launchpad.net/nova/+bug/1767309
