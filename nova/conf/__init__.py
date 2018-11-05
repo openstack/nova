@@ -39,6 +39,7 @@ from nova.conf import guestfs
 from nova.conf import hyperv
 from nova.conf import ironic
 from nova.conf import key_manager
+from nova.conf import key_pairs
 from nova.conf import keystone
 from nova.conf import libvirt
 from nova.conf import mks
@@ -95,6 +96,7 @@ hyperv.register_opts(CONF)
 mks.register_opts(CONF)
 ironic.register_opts(CONF)
 key_manager.register_opts(CONF)
+key_pairs.register_opts(CONF)
 keystone.register_opts(CONF)
 libvirt.register_opts(CONF)
 netconf.register_opts(CONF)

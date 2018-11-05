@@ -44,9 +44,20 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
+ALLOWED_HASH_ALGOS = {
+    "md5": hashes.MD5,
+    "sha1": hashes.SHA1,
+    "sha256": hashes.SHA256
+}
 
 
 def generate_fingerprint(public_key):
+    hasher = hashes.MD5
+    if 'fingerprint_algorithm' in CONF.key_pairs and \
+            CONF.key_pairs.fingerprint_algorithm:
+        hasher = ALLOWED_HASH_ALGOS.get(
+            CONF.key_pairs.fingerprint_algorithm.lower(), hashes.MD5)
+
     try:
         pub_bytes = public_key.encode('utf-8')
         # Test that the given public_key string is a proper ssh key. The
@@ -55,10 +66,10 @@ def generate_fingerprint(public_key):
         serialization.load_ssh_public_key(
             pub_bytes, backends.default_backend())
         pub_data = base64.b64decode(public_key.split(' ')[1])
-        digest = hashes.Hash(hashes.MD5(), backends.default_backend())
+        digest = hashes.Hash(hasher(), backends.default_backend())
         digest.update(pub_data)
-        md5hash = digest.finalize()
-        raw_fp = binascii.hexlify(md5hash)
+        raw_hash = digest.finalize()
+        raw_fp = binascii.hexlify(raw_hash)
         if six.PY3:
             raw_fp = raw_fp.decode('ascii')
         return ':'.join(a + b for a, b in zip(raw_fp[::2], raw_fp[1::2]))

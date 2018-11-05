@@ -22,6 +22,7 @@ from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization
 import mock
 from oslo_concurrency import processutils
+from oslo_config import cfg
 import paramiko
 import six
 
@@ -29,6 +30,8 @@ from nova import crypto
 from nova import exception
 from nova import test
 from nova import utils
+
+CONF = cfg.CONF
 
 
 class EncryptionTests(test.NoDBTestCase):
@@ -150,6 +153,13 @@ class KeyPairTest(test.NoDBTestCase):
     )
 
     rsa_fp = "e7:66:a1:2c:4f:90:6e:11:19:da:ac:c2:69:e1:ad:89"
+    rsa_fp_sha1 = (
+        "05:60:99:2a:85:1d:b8:24:40:d3:9c:4f:34:75:0f:54:aa:90:a8:ec"
+    )
+    rsa_fp_sha256 = (
+        "f7:db:6b:93:63:af:f5:1b:f5:c2:0c:90:f2:02:db:10:"
+        "37:21:8d:22:df:8f:42:8b:cf:6c:2d:5a:70:35:4f:ba"
+    )
 
     dss_pub = (
         "ssh-dss AAAAB3NzaC1kc3MAAACBAKWFW2++pDxJWObkADbSXw8KfZ4VupkRKEXF"
@@ -165,6 +175,13 @@ class KeyPairTest(test.NoDBTestCase):
     )
 
     dss_fp = "b9:dc:ac:57:df:2a:2b:cf:65:a8:c3:4e:9d:4a:82:3c"
+    dss_fp_sha1 = (
+        "4c:ee:fa:e4:79:5d:8e:46:a8:e2:d7:e3:28:11:10:db:58:8f:8a:17"
+    )
+    dss_fp_sha256 = (
+        "8d:66:3f:36:7f:c0:f3:f6:d2:d7:e3:c5:ca:0f:ff:81:"
+        "ca:6a:78:85:27:fe:d2:47:63:2d:5f:c2:a5:40:e3:88"
+    )
 
     ecdsa_pub = (
         "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAy"
@@ -179,6 +196,13 @@ class KeyPairTest(test.NoDBTestCase):
     )
 
     ecdsa_fp = "16:6a:c9:ec:80:4d:17:3e:d5:3b:6f:c0:d7:15:04:40"
+    ecdsa_fp_sha1 = (
+        "e3:e8:a3:8a:19:17:f6:dc:aa:74:26:f6:84:2b:72:37:3a:0e:14:d9"
+    )
+    ecdsa_fp_sha256 = (
+        "c0:cb:38:bc:e9:4d:e2:0c:c6:75:b3:7c:e1:00:8f:7e:"
+        "9a:df:eb:2f:6a:5e:6d:f6:56:c5:b4:bd:15:f6:dc:a3"
+    )
 
     def test_generate_fingerprint(self):
         fingerprint = crypto.generate_fingerprint(self.rsa_pub)
@@ -192,6 +216,37 @@ class KeyPairTest(test.NoDBTestCase):
 
         fingerprint = crypto.generate_fingerprint(self.ecdsa_pub_with_spaces)
         self.assertEqual(self.ecdsa_fp, fingerprint)
+
+        CONF.set_default('fingerprint_algorithm',
+                         default='sha1', group='key_pairs')
+        fingerprint = crypto.generate_fingerprint(self.rsa_pub)
+        self.assertEqual(self.rsa_fp_sha1, fingerprint)
+
+        fingerprint = crypto.generate_fingerprint(self.dss_pub)
+        self.assertEqual(self.dss_fp_sha1, fingerprint)
+
+        fingerprint = crypto.generate_fingerprint(self.ecdsa_pub)
+        self.assertEqual(self.ecdsa_fp_sha1, fingerprint)
+
+        fingerprint = crypto.generate_fingerprint(self.ecdsa_pub_with_spaces)
+        self.assertEqual(self.ecdsa_fp_sha1, fingerprint)
+
+        CONF.set_default('fingerprint_algorithm',
+                         default='sha256', group='key_pairs')
+        fingerprint = crypto.generate_fingerprint(self.rsa_pub)
+        self.assertEqual(self.rsa_fp_sha256, fingerprint)
+
+        fingerprint = crypto.generate_fingerprint(self.dss_pub)
+        self.assertEqual(self.dss_fp_sha256, fingerprint)
+
+        fingerprint = crypto.generate_fingerprint(self.ecdsa_pub)
+        self.assertEqual(self.ecdsa_fp_sha256, fingerprint)
+
+        fingerprint = crypto.generate_fingerprint(self.ecdsa_pub_with_spaces)
+        self.assertEqual(self.ecdsa_fp_sha256, fingerprint)
+
+        CONF.set_default('fingerprint_algorithm',
+                         default='md5', group='key_pairs')
 
     def test_generate_key_pair_2048_bits(self):
         (private_key, public_key, fingerprint) = crypto.generate_key_pair()
@@ -219,3 +274,22 @@ class KeyPairTest(test.NoDBTestCase):
             (private_key, public_key, fingerprint) = crypto.generate_key_pair()
             self.assertEqual(self.rsa_pub, public_key)
             self.assertEqual(self.rsa_fp, fingerprint)
+
+        CONF.set_default('fingerprint_algorithm',
+                         default='sha1', group='key_pairs')
+        with mock.patch.object(paramiko.RSAKey, 'generate') as mock_generate:
+            mock_generate.return_value = key
+            (private_key, public_key, fingerprint) = crypto.generate_key_pair()
+            self.assertEqual(self.rsa_pub, public_key)
+            self.assertEqual(self.rsa_fp_sha1, fingerprint)
+
+        CONF.set_default('fingerprint_algorithm',
+                         default='sha256', group='key_pairs')
+        with mock.patch.object(paramiko.RSAKey, 'generate') as mock_generate:
+            mock_generate.return_value = key
+            (private_key, public_key, fingerprint) = crypto.generate_key_pair()
+            self.assertEqual(self.rsa_pub, public_key)
+            self.assertEqual(self.rsa_fp_sha256, fingerprint)
+
+        CONF.set_default('fingerprint_algorithm',
+                         default='md5', group='key_pairs')
