@@ -7,4 +7,8 @@ features:
     1767309`_ allowing more aggressive reduction in the amount of traffic to
     the placement service.
 
+    The cache can be cleared manually at any time by sending SIGHUP to the
+    compute process. This will cause the cache to be repopulated the next time
+    the data is accessed.
+
     .. _`bug 1767309`: https://bugs.launchpad.net/nova/+bug/1767309

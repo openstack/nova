@@ -548,6 +548,7 @@ class ComputeManager(manager.Manager):
         LOG.info('Reloading compute RPC API')
         compute_rpcapi.LAST_VERSION = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+        self._get_resource_tracker().reportclient.clear_provider_cache()
 
     def _get_resource_tracker(self):
         if not self._resource_tracker:

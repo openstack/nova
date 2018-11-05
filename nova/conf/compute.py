@@ -652,6 +652,8 @@ Related options:
         default=300,
         min=0,
         mutable=True,
+        # TODO(efried): Provide more/better explanation of what this option is
+        # all about. Reference bug(s). Unless we're just going to remove it.
         help="""
 Interval for updating nova-compute-side cache of the compute node resource
 provider's aggregates and traits info.
@@ -661,6 +663,9 @@ provider's aggregates and traits information in the local cache of the compute
 node.
 
 A value of zero disables cache refresh completely.
+
+The cache can be cleared manually at any time by sending SIGHUP to the compute
+process, causing it to be repopulated the next time the data is accessed.
 
 Possible values:
 

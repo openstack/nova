@@ -4744,6 +4744,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_rpc.assert_called_once_with()
             self.assertIsNot(orig_rpc, self.compute.compute_rpcapi)
 
+    def test_reset_clears_provider_cache(self):
+        # Seed the cache so we can tell we've cleared it
+        reportclient = self.compute._get_resource_tracker().reportclient
+        ptree = reportclient._provider_tree
+        ptree.new_root('foo', uuids.foo)
+        self.assertEqual([uuids.foo], ptree.get_provider_uuids())
+        times = reportclient._association_refresh_time
+        times[uuids.foo] = time.time()
+        self.compute.reset()
+        ptree = reportclient._provider_tree
+        self.assertEqual([], ptree.get_provider_uuids())
+        times = reportclient._association_refresh_time
+        self.assertEqual({}, times)
+
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     @mock.patch('nova.compute.manager.ComputeManager._delete_instance')
     def test_terminate_instance_no_bdm_volume_id(self, mock_delete_instance,

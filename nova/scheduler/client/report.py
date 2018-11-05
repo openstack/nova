@@ -274,6 +274,11 @@ class SchedulerReportClient(object):
         # NOTE(danms): Keep track of how naggy we've been
         self._warn_count = 0
 
+    def clear_provider_cache(self):
+        LOG.info("Clearing the report client's provider cache.")
+        self._provider_tree = provider_tree.ProviderTree()
+        self._association_refresh_time = {}
+
     @utils.synchronized(PLACEMENT_CLIENT_SEMAPHORE)
     def _create_client(self):
         """Create the HTTP session accessing the placement service."""
