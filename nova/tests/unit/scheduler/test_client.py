@@ -40,12 +40,10 @@ class SchedulerClientTestCase(test.NoDBTestCase):
     def test_select_destinations(self, mock_select_destinations):
         fake_spec = objects.RequestSpec()
         fake_spec.instance_uuid = uuids.instance
-        self.assertIsNone(self.client.queryclient.instance)
 
         self.client.select_destinations('ctxt', fake_spec,
                 [fake_spec.instance_uuid])
 
-        self.assertIsNotNone(self.client.queryclient.instance)
         mock_select_destinations.assert_called_once_with('ctxt', fake_spec,
                 [fake_spec.instance_uuid], False, False)
 
@@ -97,11 +95,8 @@ class SchedulerClientTestCase(test.NoDBTestCase):
     @mock.patch.object(scheduler_report_client.SchedulerReportClient,
                        'update_compute_node')
     def test_update_compute_node(self, mock_update_compute_node):
-        self.assertIsNone(self.client.reportclient.instance)
-
         self.client.update_compute_node(mock.sentinel.ctx, mock.sentinel.cn)
 
-        self.assertIsNotNone(self.client.reportclient.instance)
         mock_update_compute_node.assert_called_once_with(
             mock.sentinel.ctx, mock.sentinel.cn)
 

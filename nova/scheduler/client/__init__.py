@@ -13,38 +13,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import functools
-
-from oslo_utils import importutils
-
+from nova.scheduler.client import query
+from nova.scheduler.client import report
 from nova.scheduler import utils
-
-
-class LazyLoader(object):
-
-    def __init__(self, klass, *args, **kwargs):
-        self.klass = klass
-        self.args = args
-        self.kwargs = kwargs
-        self.instance = None
-
-    def __getattr__(self, name):
-        return functools.partial(self.__run_method, name)
-
-    def __run_method(self, __name, *args, **kwargs):
-        if self.instance is None:
-            self.instance = self.klass(*self.args, **self.kwargs)
-        return getattr(self.instance, __name)(*args, **kwargs)
 
 
 class SchedulerClient(object):
     """Client library for placing calls to the scheduler."""
 
     def __init__(self):
-        self.queryclient = LazyLoader(importutils.import_class(
-            'nova.scheduler.client.query.SchedulerQueryClient'))
-        self.reportclient = LazyLoader(importutils.import_class(
-            'nova.scheduler.client.report.SchedulerReportClient'))
+        self.queryclient = query.SchedulerQueryClient()
+        self.reportclient = report.SchedulerReportClient()
 
     @utils.retry_select_destinations
     def select_destinations(self, context, spec_obj, instance_uuids,

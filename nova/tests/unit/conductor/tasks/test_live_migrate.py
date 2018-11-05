@@ -629,12 +629,12 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename',
                        side_effect=exception.ComputeHostNotFound(host='host'))
-    def test_remove_host_allocations_compute_host_not_found(self, get_cn):
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_tree_from_instance_allocation')
+    def test_remove_host_allocations_compute_host_not_found(
+            self, remove_provider, get_cn):
         """Tests that failing to find a ComputeNode will not blow up
         the _remove_host_allocations method.
         """
-        with mock.patch.object(
-                self.task.scheduler_client.reportclient,
-                'remove_provider_from_instance_allocation') as remove_provider:
-            self.task._remove_host_allocations('host', 'node')
+        self.task._remove_host_allocations('host', 'node')
         remove_provider.assert_not_called()
