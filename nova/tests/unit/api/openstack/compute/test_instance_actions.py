@@ -129,7 +129,8 @@ class InstanceActionsTestV21(test.NoDBTestCase):
     expect_event_hostId = False
     expect_event_host = False
 
-    def fake_get(self, context, instance_uuid, expected_attrs=None):
+    def fake_get(self, context, instance_uuid, expected_attrs=None,
+                 cell_down_support=False):
         return objects.Instance(uuid=instance_uuid)
 
     def setUp(self):
@@ -251,7 +252,8 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         self.assertRaises(exc.HTTPNotFound, self.controller.index, req,
                           FAKE_UUID)
         self.mock_get.assert_called_once_with(req.environ['nova.context'],
-                                              FAKE_UUID, expected_attrs=None)
+                                              FAKE_UUID, expected_attrs=None,
+                                              cell_down_support=False)
 
     def test_show_instance_not_found(self):
         self.mock_get.side_effect = exception.InstanceNotFound(
@@ -260,13 +262,15 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req,
                           FAKE_UUID, 'fake')
         self.mock_get.assert_called_once_with(req.environ['nova.context'],
-                                              FAKE_UUID, expected_attrs=None)
+                                              FAKE_UUID, expected_attrs=None,
+                                              cell_down_support=False)
 
 
 class InstanceActionsTestV221(InstanceActionsTestV21):
     wsgi_api_version = "2.21"
 
-    def fake_get(self, context, instance_uuid, expected_attrs=None):
+    def fake_get(self, context, instance_uuid, expected_attrs=None,
+                 cell_down_support=False):
         self.assertEqual('yes', context.read_deleted)
         return objects.Instance(uuid=instance_uuid)
 

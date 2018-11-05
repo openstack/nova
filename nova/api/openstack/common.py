@@ -460,11 +460,13 @@ class ViewBuilder(object):
         return self._update_link_prefix(orig_url, CONF.api.compute_link_prefix)
 
 
-def get_instance(compute_api, context, instance_id, expected_attrs=None):
+def get_instance(compute_api, context, instance_id, expected_attrs=None,
+                 cell_down_support=False):
     """Fetch an instance from the compute API, handling error checking."""
     try:
         return compute_api.get(context, instance_id,
-                               expected_attrs=expected_attrs)
+                               expected_attrs=expected_attrs,
+                               cell_down_support=cell_down_support)
     except exception.InstanceNotFound as e:
         raise exc.HTTPNotFound(explanation=e.format_message())
 

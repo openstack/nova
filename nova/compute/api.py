@@ -2387,7 +2387,58 @@ class API(base.Base):
             inst_map = None
         return inst_map
 
-    def _get_instance(self, context, instance_uuid, expected_attrs):
+    def _get_instance_from_cell(self, context, im, expected_attrs,
+                                cell_down_support):
+        # NOTE(danms): Even though we're going to scatter/gather to the
+        # right cell, other code depends on this being force targeted when
+        # the get call returns.
+        nova_context.set_target_cell(context, im.cell_mapping)
+
+        uuid = im.instance_uuid
+        result = nova_context.scatter_gather_single_cell(context,
+            im.cell_mapping, objects.Instance.get_by_uuid, uuid,
+            expected_attrs=expected_attrs)
+        cell_uuid = im.cell_mapping.uuid
+        if not nova_context.is_cell_failure_sentinel(result[cell_uuid]):
+            return result[cell_uuid]
+        elif isinstance(result[cell_uuid], exception.InstanceNotFound):
+            raise exception.InstanceNotFound(instance_id=uuid)
+        elif cell_down_support:
+            if im.queued_for_delete:
+                # should be treated like deleted instance.
+                raise exception.InstanceNotFound(instance_id=uuid)
+
+            # instance in down cell, return a minimal construct
+            LOG.warning("Cell %s is not responding and hence only "
+                        "partial results are available from this "
+                        "cell.", cell_uuid)
+            try:
+                rs = objects.RequestSpec.get_by_instance_uuid(context,
+                                                              uuid)
+                # For BFV case, we could have rs.image but rs.image.id might
+                # still not be set. So we check the existence of both image
+                # and its id.
+                image_ref = (rs.image.id if rs.image and
+                             'id' in rs.image else None)
+                return objects.Instance(context=context, power_state=0,
+                                        uuid=uuid,
+                                        project_id=im.project_id,
+                                        created_at=im.created_at,
+                                        user_id=rs.user_id,
+                                        flavor=rs.flavor,
+                                        image_ref=image_ref,
+                                        availability_zone=rs.availability_zone)
+            except exception.RequestSpecNotFound:
+                # could be that a deleted instance whose request
+                # spec has been archived is being queried.
+                raise exception.InstanceNotFound(instance_id=uuid)
+        else:
+            raise exception.NovaException(
+                _("Cell %s is not responding and hence instance "
+                  "info is not available.") % cell_uuid)
+
+    def _get_instance(self, context, instance_uuid, expected_attrs,
+                      cell_down_support=False):
         # Before service version 15 the BuildRequest is not cleaned up during
         # a delete request so there is no reason to look it up here as we can't
         # trust that it's not referencing a deleted instance. Also even if
@@ -2419,9 +2470,8 @@ class API(base.Base):
                                                 expected_attrs=expected_attrs)
         inst_map = self._get_instance_map_or_none(context, instance_uuid)
         if inst_map and (inst_map.cell_mapping is not None):
-            nova_context.set_target_cell(context, inst_map.cell_mapping)
-            instance = objects.Instance.get_by_uuid(
-                context, instance_uuid, expected_attrs=expected_attrs)
+            instance = self._get_instance_from_cell(context, inst_map,
+                expected_attrs, cell_down_support)
         elif inst_map and (inst_map.cell_mapping is None):
             # This means the instance has not been scheduled and put in
             # a cell yet. For now it also may mean that the deployer
@@ -2436,11 +2486,8 @@ class API(base.Base):
                 inst_map = self._get_instance_map_or_none(context,
                                                           instance_uuid)
                 if inst_map and (inst_map.cell_mapping is not None):
-                    nova_context.set_target_cell(context,
-                                                 inst_map.cell_mapping)
-                    instance = objects.Instance.get_by_uuid(
-                        context, instance_uuid,
-                        expected_attrs=expected_attrs)
+                    instance = self._get_instance_from_cell(context, inst_map,
+                        expected_attrs, cell_down_support)
                 else:
                     raise exception.InstanceNotFound(instance_id=instance_uuid)
         else:
@@ -2448,8 +2495,17 @@ class API(base.Base):
 
         return instance
 
-    def get(self, context, instance_id, expected_attrs=None):
-        """Get a single instance with the given instance_id."""
+    def get(self, context, instance_id, expected_attrs=None,
+            cell_down_support=False):
+        """Get a single instance with the given instance_id.
+
+        :param cell_down_support: True if the API (and caller) support
+                                  returning a minimal instance
+                                  construct if the relevant cell is
+                                  down. If False, an error is raised
+                                  since the instance cannot be retrieved
+                                  due to the cell being down.
+        """
         if not expected_attrs:
             expected_attrs = []
         expected_attrs.extend(['metadata', 'system_metadata',
@@ -2461,7 +2517,7 @@ class API(base.Base):
                            instance_uuid=instance_id)
 
                 instance = self._get_instance(context, instance_id,
-                                              expected_attrs)
+                    expected_attrs, cell_down_support=cell_down_support)
             else:
                 LOG.debug("Failed to fetch instance by id %s", instance_id)
                 raise exception.InstanceNotFound(instance_id=instance_id)

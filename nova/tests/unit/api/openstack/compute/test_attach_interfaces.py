@@ -357,7 +357,8 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None, tag=None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         expected_attrs=None)
+                                         expected_attrs=None,
+                                         cell_down_support=False)
 
     @mock.patch.object(compute_api.API, 'get')
     @mock.patch.object(compute_api.API, 'attach_interface')
@@ -376,7 +377,8 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None, tag=None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         expected_attrs=None)
+                                         expected_attrs=None,
+                                         cell_down_support=False)
 
     @mock.patch.object(compute_api.API, 'get')
     @mock.patch.object(compute_api.API, 'attach_interface')
@@ -396,7 +398,8 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None, tag=None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         expected_attrs=None)
+                                         expected_attrs=None,
+                                         cell_down_support=False)
 
     @mock.patch.object(compute_api.API, 'get')
     @mock.patch.object(compute_api.API, 'attach_interface')
@@ -412,7 +415,8 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None, tag=None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         expected_attrs=None)
+                                         expected_attrs=None,
+                                         cell_down_support=False)
 
     @mock.patch.object(compute_api.API, 'get')
     @mock.patch.object(compute_api.API, 'attach_interface')
@@ -431,7 +435,8 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None, tag=None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         expected_attrs=None)
+                                         expected_attrs=None,
+                                         cell_down_support=False)
 
     @mock.patch.object(compute_api.API, 'get')
     @mock.patch.object(compute_api.API, 'attach_interface')
@@ -448,7 +453,8 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None, tag=None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         expected_attrs=None)
+                                         expected_attrs=None,
+                                         cell_down_support=False)
 
     def _test_attach_interface_with_invalid_parameter(self, param):
         self.stub_out('nova.compute.api.API.attach_interface',

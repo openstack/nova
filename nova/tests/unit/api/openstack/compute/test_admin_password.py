@@ -23,7 +23,8 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 
 
-def fake_get(self, context, id, expected_attrs=None):
+def fake_get(self, context, id, expected_attrs=None,
+             cell_down_support=False):
     return fake_instance.fake_instance_obj(
         context,
         uuid=id,

@@ -497,7 +497,7 @@ class ServersControllerTest(ControllerTest):
         self.mock_get.assert_called_once_with(
             req.environ['nova.context'], FAKE_UUID,
             expected_attrs=['flavor', 'info_cache', 'metadata',
-                            'numa_topology'])
+                            'numa_topology'], cell_down_support=False)
 
     def test_get_server_with_id_image_ref_by_id(self):
         image_bookmark = "http://localhost/fake/images/10"
@@ -514,7 +514,7 @@ class ServersControllerTest(ControllerTest):
         self.mock_get.assert_called_once_with(
             req.environ['nova.context'], FAKE_UUID,
             expected_attrs=['flavor', 'info_cache', 'metadata',
-                            'numa_topology'])
+                            'numa_topology'], cell_down_support=False)
 
     def _generate_nw_cache_info(self):
         pub0 = ('172.19.0.1', '172.19.0.2',)
@@ -571,7 +571,7 @@ class ServersControllerTest(ControllerTest):
         self.assertThat(res_dict, matchers.DictMatches(expected))
         self.mock_get.assert_called_once_with(
             req.environ['nova.context'], FAKE_UUID,
-            expected_attrs=None)
+            expected_attrs=None, cell_down_support=False)
         # Make sure we kept the addresses in order
         self.assertIsInstance(res_dict['addresses'], collections.OrderedDict)
         labels = [vif['network']['label'] for vif in nw_cache]
@@ -591,7 +591,8 @@ class ServersControllerTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.ips_controller.index, req, uuids.fake)
         self.mock_get.assert_called_once_with(
-            req.environ['nova.context'], uuids.fake, expected_attrs=None)
+            req.environ['nova.context'], uuids.fake, expected_attrs=None,
+            cell_down_support=False)
 
     def test_show_server_hide_addresses_in_building(self):
         uuid = FAKE_UUID

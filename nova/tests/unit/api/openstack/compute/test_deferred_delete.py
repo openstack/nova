@@ -60,7 +60,8 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
 
         mock_get.assert_called_once_with(self.fake_context,
                                          self.fake_uuid,
-                                         expected_attrs=None)
+                                         expected_attrs=None,
+                                         cell_down_support=False)
         mock_force_delete.assert_called_once_with(self.fake_context,
                                                   instance)
 
@@ -77,7 +78,8 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
 
         mock_get.assert_called_once_with(self.fake_context,
                                          self.fake_uuid,
-                                         expected_attrs=None)
+                                         expected_attrs=None,
+                                         cell_down_support=False)
 
     @mock.patch.object(compute_api.API, 'get')
     @mock.patch.object(compute_api.API, 'force_delete',
@@ -134,7 +136,8 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
 
         mock_get.assert_called_once_with(self.fake_context,
                                          self.fake_uuid,
-                                         expected_attrs=None)
+                                         expected_attrs=None,
+                                         cell_down_support=False)
         mock_restore.assert_called_once_with(self.fake_context,
                                              instance)
 
@@ -149,7 +152,8 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
 
         mock_get.assert_called_once_with(self.fake_context,
                                          self.fake_uuid,
-                                         expected_attrs=None)
+                                         expected_attrs=None,
+                                         cell_down_support=False)
 
     @mock.patch.object(compute_api.API, 'get')
     @mock.patch.object(compute_api.API, 'restore')
@@ -167,7 +171,8 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
 
         mock_get.assert_called_once_with(self.fake_context,
                                          self.fake_uuid,
-                                         expected_attrs=None)
+                                         expected_attrs=None,
+                                         cell_down_support=False)
 
         mock_restore.assert_called_once_with(self.fake_context,
                                              instance)

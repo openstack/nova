@@ -58,7 +58,8 @@ class LockServerTestsV21(admin_only_action_common.CommonTests):
                               self.req, instance.uuid, body)
             mock_unlock.assert_called_once_with(self.context, instance)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=None)
+                                              expected_attrs=None,
+                                              cell_down_support=False)
 
     @mock.patch.object(common, 'get_instance')
     def test_unlock_override_not_authorized_with_non_admin_user(
