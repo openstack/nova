@@ -45,6 +45,10 @@ class LibvirtReportTraitsTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._create_trait('CUSTOM_TRAITS')
         new_traits = ['CUSTOM_TRAITS', 'HW_CPU_X86_AVX']
         self._set_provider_traits(self.host_uuid, new_traits)
+        # The above is an out-of-band placement operation, as if the operator
+        # used the CLI. So now we have to "SIGHUP the compute process" to clear
+        # the report client cache so the subsequent update picks up the change.
+        self.compute.manager.reset()
         self._run_periodics()
         # HW_CPU_X86_AVX is filtered out because nova-compute owns CPU traits
         # and it's not in the baseline for the host.

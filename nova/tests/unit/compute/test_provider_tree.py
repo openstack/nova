@@ -57,6 +57,8 @@ class TestProviderTree(test.NoDBTestCase):
 
         self.assertEqual([cn1.uuid],
                          pt.get_provider_uuids(name_or_uuid=cn1.uuid))
+        # Same with ..._in_tree
+        self.assertEqual([cn1.uuid], pt.get_provider_uuids_in_tree(cn1.uuid))
         self.assertEqual(set([cn1.uuid, cn2.uuid]),
                          set(pt.get_provider_uuids()))
 
@@ -76,9 +78,23 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertTrue(pt.exists('pf1_cell0'))
 
         # Now we've got a 3-level tree under cn1 - check provider UUIDs again
+        all_cn1 = [cn1.uuid, numa_cell0_uuid, pf1_cell0_uuid, numa_cell1_uuid]
         self.assertEqual(
-            set([cn1.uuid, numa_cell0_uuid, pf1_cell0_uuid, numa_cell1_uuid]),
+            set(all_cn1),
             set(pt.get_provider_uuids(name_or_uuid=cn1.uuid)))
+        # Same with ..._in_tree if we're asking for the root
+        self.assertEqual(
+            set(all_cn1),
+            set(pt.get_provider_uuids_in_tree(cn1.uuid)))
+        # Asking for a subtree.
+        self.assertEqual(
+            [numa_cell0_uuid, pf1_cell0_uuid],
+            pt.get_provider_uuids(name_or_uuid=numa_cell0_uuid))
+        # With ..._in_tree, get the whole tree no matter which we specify.
+        for node in all_cn1:
+            self.assertEqual(set(all_cn1), set(pt.get_provider_uuids_in_tree(
+                node)))
+        # With no provider specified, get everything
         self.assertEqual(
             set([cn1.uuid, cn2.uuid, numa_cell0_uuid, pf1_cell0_uuid,
                  numa_cell1_uuid]),
