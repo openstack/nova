@@ -121,7 +121,7 @@ fake_services_list = [
 
 def fake_service_get_all(services):
     def service_get_all(context, filters=None, set_zones=False,
-                        all_cells=False):
+                        all_cells=False, cell_down_support=False):
         if set_zones or 'availability_zone' in filters:
             return availability_zones.set_availability_zones(context,
                                                              services)

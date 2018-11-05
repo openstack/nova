@@ -54,10 +54,10 @@ class ServiceController(wsgi.Controller):
         context.can(services_policies.BASE_POLICY_NAME)
 
         _services = [
-           s
-           for s in self.host_api.service_get_all(context, set_zones=True,
-                                                  all_cells=True)
-           if s['binary'] not in api_services
+            s
+            for s in self.host_api.service_get_all(context, set_zones=True,
+                all_cells=True, cell_down_support=False)
+            if s['binary'] not in api_services
         ]
 
         host = ''
