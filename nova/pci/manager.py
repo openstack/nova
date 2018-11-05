@@ -314,23 +314,43 @@ class PciDevTracker(object):
         for dev in freed_devs:
             self.stats.add_device(dev)
 
-    def _free_instance(self, instance):
+    def free_instance_allocations(self, context, instance):
+        """Free devices that are in ALLOCATED state for instance.
+
+        :param context: user request context (nova.context.RequestContext)
+        :param instance: instance object
+        """
+        if self.allocations.pop(instance['uuid'], None):
+            for dev in self.pci_devs:
+                if (dev.status == fields.PciDeviceStatus.ALLOCATED and
+                        dev.instance_uuid == instance['uuid']):
+                    self._free_device(dev)
+
+    def free_instance_claims(self, context, instance):
+        """Free devices that are in CLAIMED state for instance.
+
+        :param context: user request context (nova.context.RequestContext)
+        :param instance: instance object
+        """
+        if self.claims.pop(instance['uuid'], None):
+            for dev in self.pci_devs:
+                if (dev.status == fields.PciDeviceStatus.CLAIMED and
+                        dev.instance_uuid == instance['uuid']):
+                    self._free_device(dev)
+
+    def free_instance(self, context, instance):
+        """Free devices that are in CLAIMED or ALLOCATED state for instance.
+
+        :param context: user request context (nova.context.RequestContext)
+        :param instance: instance object
+        """
         # Note(yjiang5): When an instance is resized, the devices in the
         # destination node are claimed to the instance in prep_resize stage.
         # However, the instance contains only allocated devices
         # information, not the claimed one. So we can't use
         # instance['pci_devices'] to check the devices to be freed.
-        for dev in self.pci_devs:
-            if dev.status in (fields.PciDeviceStatus.CLAIMED,
-                              fields.PciDeviceStatus.ALLOCATED):
-                if dev.instance_uuid == instance['uuid']:
-                    self._free_device(dev)
-
-    def free_instance(self, context, instance):
-        if self.allocations.pop(instance['uuid'], None):
-            self._free_instance(instance)
-        elif self.claims.pop(instance['uuid'], None):
-            self._free_instance(instance)
+        self.free_instance_allocations(context, instance)
+        self.free_instance_claims(context, instance)
 
     def update_pci_for_instance(self, context, instance, sign):
         """Update PCI usage information if devices are de/allocated.

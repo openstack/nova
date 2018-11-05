@@ -546,6 +546,58 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertIn(pci_device.id, free_pci_device_ids)
         self.assertIsNone(self.tracker.allocations.get(instance_uuid))
 
+    def test_free_instance_claims(self):
+        # Create an InstancePCIRequest object
+        pci_requests_obj = self._create_pci_requests_object(
+            [{'count': 1, 'spec': [{'vendor_id': 'v'}]}])
+
+        # Claim a single PCI device
+        claimed_devs = self.tracker.claim_instance(mock.sentinel.context,
+                                                   pci_requests_obj, None)
+
+        # Assert we have exactly one claimed device for the given instance.
+        claimed_dev = claimed_devs[0]
+        instance_uuid = self.inst['uuid']
+        self.assertEqual(1, len(self.tracker.claims.get(instance_uuid)))
+        self.assertIn(claimed_dev.id,
+                      [pci_dev.id for pci_dev in
+                       self.tracker.claims.get(instance_uuid)])
+        self.assertIsNone(self.tracker.allocations.get(instance_uuid))
+
+        # Free instance claims
+        self.tracker.free_instance_claims(mock.sentinel.context, self.inst)
+
+        # Assert no claims for instance and all PCI devices are free
+        self.assertIsNone(self.tracker.claims.get(instance_uuid))
+        free_devs = self.tracker.pci_stats.get_free_devs()
+        self.assertEqual(len(fake_db_devs), len(free_devs))
+
+    def test_free_instance_allocations(self):
+        # Create an InstancePCIRequest object
+        pci_requests_obj = self._create_pci_requests_object(
+            [{'count': 1, 'spec': [{'vendor_id': 'v'}]}])
+        # Allocate a single PCI device
+        allocated_devs = self.tracker.claim_instance(mock.sentinel.context,
+                                                     pci_requests_obj, None)
+        self.tracker.allocate_instance(self.inst)
+
+        # Assert we have exactly one allocated device for the given instance.
+        allocated_dev = allocated_devs[0]
+        instance_uuid = self.inst['uuid']
+        self.assertIsNone(self.tracker.claims.get(instance_uuid))
+        self.assertEqual(1, len(self.tracker.allocations.get(instance_uuid)))
+        self.assertIn(allocated_dev.id,
+                      [pci_dev.id for pci_dev in
+                       self.tracker.allocations.get(instance_uuid)])
+
+        # Free instance allocations and assert claims did not change
+        self.tracker.free_instance_allocations(mock.sentinel.context,
+                                               self.inst)
+        # Assert all PCI devices are free.
+        self.assertIsNone(self.tracker.allocations.get(instance_uuid))
+        free_devs = self.tracker.pci_stats.get_free_devs()
+        self.assertEqual(len(fake_db_devs), len(free_devs))
+
 
 class PciGetInstanceDevs(test.NoDBTestCase):
 
