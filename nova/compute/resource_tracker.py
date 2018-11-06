@@ -933,8 +933,8 @@ class ResourceTracker(object):
             context, compute_node.uuid, name=compute_node.hypervisor_hostname)
         # Let the virt driver rearrange the provider tree and set/update
         # the inventory, traits, and aggregates throughout.
+        allocs = None
         try:
-            allocs = None
             try:
                 self.driver.update_provider_tree(prov_tree, nodename)
             except exception.ReshapeNeeded:
@@ -950,27 +950,24 @@ class ResourceTracker(object):
                 self.driver.update_provider_tree(prov_tree, nodename,
                                                  allocations=allocs)
 
-            # Flush any changes. If we processed ReshapeNeeded above, allocs is
-            # not None, and this will hit placement's POST /reshaper route.
-            reportclient.update_from_provider_tree(context, prov_tree,
-                                                   allocations=allocs)
         except NotImplementedError:
             # update_provider_tree isn't implemented yet - try get_inventory
             try:
                 inv_data = self.driver.get_inventory(nodename)
                 _normalize_inventory_from_cn_obj(inv_data, compute_node)
-                self.scheduler_client.set_inventory_for_provider(
-                    context,
-                    compute_node.uuid,
-                    compute_node.hypervisor_hostname,
-                    inv_data,
-                )
             except NotImplementedError:
                 # Eventually all virt drivers will return an inventory dict in
                 # the format that the placement API expects and we'll be able
                 # to remove this code branch
-                self.scheduler_client.update_compute_node(context,
-                                                          compute_node)
+                inv_data = compute_utils.compute_node_to_inventory_dict(
+                    compute_node)
+
+            prov_tree.update_inventory(nodename, inv_data)
+
+        # Flush any changes. If we processed ReshapeNeeded above, allocs is not
+        # None, and this will hit placement's POST /reshaper route.
+        reportclient.update_from_provider_tree(context, prov_tree,
+                                               allocations=allocs)
 
     @retrying.retry(stop_max_attempt_number=4,
                     retry_on_exception=lambda e: isinstance(

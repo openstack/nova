@@ -30,7 +30,6 @@ from oslo_utils import versionutils
 import retrying
 
 from nova.compute import provider_tree
-from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
 from nova.i18n import _
@@ -42,9 +41,6 @@ from nova import utils
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
-VCPU = fields.ResourceClass.VCPU
-MEMORY_MB = fields.ResourceClass.MEMORY_MB
-DISK_GB = fields.ResourceClass.DISK_GB
 _RE_INV_IN_USE = re.compile("Inventory for (.+) on resource provider "
                             "(.+) in use")
 WARN_EVERY = 10
@@ -126,50 +122,6 @@ def retries(f):
                   f.__name__)
         return False
     return wrapper
-
-
-def _compute_node_to_inventory_dict(compute_node):
-    """Given a supplied `objects.ComputeNode` object, return a dict, keyed
-    by resource class, of various inventory information.
-
-    :param compute_node: `objects.ComputeNode` object to translate
-    """
-    result = {}
-
-    # NOTE(jaypipes): Ironic virt driver will return 0 values for vcpus,
-    # memory_mb and disk_gb if the Ironic node is not available/operable
-    if compute_node.vcpus > 0:
-        result[VCPU] = {
-            'total': compute_node.vcpus,
-            'reserved': CONF.reserved_host_cpus,
-            'min_unit': 1,
-            'max_unit': compute_node.vcpus,
-            'step_size': 1,
-            'allocation_ratio': compute_node.cpu_allocation_ratio,
-        }
-    if compute_node.memory_mb > 0:
-        result[MEMORY_MB] = {
-            'total': compute_node.memory_mb,
-            'reserved': CONF.reserved_host_memory_mb,
-            'min_unit': 1,
-            'max_unit': compute_node.memory_mb,
-            'step_size': 1,
-            'allocation_ratio': compute_node.ram_allocation_ratio,
-        }
-    if compute_node.local_gb > 0:
-        # TODO(johngarbutt) We should either move to reserved_host_disk_gb
-        # or start tracking DISK_MB.
-        reserved_disk_gb = compute_utils.convert_mb_to_ceil_gb(
-            CONF.reserved_host_disk_mb)
-        result[DISK_GB] = {
-            'total': compute_node.local_gb,
-            'reserved': reserved_disk_gb,
-            'min_unit': 1,
-            'max_unit': compute_node.local_gb,
-            'step_size': 1,
-            'allocation_ratio': compute_node.disk_allocation_ratio,
-        }
-    return result
 
 
 def _instance_to_allocations_dict(instance):
@@ -900,143 +852,6 @@ class SchedulerReportClient(object):
             return False
         return (time.time() - refresh_time) > rpar
 
-    def _update_inventory_attempt(self, context, rp_uuid, inv_data):
-        """Update the inventory for this resource provider if needed.
-
-        :param context: The security context
-        :param rp_uuid: The resource provider UUID for the operation
-        :param inv_data: The new inventory for the resource provider
-        :returns: True if the inventory was updated (or did not need to be),
-                  False otherwise.
-        """
-        # TODO(jaypipes): Should we really be calling the placement API to get
-        # the current inventory for every resource provider each and every time
-        # update_resource_stats() is called? :(
-        curr = self._refresh_and_get_inventory(context, rp_uuid)
-        if curr is None:
-            LOG.debug('No inventory for provider: %s', rp_uuid, inv_data)
-            return False
-
-        cur_gen = curr['resource_provider_generation']
-
-        # Check to see if we need to update placement's view
-        if not self._provider_tree.has_inventory_changed(rp_uuid, inv_data):
-            LOG.debug('Inventory has not changed for provider %s based '
-                      'on inventory data: %s', rp_uuid, inv_data)
-            return True
-
-        payload = {
-            'resource_provider_generation': cur_gen,
-            'inventories': inv_data,
-        }
-        url = '/resource_providers/%s/inventories' % rp_uuid
-        # NOTE(vdrok): in microversion 1.26 it is allowed to have inventory
-        # records with reserved value equal to total
-        version = ALLOW_RESERVED_EQUAL_TOTAL_INVENTORY_VERSION
-        result = self.put(url, payload, version=version,
-                          global_request_id=context.global_id)
-        if result.status_code == 409:
-            LOG.info('[%(placement_req_id)s] Inventory update conflict for '
-                     '%(resource_provider_uuid)s with generation ID '
-                     '%(generation)s',
-                     {'placement_req_id': get_placement_request_id(result),
-                      'resource_provider_uuid': rp_uuid,
-                      'generation': cur_gen})
-            # NOTE(jaypipes): There may be cases when we try to set a
-            # provider's inventory that results in attempting to delete an
-            # inventory record for a resource class that has an active
-            # allocation. We need to catch this particular case and raise an
-            # exception here instead of returning False, since we should not
-            # re-try the operation in this case.
-            #
-            # A use case for where this can occur is the following:
-            #
-            # 1) Provider created for each Ironic baremetal node in Newton
-            # 2) Inventory records for baremetal node created for VCPU,
-            #    MEMORY_MB and DISK_GB
-            # 3) A Nova instance consumes the baremetal node and allocation
-            #    records are created for VCPU, MEMORY_MB and DISK_GB matching
-            #    the total amount of those resource on the baremetal node.
-            # 3) Upgrade to Ocata and now resource tracker wants to set the
-            #    provider's inventory to a single record of resource class
-            #    CUSTOM_IRON_SILVER (or whatever the Ironic node's
-            #    "resource_class" attribute is)
-            # 4) Scheduler report client sends the inventory list containing a
-            #    single CUSTOM_IRON_SILVER record and placement service
-            #    attempts to delete the inventory records for VCPU, MEMORY_MB
-            #    and DISK_GB. An exception is raised from the placement service
-            #    because allocation records exist for those resource classes,
-            #    and a 409 Conflict is returned to the compute node. We need to
-            #    trigger a delete of the old allocation records and then set
-            #    the new inventory, and then set the allocation record to the
-            #    new CUSTOM_IRON_SILVER record.
-            rc = _extract_inventory_in_use(result.text)
-            if rc is not None:
-                raise exception.InventoryInUse(
-                    resource_classes=rc,
-                    resource_provider=rp_uuid,
-                )
-
-            # Invalidate our cache and re-fetch the resource provider
-            # to be sure to get the latest generation.
-            self._provider_tree.remove(rp_uuid)
-            # NOTE(jaypipes): We don't need to pass a name parameter to
-            # _ensure_resource_provider() because we know the resource provider
-            # record already exists. We're just reloading the record here.
-            self._ensure_resource_provider(context, rp_uuid)
-            return False
-        elif not result:
-            placement_req_id = get_placement_request_id(result)
-            LOG.warning('[%(placement_req_id)s] Failed to update inventory '
-                        'for resource provider %(uuid)s: %(status)i %(text)s',
-                        {'placement_req_id': placement_req_id,
-                         'uuid': rp_uuid,
-                         'status': result.status_code,
-                         'text': result.text})
-            # log the body at debug level
-            LOG.debug('[%(placement_req_id)s] Failed inventory update request '
-                      'for resource provider %(uuid)s with body: %(payload)s',
-                      {'placement_req_id': placement_req_id,
-                       'uuid': rp_uuid,
-                       'payload': payload})
-            return False
-
-        if result.status_code != 200:
-            placement_req_id = get_placement_request_id(result)
-            LOG.info('[%(placement_req_id)s] Received unexpected response '
-                     'code %(code)i while trying to update inventory for '
-                     'resource provider %(uuid)s: %(text)s',
-                     {'placement_req_id': placement_req_id,
-                      'uuid': rp_uuid,
-                      'code': result.status_code,
-                      'text': result.text})
-            return False
-
-        # Update our view of the generation for next time
-        updated_inventories_result = result.json()
-        new_gen = updated_inventories_result['resource_provider_generation']
-        LOG.debug('Updating ProviderTree inventory for provider %s with '
-                  'generation %s from _update_inventory_attempt with data: '
-                  '%s', rp_uuid, new_gen, inv_data)
-        self._provider_tree.update_inventory(rp_uuid, inv_data,
-                                             generation=new_gen)
-        return True
-
-    @safe_connect
-    def _update_inventory(self, context, rp_uuid, inv_data):
-        for attempt in (1, 2, 3):
-            if not self._provider_tree.exists(rp_uuid):
-                # NOTE(danms): Either we failed to fetch/create the RP
-                # on our first attempt, or a previous attempt had to
-                # invalidate the cache, and we were unable to refresh
-                # it. Bail and try again next time.
-                LOG.warning('Unable to refresh my resource provider record')
-                return False
-            if self._update_inventory_attempt(context, rp_uuid, inv_data):
-                return True
-            time.sleep(1)
-        return False
-
     def get_provider_tree_and_ensure_root(self, context, rp_uuid, name=None,
                                           parent_provider_uuid=None):
         """Returns a fresh ProviderTree representing all providers which are in
@@ -1068,67 +883,11 @@ class SchedulerReportClient(object):
         # Return a *copy* of the tree.
         return copy.deepcopy(self._provider_tree)
 
-    def set_inventory_for_provider(self, context, rp_uuid, rp_name, inv_data,
-                                   parent_provider_uuid=None):
+    def set_inventory_for_provider(self, context, rp_uuid, inv_data):
         """Given the UUID of a provider, set the inventory records for the
         provider to the supplied dict of resources.
 
-        :param context: The security context
-        :param rp_uuid: UUID of the resource provider to set inventory for
-        :param rp_name: Name of the resource provider in case we need to create
-                        a record for it in the placement API
-        :param inv_data: Dict, keyed by resource class name, of inventory data
-                         to set against the provider
-        :param parent_provider_uuid:
-                If the provider is not a root, this is required, and represents
-                the UUID of the immediate parent, which is a provider for which
-                this method has already been invoked.
-
-        :raises: exc.InvalidResourceClass if a supplied custom resource class
-                 name does not meet the placement API's format requirements.
-        """
-        self._ensure_resource_provider(
-            context, rp_uuid, rp_name,
-            parent_provider_uuid=parent_provider_uuid)
-
-        # Auto-create custom resource classes coming from a virt driver
-        self._ensure_resource_classes(context, set(inv_data))
-
-        # NOTE(efried): Do not use the DELETE API introduced in microversion
-        # 1.5, even if the new inventory is empty.  It provides no way of
-        # sending the generation down, so no way to trigger/detect a conflict
-        # if an out-of-band update occurs between when we GET the latest and
-        # when we invoke the DELETE.  See bug #1746374.
-        self._update_inventory(context, rp_uuid, inv_data)
-
-    def _set_inventory_for_provider(self, context, rp_uuid, inv_data):
-        """Given the UUID of a provider, set the inventory records for the
-        provider to the supplied dict of resources.
-
-        Compare and contrast with set_inventory_for_provider above.  This one
-        is specially formulated for use by update_from_provider_tree.  Like the
-        other method, we DO need to _ensure_resource_class - i.e. automatically
-        create new resource classes specified in the inv_data.  However, UNLIKE
-        the other method:
-        - We don't use the DELETE API when inventory is empty, because that guy
-          doesn't return content, and we need to update the cached provider
-          tree with the new generation.
-        - We raise exceptions (rather than returning a boolean) which are
-          handled in a consistent fashion by update_from_provider_tree.
-        - We don't invalidate the cache on failure.  That's controlled at a
-          broader scope (based on errors from ANY of the set_*_for_provider
-          methods, etc.) by update_from_provider_tree.
-        - We don't retry.  In this code path, retries happen at the level of
-          the resource tracker on the next iteration.
-        - We take advantage of the cache and no-op if inv_data isn't different
-          from what we have locally.  This is an optimization, not essential.
-        - We don't _ensure_resource_provider or refresh_and_get_inventory,
-          because that's already been done in the code paths leading up to
-          update_from_provider_tree (by get_provider_tree).  This is an
-          optimization, not essential.
-
-        In short, this version is more in the spirit of set_traits_for_provider
-        and set_aggregates_for_provider.
+        The provider must exist - this method does not attempt to create it.
 
         :param context: The security context
         :param rp_uuid: The UUID of the provider whose inventory is to be
@@ -1147,8 +906,6 @@ class SchedulerReportClient(object):
         :raises: ResourceProviderUpdateFailed on any other placement API
                  failure.
         """
-        # TODO(efried): Consolidate/refactor to one set_inventory_for_provider.
-
         # NOTE(efried): This is here because _ensure_resource_class already has
         # @safe_connect, so we don't want to decorate this whole method with it
         @safe_connect
@@ -1179,7 +936,7 @@ class SchedulerReportClient(object):
 
         if resp.status_code == 200:
             LOG.debug('Updated inventory for provider %s with generation %s '
-                      'in Placement from _set_inventory_for_provider using '
+                      'in Placement from set_inventory_for_provider using '
                       'data: %s', rp_uuid, generation, inv_data)
             json = resp.json()
             self._provider_tree.update_inventory(
@@ -1461,26 +1218,6 @@ class SchedulerReportClient(object):
                 LOG.error(msg, args)
                 raise exception.InvalidResourceClass(resource_class=name)
 
-    def update_compute_node(self, context, compute_node):
-        """Creates or updates stats for the supplied compute node.
-
-        :param context: The security context
-        :param compute_node: updated nova.objects.ComputeNode to report
-        :raises `exception.InventoryInUse` if the compute node has had changes
-                to its inventory but there are still active allocations for
-                resource classes that would be deleted by an update to the
-                placement API.
-        """
-        self._ensure_resource_provider(context, compute_node.uuid,
-                                       compute_node.hypervisor_hostname)
-        inv_data = _compute_node_to_inventory_dict(compute_node)
-        # NOTE(efried): Do not use the DELETE API introduced in microversion
-        # 1.5, even if the new inventory is empty.  It provides no way of
-        # sending the generation down, so no way to trigger/detect a conflict
-        # if an out-of-band update occurs between when we GET the latest and
-        # when we invoke the DELETE.  See bug #1746374.
-        self._update_inventory(context, compute_node.uuid, inv_data)
-
     def _reshape(self, context, inventories, allocations):
         """Perform atomic inventory & allocation data migration.
 
@@ -1701,7 +1438,7 @@ class SchedulerReportClient(object):
         for uuid in reversed(new_uuids):
             pd = new_tree.data(uuid)
             with catch_all(pd.uuid):
-                self._set_inventory_for_provider(
+                self.set_inventory_for_provider(
                     context, pd.uuid, pd.inventory)
                 self.set_aggregates_for_provider(
                     context, pd.uuid, pd.aggregates)

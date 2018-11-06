@@ -197,6 +197,7 @@ class PowerVMDriver(driver.ComputeDriver):
         # otherwise.
         inv = provider_tree.data(nodename).inventory
         ratios = self._get_allocation_ratios(inv)
+        # TODO(efried): Fix these to reflect something like reality
         cpu_reserved = CONF.reserved_host_cpus
         mem_reserved = CONF.reserved_host_memory_mb
         disk_reserved = self._get_reserved_host_disk_gb_from_config()

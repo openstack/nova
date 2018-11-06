@@ -33,6 +33,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova import exception
 from nova.image import glance
@@ -53,6 +54,8 @@ from nova.tests.unit.objects import test_flavor
 
 
 FAKE_IMAGE_REF = uuids.image_ref
+
+CONF = nova.conf.CONF
 
 
 def create_instance(context, user_id='fake', project_id='fake', params=None):
@@ -1451,3 +1454,65 @@ class IsVolumeBackedInstanceTestCase(test.TestCase):
         self.assertFalse(
             compute_utils.is_volume_backed_instance(ctxt, instance, None))
         mock_bdms.assert_called_with(ctxt, instance.uuid)
+
+
+class TestComputeNodeToInventoryDict(test.NoDBTestCase):
+    def test_compute_node_inventory(self):
+        uuid = uuids.compute_node
+        name = 'computehost'
+        compute_node = objects.ComputeNode(uuid=uuid,
+                                           hypervisor_hostname=name,
+                                           vcpus=2,
+                                           cpu_allocation_ratio=16.0,
+                                           memory_mb=1024,
+                                           ram_allocation_ratio=1.5,
+                                           local_gb=10,
+                                           disk_allocation_ratio=1.0)
+
+        self.flags(reserved_host_memory_mb=1000)
+        self.flags(reserved_host_disk_mb=200)
+        self.flags(reserved_host_cpus=1)
+
+        result = compute_utils.compute_node_to_inventory_dict(compute_node)
+
+        expected = {
+            'VCPU': {
+                'total': compute_node.vcpus,
+                'reserved': CONF.reserved_host_cpus,
+                'min_unit': 1,
+                'max_unit': compute_node.vcpus,
+                'step_size': 1,
+                'allocation_ratio': compute_node.cpu_allocation_ratio,
+            },
+            'MEMORY_MB': {
+                'total': compute_node.memory_mb,
+                'reserved': CONF.reserved_host_memory_mb,
+                'min_unit': 1,
+                'max_unit': compute_node.memory_mb,
+                'step_size': 1,
+                'allocation_ratio': compute_node.ram_allocation_ratio,
+            },
+            'DISK_GB': {
+                'total': compute_node.local_gb,
+                'reserved': 1,  # this is ceil(1000/1024)
+                'min_unit': 1,
+                'max_unit': compute_node.local_gb,
+                'step_size': 1,
+                'allocation_ratio': compute_node.disk_allocation_ratio,
+            },
+        }
+        self.assertEqual(expected, result)
+
+    def test_compute_node_inventory_empty(self):
+        uuid = uuids.compute_node
+        name = 'computehost'
+        compute_node = objects.ComputeNode(uuid=uuid,
+                                           hypervisor_hostname=name,
+                                           vcpus=0,
+                                           cpu_allocation_ratio=16.0,
+                                           memory_mb=0,
+                                           ram_allocation_ratio=1.5,
+                                           local_gb=0,
+                                           disk_allocation_ratio=1.0)
+        result = compute_utils.compute_node_to_inventory_dict(compute_node)
+        self.assertEqual({}, result)

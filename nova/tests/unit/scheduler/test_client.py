@@ -20,7 +20,6 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from nova import objects
 from nova.scheduler import client as scheduler_client
 from nova.scheduler.client import query as scheduler_query_client
-from nova.scheduler.client import report as scheduler_report_client
 from nova import test
 """Tests for Scheduler Client."""
 
@@ -79,44 +78,3 @@ class SchedulerClientTestCase(test.NoDBTestCase):
             aggregate=aggregate)
         mock_delete_agg.assert_called_once_with(
             'context', aggregate)
-
-    @mock.patch.object(scheduler_report_client.SchedulerReportClient,
-                       'update_compute_node')
-    def test_update_compute_node(self, mock_update_compute_node):
-        self.client.update_compute_node(mock.sentinel.ctx, mock.sentinel.cn)
-
-        mock_update_compute_node.assert_called_once_with(
-            mock.sentinel.ctx, mock.sentinel.cn)
-
-    @mock.patch.object(scheduler_report_client.SchedulerReportClient,
-                       'set_inventory_for_provider')
-    def test_set_inventory_for_provider(self, mock_set):
-        self.client.set_inventory_for_provider(
-            mock.sentinel.ctx,
-            mock.sentinel.rp_uuid,
-            mock.sentinel.rp_name,
-            mock.sentinel.inv_data,
-        )
-        mock_set.assert_called_once_with(
-            mock.sentinel.ctx,
-            mock.sentinel.rp_uuid,
-            mock.sentinel.rp_name,
-            mock.sentinel.inv_data,
-            parent_provider_uuid=None,
-        )
-        # Pass the optional parent_provider_uuid
-        mock_set.reset_mock()
-        self.client.set_inventory_for_provider(
-            mock.sentinel.ctx,
-            mock.sentinel.child_uuid,
-            mock.sentinel.child_name,
-            mock.sentinel.inv_data2,
-            parent_provider_uuid=mock.sentinel.rp_uuid,
-        )
-        mock_set.assert_called_once_with(
-            mock.sentinel.ctx,
-            mock.sentinel.child_uuid,
-            mock.sentinel.child_name,
-            mock.sentinel.inv_data2,
-            parent_provider_uuid=mock.sentinel.rp_uuid,
-        )
