@@ -60,7 +60,7 @@ the following endpoints:
 
 * / - list of available versions
 * /v2 - the first version of the Compute API, uses extensions
-        (we call this Compute API v2.0)
+  (we call this Compute API v2.0)
 * /v2.1 - same API, except uses microversions
 
 While this guide concentrates on documenting the v2.1 API,

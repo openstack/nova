@@ -4,18 +4,18 @@ Paginated collections
 
 To reduce load on the service, list operations return a maximum number
 of items at a time. The maximum number of items returned is determined
-by the compute provider. To navigate the collection, the *``limit``* and
-*``marker``* parameters can be set in the URI. For example:
+by the compute provider. To navigate the collection, the ``limit`` and
+``marker`` parameters can be set in the URI. For example:
 
 .. code::
 
     ?limit=100&marker=1234
 
-The *``marker``* parameter is the ID of the last item in the previous
+The ``marker`` parameter is the ID of the last item in the previous
 list. By default, the service sorts items by create time in descending order.
 When the service cannot identify a create time, it sorts items by ID. The
-*``limit``* parameter sets the page size. Both parameters are optional. If the
-client requests a *``limit``* beyond one that is supported by the deployment
+``limit`` parameter sets the page size. Both parameters are optional. If the
+client requests a ``limit`` beyond one that is supported by the deployment
 an overLimit (413) fault may be thrown. A marker with an invalid ID returns
 a badRequest (400) fault.
 
@@ -25,11 +25,11 @@ implementation does not contain ``previous`` links. The last
 page in the list does not contain a link to "next" page. The following examples
 illustrate three pages in a collection of servers. The first page was
 retrieved through a **GET** to
-``http://servers.api.openstack.org/v2.1/servers?limit=1``. In these
+`http://servers.api.openstack.org/v2.1/servers?limit=1`. In these
 examples, the *``limit``* parameter sets the page size to a single item.
 Subsequent links honor the initial page size. Thus, a client can follow
 links to traverse a paginated collection without having to input the
-*``marker``* parameter.
+``marker`` parameter.
 
 
 **Example: Servers collection: JSON (first page)**

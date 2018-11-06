@@ -59,9 +59,9 @@ server status is one of the following values:
 
 -  ``SHUTOFF``: The server was powered down by the user, either through the
    OpenStack Compute API or from within the server. For example, the user
-   issued a ``shutdown -h`` command from within the server. If the OpenStack
-   Compute manager detects that the VM was powered down, it transitions the
-   server to the SHUTOFF status.
+   issued a :command:`shutdown -h` command from within the server.
+   If the OpenStack Compute manager detects that the VM was powered down,
+   it transitions the server to the SHUTOFF status.
 
 -  ``SOFT_DELETED``: The server is marked as deleted but will remain in the
    cloud for some configurable amount of time. While soft-deleted, an
@@ -93,8 +93,8 @@ are exposed to administrators:
   Refer to :nova-doc:`VM States <reference/vm-states.html>`.
 
 - task_state represents what is happening to the instance at the
-  current moment. These tasks can be generic, such as 'spawning', or specific,
-  such as 'block_device_mapping'. These task states allow for a better view into
+  current moment. These tasks can be generic, such as `spawning`, or specific,
+  such as `block_device_mapping`. These task states allow for a better view into
   what a server is doing.
 
 Server creation
@@ -102,24 +102,28 @@ Server creation
 
 Status Transition:
 
-``BUILD``
+- ``BUILD``
 
-``ACTIVE``
+  .. todo:: Add more details.
 
-``ERROR`` (on error)
+- ``ACTIVE``
 
-When you create a server, the operation asynchronously provisions a new
-server. The progress of this operation depends on several factors
-including location of the requested image, network I/O, host load, and
-the selected flavor. The progress of the request can be checked by
-performing a **GET** on /servers/*``id``*, which returns a progress
-attribute (from 0% to 100% complete). The full URL to the newly created
-server is returned through the ``Location`` header and is available as a
-``self`` and ``bookmark`` link in the server representation. Note that
-when creating a server, only the server ID, its links, and the
-administrative password are guaranteed to be returned in the request.
-You can retrieve additional attributes by performing subsequent **GET**
-operations on the server.
+  .. todo:: Add more details.
+
+- ``ERROR`` (on error)
+
+  When you create a server, the operation asynchronously provisions a new
+  server. The progress of this operation depends on several factors
+  including location of the requested image, network I/O, host load, and
+  the selected flavor. The progress of the request can be checked by
+  performing a **GET** on /servers/*{server_id}*, which returns a progress
+  attribute (from 0% to 100% complete). The full URL to the newly created
+  server is returned through the ``Location`` header and is available as a
+  ``self`` and ``bookmark`` link in the server representation. Note that
+  when creating a server, only the server ID, its links, and the
+  administrative password are guaranteed to be returned in the request.
+  You can retrieve additional attributes by performing subsequent **GET**
+  operations on the server.
 
 Server query
 ~~~~~~~~~~~~
@@ -144,31 +148,33 @@ For different user roles, the user has different query options set:
   the query options are different from the attribute naming in the servers API
   response.
 
-.. code::
 
-   Precondition:
-   there are 2 servers existing in cloud with following info:
+Precondition: there are 2 servers existing in cloud with following info::
 
-   "servers": [
-       {
-           "name": "t1",
-           "locked": "true",
-           ...
-       },
-       {
-           "name": "t2",
-           "locked": "false",
-           ...
-       }
-   ]
+  {
+      "servers": [
+          {
+              "name": "t1",
+              "locked": "true",
+              ...
+          },
+          {
+              "name": "t2",
+              "locked": "false",
+              ...
+          }
+      ]
+  }
 
-   **Example: General user query server with administrator only options**
+**Example: General user query server with administrator only options**
 
-   Request with non-administrator context:
-   GET /servers/detail?locked=1
-   Note that 'locked' is not returned through API layer
+Request with non-administrator context: ``GET /servers/detail?locked=1``
 
-   Response:
+Note that ``locked`` is returned through API layer starting from
+microversion 2.9.
+
+Response::
+
    {
        "servers": [
            {
@@ -182,12 +188,12 @@ For different user roles, the user has different query options set:
        ]
    }
 
-   **Example: Administrator query server with administrator only options**
+**Example: Administrator query server with administrator only options**
 
-   Request with administrator context:
-   GET /servers/detail?locked=1
+Request with administrator context: ``GET /servers/detail?locked=1``
 
-   Response:
+Response::
+
    {
        "servers": [
            {
@@ -213,14 +219,13 @@ There are also some special query options:
 - ``all_tenants`` is an administrator query option, which allows the
   administrator to query the servers in any tenant.
 
-.. code::
 
-   **Example: User query server with special keys changes-since or changes-before**
+**Example: User query server with special keys changes-since or changes-before**
 
-   Precondition:
-   GET /servers/detail
+Request: ``GET /servers/detail``
 
-   Response:
+Response::
+
    {
        "servers": [
            {
@@ -236,9 +241,10 @@ There are also some special query options:
        ]
    }
 
-   GET /servers/detail?changes-since='2015-12-16T15:55:52Z'
+Request: ``GET /servers/detail?changes-since='2015-12-16T15:55:52Z'``
 
-   Response:
+Response::
+
    {
        {
            "name": "t2",
@@ -247,9 +253,10 @@ There are also some special query options:
        }
    }
 
-   GET /servers/detail?changes-before='2015-12-16T15:55:52Z'
+Request: ``GET /servers/detail?changes-before='2015-12-16T15:55:52Z'``
 
-   Response:
+Response::
+
    {
        {
            "name": "t1",
@@ -258,9 +265,11 @@ There are also some special query options:
        }
    }
 
-   GET /servers/detail?changes-since='2015-12-10T15:55:52Z'&changes-before='2015-12-28T15:55:52Z'
+Request:
+``GET /servers/detail?changes-since='2015-12-10T15:55:52Z'&changes-before='2015-12-28T15:55:52Z'``
 
-   Response:
+Response::
+
    {
        "servers": [
            {
@@ -279,15 +288,11 @@ There are also some special query options:
 There are two kinds of matching in query options: Exact matching and
 regex matching.
 
-.. code::
+**Example: User query server using exact matching on host**
 
-   **Example: User query server using exact matching on host**
+Request with administrator context: ``GET /servers/detail``
 
-   Precondition:
-   Request with administrator context:
-   GET /servers/detail
-
-   Response:
+Response::
 
    {
        "servers": [
@@ -304,10 +309,9 @@ regex matching.
        ]
    }
 
-   Request with administrator context:
-   GET /servers/detail?host=devstack
+Request with administrator context: ``GET /servers/detail?host=devstack``
 
-   Response:
+Response::
 
    {
        "servers": [
@@ -319,13 +323,11 @@ regex matching.
        ]
    }
 
-   **Example: Query server using regex matching on name**
+**Example: Query server using regex matching on name**
 
-   Precondition:
-   Request with administrator context:
-   GET /servers/detail
+Request with administrator context: ``GET /servers/detail``
 
-   Response:
+Response::
 
    {
        "servers": [
@@ -348,10 +350,9 @@ regex matching.
        ]
    }
 
-   Request with administrator context:
-   GET /servers/detail?name=t1
+Request with administrator context: ``GET /servers/detail?name=t1``
 
-   Response:
+Response::
 
    {
        "servers": [
@@ -370,14 +371,12 @@ regex matching.
        ]
    }
 
-   **Example: User query server using exact matching on host and
-   regex matching on name**
+**Example: User query server using exact matching on host and regex
+matching on name**
 
-   Precondition:
-   Request with administrator context:
-   GET /servers/detail
+Request with administrator context: ``GET /servers/detail``
 
-   Response:
+Response::
 
    {
        "servers": [
@@ -399,10 +398,10 @@ regex matching.
        ]
    }
 
-   Request with administrator context:
-   GET /servers/detail?host=devstack1&name=test
+Request with administrator context:
+``GET /servers/detail?host=devstack1&name=test``
 
-   Response:
+Response::
 
    {
        "servers": [
@@ -414,16 +413,10 @@ regex matching.
        ]
    }
 
-               "name": "t2",
-               "updated": "2015-12-17T15:55:52Z"
-               ...
-           }
-       ]
-   }
+Request: ``GET /servers/detail?changes-since='2015-12-16T15:55:52Z'``
 
-   GET /servers/detail?changes-since='2015-12-16T15:55:52Z'
+Response::
 
-   Response:
    {
        {
            "name": "t2",
@@ -635,7 +628,7 @@ limit.
 Block Device Mapping
 ~~~~~~~~~~~~~~~~~~~~
 
-TODO: Add some description about BDM.
+.. todo:: Add some description about BDM.
 
 Scheduler Hints
 ~~~~~~~~~~~~~~~
@@ -706,7 +699,7 @@ assigned at creation time.
 
 **Example: Create server with access IP: JSON request**
 
-.. code::
+.. code-block:: json
 
     {
         "server": {
@@ -724,7 +717,7 @@ assigned at creation time.
 
 **Example: Create server with multiple access IPs: JSON request**
 
-.. code::
+.. code-block:: json
 
     {
         "server": {
@@ -803,7 +796,7 @@ a cloud:
    This process can be repeated until the whole cloud has been updated,
    usually using a pool of empty hosts instead of just one.
 
-- **Resource Optimization**
+-  **Resource Optimization**
 
    To reduce energy usage, some cloud operators will try and move
    servers so they fit into the minimum number of hosts, allowing

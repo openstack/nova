@@ -27,24 +27,24 @@ There are multiple cases which you can resolve with microversions:
 
 - **Older clients with new cloud**
 
-Before using an old client to talk to a newer cloud, the old client can check
-the minimum version of microversions to verify whether the cloud is compatible
-with the old API. This prevents the old client from breaking with backwards
-incompatible API changes.
+  Before using an old client to talk to a newer cloud, the old client can check
+  the minimum version of microversions to verify whether the cloud is
+  compatible with the old API. This prevents the old client from breaking with
+  backwards incompatible API changes.
 
-Currently the minimum version of microversions is `2.1`, which is a
-microversion compatible with the legacy v2 API. That means the legacy v2 API
-user doesn't need to worry that their older client software will be broken when
-their cloud is upgraded with new versions. And the cloud operator doesn't need
-to worry that upgrading their cloud to newer versions will break any user with
-older clients that don't expect these changes.
+  Currently the minimum version of microversions is `2.1`, which is a
+  microversion compatible with the legacy v2 API. That means the legacy v2 API
+  user doesn't need to worry that their older client software will be broken
+  when their cloud is upgraded with new versions. And the cloud operator
+  doesn't need to worry that upgrading their cloud to newer versions will
+  break any user with older clients that don't expect these changes.
 
 - **User discovery of available features between clouds**
 
-The new features can be discovered by microversions. The user client should
-check the microversions firstly, and new features are only enabled when clouds
-support. In this way, the user client can work with clouds that have deployed
-different microversions simultaneously.
+  The new features can be discovered by microversions. The user client should
+  check the microversions firstly, and new features are only enabled when
+  clouds support. In this way, the user client can work with clouds that have
+  deployed different microversions simultaneously.
 
 Version Discovery
 =================
@@ -52,7 +52,7 @@ Version Discovery
 The Version API will return the minimum and maximum microversions. These values
 are used by the client to discover the API's supported microversion(s).
 
-Requests to '/' will get version info for all endpoints. A response would look
+Requests to `/` will get version info for all endpoints. A response would look
 as follows::
 
   {
@@ -86,12 +86,12 @@ as follows::
     ]
   }
 
-"version" is the maximum microversion, "min_version" is the minimum
+``version`` is the maximum microversion, ``min_version`` is the minimum
 microversion. If the value is the empty string, it means this endpoint doesn't
 support microversions; it is a legacy v2 API endpoint -- for example, the
 endpoint `http://openstack.example.com/v2/` in the above sample. The endpoint
 `http://openstack.example.com/v2.1/` supports microversions; the maximum
-microversion is '2.14', and the minimum microversion is '2.1'. The client
+microversion is `2.14`, and the minimum microversion is `2.1`. The client
 should specify a microversion between (and including) the minimum and maximum
 microversion to access the endpoint.
 
@@ -117,20 +117,20 @@ following header to specify the microversion::
 
 This acts conceptually like the "Accept" header. Semantically this means:
 
-* If neither `X-OpenStack-Nova-API-Version` nor `OpenStack-API-Version`
+* If neither ``X-OpenStack-Nova-API-Version`` nor ``OpenStack-API-Version``
   (specifying `compute`) is provided, act as if the minimum supported
   microversion was specified.
 
-* If both headers are provided, `OpenStack-API-Version` will be preferred.
+* If both headers are provided, ``OpenStack-API-Version`` will be preferred.
 
-* If `X-OpenStack-Nova-API-Version` or `OpenStack-API-Version` is provided,
+* If ``X-OpenStack-Nova-API-Version`` or ``OpenStack-API-Version`` is provided,
   respond with the API at that microversion. If that's outside of the range
   of microversions supported, return 406 Not Acceptable.
 
-* If `X-OpenStack-Nova-API-Version` or `OpenStack-API-Version` has a value
-  of ``latest`` (special keyword), act as if maximum was specified.
+* If ``X-OpenStack-Nova-API-Version`` or ``OpenStack-API-Version`` has a value
+  of `latest` (special keyword), act as if maximum was specified.
 
-.. warning:: The ``latest`` value is mostly meant for integration testing and
+.. warning:: The `latest` value is mostly meant for integration testing and
   would be dangerous to rely on in client code since microversions are not
   following semver and therefore backward compatibility is not guaranteed.
   Clients should always require a specific microversion but limit what is
@@ -149,7 +149,7 @@ the response::
 The first header specifies the microversion number of the API which was
 executed.
 
-The `Vary` header is used as a hint to caching proxies that the response
+The ``Vary`` header is used as a hint to caching proxies that the response
 is also dependent on the microversion and not just the body and query
 parameters. See :rfc:`2616` section 14.44 for details.
 
