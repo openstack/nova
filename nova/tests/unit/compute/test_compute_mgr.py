@@ -27,6 +27,7 @@ import netaddr
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
+from oslo_service import fixture as service_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
@@ -6444,6 +6445,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         """Tests that _try_deallocate_network will retry calling
         _deallocate_network on keystone ConnectFailure errors up to a limit.
         """
+        self.useFixture(service_fixture.SleepFixture())
         deallocate_network_mock.side_effect = \
             keystone_exception.connection.ConnectFailure
         req_networks = objects.NetworkRequestList(

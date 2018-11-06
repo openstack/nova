@@ -17,6 +17,7 @@
 import sys
 
 import mock
+from oslo_service import fixture as service_fixture
 from oslo_utils import encodeutils
 import six
 import testtools
@@ -45,6 +46,9 @@ class GuestTestCase(test.NoDBTestCase):
 
         self.domain = mock.Mock(spec=fakelibvirt.virDomain)
         self.guest = libvirt_guest.Guest(self.domain)
+
+        # Make RetryDecorator not actually sleep on retries
+        self.useFixture(service_fixture.SleepFixture())
 
     def test_repr(self):
         self.domain.ID.return_value = 99
