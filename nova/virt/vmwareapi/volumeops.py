@@ -343,7 +343,9 @@ class VMwareVolumeOps(object):
         # Get details required for adding disk device such as
         # adapter_type, disk_type
         vmdk = vm_util.get_vmdk_info(self._session, volume_ref)
-        adapter_type = adapter_type or vmdk.adapter_type
+        instance_root_vmdk_info = vm_util.get_vmdk_info(self._session, vm_ref,
+                                                        uuid=instance.uuid)
+        adapter_type = adapter_type or instance_root_vmdk_info.adapter_type
 
         # IDE does not support disk hotplug
         if adapter_type == constants.ADAPTER_TYPE_IDE:
