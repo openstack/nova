@@ -1180,12 +1180,19 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             for k, expected in pdict.items():
                 # For inventories, we're only validating totals
                 if k is 'inventory':
-                    self.assertEqual(set(expected), set(actual_data.inventory))
+                    self.assertEqual(
+                        set(expected), set(actual_data.inventory),
+                        "Mismatched inventory keys for provider %s" % uuid)
                     for rc, totaldict in expected.items():
-                        self.assertEqual(totaldict['total'],
-                                         actual_data.inventory[rc]['total'])
+                        self.assertEqual(
+                            totaldict['total'],
+                            actual_data.inventory[rc]['total'],
+                            "Mismatched inventory totals for provider %s" %
+                            uuid)
                 else:
-                    self.assertEqual(expected, getattr(actual_data, k))
+                    self.assertEqual(expected, getattr(actual_data, k),
+                                     "Mismatched %s for provider %s" %
+                                     (k, uuid))
 
     def _set_up_provider_tree_allocs(self):
         """Create some allocations on our compute (with sharing).
@@ -1294,6 +1301,14 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             # in gabbits and via update_from_provider_tree.
             self._set_up_provider_tree()
             self._set_up_provider_tree_allocs()
+            # Updating allocations bumps generations for affected providers.
+            # In real life, the subsequent update_from_provider_tree will
+            # bounce 409, the cache will be cleared, and the operation will be
+            # retried. We don't care about any of that retry logic in the scope
+            # of this test case, so just clear the cache so
+            # get_provider_tree_and_ensure_root repopulates it and we avoid the
+            # conflict exception.
+            self.client.clear_provider_cache()
 
             ptree = self.client.get_provider_tree_and_ensure_root(
                 self.context, self.compute_uuid)
@@ -1336,6 +1351,14 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             exp_allocs = self._set_up_provider_tree_allocs()
             # Save a copy of this for later
             orig_exp_allocs = copy.deepcopy(exp_allocs)
+            # Updating allocations bumps generations for affected providers.
+            # In real life, the subsequent update_from_provider_tree will
+            # bounce 409, the cache will be cleared, and the operation will be
+            # retried. We don't care about any of that retry logic in the scope
+            # of this test case, so just clear the cache so
+            # get_provider_tree_and_ensure_root repopulates it and we avoid the
+            # conflict exception.
+            self.client.clear_provider_cache()
             # Another null reshape: no inv changes, no alloc changes
             ptree = self.client.get_provider_tree_and_ensure_root(
                 self.context, self.compute_uuid)
