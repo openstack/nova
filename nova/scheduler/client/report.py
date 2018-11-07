@@ -847,10 +847,20 @@ class SchedulerReportClient(object):
         Associations are stale if association_refresh_time for this uuid is not
         set or is more than CONF.compute.resource_provider_association_refresh
         seconds ago.
+
+        Always False if CONF.compute.resource_provider_association_refresh is
+        zero.
         """
+        rpar = CONF.compute.resource_provider_association_refresh
         refresh_time = self._association_refresh_time.get(uuid, 0)
-        return ((time.time() - refresh_time) >
-                CONF.compute.resource_provider_association_refresh)
+        # If refresh is disabled, associations are "never" stale. (But still
+        # load them if we haven't yet done so.)
+        if rpar == 0 and refresh_time != 0:
+            # TODO(efried): If refresh is disabled, we could avoid touching the
+            # _association_refresh_time dict anywhere, but that would take some
+            # nontrivial refactoring.
+            return False
+        return (time.time() - refresh_time) > rpar
 
     def _update_inventory_attempt(self, context, rp_uuid, inv_data):
         """Update the inventory for this resource provider if needed.

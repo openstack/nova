@@ -2934,6 +2934,62 @@ class TestAssociations(SchedulerReportClientTestCase):
             mock_trait_get.assert_called_once_with(self.context, uuid)
             mock_shr_get.assert_called_once_with(self.context, set())
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_traits')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_sharing_providers')
+    def test_refresh_associations_disabled(self, mock_shr_get, mock_trait_get,
+                                           mock_agg_get):
+        """Test that refresh associations can be disabled."""
+        self.flags(resource_provider_association_refresh=0, group='compute')
+        uuid = uuids.compute_node
+        # Seed the provider tree so _refresh_associations finds the provider
+        self.client._provider_tree.new_root('compute', uuid, generation=1)
+        mock_agg_get.return_value = report.AggInfo(aggregates=set([]),
+                                                   generation=42)
+        mock_trait_get.return_value = report.TraitInfo(traits=set([]),
+                                                       generation=43)
+        mock_shr_get.return_value = []
+
+        # Called a first time because association_refresh_time is empty.
+        now = time.time()
+        self.client._refresh_associations(self.context, uuid)
+        mock_agg_get.assert_called_once_with(self.context, uuid)
+        mock_trait_get.assert_called_once_with(self.context, uuid)
+        mock_shr_get.assert_called_once_with(self.context, set())
+        self.assertIn(uuid, self.client._association_refresh_time)
+
+        # Clear call count.
+        mock_agg_get.reset_mock()
+        mock_trait_get.reset_mock()
+        mock_shr_get.reset_mock()
+
+        with mock.patch('time.time') as mock_future:
+            # A lot of time passes
+            mock_future.return_value = now + 10000000000000
+            self.client._refresh_associations(self.context, uuid)
+            mock_agg_get.assert_not_called()
+            mock_trait_get.assert_not_called()
+            mock_shr_get.assert_not_called()
+
+            # Forever passes
+            mock_future.return_value = float('inf')
+            self.client._refresh_associations(self.context, uuid)
+            mock_agg_get.assert_not_called()
+            mock_trait_get.assert_not_called()
+            mock_shr_get.assert_not_called()
+
+            # Even if no time passes, clearing the counter triggers refresh
+            mock_future.return_value = now
+            del self.client._association_refresh_time[uuid]
+            self.client._refresh_associations(self.context, uuid)
+            mock_agg_get.assert_called_once_with(self.context, uuid)
+            mock_trait_get.assert_called_once_with(self.context, uuid)
+            mock_shr_get.assert_called_once_with(self.context, set())
+            self.assertIn(uuid, self.client._association_refresh_time)
+
 
 class TestComputeNodeToInventoryDict(test.NoDBTestCase):
     def test_compute_node_inventory(self):

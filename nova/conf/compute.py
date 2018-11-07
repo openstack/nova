@@ -650,7 +650,8 @@ Related options:
 """),
     cfg.IntOpt('resource_provider_association_refresh',
         default=300,
-        min=1,
+        min=0,
+        mutable=True,
         help="""
 Interval for updating nova-compute-side cache of the compute node resource
 provider's aggregates and traits info.
@@ -659,9 +660,11 @@ This option specifies the number of seconds between attempts to update a
 provider's aggregates and traits information in the local cache of the compute
 node.
 
+A value of zero disables cache refresh completely.
+
 Possible values:
 
-* Any positive integer in seconds.
+* Any positive integer in seconds, or zero to disable refresh.
 """),
    cfg.StrOpt('cpu_shared_set',
         help="""
