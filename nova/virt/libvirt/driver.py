@@ -8078,6 +8078,54 @@ class LibvirtDriver(driver.ComputeDriver):
             bus.address = address
         return bus
 
+    def _build_interface_metadata(self, dev, vifs_to_expose, vlans_by_mac):
+        """Builds a metadata object for a network interface
+
+        :param dev: The LibvirtConfigGuestInterface to build metadata for.
+        :param vifs_to_expose: The list of tagged and/or vlan'ed
+                               VirtualInterface objects.
+        :param vlans_by_mac: A dictionary of mac address -> vlan associations.
+        :return: A NetworkInterfaceMetadata object, or None.
+        """
+        vif = vifs_to_expose.get(dev.mac_addr)
+        if not vif:
+            LOG.debug('No VIF found with MAC %s, not building metadata',
+                      dev.mac_addr)
+            return None
+        bus = self._prepare_device_bus(dev)
+        device = objects.NetworkInterfaceMetadata(mac=vif.address)
+        if 'tag' in vif and vif.tag:
+            device.tags = [vif.tag]
+        if bus:
+            device.bus = bus
+        vlan = vlans_by_mac.get(vif.address)
+        if vlan:
+            device.vlan = int(vlan)
+        return device
+
+    def _build_disk_metadata(self, dev, tagged_bdms):
+        """Builds a metadata object for a disk
+
+        :param dev: The vconfig.LibvirtConfigGuestDisk to build metadata for.
+        :param tagged_bdms: The list of tagged BlockDeviceMapping objects.
+        :return: A DiskMetadata object, or None.
+        """
+        bdm = tagged_bdms.get(dev.target_dev)
+        if not bdm:
+            LOG.debug('No BDM found with device name %s, not building '
+                      'metadata.', dev.target_dev)
+            return None
+        bus = self._prepare_device_bus(dev)
+        device = objects.DiskMetadata(tags=[bdm.tag])
+        # NOTE(artom) Setting the serial (which corresponds to
+        # volume_id in BlockDeviceMapping) in DiskMetadata allows us to
+        # find the disks's BlockDeviceMapping object when we detach the
+        # volume and want to clean up its metadata.
+        device.serial = bdm.volume_id
+        if bus:
+            device.bus = bus
+        return device
+
     def _build_device_metadata(self, context, instance):
         """Builds a metadata object for instance devices, that maps the user
            provided tag to the hypervisor assigned device address.
@@ -8107,36 +8155,13 @@ class LibvirtDriver(driver.ComputeDriver):
         guest_config.parse_dom(xml_dom)
 
         for dev in guest_config.devices:
-            # Build network interfaces related metadata
+            device = None
             if isinstance(dev, vconfig.LibvirtConfigGuestInterface):
-                vif = vifs_to_expose.get(dev.mac_addr)
-                if not vif:
-                    continue
-                bus = self._prepare_device_bus(dev)
-                device = objects.NetworkInterfaceMetadata(mac=vif.address)
-                if 'tag' in vif and vif.tag:
-                    device.tags = [vif.tag]
-                if bus:
-                    device.bus = bus
-                vlan = vlans_by_mac.get(vif.address)
-                if vlan:
-                    device.vlan = int(vlan)
-                devices.append(device)
-
-            # Build disks related metadata
+                device = self._build_interface_metadata(dev, vifs_to_expose,
+                                                        vlans_by_mac)
             if isinstance(dev, vconfig.LibvirtConfigGuestDisk):
-                bdm = tagged_bdms.get(dev.target_dev)
-                if not bdm:
-                    continue
-                bus = self._prepare_device_bus(dev)
-                device = objects.DiskMetadata(tags=[bdm.tag])
-                # NOTE(artom) Setting the serial (which corresponds to
-                # volume_id in BlockDeviceMapping) in DiskMetadata allows us to
-                # find the disks's BlockDeviceMapping object when we detach the
-                # volume and want to clean up its metadata.
-                device.serial = bdm.volume_id
-                if bus:
-                    device.bus = bus
+                device = self._build_disk_metadata(dev, tagged_bdms)
+            if device:
                 devices.append(device)
         if devices:
             dev_meta = objects.InstanceDeviceMetadata(devices=devices)
