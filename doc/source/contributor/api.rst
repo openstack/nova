@@ -49,7 +49,7 @@ A very basic controller of a v2.1 API::
             write_body_here = ok
             return response_body
 
-        # Defining support for other RESTFul methods based on resouce.
+        # Defining support for other RESTFul methods based on resource.
 
 
 See `servers.py <http://git.openstack.org/cgit/openstack/nova/tree/nova/api/openstack/compute/servers.py>`_ for ref.

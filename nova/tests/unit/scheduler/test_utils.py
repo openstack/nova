@@ -879,7 +879,7 @@ class TestUtils(test.NoDBTestCase):
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
     @mock.patch('nova.scheduler.utils.request_is_rebuild')
-    def test_claim_resouces_for_policy_check(self, mock_is_rebuild,
+    def test_claim_resources_for_policy_check(self, mock_is_rebuild,
             mock_client):
         mock_is_rebuild.return_value = True
         ctx = mock.Mock(user_id=uuids.user_id)

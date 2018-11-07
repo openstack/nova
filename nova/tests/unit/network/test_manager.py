@@ -1144,7 +1144,7 @@ class VlanNetworkTestCase(test.TestCase):
                           vlan=100, cidr='192.168.0.1/24', network_size=100)
 
     def test_vlan_start(self):
-        # VLAN 100 and 101 are used, so this network shoud be created in 102
+        # VLAN 100 and 101 are used, so this network should be created in 102
         networks = self.network.create_networks(
                           self.context_admin, label="fake", num_networks=1,
                           vlan_start=100, cidr='192.168.3.1/24',
@@ -1153,7 +1153,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.assertEqual(102, networks[0]["vlan"])
 
     def test_vlan_start_multiple(self):
-        # VLAN 100 and 101 are used, so these networks shoud be created in 102
+        # VLAN 100 and 101 are used, so these networks should be created in 102
         # and 103
         networks = self.network.create_networks(
                           self.context_admin, label="fake", num_networks=2,
