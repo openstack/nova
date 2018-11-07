@@ -11,7 +11,10 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import copy
+import itertools
 
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
@@ -24,6 +27,8 @@ from nova.objects import base
 from nova.objects import fields
 from nova.objects import instance as obj_instance
 from nova.virt import hardware
+
+LOG = logging.getLogger(__name__)
 
 REQUEST_SPEC_OPTIONAL_ATTRS = ['requested_destination',
                                'security_groups',
@@ -85,6 +90,11 @@ class RequestSpec(base.NovaObject):
         'security_groups': fields.ObjectField('SecurityGroupList'),
         'network_metadata': fields.ObjectField('NetworkMetadata'),
         'is_bfv': fields.BooleanField(),
+        # NOTE(gibi): Eventually we want to store every resource request as
+        # RequestGroup objects here. However currently the flavor based
+        # resources like vcpu, ram, disk, and flavor.extra_spec based resources
+        # are not handled this way. See the Todo in from_components() where
+        # requested_resources are set.
         'requested_resources': fields.ListOfObjectsField('RequestGroup',
                                                          nullable=True,
                                                          default=None)
@@ -665,6 +675,171 @@ class RequestSpec(base.NovaObject):
         # NOTE(sbauza): Make sure we don't persist this, we need to keep the
         # original request for the forced hosts
         self.obj_reset_changes(['force_hosts', 'force_nodes'])
+
+    def _is_valid_group_rp_mapping(
+            self, group_rp_mapping, placement_allocations, provider_traits):
+        """Decides if the mapping is valid from resources and traits
+        perspective.
+
+        :param group_rp_mapping: A list of RequestGroup - RP UUID two tuples
+                                representing a mapping between request groups
+                                in this RequestSpec and RPs from the
+                                allocation. It contains every RequestGroup in
+                                this RequestSpec but the mapping might not be
+                                valid from resources and traits perspective.
+        :param placement_allocations: The overall allocation made by the
+                                      scheduler for this RequestSpec
+        :param provider_traits: A dict keyed by resource provider uuids
+                                containing the list of traits the given RP has.
+                                This dict contains info only about RPs
+                                appearing in the placement_allocations param.
+        :return: True if each group's resource and trait request can be
+                 fulfilled from RP it is mapped to. False otherwise.
+        """
+
+        # Check that traits are matching for each group - rp pair in
+        # this mapping
+        for group, rp_uuid in group_rp_mapping:
+            if (set(provider_traits[rp_uuid])
+                    & set(group.required_traits)
+                    != set(group.required_traits)):
+                return False
+
+        # TODO(gibi): add support for groups with forbidden_traits and
+        # aggregates
+
+        # Check that each group can consume the requested resources from the rp
+        # that it is mapped to in the current mapping. Consume each group's
+        # request from the allocation, if anything drops below zero, then this
+        # is not a solution
+        rcs = set()
+        allocs = copy.deepcopy(placement_allocations)
+        for group, rp_uuid in group_rp_mapping:
+            rp_allocs = allocs[rp_uuid]['resources']
+            for rc, amount in group.resources.items():
+                rcs.add(rc)
+                if rc in rp_allocs:
+                    rp_allocs[rc] -= amount
+                    if rp_allocs[rc] < 0:
+                        return False
+                else:
+                    return False
+
+        # Check that all the allocations are consumed from the resource
+        # classes that are appeared in the request groups. It should never
+        # happen that we have a match but also have some leftover if placement
+        # returns valid allocation candidates. Except if the leftover in the
+        # allocation are due to the RC requested in the unnumbered group.
+        for rp_uuid in allocs:
+            rp_allocs = allocs[rp_uuid]['resources']
+            for rc, amount in group.resources.items():
+                if rc in rcs and rc in rp_allocs:
+                    if rp_allocs[rc] != 0:
+                        LOG.debug(
+                            'Found valid group - RP mapping %s but there are '
+                            'allocation leftover in %s',
+                            group_rp_mapping, allocs)
+                        return False
+
+        # If both the traits and the allocations are OK then mapping is valid
+        return True
+
+    def map_requested_resources_to_providers(
+            self, placement_allocations, provider_traits):
+        """Fill the provider_uuids field in each RequestGroup objects in the
+        requested_resources field.
+
+        The mapping is generated based on the overall allocation made for this
+        RequestSpec, the request in each RequestGroup, and the traits of the
+        RPs in the allocation.
+
+        Limitations:
+        * only groups with use_same_provider = True is mapped, the un-numbered
+          group are not supported.
+        * mapping is generated only based on the resource request and the
+          required traits, aggregate membership and forbidden traits are not
+          supported.
+        * requesting the same resource class in numbered and un-numbered group
+
+        We can live with these limitations today as Neutron does not use
+        forbidden traits and aggregates in the request and each Neutron port is
+        mapped to a numbered group and the resources class used by neutron
+        ports are never requested through the flavor extra_spec.
+
+        This is a workaround as placement does not return which RP fulfills
+        which granular request group in the allocation candidate request. There
+        is a spec proposing a solution in placement:
+        https://review.openstack.org/#/c/597601/
+
+        :param placement_allocations: The overall allocation made by the
+                                      scheduler for this RequestSpec
+        :param provider_traits: A dict keyed by resource provider uuids
+                                containing the list of traits the given RP has.
+                                This dict contains info only about RPs
+                                appearing in the placement_allocations param.
+        """
+        if 'requested_resources' not in self or not self.requested_resources:
+            # Nothing to do, so let's return early
+            return
+
+        for group in self.requested_resources:
+            # See the limitations in the func doc above
+            if (not group.use_same_provider
+                    or group.aggregates
+                    or group.forbidden_traits):
+                raise NotImplementedError()
+
+        # Iterate through every possible group - RP mappings and try to find a
+        # valid one. If there are more than one possible solution then it is
+        # enough to find one as these solutions are interchangeable from
+        # backend (e.g. Neutron) perspective.
+        LOG.debug('Trying to find a valid group - RP mapping for groups %s to '
+                  'allocations %s with traits %s', self.requested_resources,
+                  placement_allocations, provider_traits)
+
+        # This generator first creates permutations with repetition of the RPs
+        # with length of the number of groups we have. So if there is
+        #   2 RPs (rp1, rp2) and
+        #   3 groups (g1, g2, g3).
+        # Then the itertools.product(('rp1', 'rp2'), repeat=3)) will be:
+        #  (rp1, rp1, rp1)
+        #  (rp1, rp1, rp2)
+        #  (rp1, rp2, rp1)
+        #  ...
+        #  (rp2, rp2, rp2)
+        # Then we zip each of this permutations to our group list resulting in
+        # a list of list of group - rp pairs:
+        # [[('g1', 'rp1'), ('g2', 'rp1'), ('g3', 'rp1')],
+        #  [('g1', 'rp1'), ('g2', 'rp1'), ('g3', 'rp2')],
+        #  [('g1', 'rp1'), ('g2', 'rp2'), ('g3', 'rp1')],
+        #  ...
+        #  [('g1', 'rp2'), ('g2', 'rp2'), ('g3', 'rp2')]]
+        # NOTE(gibi): the list() around the zip() below is needed as the
+        # algorithm looks into the mapping more than once and zip returns an
+        # iterator in py3.x. Still we need to generate a mapping once hence the
+        # generator expression.
+        every_possible_mapping = (list(zip(self.requested_resources, rps))
+                                  for rps in itertools.product(
+                                      placement_allocations.keys(),
+                                      repeat=len(self.requested_resources)))
+        for mapping in every_possible_mapping:
+            if self._is_valid_group_rp_mapping(
+                    mapping, placement_allocations, provider_traits):
+                for group, rp in mapping:
+                    # NOTE(gibi): un-numbered group might be mapped to more
+                    # than one RP but we do not support that yet here.
+                    group.provider_uuids = [rp]
+                LOG.debug('Found valid group - RP mapping %s', mapping)
+                return
+
+        # if we reached this point then none of the possible mappings was
+        # valid. This should never happen as Placement returns allocation
+        # candidates based on the overall resource request of the server
+        # including the request of the groups.
+        raise ValueError('No valid group - RP mapping is found for '
+                         'groups %s, allocation %s and provider traits %s' %
+                         (self.requested_resources, placement_allocations,
+                          provider_traits))
 
 
 @base.NovaObjectRegistry.register
