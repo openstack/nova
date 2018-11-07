@@ -242,3 +242,4 @@ Reference
 * `Verifying the Nova API Ref <https://wiki.openstack.org/wiki/NovaAPIRef>`_
 * `The description for Parameters whose values are null <http://lists.openstack.org/pipermail/openstack-dev/2017-January/109868.html>`_
 * `The definition of "Optional" parameter <http://lists.openstack.org/pipermail/openstack-dev/2017-July/119239.html>`_
+* `How to document your OpenStack API service <https://docs.openstack.org/doc-contrib-guide/api-guides.html#how-to-document-your-openstack-api-service>`_
