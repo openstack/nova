@@ -674,6 +674,10 @@ class API(base_api.NetworkAPI):
             for profile_key in ('pci_vendor_info', 'pci_slot'):
                 if profile_key in port_profile:
                     del port_profile[profile_key]
+            # NOTE(gibi): remove information about the resource allocation
+            # of this port
+            if 'allocation' in port_profile:
+                del port_profile['allocation']
             port_req_body['port'][BINDING_PROFILE] = port_profile
 
             # NOTE: For internal DNS integration (network does not have a
@@ -1073,6 +1077,25 @@ class API(base_api.NetworkAPI):
         security_group_ids = self._process_security_groups(
                                     instance, neutron, security_groups)
 
+        # Tell Neutron which resource provider fulfills the ports' resource
+        # request.
+        # We only consider pre-created ports here as ports created
+        # below based on requested networks are not scheduled to have their
+        # resource request fulfilled.
+        for port in requested_ports_dict.values():
+            # only communicate the allocations if the port has resource
+            # requests
+            if port.get('resource_request', None):
+                profile = port.get(BINDING_PROFILE, {})
+                # NOTE(gibi): In the resource provider mapping there can be
+                # more than one RP fulfilling a request group. But resource
+                # requests of a Neutron port is always mapped to a
+                # numbered request group that is always fulfilled by one
+                # resource provider. So we only pass that single RP UUID here.
+                profile['allocation'] = resource_provider_mapping[
+                    port['id']][0]
+                port[BINDING_PROFILE] = profile
+
         # Create ports from the list of ordered_networks. The returned
         # requests_and_created_ports variable is a list of 2-item tuples of
         # the form (NetworkRequest, created_port_id). Note that a tuple pair
@@ -1081,6 +1104,10 @@ class API(base_api.NetworkAPI):
         # pre-existing port so one wasn't created here. The ports will be
         # updated later in _update_ports_for_instance to be bound to the
         # instance and compute host.
+        # TODO(gibi): if a port created here has resource request then we have
+        # to abort as that resource request was not considered during the
+        # scheduling of the instance and therefore there is no allocation in
+        # placement for that port.
         requests_and_created_ports = self._create_ports_for_instance(
             context, instance, ordered_networks, nets, neutron,
             security_group_ids)

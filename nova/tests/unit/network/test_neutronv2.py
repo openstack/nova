@@ -4892,6 +4892,55 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
                           mock.sentinel.ctx, mock_inst, False,
                           requested_networks=nw_req)
 
+    @mock.patch('nova.objects.virtual_interface.VirtualInterface.create')
+    @mock.patch('nova.network.neutronv2.api.API.'
+                '_check_external_network_attach')
+    @mock.patch('nova.network.neutronv2.api.API._show_port')
+    @mock.patch('nova.network.neutronv2.api.API._update_port')
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_port_with_resource_request_has_allocation_in_binding(
+            self, mock_get_client, mock_update_port, mock_show_port,
+            mock_check_external, mock_vif_create):
+
+        nw_req = objects.NetworkRequestList(
+            objects = [objects.NetworkRequest(port_id=uuids.portid_1)])
+        mock_inst = mock.Mock(
+            uuid=uuids.instance_uuid,
+            project_id=uuids.project_id,
+            availability_zone='nova',
+        )
+        port = {
+            'id': uuids.portid_1,
+            'tenant_id': uuids.project_id,
+            'network_id': uuids.networkid_1,
+            'mac_address': 'fake-mac',
+            'resource_request': 'fake-request'
+        }
+        mock_show_port.return_value = port
+        mock_get_client.return_value.list_networks.return_value = {
+            "networks": [{'id': uuids.networkid_1,
+                          'port_security_enabled': False}]}
+        mock_update_port.return_value = port
+
+        with mock.patch.object(self.api, 'get_instance_nw_info'):
+            self.api.allocate_for_instance(
+                mock.sentinel.ctx, mock_inst, False,
+                requested_networks=nw_req,
+                resource_provider_mapping={uuids.portid_1: [uuids.rp1]})
+
+        mock_update_port.assert_called_once_with(
+            mock_get_client.return_value, mock_inst, uuids.portid_1,
+            {
+                'port': {
+                    'binding:host_id': None,
+                    'device_id': uuids.instance_uuid,
+                    'binding:profile': {
+                        'allocation': uuids.rp1},
+                    'device_owner': 'compute:nova'}})
+        mock_show_port.assert_called_once_with(
+            mock.sentinel.ctx, uuids.portid_1,
+            neutron_client=mock_get_client.return_value)
+
     @mock.patch('nova.network.neutronv2.api.get_client')
     def test_get_floating_ip_by_address_not_found_neutron_not_found(self,
                                                                 mock_ntrn):
@@ -4990,6 +5039,21 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
             uuids.port_id, admin_port_req_body)
         neutron.update_port.assert_called_once_with(
             uuids.port_id, non_admin_port_req_body)
+
+    @mock.patch('nova.network.neutronv2.api.API._show_port')
+    def test_unbind_ports_reset_allocation_in_port_binding(self, mock_show):
+        neutron = mock.Mock()
+        port_client = mock.Mock()
+        ports = [uuids.port_id]
+        mock_show.return_value = {'id': uuids.port,
+                                  'binding:profile': {'allocation': uuids.rp1}}
+        self.api._unbind_ports(self.context, ports, neutron, port_client)
+        port_req_body = {'port': {'binding:host_id': None,
+                                  'binding:profile': {},
+                                  'device_id': '',
+                                  'device_owner': ''}}
+        port_client.update_port.assert_called_once_with(
+            uuids.port_id, port_req_body)
 
     @mock.patch('nova.network.neutronv2.api.API._show_port')
     def test_unbind_ports_reset_binding_profile(self, mock_show):
@@ -5982,7 +6046,7 @@ class TestAllocateForInstance(test.NoDBTestCase):
 
         api = neutronapi.API()
         mock_get_client.side_effect = ["user", "admin"]
-        mock_validate_ports.return_value = ("ports", "ordered_nets")
+        mock_validate_ports.return_value = ({}, "ordered_nets")
         mock_validate_nets.return_value = "nets"
         mock_clean_sg.return_value = "security_groups"
         mock_sg.return_value = "security_group_ids"
@@ -6592,7 +6656,7 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
             project_id=1, availability_zone='nova', uuid=uuids.instance)
         secgroups = ['default']  # Nova API provides the 'default'
 
-        mock_validate_requested_port_ids.return_value = [None, onets]
+        mock_validate_requested_port_ids.return_value = [{}, onets]
         mock_filter_macs.return_value = None
         mock_get_available_networks.return_value = nets
         mock_process_security_groups.return_value = []
@@ -6645,7 +6709,7 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
             project_id=1, availability_zone='nova', uuid=uuids.instance)
         secgroups = ['default', 'secgrp1', 'secgrp2']
 
-        mock_validate_requested_port_ids.return_value = [None, onets]
+        mock_validate_requested_port_ids.return_value = [{}, onets]
         mock_filter_macs.return_value = None
         mock_get_available_networks.return_value = nets
         mock_process_security_groups.return_value = ['default-uuid',
@@ -6700,7 +6764,7 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
             project_id=1, availability_zone='nova', uuid=uuids.instance)
         secgroups = ['default']  # Nova API provides the 'default'
 
-        mock_validate_requested_port_ids.return_value = [None, onets]
+        mock_validate_requested_port_ids.return_value = [{}, onets]
         mock_filter_macs.return_value = None
         mock_get_available_networks.return_value = nets
         mock_process_security_groups.return_value = []
@@ -6753,7 +6817,7 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
             project_id=1, availability_zone='nova', uuid=uuids.instance)
         secgroups = ['default', 'secgrp1', 'secgrp2']
 
-        mock_validate_requested_port_ids.return_value = [None, onets]
+        mock_validate_requested_port_ids.return_value = [{}, onets]
         mock_filter_macs.return_value = None
         mock_get_available_networks.return_value = nets
         mock_process_security_groups.return_value = ['default-uuid',

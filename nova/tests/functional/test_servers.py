@@ -6046,6 +6046,9 @@ class PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck(
             networks=[{'port': non_qos_port['id']},
                       {'port': qos_port['id']}])
         server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        updated_non_qos_port = self.neutron.show_port(
+            non_qos_port['id'])['port']
+        updated_qos_port = self.neutron.show_port(qos_port['id'])['port']
 
         allocations = self.placement_api.get(
             '/allocations/%s' % server['id']).body['allocations']
@@ -6062,7 +6065,24 @@ class PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck(
                          compute_allocations)
         self.assertPortMatchesAllocation(qos_port, network_allocations)
 
+        # We expect that only the RP uuid of the networking RP having the port
+        # allocation is sent in the port binding for the port having resource
+        # request
+        qos_binding_profile = updated_qos_port['binding:profile']
+        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
+                         qos_binding_profile['allocation'])
+
+        # And we expect not to have any allocation set in the port binding for
+        # the port that doesn't have resource request
+        self.assertNotIn('binding:profile', updated_non_qos_port)
+
         self._delete_and_check_allocations(server)
+
+        # assert that unbind removes the allocation from the binding of the
+        # port that got allocation during the bind
+        updated_qos_port = self.neutron.show_port(qos_port['id'])['port']
+        binding_profile = updated_qos_port['binding:profile']
+        self.assertNotIn('allocation', binding_profile)
 
 
 class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(
@@ -6103,6 +6123,7 @@ class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(
             flavor=self.flavor,
             networks=[{'port': port['id']}])
         server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        updated_port = self.neutron.show_port(port['id'])['port']
 
         dest_hostname = server['OS-EXT-SRV-ATTR:host']
         dest_compute_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
@@ -6136,4 +6157,15 @@ class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(
             self._get_provider_usages(
                 self.ovs_bridge_rp_per_host[failed_compute_rp]))
 
+        # We expect that only the RP uuid of the networking RP having the port
+        # allocation is sent in the port binding
+        binding_profile = updated_port['binding:profile']
+        self.assertEqual(self.ovs_bridge_rp_per_host[dest_compute_rp_uuid],
+                         binding_profile['allocation'])
+
         self._delete_and_check_allocations(server)
+
+        # assert that unbind removes the allocation from the binding
+        updated_port = self.neutron.show_port(port['id'])['port']
+        binding_profile = updated_port['binding:profile']
+        self.assertNotIn('allocation', binding_profile)
