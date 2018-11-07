@@ -8126,6 +8126,42 @@ class LibvirtDriver(driver.ComputeDriver):
             device.bus = bus
         return device
 
+    def _build_hostdev_metadata(self, dev, vifs_to_expose, vlans_by_mac):
+        """Builds a metadata object for a hostdev. This can only be a PF, so we
+        don't need trusted_by_mac like in _build_interface_metadata because
+        only VFs can be trusted.
+
+        :param dev: The LibvirtConfigGuestHostdevPCI to build metadata for.
+        :param vifs_to_expose: The list of tagged and/or vlan'ed
+                               VirtualInterface objects.
+        :param vlans_by_mac: A dictionary of mac address -> vlan associations.
+        :return: A NetworkInterfaceMetadata object, or None.
+        """
+        # Strip out the leading '0x'
+        pci_address = pci_utils.get_pci_address(
+            *[x[2:] for x in (dev.domain, dev.bus, dev.slot, dev.function)])
+        try:
+            mac = pci_utils.get_mac_by_pci_address(pci_address,
+                                                   pf_interface=True)
+        except exception.PciDeviceNotFoundById:
+            LOG.debug('Not exposing metadata for not found PCI device %s',
+                      pci_address)
+            return None
+
+        vif = vifs_to_expose.get(mac)
+        if not vif:
+            LOG.debug('No VIF found with MAC %s, not building metadata', mac)
+            return None
+
+        device = objects.NetworkInterfaceMetadata(mac=mac)
+        device.bus = objects.PCIDeviceBus(address=pci_address)
+        if 'tag' in vif and vif.tag:
+            device.tags = [vif.tag]
+        vlan = vlans_by_mac.get(mac)
+        if vlan:
+            device.vlan = int(vlan)
+        return device
+
     def _build_device_metadata(self, context, instance):
         """Builds a metadata object for instance devices, that maps the user
            provided tag to the hypervisor assigned device address.
@@ -8161,6 +8197,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                                         vlans_by_mac)
             if isinstance(dev, vconfig.LibvirtConfigGuestDisk):
                 device = self._build_disk_metadata(dev, tagged_bdms)
+            if isinstance(dev, vconfig.LibvirtConfigGuestHostdevPCI):
+                device = self._build_hostdev_metadata(dev, vifs_to_expose,
+                                                      vlans_by_mac)
             if device:
                 devices.append(device)
         if devices:

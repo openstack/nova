@@ -1626,6 +1626,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 <alias name='net0'/>
                 <address type='ccw' cssid='0xfe' ssid='0x0' devno='0x0001'/>
             </interface>
+            <hostdev mode="subsystem" type="pci" managed="yes">
+                <source>
+                    <address bus="0x06" domain="0x0000" function="0x1"
+                    slot="0x00"/>
+                </source>
+            </hostdev>
           </devices>
         </domain>"""
 
@@ -1679,24 +1685,32 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         vif.instance_uuid = '32dfcb37-5af1-552b-357c-be8c3aa38310'
         vif.uuid = '12ec4b21-ef22-6c21-534b-ba3e3ab3a311'
         vif.tag = 'mytag1'
+
         vif1 = obj_vif.VirtualInterface(context=self.context)
         vif1.address = '51:5a:2c:a4:5e:1b'
         vif1.network_id = 123
         vif1.instance_uuid = '32dfcb37-5af1-552b-357c-be8c3aa38310'
         vif1.uuid = 'abec4b21-ef22-6c21-534b-ba3e3ab3a312'
+
         vif2 = obj_vif.VirtualInterface(context=self.context)
         vif2.address = 'fa:16:3e:d1:28:e4'
         vif2.network_id = 123
         vif2.instance_uuid = '32dfcb37-5af1-552b-357c-be8c3aa38310'
         vif2.uuid = '645686e4-7086-4eab-8c2f-c41f017a1b16'
         vif2.tag = 'mytag2'
+
         vif3 = obj_vif.VirtualInterface(context=self.context)
         vif3.address = '52:54:00:14:6f:50'
         vif3.network_id = 123
         vif3.instance_uuid = '32dfcb37-5af1-552b-357c-be8c3aa38310'
         vif3.uuid = '99cc3604-782d-4a32-a27c-bc33ac56ce86'
         vif3.tag = 'mytag3'
-        vifs = [vif, vif1, vif2, vif3]
+
+        vif4 = obj_vif.VirtualInterface(context=self.context)
+        vif4.address = 'da:d1:f2:91:95:c1'
+        vif4.tag = 'pf_tag'
+
+        vifs = [vif, vif1, vif2, vif3, vif4]
 
         network_info = _fake_network_info(self, 4)
         network_info[0]['vnic_type'] = network_model.VNIC_TYPE_DIRECT_PHYSICAL
@@ -1713,11 +1727,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.patch('nova.virt.libvirt.host.Host.get_guest',
                        return_value=guest),
             mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc',
-                              return_value=xml)):
+                              return_value=xml),
+            mock.patch.object(pci_utils, 'get_mac_by_pci_address',
+                              return_value='da:d1:f2:91:95:c1')):
             metadata_obj = drvr._build_device_metadata(self.context,
                                                        instance_ref)
             metadata = metadata_obj.devices
-            self.assertEqual(10, len(metadata))
+            self.assertEqual(11, len(metadata))
             self.assertIsInstance(metadata[0],
                                   objects.DiskMetadata)
             self.assertIsInstance(metadata[0].bus,
@@ -1775,6 +1791,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertIsInstance(metadata[9],
                                   objects.NetworkInterfaceMetadata)
             self.assertEqual(['mytag3'], metadata[9].tags)
+            self.assertIsInstance(metadata[10],
+                                  objects.NetworkInterfaceMetadata)
+            self.assertEqual(['pf_tag'], metadata[10].tags)
+            self.assertEqual('da:d1:f2:91:95:c1', metadata[10].mac)
+            self.assertEqual('0000:06:00.1', metadata[10].bus.address)
 
     @mock.patch.object(host.Host, 'get_connection')
     @mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc')
