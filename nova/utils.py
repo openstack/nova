@@ -1385,8 +1385,8 @@ def supports_direct_io(dirpath):
     fd = None
     try:
         fd = os.open(testfile, os.O_CREAT | os.O_WRONLY | os.O_DIRECT)
-        # Check is the write allowed with 512 byte alignment
-        align_size = 512
+        # Check is the write allowed with 4096 byte alignment
+        align_size = 4096
         m = mmap.mmap(-1, align_size)
         m.write(b"x" * align_size)
         os.write(fd, m)
