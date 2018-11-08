@@ -8445,10 +8445,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _disk_raw_to_qcow2(path):
         """Converts a raw disk to qcow2."""
         path_qcow = path + '_qcow'
-        # execute operation with disk concurrency semaphore
-        with compute_utils.disk_ops_semaphore:
-            processutils.execute('qemu-img', 'convert', '-f', 'raw',
-                                 '-O', 'qcow2', path, path_qcow)
+        images.convert_image(path, path_qcow, 'raw', 'qcow2')
         os.rename(path_qcow, path)
 
     def finish_migration(self, context, migration, instance, disk_info,

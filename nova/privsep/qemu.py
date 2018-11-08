@@ -26,14 +26,15 @@ LOG = logging.getLogger(__name__)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def convert_image(source, dest, in_format, out_format, instances_path):
+def convert_image(source, dest, in_format, out_format, instances_path,
+                  compress):
     unprivileged_convert_image(source, dest, in_format, out_format,
-                               instances_path)
+                               instances_path, compress)
 
 
 # NOTE(mikal): this method is deliberately not wrapped in a privsep entrypoint
 def unprivileged_convert_image(source, dest, in_format, out_format,
-                               instances_path):
+                               instances_path, compress):
     # NOTE(mdbooth): qemu-img convert defaults to cache=unsafe, which means
     # that data is not synced to disk at completion. We explicitly use
     # cache=none here to (1) ensure that we don't interfere with other
@@ -55,5 +56,9 @@ def unprivileged_convert_image(source, dest, in_format, out_format,
 
     if in_format is not None:
         cmd = cmd + ('-f', in_format)
+
+    if compress:
+        cmd += ('-c',)
+
     cmd = cmd + (source, dest)
     processutils.execute(*cmd)

@@ -95,12 +95,14 @@ def qemu_img_info(path, format=None):
     return imageutils.QemuImgInfo(out)
 
 
-def convert_image(source, dest, in_format, out_format, run_as_root=False):
+def convert_image(source, dest, in_format, out_format, run_as_root=False,
+                  compress=False):
     """Convert image to other format."""
     if in_format is None:
         raise RuntimeError("convert_image without input format is a security"
                            " risk")
-    _convert_image(source, dest, in_format, out_format, run_as_root)
+    _convert_image(source, dest, in_format, out_format, run_as_root,
+                   compress=compress)
 
 
 def convert_image_unsafe(source, dest, out_format, run_as_root=False):
@@ -116,15 +118,18 @@ def convert_image_unsafe(source, dest, out_format, run_as_root=False):
     _convert_image(source, dest, None, out_format, run_as_root)
 
 
-def _convert_image(source, dest, in_format, out_format, run_as_root):
+def _convert_image(source, dest, in_format, out_format, run_as_root,
+                   compress=False):
     try:
         with compute_utils.disk_ops_semaphore:
             if not run_as_root:
                 nova.privsep.qemu.unprivileged_convert_image(
-                    source, dest, in_format, out_format, CONF.instances_path)
+                    source, dest, in_format, out_format, CONF.instances_path,
+                    compress)
             else:
                 nova.privsep.qemu.convert_image(
-                    source, dest, in_format, out_format, CONF.instances_path)
+                    source, dest, in_format, out_format, CONF.instances_path,
+                    compress)
 
     except processutils.ProcessExecutionError as exp:
         msg = (_("Unable to convert image to %(format)s: %(exp)s") %

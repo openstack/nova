@@ -26,7 +26,6 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import fileutils
 
-from nova.compute import utils as compute_utils
 import nova.conf
 from nova.i18n import _
 from nova.objects import fields as obj_fields
@@ -309,16 +308,9 @@ def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
     if dest_fmt == 'ploop':
         dest_fmt = 'parallels'
 
-    qemu_img_cmd = ('qemu-img', 'convert', '-f', source_fmt, '-O', dest_fmt)
-
-    # Conditionally enable compression of snapshots.
-    if CONF.libvirt.snapshot_compression and dest_fmt == "qcow2":
-        qemu_img_cmd += ('-c',)
-
-    qemu_img_cmd += (disk_path, out_path)
-    # execute operation with disk concurrency semaphore
-    with compute_utils.disk_ops_semaphore:
-        processutils.execute(*qemu_img_cmd)
+    compress = CONF.libvirt.snapshot_compression and dest_fmt == "qcow2"
+    images.convert_image(disk_path, out_path, source_fmt, dest_fmt,
+                         compress=compress)
 
 
 def load_file(path):
