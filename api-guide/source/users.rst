@@ -27,7 +27,7 @@ Keystone middleware is used to authenticate users and identify their roles.
 The Compute API uses these roles, along with oslo.policy, to decide
 what the user is authorized to do.
 
-TODO - link to compute admin guide for details.
+.. todo:: link to compute admin guide for details.
 
 Personas used in this guide
 ===========================
@@ -47,11 +47,15 @@ cloud administrator permissions, such as a read-only role that is able to view
 a lists of servers for a specific tenant but is not able to perform any
 actions on any of them.
 
-Note: this is not attempting to be an exhaustive set of personas that consider
-various facets of the different users but instead aims to be a minimal set of
-users such that we use a consistent terminology throughout this document.
+.. note::
 
-TODO - could assign names to these users, or similar, to make it more "real".
+  This is not attempting to be an exhaustive set of personas that consider
+  various facets of the different users but instead aims to be a minimal set of
+  users such that we use a consistent terminology throughout this document.
+
+.. todo::
+
+  could assign names to these users, or similar, to make it more "real".
 
 Discovering Policy
 ==================
@@ -59,4 +63,4 @@ Discovering Policy
 An API to discover what actions you are authorized to perform is still a work
 in progress. Currently this reported by a HTTP 403 error.
 
-TODO - link to the doc on errors.
+.. todo:: link to the doc on errors.
