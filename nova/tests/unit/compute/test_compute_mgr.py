@@ -6437,8 +6437,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.context, mock.sentinel.instance,
                 requested_networks=requested_networks)
 
-    @mock.patch('oslo_service.loopingcall._ThreadingEvent.wait',
-                new=mock.Mock())
     @mock.patch('nova.compute.manager.ComputeManager._deallocate_network')
     @mock.patch('nova.compute.manager.LOG.warning')
     def test_try_deallocate_network_retry_direct(self, warning_mock,
