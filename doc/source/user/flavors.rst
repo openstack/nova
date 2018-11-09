@@ -617,6 +617,28 @@ Secure Boot
   - ``disabled`` or ``optional``: (default) Disable Secure Boot for instances
     running with this flavor.
 
+Custom resource classes and standard resource classes to override
+    Added in the 16.0.0 Pike release.
+
+    Specify custom resource classes to require or override quantity values of
+    standard resource classes.
+
+    The syntax of the extra spec is ``resources:<resource_class_name>=VALUE``
+    (``VALUE`` is integer).
+    The name of custom resource classes must start with ``CUSTOM_``.
+    Standard resource classes to override are ``VCPU``, ``MEMORY_MB`` or
+    ``DISK_GB``. In this case, you can disable scheduling based on standard
+    resource classes by setting the value to ``0``.
+
+    For example:
+
+    - resources:CUSTOM_BAREMETAL_SMALL=1
+    - resources:VCPU=0
+
+    See `Create flavors for use with the Bare Metal service
+    <https://docs.openstack.org/ironic/queens/install/configure-nova-flavors>`_
+    for more examples.
+
 Required traits
     Added in the 17.0.0 Queens release.
 
