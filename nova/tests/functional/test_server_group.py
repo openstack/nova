@@ -92,9 +92,11 @@ class ServerGroupTestBase(test.TestCase,
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
     def _boot_a_server_to_group(self, group,
-                                expected_status='ACTIVE', flavor=None):
+                                expected_status='ACTIVE', flavor=None,
+                                az=None):
         server = self._build_minimal_create_server_request(self.api,
-                                                           'some-server')
+                                                           'some-server',
+                                                           az=az)
         if flavor:
             server['flavorRef'] = ('http://fake.server/%s'
                                                   % flavor['id'])
@@ -845,3 +847,87 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
     def test_soft_affinity_not_supported(self):
         pass
+
+
+class ServerGroupTestMultiCell(ServerGroupTestBase):
+
+    NUMBER_OF_CELLS = 2
+
+    def setUp(self):
+        super(ServerGroupTestMultiCell, self).setUp()
+        # Start two compute services, one per cell
+        fake.set_nodes(['host1'])
+        self.addCleanup(fake.restore_nodes)
+        self.compute1 = self.start_service('compute', host='host1',
+                                           cell='cell1')
+        fake.set_nodes(['host2'])
+        self.addCleanup(fake.restore_nodes)
+        self.compute2 = self.start_service('compute', host='host2',
+                                           cell='cell2')
+        # This is needed to avoid a NetworkAmbiguous error during
+        # _validate_requested_port_ids in allocate_for_instance.
+        fake_network.set_stub_network_methods(self)
+        # This is needed to find a server that is still booting with multiple
+        # cells, while waiting for the state change to ACTIVE. See the
+        # _get_instance method in the compute/api for details.
+        self.useFixture(nova_fixtures.AllServicesCurrent())
+
+        self.aggregates = {}
+
+    def _create_aggregate(self, name):
+        agg = self.admin_api.post_aggregate({'aggregate': {'name': name}})
+        self.aggregates[name] = agg
+
+    def _add_host_to_aggregate(self, agg, host):
+        """Add a compute host to nova aggregates.
+
+        :param agg: Name of the nova aggregate
+        :param host: Name of the compute host
+        """
+        agg = self.aggregates[agg]
+        self.admin_api.add_host_to_aggregate(agg['id'], host)
+
+    def _set_az_aggregate(self, agg, az):
+        """Set the availability_zone of an aggregate
+
+        :param agg: Name of the nova aggregate
+        :param az: Availability zone name
+        """
+        agg = self.aggregates[agg]
+        action = {
+            'set_metadata': {
+                'metadata': {
+                    'availability_zone': az,
+                }
+            },
+        }
+        self.admin_api.post_aggregate_action(agg['id'], action)
+
+    def test_boot_servers_with_affinity(self):
+        # Create a server group for affinity
+        # As of microversion 2.64, a single policy must be specified when
+        # creating a server group.
+        created_group = self.api.post_server_groups(self.affinity)
+        # Create aggregates for cell1 and cell2
+        self._create_aggregate('agg1_cell1')
+        self._create_aggregate('agg2_cell2')
+        # Add each cell to a separate aggregate
+        self._add_host_to_aggregate('agg1_cell1', 'host1')
+        self._add_host_to_aggregate('agg2_cell2', 'host2')
+        # Set each cell to a separate availability zone
+        self._set_az_aggregate('agg1_cell1', 'cell1')
+        self._set_az_aggregate('agg2_cell2', 'cell2')
+        # Boot a server to cell2 with the affinity policy. Order matters here
+        # because the CellDatabases fixture defaults the local cell database to
+        # cell1. So boot the server to cell2 where the group member cannot be
+        # found as a result of the default setting.
+        self._boot_a_server_to_group(created_group, az='cell2')
+        # TODO(melwitt): Uncomment this when the bug is fixed.
+        # self._boot_a_server_to_group(created_group, az='cell1',
+        #                             expected_status='ERROR')
+        # TODO(melwitt): Remove this when the bug is fixed.
+        # Boot a server to cell1 with the affinity policy. This should fail
+        # because a group member has landed in cell2 already. But it passes
+        # because of the bug -- the query for group members doesn't find any
+        # members in cell2 because the query isn't multi-cell enabled.
+        self._boot_a_server_to_group(created_group, az='cell1')
