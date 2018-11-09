@@ -19,7 +19,7 @@ from nova.conductor.tasks import base
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 
 LOG = logging.getLogger(__name__)
@@ -53,8 +53,7 @@ def replace_allocation_with_migration(context, instance, migration):
         # and do any rollback required
         raise
 
-    schedclient = scheduler_client.SchedulerClient()
-    reportclient = schedclient.reportclient
+    reportclient = report.SchedulerReportClient()
 
     orig_alloc = reportclient.get_allocs_for_consumer(
         context, instance.uuid)['allocations']
@@ -92,8 +91,7 @@ def replace_allocation_with_migration(context, instance, migration):
 def revert_allocation_for_migration(context, source_cn, instance, migration):
     """Revert an allocation made for a migration back to the instance."""
 
-    schedclient = scheduler_client.SchedulerClient()
-    reportclient = schedclient.reportclient
+    reportclient = report.SchedulerReportClient()
 
     # FIXME(danms): This method is flawed in that it asssumes allocations
     # against only one provider. So, this may overwite allocations against
@@ -114,7 +112,7 @@ def revert_allocation_for_migration(context, source_cn, instance, migration):
 class MigrationTask(base.TaskBase):
     def __init__(self, context, instance, flavor,
                  request_spec, clean_shutdown, compute_rpcapi,
-                 scheduler_client, host_list):
+                 scheduler_client, report_client, host_list):
         super(MigrationTask, self).__init__(context, instance)
         self.clean_shutdown = clean_shutdown
         self.request_spec = request_spec
@@ -122,7 +120,7 @@ class MigrationTask(base.TaskBase):
 
         self.compute_rpcapi = compute_rpcapi
         self.scheduler_client = scheduler_client
-        self.reportclient = scheduler_client.reportclient
+        self.reportclient = report_client
         self.host_list = host_list
 
         # Persist things from the happy path so we don't have to look

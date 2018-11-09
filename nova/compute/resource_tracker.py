@@ -43,6 +43,7 @@ from nova.pci import request as pci_request
 from nova import rc_fields as fields
 from nova import rpc
 from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import report
 from nova import utils
 from nova.virt import hardware
 
@@ -147,7 +148,7 @@ class ResourceTracker(object):
         self.monitors = monitor_handler.monitors
         self.old_resources = collections.defaultdict(objects.ComputeNode)
         self.scheduler_client = scheduler_client.SchedulerClient()
-        self.reportclient = self.scheduler_client.reportclient
+        self.reportclient = report.SchedulerReportClient()
         self.ram_allocation_ratio = CONF.ram_allocation_ratio
         self.cpu_allocation_ratio = CONF.cpu_allocation_ratio
         self.disk_allocation_ratio = CONF.disk_allocation_ratio
@@ -928,8 +929,7 @@ class ResourceTracker(object):
         # Retrieve the provider tree associated with this compute node.  If
         # it doesn't exist yet, this will create it with a (single, root)
         # provider corresponding to the compute node.
-        reportclient = self.scheduler_client.reportclient
-        prov_tree = reportclient.get_provider_tree_and_ensure_root(
+        prov_tree = self.reportclient.get_provider_tree_and_ensure_root(
             context, compute_node.uuid, name=compute_node.hypervisor_hostname)
         # Let the virt driver rearrange the provider tree and set/update
         # the inventory, traits, and aggregates throughout.
@@ -945,7 +945,7 @@ class ResourceTracker(object):
                 LOG.info("Performing resource provider inventory and "
                          "allocation data migration during compute service "
                          "startup or fast-forward upgrade.")
-                allocs = reportclient.get_allocations_for_provider_tree(
+                allocs = self.reportclient.get_allocations_for_provider_tree(
                     context, nodename)
                 self.driver.update_provider_tree(prov_tree, nodename,
                                                  allocations=allocs)
@@ -966,8 +966,8 @@ class ResourceTracker(object):
 
         # Flush any changes. If we processed ReshapeNeeded above, allocs is not
         # None, and this will hit placement's POST /reshaper route.
-        reportclient.update_from_provider_tree(context, prov_tree,
-                                               allocations=allocs)
+        self.reportclient.update_from_provider_tree(context, prov_tree,
+                                                    allocations=allocs)
 
     @retrying.retry(stop_max_attempt_number=4,
                     retry_on_exception=lambda e: isinstance(

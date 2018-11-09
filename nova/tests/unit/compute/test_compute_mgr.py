@@ -334,14 +334,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         log_mock.exception.assert_called_once()
 
     @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete_resource_provider')
     @mock.patch.object(manager.ComputeManager,
                        '_update_available_resource_for_node')
     @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
     @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
     def test_update_available_resource(self, get_db_nodes, get_avail_nodes,
-                                       update_mock, del_rp_mock, mock_get_rt):
+                                       update_mock, mock_get_rt):
         db_nodes = [self._make_compute_node('node%s' % i, i)
                     for i in range(1, 5)]
         avail_nodes = set(['node2', 'node3', 'node4', 'node5'])
@@ -357,12 +355,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
              for node in avail_nodes_l]
         )
 
+        rc_mock = mock_get_rt.return_value.reportclient
         # First node in set should have been removed from DB
         for db_node in db_nodes:
             if db_node.hypervisor_hostname == 'node1':
                 db_node.destroy.assert_called_once_with()
-                del_rp_mock.assert_called_once_with(self.context, db_node,
-                        cascade=True)
+                rc_mock.delete_resource_provider.assert_called_once_with(
+                    self.context, db_node, cascade=True)
                 mock_get_rt.return_value.remove_node.assert_called_once_with(
                     'node1')
             else:
@@ -5010,9 +5009,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             },
         }]
         self.mock_get_allocs = self.useFixture(
-            fixtures.fixtures.MockPatch(
-                'nova.scheduler.client.report.SchedulerReportClient.'
-                'get_allocations_for_consumer')).mock
+            fixtures.fixtures.MockPatchObject(
+                fake_rt.reportclient, 'get_allocations_for_consumer')).mock
         self.mock_get_allocs.return_value = self.allocations
 
     def _do_build_instance_update(self, mock_save, reschedule_update=False):
@@ -6866,6 +6864,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         def _get_instance_nw_info(context, instance):
             return self.nw_info
 
+        reportclient = self.compute.reportclient
+
         @mock.patch.object(self.compute, '_get_resource_tracker')
         @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
         @mock.patch.object(self.compute.driver, 'finish_revert_migration')
@@ -6896,6 +6896,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                     mock_get_cn,
                     get_resource_tracker):
 
+            # Restore the report client
+            get_resource_tracker.return_value.reportclient = reportclient
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
             self.instance.migration_context = objects.MigrationContext()
@@ -7051,7 +7053,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         do_confirm_resize()
 
     def test_delete_allocation_after_move_confirm_by_migration(self):
-        with mock.patch.object(self.compute, 'reportclient') as mock_report:
+        with mock.patch.object(self.compute, '_reportclient') as mock_report:
             mock_report.delete_allocation_for_instance.return_value = True
             self.compute._delete_allocation_after_move(self.context,
                                                        self.instance,
@@ -7062,7 +7064,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def test_revert_allocation(self):
         """New-style migration-based allocation revert."""
 
-        @mock.patch.object(self.compute, 'reportclient')
+        @mock.patch.object(self.compute, '_reportclient')
         def doit(mock_report):
             cu = uuids.node
             a = {cu: {'resources': {'DISK_GB': 1}}}
@@ -7081,7 +7083,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def test_revert_allocation_old_style(self):
         """Test that we don't delete allocs for migration if none found."""
 
-        @mock.patch.object(self.compute, 'reportclient')
+        @mock.patch.object(self.compute, '_reportclient')
         def doit(mock_report):
             mock_report.get_allocations_for_consumer.return_value = {}
             self.migration.uuid = uuids.migration
@@ -7102,7 +7104,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         we can do.
         """
 
-        @mock.patch.object(self.compute, 'reportclient')
+        @mock.patch.object(self.compute, '_reportclient')
         def doit(mock_report):
             a = {
                 uuids.node: {'resources': {'DISK_GB': 1}},
@@ -7897,8 +7899,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                             is_shared_instance_path=False,
                                             is_shared_block_storage=False)
         with test.nested(
-                mock.patch.object(self.compute.scheduler_client,
-                                  'reportclient'),
+                mock.patch.object(self.compute, '_reportclient'),
                 mock.patch.object(self.compute,
                                   '_delete_allocation_after_move'),
         ) as (
@@ -8369,10 +8370,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         cn = objects.ComputeNode(uuid=uuids.compute)
         mock_cn.return_value = cn
 
+        reportclient = self.compute.reportclient
+
         @mock.patch.object(self.compute, '_reschedule')
         @mock.patch.object(self.compute, '_prep_resize')
         @mock.patch.object(self.compute, '_get_resource_tracker')
         def doit(mock_grt, mock_pr, mock_r):
+            # Restore the report client
+            mock_grt.return_value.reportclient = reportclient
             mock_r.return_value = False
             mock_pr.side_effect = test.TestingException
 

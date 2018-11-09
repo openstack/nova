@@ -14,7 +14,6 @@
 #    under the License.
 
 from nova.scheduler.client import query
-from nova.scheduler.client import report
 
 
 class SchedulerClient(object):
@@ -22,7 +21,6 @@ class SchedulerClient(object):
 
     def __init__(self):
         self.queryclient = query.SchedulerQueryClient()
-        self.reportclient = report.SchedulerReportClient()
 
     def select_destinations(self, context, spec_obj, instance_uuids,
             return_objects=False, return_alternates=False):

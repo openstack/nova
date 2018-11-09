@@ -51,6 +51,7 @@ from nova.objects import fields
 from nova import profiler
 from nova import rpc
 from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
 from nova import utils
@@ -233,7 +234,7 @@ class ComputeTaskManager(base.Base):
         self.network_api = network.API()
         self.servicegroup_api = servicegroup.API()
         self.scheduler_client = scheduler_client.SchedulerClient()
-        self.report_client = self.scheduler_client.reportclient
+        self.report_client = report.SchedulerReportClient()
         self.notifier = rpc.get_notifier('compute', CONF.host)
         # Help us to record host in EventReporter
         self.host = CONF.host
@@ -465,15 +466,16 @@ class ComputeTaskManager(base.Base):
                                               self.compute_rpcapi,
                                               self.servicegroup_api,
                                               self.scheduler_client,
+                                              self.report_client,
                                               request_spec)
 
     def _build_cold_migrate_task(self, context, instance, flavor, request_spec,
             clean_shutdown, host_list):
         return migrate.MigrationTask(context, instance, flavor,
-                                     request_spec,
-                                     clean_shutdown,
+                                     request_spec, clean_shutdown,
                                      self.compute_rpcapi,
-                                     self.scheduler_client, host_list)
+                                     self.scheduler_client, self.report_client,
+                                     host_list)
 
     def _destroy_build_request(self, context, instance):
         # The BuildRequest needs to be stored until the instance is mapped to
@@ -1290,8 +1292,8 @@ class ComputeTaskManager(base.Base):
                           'was already deleted.', instance=instance)
                 # This is a placeholder in case the quota recheck fails.
                 instances.append(None)
-                rc = self.scheduler_client.reportclient
-                rc.delete_allocation_for_instance(context, instance.uuid)
+                self.report_client.delete_allocation_for_instance(
+                    context, instance.uuid)
                 continue
             else:
                 if host.service_host not in host_az:

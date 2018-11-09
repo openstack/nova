@@ -24,6 +24,7 @@ from nova import exception
 from nova.network import model as network_model
 from nova import objects
 from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
 from nova import test
@@ -74,7 +75,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.instance, self.destination, self.block_migration,
             self.disk_over_commit, self.migration, compute_rpcapi.ComputeAPI(),
             servicegroup.API(), scheduler_client.SchedulerClient(),
-            self.fake_spec)
+            report.SchedulerReportClient(), self.fake_spec)
 
     def test_execute_with_destination(self):
         dest_node = objects.ComputeNode(hypervisor_hostname='dest_node')
@@ -99,7 +100,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             mock_check_dest.assert_called_once_with()
             allocs = mock.sentinel.allocs
             mock_claim.assert_called_once_with(
-                self.context, self.task.scheduler_client.reportclient,
+                self.context, self.task.report_client,
                 self.instance, mock.sentinel.source_node, dest_node,
                 source_allocations=allocs, consumer_generation=None)
             mock_mig.assert_called_once_with(

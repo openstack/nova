@@ -136,7 +136,6 @@ class IronicResourceTrackerTest(test_base.SchedulerReportClientTestBase):
         interceptor.
         """
         self.report_client = client
-        self.rt.scheduler_client.reportclient = client
         self.rt.reportclient = client
 
     def setUp(self):

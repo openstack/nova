@@ -46,7 +46,8 @@ def supports_extended_port_binding(context, host):
 class LiveMigrationTask(base.TaskBase):
     def __init__(self, context, instance, destination,
                  block_migration, disk_over_commit, migration, compute_rpcapi,
-                 servicegroup_api, scheduler_client, request_spec=None):
+                 servicegroup_api, scheduler_client, report_client,
+                 request_spec=None):
         super(LiveMigrationTask, self).__init__(context, instance)
         self.destination = destination
         self.block_migration = block_migration
@@ -58,6 +59,7 @@ class LiveMigrationTask(base.TaskBase):
         self.compute_rpcapi = compute_rpcapi
         self.servicegroup_api = servicegroup_api
         self.scheduler_client = scheduler_client
+        self.report_client = report_client
         self.request_spec = request_spec
         self._source_cn = None
         self._held_allocations = None
@@ -107,7 +109,7 @@ class LiveMigrationTask(base.TaskBase):
             # generation conflict and this call raise a AllocationUpdateFailed
             # exception. We let that propagate here to abort the migration.
             scheduler_utils.claim_resources_on_destination(
-                self.context, self.scheduler_client.reportclient,
+                self.context, self.report_client,
                 self.instance, source_node, dest_node,
                 source_allocations=self._held_allocations,
                 consumer_generation=None)
@@ -431,8 +433,7 @@ class LiveMigrationTask(base.TaskBase):
         # Note that this does not remove allocations against any other node
         # or shared resource provider, it's just undoing what the scheduler
         # allocated for the given (destination) node.
-        self.scheduler_client.reportclient.\
-            remove_provider_tree_from_instance_allocation(
+        self.report_client.remove_provider_tree_from_instance_allocation(
             self.context, self.instance.uuid, compute_node.uuid)
 
     def _check_not_over_max_retries(self, attempted_hosts):
