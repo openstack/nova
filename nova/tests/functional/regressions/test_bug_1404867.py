@@ -96,7 +96,8 @@ class DeleteWithReservedVolumes(integrated_helpers._IntegratedTestBase,
 
         # There should now exist an attachment to the volume as it was created
         # by Nova.
-        self.assertIn(volume_id, self.cinder.attachments[server_id])
+        self.assertIn(volume_id,
+                      self.cinder.volume_ids_for_instance(server_id))
 
         # Delete this server, which should delete BDMs and remove the
         # reservation on the instances.
@@ -104,4 +105,5 @@ class DeleteWithReservedVolumes(integrated_helpers._IntegratedTestBase,
 
         # The volume should no longer have any attachments as instance delete
         # should have removed them.
-        self.assertNotIn(volume_id, self.cinder.attachments[server_id])
+        self.assertNotIn(volume_id,
+                         self.cinder.volume_ids_for_instance(server_id))
