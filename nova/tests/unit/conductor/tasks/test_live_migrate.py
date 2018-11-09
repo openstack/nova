@@ -23,7 +23,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
-from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import query
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
@@ -74,7 +74,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.task = live_migrate.LiveMigrationTask(self.context,
             self.instance, self.destination, self.block_migration,
             self.disk_over_commit, self.migration, compute_rpcapi.ComputeAPI(),
-            servicegroup.API(), scheduler_client.SchedulerClient(),
+            servicegroup.API(), query.SchedulerQueryClient(),
             report.SchedulerReportClient(), self.fake_spec)
 
     def test_execute_with_destination(self):
@@ -375,7 +375,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                        '_call_livem_checks_on_host')
     @mock.patch.object(live_migrate.LiveMigrationTask,
                        '_check_compatible_with_source_hypervisor')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
                        return_value=[[fake_selection1]])
     @mock.patch.object(objects.RequestSpec, 'reset_forced_destinations')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
@@ -404,7 +404,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                        '_call_livem_checks_on_host')
     @mock.patch.object(live_migrate.LiveMigrationTask,
                        '_check_compatible_with_source_hypervisor')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
                        return_value=[[fake_selection1]])
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     def test_find_destination_no_image_works(self, mock_setup, mock_select,
@@ -426,7 +426,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                        '_call_livem_checks_on_host')
     @mock.patch.object(live_migrate.LiveMigrationTask,
                        '_check_compatible_with_source_hypervisor')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
                        side_effect=[[[fake_selection1]], [[fake_selection2]]])
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     def _test_find_destination_retry_hypervisor_raises(
@@ -460,7 +460,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                        '_call_livem_checks_on_host')
     @mock.patch.object(live_migrate.LiveMigrationTask,
                        '_check_compatible_with_source_hypervisor')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
                        side_effect=[[[fake_selection1]], [[fake_selection2]]])
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     def test_find_destination_retry_with_invalid_livem_checks(
@@ -486,7 +486,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                        '_call_livem_checks_on_host')
     @mock.patch.object(live_migrate.LiveMigrationTask,
                        '_check_compatible_with_source_hypervisor')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
                        side_effect=[[[fake_selection1]], [[fake_selection2]]])
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     def test_find_destination_retry_with_failed_migration_pre_checks(
@@ -513,7 +513,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(live_migrate.LiveMigrationTask,
                        '_check_compatible_with_source_hypervisor',
                        side_effect=exception.DestinationHypervisorTooOld())
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
                        return_value=[[fake_selection1]])
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     def test_find_destination_retry_exceeds_max(
@@ -532,7 +532,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             return_objects=True, return_alternates=False)
         mock_check.assert_called_once_with('host1')
 
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations',
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
                        side_effect=exception.NoValidHost(reason=""))
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     def test_find_destination_when_runs_out_of_hosts(self, mock_setup,
@@ -554,7 +554,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         m_build_request_spec.return_value = {}
         fake_spec = objects.RequestSpec()
         m_from_primitives.return_value = fake_spec
-        with mock.patch.object(self.task.scheduler_client,
+        with mock.patch.object(self.task.query_client,
             'select_destinations') as m_select_destinations:
             error = messaging.RemoteError()
             m_select_destinations.side_effect = error

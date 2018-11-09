@@ -87,7 +87,7 @@ from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import whitelist
 from nova import rpc
 from nova import safe_utils
-from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import query
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
@@ -506,7 +506,7 @@ class ComputeManager(manager.Manager):
         self.is_neutron_security_groups = (
             openstack_driver.is_neutron_security_groups())
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
-        self.scheduler_client = scheduler_client.SchedulerClient()
+        self.query_client = query.SchedulerQueryClient()
         self._reportclient = None
         self._resource_tracker = None
         self.instance_events = InstanceEvents()
@@ -1726,16 +1726,16 @@ class ComputeManager(manager.Manager):
         if isinstance(instance, obj_instance.Instance):
             instance = objects.InstanceList(objects=[instance])
         context = context.elevated()
-        self.scheduler_client.update_instance_info(context, self.host,
-                                                   instance)
+        self.query_client.update_instance_info(context, self.host,
+                                               instance)
 
     def _delete_scheduler_instance_info(self, context, instance_uuid):
         """Sends the uuid of the deleted Instance to the Scheduler client."""
         if not self.send_instance_updates:
             return
         context = context.elevated()
-        self.scheduler_client.delete_instance_info(context, self.host,
-                                                   instance_uuid)
+        self.query_client.delete_instance_info(context, self.host,
+                                               instance_uuid)
 
     @periodic_task.periodic_task(spacing=CONF.scheduler_instance_sync_interval)
     def _sync_scheduler_instance_info(self, context):
@@ -1746,7 +1746,7 @@ class ComputeManager(manager.Manager):
                                                      expected_attrs=[],
                                                      use_slave=True)
         uuids = [instance.uuid for instance in instances]
-        self.scheduler_client.sync_instance_info(context, self.host, uuids)
+        self.query_client.sync_instance_info(context, self.host, uuids)
 
     def _notify_about_instance_usage(self, context, instance, event_suffix,
                                      network_info=None, extra_usage_info=None,

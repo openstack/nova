@@ -22,7 +22,6 @@ from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import exception
 from nova import objects
-from nova.scheduler import client
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import utils as scheduler_utils
@@ -56,12 +55,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     driver_cls = filter_scheduler.FilterScheduler
 
-    @mock.patch('nova.scheduler.client.SchedulerClient')
-    def setUp(self, mock_client):
-        sched_client = mock.Mock(spec=client.SchedulerClient)
-        mock_client.return_value = sched_client
-        with mock.patch('nova.scheduler.client.report.SchedulerReportClient',
-                        autospec=True):
+    def setUp(self):
+        with mock.patch(
+                'nova.scheduler.client.report.SchedulerReportClient',
+                autospec=True), mock.patch(
+                'nova.scheduler.client.query.SchedulerQueryClient',
+                autospec=True):
             super(FilterSchedulerTestCase, self).setUp()
 
     @mock.patch('nova.scheduler.utils.claim_resources')

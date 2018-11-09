@@ -50,7 +50,7 @@ from nova.objects import base as nova_object
 from nova.objects import fields
 from nova import profiler
 from nova import rpc
-from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import query
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
@@ -233,7 +233,7 @@ class ComputeTaskManager(base.Base):
         self.image_api = image.API()
         self.network_api = network.API()
         self.servicegroup_api = servicegroup.API()
-        self.scheduler_client = scheduler_client.SchedulerClient()
+        self.query_client = query.SchedulerQueryClient()
         self.report_client = report.SchedulerReportClient()
         self.notifier = rpc.get_notifier('compute', CONF.host)
         # Help us to record host in EventReporter
@@ -465,7 +465,7 @@ class ComputeTaskManager(base.Base):
                                               disk_over_commit, migration,
                                               self.compute_rpcapi,
                                               self.servicegroup_api,
-                                              self.scheduler_client,
+                                              self.query_client,
                                               self.report_client,
                                               request_spec)
 
@@ -474,7 +474,7 @@ class ComputeTaskManager(base.Base):
         return migrate.MigrationTask(context, instance, flavor,
                                      request_spec, clean_shutdown,
                                      self.compute_rpcapi,
-                                     self.scheduler_client, self.report_client,
+                                     self.query_client, self.report_client,
                                      host_list)
 
     def _destroy_build_request(self, context, instance):
@@ -747,9 +747,9 @@ class ComputeTaskManager(base.Base):
                             instance_uuids=None, return_alternates=False):
         scheduler_utils.setup_instance_group(context, request_spec)
         with timeutils.StopWatch() as timer:
-            host_lists = self.scheduler_client.select_destinations(context,
-                    request_spec, instance_uuids, return_objects=True,
-                    return_alternates=return_alternates)
+            host_lists = self.query_client.select_destinations(
+                context, request_spec, instance_uuids, return_objects=True,
+                return_alternates=return_alternates)
         LOG.debug('Took %0.2f seconds to select destinations for %s '
                   'instance(s).', timer.elapsed(), len(instance_uuids))
         return host_lists

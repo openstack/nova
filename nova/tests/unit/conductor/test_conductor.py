@@ -46,7 +46,7 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields
-from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import query
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures
@@ -525,8 +525,7 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(scheduler_utils, 'build_request_spec')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
-    @mock.patch.object(scheduler_client.SchedulerClient,
-                       'select_destinations')
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_cleanup_allocated_networks')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
@@ -669,8 +668,7 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
             side_effect=exc.InstanceMappingNotFound(uuid='fake'))
     @mock.patch.object(objects.HostMapping, 'get_by_host')
-    @mock.patch.object(scheduler_client.SchedulerClient,
-                       'select_destinations')
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
     def test_build_instances_no_instance_mapping(self, _mock_set_state,
@@ -765,8 +763,7 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.HostMapping, 'get_by_host',
             side_effect=exc.HostMappingNotFound(name='fake'))
-    @mock.patch.object(scheduler_client.SchedulerClient,
-                       'select_destinations')
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
     def test_build_instances_no_host_mapping(self, _mock_set_state,
@@ -811,8 +808,7 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.HostMapping, 'get_by_host')
-    @mock.patch.object(scheduler_client.SchedulerClient,
-                       'select_destinations')
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
     def test_build_instances_update_instance_mapping(self, _mock_set_state,
@@ -861,8 +857,7 @@ class _BaseTaskTestCase(object):
 
     @mock.patch.object(objects.Instance, 'save', new=mock.MagicMock())
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
-    @mock.patch.object(scheduler_client.SchedulerClient,
-                       'select_destinations')
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify', new=mock.MagicMock())
     def test_build_instances_destroy_build_request(self, mock_select_dests,
@@ -903,8 +898,7 @@ class _BaseTaskTestCase(object):
             build_req.destroy.assert_called_once_with()
 
     @mock.patch.object(objects.Instance, 'save', new=mock.MagicMock())
-    @mock.patch.object(scheduler_client.SchedulerClient,
-                       'select_destinations')
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify', new=mock.MagicMock())
     def test_build_instances_reschedule_ignores_build_request(self,
@@ -1342,7 +1336,7 @@ class _BaseTaskTestCase(object):
         with test.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
-            mock.patch.object(self.conductor_manager.scheduler_client,
+            mock.patch.object(self.conductor_manager.query_client,
                               'select_destinations')
         ) as (rebuild_mock, select_dest_mock):
             self.conductor_manager.rebuild_instance(context=self.context,
@@ -1372,7 +1366,7 @@ class _BaseTaskTestCase(object):
                               'rebuild_instance'),
             mock.patch.object(scheduler_utils, 'setup_instance_group',
                               return_value=False),
-            mock.patch.object(self.conductor_manager.scheduler_client,
+            mock.patch.object(self.conductor_manager.query_client,
                               'select_destinations',
                               return_value=[[fake_selection]])
         ) as (rebuild_mock, sig_mock, select_dest_mock):
@@ -1409,7 +1403,7 @@ class _BaseTaskTestCase(object):
                               'rebuild_instance'),
             mock.patch.object(scheduler_utils, 'setup_instance_group',
                               return_value=False),
-            mock.patch.object(self.conductor_manager.scheduler_client,
+            mock.patch.object(self.conductor_manager.query_client,
                               'select_destinations',
                               side_effect=exc.NoValidHost(reason='')),
             mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
@@ -1430,7 +1424,7 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(conductor_manager.compute_rpcapi.ComputeAPI,
                        'rebuild_instance')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
-    @mock.patch.object(conductor_manager.scheduler_client.SchedulerClient,
+    @mock.patch.object(conductor_manager.query.SchedulerQueryClient,
                        'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
@@ -1488,7 +1482,7 @@ class _BaseTaskTestCase(object):
         with test.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
-            mock.patch.object(self.conductor_manager.scheduler_client,
+            mock.patch.object(self.conductor_manager.query_client,
                               'select_destinations'),
             mock.patch.object(objects.Migration, 'get_by_instance_and_status',
                               return_value=migration)
@@ -1519,7 +1513,7 @@ class _BaseTaskTestCase(object):
                               'rebuild_instance'),
             mock.patch.object(scheduler_utils, 'setup_instance_group',
                               return_value=False),
-            mock.patch.object(self.conductor_manager.scheduler_client,
+            mock.patch.object(self.conductor_manager.query_client,
                               'select_destinations',
                               return_value=[[fake_selection]]),
             mock.patch.object(fake_spec, 'reset_forced_destinations'),
@@ -2359,7 +2353,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
     @mock.patch.object(migrate.MigrationTask, 'rollback')
@@ -2410,7 +2404,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
     @mock.patch.object(migrate.MigrationTask, 'rollback')
@@ -2536,7 +2530,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
     @mock.patch.object(migrate.MigrationTask, 'rollback')
@@ -2753,7 +2747,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 mock.patch.object(instances[1], 'save'),
                 mock.patch.object(objects.RequestSpec, 'from_primitives',
                                   return_value=fake_spec),
-                mock.patch.object(self.conductor_manager.scheduler_client,
+                mock.patch.object(self.conductor_manager.query_client,
                     'select_destinations', return_value=destinations),
                 mock.patch.object(self.conductor_manager.compute_rpcapi,
                     'build_and_run_instance'),
@@ -2847,7 +2841,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         with mock.patch.object(self.conductor, '_destroy_build_request',
                                new_callable=mock.NonCallableMock):
             with mock.patch.object(
-                    self.conductor.scheduler_client, 'select_destinations',
+                    self.conductor.query_client, 'select_destinations',
                     side_effect=exc.NoValidHost(reason='oops')):
                 self.conductor.build_instances(
                     self.context, [instance], image, filter_props,

@@ -76,8 +76,8 @@ from nova.policies import servers as servers_policies
 import nova.policy
 from nova import profiler
 from nova import rpc
-from nova.scheduler.client import query as queryclient
-from nova.scheduler.client import report as reportclient
+from nova.scheduler.client import query
+from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
 from nova import utils
@@ -2123,7 +2123,7 @@ class API(base.Base):
     @property
     def placementclient(self):
         if self._placementclient is None:
-            self._placementclient = reportclient.SchedulerReportClient()
+            self._placementclient = report.SchedulerReportClient()
         return self._placementclient
 
     def _local_delete(self, context, instance, bdms, delete_type, cb):
@@ -5242,14 +5242,14 @@ class AggregateAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host aggregates."""
     def __init__(self, **kwargs):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
-        self.scheduler_client = queryclient.SchedulerQueryClient()
+        self.query_client = query.SchedulerQueryClient()
         self._placement_client = None  # Lazy-load on first access.
         super(AggregateAPI, self).__init__(**kwargs)
 
     @property
     def placement_client(self):
         if self._placement_client is None:
-            self._placement_client = reportclient.SchedulerReportClient()
+            self._placement_client = report.SchedulerReportClient()
         return self._placement_client
 
     @wrap_exception()
@@ -5261,7 +5261,7 @@ class AggregateAPI(base.Base):
         if availability_zone:
             aggregate.metadata = {'availability_zone': availability_zone}
         aggregate.create()
-        self.scheduler_client.update_aggregates(context, [aggregate])
+        self.query_client.update_aggregates(context, [aggregate])
         return aggregate
 
     def get_aggregate(self, context, aggregate_id):
@@ -5288,7 +5288,7 @@ class AggregateAPI(base.Base):
         if values:
             aggregate.update_metadata(values)
             aggregate.updated_at = timeutils.utcnow()
-        self.scheduler_client.update_aggregates(context, [aggregate])
+        self.query_client.update_aggregates(context, [aggregate])
         # If updated values include availability_zones, then the cache
         # which stored availability_zones and host need to be reset
         if values.get('availability_zone'):
@@ -5302,7 +5302,7 @@ class AggregateAPI(base.Base):
         self.is_safe_to_update_az(context, metadata, aggregate=aggregate,
                                   action_name=AGGREGATE_ACTION_UPDATE_META)
         aggregate.update_metadata(metadata)
-        self.scheduler_client.update_aggregates(context, [aggregate])
+        self.query_client.update_aggregates(context, [aggregate])
         # If updated metadata include availability_zones, then the cache
         # which stored availability_zones and host need to be reset
         if metadata and metadata.get('availability_zone'):
@@ -5330,7 +5330,7 @@ class AggregateAPI(base.Base):
             raise exception.InvalidAggregateActionDelete(
                 aggregate_id=aggregate_id, reason=msg)
         aggregate.destroy()
-        self.scheduler_client.delete_aggregate(context, aggregate)
+        self.query_client.delete_aggregate(context, aggregate)
         compute_utils.notify_about_aggregate_update(context,
                                                     "delete.end",
                                                     aggregate_payload)
@@ -5439,7 +5439,7 @@ class AggregateAPI(base.Base):
                                   hosts=[host_name], aggregate=aggregate)
 
         aggregate.add_host(host_name)
-        self.scheduler_client.update_aggregates(context, [aggregate])
+        self.query_client.update_aggregates(context, [aggregate])
         try:
             self.placement_client.aggregate_add_host(
                 context, aggregate.uuid, host_name)
@@ -5505,7 +5505,7 @@ class AggregateAPI(base.Base):
             phase=fields_obj.NotificationPhase.START)
 
         aggregate.delete_host(host_name)
-        self.scheduler_client.update_aggregates(context, [aggregate])
+        self.query_client.update_aggregates(context, [aggregate])
         try:
             self.placement_client.aggregate_remove_host(
                 context, aggregate.uuid, host_name)

@@ -18,7 +18,7 @@ from nova.conductor.tasks import migrate
 from nova import context
 from nova import exception
 from nova import objects
-from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import query
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import test
@@ -65,7 +65,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
                                      self.request_spec,
                                      self.clean_shutdown,
                                      compute_rpcapi.ComputeAPI(),
-                                     scheduler_client.SchedulerClient(),
+                                     query.SchedulerQueryClient(),
                                      report.SchedulerReportClient(),
                                      host_list=None)
 
@@ -77,7 +77,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.Service.get_minimum_version_multi')
     @mock.patch('nova.availability_zones.get_host_availability_zone')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
     def _test_execute(self, prep_resize_mock, sel_dest_mock, sig_mock, az_mock,
                       gmv_mock, cm_mock, sm_mock, cn_mock, rc_mock, gbf_mock,
@@ -117,7 +117,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         self.heal_reqspec_is_bfv_mock.assert_called_once_with(
             self.context, self.request_spec, self.instance)
         sig_mock.assert_called_once_with(self.context, self.request_spec)
-        task.scheduler_client.select_destinations.assert_called_once_with(
+        task.query_client.select_destinations.assert_called_once_with(
             self.context, self.request_spec, [self.instance.uuid],
             return_objects=True, return_alternates=True)
         selection = self.host_lists[0][0]
@@ -170,7 +170,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.Service.get_minimum_version_multi')
     @mock.patch('nova.availability_zones.get_host_availability_zone')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
     def test_execute_rollback(self, prep_resize_mock, sel_dest_mock, sig_mock,
                               az_mock, gmv_mock, cm_mock, sm_mock, cn_mock,

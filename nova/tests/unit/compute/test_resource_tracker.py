@@ -433,7 +433,7 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
                               return overhead of memory given an instance
                               object. Defaults to returning zero overhead.
     """
-    sched_client_mock = mock.MagicMock()
+    query_client_mock = mock.MagicMock()
     report_client_mock = mock.MagicMock()
     notifier_mock = mock.MagicMock()
     vd = mock.MagicMock(autospec=driver.ComputeDriver)
@@ -447,13 +447,13 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
     vd.rebalances_nodes = False
 
     with test.nested(
-            mock.patch('nova.scheduler.client.SchedulerClient',
-                       return_value=sched_client_mock),
+            mock.patch('nova.scheduler.client.query.SchedulerQueryClient',
+                       return_value=query_client_mock),
             mock.patch('nova.scheduler.client.report.SchedulerReportClient',
                        return_value=report_client_mock),
             mock.patch('nova.rpc.get_notifier', return_value=notifier_mock)):
         rt = resource_tracker.ResourceTracker(hostname, vd)
-    return (rt, sched_client_mock, report_client_mock, vd)
+    return (rt, query_client_mock, report_client_mock, vd)
 
 
 def compute_update_usage(resources, flavor, sign=1):
