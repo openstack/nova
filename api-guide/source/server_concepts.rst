@@ -155,12 +155,12 @@ Precondition: there are 2 servers existing in cloud with following info::
       "servers": [
           {
               "name": "t1",
-              "locked": "true",
+              "OS-EXT-STS:vm_state": "active",
               ...
           },
           {
               "name": "t2",
-              "locked": "false",
+              "OS-EXT-STS:vm_state": "stopped",
               ...
           }
       ]
@@ -168,10 +168,14 @@ Precondition: there are 2 servers existing in cloud with following info::
 
 **Example: General user query server with administrator only options**
 
-Request with non-administrator context: ``GET /servers/detail?locked=1``
+Request with non-administrator context: ``GET /servers/detail?vm_state=active``
 
-Note that ``locked`` is returned through API layer starting from
-microversion 2.9.
+.. note::
+
+  The ``vm_state`` query parameter is only for administrator users and
+  the query parameter is ignored if specified by non-administrator users.
+  Thus the API returns servers of both ``active`` and ``stopped``
+  in this example.
 
 Response::
 
@@ -190,7 +194,7 @@ Response::
 
 **Example: Administrator query server with administrator only options**
 
-Request with administrator context: ``GET /servers/detail?locked=1``
+Request with administrator context: ``GET /servers/detail?vm_state=active``
 
 Response::
 
