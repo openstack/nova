@@ -200,7 +200,8 @@ def _move_operation_alloc_request(source_allocs, dest_alloc_req):
     :param dest_alloc_req: The allocation_request for resources against the
                            destination host
     """
-    LOG.debug("Doubling-up allocation_request for move operation.")
+    LOG.debug("Doubling-up allocation_request for move operation. Current "
+              "allocations: %s", source_allocs)
     # Remove any allocations against resource providers that are
     # already allocated against on the source host (like shared storage
     # providers)
