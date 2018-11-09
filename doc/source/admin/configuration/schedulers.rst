@@ -228,6 +228,13 @@ scheduling. A server create request from another tenant Y will result in only
 HostA being a scheduling candidate since HostA is not part of the
 tenant-isolated aggregate.
 
+.. note:: There is a
+    `known limitation <https://bugs.launchpad.net/nova/+bug/1802111>`_ with
+    the number of tenants that can be isolated per aggregate using this
+    filter. This limitation does not exist, however, for the
+    `Tenant Isolation with Placement`_ filtering capability added in the
+    18.0.0 Rocky release.
+
 AggregateNumInstancesFilter
 ---------------------------
 
@@ -1248,7 +1255,7 @@ Tenant Isolation with Placement
 In order to use placement to isolate tenants, there must be placement
 aggregates that match the membership and UUID of nova host aggregates
 that you want to use for isolation. The same key pattern in aggregate
-metadata used by the `AggregateMultiTenancyIsolation` filter controls
+metadata used by the `AggregateMultiTenancyIsolation`_ filter controls
 this function, and is enabled by setting
 `[scheduler]/limit_tenants_to_placement_aggregate=True`.
 
@@ -1289,6 +1296,9 @@ this function, and is enabled by setting
   $ openstack aggregate set --property filter_tenant_id=9691591f913949818a514f95286a6b90 myagg
 
   $ openstack --os-placement-api-version=1.2 resource provider aggregate set --aggregate 019e2189-31b3-49e1-aff2-b220ebd91c24 815a5634-86fb-4e1e-8824-8a631fee3e06
+
+Note that the ``filter_tenant_id`` metadata key can be optionally suffixed
+with any string for multiple tenants, such as ``filter_tenant_id3=$tenantid``.
 
 Availability Zones with Placement
 ---------------------------------
