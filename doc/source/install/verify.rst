@@ -30,7 +30,7 @@ Verify operation of the Compute service.
 
    .. note::
 
-      This output should indicate three service components enabled on the
+      This output should indicate two service components enabled on the
       controller node and one service component enabled on the compute node.
 
 #. List API endpoints in the Identity service to verify connectivity with the
