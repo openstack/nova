@@ -922,12 +922,7 @@ class ServerGroupTestMultiCell(ServerGroupTestBase):
         # cell1. So boot the server to cell2 where the group member cannot be
         # found as a result of the default setting.
         self._boot_a_server_to_group(created_group, az='cell2')
-        # TODO(melwitt): Uncomment this when the bug is fixed.
-        # self._boot_a_server_to_group(created_group, az='cell1',
-        #                             expected_status='ERROR')
-        # TODO(melwitt): Remove this when the bug is fixed.
         # Boot a server to cell1 with the affinity policy. This should fail
-        # because a group member has landed in cell2 already. But it passes
-        # because of the bug -- the query for group members doesn't find any
-        # members in cell2 because the query isn't multi-cell enabled.
-        self._boot_a_server_to_group(created_group, az='cell1')
+        # because group members found in cell2 should violate the policy.
+        self._boot_a_server_to_group(created_group, az='cell1',
+                                     expected_status='ERROR')
