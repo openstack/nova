@@ -8922,7 +8922,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #                 will assign them
         for bdm in block_device_mapping:
             if bdm.device_name is not None:
-                LOG.warning(
+                LOG.info(
                     "Ignoring supplied device name: %(device_name)s. "
                     "Libvirt can't honour user-supplied dev names",
                     {'device_name': bdm.device_name}, instance=instance)
@@ -8944,7 +8944,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         suggested_dev_name = block_device_obj.device_name
         if suggested_dev_name is not None:
-            LOG.warning(
+            LOG.info(
                 'Ignoring supplied device name: %(suggested_dev)s',
                 {'suggested_dev': suggested_dev_name}, instance=instance)
 
