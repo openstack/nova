@@ -111,7 +111,7 @@ class IronicClientWrapper(object):
             ksa_adap = utils.get_ksa_adapter(
                 nova.conf.ironic.DEFAULT_SERVICE_TYPE,
                 ksa_auth=auth_plugin, ksa_session=sess,
-                min_version=(IRONIC_API_VERSION[0], 0),
+                min_version=(IRONIC_API_VERSION[0], IRONIC_API_VERSION[1]),
                 max_version=(IRONIC_API_VERSION[0], ks_disc.LATEST))
             ironic_url = ksa_adap.get_endpoint()
             ironic_url_none_reason = 'returned None'

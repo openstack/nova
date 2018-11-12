@@ -89,6 +89,11 @@ Related options:
              'Nodes matching the partition_key value will be distributed '
              'between all services specified here. '
              'If partition_key is unset, this option is ignored.'),
+    cfg.StrOpt(
+        'conductor_group',
+        default=None,
+        help='Name of the conductor group (incompatible with balancing)'
+    )
 ]
 
 

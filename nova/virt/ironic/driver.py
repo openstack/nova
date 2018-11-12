@@ -593,6 +593,10 @@ class IronicDriver(virt_driver.ComputeDriver):
         :returns: a list or generator of raw nodes from ironic
         :raises: VirtDriverNotReady
         """
+        if CONF.ironic.conductor_group is not None:
+            kwargs['conductor_group'] = CONF.ironic.conductor_group
+
+        node_list = []
         try:
             # NOTE(dustinc): The generator returned by the SDK can only be
             # interated once. Since there are cases where it needs to be
@@ -712,15 +716,17 @@ class IronicDriver(virt_driver.ComputeDriver):
         service_list = objects.ServiceList.get_all_computes_by_hv_type(
             ctxt, self._get_hypervisor_type())
         services = set()
-        for svc in service_list:
-            # NOTE(jroll) if peer_list is None, we aren't partitioning by
-            # conductor group, so we check all compute services for liveness.
-            # if we have a peer_list, don't check liveness for compute
-            # services that aren't in the list.
-            if peer_list is None or svc.host in peer_list:
-                is_up = self.servicegroup_api.service_is_up(svc)
-                if is_up:
-                    services.add(svc.host.lower())
+
+        if not CONF.ironic.conductor_group:
+            for svc in service_list:
+                # NOTE(jroll) if peer_list is None, we aren't partitioning by
+                # conductor group, so we check all compute services for
+                # liveness. if we have a peer_list, don't check liveness for
+                # compute services that aren't in the list.
+                if peer_list is None or svc.host in peer_list:
+                    is_up = self.servicegroup_api.service_is_up(svc)
+                    if is_up:
+                        services.add(svc.host.lower())
         # NOTE(jroll): always make sure this service is in the list, because
         # only services that have something registered in the compute_nodes
         # table will be here so far, and we might be brand new.

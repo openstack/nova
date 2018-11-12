@@ -80,7 +80,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         ironicclient.call("node.list")
         self.get_ksa_adapter.assert_called_once_with(
             'baremetal', ksa_auth=self.get_auth_plugin.return_value,
-            ksa_session='session', min_version=(1, 0),
+            ksa_session='session', min_version=(1, 46),
             max_version=(1, ksa_disc.LATEST))
         expected = {'session': 'session',
             'max_retries': CONF.ironic.api_max_retries,
@@ -104,7 +104,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         ironicclient.call("node.list")
         self.get_ksa_adapter.assert_called_once_with(
             'baremetal', ksa_auth=self.get_auth_plugin.return_value,
-            ksa_session='session', min_version=(1, 0),
+            ksa_session='session', min_version=(1, 46),
             max_version=(1, ksa_disc.LATEST))
         # When get_endpoint_data raises any ServiceNotFound, None is returned.
         expected = {'session': 'session',
