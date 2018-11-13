@@ -86,18 +86,26 @@ class QuotaIntegrationTestCase(test.TestCase):
         nova.tests.unit.image.fake.FakeImageService_reset()
 
     def _create_instance(self, flavor_name='m1.large'):
-        """Create a test instance."""
-        inst = objects.Instance(context=self.context)
-        inst.image_id = 'cedef40a-ed67-4d10-800e-17455edce175'
-        inst.reservation_id = 'r-fakeres'
-        inst.user_id = self.user_id
-        inst.project_id = self.project_id
-        inst.flavor = flavors.get_flavor_by_name(flavor_name)
-        # This is needed for instance quota counting until we have the
-        # ability to count allocations in placement.
-        inst.vcpus = inst.flavor.vcpus
-        inst.memory_mb = inst.flavor.memory_mb
-        inst.create()
+        """Create a test instance in cell1 with an instance mapping."""
+        cell1 = self.cell_mappings[test.CELL1_NAME]
+        with context.target_cell(self.context, cell1) as cctxt:
+            inst = objects.Instance(context=cctxt)
+            inst.image_id = 'cedef40a-ed67-4d10-800e-17455edce175'
+            inst.reservation_id = 'r-fakeres'
+            inst.user_id = self.user_id
+            inst.project_id = self.project_id
+            inst.flavor = flavors.get_flavor_by_name(flavor_name)
+            # This is needed for instance quota counting until we have the
+            # ability to count allocations in placement.
+            inst.vcpus = inst.flavor.vcpus
+            inst.memory_mb = inst.flavor.memory_mb
+            inst.create()
+        # Create the related instance mapping which will be used in
+        # _instances_cores_ram_count().
+        inst_map = objects.InstanceMapping(
+            self.context, instance_uuid=inst.uuid, project_id=inst.project_id,
+            cell_mapping=cell1)
+        inst_map.create()
         return inst
 
     def test_too_many_instances(self):
