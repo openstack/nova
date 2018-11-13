@@ -3719,9 +3719,9 @@ class ServerStatusTest(test.TestCase):
         self.controller = servers.ServersController()
 
     def _get_with_state(self, vm_state, task_state=None):
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_state,
-                                        task_state=task_state))
+        self.stub_out('nova.compute.api.API.get',
+                fakes.fake_compute_get(vm_state=vm_state,
+                                       task_state=task_state))
 
         request = fakes.HTTPRequestV21.blank('/fake/servers/%s' % FAKE_UUID)
         return self.controller.show(request, FAKE_UUID)
