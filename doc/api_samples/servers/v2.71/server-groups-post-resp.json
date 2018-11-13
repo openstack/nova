@@ -1,0 +1,11 @@
+{
+    "server_group": {
+        "id": "f3d86fe6-4246-4be8-b87c-eb894626c741",
+        "members": [],
+        "name": "test",
+        "policy": "affinity",
+        "project_id": "6f70656e737461636b20342065766572",
+        "rules": {},
+        "user_id": "fake"
+    }
+}

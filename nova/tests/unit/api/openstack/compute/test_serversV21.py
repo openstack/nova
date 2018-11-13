@@ -57,6 +57,7 @@ from nova import exception
 from nova.image import glance
 from nova import objects
 from nova.objects import instance as instance_obj
+from nova.objects.instance_group import InstanceGroup
 from nova.objects import tag
 from nova.policies import servers as server_policies
 from nova import policy
@@ -2508,6 +2509,21 @@ class ServerControllerTestV266(ControllerTest):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
 
 
+class ServersControllerTestV271(ControllerTest):
+    wsgi_api_version = '2.71'
+
+    def req(self, url, use_admin_context=False):
+        return fakes.HTTPRequest.blank(url,
+                                       use_admin_context=use_admin_context,
+                                       version=self.wsgi_api_version)
+
+    def test_show_server_group_not_exist(self):
+        req = self.req('/fake/servers/%s' % FAKE_UUID)
+        servers = self.controller.show(req, FAKE_UUID)
+        expect_sg = []
+        self.assertEqual(expect_sg, servers['server']['server_groups'])
+
+
 class ServersControllerDeleteTest(ControllerTest):
 
     def setUp(self):
@@ -3433,6 +3449,43 @@ class ServersControllerRebuildTestV263(ControllerTest):
                       six.text_type(ex))
 
 
+class ServersControllerRebuildTestV271(ControllerTest):
+    image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+
+    def setUp(self):
+        super(ServersControllerRebuildTestV271, self).setUp()
+        self.req = fakes.HTTPRequest.blank('/fake/servers/a/action',
+                                           use_admin_context=True)
+        self.req.method = 'POST'
+        self.req.headers["content-type"] = "application/json"
+        self.req_user_id = self.req.environ['nova.context'].user_id
+        self.req_project_id = self.req.environ['nova.context'].project_id
+        self.req.api_version_request = (api_version_request.
+                                         APIVersionRequest('2.71'))
+        self.body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+                "user_data": None
+            }
+        }
+
+    @mock.patch('nova.compute.api.API.get')
+    def _rebuild_server(self, mock_get):
+        ctx = self.req.environ['nova.context']
+        mock_get.return_value = fakes.stub_instance_obj(ctx,
+            vm_state=vm_states.ACTIVE, project_id=self.req_project_id,
+            user_id=self.req_user_id)
+        server = self.controller._action_rebuild(
+            self.req, FAKE_UUID, body=self.body).obj['server']
+        return server
+
+    @mock.patch.object(InstanceGroup, 'get_by_instance_uuid',
+            side_effect=exception.InstanceGroupNotFound(group_uuid=FAKE_UUID))
+    def test_rebuild_with_server_group_not_exist(self, mock_sg_get):
+        server = self._rebuild_server()
+        self.assertEqual([], server['server_groups'])
+
+
 class ServersControllerUpdateTest(ControllerTest):
 
     def _get_request(self, body=None):
@@ -3719,6 +3772,23 @@ class ServersControllerUpdateTestV219(ServersControllerUpdateTest):
         req = self._get_request(body)
         self.assertRaises(exception.ValidationError, self.controller.update,
                           req, FAKE_UUID, body=body)
+
+
+class ServersControllerUpdateTestV271(ServersControllerUpdateTest):
+    body = {'server': {'name': 'server_test'}}
+
+    def _get_request(self, body=None):
+        req = super(ServersControllerUpdateTestV271, self)._get_request(
+            body=body)
+        req.api_version_request = api_version_request.APIVersionRequest('2.71')
+        return req
+
+    @mock.patch.object(InstanceGroup, 'get_by_instance_uuid',
+             side_effect=exception.InstanceGroupNotFound(group_uuid=FAKE_UUID))
+    def test_update_with_server_group_not_exist(self, mock_sg_get):
+        req = self._get_request(self.body)
+        res_dict = self.controller.update(req, FAKE_UUID, body=self.body)
+        self.assertEqual([], res_dict['server']['server_groups'])
 
 
 class ServerStatusTest(test.TestCase):

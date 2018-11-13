@@ -5861,6 +5861,14 @@ server_groups: &server_groups
   in: body
   required: true
   type: integer
+server_groups_2_71:
+  description: |
+    The UUIDs of the server groups to which the server belongs. Currently
+    this can contain at most one entry.
+  in: body
+  required: true
+  type: array
+  min_version: 2.71
 server_groups_list:
   description: |
     The list of existing server groups.

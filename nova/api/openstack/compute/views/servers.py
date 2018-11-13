@@ -140,7 +140,8 @@ class ViewBuilder(common.ViewBuilder):
         # results.
         return sorted(list(set(self._show_expected_attrs + expected_attrs)))
 
-    def _show_from_down_cell(self, request, instance, show_extra_specs):
+    def _show_from_down_cell(self, request, instance, show_extra_specs,
+                             show_server_groups):
         """Function that constructs the partial response for the instance."""
         ret = {
             "server": {
@@ -172,6 +173,10 @@ class ViewBuilder(common.ViewBuilder):
             # in case its an old request spec which doesn't have the user_id
             # data migrated, return UNKNOWN.
             ret["server"]["user_id"] = instance.user_id or "UNKNOWN"
+            if show_server_groups:
+                context = request.environ['nova.context']
+                ret['server']['server_groups'] = self._get_server_groups(
+                                                             context, instance)
         else:
             # GET /servers/detail includes links for GET /servers/{server_id}.
             ret['server']["links"] = self._get_links(
@@ -183,7 +188,7 @@ class ViewBuilder(common.ViewBuilder):
              show_extended_attr=None, show_host_status=None,
              show_keypair=True, show_srv_usg=True, show_sec_grp=True,
              show_extended_status=True, show_extended_volumes=True,
-             bdms=None, cell_down_support=False):
+             bdms=None, cell_down_support=False, show_server_groups=False):
         """Detailed view of a single instance."""
         if show_extra_specs is None:
             # detail will pre-calculate this for us. If we're doing show,
@@ -201,7 +206,7 @@ class ViewBuilder(common.ViewBuilder):
             # `display_name`) and return partial constructs based on the
             # information available from the nova_api database.
             return self._show_from_down_cell(
-                request, instance, show_extra_specs)
+                request, instance, show_extra_specs, show_server_groups)
         ip_v4 = instance.get('access_ip_v4')
         ip_v6 = instance.get('access_ip_v6')
 
@@ -339,6 +344,10 @@ class ViewBuilder(common.ViewBuilder):
                 trusted_certs = instance.trusted_certs.ids
             server["server"]["trusted_image_certificates"] = trusted_certs
 
+        if show_server_groups:
+            server['server']['server_groups'] = self._get_server_groups(
+                                                                   context,
+                                                                   instance)
         return server
 
     def index(self, request, instances, cell_down_support=False):
@@ -633,3 +642,12 @@ class ViewBuilder(common.ViewBuilder):
         # with v2.0.
         key = "os-extended-volumes:volumes_attached"
         server[key] = volumes_attached
+
+    @staticmethod
+    def _get_server_groups(context, instance):
+        try:
+            sg = objects.InstanceGroup.get_by_instance_uuid(context,
+                                                            instance.uuid)
+            return [sg.uuid]
+        except exception.InstanceGroupNotFound:
+            return []

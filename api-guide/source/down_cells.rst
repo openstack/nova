@@ -240,6 +240,9 @@ behavior are described below:
   - availability_zone: The availability_zone of the server if it was specified
     during during boot time and "UNKNOWN" otherwise.
   - power_state: Its value will be 0 (``NOSTATE``).
+  - server_groups: The UUIDs of the server groups to which the server belongs.
+    Currently this can contain at most one entry. Note that this key will be in
+    the response only from the "2.71" microversion.
 
   A sample response for a GET /servers/{server_id} request that
   includes one server from an unreachable part of the infrastructure
@@ -272,6 +275,7 @@ behavior are described below:
                  },
                  "OS-EXT-AZ:availability_zone": "geneva",
                  "OS-EXT-STS:power_state": 0,
+                 "server_groups": ["0fd77252-4eef-4ec4-ae9b-e05dfc98aeac"]
              }
          ]
      }
