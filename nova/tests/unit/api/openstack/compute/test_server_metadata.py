@@ -28,7 +28,6 @@ import nova.db.api
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_instance
 
 
 CONF = cfg.CONF
@@ -78,28 +77,6 @@ def stub_max_server_metadata():
     return metadata
 
 
-def return_server(context, server_id, columns_to_join=None):
-    return fake_instance.fake_db_instance(
-        **{'id': server_id,
-           'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
-           'name': 'fake',
-           'locked': False,
-           'launched_at': timeutils.utcnow(),
-           'vm_state': vm_states.ACTIVE})
-
-
-def return_server_by_uuid(context, server_uuid,
-                          columns_to_join=None, use_slave=False):
-    return fake_instance.fake_db_instance(
-        **{'id': 1,
-           'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
-           'name': 'fake',
-           'locked': False,
-           'launched_at': timeutils.utcnow(),
-           'metadata': stub_server_metadata(),
-           'vm_state': vm_states.ACTIVE})
-
-
 def return_server_nonexistent(context, server_id,
         columns_to_join=None, use_slave=False):
     raise exception.InstanceNotFound(instance_id=server_id)
@@ -115,10 +92,14 @@ class ServerMetaDataTestV21(test.TestCase):
 
     def setUp(self):
         super(ServerMetaDataTestV21, self).setUp()
-        fakes.stub_out_key_pair_funcs(self)
-        self.stub_out('nova.db.api.instance_get', return_server)
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      return_server_by_uuid)
+        metadata = stub_server_metadata()
+        self.stub_out('nova.compute.api.API.get',
+                      fakes.fake_compute_get(
+                          **{'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
+                             'name': 'fake',
+                             'launched_at': timeutils.utcnow(),
+                             'vm_state': vm_states.ACTIVE,
+                             'metadata': metadata}))
 
         self.stub_out('nova.db.api.instance_metadata_get',
                       return_server_metadata)
@@ -196,12 +177,13 @@ class ServerMetaDataTestV21(test.TestCase):
         self.assertIsNone(res)
 
     def test_delete_nonexistent_server(self):
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      return_server_nonexistent)
         req = self._get_request('/key1')
         req.method = 'DELETE'
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.delete, req, self.uuid, 'key1')
+        with mock.patch('nova.compute.api.API.get',
+                        side_effect=exception.InstanceNotFound(
+                            instance_id=self.uuid)):
+            self.assertRaises(webob.exc.HTTPNotFound,
+                              self.controller.delete, req, self.uuid, 'key1')
 
     def test_delete_meta_not_found(self):
         self.stub_out('nova.db.api.instance_metadata_get',
@@ -299,16 +281,17 @@ class ServerMetaDataTestV21(test.TestCase):
                           self.controller.create, req, self.uuid, body=body)
 
     def test_create_nonexistent_server(self):
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      return_server_nonexistent)
         req = self._get_request()
         req.method = 'POST'
         body = {"metadata": {"key1": "value1"}}
         req.body = jsonutils.dump_as_bytes(body)
         req.headers["content-type"] = "application/json"
-
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.create, req, self.uuid, body=body)
+        with mock.patch('nova.compute.api.API.get',
+                        side_effect=exception.InstanceNotFound(
+                            instance_id=self.uuid)):
+            self.assertRaises(webob.exc.HTTPNotFound,
+                              self.controller.create, req, self.uuid,
+                              body=body)
 
     def test_update_metadata(self):
         self.stub_out('nova.objects.Instance.save', fake_instance_save)
@@ -403,15 +386,17 @@ class ServerMetaDataTestV21(test.TestCase):
                           body=expected)
 
     def test_update_all_nonexistent_server(self):
-        self.stub_out('nova.db.api.instance_get', return_server_nonexistent)
         req = self._get_request()
         req.method = 'PUT'
         req.content_type = "application/json"
         body = {'metadata': {'key10': 'value10'}}
         req.body = jsonutils.dump_as_bytes(body)
-
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.update_all, req, '100', body=body)
+        with mock.patch('nova.compute.api.API.get',
+                        side_effect=exception.InstanceNotFound(
+                            instance_id=self.uuid)):
+            self.assertRaises(webob.exc.HTTPNotFound,
+                              self.controller.update_all, req, self.uuid,
+                              body=body)
 
     def test_update_all_non_dict(self):
         self.stub_out('nova.db.api.instance_metadata_update',
@@ -437,17 +422,17 @@ class ServerMetaDataTestV21(test.TestCase):
         self.assertEqual(expected, res_dict)
 
     def test_update_item_nonexistent_server(self):
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      return_server_nonexistent)
         req = self._get_request('/key1')
         req.method = 'PUT'
         body = {"meta": {"key1": "value1"}}
         req.body = jsonutils.dump_as_bytes(body)
         req.headers["content-type"] = "application/json"
-
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.update, req, self.uuid, 'key1',
-                          body=body)
+        with mock.patch('nova.compute.api.API.get',
+                        side_effect=exception.InstanceNotFound(
+                            instance_id=self.uuid)):
+            self.assertRaises(webob.exc.HTTPNotFound,
+                              self.controller.update, req, self.uuid, 'key1',
+                              body=body)
 
     def test_update_item_empty_body(self):
         self.stub_out('nova.db.api.instance_metadata_update',
@@ -667,15 +652,16 @@ class BadStateServerMetaDataTestV21(test.TestCase):
 
     def setUp(self):
         super(BadStateServerMetaDataTestV21, self).setUp()
-        fakes.stub_out_key_pair_funcs(self)
         self.stub_out('nova.db.api.instance_metadata_get',
                       return_server_metadata)
         self.stub_out(
             'nova.compute.rpcapi.ComputeAPI.change_instance_metadata',
             fake_change_instance_metadata)
-        self.stub_out('nova.db.api.instance_get', self._return_server_in_build)
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      self._return_server_in_build_by_uuid)
+        self.stub_out('nova.compute.api.API.get',
+                      fakes.fake_compute_get(
+                          **{'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
+                             'name': 'fake',
+                             'vm_state': vm_states.BUILDING}))
         self.stub_out('nova.db.api.instance_metadata_delete',
                       delete_server_metadata)
         self._set_up_resources()
@@ -709,24 +695,6 @@ class BadStateServerMetaDataTestV21(test.TestCase):
         req.body = jsonutils.dump_as_bytes(expected)
         self.assertRaises(webob.exc.HTTPConflict, self.controller.update_all,
                 req, self.uuid, body=expected)
-
-    def _return_server_in_build(self, context, server_id,
-                                columns_to_join=None):
-        return fake_instance.fake_db_instance(
-            **{'id': server_id,
-               'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
-               'name': 'fake',
-               'locked': False,
-               'vm_state': vm_states.BUILDING})
-
-    def _return_server_in_build_by_uuid(self, context, server_uuid,
-                                        columns_to_join=None, use_slave=False):
-        return fake_instance.fake_db_instance(
-            **{'id': 1,
-               'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
-               'name': 'fake',
-               'locked': False,
-               'vm_state': vm_states.BUILDING})
 
     @mock.patch.object(nova.compute.api.API, 'update_instance_metadata',
                        side_effect=exception.InstanceIsLocked(instance_uuid=0))
