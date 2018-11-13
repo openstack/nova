@@ -589,7 +589,7 @@ Error: %s""") % six.text_type(e))
         # NOTE(danms): Return nonzero if we archived something
         return int(bool(table_to_rows_archived))
 
-    @args('--before', dest='before',
+    @args('--before', metavar='<before>', dest='before',
           help='If specified, purge rows from shadow tables that are older '
                'than this. Fuzzy time specs are allowed')
     @args('--all', dest='purge_all', action='store_true',
