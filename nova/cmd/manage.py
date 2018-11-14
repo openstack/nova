@@ -45,6 +45,7 @@ import six
 import six.moves.urllib.parse as urlparse
 from sqlalchemy.engine import url as sqla_url
 
+# FIXME(cdent): This is a speedbump in the extraction process
 from nova.api.openstack.placement.objects import consumer as consumer_obj
 from nova.cmd import common as cmd_common
 from nova.compute import api as compute_api
@@ -416,6 +417,7 @@ class DbCommands(object):
         # need to be populated if it was not specified during boot time.
         instance_obj.populate_missing_availability_zones,
         # Added in Rocky
+        # FIXME(cdent): This is a factor that needs to be addressed somehow
         consumer_obj.create_incomplete_consumers,
         # Added in Rocky
         instance_mapping_obj.populate_queued_for_delete,
@@ -1987,6 +1989,7 @@ class PlacementCommands(object):
 
         return num_processed
 
+    # FIXME(cdent): This needs to be addressed as part of extraction.
     @action_description(
         _("Iterates over non-cell0 cells looking for instances which do "
           "not have allocations in the Placement service, or have incomplete "

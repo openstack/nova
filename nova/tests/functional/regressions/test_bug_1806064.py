@@ -16,6 +16,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import policy_fixture
 
@@ -50,7 +51,7 @@ class BootFromVolumeOverQuotaRaceDeleteTest(
         # Use the standard fixtures.
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
-        self.useFixture(nova_fixtures.PlacementFixture())
+        self.useFixture(func_fixtures.PlacementFixture())
         self.api = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1')).api
         # Use microversion 2.52 which allows creating a server with tags.

@@ -16,6 +16,10 @@
 Unit tests for the nova-status CLI interfaces.
 """
 
+# NOTE(cdent): Additional tests of nova-status may be found in
+# nova/tests/functional/test_nova_status.py. Those tests use the external
+# PlacementFixture, which is only available in functioanl tests.
+
 import fixtures
 import mock
 from six.moves import StringIO
@@ -27,7 +31,6 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 from requests import models
 
-from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.cmd import status
 import nova.conf
 from nova import context
@@ -35,7 +38,6 @@ from nova import context
 # in the tests, we don't use them in the actual CLI.
 from nova import objects
 from nova.objects import request_spec as reqspec_obj
-from nova import rc_fields as fields
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 
@@ -444,246 +446,6 @@ class TestUpgradeCheckCellsV2(test.NoDBTestCase):
         hm.create()
 
         result = self.cmd._check_cellsv2()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
-        self.assertIsNone(result.details)
-
-
-# This is what the ResourceTracker sets up in the nova-compute service.
-FAKE_VCPU_INVENTORY = {
-    'resource_class': fields.ResourceClass.VCPU,
-    'total': 32,
-    'reserved': 4,
-    'min_unit': 1,
-    'max_unit': 1,
-    'step_size': 1,
-    'allocation_ratio': 1.0,
-}
-
-# This is the kind of thing that Neutron will setup externally for routed
-# networks.
-FAKE_IP_POOL_INVENTORY = {
-    'resource_class': fields.ResourceClass.IPV4_ADDRESS,
-    'total': 256,
-    'reserved': 10,
-    'min_unit': 1,
-    'max_unit': 1,
-    'step_size': 1,
-    'allocation_ratio': 1.0,
-}
-
-
-class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
-    """Tests for the nova-status upgrade check on resource providers."""
-
-    # We'll setup the database ourselves because we need to use cells fixtures
-    # for multiple cell mappings.
-    USES_DB_SELF = True
-
-    def setUp(self):
-        super(TestUpgradeCheckResourceProviders, self).setUp()
-        self.output = StringIO()
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
-        # We always need the API DB to be setup.
-        self.useFixture(nova_fixtures.Database(database='api'))
-        self.useFixture(nova_fixtures.Database(database='placement'))
-        self.cmd = status.UpgradeCommands()
-        rp_obj.ensure_rc_cache(context.get_admin_context())
-
-    def test_check_resource_providers_fresh_install_no_mappings(self):
-        """Tests the scenario where we don't have any cell mappings (no cells
-        v2 setup yet) and no compute nodes in the single main database.
-        """
-        # We don't have a cell mapping, just the regular old main database
-        # because let's assume they haven't run simple_cell_setup yet.
-        self.useFixture(nova_fixtures.Database())
-        result = self.cmd._check_resource_providers()
-        # this is assumed to be base install so it's OK but with details
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
-        self.assertIn('There are no compute resource providers in the '
-                      'Placement service nor are there compute nodes in the '
-                      'database',
-                      result.details)
-
-    def test_check_resource_providers_no_rps_no_computes_in_cell1(self):
-        """Tests the scenario where we have a cell mapping with no computes in
-        it and no resource providers (because of no computes).
-        """
-        # this will setup two cell mappings, one for cell0 and a single cell1
-        self._setup_cells()
-        # there are no compute nodes in the cell1 database so we have 0
-        # resource providers and 0 compute nodes, so it's assumed to be a fresh
-        # install and not a failure.
-        result = self.cmd._check_resource_providers()
-        # this is assumed to be base install so it's OK but with details
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
-        self.assertIn('There are no compute resource providers in the '
-                      'Placement service nor are there compute nodes in the '
-                      'database',
-                      result.details)
-
-    def test_check_resource_providers_no_rps_one_compute(self):
-        """Tests the scenario where we have compute nodes in the cell but no
-        resource providers yet - VCPU or otherwise. This is a warning because
-        the compute isn't reporting into placement.
-        """
-        self._setup_cells()
-        # create a compute node which will be in cell1 by default
-        cn = objects.ComputeNode(
-            context=context.get_admin_context(),
-            host='fake-host',
-            vcpus=4,
-            memory_mb=8 * 1024,
-            local_gb=40,
-            vcpus_used=2,
-            memory_mb_used=2 * 1024,
-            local_gb_used=10,
-            hypervisor_type='fake',
-            hypervisor_version=1,
-            cpu_info='{"arch": "x86_64"}')
-        cn.create()
-        result = self.cmd._check_resource_providers()
-        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
-        self.assertIn('There are no compute resource providers in the '
-                      'Placement service but there are 1 compute nodes in the '
-                      'deployment.', result.details)
-
-    def _create_resource_provider(self, inventory):
-        """Helper method to create a resource provider with inventory"""
-        ctxt = context.get_admin_context()
-        rp_uuid = uuidutils.generate_uuid()
-        rp = rp_obj.ResourceProvider(
-            context=ctxt,
-            name=rp_uuid,
-            uuid=rp_uuid)
-        rp.create()
-        inv = rp_obj.Inventory(
-            context=ctxt,
-            resource_provider=rp,
-            **inventory)
-        inv_list = rp_obj.InventoryList(objects=[inv])
-        rp.set_inventory(inv_list)
-        return rp
-
-    def test_check_resource_providers_no_compute_rps_one_compute(self):
-        """Tests the scenario where we have compute nodes in the cell but no
-        compute (VCPU) resource providers yet. This is a failure warning the
-        compute isn't reporting into placement.
-        """
-        self._setup_cells()
-        # create a compute node which will be in cell1 by default
-        cn = objects.ComputeNode(
-            context=context.get_admin_context(),
-            host='fake-host',
-            vcpus=4,
-            memory_mb=8 * 1024,
-            local_gb=40,
-            vcpus_used=2,
-            memory_mb_used=2 * 1024,
-            local_gb_used=10,
-            hypervisor_type='fake',
-            hypervisor_version=1,
-            cpu_info='{"arch": "x86_64"}')
-        cn.create()
-
-        # create a single resource provider that represents an external shared
-        # IP allocation pool - this tests our filtering when counting resource
-        # providers
-        self._create_resource_provider(FAKE_IP_POOL_INVENTORY)
-
-        result = self.cmd._check_resource_providers()
-        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
-        self.assertIn('There are no compute resource providers in the '
-                      'Placement service but there are 1 compute nodes in the '
-                      'deployment.', result.details)
-
-    def test_check_resource_providers_fewer_rps_than_computes(self):
-        """Tests the scenario that we have fewer resource providers than
-        compute nodes which is a warning because we're underutilized.
-        """
-        # setup the cell0 and cell1 mappings
-        self._setup_cells()
-
-        # create two compute nodes (by default in cell1)
-        ctxt = context.get_admin_context()
-        for x in range(2):
-            cn = objects.ComputeNode(
-                context=ctxt,
-                host=getattr(uuids, str(x)),
-                vcpus=4,
-                memory_mb=8 * 1024,
-                local_gb=40,
-                vcpus_used=2,
-                memory_mb_used=2 * 1024,
-                local_gb_used=10,
-                hypervisor_type='fake',
-                hypervisor_version=1,
-                cpu_info='{"arch": "x86_64"}')
-            cn.create()
-
-        # create a single resource provider with some VCPU inventory
-        self._create_resource_provider(FAKE_VCPU_INVENTORY)
-
-        result = self.cmd._check_resource_providers()
-        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
-        self.assertIn('There are 1 compute resource providers and 2 compute '
-                      'nodes in the deployment.', result.details)
-
-    def test_check_resource_providers_equal_rps_to_computes(self):
-        """This tests the happy path scenario where we have an equal number
-        of compute resource providers to compute nodes.
-        """
-        # setup the cell0 and cell1 mappings
-        self._setup_cells()
-
-        # create a single compute node
-        ctxt = context.get_admin_context()
-        cn = objects.ComputeNode(
-            context=ctxt,
-            host=uuids.host,
-            vcpus=4,
-            memory_mb=8 * 1024,
-            local_gb=40,
-            vcpus_used=2,
-            memory_mb_used=2 * 1024,
-            local_gb_used=10,
-            hypervisor_type='fake',
-            hypervisor_version=1,
-            cpu_info='{"arch": "x86_64"}')
-        cn.create()
-
-        # create a deleted compute node record (shouldn't count)
-        cn2 = objects.ComputeNode(
-            context=ctxt,
-            host='fakehost',
-            vcpus=4,
-            memory_mb=8 * 1024,
-            local_gb=40,
-            vcpus_used=2,
-            memory_mb_used=2 * 1024,
-            local_gb_used=10,
-            hypervisor_type='fake',
-            hypervisor_version=1,
-            cpu_info='{"arch": "x86_64"}')
-        cn2.create()
-        cn2.destroy()
-
-        # create a single resource provider with some VCPU inventory
-        self._create_resource_provider(FAKE_VCPU_INVENTORY)
-        # create an externally shared IP allocation pool resource provider
-        self._create_resource_provider(FAKE_IP_POOL_INVENTORY)
-
-        # Stub out _count_compute_nodes to make sure we never call it without
-        # a cell-targeted context.
-        original_count_compute_nodes = (
-            status.UpgradeCommands._count_compute_nodes)
-
-        def stub_count_compute_nodes(_self, context=None):
-            self.assertIsNotNone(context.db_connection)
-            return original_count_compute_nodes(_self, context=context)
-        self.stub_out('nova.cmd.status.UpgradeCommands._count_compute_nodes',
-                      stub_count_compute_nodes)
-
-        result = self.cmd._check_resource_providers()
         self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
         self.assertIsNone(result.details)
 

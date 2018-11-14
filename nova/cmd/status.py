@@ -251,6 +251,7 @@ class UpgradeCommands(object):
         # and resource class, so we can simply count the number of inventories
         # records for the given resource class and those will uniquely identify
         # the number of resource providers we care about.
+        # FIXME(cdent): This will be a different project soon.
         meta = MetaData(bind=placement_db.get_placement_engine())
         inventories = Table('inventories', meta, autoload=True)
         return select([sqlfunc.count()]).select_from(

@@ -20,6 +20,7 @@ import mock
 import nova
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.unit import cast_as_call
 from nova.tests.unit import policy_fixture
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
@@ -34,7 +35,7 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         super(TestSerialConsoleLiveMigrate, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
-        self.useFixture(nova_fixtures.PlacementFixture())
+        self.useFixture(func_fixtures.PlacementFixture())
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
         # Replace libvirt with fakelibvirt

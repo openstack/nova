@@ -10,8 +10,14 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from oslo_config import cfg
+from oslo_config import fixture as config_fixture
+from placement import conf as placement_conf
+from placement.tests import fixtures as placement_db
+
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
@@ -55,10 +61,17 @@ class TestLocalDeleteAllocations(test.TestCase,
         have been cleaned up once the nova-compute service restarts.
 
         In this scenario we conditionally use the PlacementFixture to simulate
-        the case that nova-api isn't configured to talk to placement.
+        the case that nova-api isn't configured to talk to placement, thus we
+        need to manage the placement database independently.
         """
+        config = cfg.ConfigOpts()
+        placement_config = self.useFixture(config_fixture.Config(config))
+        placement_conf.register_opts(config)
+        self.useFixture(placement_db.Database(placement_config,
+                                             set_config=True))
         # Get allocations, make sure they are 0.
-        with nova_fixtures.PlacementFixture() as placement:
+        with func_fixtures.PlacementFixture(
+                conf_fixture=placement_config, db=False) as placement:
             compute = self.start_service('compute')
             placement_api = placement.api
             resp = placement_api.get('/resource_providers')
@@ -89,7 +102,8 @@ class TestLocalDeleteAllocations(test.TestCase,
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
 
-        with nova_fixtures.PlacementFixture() as placement:
+        with func_fixtures.PlacementFixture(
+                conf_fixture=placement_config, db=False) as placement:
             placement_api = placement.api
             # Assert usages are still non-zero.
             usages_during = self._get_usages(placement_api, rp_uuid)
@@ -111,7 +125,7 @@ class TestLocalDeleteAllocations(test.TestCase,
         """Tests that the compute API deletes allocations when the compute
         service on which the instance was running is down.
         """
-        placement_api = self.useFixture(nova_fixtures.PlacementFixture()).api
+        placement_api = self.useFixture(func_fixtures.PlacementFixture()).api
         compute = self.start_service('compute')
         # Get allocations, make sure they are 0.
         resp = placement_api.get('/resource_providers')

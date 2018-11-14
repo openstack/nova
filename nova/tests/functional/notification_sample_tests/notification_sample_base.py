@@ -22,6 +22,7 @@ from oslo_utils import fixture as utils_fixture
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests import json_ref
 from nova.tests.unit.api.openstack.compute import test_services
@@ -83,7 +84,7 @@ class NotificationSampleTestBase(test.TestCase,
         # the image fake backend needed for image discovery
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
-        self.useFixture(nova_fixtures.PlacementFixture())
+        self.useFixture(func_fixtures.PlacementFixture())
 
         context_patcher = self.mock_gen_request_id = mock.patch(
             'oslo_context.context.generate_request_id',

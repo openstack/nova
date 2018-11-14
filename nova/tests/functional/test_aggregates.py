@@ -21,6 +21,7 @@ from nova import context as nova_context
 from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
@@ -71,7 +72,7 @@ class AggregateRequestFiltersTest(test.TestCase,
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(nova_fixtures.AllServicesCurrent())
 
-        placement = self.useFixture(nova_fixtures.PlacementFixture())
+        placement = self.useFixture(func_fixtures.PlacementFixture())
         self.placement_api = placement.api
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
@@ -381,7 +382,7 @@ class TestAggregateMultiTenancyIsolationFilter(
         # Stub out glance, placement and neutron.
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
-        self.useFixture(nova_fixtures.PlacementFixture())
+        self.useFixture(func_fixtures.PlacementFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
         # Start nova services.
         self.start_service('conductor')

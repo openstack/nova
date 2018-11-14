@@ -22,7 +22,7 @@ from nova import conf
 from nova import context
 from nova import objects
 from nova import rc_fields as fields
-from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional import test_report_client as test_base
 from nova.virt import driver as virt_driver
@@ -200,7 +200,7 @@ class IronicResourceTrackerTest(test_base.SchedulerReportClientTestBase):
         usage for an instance, the nodes still have their unique stats and
         nothing is leaked from node to node.
         """
-        self.useFixture(nova_fixtures.PlacementFixture())
+        self.useFixture(func_fixtures.PlacementFixture())
         # Before the resource tracker is "initialized", we shouldn't have
         # any compute nodes or stats in the RT's cache...
         self.assertEqual(0, len(self.rt.compute_nodes))

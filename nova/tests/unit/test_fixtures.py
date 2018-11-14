@@ -38,7 +38,6 @@ from nova.objects import service as service_obj
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import conf_fixture
-from nova.tests.unit import policy_fixture
 from nova import utils
 
 CONF = cfg.CONF
@@ -473,34 +472,6 @@ class TestSingleCellSimpleFixture(testtools.TestCase):
         self.useFixture(fixtures.SingleCellSimple())
         with context.target_cell(mock.sentinel.context, None) as c:
             self.assertIs(mock.sentinel.context, c)
-
-
-class TestPlacementFixture(testtools.TestCase):
-    def setUp(self):
-        super(TestPlacementFixture, self).setUp()
-        # We need ConfFixture since PlacementPolicyFixture reads from config.
-        self.useFixture(conf_fixture.ConfFixture())
-        # We need PlacementPolicyFixture because placement-api checks policy.
-        self.useFixture(policy_fixture.PlacementPolicyFixture())
-        # Database is needed to start placement API
-        self.useFixture(fixtures.Database(database='placement'))
-
-    def test_responds_to_version(self):
-        """Ensure the Placement server responds to calls sensibly."""
-        placement_fixture = self.useFixture(fixtures.PlacementFixture())
-
-        # request the API root, which provides us the versions of the API
-        resp = placement_fixture._fake_get(None, '/')
-        self.assertEqual(200, resp.status_code)
-
-        # request a known bad url, and we should get a 404
-        resp = placement_fixture._fake_get(None, '/foo')
-        self.assertEqual(404, resp.status_code)
-
-        # unsets the token so we fake missing it
-        placement_fixture.token = None
-        resp = placement_fixture._fake_get(None, '/foo')
-        self.assertEqual(401, resp.status_code)
 
 
 class TestWarningsFixture(test.TestCase):

@@ -48,6 +48,8 @@
       Run tox-based functional tests for the OpenStack Nova project with Nova
       specific irrelevant-files list. Uses tox with the ``functional``
       environment.
+    required-projects:
+      - openstack/placement
     irrelevant-files: &functional-irrelevant-files
       - ^.*\.rst$
       - ^api-.*$
@@ -56,6 +58,7 @@
       - ^releasenotes/.*$
     vars:
       tox_envlist: functional
+      tox_install_siblings: true
     timeout: 3600
 
 - job:
@@ -65,9 +68,12 @@
       Run tox-based functional tests for the OpenStack Nova project
       under cPython version 3.5. with Nova specific irrelevant-files list.
       Uses tox with the ``functional-py35`` environment.
+    required-projects:
+      - openstack/placement
     irrelevant-files: *functional-irrelevant-files
     vars:
       tox_envlist: functional-py35
+      tox_install_siblings: true
     timeout: 3600
 
 - job:

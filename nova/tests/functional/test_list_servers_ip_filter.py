@@ -18,6 +18,7 @@ import nova.scheduler.utils
 import nova.servicegroup
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.unit import cast_as_call
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
@@ -39,7 +40,7 @@ class TestListServersIpFilter(test.TestCase):
         # the image fake backend needed for image discovery
         nova.tests.unit.image.fake.stub_out_image_service(self)
 
-        self.useFixture(nova_fixtures.PlacementFixture())
+        self.useFixture(func_fixtures.PlacementFixture())
 
         self.start_service('conductor')
         self.flags(enabled_filters=['ComputeFilter'],
