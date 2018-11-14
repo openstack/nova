@@ -751,3 +751,48 @@ FAQs
    to restart the scheduler process to refresh the cache, or send a SIGHUP
    signal to the scheduler by which it will automatically refresh the cells
    cache and the changes will take effect.
+
+#. Why was the cells REST API not implemented for CellsV2? Why are
+   there no CRUD operations for cells in the API?
+
+   One of the deployment challenges that CellsV1 had was the
+   requirement for the API and control services to be up before a new
+   cell could be deployed. This was not a problem for large-scale
+   public clouds that never shut down, but is not a reasonable
+   requirement for smaller clouds that do offline upgrades and/or
+   clouds which could be taken completely offline by something like a
+   power outage. Initial devstack and gate testing for CellsV1 was
+   delayed by the need to engineer a solution for bringing the services
+   partially online in order to deploy the rest, and this continues to
+   be a gap for other deployment tools. Consider also the FFU case
+   where the control plane needs to be down for a multi-release
+   upgrade window where changes to cell records have to be made. This
+   would be quite a bit harder if the way those changes are made is
+   via the API, which must remain down during the process.
+
+   Further, there is a long-term goal to move cell configuration
+   (i.e. cell_mappings and the associated URLs and credentials) into
+   config and get away from the need to store and provision those
+   things in the database. Obviously a CRUD interface in the API would
+   prevent us from making that move.
+
+#. Why are cells not exposed as a grouping mechanism in the API for
+   listing services, instances, and other resources?
+
+   Early in the design of CellsV2 we set a goal to not let the cell
+   concept leak out of the API, even for operators. Aggregates are the
+   way nova supports grouping of hosts for a variety of reasons, and
+   aggregates can cut across cells, and/or be aligned with them if
+   desired. If we were to support cells as another grouping mechanism,
+   we would likely end up having to implement many of the same
+   features for them as aggregates, such as scheduler features,
+   metadata, and other searching/filtering operations. Since
+   aggregates are how Nova supports grouping, we expect operators to
+   use aggregates any time they need to refer to a cell as a group of
+   hosts from the API, and leave actual cells as a purely
+   architectural detail.
+
+   The need to filter instances by cell in the API can and should be
+   solved by adding a generic by-aggregate filter, which would allow
+   listing instances on hosts contained within any aggregate,
+   including one that matches the cell boundaries if so desired.
