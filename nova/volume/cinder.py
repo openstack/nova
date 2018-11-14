@@ -126,11 +126,11 @@ def _get_server_version(context, url):
 
         # NOTE(andreykurilin): endpoint URL has at least 2 formats:
         #   1. The classic (legacy) endpoint:
-        #       http://{host}:{optional_port}/v{1 or 2 or 3}/{project-id}
-        #       http://{host}:{optional_port}/v{1 or 2 or 3}
+        #       http://{host}:{optional_port}/v{2 or 3}/{project-id}
+        #       http://{host}:{optional_port}/v{2 or 3}
         #   3. Under wsgi:
-        #       http://{host}:{optional_port}/volume/v{1 or 2 or 3}
-        for ver in ['v1', 'v2', 'v3']:
+        #       http://{host}:{optional_port}/volume/v{2 or 3}
+        for ver in ['v2', 'v3']:
             if u.path.endswith(ver) or "/{0}/".format(ver) in u.path:
                 path = u.path[:u.path.rfind(ver)]
                 version_url = '%s://%s%s' % (u.scheme, u.netloc, path)
