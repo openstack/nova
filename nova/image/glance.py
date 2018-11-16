@@ -446,7 +446,7 @@ class GlanceImageServiceV2(object):
         # 'show_multiple_locations' must be enabled in glance api conf file.
         try:
             return self._client.call(
-                context, 2, 'add_location', args=(image_id, location))
+                context, 2, 'add_location', args=(image_id, location, {}))
         except glanceclient.exc.HTTPBadRequest:
             _reraise_translated_exception()
 
