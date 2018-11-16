@@ -360,8 +360,7 @@ def find_guest_agent(base_dir):
         # required
         LOG.info('XenServer tools installed in this '
                  'image are capable of network injection.  '
-                 'Networking files will not be'
-                 'manipulated')
+                 'Networking files will not be manipulated')
         return True
     xe_daemon_filename = os.path.join(base_dir,
         'usr', 'sbin', 'xe-daemon')

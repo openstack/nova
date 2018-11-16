@@ -793,7 +793,7 @@ class VMOps(object):
             if rescue:
                 if not image_meta.properties.obj_attr_is_set(
                         "hw_auto_disk_config"):
-                    LOG.debug("'hw_auto_disk_config' value not found in"
+                    LOG.debug("'hw_auto_disk_config' value not found in "
                               "rescue image_properties. Setting value to %s",
                               auto_disk_config, instance=instance)
                 else:
@@ -1156,7 +1156,7 @@ class VMOps(object):
                 undo_mgr, old_vdi_ref)
             transfer_vhd_to_dest(new_vdi_ref, new_vdi_uuid)
         except Exception as error:
-            LOG.exception(_("_migrate_disk_resizing_down failed. Restoring"
+            LOG.exception(_("_migrate_disk_resizing_down failed. Restoring "
                             "orig vm"), instance=instance)
             undo_mgr._rollback()
             raise exception.InstanceFaultRollback(error)
@@ -2369,8 +2369,8 @@ class VMOps(object):
             # passed from admin user, so we need this check until
             # block_migration flag is removed from API
             if not pooled_migrate:
-                reason = _("Destination host is not in the same shared storage"
-                           "pool as source host %s.") % src
+                reason = _("Destination host is not in the same shared "
+                           "storage pool as source host %s.") % src
                 raise exception.MigrationPreCheckError(reason=reason)
             # TODO(johngarbutt) we currently assume
             # instance is on a SR shared with other destination

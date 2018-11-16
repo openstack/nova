@@ -3018,7 +3018,7 @@ class API(base_api.NetworkAPI):
             self._get_pci_devices_from_migration_context(migration_context,
                                                          migration)
         if old_pci_devices and new_pci_devices:
-            LOG.debug("Determining PCI devices mapping using migration"
+            LOG.debug("Determining PCI devices mapping using migration "
                       "context: old_pci_devices: %(old)s, "
                       "new_pci_devices: %(new)s",
                       {'old': [dev for dev in old_pci_devices],

@@ -3698,7 +3698,7 @@ def _get_traits_by_provider_tree(ctx, root_ids):
     :param root_ids: list of root resource provider IDs
     """
     if not root_ids:
-        raise ValueError(_("Expected root_ids to be a list of root resource"
+        raise ValueError(_("Expected root_ids to be a list of root resource "
                            "provider internal IDs, but got an empty list."))
 
     rpt = sa.alias(_RP_TBL, name='rpt')

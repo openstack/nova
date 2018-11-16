@@ -698,12 +698,12 @@ http://man7.org/linux/man-pages/man7/random.7.html.
     cfg.ListOpt('uid_maps',
                 default=[],
                 help='List of uid targets and ranges.'
-                     'Syntax is guest-uid:host-uid:count'
+                     'Syntax is guest-uid:host-uid:count. '
                      'Maximum of 5 allowed.'),
     cfg.ListOpt('gid_maps',
                 default=[],
                 help='List of guid targets and ranges.'
-                     'Syntax is guest-gid:host-gid:count'
+                     'Syntax is guest-gid:host-gid:count. '
                      'Maximum of 5 allowed.'),
     cfg.IntOpt('realtime_scheduler_priority',
                default=1,

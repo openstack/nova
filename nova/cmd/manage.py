@@ -456,7 +456,7 @@ class DbCommands(object):
 
     @args('--version', metavar='<version>', help=argparse.SUPPRESS)
     @args('--local_cell', action='store_true',
-          help='Only sync db in the local cell: do not attempt to fan-out'
+          help='Only sync db in the local cell: do not attempt to fan-out '
                'to all cells')
     @args('version2', metavar='VERSION', nargs='?', help='Database version')
     def sync(self, version=None, local_cell=False, version2=None):
@@ -1413,9 +1413,10 @@ class CellV2Commands(object):
                         if instance:
                             say('The instance with uuid %s has been deleted.'
                                 % uuid)
-                            say('Execute `nova-manage db archive_deleted_rows`'
-                                'command to archive this deleted instance and'
-                                'remove its instance_mapping.')
+                            say('Execute '
+                                '`nova-manage db archive_deleted_rows` '
+                                'command to archive this deleted '
+                                'instance and remove its instance_mapping.')
                             return 3
                     except exception.InstanceNotFound:
                         # instance is archived

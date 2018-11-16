@@ -1779,7 +1779,7 @@ def load_compute_driver(virtapi, compute_driver=None):
         LOG.exception(_("Unable to load the virtualization driver"))
         sys.exit(1)
     except ValueError:
-        LOG.exception("Compute driver '%s' from 'nova.virt' is not of type"
+        LOG.exception("Compute driver '%s' from 'nova.virt' is not of type "
                       "'%s'", compute_driver, str(ComputeDriver))
         sys.exit(1)
 

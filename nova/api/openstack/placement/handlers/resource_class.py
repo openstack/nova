@@ -76,7 +76,7 @@ def create_resource_class(req):
     except exception.MaxDBRetriesExceeded:
         raise webob.exc.HTTPConflict(
             _('Max retries of DB transaction exceeded attempting '
-              'to create resource class: %(name)s, please'
+              'to create resource class: %(name)s, please '
               'try again.') %
             {'name': data['name']})
 

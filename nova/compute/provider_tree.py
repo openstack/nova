@@ -317,7 +317,7 @@ class ProviderTree(object):
                     # that don't wind up at the root, which means we can't have
                     # cycles.  But to quell the paranoia...
                     raise ValueError(
-                        _("Unexpectedly failed to find parents already in the"
+                        _("Unexpectedly failed to find parents already in the "
                           "tree for any of the following: %s") %
                         ','.join(set(to_add_by_uuid)))
 

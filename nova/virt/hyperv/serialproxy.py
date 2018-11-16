@@ -69,7 +69,7 @@ class SerialProxy(threading.Thread):
             self._sock.listen(1)
         except socket.error as err:
             self._sock.close()
-            msg = (_('Failed to initialize serial proxy on'
+            msg = (_('Failed to initialize serial proxy on '
                      '%(addr)s:%(port)s, handling connections '
                      'to instance %(instance_name)s. Error: %(error)s') %
                    {'addr': self._addr,

@@ -77,7 +77,7 @@ class ConfigDrivePowerVM(object):
         # will default to generic vif.
         for vif in network_info:
             if vif.get('type') is not 'ovs':
-                LOG.debug('Changing vif type from %(type)s to vif for vif'
+                LOG.debug('Changing vif type from %(type)s to vif for vif '
                           '%(id)s.', {'type': vif.get('type'),
                                       'id': vif.get('id')})
                 vif['type'] = 'vif'

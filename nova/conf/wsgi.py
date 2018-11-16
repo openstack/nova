@@ -64,7 +64,7 @@ has no effect.
 
 Possible values:
 
-* '%(client_ip)s "%(request_line)s" status: %(status_code)s'
+* '%(client_ip)s "%(request_line)s" status: %(status_code)s '
   'len: %(body_length)s time: %(wall_seconds).7f' (default)
 * Any formatted string formed by specific values.
 """),

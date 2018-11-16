@@ -305,7 +305,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                 self._conn.nwfilterLookupByName(instance_filter_name)
             except libvirt.libvirtError:
                 name = instance.name
-                LOG.debug('The nwfilter(%(instance_filter_name)s) for'
+                LOG.debug('The nwfilter(%(instance_filter_name)s) for '
                           '%(name)s is not found.',
                           {'instance_filter_name': instance_filter_name,
                            'name': name},

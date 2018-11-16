@@ -367,7 +367,7 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
             host_network.brctl_del_if(self._session, qbr_name, port_name)
             self._delete_net_dev(port_name)
         except Exception:
-            LOG.debug("Fail to delete linux port %(port_name)s on bridge"
+            LOG.debug("Fail to delete linux port %(port_name)s on bridge "
                       "%(qbr_name)s",
                       {'port_name': port_name, 'qbr_name': qbr_name})
 
