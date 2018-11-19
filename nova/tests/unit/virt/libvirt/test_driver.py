@@ -58,7 +58,6 @@ from six.moves import builtins
 from six.moves import range
 
 from nova.api.metadata import base as instance_metadata
-from nova.api.openstack.placement.objects import resource_provider as rp_object
 from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import provider_tree
@@ -17939,31 +17938,21 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         # create compute node resource provider
-        self.cn_rp = rp_object.ResourceProvider(
+        self.cn_rp = dict(
             uuid=uuids.cn,
             name='compute-node',
         )
         # create shared storage resource provider
-        self.shared_rp = rp_object.ResourceProvider(
+        self.shared_rp = dict(
             uuid=uuids.shared_storage,
             name='shared_storage_rp',
         )
-        # create resource provider list
-        rp_list = rp_object.ResourceProviderList(
-            objects=[self.cn_rp, self.shared_rp]
-        )
 
-        def _pt_with_cn_rp_and_shared_rp():
-            """Create a provider tree instance having both compute node
-            and shared storage resource provider.
-            """
+        self.pt = provider_tree.ProviderTree()
+        self.pt.new_root(self.cn_rp['name'], self.cn_rp['uuid'], generation=0)
+        self.pt.new_root(self.shared_rp['name'], self.shared_rp['uuid'],
+                         generation=0)
 
-            pt = provider_tree.ProviderTree()
-            for rp in rp_list:
-                pt.new_root(rp.name, rp.uuid, generation=0)
-            return pt
-
-        self.pt = _pt_with_cn_rp_and_shared_rp()
         self.cpu_traits['HW_CPU_X86_AVX512F'] = True
         self.cpu_traits['HW_CPU_X86_BMI'] = True
 
@@ -18008,14 +17997,14 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                                    mock_vgpus, total_vgpus=0):
         mock_vgpus.return_value = total_vgpus
         self.driver.update_provider_tree(self.pt,
-                                         self.cn_rp.name)
+                                         self.cn_rp['name'])
 
     def test_update_provider_tree(self):
         self._test_update_provider_tree()
         self.assertEqual(self._get_inventory(),
-                         (self.pt.data(self.cn_rp.uuid)).inventory)
+                         (self.pt.data(self.cn_rp['uuid'])).inventory)
         self.assertEqual(set(['HW_CPU_X86_AVX512F', 'HW_CPU_X86_BMI']),
-                         self.pt.data(self.cn_rp.uuid).traits)
+                         self.pt.data(self.cn_rp['uuid']).traits)
 
     def test_update_provider_tree_with_vgpus(self):
         self._test_update_provider_tree(total_vgpus=8)
@@ -18026,7 +18015,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                                                    'max_unit': 8,
                                                    'total': 8}
         self.assertEqual(inventory,
-                         (self.pt.data(self.cn_rp.uuid)).inventory)
+                         (self.pt.data(self.cn_rp['uuid'])).inventory)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vgpu_total',
                 return_value=0)
@@ -18053,14 +18042,14 @@ class TestUpdateProviderTree(test.NoDBTestCase):
             }
         }
         # report inventory for shared storage resource provider
-        self.pt.update_inventory(self.shared_rp.uuid, shared_rp_inv)
+        self.pt.update_inventory(self.shared_rp['uuid'], shared_rp_inv)
 
         # add trait to shared storage resource provider
-        self.pt.update_traits(self.shared_rp.uuid,
+        self.pt.update_traits(self.shared_rp['uuid'],
                               ['MISC_SHARES_VIA_AGGREGATE'])
 
         self.driver.update_provider_tree(self.pt,
-                                         self.cn_rp.name)
+                                         self.cn_rp['name'])
 
         inventory = self._get_inventory()
         # Remove DISK_GB resource from inventory as you don't expect it to be
@@ -18068,23 +18057,24 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         del inventory[rc_fields.ResourceClass.DISK_GB]
 
         self.assertEqual(inventory,
-                         (self.pt.data(self.cn_rp.uuid)).inventory)
+                         (self.pt.data(self.cn_rp['uuid'])).inventory)
         self.assertEqual(shared_rp_inv,
-                         (self.pt.data(self.shared_rp.uuid)).inventory)
+                         (self.pt.data(self.shared_rp['uuid'])).inventory)
 
     def test_update_provider_tree_with_file_backed_memory(self):
         self.flags(file_backed_memory=1024,
                    group="libvirt")
         self._test_update_provider_tree()
         self.assertEqual(self._get_inventory(),
-                         (self.pt.data(self.cn_rp.uuid)).inventory)
+                         (self.pt.data(self.cn_rp['uuid'])).inventory)
 
     def test_update_provider_tree_with_cpu_traits(self):
         # These two traits should be unset when update_provider_tree is called
-        self.pt.add_traits(self.cn_rp.uuid, 'HW_CPU_X86_VMX', 'HW_CPU_X86_XOP')
+        self.pt.add_traits(self.cn_rp['uuid'],
+                           'HW_CPU_X86_VMX', 'HW_CPU_X86_XOP')
         self._test_update_provider_tree()
         self.assertEqual(set(['HW_CPU_X86_AVX512F', 'HW_CPU_X86_BMI']),
-                         self.pt.data(self.cn_rp.uuid).traits)
+                         self.pt.data(self.cn_rp['uuid']).traits)
 
 
 class TraitsComparisonMixin(object):
