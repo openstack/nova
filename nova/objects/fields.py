@@ -1249,3 +1249,9 @@ class InstancePowerStateField(BaseEnumField):
 
 class ListOfListsOfStringsField(fields.AutoTypedField):
     AUTO_TYPE = List(List(fields.String()))
+
+
+# TODO(mriedem): Replace this with the version from oslo.versiondobjects
+# when https://review.openstack.org/#/c/634700/ is released.
+class ListOfUUIDField(AutoTypedField):
+    AUTO_TYPE = List(fields.UUID())

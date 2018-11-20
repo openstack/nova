@@ -1142,7 +1142,7 @@ object_data = {
     'PowerVMLiveMigrateData': '1.4-a745f4eda16b45e1bc5686a0c498f27e',
     'Quotas': '1.3-40fcefe522111dddd3e5e6155702cf4e',
     'QuotasNoOp': '1.3-347a039fc7cfee7b225b68b5181e0733',
-    'RequestGroup': '1.0-5f694d4237c00c7b01136a4e4bcacd6d',
+    'RequestGroup': '1.1-5a330f65df2d91356b1da19f10540ec8',
     'RequestSpec': '1.12-25010470f219af9b6163f2a457a513f5',
     'S3ImageMapping': '1.0-7dd7366a890d82660ed121de9092276e',
     'SchedulerLimits': '1.0-249c4bd8e62a9b327b7026b7f19cc641',
