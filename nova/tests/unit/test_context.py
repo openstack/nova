@@ -430,8 +430,22 @@ class ContextTestCase(test.NoDBTestCase):
             ctxt, mappings, 30, objects.InstanceList.get_by_filters)
         self.assertEqual(2, len(results))
         self.assertIn(mock.sentinel.instances, results.values())
-        isinstance(results.values(), Exception)
+        self.assertIsInstance(results[mapping1.uuid], Exception)
+        # non-NovaException gets logged
         self.assertTrue(mock_log_exception.called)
+
+        # Now run it again with a NovaException to see it's not logged.
+        mock_log_exception.reset_mock()
+        mock_get_inst.side_effect = [mock.sentinel.instances,
+                                     exception.NotFound()]
+
+        results = context.scatter_gather_cells(
+            ctxt, mappings, 30, objects.InstanceList.get_by_filters)
+        self.assertEqual(2, len(results))
+        self.assertIn(mock.sentinel.instances, results.values())
+        self.assertIsInstance(results[mapping1.uuid], exception.NovaException)
+        # NovaExceptions are not logged, the caller should handle them.
+        mock_log_exception.assert_not_called()
 
     @mock.patch('nova.context.scatter_gather_cells')
     @mock.patch('nova.objects.CellMappingList.get_all')
