@@ -20,6 +20,8 @@ Class for VM tasks like spawn, snapshot, suspend, resume etc.
 """
 
 import collections
+import copy
+import math
 import os
 import re
 import time
@@ -280,14 +282,19 @@ class VMwareVMOps(object):
         # We cannot truncate the 'id' as this is unique across OpenStack.
         return '%s (%s)' % (name[:40], id[:36])
 
-    def _get_project_folder(self, dc_info, project_id=None, type_=None):
+    def _get_project_folder_path(self, project_id, type_):
         folder_name = self._get_folder_name('Project', project_id)
         folder_path = 'OpenStack/%s/%s' % (folder_name, type_)
+
+        return folder_path
+
+    def _get_project_folder(self, dc_info, project_id=None, type_=None):
+        folder_path = self._get_project_folder_path(project_id, type_)
         return self._create_folders(dc_info.vmFolder, folder_path)
 
-    def build_virtual_machine(self, instance, context, image_info,
-                              dc_info, datastore, network_info, extra_specs,
-                              metadata):
+    def _get_vm_config_spec(self, instance, image_info,
+                            datastore, network_info, extra_specs,
+                            metadata, vm_name=None):
         vif_infos = vmwarevif.get_vif_info(self._session,
                                            self._cluster,
                                            image_info.vif_model,
@@ -308,10 +315,21 @@ class VMwareVMOps(object):
                                                  extra_specs,
                                                  image_info.os_type,
                                                  profile_spec=profile_spec,
-                                                 metadata=metadata)
+                                                 metadata=metadata,
+                                                 vm_name=vm_name)
+
+        return config_spec
+
+    def build_virtual_machine(self, instance, context, image_info,
+                              dc_info, datastore, network_info, extra_specs,
+                              metadata, folder_type='Instances', vm_name=None):
+        config_spec = self._get_vm_config_spec(instance, image_info, datastore,
+                                               network_info, extra_specs,
+                                               metadata, vm_name=vm_name)
 
         folder = self._get_project_folder(dc_info,
-            project_id=instance.project_id, type_='Instances')
+                                          project_id=instance.project_id,
+                                          type_=folder_type)
 
         # Create the VM
         vm_ref = vm_util.create_vm(self._session, instance, folder,
@@ -446,6 +464,10 @@ class VMwareVMOps(object):
             image_ds_loc.rel_path,
             cookies=cookies)
 
+    def _get_image_template_vm_name(self, image_id, datastore_name):
+        templ_vm_name = '%s (%s)' % (image_id, datastore_name)
+        return templ_vm_name
+
     def _fetch_image_as_vapp(self, context, vi, image_ds_loc):
         """Download stream optimized image to host as a vApp."""
 
@@ -467,7 +489,7 @@ class VMwareVMOps(object):
             vm_name,
             vi.datastore.name,
             self._get_project_folder(vi.dc_info,
-                project_id=vi.ii.owner, type_='Images'),
+                project_id=vi.instance.project_id, type_='Images'),
             self._root_resource_pool)
         # The size of the image is different from the size of the virtual disk.
         # We want to use the latter. On vSAN this is the only way to get this
@@ -475,15 +497,11 @@ class VMwareVMOps(object):
         vi.ii.file_size = image_size
         self._cache_vm_image(vi, src_folder_ds_path)
 
-    def _get_image_template_vm_name(self, image_id, datastore_name):
-        templ_vm_name = '%s (%s)' % (image_id, datastore_name)
-        return templ_vm_name
-
     def _fetch_image_as_ova(self, context, vi, image_ds_loc):
         """Download root disk of an OVA image as streamOptimized."""
 
-        vm_name = self._get_image_template_vm_name(vi.ii.image_id,
-                                                   vi.datastore.name)
+        vm_name = self._get_image_template_vm_name(
+            vi.ii.image_id, vi.datastore.name)
 
         image_size, src_folder_ds_path = images.fetch_image_ova(
             context,
@@ -492,18 +510,9 @@ class VMwareVMOps(object):
             vm_name,
             vi.datastore.name,
             self._get_project_folder(vi.dc_info,
-                                     project_id=vi.ii.owner,
-                                     type_='Images'),
+                project_id=vi.instance.project_id, type_='Images'),
             self._root_resource_pool)
 
-        self._move_to_cache(vi.dc_info.ref,
-                            src_folder_ds_path,
-                            vi.cache_image_folder)
-
-        try:
-            ds_util.mkdir(self._session, vi.cache_image_folder, vi.dc_info.ref)
-        except vexc.FileAlreadyExistsException:
-            pass
         # The size of the image is different from the size of the virtual disk.
         # We want to use the latter. On vSAN this is the only way to get this
         # size because there is no VMDK descriptor.
@@ -671,6 +680,38 @@ class VMwareVMOps(object):
             raise exception.InvalidDiskInfo(reason=reason)
         return image_prepare, image_fetch, image_cache
 
+    def _fetch_image_from_other_datastores(self, vi):
+        dc_all_datastores = ds_util.get_available_datastores(
+            self._session, dc_ref=vi.dc_info.ref)
+        dc_other_datastores = [ds for ds in dc_all_datastores if
+                                dict(ds.ref) != dict(vi.datastore.ref)]
+
+        client_factory = self._session.vim.client.factory
+        tmp_vi = copy.copy(vi)
+        for ds in dc_other_datastores:
+            tmp_vi.datastore = ds
+            other_templ_vm_ref = self._find_image_template_vm(tmp_vi)
+            if other_templ_vm_ref:
+                rel_spec = vm_util.relocate_vm_spec(
+                    client_factory,
+                    res_pool=self._root_resource_pool,
+                    disk_move_type="moveAllDiskBackingsAndDisallowSharing",
+                    datastore=vi.datastore.ref)
+                clone_spec = vm_util.clone_vm_spec(client_factory,
+                                                   rel_spec, template=True)
+                templ_vm_clone_task = self._session._call_method(
+                    self._session.vim,
+                    "CloneVM_Task",
+                    other_templ_vm_ref,
+                    folder=self._get_project_folder(vi.dc_info,
+                        project_id=vi.instance.project_id, type_='Images'),
+                    name=self._get_image_template_vm_name(
+                        vi.ii.image_id, vi.datastore.name),
+                    spec=clone_spec)
+                task_info = self._session._wait_for_task(templ_vm_clone_task)
+                templ_vm_ref = task_info.result
+                return templ_vm_ref
+
     def _fetch_image_if_missing(self, context, vi):
         image_prepare, image_fetch, image_cache = self._get_image_callbacks(vi)
         LOG.debug("Processing image %s", vi.ii.image_id, instance=vi.instance)
@@ -679,9 +720,21 @@ class VMwareVMOps(object):
                             lock_file_prefix='nova-vmware-fetch_image'):
             self.check_cache_folder(vi.datastore.name, vi.datastore.ref)
             ds_browser = self._get_ds_browser(vi.datastore.ref)
-            if not ds_util.file_exists(self._session, ds_browser,
-                                       vi.cache_image_folder,
-                                       vi.cache_image_path.basename):
+            image_available = ds_util.file_exists(
+                self._session, ds_browser,
+                vi.cache_image_folder,
+                vi.cache_image_path.basename)
+
+            if not image_available and CONF.vmware.image_as_template:
+                templ_vm_ref = self._find_image_template_vm(vi)
+                image_available = (templ_vm_ref is not None)
+
+                if (not image_available and
+                        CONF.vmware.fetch_image_from_other_datastores):
+                    templ_vm_ref = self._fetch_image_from_other_datastores(vi)
+                    image_available = (templ_vm_ref is not None)
+
+            if not image_available:
                 LOG.debug("Preparing fetch location", instance=vi.instance)
                 tmp_dir_loc, tmp_image_ds_loc = image_prepare(vi)
                 LOG.debug("Fetch image to %s", tmp_image_ds_loc,
@@ -783,6 +836,154 @@ class VMwareVMOps(object):
         if new_size is not None:
             vi.ii.file_size = new_size
 
+    def _create_image_template(self, context, vi, extra_specs):
+        metadata = self._get_instance_metadata(context, vi.instance)
+
+        max_attempts = 2
+        for i in range(max_attempts):
+            try:
+                templ_vm_ref = self.build_virtual_machine(vi.instance,
+                    context,
+                    vi.ii,
+                    vi.dc_info,
+                    vi.datastore,
+                    None,
+                    extra_specs,
+                    metadata,
+                    folder_type='Images',
+                    vm_name=self._get_image_template_vm_name(
+                        vi.ii.image_id, vi.datastore.name))
+
+                self._imagecache.enlist_image(
+                        vi.ii.image_id, vi.datastore, vi.dc_info.ref)
+                self._fetch_image_if_missing(context, vi)
+
+                if vi.ii.is_iso:
+                    self._use_iso_image(templ_vm_ref, vi)
+                elif vi.ii.linked_clone:
+                    self._use_disk_image_as_linked_clone(templ_vm_ref, vi)
+                else:
+                    self._use_disk_image_as_full_clone(templ_vm_ref, vi)
+
+                vm_util.mark_vm_as_template(self._session,
+                                            vi.instance, templ_vm_ref)
+
+                return templ_vm_ref
+            except Exception as create_templ_exc:
+                is_last_attempt = (i == max_attempts - 1)
+                with excutils.save_and_reraise_exception(
+                        reraise=is_last_attempt):
+                    LOG.error('Creating VM template for image failed with '
+                              'error: %s', create_templ_exc,
+                              instance=vi.instance)
+                    try:
+                        vm_util.destroy_vm(self._session, vi.instance)
+                    except Exception as destroy_templ_exc:
+                        LOG.error('Cleaning up VM template for image '
+                                  'failed with error: %s',
+                                  destroy_templ_exc, instance=vi.instance)
+
+    def _build_template_vm_inventory_path(self, vi):
+        vm_folder_name = self._session._call_method(vutil,
+                                                    "get_object_property",
+                                                    vi.dc_info.vmFolder,
+                                                    "name")
+        images_folder_path = self._get_project_folder_path(
+            vi.instance.project_id, 'Images')
+        templ_vm_name = self._get_image_template_vm_name(vi.ii.image_id,
+                                                         vi.datastore.name)
+        templ_vm_inventory_path = '%s/%s/%s/%s' % (
+            vi.dc_info.name, vm_folder_name,
+            images_folder_path, templ_vm_name)
+        return templ_vm_inventory_path
+
+    def _find_image_template_vm(self, vi):
+        templ_vm_inventory_path = self._build_template_vm_inventory_path(vi)
+        templ_vm_ref = vm_util.find_by_inventory_path(self._session,
+                                                      templ_vm_inventory_path)
+
+        return templ_vm_ref
+
+    def _get_vm_template_for_image(self, context, instance,
+                                   image_info, extra_specs):
+        templ_instance = copy.deepcopy(instance)
+        # Use image UUID instead of instance UUID for creating the
+        # VM template.
+        templ_instance.uuid = templ_instance.image_ref
+
+        with lockutils.lock(templ_instance.uuid,
+                            lock_file_prefix='nova-vmware-image-template'):
+
+            # Create template with the smallest root disk size that can hold
+            # the image so that it can be extended during instantiation (after
+            # clone) to match the flavor
+            templ_instance.flavor.root_gb = int(math.ceil(
+                float(image_info.file_size) / units.Gi /
+                templ_instance.flavor.root_gb
+            ))
+
+            vi = self._get_vm_config_info(templ_instance, image_info,
+                                          extra_specs)
+
+            self._imagecache.enlist_image(
+                    vi.ii.image_id, vi.datastore, vi.dc_info.ref)
+            self._fetch_image_if_missing(context, vi)
+
+            templ_vm_ref = self._find_image_template_vm(vi)
+
+            if (not templ_vm_ref and
+                    CONF.vmware.fetch_image_from_other_datastores):
+                templ_vm_ref = self._fetch_image_from_other_datastores(vi)
+
+            if not templ_vm_ref:
+                templ_vm_ref = self._create_image_template(
+                    context, vi, extra_specs)
+
+            return templ_vm_ref
+
+    def _create_instance_from_image_template(self, context, client_factory,
+                                             templ_vm_ref, vi,
+                                             extra_specs, network_info):
+        rel_spec = vm_util.relocate_vm_spec(
+            client_factory,
+            res_pool=self._root_resource_pool,
+            disk_move_type="moveAllDiskBackingsAndDisallowSharing")
+        clone_spec = vm_util.clone_vm_spec(client_factory, rel_spec)
+        vm_clone_task = self._session._call_method(
+            self._session.vim,
+            "CloneVM_Task",
+            templ_vm_ref,
+            folder=self._get_project_folder(vi.dc_info,
+                project_id=vi.instance.project_id, type_='Instances'),
+            name=vi.instance.uuid,
+            spec=clone_spec)
+        task_info = self._session._wait_for_task(vm_clone_task)
+        vm_ref = task_info.result
+
+        root_vmdk_info = vm_util.get_vmdk_info(self._session,
+            vm_ref, uuid=vi.instance.uuid)
+        self._extend_if_required(vi.dc_info, vi.ii,
+                                 vi.instance, root_vmdk_info.path)
+
+        metadata = self._get_instance_metadata(context, vi.instance)
+        reconfig_spec = vm_util.get_vm_resize_spec(client_factory,
+                                                   int(vi.instance.vcpus),
+                                                   int(vi.instance.memory_mb),
+                                                   extra_specs,
+                                                   metadata=metadata)
+        reconfig_spec.instanceUuid = vi.instance.uuid
+        vif_infos = vmwarevif.get_vif_info(self._session,
+                                           self._cluster,
+                                           utils.is_neutron(),
+                                           vi.ii.vif_model,
+                                           network_info)
+        vm_util.append_vif_infos_to_config_spec(client_factory,
+            reconfig_spec, vif_infos, extra_specs.vif_limits)
+
+        vm_util.reconfigure_vm(self._session, vm_ref, reconfig_spec)
+
+        return vm_ref
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
 
@@ -795,17 +996,22 @@ class VMwareVMOps(object):
         vi = self._get_vm_config_info(instance, image_info,
                                       extra_specs)
 
-        metadata = self._get_instance_metadata(context, instance)
-        # Creates the virtual machine. The virtual machine reference returned
-        # is unique within Virtual Center.
-        vm_ref = self.build_virtual_machine(instance,
-                                            context,
-                                            image_info,
-                                            vi.dc_info,
-                                            vi.datastore,
-                                            network_info,
-                                            extra_specs,
-                                            metadata)
+        if instance.image_ref and CONF.vmware.image_as_template:
+            templ_vm_ref = self._get_vm_template_for_image(
+                context, instance, image_info, extra_specs)
+            vm_ref = self._create_instance_from_image_template(
+                context, client_factory, templ_vm_ref, vi,
+                extra_specs, network_info)
+        else:
+            metadata = self._get_instance_metadata(context, instance)
+            vm_ref = self.build_virtual_machine(instance,
+                                                context,
+                                                image_info,
+                                                vi.dc_info,
+                                                vi.datastore,
+                                                network_info,
+                                                extra_specs,
+                                                metadata)
 
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
         # instance uuid.
@@ -829,7 +1035,7 @@ class VMwareVMOps(object):
             block_device_mapping = driver.block_device_info_get_mapping(
                 block_device_info)
 
-        if instance.image_ref:
+        if instance.image_ref and not CONF.vmware.image_as_template:
             self._imagecache.enlist_image(
                     image_info.image_id, vi.datastore, vi.dc_info.ref)
             self._fetch_image_if_missing(context, vi)

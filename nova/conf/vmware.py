@@ -296,6 +296,18 @@ With the right hardware support, it might be faster, especially on the export.
                 help="""
 Create a snapshot of the VM before cloning it
 """),
+    cfg.BoolOpt('image_as_template',
+                default=False,
+                help="""
+Keep Glance images as VM templates in vCenter per datastore and create
+instances as clone from template.
+"""),
+    cfg.BoolOpt('fetch_image_from_other_datastores',
+                default=True,
+                help="""
+Before fetching from Glance an image missing on the datastore first look
+for it on other datastores and clone it from there if available.
+"""),
     cfg.BoolOpt('use_property_collector',
                 default=True,
                 help="""

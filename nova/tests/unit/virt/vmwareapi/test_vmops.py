@@ -1725,6 +1725,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                     extra_specs,
                     constants.DEFAULT_OS_TYPE,
                     profile_spec=None,
+                    vm_name=None,
                     metadata='fake-metadata')
             mock_create_vm.assert_called_once_with(
                     self._session,

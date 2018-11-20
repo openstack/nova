@@ -1645,7 +1645,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         device_change.operation = 'add'
 
         device = fake_factory.create('ns0:VirtualE1000')
-        device.key = -48
+        device.key = -47
         device.macAddress = '00:00:00:ca:fe:02'
         device.addressType = 'manual'
         device.wakeOnLanEnabled = True
