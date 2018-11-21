@@ -58,19 +58,7 @@ class SchedulerClientTestCase(test.NoDBTestCase):
                 False]
         self.assertRaises(messaging.MessagingTimeout,
                           self.client.select_destinations, *fake_args)
-        mock_select_destinations.assert_has_calls([mock.call(*fake_args)] * 2)
-
-    @mock.patch.object(scheduler_query_client.SchedulerQueryClient,
-                       'select_destinations', side_effect=[
-                           messaging.MessagingTimeout(), mock.DEFAULT])
-    def test_select_destinations_timeout_once(self, mock_select_destinations):
-        # scenario: the scheduler service times out & recovers after failure
-        fake_spec = objects.RequestSpec()
-        fake_spec.instance_uuid = uuids.instance
-        fake_args = ['ctxt', fake_spec, [fake_spec.instance_uuid], False,
-                False]
-        self.client.select_destinations(*fake_args)
-        mock_select_destinations.assert_has_calls([mock.call(*fake_args)] * 2)
+        mock_select_destinations.assert_called_once_with(*fake_args)
 
     @mock.patch.object(scheduler_query_client.SchedulerQueryClient,
                        'update_aggregates')

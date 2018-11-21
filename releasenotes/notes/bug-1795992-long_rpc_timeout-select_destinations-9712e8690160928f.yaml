@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    The ``long_rpc_timeout`` configuration option is now used for the RPC
+    call to the scheduler to select a host. This is in order to avoid a
+    timeout when scheduling multiple servers in a single request and/or when
+    the scheduler needs to process a large number of hosts.

@@ -15,7 +15,6 @@
 
 from nova.scheduler.client import query
 from nova.scheduler.client import report
-from nova.scheduler import utils
 
 
 class SchedulerClient(object):
@@ -25,7 +24,6 @@ class SchedulerClient(object):
         self.queryclient = query.SchedulerQueryClient()
         self.reportclient = report.SchedulerReportClient()
 
-    @utils.retry_select_destinations
     def select_destinations(self, context, spec_obj, instance_uuids,
             return_objects=False, return_alternates=False):
         return self.queryclient.select_destinations(context, spec_obj,
