@@ -564,6 +564,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
         final_result = 'meow'
+        rp_mapping = {}
 
         expected_sleep_times = [1, 2, 4, 8, 16, 30, 30, 30]
 
@@ -574,7 +575,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                        req_networks,
                                                        macs,
                                                        sec_groups,
-                                                       is_vpn)
+                                                       is_vpn,
+                                                       rp_mapping)
 
         mock_sleep.has_calls(expected_sleep_times)
         self.assertEqual(final_result, res)
@@ -592,6 +594,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             objects=[objects.NetworkRequest(network_id='fake')])
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
+        rp_mapping = {}
 
         with mock.patch.object(
                 self.compute.network_api, 'allocate_for_instance',
@@ -599,13 +602,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.assertRaises(test.TestingException,
                               self.compute._allocate_network_async,
                               self.context, instance, req_networks, macs,
-                              sec_groups, is_vpn)
+                              sec_groups, is_vpn, rp_mapping)
 
         mock_allocate.assert_called_once_with(
             self.context, instance, vpn=is_vpn,
             requested_networks=req_networks, macs=macs,
             security_groups=sec_groups,
-            bind_host_id=instance.get('host'))
+            bind_host_id=instance.get('host'),
+            resource_provider_mapping=rp_mapping)
 
     @mock.patch.object(manager.ComputeManager, '_instance_update')
     @mock.patch.object(time, 'sleep')
@@ -621,6 +625,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
         final_result = 'zhangtralon'
+        rp_mapping = {}
 
         with mock.patch.object(self.compute.network_api,
                                'allocate_for_instance',
@@ -630,7 +635,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                        req_networks,
                                                        macs,
                                                        sec_groups,
-                                                       is_vpn)
+                                                       is_vpn,
+                                                       rp_mapping)
         self.assertEqual(final_result, res)
         self.assertEqual(1, sleep.call_count)
 
@@ -641,7 +647,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             objects=[objects.NetworkRequest(network_id='none')])
         nwinfo = self.compute._allocate_network_async(
             self.context, mock.sentinel.instance, req_networks, macs=None,
-            security_groups=['default'], is_vpn=False)
+            security_groups=['default'], is_vpn=False,
+            resource_provider_mapping={})
         self.assertEqual(0, len(nwinfo))
 
     @mock.patch('nova.compute.manager.ComputeManager.'
@@ -4949,6 +4956,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.filter_properties = {'retry': {'num_attempts': 1,
                                             'hosts': [[self.compute.host,
                                                        'fake-node']]}}
+        self.resource_provider_mapping = None
 
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
@@ -5203,7 +5211,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 extra_usage_info={'image_name': self.image.get('name')}),
             mock.call(self.context, self.instance, 'create.error', fault=exc)])
         mock_build.assert_called_once_with(self.context, self.instance,
-            self.requested_networks, self.security_groups)
+            self.requested_networks, self.security_groups,
+            self.resource_provider_mapping)
         mock_shutdown.assert_called_once_with(self.context, self.instance,
             self.block_device_mapping, self.requested_networks,
             try_deallocate_networks=False)
@@ -5715,7 +5724,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                       fault=exc)])
         mock_build.assert_called_once_with(
             self.context, self.instance, self.requested_networks,
-            self.security_groups)
+            self.security_groups, self.resource_provider_mapping)
         mock_shutdown.assert_called_once_with(
             self.context, self.instance, self.block_device_mapping,
             self.requested_networks, try_deallocate_networks=False)
@@ -5838,7 +5847,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.context, self.instance, {})
             _build_networks_for_instance.assert_has_calls(
                     [mock.call(self.context, self.instance,
-                        self.requested_networks, self.security_groups)])
+                        self.requested_networks, self.security_groups,
+                        self.resource_provider_mapping)])
 
             _notify_about_instance_usage.assert_has_calls([
                 mock.call(self.context, self.instance, 'create.start',
@@ -5942,7 +5952,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 fault=exc)])
         mock_build.assert_called_once_with(self.context, self.instance,
             self.requested_networks, self.security_groups,
-            test.MatchType(objects.ImageMeta), self.block_device_mapping)
+            test.MatchType(objects.ImageMeta), self.block_device_mapping,
+            self.resource_provider_mapping)
 
     @mock.patch.object(virt_driver.ComputeDriver, 'failed_spawn_cleanup')
     @mock.patch.object(virt_driver.ComputeDriver, 'prepare_for_spawn')
@@ -5963,14 +5974,16 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         try:
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
-                    self.image, self.block_device_mapping):
+                    self.image, self.block_device_mapping,
+                    self.resource_provider_mapping):
                 pass
         except Exception as e:
             self.assertIsInstance(e, exception.BuildAbortException)
 
         mock_save.assert_called_once_with()
         mock_build.assert_called_once_with(self.context, self.instance,
-                self.requested_networks, self.security_groups)
+                self.requested_networks, self.security_groups,
+                self.resource_provider_mapping)
         mock_prep.assert_called_once_with(self.context, self.instance,
                 self.block_device_mapping)
         mock_prepnet.assert_called_once_with(self.instance, self.network_info)
@@ -6080,7 +6093,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             try:
                 with self.compute._build_resources(self.context, self.instance,
                         self.requested_networks, self.security_groups,
-                        self.image, self.block_device_mapping):
+                        self.image, self.block_device_mapping,
+                        self.resource_provider_mapping):
                     pass
             except Exception as e:
                 self.assertIsInstance(e,
@@ -6088,7 +6102,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
             _build_networks_for_instance.assert_has_calls(
                     [mock.call(self.context, self.instance,
-                        self.requested_networks, self.security_groups)])
+                        self.requested_networks, self.security_groups,
+                        self.resource_provider_mapping)])
 
             save.assert_has_calls([mock.call()])
         mock_prepnet.assert_called_once_with(self.instance, self.network_info)
@@ -6107,13 +6122,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         try:
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups, self.image,
-                    self.block_device_mapping):
+                    self.block_device_mapping, self.resource_provider_mapping):
                 pass
         except Exception as e:
             self.assertIsInstance(e, exception.BuildAbortException)
 
         mock_build.assert_called_once_with(self.context, self.instance,
-                self.requested_networks, self.security_groups)
+                self.requested_networks, self.security_groups,
+                self.resource_provider_mapping)
         # This exception is raised prior to initial prep and cleanup
         # with the virt driver, and as such these should not record
         # any calls.
@@ -6136,14 +6152,16 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             try:
                 with self.compute._build_resources(self.context, self.instance,
                         self.requested_networks, self.security_groups,
-                        self.image, self.block_device_mapping):
+                        self.image, self.block_device_mapping,
+                        self.resource_provider_mapping):
                     pass
             except Exception as e:
                 self.assertIsInstance(e, exc)
 
             _build_networks.assert_has_calls(
                     [mock.call(self.context, self.instance,
-                        self.requested_networks, self.security_groups)])
+                        self.requested_networks, self.security_groups,
+                        self.resource_provider_mapping)])
         mock_prepspawn.assert_not_called()
         mock_failedspawn.asset_not_called()
 
@@ -6163,7 +6181,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             with self.compute._build_resources(
                     self.context, self.instance, self.requested_networks,
                     self.security_groups, self.image,
-                    self.block_device_mapping):
+                    self.block_device_mapping, self.resource_provider_mapping):
                 pass
         except Exception as e:
             self.assertIsInstance(e, exception.BuildAbortException)
@@ -6192,14 +6210,16 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         try:
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
-                    self.image, self.block_device_mapping):
+                    self.image, self.block_device_mapping,
+                    self.resource_provider_mapping):
                 fake_spawn()
         except Exception as e:
             self.assertEqual(test_exception, e)
 
         mock_save.assert_called_once_with()
         mock_build.assert_called_once_with(self.context, self.instance,
-                self.requested_networks, self.security_groups)
+                self.requested_networks, self.security_groups,
+                self.resource_provider_mapping)
         mock_shutdown.assert_called_once_with(self.context, self.instance,
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False)
@@ -6224,12 +6244,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         try:
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
-                    self.image, self.block_device_mapping):
+                    self.image, self.block_device_mapping,
+                    self.resource_provider_mapping):
                 raise test.TestingException()
         except Exception as e:
             self.assertEqual(expected_exc, e)
         mock_build_network.assert_called_once_with(self.context, self.instance,
-                self.requested_networks, self.security_groups)
+                self.requested_networks, self.security_groups,
+                self.resource_provider_mapping)
         mock_info_wait.assert_called_once_with(do_raise=False)
         mock_prepspawn.assert_called_once_with(self.instance)
         mock_failedspawn.assert_called_once_with(self.instance)
@@ -6253,12 +6275,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         try:
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
-                    self.image, self.block_device_mapping):
+                    self.image, self.block_device_mapping,
+                    self.resource_provider_mapping):
                 raise test.TestingException()
         except exception.BuildAbortException:
             pass
         mock_build_network.assert_called_once_with(self.context, self.instance,
-                self.requested_networks, self.security_groups)
+                self.requested_networks, self.security_groups,
+                self.resource_provider_mapping)
         mock_info_wait.assert_called_once_with(do_raise=False)
         mock_prepnet.assert_called_once_with(self.instance, self.network_info)
         mock_clean.assert_called_once_with(self.instance, self.network_info)
@@ -6279,12 +6303,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         try:
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
-                    self.image, self.block_device_mapping):
+                    self.image, self.block_device_mapping,
+                    self.resource_provider_mapping):
                 raise test.TestingException()
         except exception.BuildAbortException:
             pass
         mock_build_network.assert_called_once_with(self.context, self.instance,
-                self.requested_networks, self.security_groups)
+                self.requested_networks, self.security_groups,
+                self.resource_provider_mapping)
         mock_info_wait.assert_called_once_with(do_raise=False)
         mock_prepspawn.assert_called_once_with(self.instance)
         mock_failedspawn.assert_called_once_with(self.instance)
@@ -6309,7 +6335,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                     'Failed to spawn'):
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
-                    self.image, self.block_device_mapping):
+                    self.image, self.block_device_mapping,
+                    self.resource_provider_mapping):
                 fake_spawn()
 
         self.assertTrue(mock_log.warning.called)
@@ -6317,7 +6344,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertIn('Failed to shutdown', msg[0][1])
         mock_save.assert_called_once_with()
         mock_build.assert_called_once_with(self.context, self.instance,
-                self.requested_networks, self.security_groups)
+                self.requested_networks, self.security_groups,
+                self.resource_provider_mapping)
         mock_shutdown.assert_called_once_with(self.context, self.instance,
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False)
@@ -6334,10 +6362,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 expected_attrs=['system_metadata'])
 
         nw_info_obj = self.compute._build_networks_for_instance(self.context,
-                instance, self.requested_networks, self.security_groups)
+                instance, self.requested_networks, self.security_groups,
+                self.resource_provider_mapping)
 
         mock_allocate.assert_called_once_with(self.context, instance,
-                self.requested_networks, None, self.security_groups)
+                self.requested_networks, None, self.security_groups,
+                self.resource_provider_mapping)
         self.assertTrue(hasattr(nw_info_obj, 'wait'), "wait must be there")
 
     @mock.patch.object(manager.ComputeManager, '_allocate_network')
@@ -6348,10 +6378,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 expected_attrs=['system_metadata'])
 
         nw_info_obj = self.compute._build_networks_for_instance(self.context,
-                instance, self.requested_networks, self.security_groups)
+                instance, self.requested_networks, self.security_groups,
+                self.resource_provider_mapping)
 
         mock_allocate.assert_called_once_with(self.context, instance,
-                self.requested_networks, None, self.security_groups)
+                self.requested_networks, None, self.security_groups,
+                self.resource_provider_mapping)
         self.assertTrue(hasattr(nw_info_obj, 'wait'), "wait must be there")
 
     @mock.patch.object(manager.ComputeManager, '_allocate_network')
@@ -6376,7 +6408,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             # match what get_instance_nw_info really returns
             mock_get.return_value = fake_network_info()
             self.compute._build_networks_for_instance(self.context, instance,
-                    self.requested_networks, self.security_groups)
+                    self.requested_networks, self.security_groups,
+                    self.resource_provider_mapping)
 
         mock_get.assert_called_once_with(self.context, instance)
         mock_setup.assert_called_once_with(self.context, instance,
@@ -6565,6 +6598,29 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             create_error_call = mock_notify.call_args_list[
                     mock_notify.call_count - 1]
             self.assertEqual(expected_call, create_error_call)
+
+    def test_build_with_resource_request_in_the_request_spec(self):
+        request_spec = objects.RequestSpec(
+            requested_resources=[
+                objects.RequestGroup(
+                    requester_id=uuids.port1,
+                    provider_uuids=[uuids.rp1])])
+        with test.nested(
+                mock.patch.object(self.compute.driver, 'spawn'),
+                mock.patch.object(self.compute,
+                    '_build_networks_for_instance', return_value=[]),
+                mock.patch.object(self.instance, 'save'),
+        ) as (mock_spawn, mock_networks, mock_save):
+                self.compute._build_and_run_instance(
+                    self.context,
+                    self.instance, self.image, self.injected_files,
+                    self.admin_pass, self.requested_networks,
+                    self.security_groups, self.block_device_mapping, self.node,
+                    self.limits, self.filter_properties, request_spec)
+
+        mock_networks.assert_called_once_with(
+            self.context, self.instance, self.requested_networks,
+            self.security_groups, {uuids.port1: [uuids.rp1]})
 
 
 class ComputeManagerErrorsOutMigrationTestCase(test.NoDBTestCase):

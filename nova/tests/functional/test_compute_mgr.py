@@ -72,6 +72,7 @@ class ComputeManagerTestCase(test.TestCase):
                  'instance_type': flavor,
                  'image': None},
                 filter_properties)
+            request_spec.requested_resources = []
             self.compute.manager.build_and_run_instance(
                     self.context, instance, {}, request_spec,
                     filter_properties, block_device_mapping=[])

@@ -1470,7 +1470,8 @@ class ComputeManager(manager.Manager):
             raise exception.InstanceExists(name=instance.name)
 
     def _allocate_network_async(self, context, instance, requested_networks,
-                                macs, security_groups, is_vpn):
+                                macs, security_groups, is_vpn,
+                                resource_provider_mapping):
         """Method used to allocate networks in the background.
 
         Broken out for testing.
@@ -1495,7 +1496,8 @@ class ComputeManager(manager.Manager):
                         requested_networks=requested_networks,
                         macs=macs,
                         security_groups=security_groups,
-                        bind_host_id=bind_host_id)
+                        bind_host_id=bind_host_id,
+                        resource_provider_mapping=resource_provider_mapping)
                 LOG.debug('Instance network_info: |%s|', nwinfo,
                           instance=instance)
                 instance.system_metadata['network_allocated'] = 'True'
@@ -1523,7 +1525,7 @@ class ComputeManager(manager.Manager):
         # Not reached.
 
     def _build_networks_for_instance(self, context, instance,
-            requested_networks, security_groups):
+            requested_networks, security_groups, resource_provider_mapping):
 
         # If we're here from a reschedule the network may already be allocated.
         if strutils.bool_from_string(
@@ -1541,12 +1543,13 @@ class ComputeManager(manager.Manager):
 
         macs = self.driver.macs_for_instance(instance)
         network_info = self._allocate_network(context, instance,
-                requested_networks, macs, security_groups)
+                requested_networks, macs, security_groups,
+                resource_provider_mapping)
 
         return network_info
 
     def _allocate_network(self, context, instance, requested_networks, macs,
-                          security_groups):
+                          security_groups, resource_provider_mapping):
         """Start network allocation asynchronously.  Return an instance
         of NetworkInfoAsyncWrapper that can be used to retrieve the
         allocated networks when the operation has finished.
@@ -1561,7 +1564,8 @@ class ComputeManager(manager.Manager):
         is_vpn = False
         return network_model.NetworkInfoAsyncWrapper(
                 self._allocate_network_async, context, instance,
-                requested_networks, macs, security_groups, is_vpn)
+                requested_networks, macs, security_groups, is_vpn,
+                resource_provider_mapping)
 
     def _default_root_device_name(self, instance, image_meta, root_bdm):
         """Gets a default root device name from the driver.
@@ -2120,9 +2124,19 @@ class ComputeManager(manager.Manager):
                 self._validate_instance_group_policy(context, instance,
                                                      scheduler_hints)
                 image_meta = objects.ImageMeta.from_dict(image)
+
+                if request_spec:
+                    request_group_resource_providers_mapping = {
+                        group.requester_id: group.provider_uuids
+                        for group in request_spec.requested_resources
+                    }
+                else:
+                    request_group_resource_providers_mapping = None
+
                 with self._build_resources(context, instance,
                         requested_networks, security_groups, image_meta,
-                        block_device_mapping) as resources:
+                        block_device_mapping,
+                        request_group_resource_providers_mapping) as resources:
                     instance.vm_state = vm_states.BUILDING
                     instance.task_state = task_states.SPAWNING
                     # NOTE(JoshNang) This also saves the changes to the
@@ -2283,14 +2297,16 @@ class ComputeManager(manager.Manager):
 
     @contextlib.contextmanager
     def _build_resources(self, context, instance, requested_networks,
-                         security_groups, image_meta, block_device_mapping):
+                         security_groups, image_meta, block_device_mapping,
+                         resource_provider_mapping):
         resources = {}
         network_info = None
         try:
             LOG.debug('Start building networks asynchronously for instance.',
                       instance=instance)
             network_info = self._build_networks_for_instance(context, instance,
-                    requested_networks, security_groups)
+                    requested_networks, security_groups,
+                    resource_provider_mapping)
             resources['network_info'] = network_info
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError):

@@ -4380,9 +4380,12 @@ class ComputeTestCase(BaseTestCase,
 
     def test_run_instance_usage_notification(self, request_spec=None):
         # Ensure run instance generates appropriate usage notification.
-        request_spec = request_spec or {}
+        request_spec = request_spec or objects.RequestSpec(
+            image=objects.ImageMeta(),
+            requested_resources=[])
         instance = self._create_fake_instance_obj()
-        expected_image_name = request_spec.get('image', {}).get('name', '')
+        expected_image_name = (request_spec.image.name
+                               if 'name' in request_spec.image else '')
         self.compute.build_and_run_instance(self.context, instance,
                                             request_spec=request_spec,
                                             filter_properties={},
@@ -4419,12 +4422,16 @@ class ComputeTestCase(BaseTestCase,
         self.compute.terminate_instance(self.context, instance, [])
 
     def test_run_instance_image_usage_notification(self):
-        request_spec = {'image': {'name': 'fake_name', 'key': 'value'}}
+        request_spec = objects.RequestSpec(
+            image=objects.ImageMeta(name='fake_name', key='value'),
+            requested_resources=[])
         self.test_run_instance_usage_notification(request_spec=request_spec)
 
     def test_run_instance_usage_notification_volume_meta(self):
         # Volume's image metadata won't contain the image name
-        request_spec = {'image': {'key': 'value'}}
+        request_spec = objects.RequestSpec(
+            image=objects.ImageMeta(key='value'),
+            requested_resources=[])
         self.test_run_instance_usage_notification(request_spec=request_spec)
 
     def test_run_instance_end_notification_on_abort(self):
@@ -4563,13 +4570,15 @@ class ComputeTestCase(BaseTestCase,
             mock_allocate.return_value = (
                 fake_network.fake_get_instance_nw_info(self, 1, 1))
             self.compute._build_networks_for_instance(self.context, instance,
-                    requested_networks=None, security_groups=None)
+                    requested_networks=None, security_groups=None,
+                    resource_provider_mapping=None)
 
         security_groups = None if CONF.use_neutron else []
         mock_allocate.assert_called_once_with(self.context, instance,
                 vpn=False, requested_networks=None, macs=macs,
                 security_groups=security_groups,
-                bind_host_id=self.compute.host)
+                bind_host_id=self.compute.host,
+                resource_provider_mapping=None)
         mock_mac.assert_called_once_with(test.MatchType(instance_obj.Instance))
 
     def test_instance_set_to_error_on_uncaught_exception(self):

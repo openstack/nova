@@ -215,7 +215,8 @@ class API(base_api.NetworkAPI):
     def allocate_for_instance(self, context, instance, vpn,
                               requested_networks, macs=None,
                               security_groups=None,
-                              bind_host_id=None, attach=False):
+                              bind_host_id=None, attach=False,
+                              resource_provider_mapping=None):
         """Allocates all network structures for an instance.
 
         :param context: The request context.
@@ -230,6 +231,7 @@ class API(base_api.NetworkAPI):
             instance.
         :param bind_host_id: ignored by this driver.
         :param attach: ignored by this driver
+        :param resource_provider_mapping: ignored by this driver
         :returns: network info as from get_instance_nw_info() below
         """
         # NOTE(vish): We can't do the floating ip allocation here because
