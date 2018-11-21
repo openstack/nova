@@ -241,8 +241,14 @@ class ServiceController(wsgi.Controller):
                 self.placementclient.delete_resource_provider(
                     context, service.compute_node, cascade=True)
                 # remove the host_mapping of this host.
-                hm = objects.HostMapping.get_by_host(context, service.host)
-                hm.destroy()
+                try:
+                    hm = objects.HostMapping.get_by_host(context, service.host)
+                    hm.destroy()
+                except exception.HostMappingNotFound:
+                    # It's possible to startup a nova-compute service and then
+                    # delete it (maybe it was accidental?) before mapping it to
+                    # a cell using discover_hosts, so we just ignore this.
+                    pass
             self.host_api.service_delete(context, id)
 
         except exception.ServiceNotFound:
