@@ -733,9 +733,18 @@ def _provider_ids_from_rp_ids(context, rp_ids):
         me.c.parent_provider_id == parent.c.id)
     sel = sa.select(cols).select_from(me_to_parent)
     sel = sel.where(me.c.id.in_(rp_ids))
-    return {
-        r[0]: ProviderIds(**dict(r)) for r in context.session.execute(sel)
-    }
+
+    ret = {}
+    for r in context.session.execute(sel):
+        # Use its id/uuid for the root id/uuid if the root id/uuid is None
+        # TODO(tetsuro): Remove this to when we are sure all root_provider_id
+        # values are NOT NULL
+        d = dict(r)
+        if d['root_id'] is None:
+            d['root_id'] = d['id']
+            d['root_uuid'] = d['uuid']
+        ret[d['id']] = ProviderIds(**d)
+    return ret
 
 
 def _provider_ids_from_uuid(context, uuid):
@@ -2732,13 +2741,15 @@ def _get_usages_by_provider_tree(ctx, root_ids):
     #   FROM allocations
     #   JOIN resource_providers
     #     ON allocations.resource_provider_id = resource_providers.id
-    #     AND resource_providers.root_provider_id IN($root_ids)
+    #     AND (resource_providers.root_provider_id IN($root_ids)
+    #          OR resource_providers.id IN($root_ids))
     #   GROUP BY resource_provider_id, resource_class_id
     # )
-    # AS usages
+    # AS usage
     #   ON inv.resource_provider_id = usage.resource_provider_id
     #   AND inv.resource_class_id = usage.resource_class_id
-    # WHERE rp.root_provider_id IN ($root_ids)
+    # WHERE (rp.root_provider_id IN ($root_ids)
+    #        OR resource_providers.id IN($root_ids))
     rpt = sa.alias(_RP_TBL, name="rp")
     inv = sa.alias(_INV_TBL, name="inv")
     # Build our derived table (subquery in the FROM clause) that sums used
@@ -2746,7 +2757,12 @@ def _get_usages_by_provider_tree(ctx, root_ids):
     derived_alloc_to_rp = sa.join(
         _ALLOC_TBL, _RP_TBL,
         sa.and_(_ALLOC_TBL.c.resource_provider_id == _RP_TBL.c.id,
-                _RP_TBL.c.root_provider_id.in_(root_ids)))
+                # TODO(tetsuro): Remove this OR condition when all
+                # root_provider_id values are NOT NULL
+                sa.or_(_RP_TBL.c.root_provider_id.in_(root_ids),
+                       _RP_TBL.c.id.in_(root_ids))
+                )
+    )
     usage = sa.alias(
         sa.select([
             _ALLOC_TBL.c.resource_provider_id,
@@ -2778,7 +2794,14 @@ def _get_usages_by_provider_tree(ctx, root_ids):
         inv.c.allocation_ratio,
         inv.c.max_unit,
         usage.c.used,
-    ]).select_from(usage_join).where(rpt.c.root_provider_id.in_(root_ids))
+    ]).select_from(usage_join).where(
+        # TODO(tetsuro): Remove this or condition when all
+        # root_provider_id values are NOT NULL
+        sa.or_(
+            rpt.c.root_provider_id.in_(root_ids),
+            rpt.c.id.in_(root_ids)
+        )
+    )
     return ctx.session.execute(query).fetchall()
 
 
@@ -3052,7 +3075,16 @@ def _get_providers_with_resource(ctx, rc_id, amount):
     sel = sel.where(sa.and_(*where_conds))
     res = ctx.session.execute(sel).fetchall()
     res = set((r[0], r[1]) for r in res)
-    return res
+    # TODO(tetsuro): Bug#1799892: We could have old providers with no root
+    # provider set and they haven't undergone a data migration yet,
+    # so we need to set the root_id explicitly here. We remove
+    # this and when all root_provider_id values are NOT NULL
+    ret = []
+    for rp_tuple in res:
+        rp_id = rp_tuple[0]
+        root_id = rp_id if rp_tuple[1] is None else rp_tuple[1]
+        ret.append((rp_id, root_id))
+    return ret
 
 
 @db_api.placement_context_manager.reader
