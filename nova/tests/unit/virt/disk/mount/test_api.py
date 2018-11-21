@@ -29,7 +29,7 @@ MAP_PARTITION = "/dev/mapper/nullp77"
 
 
 # Make RetryDecorator not actually sleep on retries
-@mock.patch('oslo_service.loopingcall._ThreadingEvent.wait', new=mock.Mock())
+@mock.patch('oslo_service.loopingcall.LoopingCallBase._sleep', new=mock.Mock())
 class MountTestCase(test.NoDBTestCase):
     def _test_map_dev(self, partition):
         mount = api.Mount(mock.sentinel.image, mock.sentinel.mount_dir)
