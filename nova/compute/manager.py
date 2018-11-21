@@ -2125,7 +2125,9 @@ class ComputeManager(manager.Manager):
                                                      scheduler_hints)
                 image_meta = objects.ImageMeta.from_dict(image)
 
-                if request_spec:
+                if (request_spec
+                        and 'requested_resources' in request_spec
+                        and request_spec.requested_resources is not None):
                     request_group_resource_providers_mapping = {
                         group.requester_id: group.provider_uuids
                         for group in request_spec.requested_resources
