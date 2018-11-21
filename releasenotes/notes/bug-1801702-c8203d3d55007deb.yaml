@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    When testing whether direct IO is possible on the backing storage
+    for an instance, Nova now uses a block size of 4096 bytes instead
+    of 512 bytes, avoiding issues when the underlying block device has
+    sectors larger than 512 bytes. See bug
+    https://launchpad.net/bugs/1801702 for details.
