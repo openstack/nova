@@ -11,16 +11,17 @@
 # Jongwon Lee <tothebinaryworld@gmail.com>, 2016. #zanata
 # Ian Y. Choi <ianyrchoi@gmail.com>, 2017. #zanata
 # Lee Dogeon <moreal@dsm.hs.kr>, 2018. #zanata
+# SEEUNG KANG <seeung0305@naver.com>, 2018. #zanata
 msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-10-08 07:25+0000\n"
+"POT-Creation-Date: 2018-11-21 20:55+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2018-09-20 06:43+0000\n"
-"Last-Translator: Lee Dogeon <moreal@dsm.hs.kr>\n"
+"PO-Revision-Date: 2018-10-31 08:50+0000\n"
+"Last-Translator: SEEUNG KANG <seeung0305@naver.com>\n"
 "Language: ko_KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -619,6 +620,10 @@ msgstr ""
 "모델 선택을 지원하지 않음"
 
 #, python-format
+msgid "Conflict deleting image. Reason: %(reason)s."
+msgstr "이미지 서명 검증 실패. 사유 : %(reason)s"
+
+#, python-format
 msgid ""
 "Conflict updating instance %(instance_uuid)s, but we were unable to "
 "determine the cause"
@@ -937,6 +942,10 @@ msgstr "자원 모니터 작성 중에 오류 발생: %(monitor)s"
 
 msgid "Error: Agent is disabled"
 msgstr "오류: 에이전트가 사용 안됨"
+
+#, python-format
+msgid "Error: unsupported image handler %(image_handler)s."
+msgstr " 에러 : 제공하지 않는 %(image_handler)s 이미지 핸들러"
 
 #, python-format
 msgid "Event %(event)s not found for action id %(action_id)s"
@@ -2108,12 +2117,18 @@ msgstr ""
 "사용 가능한 네트워크를 두 개 이상 발견했습니다. 네트워크 ID를 지정하여 연결"
 "할 항목을 선택하십시오."
 
+msgid "More than one possible service found."
+msgstr "둘 이상의 가능한 서비스를 찾았음."
+
 msgid "More than one swap drive requested."
 msgstr "둘 이상의 스왑 드라이브를 요청함 "
 
 #, python-format
 msgid "Multi-boot operating system found in %s"
 msgstr "%s에 다중 부트 운영 체제가 있음"
+
+msgid "Multiattach volume support is not yet available."
+msgstr "다중 연결 볼륨 기능은 아직 지원하지 않습니다."
 
 msgid "Multiple X-Instance-ID headers found within request."
 msgstr "요청에 다중 X-Instance-ID 헤더가 있습니다. "
@@ -3712,6 +3727,10 @@ msgstr ""
 "%(seconds)s 초 동안 기다리거나 %(attempts)s 시도 하였으나 %(volume_id)s 볼륨"
 "이 생성되지 않았습니다. 지금 상태는 %(volume_status)s 입니다."
 
+#, python-format
+msgid "Volume attachment %(attachment_id)s could not be found."
+msgstr "%(attachment_id)s 볼륨을 찾을 수 없습니다. "
+
 msgid "Volume does not belong to the requested instance."
 msgstr "볼륨이 요청된 인스턴스에 속해 있지 않습니다."
 
@@ -3735,6 +3754,9 @@ msgid ""
 msgstr ""
 "볼륨에서 블록 크기를 설정하지만 현재 libvirt 하이퍼바이저 '%s'이(가) 사용자 "
 "정의 블록 크기를 지원하지 않음"
+
+msgid "Volume size extension is not supported by the hypervisor."
+msgstr "하이퍼바이저에서 볼륨크기 확장을 지원하지 않습니다"
 
 #, python-format
 msgid ""
