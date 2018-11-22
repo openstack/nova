@@ -375,6 +375,7 @@ transferred, with lower bound of a minimum of 2 GiB per device.
 """),
     cfg.IntOpt('live_migration_completion_timeout',
                default=800,
+               min=0,
                mutable=True,
                help="""
 Time to wait, in seconds, for migration to successfully complete transferring
@@ -408,6 +409,23 @@ This is deprecated, and now disabled by default because we have found serious
 bugs in this feature that caused false live-migration timeout failures. This
 feature will be removed or replaced in a future release.
 """),
+    cfg.StrOpt('live_migration_timeout_action',
+               default='abort',
+               choices=('abort', 'force_complete'),
+               mutable=True,
+               help="""
+This option will be used to determine what action will be taken against a
+VM after ``live_migration_completion_timeout`` expires. By default, the live
+migrate operation will be aborted after completion timeout. If it is set to
+``force_complete``, the compute service will either pause the VM or trigger
+post-copy depending on if post copy is enabled and available
+(``live_migration_permit_post_copy`` is set to True).
+
+Related options:
+
+* live_migration_completion_timeout
+* live_migration_permit_post_copy
+"""),
     cfg.BoolOpt('live_migration_permit_post_copy',
                 default=False,
                 help="""
@@ -418,7 +436,12 @@ needs to be transferred. Post-copy requires libvirt>=1.3.3 and QEMU>=2.5.0.
 
 When permitted, post-copy mode will be automatically activated if a
 live-migration memory copy iteration does not make percentage increase of at
-least 10% over the last iteration.
+least 10% over the last iteration, or will be automatically activated if
+we reach the timeout defined by ``live_migration_completion_timeout`` and
+``live_migration_timeout_action`` is set to 'force_complete'. Note if you
+change to no timeout or choose to use 'abort',
+i.e. ``live_migration_completion_timeout = 0``, then there will be no
+automatic switch to post-copy.
 
 The live-migration force complete API also uses post-copy when permitted. If
 post-copy mode is not available, force complete falls back to pausing the VM
@@ -430,7 +453,8 @@ details, please see the Administration guide.
 
 Related options:
 
-    * live_migration_permit_auto_converge
+* live_migration_permit_auto_converge
+* live_migration_timeout_action
 """),
     cfg.BoolOpt('live_migration_permit_auto_converge',
                 default=False,

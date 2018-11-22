@@ -218,9 +218,25 @@ What to do when the migration times out
 During the migration process, the instance may write to a memory page after
 that page has been copied to the destination. When that happens, the same page
 has to be copied again. The instance may write to memory pages faster than they
-can be copied, so that the migration cannot complete.  The Compute service will
-cancel it when the ``live_migration_completion_timeout``, a configuration
-parameter, is reached.
+can be copied, so that the migration cannot complete. There are two optional
+actions, controlled by
+:oslo.config:option:`libvirt.live_migration_timeout_action`, which can be
+taken against a VM after
+:oslo.config:option:`libvirt.live_migration_completion_timeout` is reached:
+
+1. ``abort`` (default): The live migration operation will be cancelled after
+   the completion timeout is reached. This is similar to using API
+   ``DELETE /servers/{server_id}/migrations/{migration_id}``.
+
+2. ``force_complete``: The compute service will either pause the VM or trigger
+   post-copy depending on if post copy is enabled and available
+   (:oslo.config:option:`libvirt.live_migration_permit_post_copy` is set to
+   `True`). This is similar to using API
+   ``POST /servers/{server_id}/migrations/{migration_id}/action (force_complete)``.
+
+You can also read the
+:oslo.config:option:`libvirt.live_migration_timeout_action`
+configuration option help for more details.
 
 The following remarks assume the KVM/Libvirt hypervisor.
 
