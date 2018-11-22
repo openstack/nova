@@ -52,7 +52,7 @@ extensions = ['sphinx.ext.autodoc',
 # openstackdocstheme options
 repository_name = 'openstack/nova'
 bug_project = 'nova'
-bug_tag = ''
+bug_tag = 'doc'
 
 config_generator_config_file = '../../etc/nova/nova-config-generator.conf'
 sample_config_basename = '_static/nova'
