@@ -391,24 +391,6 @@ Related options:
 * live_migration_downtime_steps
 * live_migration_downtime_delay
 """),
-    cfg.IntOpt('live_migration_progress_timeout',
-               default=0,
-               deprecated_for_removal=True,
-               deprecated_reason="""
-Serious bugs found in this feature, see
-https://bugs.launchpad.net/nova/+bug/1644248 for details.
-""",
-               mutable=True,
-               help="""
-Time to wait, in seconds, for migration to make forward progress in
-transferring data before aborting the operation.
-
-Set to 0 to disable timeouts.
-
-This is deprecated, and now disabled by default because we have found serious
-bugs in this feature that caused false live-migration timeout failures. This
-feature will be removed or replaced in a future release.
-"""),
     cfg.StrOpt('live_migration_timeout_action',
                default='abort',
                choices=('abort', 'force_complete'),
@@ -434,9 +416,7 @@ mode, i.e., switch the active VM to the one on the destination node before the
 migration is complete, therefore ensuring an upper bound on the memory that
 needs to be transferred. Post-copy requires libvirt>=1.3.3 and QEMU>=2.5.0.
 
-When permitted, post-copy mode will be automatically activated if a
-live-migration memory copy iteration does not make percentage increase of at
-least 10% over the last iteration, or will be automatically activated if
+When permitted, post-copy mode will be automatically activated if
 we reach the timeout defined by ``live_migration_completion_timeout`` and
 ``live_migration_timeout_action`` is set to 'force_complete'. Note if you
 change to no timeout or choose to use 'abort',

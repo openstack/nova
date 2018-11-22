@@ -7338,9 +7338,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         n = 0
         start = time.time()
-        progress_time = start
-        progress_watermark = None
-        previous_data_remaining = -1
         is_post_copy_enabled = self._is_post_copy_enabled(migration_flags)
         while True:
             info = guest.get_job_info()
@@ -7375,13 +7372,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 now = time.time()
                 elapsed = now - start
 
-                if ((progress_watermark is None) or
-                    (progress_watermark == 0) or
-                    (progress_watermark > info.data_remaining)):
-                    progress_watermark = info.data_remaining
-                    progress_time = now
-
-                progress_timeout = CONF.libvirt.live_migration_progress_timeout
                 completion_timeout = int(
                     CONF.libvirt.live_migration_completion_timeout * data_gb)
                 # NOTE(yikun): Check the completion timeout to determine
@@ -7391,8 +7381,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # if available else the VM will be suspended, otherwise the
                 # live migrate operation will be aborted.
                 if libvirt_migrate.should_trigger_timeout_action(
-                        instance, now, progress_time, progress_timeout,
-                        elapsed, completion_timeout, migration.status):
+                        instance, elapsed, completion_timeout,
+                        migration.status):
                     timeout_act = CONF.libvirt.live_migration_timeout_action
                     if timeout_act == 'force_complete':
                         self.live_migration_force_complete(instance)
@@ -7406,15 +7396,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                     instance=instance)
                             self._clear_empty_migration(instance)
                             raise
-
-                if (is_post_copy_enabled and
-                    libvirt_migrate.should_switch_to_postcopy(
-                    info.memory_iteration, info.data_remaining,
-                    previous_data_remaining, migration.status)):
-                    libvirt_migrate.trigger_postcopy_switch(guest,
-                                                            instance,
-                                                            migration)
-                previous_data_remaining = info.data_remaining
 
                 curdowntime = libvirt_migrate.update_downtime(
                     guest, instance, curdowntime,
@@ -7458,13 +7439,6 @@ class LibvirtDriver(driver.ComputeDriver):
                         "processed_memory": info.memory_processed,
                         "remaining_memory": info.memory_remaining,
                         "total_memory": info.memory_total}, instance=instance)
-                    if info.data_remaining > progress_watermark:
-                        lg("Data remaining %(remaining)d bytes, "
-                           "low watermark %(watermark)d bytes "
-                           "%(last)d seconds ago",
-                           {"remaining": info.data_remaining,
-                            "watermark": progress_watermark,
-                            "last": (now - progress_time)}, instance=instance)
 
                 n = n + 1
             elif info.type == libvirt.VIR_DOMAIN_JOB_COMPLETED:
