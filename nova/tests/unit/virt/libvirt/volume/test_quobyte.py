@@ -61,7 +61,7 @@ class QuobyteTestCase(test.NoDBTestCase):
 
     @mock.patch.object(os.path, "exists", return_value=False)
     @mock.patch.object(fileutils, "ensure_tree")
-    @mock.patch.object(utils, "execute")
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_quobyte_mount_volume_not_systemd(self, mock_execute,
                                               mock_ensure_tree,
                                               mock_exists):
@@ -83,7 +83,7 @@ class QuobyteTestCase(test.NoDBTestCase):
 
     @mock.patch.object(os.path, "exists", return_value=True)
     @mock.patch.object(fileutils, "ensure_tree")
-    @mock.patch.object(utils, "execute")
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_quobyte_mount_volume_systemd(self, mock_execute,
                                           mock_ensure_tree,
                                           mock_exists):
@@ -108,7 +108,7 @@ class QuobyteTestCase(test.NoDBTestCase):
 
     @mock.patch.object(os.path, "exists", return_value=False)
     @mock.patch.object(fileutils, "ensure_tree")
-    @mock.patch.object(utils, "execute")
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_quobyte_mount_volume_with_config(self,
                                               mock_execute,
                                               mock_ensure_tree,
@@ -135,9 +135,9 @@ class QuobyteTestCase(test.NoDBTestCase):
         mock_exists.assert_called_once_with(" /run/systemd/system")
 
     @mock.patch.object(fileutils, "ensure_tree")
-    @mock.patch.object(utils, "execute",
-                       side_effect=(processutils.
-                                    ProcessExecutionError))
+    @mock.patch('oslo_concurrency.processutils.execute',
+                side_effect=(processutils.
+                             ProcessExecutionError))
     def test_quobyte_mount_volume_fails(self, mock_execute, mock_ensure_tree):
         mnt_base = '/mnt'
         quobyte_volume = '192.168.1.1/volume-00001'
@@ -149,7 +149,7 @@ class QuobyteTestCase(test.NoDBTestCase):
                           quobyte_volume,
                           export_mnt_base)
 
-    @mock.patch.object(utils, "execute")
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_quobyte_umount_volume(self, mock_execute):
         mnt_base = '/mnt'
         quobyte_volume = '192.168.1.1/volume-00001'
@@ -162,7 +162,7 @@ class QuobyteTestCase(test.NoDBTestCase):
                                              export_mnt_base)
 
     @mock.patch.object(quobyte.LOG, "error")
-    @mock.patch.object(utils, "execute")
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_quobyte_umount_volume_warns(self,
                                          mock_execute,
                                          mock_debug):
@@ -184,8 +184,8 @@ class QuobyteTestCase(test.NoDBTestCase):
                                  export_mnt_base))
 
     @mock.patch.object(quobyte.LOG, "exception")
-    @mock.patch.object(utils, "execute",
-                       side_effect=(processutils.ProcessExecutionError))
+    @mock.patch('oslo_concurrency.processutils.execute',
+                side_effect=(processutils.ProcessExecutionError))
     def test_quobyte_umount_volume_fails(self,
                                          mock_execute,
                                          mock_exception):
