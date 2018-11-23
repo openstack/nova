@@ -695,7 +695,8 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
             return False
 
         self.stub_out('os.path.exists', fake_exists)
-        self.stub_out('nova.utils.execute', lambda *a, **kw: None)
+        self.stub_out('oslo_concurrency.processutils.execute',
+                      lambda *a, **kw: None)
         self.stub_out('nova.virt.disk.api.extend',
                       lambda image, size, use_cow=False: None)
         self.useFixture(fixtures.MonkeyPatch(
@@ -18315,7 +18316,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                  '_is_storage_shared_with'), return_value=False)
     @mock.patch('os.rename')
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute', side_effect=test.TestingException)
+    @mock.patch('oslo_concurrency.processutils.execute',
+                side_effect=test.TestingException)
     def test_migrate_disk_and_power_off_exception(
             self, mock_execute, mock_exists, mock_rename, mock_is_shared,
             mock_get_host_ip, mock_destroy, mock_get_disk_info):
@@ -18542,7 +18544,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                                           mock_is_shared):
         def fake_execute(*args, **kwargs):
             raise processutils.ProcessExecutionError()
-        self.stub_out('nova.utils.execute', fake_execute)
+        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
 
         expected_exc = exception.InstanceFaultRollback
         self._test_migrate_disk_and_power_off_resize_check(expected_exc)
@@ -18659,7 +18661,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self._test_migrate_disk_and_power_off(self.context, flavor_obj)
 
     @mock.patch('os.rename')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('nova.virt.libvirt.utils.copy_image')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
@@ -18728,7 +18730,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                                   'uuid': 'other_uuid'})
 
     @mock.patch.object(compute_utils, 'disk_ops_semaphore')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('os.rename')
     def test_disk_raw_to_qcow2(self, mock_rename, mock_execute,
                                mock_disk_op_sema):
@@ -18895,7 +18897,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                       fake_to_xml)
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.plug_vifs',
                       fake_plug_vifs)
-        self.stub_out('nova.utils.execute', fake_execute)
+        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
         fw = base_firewall.NoopFirewallDriver()
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.firewall_driver',
                       fw)
@@ -21661,7 +21663,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                  mock.Mock(return_value=False))
     @mock.patch('nova.virt.images.qemu_img_info',
                 return_value=mock.Mock(file_format="fake_fmt"))
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_volume_snapshot_delete_when_dom_not_running(self, mock_execute,
                                                          mock_qemu_img_info,
                                                          mock_disk_op_sema):
@@ -21693,7 +21695,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                  mock.Mock(return_value=False))
     @mock.patch('nova.virt.images.qemu_img_info',
                 return_value=mock.Mock(file_format="fake_fmt"))
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_volume_snapshot_delete_when_dom_not_running_and_no_rebase_base(
         self, mock_execute, mock_qemu_img_info, mock_disk_op_sema):
         """Deleting newest snapshot of a file-based image when the domain is
