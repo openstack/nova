@@ -1155,8 +1155,8 @@ def generate_configdrive(session, context, instance, vm_ref, userdevice,
                 # XAPI can only import a VHD file, so convert to vhd format
                 vhd_file = '%s.vhd' % tmp_file
                 with compute_utils.disk_ops_semaphore:
-                    utils.execute('qemu-img', 'convert', '-Ovpc', tmp_file,
-                                  vhd_file)
+                    processutils.execute('qemu-img', 'convert', '-Ovpc',
+                                         tmp_file, vhd_file)
                 vhd_file_size = os.path.getsize(vhd_file)
                 with open(vhd_file) as file_obj:
                     volume_utils.stream_to_vdi(
