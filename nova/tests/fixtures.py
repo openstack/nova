@@ -68,7 +68,7 @@ from nova.tests.unit import fake_requests
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 
 CONF = cfg.CONF
-DB_SCHEMA = {'main': "", 'api': ""}
+DB_SCHEMA = collections.defaultdict(str)
 SESSION_CONFIGURED = False
 
 LOG = logging.getLogger(__name__)
@@ -392,12 +392,12 @@ class CellDatabases(fixtures.Fixture):
         # NOTE(melwitt): See the regular Database fixture for why
         # we do this.
         global DB_SCHEMA
-        if not DB_SCHEMA['main']:
+        if not DB_SCHEMA[('main', None)]:
             ctxt_mgr = self._ctxt_mgrs[connection_str]
             engine = ctxt_mgr.writer.get_engine()
             conn = engine.connect()
             migration.db_sync(database='main')
-            DB_SCHEMA['main'] = "".join(line for line
+            DB_SCHEMA[('main', None)] = "".join(line for line
                                         in conn.connection.iterdump())
             engine.dispose()
 
@@ -558,11 +558,11 @@ class CellDatabases(fixtures.Fixture):
         with fixtures.MonkeyPatch(
                 'nova.db.sqlalchemy.api.get_context_manager',
                 get_context_manager):
-            self._cache_schema(connection_str)
             engine = ctxt_mgr.writer.get_engine()
             engine.dispose()
+            self._cache_schema(connection_str)
             conn = engine.connect()
-            conn.connection.executescript(DB_SCHEMA['main'])
+            conn.connection.executescript(DB_SCHEMA[('main', None)])
 
     def setUp(self):
         super(CellDatabases, self).setUp()
@@ -596,7 +596,7 @@ class CellDatabases(fixtures.Fixture):
 
 
 class Database(fixtures.Fixture):
-    def __init__(self, database='main', connection=None):
+    def __init__(self, database='main', version=None, connection=None):
         """Create a database fixture.
 
         :param database: The type of database, 'main', or 'api'
@@ -610,6 +610,7 @@ class Database(fixtures.Fixture):
             session.configure(CONF)
             SESSION_CONFIGURED = True
         self.database = database
+        self.version = version
         if database == 'main':
             if connection is not None:
                 ctxt_mgr = session.create_context_manager(
@@ -622,12 +623,12 @@ class Database(fixtures.Fixture):
 
     def _cache_schema(self):
         global DB_SCHEMA
-        if not DB_SCHEMA[self.database]:
+        if not DB_SCHEMA[(self.database, self.version)]:
             engine = self.get_engine()
             conn = engine.connect()
-            migration.db_sync(database=self.database)
-            DB_SCHEMA[self.database] = "".join(line for line
-                                               in conn.connection.iterdump())
+            migration.db_sync(database=self.database, version=self.version)
+            DB_SCHEMA[(self.database, self.version)] = "".join(
+                line for line in conn.connection.iterdump())
             engine.dispose()
 
     def cleanup(self):
@@ -635,45 +636,15 @@ class Database(fixtures.Fixture):
         engine.dispose()
 
     def reset(self):
-        self._cache_schema()
         engine = self.get_engine()
         engine.dispose()
+        self._cache_schema()
         conn = engine.connect()
-        conn.connection.executescript(DB_SCHEMA[self.database])
+        conn.connection.executescript(
+            DB_SCHEMA[(self.database, self.version)])
 
     def setUp(self):
         super(Database, self).setUp()
-        self.reset()
-        self.addCleanup(self.cleanup)
-
-
-class DatabaseAtVersion(fixtures.Fixture):
-    def __init__(self, version, database='main'):
-        """Create a database fixture.
-
-        :param version: Max version to sync to (or None for current)
-        :param database: The type of database, 'main', 'api'
-        """
-        super(DatabaseAtVersion, self).__init__()
-        self.database = database
-        self.version = version
-        if database == 'main':
-            self.get_engine = session.get_engine
-        elif database == 'api':
-            self.get_engine = session.get_api_engine
-
-    def cleanup(self):
-        engine = self.get_engine()
-        engine.dispose()
-
-    def reset(self):
-        engine = self.get_engine()
-        engine.dispose()
-        engine.connect()
-        migration.db_sync(version=self.version, database=self.database)
-
-    def setUp(self):
-        super(DatabaseAtVersion, self).setUp()
         self.reset()
         self.addCleanup(self.cleanup)
 

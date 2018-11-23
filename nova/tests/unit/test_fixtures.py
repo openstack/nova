@@ -214,13 +214,11 @@ class TestDatabaseFixture(testtools.TestCase):
         schema = "".join(line for line in conn.connection.iterdump())
         self.assertEqual("BEGIN TRANSACTION;COMMIT;", schema)
 
-
-class TestDatabaseAtVersionFixture(testtools.TestCase):
     def test_fixture_schema_version(self):
         self.useFixture(conf_fixture.ConfFixture())
 
         # In/after 317 aggregates did have uuid
-        self.useFixture(fixtures.DatabaseAtVersion(318))
+        self.useFixture(fixtures.Database(version=318))
         engine = session.get_engine()
         engine.connect()
         meta = sqlalchemy.MetaData(engine)
@@ -228,7 +226,7 @@ class TestDatabaseAtVersionFixture(testtools.TestCase):
         self.assertTrue(hasattr(aggregate.c, 'uuid'))
 
         # Before 317, aggregates had no uuid
-        self.useFixture(fixtures.DatabaseAtVersion(316))
+        self.useFixture(fixtures.Database(version=316))
         engine = session.get_engine()
         engine.connect()
         meta = sqlalchemy.MetaData(engine)
@@ -239,7 +237,7 @@ class TestDatabaseAtVersionFixture(testtools.TestCase):
     def test_fixture_after_database_fixture(self):
         self.useFixture(conf_fixture.ConfFixture())
         self.useFixture(fixtures.Database())
-        self.useFixture(fixtures.DatabaseAtVersion(318))
+        self.useFixture(fixtures.Database(version=318))
 
 
 class TestDefaultFlavorsFixture(testtools.TestCase):

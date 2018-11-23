@@ -279,7 +279,7 @@ class TestFlavorCheck(test.TestCase):
 class TestNewtonCheck(test.TestCase):
     def setUp(self):
         super(TestNewtonCheck, self).setUp()
-        self.useFixture(nova_fixtures.DatabaseAtVersion(329))
+        self.useFixture(nova_fixtures.Database(version=329))
         self.context = context.get_admin_context()
         self.migration = importlib.import_module(
             'nova.db.sqlalchemy.migrate_repo.versions.'
@@ -405,7 +405,7 @@ class TestNewtonCellsCheck(test.NoDBTestCase):
 
     def setUp(self):
         super(TestNewtonCellsCheck, self).setUp()
-        self.useFixture(nova_fixtures.DatabaseAtVersion(28, 'api'))
+        self.useFixture(nova_fixtures.Database('api', 28))
         self.context = context.get_admin_context()
         self.migration = importlib.import_module(
             'nova.db.sqlalchemy.api_migrations.migrate_repo.versions.'
@@ -497,7 +497,7 @@ class TestServicesUUIDCheck(test.TestCase):
     """Tests the 400_enforce_service_uuid blocker migration."""
     def setUp(self):
         super(TestServicesUUIDCheck, self).setUp()
-        self.useFixture(nova_fixtures.DatabaseAtVersion(398))
+        self.useFixture(nova_fixtures.Database(version=398))
         self.context = context.get_admin_context()
         self.migration = importlib.import_module(
             'nova.db.sqlalchemy.migrate_repo.versions.'
