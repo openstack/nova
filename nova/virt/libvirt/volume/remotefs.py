@@ -190,8 +190,9 @@ class SshDriver(RemoteFilesystemDriver):
 
     def copy_file(self, src, dst, on_execute, on_completion, compression):
         # As far as ploop disks are in fact directories we add '-r' argument
-        utils.execute('scp', '-r', src, dst,
-                      on_execute=on_execute, on_completion=on_completion)
+        processutils.execute('scp', '-r', src, dst,
+                             on_execute=on_execute,
+                             on_completion=on_completion)
 
 
 class RsyncDriver(RemoteFilesystemDriver):
@@ -203,14 +204,16 @@ class RsyncDriver(RemoteFilesystemDriver):
             # Create target dir inside temporary directory
             local_tmp_dir = os.path.join(tempdir,
                                          dir_path.strip(os.path.sep))
-            utils.execute('mkdir', '-p', local_tmp_dir,
-                          on_execute=on_execute, on_completion=on_completion)
+            processutils.execute('mkdir', '-p', local_tmp_dir,
+                                 on_execute=on_execute,
+                                 on_completion=on_completion)
 
             # Create file in directory
             file_name = os.path.basename(os.path.normpath(dst_path))
             local_tmp_file = os.path.join(local_tmp_dir, file_name)
-            utils.execute('touch', local_tmp_file,
-                          on_execute=on_execute, on_completion=on_completion)
+            processutils.execute('touch', local_tmp_file,
+                                 on_execute=on_execute,
+                                 on_completion=on_completion)
             RsyncDriver._synchronize_object(tempdir,
                                             host, dst_path,
                                             on_execute=on_execute,
@@ -229,8 +232,9 @@ class RsyncDriver(RemoteFilesystemDriver):
             # Create target dir inside temporary directory
             local_tmp_dir = os.path.join(tempdir,
                                          dir_path.strip(os.path.sep))
-            utils.execute('mkdir', '-p', local_tmp_dir,
-                          on_execute=on_execute, on_completion=on_completion)
+            processutils.execute('mkdir', '-p', local_tmp_dir,
+                                 on_execute=on_execute,
+                                 on_completion=on_completion)
             RsyncDriver._synchronize_object(tempdir,
                                             host, dst_path,
                                             on_execute=on_execute,
@@ -239,10 +243,11 @@ class RsyncDriver(RemoteFilesystemDriver):
     def remove_dir(self, host, dst, on_execute, on_completion):
         # Remove remote directory's content
         with utils.tempdir() as tempdir:
-            utils.execute('rsync', '--archive', '--delete-excluded',
-                          tempdir + os.path.sep,
-                          utils.format_remote_path(host, dst),
-                          on_execute=on_execute, on_completion=on_completion)
+            processutils.execute('rsync', '--archive', '--delete-excluded',
+                                 tempdir + os.path.sep,
+                                 utils.format_remote_path(host, dst),
+                                 on_execute=on_execute,
+                                 on_completion=on_completion)
 
             # Delete empty directory
             RsyncDriver._remove_object(tempdir, host, dst,
@@ -260,13 +265,14 @@ class RsyncDriver(RemoteFilesystemDriver):
         :param on_completion: Callback method to remove pid of process from
                               cache
         """
-        utils.execute('rsync', '--archive', '--delete',
-                      '--include', os.path.basename(os.path.normpath(dst)),
-                      '--exclude', '*',
-                      os.path.normpath(src) + os.path.sep,
-                      utils.format_remote_path(host,
-                                 os.path.dirname(os.path.normpath(dst))),
-                      on_execute=on_execute, on_completion=on_completion)
+        processutils.execute(
+            'rsync', '--archive', '--delete',
+            '--include', os.path.basename(os.path.normpath(dst)),
+            '--exclude', '*',
+            os.path.normpath(src) + os.path.sep,
+            utils.format_remote_path(host,
+                                     os.path.dirname(os.path.normpath(dst))),
+            on_execute=on_execute, on_completion=on_completion)
 
     @staticmethod
     def _synchronize_object(src, host, dst, on_execute, on_completion):
@@ -293,15 +299,16 @@ class RsyncDriver(RemoteFilesystemDriver):
             os.path.normpath(dst).strip(os.path.sep))
 
         # Do relative rsync local directory with remote root directory
-        utils.execute('rsync', '--archive', '--relative', '--no-implied-dirs',
-                      relative_tmp_file_path,
-                      utils.format_remote_path(host, os.path.sep),
-                      on_execute=on_execute, on_completion=on_completion)
+        processutils.execute(
+            'rsync', '--archive', '--relative', '--no-implied-dirs',
+            relative_tmp_file_path,
+            utils.format_remote_path(host, os.path.sep),
+            on_execute=on_execute, on_completion=on_completion)
 
     def copy_file(self, src, dst, on_execute, on_completion, compression):
         # As far as ploop disks are in fact directories we add '-r' argument
         args = ['rsync', '-r', '--sparse', src, dst]
         if compression:
             args.append('--compress')
-        utils.execute(*args,
-                      on_execute=on_execute, on_completion=on_completion)
+        processutils.execute(
+            *args, on_execute=on_execute, on_completion=on_completion)
