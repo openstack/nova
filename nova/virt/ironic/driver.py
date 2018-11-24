@@ -804,20 +804,25 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         info = self._node_resource(node)
         result = {}
-        for rc, field in [(rc_fields.ResourceClass.VCPU, 'vcpus'),
-                          (rc_fields.ResourceClass.MEMORY_MB, 'memory_mb'),
-                          (rc_fields.ResourceClass.DISK_GB, 'local_gb')]:
-            # NOTE(dtantsur): any of these fields can be zero starting with
-            # the Pike release.
-            if info[field]:
-                result[rc] = {
-                    'total': info[field],
-                    'reserved': info[field] if reserved else 0,
-                    'min_unit': 1,
-                    'max_unit': info[field],
-                    'step_size': 1,
-                    'allocation_ratio': 1.0,
-                }
+        # Only report standard resource class inventory if configured to do so.
+        # This allows operators to cut-over to ironic custom resource class
+        # based scheduled as soon as they have completed the ironic instance
+        # flavor data migrations.
+        if CONF.workarounds.report_ironic_standard_resource_class_inventory:
+            for rc, field in [(rc_fields.ResourceClass.VCPU, 'vcpus'),
+                              (rc_fields.ResourceClass.MEMORY_MB, 'memory_mb'),
+                              (rc_fields.ResourceClass.DISK_GB, 'local_gb')]:
+                # NOTE(dtantsur): any of these fields can be zero starting with
+                # the Pike release.
+                if info[field]:
+                    result[rc] = {
+                        'total': info[field],
+                        'reserved': info[field] if reserved else 0,
+                        'min_unit': 1,
+                        'max_unit': info[field],
+                        'step_size': 1,
+                        'allocation_ratio': 1.0,
+                    }
 
         rc_name = info.get('resource_class')
         if rc_name is not None:

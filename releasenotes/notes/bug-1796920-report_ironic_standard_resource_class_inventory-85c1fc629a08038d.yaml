@@ -1,0 +1,35 @@
+---
+fixes:
+  - |
+    A new ``[workarounds]/report_ironic_standard_resource_class_inventory``
+    configuration option has been added.
+
+    Starting in the 16.0.0 Pike release, ironic nodes can be scheduled using
+    custom resource classes rather than the standard resource classes VCPU,
+    MEMORY_MB and DISK_GB:
+
+    https://docs.openstack.org/ironic/rocky/install/configure-nova-flavors.html
+
+    However, existing ironic instances require a data migration which can be
+    achieved either by restarting ``nova-compute`` services managing ironic
+    nodes or running ``nova-manage db ironic_flavor_migration``. The completion
+    of the data migration can be checked by running the
+    ``nova-status upgrade check`` command and checking the
+    "Ironic Flavor Migration" result.
+
+    Once all data migrations are complete, you can set this option to False to
+    stop reporting VCPU, MEMORY_MB and DISK_GB resource class inventory to the
+    Placement service so that scheduling will only rely on the custom resource
+    class for each ironic node, as described in the document above.
+
+    Note that this option does not apply starting in the 19.0.0 Stein release
+    since the ironic compute driver no longer reports standard resource class
+    inventory regardless of configuration.
+
+    Alternatives to this workaround would be unsetting ``memory_mb`` and/or
+    ``vcpus`` properties from ironic nodes, or using host aggregates to
+    segregate VM from BM compute hosts and restrict flavors to those
+    aggregates, but those alternatives might not be feasible at large scale.
+
+    See related bug https://bugs.launchpad.net/nova/+bug/1796920 for more
+    details.
