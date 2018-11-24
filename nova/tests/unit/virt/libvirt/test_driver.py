@@ -3633,6 +3633,153 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 else:
                     self.assertEqual(2, len(cfg.clock.timers))
 
+    def test_get_guest_config_clock_hpet_false(self):
+        self.flags(virt_type='kvm', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_time_hpet": "false"}})
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        hpet_map = {
+            fields.Architecture.X86_64: True,
+            fields.Architecture.I686: True,
+            fields.Architecture.PPC: False,
+            fields.Architecture.PPC64: False,
+            fields.Architecture.ARMV7: False,
+            fields.Architecture.AARCH64: False,
+            }
+
+        for guestarch, expect_hpet in hpet_map.items():
+            with mock.patch.object(libvirt_driver.libvirt_utils,
+                                   'get_arch',
+                                   return_value=guestarch):
+                cfg = drvr._get_guest_config(instance_ref, [],
+                                             image_meta,
+                                             disk_info)
+                self.assertIsInstance(cfg.clock,
+                                      vconfig.LibvirtConfigGuestClock)
+                self.assertEqual(cfg.clock.offset, "utc")
+                self.assertIsInstance(cfg.clock.timers[0],
+                                      vconfig.LibvirtConfigGuestTimer)
+                self.assertIsInstance(cfg.clock.timers[1],
+                                      vconfig.LibvirtConfigGuestTimer)
+                self.assertEqual(cfg.clock.timers[0].name, "pit")
+                self.assertEqual(cfg.clock.timers[0].tickpolicy,
+                                      "delay")
+                self.assertEqual(cfg.clock.timers[1].name, "rtc")
+                self.assertEqual(cfg.clock.timers[1].tickpolicy,
+                                      "catchup")
+                if expect_hpet:
+                    self.assertEqual(3, len(cfg.clock.timers))
+                    self.assertIsInstance(cfg.clock.timers[2],
+                                          vconfig.LibvirtConfigGuestTimer)
+                    self.assertEqual('hpet', cfg.clock.timers[2].name)
+                    self.assertFalse(cfg.clock.timers[2].present)
+                else:
+                    self.assertEqual(2, len(cfg.clock.timers))
+
+    def test_get_guest_config_clock_hpet_true(self):
+        self.flags(virt_type='kvm', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({
+            "id": uuids.image_id,
+            "disk_format": "raw",
+            "properties": {"hw_time_hpet": "true"}})
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        hpet_map = {
+            fields.Architecture.X86_64: True,
+            fields.Architecture.I686: True,
+            fields.Architecture.PPC: False,
+            fields.Architecture.PPC64: False,
+            fields.Architecture.ARMV7: False,
+            fields.Architecture.AARCH64: False,
+            }
+
+        for guestarch, expect_hpet in hpet_map.items():
+            with mock.patch.object(libvirt_driver.libvirt_utils,
+                                   'get_arch',
+                                   return_value=guestarch):
+                cfg = drvr._get_guest_config(instance_ref, [],
+                                             image_meta,
+                                             disk_info)
+                self.assertIsInstance(cfg.clock,
+                                      vconfig.LibvirtConfigGuestClock)
+                self.assertEqual(cfg.clock.offset, "utc")
+                self.assertIsInstance(cfg.clock.timers[0],
+                                      vconfig.LibvirtConfigGuestTimer)
+                self.assertIsInstance(cfg.clock.timers[1],
+                                      vconfig.LibvirtConfigGuestTimer)
+                self.assertEqual(cfg.clock.timers[0].name, "pit")
+                self.assertEqual(cfg.clock.timers[0].tickpolicy,
+                                      "delay")
+                self.assertEqual(cfg.clock.timers[1].name, "rtc")
+                self.assertEqual(cfg.clock.timers[1].tickpolicy,
+                                      "catchup")
+                if expect_hpet:
+                    self.assertEqual(3, len(cfg.clock.timers))
+                    self.assertIsInstance(cfg.clock.timers[2],
+                                          vconfig.LibvirtConfigGuestTimer)
+                    self.assertEqual('hpet', cfg.clock.timers[2].name)
+                    self.assertTrue(cfg.clock.timers[2].present)
+                else:
+                    self.assertEqual(2, len(cfg.clock.timers))
+
+    def test_get_guest_config_clock_hpet_invalid(self):
+        self.flags(virt_type='kvm', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_time_hpet": "blah"}})
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        hpet_map = {
+            fields.Architecture.X86_64: True,
+            fields.Architecture.I686: True,
+            fields.Architecture.PPC: False,
+            fields.Architecture.PPC64: False,
+            fields.Architecture.ARMV7: False,
+            fields.Architecture.AARCH64: False,
+            }
+
+        for guestarch, expect_hpet in hpet_map.items():
+            with mock.patch.object(libvirt_driver.libvirt_utils,
+                                   'get_arch',
+                                   return_value=guestarch):
+                cfg = drvr._get_guest_config(instance_ref, [],
+                                             image_meta,
+                                             disk_info)
+                self.assertIsInstance(cfg.clock,
+                                      vconfig.LibvirtConfigGuestClock)
+                self.assertEqual(cfg.clock.offset, "utc")
+                self.assertIsInstance(cfg.clock.timers[0],
+                                      vconfig.LibvirtConfigGuestTimer)
+                self.assertIsInstance(cfg.clock.timers[1],
+                                      vconfig.LibvirtConfigGuestTimer)
+                self.assertEqual(cfg.clock.timers[0].name, "pit")
+                self.assertEqual(cfg.clock.timers[0].tickpolicy,
+                                      "delay")
+                self.assertEqual(cfg.clock.timers[1].name, "rtc")
+                self.assertEqual(cfg.clock.timers[1].tickpolicy,
+                                      "catchup")
+                if expect_hpet:
+                    self.assertEqual(3, len(cfg.clock.timers))
+                    self.assertIsInstance(cfg.clock.timers[2],
+                                          vconfig.LibvirtConfigGuestTimer)
+                    self.assertEqual('hpet', cfg.clock.timers[2].name)
+                    # a non-boolean value of hw_time_hpet should be treated as
+                    # False
+                    self.assertFalse(cfg.clock.timers[2].present)
+                else:
+                    self.assertEqual(2, len(cfg.clock.timers))
+
     @mock.patch.object(libvirt_utils, 'get_arch')
     def test_get_guest_config_windows_timer(self, mock_get_arch):
         mock_get_arch.return_value = fields.Architecture.I686

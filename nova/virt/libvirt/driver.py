@@ -4569,6 +4569,7 @@ class LibvirtDriver(driver.ComputeDriver):
         clk.add_timer(tmpit)
         clk.add_timer(tmrtc)
 
+        hpet = image_meta.properties.get('hw_time_hpet', False)
         guestarch = libvirt_utils.get_arch(image_meta)
         if guestarch in (fields.Architecture.I686,
                          fields.Architecture.X86_64):
@@ -4576,8 +4577,12 @@ class LibvirtDriver(driver.ComputeDriver):
             # qemu -no-hpet is not supported on non-x86 targets.
             tmhpet = vconfig.LibvirtConfigGuestTimer()
             tmhpet.name = "hpet"
-            tmhpet.present = False
+            tmhpet.present = hpet
             clk.add_timer(tmhpet)
+        else:
+            if hpet:
+                LOG.warning('HPET is not turned on for non-x86 guests in image'
+                            ' %s.', image_meta.id)
 
         # Provide Windows guests with the paravirtualized hyperv timer source.
         # This is the windows equiv of kvm-clock, allowing Windows

@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Added support for the High Precision Event Timer (HPET) for x86 guests
+    in the libvirt driver when image property ``hypervisor_type=qemu`` is set.
+    The timer can be set by setting a ``hw_time_hpet=True`` image property
+    key/value pair. By default HPET remains turned off. When it is turned on
+    the HPET is activated in libvirt.
