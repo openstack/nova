@@ -3335,7 +3335,11 @@ class API(base_api.NetworkAPI):
             # as in an unshelve operation.
             vnic_type = p.get('binding:vnic_type')
             if (vnic_type in network_model.VNIC_TYPES_SRIOV
-                    and migration is not None):
+                    and migration is not None
+                    and migration['migration_type'] !=
+                    constants.LIVE_MIGRATION):
+                # Note(adrianc): for live migration binding profile was already
+                # updated in conductor when calling bind_ports_to_host()
                 if not pci_mapping:
                     pci_mapping = self._get_pci_mapping_for_migration(context,
                         instance, migration)

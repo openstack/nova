@@ -56,6 +56,7 @@ from nova.objects import fields
 from nova.objects import instance as instance_obj
 from nova.objects import migrate_data as migrate_data_obj
 from nova.objects import network_request as net_req_obj
+from nova.pci import request as pci_request
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
@@ -2692,7 +2693,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         src_info = 'src_info'
         dest_info = 'dest_info'
         dest_check_data = dict(foo='bar')
-        mig_data = dict(cow='moo')
+        mig_data = mock.MagicMock()
+        mig_data.cow = 'moo'
 
         with test.nested(
             mock.patch.object(self.compute, '_get_compute_info'),
@@ -2703,9 +2705,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(self.compute.driver,
                               'cleanup_live_migration_destination_check'),
             mock.patch.object(db, 'instance_fault_create'),
-            mock.patch.object(compute_utils, 'EventReporter')
+            mock.patch.object(compute_utils, 'EventReporter'),
+            mock.patch.object(migrate_data_obj.LiveMigrateData,
+                              'create_skeleton_migrate_vifs'),
+            mock.patch.object(instance, 'get_network_info'),
+            mock.patch.object(self.compute, '_claim_pci_for_instance_vifs'),
+            mock.patch.object(self.compute,
+                              '_update_migrate_vifs_profile_with_pci'),
         ) as (mock_get, mock_check_dest, mock_check_src, mock_check_clean,
-              mock_fault_create, mock_event):
+              mock_fault_create, mock_event, mock_create_mig_vif,
+              mock_nw_info, mock_claim_pci, mock_update_mig_vif):
             mock_get.side_effect = (src_info, dest_info)
             mock_check_dest.return_value = dest_check_data
 
@@ -7912,7 +7921,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         _do_test()
 
     def test_post_live_migration_at_destination_success(self):
-
+        @mock.patch.object(self.compute, 'rt')
         @mock.patch.object(self.instance, 'save')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
                            return_value='test_network')
@@ -7929,7 +7938,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                      _get_compute_info, _get_power_state,
                      _get_instance_block_device_info,
                      _notify_about_instance_usage, migrate_instance_finish,
-                     setup_networks_on_host, get_instance_nw_info, save):
+                     setup_networks_on_host, get_instance_nw_info, save,
+                     rt_mock):
 
             cn = mock.Mock(spec_set=['hypervisor_hostname'])
             cn.hypervisor_hostname = 'test_host'
@@ -7966,7 +7976,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             migrate_instance_finish.assert_called_once_with(
                 self.context, self.instance,
                 {'source_compute': cn_old,
-                 'dest_compute': self.compute.host})
+                 'dest_compute': self.compute.host,
+                 'migration_type': 'live-migration'})
             _get_instance_block_device_info.assert_called_once_with(
                 self.context, self.instance
             )
@@ -7976,6 +7987,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                                      self.instance)
             _get_compute_info.assert_called_once_with(self.context,
                                                       self.compute.host)
+            rt_mock.allocate_pci_devices_for_instance.assert_called_once_with(
+                self.context, self.instance)
 
             self.assertEqual(self.compute.host, self.instance.host)
             self.assertEqual('test_host', self.instance.node)
@@ -7988,7 +8001,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         _do_test()
 
     def test_post_live_migration_at_destination_compute_not_found(self):
-
+        @mock.patch.object(self.compute, 'rt')
         @mock.patch.object(self.instance, 'save')
         @mock.patch.object(self.compute, 'network_api')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
@@ -8003,7 +8016,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         def _do_test(mock_notify, post_live_migration_at_destination,
                      _get_compute_info, _get_power_state,
                      _get_instance_block_device_info,
-                     _notify_about_instance_usage, network_api, save):
+                     _notify_about_instance_usage, network_api,
+                     save, rt_mock):
             cn = mock.Mock(spec_set=['hypervisor_hostname'])
             cn.hypervisor_hostname = 'test_host'
             _get_compute_info.return_value = cn
@@ -8021,6 +8035,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
     def test_post_live_migration_at_destination_unexpected_exception(self):
 
+        @mock.patch.object(self.compute, 'rt')
         @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
         @mock.patch.object(self.instance, 'save')
         @mock.patch.object(self.compute, 'network_api')
@@ -8034,7 +8049,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         def _do_test(post_live_migration_at_destination, _get_compute_info,
                      _get_power_state, _get_instance_block_device_info,
                      _notify_about_instance_usage, network_api, save,
-                     add_instance_fault_from_exc):
+                     add_instance_fault_from_exc, rt_mock):
             cn = mock.Mock(spec_set=['hypervisor_hostname'])
             cn.hypervisor_hostname = 'test_host'
             _get_compute_info.return_value = cn
@@ -8053,6 +8068,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         """Tests that neutron fails to delete the source host port bindings
         but we handle the error and just log it.
         """
+        @mock.patch.object(self.compute, 'rt')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch.object(self.compute, 'network_api')
         @mock.patch.object(self.compute, '_get_instance_block_device_info')
@@ -8063,7 +8079,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                hypervisor_hostname='fake-dest-host'))
         @mock.patch.object(self.instance, 'save')
         def _do_test(instance_save, get_compute_node, get_power_state,
-                     get_bdms, network_api, legacy_notify):
+                     get_bdms, network_api, legacy_notify, rt_mock):
             # setup_networks_on_host is called three times:
             # 1. set the migrating_to port binding profile value (no-op)
             # 2. delete the source host port bindings - we make this raise
@@ -8095,8 +8111,12 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                                      'foo',
                                                      *args, source_bdms=bdms,
                                                      **kwargs)
+
+        mock_rt = self._mock_rt()
         result = _do_call()
         mock_clean.assert_called_once_with(self.context, self.instance.uuid)
+        mock_rt.free_pci_device_allocations_for_instance.\
+            asset_called_once_with(self.context, self.instance)
         return result
 
     def test_post_live_migration_new_allocations(self):
@@ -8125,8 +8145,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     def test_post_live_migration_cinder_v3_api(self):
         # Because live migration has succeeded, _post_live_migration
         # should call attachment_delete with the original/old attachment_id
-        compute = manager.ComputeManager()
-
         dest_host = 'test_dest_host'
         instance = fake_instance.fake_instance_obj(self.context,
                                                    node='dest',
@@ -8159,26 +8177,29 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                     'clean_console_auths_for_instance')
         @mock.patch.object(migrate_data.migration, 'save',
                            new=lambda: None)
-        @mock.patch.object(compute.reportclient,
+        @mock.patch.object(self.compute.reportclient,
                            'get_allocations_for_consumer_by_provider')
         @mock.patch.object(vol_bdm, 'save')
-        @mock.patch.object(compute, 'update_available_resource')
-        @mock.patch.object(compute.volume_api, 'attachment_delete')
-        @mock.patch.object(compute, '_get_instance_block_device_info')
-        @mock.patch.object(compute, 'compute_rpcapi')
-        @mock.patch.object(compute, 'driver')
-        @mock.patch.object(compute, '_notify_about_instance_usage')
-        @mock.patch.object(compute, 'network_api')
+        @mock.patch.object(self.compute, 'update_available_resource')
+        @mock.patch.object(self.compute.volume_api, 'attachment_delete')
+        @mock.patch.object(self.compute, '_get_instance_block_device_info')
+        @mock.patch.object(self.compute, 'compute_rpcapi')
+        @mock.patch.object(self.compute, 'driver')
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch.object(self.compute, 'network_api')
         def _test(mock_net_api, mock_notify, mock_driver,
                   mock_rpc, mock_get_bdm_info, mock_attach_delete,
                   mock_update_resource, mock_bdm_save, mock_ga,
                   mock_clean, mock_notify_action):
             self._mock_rt()
+
             bdms = objects.BlockDeviceMappingList(objects=[vol_bdm, image_bdm])
 
-            compute._post_live_migration(self.context, instance, dest_host,
-                                         migrate_data=migrate_data,
-                                         source_bdms=bdms)
+            self.compute._post_live_migration(self.context,
+                                              instance,
+                                              dest_host,
+                                              migrate_data=migrate_data,
+                                              source_bdms=bdms)
 
             mock_attach_delete.assert_called_once_with(
                 self.context, uuids.attachment)
@@ -8357,12 +8378,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         """Tests that neutron fails to delete the destination host port
         bindings but we handle the error and just log it.
         """
+        @mock.patch.object(self.compute, 'rt')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch.object(self.compute, 'network_api')
         @mock.patch.object(self.compute, '_get_instance_block_device_info')
         @mock.patch.object(self.compute.driver,
                            'rollback_live_migration_at_destination')
-        def _do_test(driver_rollback, get_bdms, network_api, legacy_notify):
+        def _do_test(driver_rollback, get_bdms, network_api, legacy_notify,
+                     rt_mock):
             self.compute.network_api.setup_networks_on_host.side_effect = (
                 exception.PortBindingDeletionFailed(
                     port_id=uuids.port_id, host='fake-dest-host'))
@@ -8377,6 +8400,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 network_api.get_instance_nw_info.return_value,
                 get_bdms.return_value, destroy_disks=False,
                 migrate_data=mock.sentinel.migrate_data)
+            rt_mock.free_pci_device_claims_for_instance.\
+                assert_called_once_with(self.context, self.instance)
 
         _do_test()
 
@@ -8611,6 +8636,111 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                           'end', flavor)])
 
         doit()
+
+    def test__claim_pci_for_instance_vifs(self):
+        @mock.patch.object(self.compute, 'rt')
+        @mock.patch.object(pci_request, 'get_instance_pci_request_from_vif')
+        @mock.patch.object(self.instance, 'get_network_info')
+        def _test(mock_get_network_info,
+                  mock_get_instance_pci_request_from_vif,
+                  rt_mock):
+            # when no VIFS, expecting no pci devices to be claimed
+            mock_get_network_info.return_value = []
+            port_id_to_pci = self.compute._claim_pci_for_instance_vifs(
+                self.context,
+                self.instance)
+            rt_mock.claim_pci_devices.assert_not_called()
+            self.assertEqual(0, len(port_id_to_pci))
+            # when there are VIFs, expect only ones with related PCI to be
+            # claimed and their migrate vif profile to be updated.
+
+            # Mock needed objects
+            nw_vifs = network_model.NetworkInfo([
+                network_model.VIF(
+                    id=uuids.port0,
+                    vnic_type='direct',
+                    type=network_model.VIF_TYPE_HW_VEB,
+                    profile={'pci_slot': '0000:04:00.3',
+                             'pci_vendor_info': '15b3:1018',
+                              'physical_network': 'default'}),
+                network_model.VIF(
+                        id=uuids.port1,
+                        vnic_type='normal',
+                        type=network_model.VIF_TYPE_OVS,
+                        profile={'some': 'attribute'})])
+            mock_get_network_info.return_value = nw_vifs
+
+            pci_req = objects.InstancePCIRequest(request_id=uuids.pci_req)
+            instance_pci_reqs = objects.InstancePCIRequests(requests=[pci_req])
+            instance_pci_devs = objects.PciDeviceList(
+                objects=[objects.PciDevice(request_id=uuids.pci_req,
+                                           address='0000:04:00.3',
+                                           vendor_id='15b3',
+                                           product_id='1018')])
+
+            def get_pci_req_side_effect(context, instance, vif):
+                if vif['id'] == uuids.port0:
+                    return pci_req
+                return None
+
+            mock_get_instance_pci_request_from_vif.side_effect = \
+                get_pci_req_side_effect
+            self.instance.pci_devices = instance_pci_devs
+            self.instance.pci_requests = instance_pci_reqs
+
+            rt_mock.reset()
+            claimed_pci_dev = objects.PciDevice(request_id=uuids.pci_req,
+                                                address='0000:05:00.4',
+                                                vendor_id='15b3',
+                                                product_id='1018')
+            rt_mock.claim_pci_devices.return_value = [claimed_pci_dev]
+
+            # Do the actual test
+            port_id_to_pci = self.compute._claim_pci_for_instance_vifs(
+                self.context,
+                self.instance)
+            self.assertEqual(len(nw_vifs),
+                             mock_get_instance_pci_request_from_vif.call_count)
+            self.assertTrue(rt_mock.claim_pci_devices.called)
+            self.assertEqual(len(port_id_to_pci), 1)
+
+        _test()
+
+    def test__update_migrate_vifs_profile_with_pci(self):
+        # Define two migrate vifs with only one pci that is required
+        # to be updated. Make sure method under test updated the correct one
+        nw_vifs = network_model.NetworkInfo(
+            [network_model.VIF(
+                id=uuids.port0,
+                vnic_type='direct',
+                type=network_model.VIF_TYPE_HW_VEB,
+                profile={'pci_slot': '0000:04:00.3',
+                         'pci_vendor_info': '15b3:1018',
+                         'physical_network': 'default'}),
+            network_model.VIF(
+                id=uuids.port1,
+                vnic_type='normal',
+                type=network_model.VIF_TYPE_OVS,
+                profile={'some': 'attribute'})])
+        pci_dev = objects.PciDevice(request_id=uuids.pci_req,
+                                    address='0000:05:00.4',
+                                    vendor_id='15b3',
+                                    product_id='1018')
+        port_id_to_pci_dev = {uuids.port0: pci_dev}
+        mig_vifs = migrate_data_obj.LiveMigrateData.\
+            create_skeleton_migrate_vifs(nw_vifs)
+        self.compute._update_migrate_vifs_profile_with_pci(mig_vifs,
+                                                           port_id_to_pci_dev)
+        # Make sure method under test updated the correct one.
+        changed_mig_vif = mig_vifs[0]
+        unchanged_mig_vif = mig_vifs[1]
+        # Migrate vifs profile was updated with pci_dev.address
+        # for port ID uuids.port0.
+        self.assertEqual(changed_mig_vif.profile['pci_slot'],
+                         pci_dev.address)
+        # Migrate vifs profile was unchanged for port ID uuids.port1.
+        # i.e 'profile' attribute does not exist.
+        self.assertNotIn('profile', unchanged_mig_vif)
 
 
 class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):

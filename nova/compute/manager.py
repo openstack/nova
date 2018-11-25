@@ -28,6 +28,7 @@ terminating it.
 import base64
 import binascii
 import contextlib
+import copy
 import functools
 import inspect
 import sys
@@ -85,6 +86,7 @@ from nova.objects import base as obj_base
 from nova.objects import fields
 from nova.objects import instance as obj_instance
 from nova.objects import migrate_data as migrate_data_obj
+from nova.pci import request as pci_req_module
 from nova.pci import whitelist
 from nova import rpc
 from nova import safe_utils
@@ -6221,6 +6223,15 @@ class ComputeManager(manager.Manager):
             migrate_data = self.compute_rpcapi.\
                                 check_can_live_migrate_source(ctxt, instance,
                                                               dest_check_data)
+            # Create migrate_data vifs
+            migrate_data.vifs = \
+                migrate_data_obj.LiveMigrateData.create_skeleton_migrate_vifs(
+                    instance.get_network_info())
+            # Claim PCI devices for VIFs on destination (if needed)
+            port_id_to_pci = self._claim_pci_for_instance_vifs(ctxt, instance)
+            # Update migrate VIFs with the newly claimed PCI devices
+            self._update_migrate_vifs_profile_with_pci(migrate_data.vifs,
+                                                       port_id_to_pci)
         finally:
             self.driver.cleanup_live_migration_destination_check(ctxt,
                     dest_check_data)
@@ -6853,6 +6864,9 @@ class ComputeManager(manager.Manager):
             # method
             destroy_vifs = True
 
+        # Free instance allocations on source before claims are allocated on
+        # destination node
+        self.rt.free_pci_device_allocations_for_instance(ctxt, instance)
         # NOTE(danms): Save source node before calling post method on
         # destination, which will update it
         source_node = instance.node
@@ -6955,7 +6969,8 @@ class ComputeManager(manager.Manager):
         self.network_api.setup_networks_on_host(context, instance,
                                                          self.host)
         migration = {'source_compute': instance.host,
-                     'dest_compute': self.host, }
+                     'dest_compute': self.host,
+                     'migration_type': 'live-migration'}
         self.network_api.migrate_instance_finish(context,
                                                  instance,
                                                  migration)
@@ -6970,6 +6985,8 @@ class ComputeManager(manager.Manager):
                 phase=fields.NotificationPhase.START)
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance)
+        # Allocate the claimed PCI resources at destination.
+        self.rt.allocate_pci_devices_for_instance(context, instance)
 
         try:
             self.driver.post_live_migration_at_destination(
@@ -7187,6 +7204,10 @@ class ComputeManager(manager.Manager):
             #             from remote volumes if necessary
             block_device_info = self._get_instance_block_device_info(context,
                                                                      instance)
+            # free any instance PCI claims done on destination during
+            # check_can_live_migrate_destination()
+            self.rt.free_pci_device_claims_for_instance(context, instance)
+
             self.driver.rollback_live_migration_at_destination(
                 context, instance, network_info, block_device_info,
                 destroy_disks=destroy_disks, migrate_data=migrate_data)
@@ -8532,3 +8553,70 @@ class ComputeManager(manager.Manager):
         """
         objects.ConsoleAuthToken.clean_expired_console_auths_for_host(
             context, self.host)
+
+    def _claim_pci_for_instance_vifs(self, ctxt, instance):
+        """Claim PCI devices for the instance's VIFs on the compute node
+
+        :param ctxt: Context
+        :param instance: Instance object
+        :return: <port ID: PciDevice> mapping for the VIFs that yielded a
+                PCI claim on the compute node
+        """
+        pci_req_id_to_port_id = {}
+        pci_reqs = []
+        port_id_to_pci_dev = {}
+
+        for vif in instance.get_network_info():
+            pci_req = pci_req_module.get_instance_pci_request_from_vif(
+                ctxt,
+                instance,
+                vif)
+            if pci_req:
+                pci_req_id_to_port_id[pci_req.request_id] = vif['id']
+                pci_reqs.append(pci_req)
+
+        if pci_reqs:
+            # Create PCI requests and claim against PCI resource tracker
+            # NOTE(adrianc): We claim against the same requests as on the
+            # source node.
+            vif_pci_requests = objects.InstancePCIRequests(
+                requests=pci_reqs,
+                instance_uuid=instance.uuid)
+
+            claimed_pci_devices_objs = self.rt.claim_pci_devices(
+                ctxt,
+                vif_pci_requests)
+
+            # Update VIFMigrateData profile with the newly claimed PCI
+            # device
+            for pci_dev in claimed_pci_devices_objs:
+                LOG.debug("PCI device: %s Claimed on destination node",
+                          pci_dev.address)
+                port_id = pci_req_id_to_port_id[pci_dev.request_id]
+                port_id_to_pci_dev[port_id] = pci_dev
+
+        return port_id_to_pci_dev
+
+    def _update_migrate_vifs_profile_with_pci(self,
+                                              migrate_vifs,
+                                              port_id_to_pci_dev):
+        """Update migrate vifs profile with the claimed PCI devices
+
+        :param migrate_vifs: list of VIFMigrateData objects
+        :param port_id_to_pci_dev: a <port_id: PciDevice> mapping
+        :return: None.
+        """
+        for mig_vif in migrate_vifs:
+            port_id = mig_vif.port_id
+            if port_id not in port_id_to_pci_dev:
+                continue
+
+            pci_dev = port_id_to_pci_dev[port_id]
+            profile = copy.deepcopy(mig_vif.source_vif['profile'])
+            profile['pci_slot'] = pci_dev.address
+            profile['pci_vendor_info'] = ':'.join([pci_dev.vendor_id,
+                                                   pci_dev.product_id])
+            mig_vif.profile = profile
+            LOG.debug("Updating migrate VIF profile for port %(port_id)s:"
+                      "%(profile)s", {'port_id': port_id,
+                                      'profile': profile})

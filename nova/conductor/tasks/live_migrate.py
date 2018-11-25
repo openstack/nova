@@ -25,6 +25,7 @@ from nova.i18n import _
 from nova import network
 from nova import objects
 from nova.objects import fields as obj_fields
+from nova.objects import migrate_data as migrate_data_obj
 from nova.scheduler import utils as scheduler_utils
 
 LOG = logging.getLogger(__name__)
@@ -42,6 +43,19 @@ def supports_extended_port_binding(context, host):
     """
     svc = objects.Service.get_by_host_and_binary(context, host, 'nova-compute')
     return svc.version >= 35
+
+
+def supports_vif_related_pci_allocations(context, host):
+    """Checks if the compute host service is new enough to support
+    VIF related PCI allocation during live migration
+
+    :param context: The user request context.
+    :param host: The nova-compute host to check.
+    :returns: True if the compute host is new enough to support vif related
+              PCI allocations
+    """
+    svc = objects.Service.get_by_host_and_binary(context, host, 'nova-compute')
+    return svc.version >= 36
 
 
 class LiveMigrationTask(base.TaskBase):
@@ -186,6 +200,47 @@ class LiveMigrationTask(base.TaskBase):
         else:
             raise exception.MigrationPreCheckError(reason=msg)
 
+    def _check_can_migrate_pci(self, src_host, dest_host):
+        """Checks that an instance can migrate with PCI requests.
+
+        At the moment support only if:
+
+            1. Instance contains VIF related PCI requests.
+            2. Neutron supports multiple port binding extension.
+            3. Src and Dest host support VIF related PCI allocations.
+        """
+        if self.instance.pci_requests is None or not len(
+                self.instance.pci_requests.requests):
+            return
+
+        for pci_request in self.instance.pci_requests.requests:
+            if pci_request.alias_name is not None:
+                # allow only VIF related PCI requests in live migration.
+                # PCI requests come from two sources: instance flavor and
+                # SR-IOV ports.
+                # SR-IOV ports pci_request don't have an alias_name.
+                # TODO(adrianc): add an is_sriov_port property to PCIRequest
+                # to make this cryptic check clearer (also in resource_tracker)
+
+                raise exception.MigrationPreCheckError(
+                    reason= "non-VIF related PCI requests for instance "
+                            "are not allowed for live migration.")
+        # All PCI requests are VIF related, now check neutron,
+        # source and destination compute nodes.
+        if not self.network_api.supports_port_binding_extension(
+                self.context):
+            raise exception.MigrationPreCheckError(
+                reason="Cannot live migrate VIF with related PCI, Neutron "
+                       "does not support required port binding extension.")
+        if not (supports_vif_related_pci_allocations(self.context,
+                                                     src_host) and
+                supports_vif_related_pci_allocations(self.context,
+                                                     dest_host)):
+            raise exception.MigrationPreCheckError(
+                reason="Cannot live migrate VIF with related PCI, "
+                       "source and destination nodes do not support "
+                       "the operation.")
+
     def _check_host_is_up(self, host):
         service = objects.Service.get_by_compute_host(self.context, host)
 
@@ -265,6 +320,7 @@ class LiveMigrationTask(base.TaskBase):
         return source_info, destination_info
 
     def _call_livem_checks_on_host(self, destination):
+        self._check_can_migrate_pci(self.source, destination)
         try:
             self.migrate_data = self.compute_rpcapi.\
                 check_can_live_migrate_destination(self.context, self.instance,
@@ -280,8 +336,17 @@ class LiveMigrationTask(base.TaskBase):
         if (self.network_api.supports_port_binding_extension(self.context) and
                 supports_extended_port_binding(self.context, self.source) and
                 supports_extended_port_binding(self.context, destination)):
-            self.migrate_data.vifs = (
-                self._bind_ports_on_destination(destination))
+            if 'vifs' not in self.migrate_data:
+                # migrate data vifs were not constructed in dest compute
+                # during check_can_live_migrate_destination, construct a
+                # skeleton to be updated after port binding.
+                # TODO(adrianc): This can be removed once we move to T release
+                self.migrate_data.vifs = migrate_data_obj.LiveMigrateData.\
+                    create_skeleton_migrate_vifs(
+                    self.instance.get_network_info())
+            bindings = self._bind_ports_on_destination(destination)
+            self._update_migrate_vifs_from_bindings(self.migrate_data.vifs,
+                                                    bindings)
 
     def _bind_ports_on_destination(self, destination):
         LOG.debug('Start binding ports on destination host: %s', destination,
@@ -291,23 +356,33 @@ class LiveMigrationTask(base.TaskBase):
         # that was bound. This information is then stuffed into the
         # migrate_data.
         try:
+            # Note(adrianc): migrate_data.vifs was partially filled
+            # by destination compute if compute is new enough.
+            # if that is the case, it may have updated the required port
+            # profile for the destination node (e.g new PCI address if SR-IOV)
+            # perform port binding against the requested profile
+            migrate_vifs_with_profile = [mig_vif for mig_vif in
+                                         self.migrate_data.vifs
+                                         if 'profile_json' in mig_vif]
+
+            ports_profile = None
+            if migrate_vifs_with_profile:
+                # Update to the port profile is required
+                ports_profile = {mig_vif.port_id: mig_vif.profile
+                                 for mig_vif in migrate_vifs_with_profile}
+
             bindings = self.network_api.bind_ports_to_host(
-                self.context, self.instance, destination)
+                self.context, self.instance, destination, None, ports_profile)
         except exception.PortBindingFailed as e:
             # Port binding failed for that host, try another one.
             raise exception.MigrationPreCheckError(
                 reason=e.format_message())
+        return bindings
 
-        source_vif_map = {
-            vif['id']: vif for vif in self.instance.get_network_info()
-        }
-        migrate_vifs = []
-        for port_id, binding in bindings.items():
-            migrate_vif = objects.VIFMigrateData(
-                port_id=port_id, **binding)
-            migrate_vif.source_vif = source_vif_map[port_id]
-            migrate_vifs.append(migrate_vif)
-        return migrate_vifs
+    def _update_migrate_vifs_from_bindings(self, migrate_vifs, bindings):
+        for migrate_vif in migrate_vifs:
+            for attr_name, attr_val in bindings[migrate_vif.port_id].items():
+                setattr(migrate_vif, attr_name, attr_val)
 
     def _get_source_cell_mapping(self):
         """Returns the CellMapping for the cell in which the instance lives
