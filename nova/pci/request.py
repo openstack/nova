@@ -39,6 +39,7 @@
     """
 
 import jsonschema
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import six
 
@@ -50,6 +51,7 @@ from nova import objects
 from nova.objects import fields as obj_fields
 from nova.pci import utils
 
+LOG = logging.getLogger(__name__)
 PCI_NET_TAG = 'physical_network'
 PCI_TRUSTED_TAG = 'trusted'
 PCI_DEVICE_TYPE_TAG = 'dev_type'
@@ -169,6 +171,60 @@ def _translate_alias_to_requests(alias_spec):
             alias_name=name,
             numa_policy=numa_policy))
     return pci_requests
+
+
+def get_instance_pci_request_from_vif(context, instance, vif):
+    """Given an Instance, return the PCI request associated
+    to the PCI device related to the given VIF (if any) on the
+    compute node the instance is currently running.
+
+    In this method we assume a VIF is associated with a PCI device
+    if 'pci_slot' attribute exists in the vif 'profile' dict.
+
+    :param context: security context
+    :param instance: instance object
+    :param vif: network VIF model object
+    :raises: raises PciRequestFromVIFNotFound if a pci device is requested
+             but not found on current host
+    :return: instance's PCIRequest object associated with the given VIF
+             or None if no PCI device is requested
+    """
+
+    # Get PCI device address for VIF if exists
+    vif_pci_dev_addr = vif['profile'].get('pci_slot') \
+        if vif['profile'] else None
+
+    if not vif_pci_dev_addr:
+        return None
+
+    try:
+        cn_id = objects.ComputeNode.get_by_host_and_nodename(
+            context,
+            instance.host,
+            instance.node).id
+    except exception.NotFound:
+        LOG.warning("expected to find compute node with host %s "
+                    "and node %s when getting instance PCI request "
+                    "from VIF", instance.host, instance.node)
+        return None
+    # Find PCIDevice associated with vif_pci_dev_addr on the compute node
+    # the instance is running on.
+    found_pci_dev = None
+    for pci_dev in instance.pci_devices:
+        if (pci_dev.compute_node_id == cn_id and
+                pci_dev.address == vif_pci_dev_addr):
+            found_pci_dev = pci_dev
+            break
+    if not found_pci_dev:
+        return None
+    # Find PCIRequest associated with the given PCIDevice in instance
+    for pci_req in instance.pci_requests.requests:
+        if pci_req.request_id == found_pci_dev.request_id:
+            return pci_req
+
+    raise exception.PciRequestFromVIFNotFound(
+        pci_slot=vif_pci_dev_addr,
+        node_id=cn_id)
 
 
 def get_pci_requests_from_flavor(flavor):
