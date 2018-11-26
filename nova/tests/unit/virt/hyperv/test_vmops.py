@@ -935,7 +935,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
 
     @mock.patch('nova.api.metadata.base.InstanceMetadata')
     @mock.patch('nova.virt.configdrive.ConfigDriveBuilder')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def _test_create_config_drive(self, mock_execute, mock_ConfigDriveBuilder,
                                   mock_InstanceMetadata, config_drive_format,
                                   config_drive_cdrom, side_effect,
