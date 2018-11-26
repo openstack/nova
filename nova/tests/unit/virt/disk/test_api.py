@@ -20,7 +20,6 @@ from oslo_concurrency import processutils
 from oslo_utils import units
 
 from nova import test
-from nova import utils
 from nova.virt.disk import api
 from nova.virt.disk.mount import api as mount
 from nova.virt.disk.vfs import localfs
@@ -51,7 +50,7 @@ class APITestCase(test.NoDBTestCase):
         self.assertFalse(api.is_image_extendable(image))
         self.assertTrue(mock_image_fs.called)
 
-    @mock.patch.object(utils, 'execute', autospec=True)
+    @mock.patch('oslo_concurrency.processutils.execute', autospec=True)
     def test_is_image_extendable_raw(self, mock_exec):
         imgfile = tempfile.NamedTemporaryFile()
         image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_RAW)
@@ -107,7 +106,7 @@ class APITestCase(test.NoDBTestCase):
                        return_value=True)
     @mock.patch.object(api, 'resize2fs', autospec=True)
     @mock.patch.object(mount.Mount, 'instance_for_format')
-    @mock.patch.object(utils, 'execute', autospec=True)
+    @mock.patch('oslo_concurrency.processutils.execute', autospec=True)
     def test_extend_qcow_success(self, mock_exec, mock_inst, mock_resize,
                                  mock_extendable, mock_can_resize):
         imgfile = tempfile.NamedTemporaryFile()
@@ -145,7 +144,7 @@ class APITestCase(test.NoDBTestCase):
     @mock.patch.object(api, 'can_resize_image', autospec=True,
                        return_value=True)
     @mock.patch.object(api, 'is_image_extendable', autospec=True)
-    @mock.patch.object(utils, 'execute', autospec=True)
+    @mock.patch('oslo_concurrency.processutils.execute', autospec=True)
     def test_extend_qcow_no_resize(self, mock_execute, mock_extendable,
                                    mock_can_resize_image):
         imgfile = tempfile.NamedTemporaryFile()
@@ -179,7 +178,7 @@ class APITestCase(test.NoDBTestCase):
     @mock.patch.object(api, 'can_resize_image', autospec=True,
                        return_value=True)
     @mock.patch.object(api, 'resize2fs', autospec=True)
-    @mock.patch.object(utils, 'execute', autospec=True)
+    @mock.patch('oslo_concurrency.processutils.execute', autospec=True)
     def test_extend_raw_success(self, mock_exec, mock_resize,
                                 mock_can_resize):
         imgfile = tempfile.NamedTemporaryFile()
