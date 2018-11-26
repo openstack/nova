@@ -122,15 +122,6 @@ def enable_hairpin(interface):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def delete_bridge(interface):
-    """Delete a bridge.
-
-    :param interface: the name of the bridge
-    """
-    processutils.execute('brctl', 'delbr', interface)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
 def plug_infiniband_vif(vnic_mac, device_id, fabric, net_model, pci_slot):
     processutils.execute('ebrctl', 'add-port', vnic_mac, device_id,
                          fabric, net_model, pci_slot)
