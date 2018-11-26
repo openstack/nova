@@ -203,27 +203,6 @@ class ServersController(wsgi.Controller):
                     search_opts[tag_filter] = search_opts[
                         tag_filter].split(',')
 
-        # If tenant_id is passed as a search parameter this should
-        # imply that all_tenants is also enabled unless explicitly
-        # disabled. Note that the tenant_id parameter is filtered out
-        # by remove_invalid_options above unless the requestor is an
-        # admin.
-
-        # TODO(gmann): 'all_tenants' flag should not be required while
-        # searching with 'tenant_id'. Ref bug# 1185290
-        # +microversions to achieve above mentioned behavior by
-        # uncommenting below code.
-
-        # if 'tenant_id' in search_opts and 'all_tenants' not in search_opts:
-            # We do not need to add the all_tenants flag if the tenant
-            # id associated with the token is the tenant id
-            # specified. This is done so a request that does not need
-            # the all_tenants flag does not fail because of lack of
-            # policy permission for compute:get_all_tenants when it
-            # doesn't actually need it.
-            # if context.project_id != search_opts.get('tenant_id'):
-            #    search_opts['all_tenants'] = 1
-
         all_tenants = common.is_all_tenants(search_opts)
         # use the boolean from here on out so remove the entry from search_opts
         # if it's present
@@ -238,9 +217,7 @@ class ServersController(wsgi.Controller):
             elevated = context.elevated()
         else:
             # As explained in lp:#1185290, if `all_tenants` is not passed
-            # we must ignore the `tenant_id` search option. As explained
-            # in a above code comment, any change to this behavior would
-            # require a microversion bump.
+            # we must ignore the `tenant_id` search option.
             search_opts.pop('tenant_id', None)
             if context.project_id:
                 search_opts['project_id'] = context.project_id
