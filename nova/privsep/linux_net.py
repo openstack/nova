@@ -23,6 +23,15 @@ import nova.privsep
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def add_bridge(interface):
+    """Add a bridge.
+
+    :param interface: the name of the bridge
+    """
+    processutils.execute('brctl', 'addbr', interface)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def delete_bridge(interface):
     """Delete a bridge.
 

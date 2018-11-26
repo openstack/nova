@@ -1422,8 +1422,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         """
         if not linux_net_utils.device_exists(bridge):
             LOG.debug('Starting Bridge %s', bridge)
-            out, err = _execute('brctl', 'addbr', bridge,
-                                check_exit_code=False, run_as_root=True)
+            out, err = nova.privsep.linux_net.add_bridge(bridge)
             if (err and err != "device %s already exists; can't create "
                                "bridge with the same name\n" % (bridge)):
                 msg = _('Failed to add bridge: %s') % err

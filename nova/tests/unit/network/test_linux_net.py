@@ -590,21 +590,18 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.assertEqual(expected, actual)
 
     @mock.patch.object(linux_net.iptables_manager.ipv4['filter'], 'add_rule')
-    @mock.patch.object(utils, 'execute')
-    def test_linux_bridge_driver_plug(self, mock_execute, mock_add_rule):
+    @mock.patch('nova.privsep.linux_net.add_bridge',
+                return_value=('', ''))
+    def test_linux_bridge_driver_plug(self, mock_add_bridge, mock_add_rule):
         """Makes sure plug doesn't drop FORWARD by default.
 
         Ensures bug 890195 doesn't reappear.
         """
 
-        def fake_execute(*args, **kwargs):
-            return "", ""
-
         def verify_add_rule(chain, rule):
             self.assertEqual('FORWARD', chain)
             self.assertIn('ACCEPT', rule)
 
-        mock_execute.side_effect = fake_execute
         mock_add_rule.side_effect = verify_add_rule
 
         driver = linux_net.LinuxBridgeInterfaceDriver()
@@ -1183,7 +1180,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         with test.nested(
             mock.patch('nova.network.linux_utils.device_exists',
                        return_value=False),
-            mock.patch.object(linux_net, '_execute', fake_execute)
+            mock.patch('nova.privsep.linux_net.add_bridge', fake_execute)
         ) as (device_exists, _):
             driver = linux_net.LinuxBridgeInterfaceDriver()
             driver.ensure_bridge('brq1234567-89', '')
