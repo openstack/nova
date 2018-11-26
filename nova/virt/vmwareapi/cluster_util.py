@@ -160,12 +160,13 @@ def update_placement(session, cluster, vm_ref, group_info):
         if group_info.policies:
             # VM group does not exist on cluster
             policy = group_info.policies[0]
-            rule_name = "%s-%s" % (group_info.uuid, policy)
-            rule = _get_rule(cluster_config, rule_name)
-            operation = "edit" if rule else "add"
-            config_spec.rulesSpec = _create_cluster_rules_spec(
-                client_factory, rule_name, [vm_ref], policy=policy,
-                operation=operation, rule=rule)
+            if policy != 'soft-affinity':
+                rule_name = "%s-%s" % (group_info.uuid, policy)
+                rule = _get_rule(cluster_config, rule_name)
+                operation = "edit" if rule else "add"
+                config_spec.rulesSpec = _create_cluster_rules_spec(
+                    client_factory, rule_name, [vm_ref], policy=policy,
+                    operation=operation, rule=rule)
 
     reconfigure_cluster(session, cluster, config_spec)
 
