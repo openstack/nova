@@ -1337,6 +1337,13 @@ class ComputeDriver(object):
         unused.
 
         Note that this function takes an instance ID.
+
+        :param instance: nova.objects.Instance to get block storage statistics
+        :param disk_id: mountpoint name, e.g. "vda"
+        :returns: None if block statistics could not be retrieved, otherwise a
+            list of the form: [rd_req, rd_bytes, wr_req, wr_bytes, errs]
+        :raises: NotImplementedError if the driver does not implement this
+            method
         """
         raise NotImplementedError()
 
