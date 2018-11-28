@@ -172,6 +172,15 @@ class ServiceController(wsgi.Controller):
 
     def _update(self, context, host, binary, payload):
         """Do the actual PUT/update"""
+        # If the user tried to perform an action
+        # (disable/enable/force down) on a non-nova-compute
+        # service, provide a more useful error message.
+        if binary != 'nova-compute':
+            msg = (_(
+                'Updating a %(binary)s service is not supported. Only '
+                'nova-compute services can be updated.') % {'binary': binary})
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
         try:
             self.host_api.service_update(context, host, binary, payload)
         except (exception.HostBinaryNotFound,
@@ -324,7 +333,7 @@ class ServiceController(wsgi.Controller):
         # technically disable a nova-scheduler service, although that doesn't
         # really do anything within Nova and is just confusing. Now trying to
         # do that will fail as a nova-scheduler service won't have a host
-        # mapping so you'll get a 404. In this new microversion, we close that
+        # mapping so you'll get a 400. In this new microversion, we close that
         # old gap and make sure you can only enable/disable and set forced_down
         # on nova-compute services since those are the only ones that make
         # sense to update for those operations.
