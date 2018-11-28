@@ -444,8 +444,24 @@ class ResourceTracker(object):
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def drop_move_claim(self, context, instance, nodename,
                         instance_type=None, prefix='new_'):
-        # Remove usage for an incoming/outgoing migration on the destination
-        # node.
+        """Remove usage for an incoming/outgoing migration.
+
+        :param context: Security context.
+        :param instance: The instance whose usage is to be removed.
+        :param nodename: Host on which to remove usage. If the migration
+                         completed successfully, this is normally the source.
+                         If it did not complete successfully (failed or
+                         reverted), this is normally the destination.
+        :param instance_type: The flavor that determines the usage to remove.
+                              If the migration completed successfully, this is
+                              the old flavor to be removed from the source. If
+                              the migration did not complete successfully, this
+                              is the new flavor to be removed from the
+                              destination.
+        :param prefix: Prefix to use when accessing migration context
+                       attributes. 'old_' or 'new_', with 'new_' being the
+                       default.
+        """
         if instance['uuid'] in self.tracked_migrations:
             migration = self.tracked_migrations.pop(instance['uuid'])
 
