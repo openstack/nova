@@ -613,7 +613,7 @@ class ServicesTestV21(test.TestCase):
 
     def test_services_enable_with_invalid_binary(self):
         body = {'host': 'host1', 'binary': 'invalid'}
-        self.assertRaises(webob.exc.HTTPNotFound,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.update,
                           self.req,
                           "enable",
@@ -636,7 +636,7 @@ class ServicesTestV21(test.TestCase):
 
     def test_services_disable_with_invalid_binary(self):
         body = {'host': 'host1', 'binary': 'invalid'}
-        self.assertRaises(webob.exc.HTTPNotFound,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.update,
                           self.req,
                           "disable",
@@ -1079,6 +1079,16 @@ class ServicesTestV211(ServicesTestV21):
                     "host": "host1", "binary": "nova-compute"}
         self.assertRaises(exception.ValidationError,
             self.controller.update, req, 'force-down', body=req_body)
+
+    def test_update_forced_down_invalid_service(self):
+        req = fakes.HTTPRequest.blank('/fake/services',
+                                      use_admin_context=True,
+                                      version=self.wsgi_api_version)
+        req_body = {"forced_down": True,
+                    "host": "host1", "binary": "nova-scheduler"}
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.update, req, 'force-down',
+                          body=req_body)
 
 
 class ServicesTestV252(ServicesTestV211):
