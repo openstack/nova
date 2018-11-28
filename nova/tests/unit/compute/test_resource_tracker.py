@@ -1536,18 +1536,6 @@ class TestUpdateComputeNode(BaseTestCase):
 
         self.assertEqual(4, ufpt_mock.call_count)
 
-    def test_get_node_uuid(self):
-        self._setup_rt()
-        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
-        self.rt.compute_nodes[_NODENAME] = orig_compute
-        uuid = self.rt.get_node_uuid(_NODENAME)
-        self.assertEqual(orig_compute.uuid, uuid)
-
-    def test_get_node_uuid_not_found(self):
-        self._setup_rt()
-        self.assertRaises(exc.ComputeHostNotFound,
-                          self.rt.get_node_uuid, 'foo')
-
     def test_copy_resources_no_update_allocation_ratios(self):
         """Tests that a ComputeNode object's allocation ratio fields are
         not set if the configured allocation ratio values are default 0.0.

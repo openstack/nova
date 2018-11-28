@@ -6546,7 +6546,6 @@ class ComputeTestCase(BaseTestCase,
             post_live_migration_at_source, setup_networks_on_host,
             clear_events, update_available_resource, mig_save, getrt
         ):
-            getrt.return_value.get_node_uuid.return_value = srcnode
             self.compute._post_live_migration(c, instance, dest,
                                               migrate_data=migrate_data)
             update_available_resource.assert_has_calls([mock.call(c)])
