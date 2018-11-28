@@ -1,0 +1,11 @@
+---
+other:
+  - |
+    The ``[cinder]/catalog_info`` default value is changed such that the
+    ``service_name`` portion of the value is no longer set and is also
+    no longer required. Since looking up the cinder endpoint in the service
+    catalog should only need the endpoint type (``volumev3`` by default) and
+    interface (``publicURL`` by default), the service name is dropped and only
+    provided during endpoint lookup if configured.
+    See `bug 1803627 <https://bugs.launchpad.net/nova/+bug/1803627>`_ for
+    details.

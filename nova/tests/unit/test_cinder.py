@@ -233,3 +233,22 @@ class CinderV3TestCase(BaseCinderTestCase, test.NoDBTestCase):
         volume = self.api.get(self.context, '5678')
         self.assertIn('attachments', volume)
         self.assertEqual(exp_volume_attachment_2, volume['attachments'])
+
+    def test_create_client_with_no_service_name(self):
+        """Tests that service_name is not required and not passed through
+        when constructing the cinder client Client object if it's not
+        configured.
+        """
+        self.flags(catalog_info='volumev3::public', group='cinder')
+        with mock.patch('cinderclient.client.Client') as mock_client:
+            # We don't use self.create_client() because that has additional
+            # assertions that we don't care about in this test. We just care
+            # about how the client is created, not what is returned.
+            cinder.cinderclient(self.context)
+        self.assertEqual(1, len(mock_client.call_args_list))
+        call_kwargs = mock_client.call_args_list[0][1]
+        # Make sure service_type and interface are passed through.
+        self.assertEqual('volumev3', call_kwargs['service_type'])
+        self.assertEqual('public', call_kwargs['interface'])
+        # And service_name is not passed through.
+        self.assertNotIn('service_name', call_kwargs)
