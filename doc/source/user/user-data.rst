@@ -20,3 +20,6 @@ You can place user data in a local file and pass it through the
 
    $ openstack server create --image ubuntu-cloudimage --flavor 1 \
      --user-data mydata.file VM_INSTANCE
+
+.. note:: The provided user data must be base64 encoded and is restricted to
+          65535 bytes.

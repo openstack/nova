@@ -15,9 +15,10 @@ The user who booted the instance can pass metadata to the instance in several
 ways. For authentication keypairs, the keypairs functionality of the Nova APIs
 can be used to upload a key and then specify that key during the Nova boot API
 request. For less structured data, a small opaque blob of data may be passed
-via the user-data feature of the Nova API. Examples of such unstructured data
-would be the puppet role that the instance should use, or the HTTP address of a
-server to fetch post-boot configuration information from.
+via the :doc:`user data </user/user-data>` feature of the Nova API. Examples of
+such unstructured data would be the puppet role that the instance should use,
+or the HTTP address of a server to fetch post-boot configuration information
+from.
 
 Nova provided data
 ------------------

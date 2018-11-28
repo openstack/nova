@@ -5,7 +5,7 @@ You can configure OpenStack to write metadata to a special configuration drive
 that attaches to the instance when it boots. The instance can mount this drive
 and read files from it to get information that is normally available through
 the :doc:`metadata service </user/metadata-service>`.
-This metadata is different from the user data.
+This metadata is different from the :doc:`user data </user/user-data>`.
 
 One use case for using the configuration drive is to pass a networking
 configuration when you do not use DHCP to assign IP addresses to
