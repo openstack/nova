@@ -114,6 +114,8 @@ global setting.  If the host is in more than one aggregate and more than one
 value is found, the minimum value will be used.  For information about how to
 use this filter, see :ref:`host-aggregates`. See also :ref:`CoreFilter`.
 
+Note the ``cpu_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>` restriction.
+
 AggregateDiskFilter
 -------------------
 
@@ -122,6 +124,9 @@ value. If the per-aggregate value is not found, the value falls back to the
 global setting.  If the host is in more than one aggregate and more than one
 value is found, the minimum value will be used.  For information about how to
 use this filter, see :ref:`host-aggregates`. See also :ref:`DiskFilter`.
+
+Note the ``disk_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>`
+restriction.
 
 AggregateImagePropertiesIsolation
 ---------------------------------
@@ -237,6 +242,8 @@ value falls back to the global setting.  If the host is in more than one
 aggregate and thus more than one value is found, the minimum value will be
 used.  For information about how to use this filter, see
 :ref:`host-aggregates`.  See also :ref:`ramfilter`.
+
+Note the ``ram_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>` restriction.
 
 AggregateTypeAffinityFilter
 ---------------------------
@@ -1049,6 +1056,23 @@ as well as the other filters that are typically enabled:
 .. code-block:: ini
 
    scheduler_default_filters=AggregateInstanceExtraSpecsFilter,RetryFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
+
+.. _bug-1804125:
+
+.. note:: Regarding the `AggregateCoreFilter`_, `AggregateDiskFilter`_ and
+   `AggregateRamFilter`_, starting in 15.0.0 (Ocata) there is a behavior
+   change where aggregate-based overcommit ratios will no longer be honored
+   during scheduling for the FilterScheduler. Instead, overcommit values must
+   be set on a per-compute-node basis in the Nova configuration files.
+
+   If you have been relying on per-aggregate overcommit, during your upgrade,
+   you must change to using per-compute-node overcommit ratios in order for
+   your scheduling behavior to stay consistent. Otherwise, you may notice
+   increased NoValidHost scheduling failures as the aggregate-based overcommit
+   is no longer being considered.
+
+   See `bug 1804125 <https://bugs.launchpad.net/nova/+bug/1804125>`_ for more
+   details.
 
 Example: Specify compute hosts with SSDs
 ----------------------------------------
