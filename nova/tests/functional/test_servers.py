@@ -1507,9 +1507,8 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual([], self._get_provider_traits(self.host_uuid))
 
     def _run_update_available_resource(self, startup):
-        ctx = context.get_admin_context()
-        rt = self.compute._get_resource_tracker()
-        rt.update_available_resource(ctx, self.compute.host, startup=startup)
+        self.compute.rt.update_available_resource(
+            context.get_admin_context(), self.compute.host, startup=startup)
 
     def _run_update_available_resource_and_assert_raises(
             self, exc=exception.ResourceProviderSyncFailed, startup=False):

@@ -166,7 +166,7 @@ class BaseTestCase(test.TestCase):
         # override tracker with a version that doesn't need the database:
         fake_rt = fake_resource_tracker.FakeResourceTracker(self.compute.host,
                     self.compute.driver)
-        self.compute._resource_tracker = fake_rt
+        self.compute.rt = fake_rt
 
         def fake_get_compute_nodes_in_db(self, context, **kwargs):
             fake_compute_nodes = [{'local_gb': 259,
@@ -262,7 +262,7 @@ class BaseTestCase(test.TestCase):
         self.compute_api = compute.API()
 
         # Just to make long lines short
-        self.rt = self.compute._get_resource_tracker()
+        self.rt = self.compute.rt
 
         self.mock_get_allocs = self.useFixture(
             fixtures.fixtures.MockPatch(
@@ -1464,7 +1464,8 @@ class ComputeVolumeTestCase(BaseTestCase):
 
 
 class ComputeTestCase(BaseTestCase,
-                      test_diagnostics.DiagnosticsComparisonMixin):
+                      test_diagnostics.DiagnosticsComparisonMixin,
+                      fake_resource_tracker.RTMockMixin):
     def setUp(self):
         super(ComputeTestCase, self).setUp()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
@@ -6229,7 +6230,7 @@ class ComputeTestCase(BaseTestCase,
         migration = objects.Migration(uuid=uuids.migration)
 
         @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
-        @mock.patch.object(self.compute, '_reportclient')
+        @mock.patch.object(self.compute, 'reportclient')
         def do_it(mock_client, mock_setup):
             mock_client.get_allocations_for_consumer.return_value = {
                 mock.sentinel.source: {
@@ -6550,12 +6551,11 @@ class ComputeTestCase(BaseTestCase,
                               'clear_events_for_instance'),
             mock.patch.object(self.compute, 'update_available_resource'),
             mock.patch.object(migration_obj, 'save'),
-            mock.patch.object(self.compute, '_get_resource_tracker'),
         ) as (
             post_live_migration, unfilter_instance,
             migrate_instance_start, post_live_migration_at_destination,
             post_live_migration_at_source, setup_networks_on_host,
-            clear_events, update_available_resource, mig_save, getrt
+            clear_events, update_available_resource, mig_save
         ):
             self.compute._post_live_migration(c, instance, dest,
                                               migrate_data=migrate_data)
@@ -7466,14 +7466,11 @@ class ComputeTestCase(BaseTestCase,
 
     @mock.patch.object(objects.Instance, 'save')
     def test_instance_update_host_check(self, mock_save):
-        # make sure rt usage doesn't happen if the host or node is different
-        def fail_get(self):
-            raise test.TestingException("wrong host")
-        self.stub_out('nova.compute.manager.ComputeManager.'
-                      '_get_resource_tracker', fail_get)
-
+        # make sure rt usage doesn't update if the host or node is different
         instance = self._create_fake_instance_obj({'host': 'someotherhost'})
-        self.compute._instance_update(self.context, instance, vcpus=4)
+        with mock.patch.object(self.compute.rt, '_update_usage',
+                               new=mock.NonCallableMock()):
+            self.compute._instance_update(self.context, instance, vcpus=4)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'remove_provider_tree_from_instance_allocation')
@@ -7698,7 +7695,6 @@ class ComputeTestCase(BaseTestCase,
         self.assertNotEqual(0, instance.deleted)
 
     def test_terminate_instance_updates_tracker(self):
-        rt = self.compute._get_resource_tracker()
         admin_context = context.get_admin_context()
 
         cn = self.rt.compute_nodes[NODENAME]
@@ -7706,7 +7702,7 @@ class ComputeTestCase(BaseTestCase,
         instance = self._create_fake_instance_obj()
         instance.vcpus = 1
 
-        rt.instance_claim(admin_context, instance, NODENAME)
+        self.compute.rt.instance_claim(admin_context, instance, NODENAME)
         self.assertEqual(1, cn.vcpus_used)
 
         self.compute.terminate_instance(admin_context, instance, [])
@@ -7720,17 +7716,16 @@ class ComputeTestCase(BaseTestCase,
     # update properly.
     @mock.patch('nova.objects.Instance.destroy')
     def test_init_deleted_instance_updates_tracker(self, noop1, noop2, noop3):
-        rt = self.compute._get_resource_tracker()
         admin_context = context.get_admin_context()
 
-        cn = rt.compute_nodes[NODENAME]
+        cn = self.compute.rt.compute_nodes[NODENAME]
         self.assertEqual(0, cn.vcpus_used)
         instance = self._create_fake_instance_obj()
         instance.vcpus = 1
 
         self.assertEqual(0, cn.vcpus_used)
 
-        rt.instance_claim(admin_context, instance, NODENAME)
+        self.compute.rt.instance_claim(admin_context, instance, NODENAME)
         self.compute._init_instance(admin_context, instance)
         self.assertEqual(1, cn.vcpus_used)
 
@@ -8022,25 +8017,22 @@ class ComputeTestCase(BaseTestCase,
         instance.old_flavor = old_type
         instance.new_flavor = new_type
 
-        fake_rt = mock.MagicMock()
-
         def fake_drop_move_claim(*args, **kwargs):
             pass
 
         def fake_setup_networks_on_host(self, *args, **kwargs):
             pass
 
+        self._mock_rt(
+            drop_move_claim=mock.Mock(side_effect=fake_drop_move_claim))
+
         with test.nested(
-            mock.patch.object(fake_rt, 'drop_move_claim',
-                              side_effect=fake_drop_move_claim),
-            mock.patch.object(self.compute, '_get_resource_tracker',
-                              return_value=fake_rt),
             mock.patch.object(self.compute.network_api,
                               'setup_networks_on_host',
                               side_effect=fake_setup_networks_on_host),
             mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                        'remove_provider_tree_from_instance_allocation')
-        ) as (mock_drop, mock_get, mock_setup, mock_remove_allocs):
+        ) as (mock_setup, mock_remove_allocs):
             migration = objects.Migration(context=self.context.elevated())
             migration.instance_uuid = instance.uuid
             migration.status = 'finished'
@@ -13041,11 +13033,11 @@ class EvacuateHostTestCase(BaseTestCase):
         patch_spawn = mock.patch.object(self.compute.driver, 'spawn')
         patch_on_disk = mock.patch.object(
             self.compute.driver, 'instance_on_disk', return_value=True)
-        self.compute._resource_tracker.rebuild_claim = mock.MagicMock()
+        self.compute.rt.rebuild_claim = mock.MagicMock()
         with patch_spawn, patch_on_disk:
             self._rebuild(migration=migration)
 
-        self.assertTrue(self.compute._resource_tracker.rebuild_claim.called)
+        self.assertTrue(self.compute.rt.rebuild_claim.called)
         self.assertEqual('done', migration.status)
         migration.save.assert_called_once_with()
 
@@ -13070,7 +13062,7 @@ class EvacuateHostTestCase(BaseTestCase):
         patch_on_disk = mock.patch.object(
             self.compute.driver, 'instance_on_disk', return_value=True)
         patch_claim = mock.patch.object(
-            self.compute._resource_tracker, 'rebuild_claim',
+            self.compute.rt, 'rebuild_claim',
             side_effect=exception.ComputeResourcesUnavailable(reason="boom"))
         patch_remove_allocs = mock.patch(
             'nova.scheduler.client.report.SchedulerReportClient.'
@@ -13088,8 +13080,7 @@ class EvacuateHostTestCase(BaseTestCase):
         patch_spawn = mock.patch.object(self.compute.driver, 'spawn')
         patch_on_disk = mock.patch.object(
             self.compute.driver, 'instance_on_disk', return_value=True)
-        patch_claim = mock.patch.object(
-            self.compute._resource_tracker, 'rebuild_claim')
+        patch_claim = mock.patch.object(self.compute.rt, 'rebuild_claim')
         patch_rebuild = mock.patch.object(
             self.compute, '_do_rebuild_instance_with_claim',
             side_effect=test.TestingException())

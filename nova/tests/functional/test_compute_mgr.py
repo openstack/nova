@@ -60,7 +60,7 @@ class ComputeManagerTestCase(test.TestCase):
         @mock.patch.object(self.compute.manager.network_api,
                            'cleanup_instance_network_on_host')
         @mock.patch('nova.compute.utils.notify_about_instance_usage')
-        @mock.patch.object(self.compute.manager, '_get_resource_tracker')
+        @mock.patch.object(self.compute.manager, 'rt')
         @mock.patch.object(self.compute.manager.driver, 'spawn')
         def _test(mock_spawn, mock_grt, mock_notify, mock_cinoh, mock_can):
             mock_spawn.side_effect = test.TestingException('Preserve this')

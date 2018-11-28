@@ -82,7 +82,8 @@ fake_host_list = [mock.sentinel.host1]
 
 
 @ddt.ddt
-class ComputeManagerUnitTestCase(test.NoDBTestCase):
+class ComputeManagerUnitTestCase(test.NoDBTestCase,
+                                 fake_resource_tracker.RTMockMixin):
     def setUp(self):
         super(ComputeManagerUnitTestCase, self).setUp()
         self.compute = manager.ComputeManager()
@@ -257,10 +258,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             cn.hypervisor_hostname = hyp_hostname
             return cn
 
-    @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
-    def test_update_available_resource_for_node(self, get_rt):
-        rt = mock.Mock(spec_set=['update_available_resource'])
-        get_rt.return_value = rt
+    def test_update_available_resource_for_node(self):
+        rt = self._mock_rt(spec_set=['update_available_resource'])
 
         self.compute._update_available_resource_for_node(
             self.context,
@@ -273,36 +272,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         )
 
     @mock.patch('nova.compute.manager.LOG')
-    @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
-    def test_update_available_resource_for_node_fail_no_host(self, get_rt,
-            log_mock):
-        rt = mock.Mock(spec_set=['update_available_resource'])
-        exc = exception.ComputeHostNotFound(host=mock.sentinel.host)
-        rt.update_available_resource.side_effect = exc
-        get_rt.return_value = rt
-        # Fake out the RT on the compute manager object so we can assert it's
-        # nulled out after the ComputeHostNotFound exception is raised.
-        self.compute._resource_tracker = rt
-
-        self.compute._update_available_resource_for_node(
-            self.context,
-            mock.sentinel.node,
-        )
-        rt.update_available_resource.assert_called_once_with(
-            self.context,
-            mock.sentinel.node,
-            startup=False,
-        )
-        self.assertTrue(log_mock.info.called)
-        self.assertIsNone(self.compute._resource_tracker)
-
-    @mock.patch('nova.compute.manager.LOG')
-    @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
-    def test_update_available_resource_for_node_reshape_failed(self, get_rt,
-                                                               log_mock):
+    def test_update_available_resource_for_node_reshape_failed(self, log_mock):
         """ReshapeFailed logs and reraises."""
-        rt = mock.Mock(spec_set=['update_available_resource'])
-        get_rt.return_value = rt
+        rt = self._mock_rt(spec_set=['update_available_resource'])
         rt.update_available_resource.side_effect = exception.ReshapeFailed(
             error='error')
 
@@ -316,12 +288,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         log_mock.critical.assert_called_once()
 
     @mock.patch('nova.compute.manager.LOG')
-    @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
-    def test_update_available_resource_for_node_reshape_needed(self, get_rt,
-                                                               log_mock):
+    def test_update_available_resource_for_node_reshape_needed(self, log_mock):
         """ReshapeNeeded logs and reraises."""
-        rt = mock.Mock(spec_set=['update_available_resource'])
-        get_rt.return_value = rt
+        rt = self._mock_rt(spec_set=['update_available_resource'])
         rt.update_available_resource.side_effect = exception.ReshapeNeeded()
 
         self.assertRaises(exception.ReshapeNeeded,
@@ -333,13 +302,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.context, mock.sentinel.node, startup=True)
         log_mock.exception.assert_called_once()
 
-    @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
     @mock.patch.object(manager.ComputeManager,
                        '_update_available_resource_for_node')
     @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
     @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
     def test_update_available_resource(self, get_db_nodes, get_avail_nodes,
-                                       update_mock, mock_get_rt):
+                                       update_mock):
+        mock_rt = self._mock_rt()
+        rc_mock = self.useFixture(fixtures.fixtures.MockPatchObject(
+            self.compute, 'reportclient')).mock
         db_nodes = [self._make_compute_node('node%s' % i, i)
                     for i in range(1, 5)]
         avail_nodes = set(['node2', 'node3', 'node4', 'node5'])
@@ -355,14 +326,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
              for node in avail_nodes_l]
         )
 
-        rc_mock = mock_get_rt.return_value.reportclient
         # First node in set should have been removed from DB
         for db_node in db_nodes:
             if db_node.hypervisor_hostname == 'node1':
                 db_node.destroy.assert_called_once_with()
                 rc_mock.delete_resource_provider.assert_called_once_with(
                     self.context, db_node, cascade=True)
-                mock_get_rt.return_value.remove_node.assert_called_once_with(
+                mock_rt.remove_node.assert_called_once_with(
                     'node1')
             else:
                 self.assertFalse(db_node.destroy.called)
@@ -4191,12 +4161,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_rebuild_driver_error_same_host(self, mock_error, mock_aiffe):
         instance = fake_instance.fake_instance_obj(self.context)
         ex = test.TestingException('foo')
-        with mock.patch.object(self.compute, '_get_resource_tracker') as mrt:
-            self.assertRaises(test.TestingException,
-                              self._test_rebuild_ex, instance, ex)
-            rt = mrt.return_value
-            self.assertFalse(
-                rt.delete_allocation_for_evacuated_instance.called)
+        rt = self._mock_rt()
+        self.assertRaises(test.TestingException,
+                          self._test_rebuild_ex, instance, ex)
+        self.assertFalse(
+            rt.delete_allocation_for_evacuated_instance.called)
 
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
@@ -4208,14 +4177,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self.context)
         instance.system_metadata = {}
         ex = test.TestingException('foo')
-        with mock.patch.object(self.compute, '_get_resource_tracker') as mrt:
-            self.assertRaises(test.TestingException,
-                              self._test_rebuild_ex, instance, ex,
-                              recreate=True, scheduled_node='foo')
-            rt = mrt.return_value
-            delete_alloc = rt.delete_allocation_for_evacuated_instance
-            delete_alloc.assert_called_once_with(self.context, instance, 'foo',
-                                                 node_type='destination')
+        rt = self._mock_rt()
+        self.assertRaises(test.TestingException,
+                          self._test_rebuild_ex, instance, ex,
+                          recreate=True, scheduled_node='foo')
+        delete_alloc = rt.delete_allocation_for_evacuated_instance
+        delete_alloc.assert_called_once_with(self.context, instance, 'foo',
+                                             node_type='destination')
 
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.objects.instance.Instance.drop_migration_context')
@@ -4329,13 +4297,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                    node=dead_node)
         instance.system_metadata = img_sys_meta
         instance.migration_context = None
+        mock_rt = self._mock_rt()
         with test.nested(
-            mock.patch.object(self.compute, '_get_resource_tracker'),
             mock.patch.object(self.compute, '_get_compute_info'),
             mock.patch.object(self.compute, '_do_rebuild_instance_with_claim'),
             mock.patch.object(objects.Instance, 'save'),
             mock.patch.object(self.compute, '_set_migration_status'),
-        ) as (mock_rt, mock_get, mock_rebuild, mock_save, mock_set):
+        ) as (mock_get, mock_rebuild, mock_save, mock_set):
             mock_get.return_value.hypervisor_hostname = 'new-node'
             self.compute.rebuild_instance(self.context, instance, None, None,
                                           None, None, None, None, True,
@@ -4343,13 +4311,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_get.assert_called_once_with(mock.ANY, self.compute.host)
             self.assertEqual('new-node', instance.node)
             mock_set.assert_called_once_with(None, 'done')
-            mock_rt.assert_called_once_with()
             # Make sure the rebuild_claim was called with the proper image_meta
             # from the instance.
-            mock_rebuild_claim = mock_rt.return_value.rebuild_claim
-            mock_rebuild_claim.assert_called_once()
-            self.assertIn('image_meta', mock_rebuild_claim.call_args[1])
-            actual_image_meta = mock_rebuild_claim.call_args[1][
+            mock_rt.rebuild_claim.assert_called_once()
+            self.assertIn('image_meta', mock_rt.rebuild_claim.call_args[1])
+            actual_image_meta = mock_rt.rebuild_claim.call_args[1][
                 'image_meta'].properties
             self.assertIn('hw_numa_nodes', actual_image_meta)
             self.assertEqual(1, actual_image_meta.hw_numa_nodes)
@@ -4748,7 +4714,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     def test_reset_clears_provider_cache(self):
         # Seed the cache so we can tell we've cleared it
-        reportclient = self.compute._get_resource_tracker().reportclient
+        reportclient = self.compute.reportclient
         ptree = reportclient._provider_tree
         ptree.new_root('foo', uuids.foo)
         self.assertEqual([uuids.foo], ptree.get_provider_uuids())
@@ -4997,7 +4963,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         # override tracker with a version that doesn't need the database:
         fake_rt = fake_resource_tracker.FakeResourceTracker(self.compute.host,
                     self.compute.driver)
-        self.compute._resource_tracker = fake_rt
+        self.compute.rt = fake_rt
 
         self.allocations = [{
             "resource_provider": {
@@ -5010,7 +4976,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         }]
         self.mock_get_allocs = self.useFixture(
             fixtures.fixtures.MockPatchObject(
-                fake_rt.reportclient, 'get_allocations_for_consumer')).mock
+                self.compute.reportclient,
+                'get_allocations_for_consumer')).mock
         self.mock_get_allocs.return_value = self.allocations
 
     def _do_build_instance_update(self, mock_save, reschedule_update=False):
@@ -6652,7 +6619,8 @@ class ComputeManagerErrorsOutMigrationTestCase(test.NoDBTestCase):
 
 
 @ddt.ddt
-class ComputeManagerMigrationTestCase(test.NoDBTestCase):
+class ComputeManagerMigrationTestCase(test.NoDBTestCase,
+                                      fake_resource_tracker.RTMockMixin):
     class TestResizeError(Exception):
         pass
 
@@ -6798,7 +6766,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute, '_is_instance_storage_shared')
         @mock.patch.object(self.compute, 'finish_revert_resize')
         @mock.patch.object(self.compute, '_instance_update')
-        @mock.patch.object(self.compute, '_get_resource_tracker')
         @mock.patch.object(self.compute.driver, 'destroy')
         @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
         @mock.patch.object(self.compute.network_api, 'migrate_instance_start')
@@ -6812,7 +6779,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                     migrate_instance_start,
                     setup_networks_on_host,
                     destroy,
-                    _get_resource_tracker,
                     _instance_update,
                     finish_revert_resize,
                     _is_instance_storage_shared,
@@ -6820,6 +6786,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                     revert_migration_context,
                     mock_finish_revert):
 
+            self._mock_rt()
             # NOTE(danms): Before a revert, the instance is "on"
             # the destination host/node
             self.migration.uuid = uuids.migration
@@ -6866,7 +6833,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         reportclient = self.compute.reportclient
 
-        @mock.patch.object(self.compute, '_get_resource_tracker')
         @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
         @mock.patch.object(self.compute.driver, 'finish_revert_migration')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
@@ -6893,11 +6859,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                     migrate_instance_finish,
                     get_instance_nw_info,
                     finish_revert_migration,
-                    mock_get_cn,
-                    get_resource_tracker):
+                    mock_get_cn):
 
-            # Restore the report client
-            get_resource_tracker.return_value.reportclient = reportclient
+            # Mock the resource tracker, but keep the report client
+            self._mock_rt().reportclient = reportclient
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
             self.instance.migration_context = objects.MigrationContext()
@@ -6913,10 +6878,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         do_test()
 
     def test_finish_revert_resize_migration_context(self):
-        fake_rt = resource_tracker.ResourceTracker(None, None)
-        fake_rt.tracked_migrations[self.instance['uuid']] = (
-            self.migration, None)
-
         @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                     'drop_move_claim')
         @mock.patch('nova.compute.rpcapi.ComputeAPI.finish_revert_resize')
@@ -6924,8 +6885,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
         @mock.patch.object(self.compute, '_is_instance_storage_shared')
         @mock.patch.object(self.compute, '_instance_update')
-        @mock.patch.object(self.compute, '_get_resource_tracker',
-                           return_value=fake_rt)
         @mock.patch.object(self.compute.driver, 'destroy')
         @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
         @mock.patch.object(self.compute.network_api, 'migrate_instance_start')
@@ -6941,7 +6900,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                              mock_migrate_instance_start,
                              mock_setup_networks_on_host,
                              mock_destroy,
-                             mock_get_resource_tracker,
                              mock_instance_update,
                              mock_is_instance_storage_shared,
                              mock_get_instance_nw_info,
@@ -6949,6 +6907,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                              mock_finish_revert,
                              mock_drop_move_claim):
 
+            self.compute.rt.tracked_migrations[self.instance['uuid']] = (
+                self.migration, None)
             self.instance.migration_context = objects.MigrationContext()
             self.migration.source_compute = self.instance['host']
             self.migration.source_node = self.instance['node']
@@ -7032,13 +6992,13 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch.object(self.compute, 'network_api')
         @mock.patch.object(self.compute.driver, 'confirm_migration')
-        @mock.patch.object(self.compute, '_get_resource_tracker')
         @mock.patch.object(self.compute, '_delete_allocation_after_move')
         @mock.patch.object(self.instance, 'drop_migration_context')
         @mock.patch.object(self.instance, 'save')
-        def do_confirm_resize(mock_save, mock_drop, mock_delete, mock_get_rt,
+        def do_confirm_resize(mock_save, mock_drop, mock_delete,
                               mock_confirm, mock_nwapi, mock_notify,
                               mock_mig_save):
+            self._mock_rt()
             self.instance.migration_context = objects.MigrationContext()
             self.migration.source_compute = self.instance['host']
             self.migration.source_node = self.instance['node']
@@ -7053,7 +7013,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         do_confirm_resize()
 
     def test_delete_allocation_after_move_confirm_by_migration(self):
-        with mock.patch.object(self.compute, '_reportclient') as mock_report:
+        with mock.patch.object(self.compute, 'reportclient') as mock_report:
             mock_report.delete_allocation_for_instance.return_value = True
             self.compute._delete_allocation_after_move(self.context,
                                                        self.instance,
@@ -7064,7 +7024,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def test_revert_allocation(self):
         """New-style migration-based allocation revert."""
 
-        @mock.patch.object(self.compute, '_reportclient')
+        @mock.patch.object(self.compute, 'reportclient')
         def doit(mock_report):
             cu = uuids.node
             a = {cu: {'resources': {'DISK_GB': 1}}}
@@ -7083,7 +7043,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def test_revert_allocation_old_style(self):
         """Test that we don't delete allocs for migration if none found."""
 
-        @mock.patch.object(self.compute, '_reportclient')
+        @mock.patch.object(self.compute, 'reportclient')
         def doit(mock_report):
             mock_report.get_allocations_for_consumer.return_value = {}
             self.migration.uuid = uuids.migration
@@ -7104,7 +7064,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         we can do.
         """
 
-        @mock.patch.object(self.compute, '_reportclient')
+        @mock.patch.object(self.compute, 'reportclient')
         def doit(mock_report):
             a = {
                 uuids.node: {'resources': {'DISK_GB': 1}},
@@ -7899,7 +7859,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                             is_shared_instance_path=False,
                                             is_shared_block_storage=False)
         with test.nested(
-                mock.patch.object(self.compute, '_reportclient'),
+                mock.patch.object(self.compute, 'reportclient'),
                 mock.patch.object(self.compute,
                                   '_delete_allocation_after_move'),
         ) as (
@@ -7955,7 +7915,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                            new=lambda: None)
         @mock.patch.object(compute.reportclient,
                            'get_allocations_for_consumer_by_provider')
-        @mock.patch.object(compute, '_get_resource_tracker')
         @mock.patch.object(vol_bdm, 'save')
         @mock.patch.object(compute, 'update_available_resource')
         @mock.patch.object(compute.volume_api, 'attachment_delete')
@@ -7968,9 +7927,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                            'get_by_instance_uuid')
         def _test(mock_get_bdms, mock_net_api, mock_notify, mock_driver,
                   mock_rpc, mock_get_bdm_info, mock_attach_delete,
-                  mock_update_resource, mock_bdm_save, mock_rt, mock_ga,
+                  mock_update_resource, mock_bdm_save, mock_ga,
                   mock_clean, mock_notify_action):
-            mock_rt.return_value = mock.Mock()
+            self._mock_rt()
             mock_get_bdms.return_value = [vol_bdm, image_bdm]
 
             compute._post_live_migration(self.context, instance, dest_host,
@@ -8035,14 +7994,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute, 'update_available_resource')
         @mock.patch.object(self.compute, '_update_scheduler_instance_info')
         @mock.patch.object(self.compute, '_clean_instance_console_tokens')
-        @mock.patch.object(self.compute, '_get_resource_tracker')
-        def _test(_get_resource_tracker, _clean_instance_console_tokens,
+        def _test(_clean_instance_console_tokens,
                   _update_scheduler_instance_info, update_available_resource,
                   driver_cleanup, _live_migration_cleanup_flags,
                   post_live_migration_at_destination,
                   post_live_migration_at_source, migrate_instance_start,
                   _notify_about_instance_usage, get_instance_nw_info,
                   _get_instance_block_device_info):
+            self._mock_rt()
             self.compute._post_live_migration(
                 self.context, self.instance, 'fake-dest',
                 migrate_data=migrate_data)
@@ -8374,10 +8333,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         @mock.patch.object(self.compute, '_reschedule')
         @mock.patch.object(self.compute, '_prep_resize')
-        @mock.patch.object(self.compute, '_get_resource_tracker')
-        def doit(mock_grt, mock_pr, mock_r):
-            # Restore the report client
-            mock_grt.return_value.reportclient = reportclient
+        def doit(mock_pr, mock_r):
+            # Mock the resource tracker, but keep the report client
+            self._mock_rt().reportclient = reportclient
             mock_r.return_value = False
             mock_pr.side_effect = test.TestingException
 

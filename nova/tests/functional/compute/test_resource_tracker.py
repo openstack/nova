@@ -413,7 +413,7 @@ class TestUpdateComputeNodeReservedAndAllocationRatio(
         rp_uuid = self._get_provider_uuid_by_host('fake-host')
         ctxt = context.get_admin_context()
 
-        rt = compute_service.manager._get_resource_tracker()
+        rt = compute_service.manager.rt
 
         inv = self.placement_api.get(
             '/resource_providers/%s/inventories' % rp_uuid).body

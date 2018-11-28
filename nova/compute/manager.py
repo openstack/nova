@@ -507,8 +507,6 @@ class ComputeManager(manager.Manager):
             openstack_driver.is_neutron_security_groups())
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         self.query_client = query.SchedulerQueryClient()
-        self._reportclient = None
-        self._resource_tracker = None
         self.instance_events = InstanceEvents()
         self._sync_power_pool = eventlet.GreenPool(
             size=CONF.sync_power_state_pool_size)
@@ -538,31 +536,20 @@ class ComputeManager(manager.Manager):
         self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
         self.use_legacy_block_device_info = \
                             self.driver.need_legacy_block_device_info
+        self.rt = resource_tracker.ResourceTracker(self.host, self.driver)
+        self.reportclient = self.rt.reportclient
 
     def reset(self):
         LOG.info('Reloading compute RPC API')
         compute_rpcapi.LAST_VERSION = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
-        self._get_resource_tracker().reportclient.clear_provider_cache()
-
-    def _get_resource_tracker(self):
-        if not self._resource_tracker:
-            rt = resource_tracker.ResourceTracker(self.host, self.driver)
-            self._resource_tracker = rt
-        return self._resource_tracker
-
-    @property
-    def reportclient(self):
-        if not self._reportclient:
-            self._reportclient = self._get_resource_tracker().reportclient
-        return self._reportclient
+        self.reportclient.clear_provider_cache()
 
     def _update_resource_tracker(self, context, instance):
         """Let the resource tracker know that an instance has changed state."""
 
         if instance.host == self.host:
-            rt = self._get_resource_tracker()
-            rt.update_usage(context, instance, instance.node)
+            self.rt.update_usage(context, instance, instance.node)
 
     def _instance_update(self, context, instance, **kwargs):
         """Update an instance in the database using kwargs as value."""
@@ -1801,14 +1788,12 @@ class ComputeManager(manager.Manager):
 
     def _build_failed(self, node):
         if CONF.compute.consecutive_build_service_disable_threshold:
-            rt = self._get_resource_tracker()
             # NOTE(danms): Update our counter, but wait for the next
             # update_available_resource() periodic to flush it to the DB
-            rt.build_failed(node)
+            self.rt.build_failed(node)
 
     def _build_succeeded(self, node):
-        rt = self._get_resource_tracker()
-        rt.build_succeeded(node)
+        self.rt.build_succeeded(node)
 
     @wrap_exception()
     @reverts_task_state
@@ -2093,8 +2078,7 @@ class ComputeManager(manager.Manager):
         try:
             scheduler_hints = self._get_scheduler_hints(filter_properties,
                                                         request_spec)
-            rt = self._get_resource_tracker()
-            with rt.instance_claim(context, instance, node, limits):
+            with self.rt.instance_claim(context, instance, node, limits):
                 # NOTE(russellb) It's important that this validation be done
                 # *after* the resource tracker instance claim, as that is where
                 # the host is set on the instance.
@@ -2983,11 +2967,10 @@ class ComputeManager(manager.Manager):
         else:
             LOG.info("Rebuilding instance", instance=instance)
 
-        rt = self._get_resource_tracker()
         if evacuate:
             # This is an evacuation to a new host, so we need to perform a
             # resource claim.
-            rebuild_claim = rt.rebuild_claim
+            rebuild_claim = self.rt.rebuild_claim
         else:
             # This is a rebuild to the same host, so we don't need to make
             # a claim since the instance is already on this host.
@@ -3053,7 +3036,7 @@ class ComputeManager(manager.Manager):
                 # get here when evacuating to a destination node. Rebuilding
                 # on the same host (not evacuate) uses the NopClaim which will
                 # not raise ComputeResourcesUnavailable.
-                rt.delete_allocation_for_evacuated_instance(
+                self.rt.delete_allocation_for_evacuated_instance(
                     context, instance, scheduled_node, node_type='destination')
                 self._notify_instance_rebuild_error(context, instance, e, bdms)
                 raise exception.BuildAbortException(
@@ -3067,7 +3050,7 @@ class ComputeManager(manager.Manager):
             except Exception as e:
                 self._set_migration_status(migration, 'failed')
                 if evacuate or scheduled_node is not None:
-                    rt.delete_allocation_for_evacuated_instance(
+                    self.rt.delete_allocation_for_evacuated_instance(
                         context, instance, scheduled_node,
                         node_type='destination')
                 self._notify_instance_rebuild_error(context, instance, e, bdms)
@@ -3898,9 +3881,8 @@ class ComputeManager(manager.Manager):
             with migration.obj_as_admin():
                 migration.save()
 
-            rt = self._get_resource_tracker()
-            rt.drop_move_claim(context, instance, migration.source_node,
-                               old_instance_type, prefix='old_')
+            self.rt.drop_move_claim(context, instance, migration.source_node,
+                                    old_instance_type, prefix='old_')
             self._delete_allocation_after_move(context, instance, migration)
             instance.drop_migration_context()
 
@@ -4007,8 +3989,7 @@ class ComputeManager(manager.Manager):
             instance.revert_migration_context()
             instance.save()
 
-            rt = self._get_resource_tracker()
-            rt.drop_move_claim(context, instance, instance.node)
+            self.rt.drop_move_claim(context, instance, instance.node)
 
             # RPC cast back to the source host to finish the revert there.
             self.compute_rpcapi.finish_revert_resize(context, instance,
@@ -4190,10 +4171,9 @@ class ComputeManager(manager.Manager):
         instance.save()
 
         limits = filter_properties.get('limits', {})
-        rt = self._get_resource_tracker()
-        with rt.resize_claim(context, instance, instance_type, node,
-                             migration, image_meta=image,
-                             limits=limits) as claim:
+        with self.rt.resize_claim(context, instance, instance_type, node,
+                                  migration, image_meta=image,
+                                  limits=limits) as claim:
             LOG.info('Migrating', instance=instance)
             # RPC cast to the source host to start the actual resize/migration.
             self.compute_rpcapi.resize_instance(
@@ -4933,8 +4913,8 @@ class ComputeManager(manager.Manager):
         # This should happen *before* the vm_state is changed to
         # SHELVED_OFFLOADED in case client-side code is polling the API to
         # schedule more instances (or unshelve) once this server is offloaded.
-        rt = self._get_resource_tracker()
-        rt.delete_allocation_for_shelve_offloaded_instance(context, instance)
+        self.rt.delete_allocation_for_shelve_offloaded_instance(context,
+                                                                instance)
 
         instance.power_state = current_power_state
         # NOTE(mriedem): The vm_state has to be set before updating the
@@ -5021,7 +5001,6 @@ class ComputeManager(manager.Manager):
         if node is None:
             node = self._get_nodename(instance)
 
-        rt = self._get_resource_tracker()
         limits = filter_properties.get('limits', {})
 
         allocations = self.reportclient.get_allocations_for_consumer(
@@ -5040,7 +5019,7 @@ class ComputeManager(manager.Manager):
                                                         self.host)
         network_info = self.network_api.get_instance_nw_info(context, instance)
         try:
-            with rt.instance_claim(context, instance, node, limits):
+            with self.rt.instance_claim(context, instance, node, limits):
                 self.driver.spawn(context, instance, image_meta,
                                   injected_files=[],
                                   admin_password=None,
@@ -7688,25 +7667,12 @@ class ComputeManager(manager.Manager):
     def _update_available_resource_for_node(self, context, nodename,
                                             startup=False):
 
-        rt = self._get_resource_tracker()
         try:
-            rt.update_available_resource(context, nodename, startup=startup)
+            self.rt.update_available_resource(context, nodename,
+                                              startup=startup)
         except exception.ComputeHostNotFound:
-            # NOTE(comstud): We can get to this case if a node was
-            # marked 'deleted' in the DB and then re-added with a
-            # different auto-increment id. The cached resource
-            # tracker tried to update a deleted record and failed.
-            # Don't add this resource tracker to the new dict, so
-            # that this will resolve itself on the next run.
-            LOG.info("Compute node '%s' not found in "
-                     "update_available_resource.", nodename)
-            # TODO(jaypipes): Yes, this is inefficient to throw away all of the
-            # compute nodes to force a rebuild, but this is only temporary
-            # until Ironic baremetal node resource providers are tracked
-            # properly in the report client and this is a tiny edge case
-            # anyway.
-            self._resource_tracker = None
-            return
+            LOG.warning("Compute node '%s' not found in "
+                        "update_available_resource.", nodename)
         except exception.ReshapeFailed:
             # We're only supposed to get here on startup, if a reshape was
             # needed, was attempted, and failed. We want to kill the service.
@@ -7756,7 +7722,6 @@ class ComputeManager(manager.Manager):
             LOG.warning("Virt driver is not ready.")
             return
 
-        rt = self._get_resource_tracker()
         # Delete orphan compute node not reported by driver but still in db
         for cn in compute_nodes_in_db:
             if cn.hypervisor_hostname not in nodenames:
@@ -7766,7 +7731,7 @@ class ComputeManager(manager.Manager):
                          {'id': cn.id, 'hh': cn.hypervisor_hostname,
                           'nodes': nodenames})
                 cn.destroy()
-                rt.remove_node(cn.hypervisor_hostname)
+                self.rt.remove_node(cn.hypervisor_hostname)
                 # Delete the corresponding resource provider in placement,
                 # along with any associated allocations and inventory.
                 self.reportclient.delete_resource_provider(context, cn,

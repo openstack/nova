@@ -29,7 +29,7 @@ class TestMetricsNotificationSample(
         self.flags(compute_monitors=['cpu.virt_driver'])
         super(TestMetricsNotificationSample, self).setUp()
         # Reset the cpu stats of the 'cpu.virt_driver' monitor
-        self.compute.manager._resource_tracker.monitors[0]._cpu_stats = {}
+        self.compute.manager.rt.monitors[0]._cpu_stats = {}
 
     def test_metrics_update(self):
         self.compute.manager.update_available_resource(
