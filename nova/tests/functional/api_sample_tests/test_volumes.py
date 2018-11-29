@@ -17,7 +17,6 @@ import datetime
 
 from oslo_utils.fixture import uuidsentinel as uuids
 
-from nova.compute import api as compute_api
 from nova import context
 from nova import objects
 from nova.tests import fixtures
@@ -26,10 +25,6 @@ from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
-
-
-COMPUTE_VERSION_OLD_ATTACH_FLOW = \
-    compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1
 
 
 class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
@@ -263,11 +258,9 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
         return subs
 
     def test_attach_volume_to_server(self):
-        self.stub_out('nova.objects.Service.get_minimum_version',
-                      lambda *a, **k: COMPUTE_VERSION_OLD_ATTACH_FLOW)
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
-        self.stub_out('nova.volume.cinder.API.reserve_volume',
-                      lambda *a, **k: None)
+        self.stub_out('nova.volume.cinder.API.attachment_create',
+                      lambda *a, **k: {'id': uuids.attachment_id})
         device_name = '/dev/vdd'
         bdm = objects.BlockDeviceMapping()
         bdm['device_name'] = device_name
@@ -294,8 +287,6 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
                               response, 200)
 
     def test_attach_volume_to_server_new_flow(self):
-        self.stub_out('nova.volume.cinder.is_microversion_supported',
-                      lambda *a, **k: None)
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
         self.stub_out('nova.volume.cinder.API.attachment_create',
                       lambda *a, **k: {'id': uuids.volume})

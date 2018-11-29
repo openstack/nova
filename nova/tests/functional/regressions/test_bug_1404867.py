@@ -12,9 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import mock
-
-from nova.compute import api as compute_api
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 
@@ -60,38 +57,13 @@ class DeleteWithReservedVolumes(integrated_helpers._IntegratedTestBase,
         })
         return self._wait_for_state_change(self.api, server, 'ERROR')
 
-    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                return_value=
-                compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1)
-    def test_delete_with_reserved_volumes(self, mock_version_get=None):
-        self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
-
-        # Create a server which should go to ERROR state because we don't
-        # have any active computes.
-        volume_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
-        server = self._create_error_server(volume_id)
-
-        # The status of the volume at this point should be 'attaching' as it
-        # is reserved by Nova by the API.
-        self.assertIn(volume_id, self.cinder.reserved_volumes)
-
-        # Delete this server, which should delete BDMs and remove the
-        # reservation on the instances.
-        self.api.delete_server(server['id'])
-
-        # The volume should no longer be reserved as the deletion of the
-        # server should have released all the resources.
-        self.assertNotIn(volume_id, self.cinder.reserved_volumes)
-
-    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                return_value=compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION)
-    def test_delete_with_reserved_volumes_new(self, mock_version_get=None):
+    def test_delete_with_reserved_volumes_new(self):
         self.cinder = self.useFixture(
             nova_fixtures.CinderFixtureNewAttachFlow(self))
 
         # Create a server which should go to ERROR state because we don't
         # have any active computes.
-        volume_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
+        volume_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
         server = self._create_error_server(volume_id)
         server_id = server['id']
 
