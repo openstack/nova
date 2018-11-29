@@ -839,7 +839,7 @@ class TestRequestGroupObject(test.TestCase):
 
     def test_fields_defaulted_at_create(self):
         rg = request_spec.RequestGroup(self.context)
-        self.assertTrue(True, rg.use_same_provider)
+        self.assertTrue(rg.use_same_provider)
         self.assertEqual({}, rg.resources)
         self.assertEqual(set(), rg.required_traits)
         self.assertEqual(set(), rg.forbidden_traits)
