@@ -54,6 +54,11 @@ from nova.virt import driver
 CONF = nova.conf.CONF
 LOG = log.getLogger(__name__)
 
+# This semaphore is used to enforce a limit on disk-IO-intensive operations
+# (image downloads, image conversions) at any given time.
+# It is initialized at ComputeManager.init_host()
+disk_ops_semaphore = None
+
 
 def exception_to_dict(fault, message=None):
     """Converts exceptions to a dict for use in notifications."""

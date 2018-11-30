@@ -727,6 +727,15 @@ Related options:
   failing if ``vif_plugging_is_fatal`` is True, or simply continuing with the
   live migration
 """),
+    cfg.IntOpt('max_concurrent_disk_ops',
+        default=0,
+        min=0,
+        help="""
+Number of concurrent disk-IO-intensive operations (glance image downloads,
+image format conversions, etc.) that we will do in parallel.  If this is set
+too high then response time suffers.
+The default value of 0 means no limit.
+ """),
 ]
 
 interval_opts = [

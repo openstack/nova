@@ -28,6 +28,7 @@ from oslo_utils import fileutils
 from oslo_utils import imageutils
 from oslo_utils import units
 
+from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
 from nova.i18n import _
@@ -118,12 +119,13 @@ def convert_image_unsafe(source, dest, out_format, run_as_root=False):
 
 def _convert_image(source, dest, in_format, out_format, run_as_root):
     try:
-        if not run_as_root:
-            nova.privsep.qemu.unprivileged_convert_image(
-                source, dest, in_format, out_format, CONF.instances_path)
-        else:
-            nova.privsep.qemu.convert_image(
-                source, dest, in_format, out_format, CONF.instances_path)
+        with compute_utils.disk_ops_semaphore:
+            if not run_as_root:
+                nova.privsep.qemu.unprivileged_convert_image(
+                    source, dest, in_format, out_format, CONF.instances_path)
+            else:
+                nova.privsep.qemu.convert_image(
+                    source, dest, in_format, out_format, CONF.instances_path)
 
     except processutils.ProcessExecutionError as exp:
         msg = (_("Unable to convert image to %(format)s: %(exp)s") %
@@ -133,8 +135,9 @@ def _convert_image(source, dest, in_format, out_format, run_as_root):
 
 def fetch(context, image_href, path, trusted_certs=None):
     with fileutils.remove_path_on_error(path):
-        IMAGE_API.download(context, image_href, dest_path=path,
-                           trusted_certs=trusted_certs)
+        with compute_utils.disk_ops_semaphore:
+            IMAGE_API.download(context, image_href, dest_path=path,
+                               trusted_certs=trusted_certs)
 
 
 def get_info(context, image_href):

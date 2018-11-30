@@ -18,6 +18,7 @@ import mock
 from oslo_concurrency import processutils
 import six
 
+from nova.compute import utils as compute_utils
 from nova import exception
 from nova import test
 from nova import utils
@@ -49,16 +50,19 @@ class QemuTestCase(test.NoDBTestCase):
         self.assertTrue(image_info)
         self.assertTrue(str(image_info))
 
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch.object(processutils, 'execute',
                        side_effect=processutils.ProcessExecutionError)
-    def test_convert_image_with_errors(self, mocked_execute, mock_direct_io):
+    def test_convert_image_with_errors(self, mocked_execute, mock_direct_io,
+                                       mock_disk_op_sema):
         self.assertRaises(exception.ImageUnacceptable,
                           images.convert_image,
                           '/path/that/does/not/exist',
                           '/other/path/that/does/not/exist',
                           'qcow2',
                           'raw')
+        mock_disk_op_sema.__enter__.assert_called_once()
 
     @mock.patch.object(utils, 'execute')
     @mock.patch.object(os.path, 'exists', return_value=True)
@@ -101,22 +105,28 @@ class QemuTestCase(test.NoDBTestCase):
                                images.fetch_to_raw,
                                None, 'href123', '/no/path')
 
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_convert_image_with_direct_io_support(self, mock_execute,
-                                                  mock_direct_io):
+                                                  mock_direct_io,
+                                                  mock_disk_op_sema):
         images._convert_image('source', 'dest', 'in_format', 'out_format',
                               run_as_root=False)
         expected = ('qemu-img', 'convert', '-t', 'none', '-O', 'out_format',
                     '-f', 'in_format', 'source', 'dest')
+        mock_disk_op_sema.__enter__.assert_called_once()
         self.assertTupleEqual(expected, mock_execute.call_args[0])
 
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=False)
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_convert_image_without_direct_io_support(self, mock_execute,
-                                                     mock_direct_io):
+                                                     mock_direct_io,
+                                                     mock_disk_op_sema):
         images._convert_image('source', 'dest', 'in_format', 'out_format',
                               run_as_root=False)
         expected = ('qemu-img', 'convert', '-t', 'writethrough',
                     '-O', 'out_format', '-f', 'in_format', 'source', 'dest')
+        mock_disk_op_sema.__enter__.assert_called_once()
         self.assertTupleEqual(expected, mock_execute.call_args[0])

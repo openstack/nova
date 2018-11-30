@@ -46,6 +46,7 @@ import six.moves.urllib.request as urlrequest
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
 from nova.i18n import _
@@ -1153,8 +1154,9 @@ def generate_configdrive(session, context, instance, vm_ref, userdevice,
                 cdb.make_drive(tmp_file)
                 # XAPI can only import a VHD file, so convert to vhd format
                 vhd_file = '%s.vhd' % tmp_file
-                utils.execute('qemu-img', 'convert', '-Ovpc', tmp_file,
-                              vhd_file)
+                with compute_utils.disk_ops_semaphore:
+                    utils.execute('qemu-img', 'convert', '-Ovpc', tmp_file,
+                                  vhd_file)
                 vhd_file_size = os.path.getsize(vhd_file)
                 with open(vhd_file) as file_obj:
                     volume_utils.stream_to_vdi(

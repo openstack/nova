@@ -26,6 +26,7 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import fileutils
 
+from nova.compute import utils as compute_utils
 import nova.conf
 from nova.i18n import _
 from nova.objects import fields as obj_fields
@@ -315,7 +316,9 @@ def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
         qemu_img_cmd += ('-c',)
 
     qemu_img_cmd += (disk_path, out_path)
-    utils.execute(*qemu_img_cmd)
+    # execute operation with disk concurrency semaphore
+    with compute_utils.disk_ops_semaphore:
+        utils.execute(*qemu_img_cmd)
 
 
 def load_file(path):
