@@ -336,8 +336,10 @@ class _TestInstanceObject(object):
         # make sure we default the "new" flavor's disabled value to False on
         # load from the database.
         fake_flavor = jsonutils.dumps(
-            {'cur': objects.Flavor(disabled=False).obj_to_primitive(),
-             'old': objects.Flavor(disabled=True).obj_to_primitive(),
+            {'cur': objects.Flavor(disabled=False,
+                                   is_public=True).obj_to_primitive(),
+             'old': objects.Flavor(disabled=True,
+                                   is_public=False).obj_to_primitive(),
              'new': objects.Flavor().obj_to_primitive()})
         fake_inst = dict(self.fake_instance, extra={'flavor': fake_flavor})
         mock_get.return_value = fake_inst
@@ -345,6 +347,10 @@ class _TestInstanceObject(object):
         self.assertFalse(inst.flavor.disabled)
         self.assertTrue(inst.old_flavor.disabled)
         self.assertFalse(inst.new_flavor.disabled)
+        # Assert the is_public values on the flavors
+        self.assertTrue(inst.flavor.is_public)
+        self.assertFalse(inst.old_flavor.is_public)
+        self.assertTrue(inst.new_flavor.is_public)
 
     @mock.patch.object(db, 'instance_get_by_uuid')
     def test_get_remote(self, mock_get):
