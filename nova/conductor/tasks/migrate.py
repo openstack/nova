@@ -160,24 +160,7 @@ class MigrationTask(base.TaskBase):
 
         return migration
 
-    def _execute(self):
-        # TODO(sbauza): Remove once all the scheduler.utils methods accept a
-        # RequestSpec object in the signature.
-        legacy_props = self.request_spec.to_legacy_filter_properties_dict()
-        scheduler_utils.setup_instance_group(self.context, self.request_spec)
-        # If a target host is set in a requested destination,
-        # 'populate_retry' need not be executed.
-        if not ('requested_destination' in self.request_spec and
-                    self.request_spec.requested_destination and
-                        'host' in self.request_spec.requested_destination):
-            scheduler_utils.populate_retry(legacy_props,
-                                           self.instance.uuid)
-
-        # NOTE(sbauza): Force_hosts/nodes needs to be reset
-        # if we want to make sure that the next destination
-        # is not forced to be the original host
-        self.request_spec.reset_forced_destinations()
-
+    def _restrict_request_spec_to_cell(self, legacy_props):
         # NOTE(danms): Right now we only support migrate to the same
         # cell as the current instance, so request that the scheduler
         # limit thusly.
@@ -200,6 +183,26 @@ class MigrationTask(base.TaskBase):
         else:
             self.request_spec.requested_destination = objects.Destination(
                 cell=instance_mapping.cell_mapping)
+
+    def _execute(self):
+        # TODO(sbauza): Remove once all the scheduler.utils methods accept a
+        # RequestSpec object in the signature.
+        legacy_props = self.request_spec.to_legacy_filter_properties_dict()
+        scheduler_utils.setup_instance_group(self.context, self.request_spec)
+        # If a target host is set in a requested destination,
+        # 'populate_retry' need not be executed.
+        if not ('requested_destination' in self.request_spec and
+                    self.request_spec.requested_destination and
+                        'host' in self.request_spec.requested_destination):
+            scheduler_utils.populate_retry(legacy_props,
+                                           self.instance.uuid)
+
+        # NOTE(sbauza): Force_hosts/nodes needs to be reset
+        # if we want to make sure that the next destination
+        # is not forced to be the original host
+        self.request_spec.reset_forced_destinations()
+
+        self._restrict_request_spec_to_cell(legacy_props)
 
         # Once _preallocate_migration() is done, the source node allocation is
         # moved from the instance consumer to the migration record consumer,
