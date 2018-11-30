@@ -2902,9 +2902,9 @@ class API(base.Base):
             raise exception.InvalidRequest(
                 _('Backup is not supported for volume-backed instances.'))
         else:
-            image_meta = self._create_image(context, instance,
-                                            name, 'backup',
-                                            extra_properties=props_copy)
+            image_meta = compute_utils.create_image(
+                context, instance, name, 'backup', self.image_api,
+                extra_properties=props_copy)
 
         # NOTE(comstud): Any changes to this method should also be made
         # to the backup_instance() method in nova/cells/messaging.py
@@ -2935,9 +2935,9 @@ class API(base.Base):
                                  when creating the image.
         :returns: A dict containing image metadata
         """
-        image_meta = self._create_image(context, instance, name,
-                                        'snapshot',
-                                        extra_properties=extra_properties)
+        image_meta = compute_utils.create_image(
+            context, instance, name, 'snapshot', self.image_api,
+            extra_properties=extra_properties)
 
         # NOTE(comstud): Any changes to this method should also be made
         # to the snapshot_instance() method in nova/cells/messaging.py
@@ -2981,62 +2981,6 @@ class API(base.Base):
 
         return image_meta
 
-    def _create_image(self, context, instance, name, image_type,
-                      extra_properties=None):
-        """Create new image entry in the image service.  This new image
-        will be reserved for the compute manager to upload a snapshot
-        or backup.
-
-        :param context: security context
-        :param instance: nova.objects.instance.Instance object
-        :param name: string for name of the snapshot
-        :param image_type: snapshot | backup
-        :param extra_properties: dict of extra image properties to include
-
-        """
-        properties = {
-            'instance_uuid': instance.uuid,
-            'user_id': str(context.user_id),
-            'image_type': image_type,
-        }
-        properties.update(extra_properties or {})
-
-        image_meta = self._initialize_instance_snapshot_metadata(
-            instance, name, properties)
-        # if we're making a snapshot, omit the disk and container formats,
-        # since the image may have been converted to another format, and the
-        # original values won't be accurate.  The driver will populate these
-        # with the correct values later, on image upload.
-        if image_type == 'snapshot':
-            image_meta.pop('disk_format', None)
-            image_meta.pop('container_format', None)
-        return self.image_api.create(context, image_meta)
-
-    def _initialize_instance_snapshot_metadata(self, instance, name,
-                                               extra_properties=None):
-        """Initialize new metadata for a snapshot of the given instance.
-
-        :param instance: nova.objects.instance.Instance object
-        :param name: string for name of the snapshot
-        :param extra_properties: dict of extra metadata properties to include
-
-        :returns: the new instance snapshot metadata
-        """
-        image_meta = utils.get_image_from_system_metadata(
-            instance.system_metadata)
-        image_meta.update({'name': name,
-                           'is_public': False})
-
-        # Delete properties that are non-inheritable
-        properties = image_meta['properties']
-        for key in CONF.non_inheritable_image_properties:
-            properties.pop(key, None)
-
-        # The properties in extra_properties have precedence
-        properties.update(extra_properties or {})
-
-        return image_meta
-
     # NOTE(melwitt): We don't check instance lock for snapshot because lock is
     #                intended to prevent accidental change/delete of instances
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
@@ -3051,7 +2995,7 @@ class API(base.Base):
 
         :returns: the new image metadata
         """
-        image_meta = self._initialize_instance_snapshot_metadata(
+        image_meta = compute_utils.initialize_instance_snapshot_metadata(
             instance, name, extra_properties)
         # the new image is simply a bucket of properties (particularly the
         # block device mapping, kernel and ramdisk IDs) with no image data,
@@ -3654,8 +3598,8 @@ class API(base.Base):
 
         if not compute_utils.is_volume_backed_instance(context, instance):
             name = '%s-shelved' % instance.display_name
-            image_meta = self._create_image(context, instance, name,
-                    'snapshot')
+            image_meta = compute_utils.create_image(
+                context, instance, name, 'snapshot', self.image_api)
             image_id = image_meta['id']
             self.compute_rpcapi.shelve_instance(context, instance=instance,
                     image_id=image_id, clean_shutdown=clean_shutdown)

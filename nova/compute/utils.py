@@ -1142,6 +1142,65 @@ def remove_shelved_keys_from_system_metadata(instance):
             del (instance.system_metadata[key])
 
 
+def create_image(context, instance, name, image_type, image_api,
+                 extra_properties=None):
+    """Create new image entry in the image service.  This new image
+    will be reserved for the compute manager to upload a snapshot
+    or backup.
+
+    :param context: security context
+    :param instance: nova.objects.instance.Instance object
+    :param name: string for name of the snapshot
+    :param image_type: snapshot | backup
+    :param image_api: instance of nova.image.API
+    :param extra_properties: dict of extra image properties to include
+
+    """
+    properties = {
+        'instance_uuid': instance.uuid,
+        'user_id': str(context.user_id),
+        'image_type': image_type,
+    }
+    properties.update(extra_properties or {})
+
+    image_meta = initialize_instance_snapshot_metadata(
+        instance, name, properties)
+    # if we're making a snapshot, omit the disk and container formats,
+    # since the image may have been converted to another format, and the
+    # original values won't be accurate.  The driver will populate these
+    # with the correct values later, on image upload.
+    if image_type == 'snapshot':
+        image_meta.pop('disk_format', None)
+        image_meta.pop('container_format', None)
+    return image_api.create(context, image_meta)
+
+
+def initialize_instance_snapshot_metadata(instance, name,
+                                          extra_properties=None):
+    """Initialize new metadata for a snapshot of the given instance.
+
+    :param instance: nova.objects.instance.Instance object
+    :param name: string for name of the snapshot
+    :param extra_properties: dict of extra metadata properties to include
+
+    :returns: the new instance snapshot metadata
+    """
+    image_meta = utils.get_image_from_system_metadata(
+        instance.system_metadata)
+    image_meta.update({'name': name,
+                       'is_public': False})
+
+    # Delete properties that are non-inheritable
+    properties = image_meta['properties']
+    for key in CONF.non_inheritable_image_properties:
+        properties.pop(key, None)
+
+    # The properties in extra_properties have precedence
+    properties.update(extra_properties or {})
+
+    return image_meta
+
+
 def may_have_ports_or_volumes(instance):
     """Checks to see if an instance may have ports or volumes based on vm_state
 

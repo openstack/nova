@@ -2997,7 +2997,7 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.context, instance, 'fake-name')
 
     @mock.patch.object(objects.Instance, 'save')
-    @mock.patch.object(compute_api.API, '_create_image')
+    @mock.patch.object(compute_utils, 'create_image')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
                        'snapshot_instance')
     def test_vm_deleting_while_creating_snapshot(self,
@@ -3017,7 +3017,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                  'fake-image-id')
 
     @mock.patch.object(objects.Instance, 'save')
-    @mock.patch.object(compute_api.API, '_create_image')
+    @mock.patch.object(compute_utils, 'create_image')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
                        'snapshot_instance')
     def test_vm_deleted_while_creating_snapshot(self,
@@ -3037,7 +3037,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                  'fake-image-id')
 
     @mock.patch.object(objects.Instance, 'save')
-    @mock.patch.object(compute_api.API, '_create_image')
+    @mock.patch.object(compute_utils, 'create_image')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
                        'snapshot_instance')
     def test_vm_deleted_while_snapshot_and_snapshot_delete_failed(self,
