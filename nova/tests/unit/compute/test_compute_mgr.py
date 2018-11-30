@@ -6390,7 +6390,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.context, mock.sentinel.instance,
                 requested_networks=requested_networks)
 
-    @mock.patch('oslo_service.loopingcall._ThreadingEvent.wait',
+    @mock.patch('oslo_service.loopingcall.LoopingCallBase._sleep',
                 new=mock.Mock())
     @mock.patch('nova.compute.manager.ComputeManager._deallocate_network')
     @mock.patch('nova.compute.manager.LOG.warning')
