@@ -314,7 +314,13 @@ for it on other datastores and clone it from there if available.
 Should the driver use a property collector to fetch essential properties
 and keep a local copy of the values. This should reduce the load on the
 vcenter api and be quicker, then polling each value individually
-""")
+"""),
+    cfg.IntOpt('min_disk_size_kb',
+               default=1,
+               help="""
+The minimum size a disk is expected to have.
+Some VASA providers need disks in the multiple MB range.
+"""),
 ]
 
 ALL_VMWARE_OPTS = (vmwareapi_vif_opts +

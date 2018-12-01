@@ -294,7 +294,7 @@ def _build_shadow_vm_config_spec(session, name, size_kb, disk_type, ds_name):
 
     disk_device = cf.create('ns0:VirtualDisk')
     # for very small disks allocate at least 1KB
-    disk_device.capacityInKB = max(1, int(size_kb))
+    disk_device.capacityInKB = max(CONF.vmware.min_disk_size_kb, int(size_kb))
     disk_device.key = -101
     disk_device.unitNumber = 0
     disk_device.controllerKey = -100
