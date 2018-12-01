@@ -202,6 +202,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         self.ironicclient = client_wrapper.IronicClientWrapper()
         self._ironic_connection = None
+        self.host = None
 
     @property
     def ironic_connection(self):
@@ -573,6 +574,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param host: the hostname of the compute host.
 
         """
+        self.host = host
         self._refresh_hash_ring(nova_context.get_admin_context())
 
     def _get_hypervisor_type(self):
@@ -648,13 +650,25 @@ class IronicDriver(virt_driver.ComputeDriver):
         :raises: VirtDriverNotReady
 
         """
-        # NOTE(dustinc): The SDK returns an object with instance_id,
-        #  but the Ironic API expects instance_uuid in query.
+
+        uuids = [node.instance_uuid for node in self._get_node_list(
+            associated=True, fields=['instance_uuid'])]
+        filters = {'uuid': uuids}
         context = nova_context.get_admin_context()
-        return [objects.Instance.get_by_uuid(context, i.instance_id).name
-                for i in self._get_node_list(return_generator=True,
-                                             associated=True,
-                                             fields=['instance_uuid'])]
+        instances = objects.InstanceList.get_by_filters(context,
+                                                        filters,
+                                                        expected_attrs=[
+                                                            'name',
+                                                            'host'],
+                                                        use_slave=True)
+
+        if CONF.ironic.update_host:
+            for instance in instances:
+                if instance.host != self.host:
+                    instance.host = self.host
+                    instance.save()
+
+        return [obj.name for obj in instances]
 
     def list_instance_uuids(self):
         """Return the IDs of all the instances provisioned.

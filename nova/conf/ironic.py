@@ -96,6 +96,10 @@ Related options:
              'Nodes matching the conductor_group value will be distributed '
              'between all services specified here. '
              'If conductor_group is unset, this option is ignored.'),
+    cfg.BoolOpt(
+        'update_host',
+        default=True,
+        help='Should the compute host be updated, if a mismatch is detected'),
 ]
 
 
