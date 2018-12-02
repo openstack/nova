@@ -37,7 +37,6 @@ import six
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.network import linux_utils as linux_net_utils
 from nova import objects
 from nova.pci import utils as pci_utils
 import nova.privsep.linux_net
@@ -1671,7 +1670,7 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                         'external-ids:attached-mac=%s' % mac_address])
             _execute('ip', 'link', 'set', dev, 'address', mac_address,
                      run_as_root=True)
-            linux_net_utils.set_device_mtu(dev, network.get('mtu'))
+            nova.privsep.linux_net.set_device_mtu(dev, network.get('mtu'))
             _execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
             if not gateway:
                 # If we weren't instructed to act as a gateway then add the
