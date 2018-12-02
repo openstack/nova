@@ -933,7 +933,7 @@ def get_dhcp_opts(context, network_ref, fixedips):
 
 
 def release_dhcp(dev, address, mac_address):
-    if linux_net_utils.device_exists(dev):
+    if nova.privsep.linux_net.device_exists(dev):
         try:
             utils.execute('dhcp_release', dev, address, mac_address,
                           run_as_root=True)
@@ -1233,22 +1233,22 @@ def _ovs_vsctl(args):
 
 
 def create_fp_dev(dev, sockpath, sockmode):
-    if not linux_net_utils.device_exists(dev):
+    if not nova.privsep.linux_net.device_exists(dev):
         utils.execute('fp-vdev', 'add', dev, '--sockpath', sockpath,
                       '--sockmode', sockmode, run_as_root=True)
-        linux_net_utils.set_device_mtu(dev)
+        nova.privsep.linux_net.set_device_mtu(dev)
         utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
                     check_exit_code=[0, 2, 254])
 
 
 def delete_fp_dev(dev):
-    if linux_net_utils.device_exists(dev):
+    if nova.privsep.linux_net.device_exists(dev):
         utils.execute('fp-vdev', 'del', dev, run_as_root=True)
 
 
 def delete_bridge_dev(dev):
     """Delete a network bridge."""
-    if linux_net_utils.device_exists(dev):
+    if nova.privsep.linux_net.device_exists(dev):
         try:
             utils.execute('ip', 'link', 'set', dev, 'down', run_as_root=True)
             nova.privsep.linux_net.delete_bridge(dev)
@@ -1375,7 +1375,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         """Create a vlan unless it already exists."""
         if interface is None:
             interface = 'vlan%s' % vlan_num
-        if not linux_net_utils.device_exists(interface):
+        if not nova.privsep.linux_net.device_exists(interface):
             LOG.debug('Starting VLAN interface %s', interface)
             _execute('ip', 'link', 'add', 'link', bridge_interface,
                      'name', interface, 'type', 'vlan',
@@ -1391,7 +1391,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                      check_exit_code=[0, 2, 254])
         # NOTE(vish): set mtu every time to ensure that changes to mtu get
         #             propagated
-        linux_net_utils.set_device_mtu(interface, mtu)
+        nova.privsep.linux_net.set_device_mtu(interface, mtu)
         return interface
 
     @staticmethod
@@ -1399,7 +1399,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
     def remove_vlan(vlan_num):
         """Delete a vlan."""
         vlan_interface = 'vlan%s' % vlan_num
-        linux_net_utils.delete_net_dev(vlan_interface)
+        nova.privsep.linux_net.delete_net_dev(vlan_interface)
 
     @staticmethod
     @utils.synchronized('lock_bridge', external=True)
@@ -1420,7 +1420,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         interface onto the bridge and reset the default gateway if necessary.
 
         """
-        if not linux_net_utils.device_exists(bridge):
+        if not nova.privsep.linux_net.device_exists(bridge):
             LOG.debug('Starting Bridge %s', bridge)
             out, err = nova.privsep.linux_net.add_bridge(bridge)
             if (err and err != "device %s already exists; can't create "
@@ -1505,7 +1505,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
     @utils.synchronized('lock_bridge', external=True)
     def remove_bridge(bridge, gateway=True, filtering=True):
         """Delete a bridge."""
-        if not linux_net_utils.device_exists(bridge):
+        if not nova.privsep.linux_net.device_exists(bridge):
             return
         else:
             if filtering:
@@ -1659,7 +1659,7 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
 
     def plug(self, network, mac_address, gateway=True):
         dev = self.get_dev(network)
-        if not linux_net_utils.device_exists(dev):
+        if not nova.privsep.linux_net.device_exists(dev):
             bridge = CONF.linuxnet_ovs_integration_bridge
             _ovs_vsctl(['--', '--may-exist', 'add-port', bridge, dev,
                         '--', 'set', 'Interface', dev, 'type=internal',

@@ -17,62 +17,19 @@
 
 """Utility methods for linux networking."""
 
-import os
-
 from oslo_concurrency import processutils
 from oslo_log import log as logging
-from oslo_utils import excutils
 
 from nova.pci import utils as pci_utils
+import nova.privsep.linux_net
 from nova import utils
 
 
 LOG = logging.getLogger(__name__)
 
 
-def device_exists(device):
-    """Check if ethernet device exists."""
-    return os.path.exists('/sys/class/net/%s' % device)
-
-
-def delete_net_dev(dev):
-    """Delete a network device only if it exists."""
-    if device_exists(dev):
-        try:
-            utils.execute('ip', 'link', 'delete', dev, run_as_root=True,
-                          check_exit_code=[0, 2, 254])
-            LOG.debug("Net device removed: '%s'", dev)
-        except processutils.ProcessExecutionError:
-            with excutils.save_and_reraise_exception():
-                LOG.error("Failed removing net device: '%s'", dev)
-
-
-def set_device_mtu(dev, mtu=None):
-    """Set the device MTU."""
-    if mtu:
-        utils.execute('ip', 'link', 'set', dev, 'mtu',
-                      mtu, run_as_root=True,
-                      check_exit_code=[0, 2, 254])
-
-
-def create_veth_pair(dev1_name, dev2_name, mtu=None):
-    """Create a pair of veth devices with the specified names,
-    deleting any previous devices with those names.
-    """
-    for dev in [dev1_name, dev2_name]:
-        delete_net_dev(dev)
-
-    utils.execute('ip', 'link', 'add', dev1_name, 'type', 'veth', 'peer',
-                  'name', dev2_name, run_as_root=True)
-    for dev in [dev1_name, dev2_name]:
-        utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
-        utils.execute('ip', 'link', 'set', dev, 'promisc', 'on',
-                      run_as_root=True)
-        set_device_mtu(dev, mtu)
-
-
 def create_tap_dev(dev, mac_address=None, multiqueue=False):
-    if not device_exists(dev):
+    if not nova.privsep.linux_net.device_exists(dev):
         try:
             # First, try with 'ip'
             cmd = ('ip', 'tuntap', 'add', dev, 'mode', 'tap')

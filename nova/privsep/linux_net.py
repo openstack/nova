@@ -17,9 +17,17 @@
 Linux network specific helpers.
 """
 
-from oslo_concurrency import processutils
 
-import nova.privsep
+import os
+
+from oslo_concurrency import processutils
+from oslo_log import log as logging
+from oslo_utils import excutils
+
+import nova.privsep.linux_net
+
+
+LOG = logging.getLogger(__name__)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
@@ -38,3 +46,60 @@ def delete_bridge(interface):
     :param interface: the name of the bridge
     """
     processutils.execute('brctl', 'delbr', interface)
+
+
+def device_exists(device):
+    """Check if ethernet device exists."""
+    return os.path.exists('/sys/class/net/%s' % device)
+
+
+def delete_net_dev(dev):
+    """Delete a network device only if it exists."""
+    if device_exists(dev):
+        try:
+            delete_net_dev_escalated(dev)
+            LOG.debug("Net device removed: '%s'", dev)
+        except processutils.ProcessExecutionError:
+            with excutils.save_and_reraise_exception():
+                LOG.error("Failed removing net device: '%s'", dev)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def delete_net_dev_escalated(dev):
+    _delete_net_dev_inner(dev)
+
+
+def _delete_net_dev_inner(dev):
+    processutils.execute('ip', 'link', 'delete', dev,
+                         check_exit_code=[0, 2, 254])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def set_device_mtu(dev, mtu):
+    _set_device_mtu_inner(dev, mtu)
+
+
+def _set_device_mtu_inner(dev, mtu):
+    if mtu:
+        processutils.execute('ip', 'link', 'set', dev, 'mtu',
+                             mtu, check_exit_code=[0, 2, 254])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def create_veth_pair(dev1_name, dev2_name, mtu=None):
+    """Create a pair of veth devices with the specified names,
+    deleting any previous devices with those names.
+    """
+    _create_veth_pair_inner(dev1_name, dev2_name, mtu=mtu)
+
+
+def _create_veth_pair_inner(dev1_name, dev2_name, mtu=None):
+    for dev in [dev1_name, dev2_name]:
+        delete_net_dev(dev)
+
+    processutils.execute('ip', 'link', 'add', dev1_name, 'type', 'veth',
+                         'peer', 'name', dev2_name)
+    for dev in [dev1_name, dev2_name]:
+        processutils.execute('ip', 'link', 'set', dev, 'up')
+        processutils.execute('ip', 'link', 'set', dev, 'promisc', 'on')
+        _set_device_mtu_inner(dev, mtu)

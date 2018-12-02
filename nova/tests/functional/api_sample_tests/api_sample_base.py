@@ -124,6 +124,7 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
         def fake_noop(*args, **kwargs):
             return '', ''
         self.stub_out('nova.privsep.linux_net.add_bridge', fake_noop)
+        self.stub_out('nova.privsep.linux_net.set_device_mtu', fake_noop)
 
     def _setup_services(self):
         pass
