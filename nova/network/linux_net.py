@@ -1236,8 +1236,7 @@ def create_fp_dev(dev, sockpath, sockmode):
         utils.execute('fp-vdev', 'add', dev, '--sockpath', sockpath,
                       '--sockmode', sockmode, run_as_root=True)
         nova.privsep.linux_net.set_device_mtu(dev)
-        utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
-                    check_exit_code=[0, 2, 254])
+        nova.privsep.linux_net.set_device_enabled(dev)
 
 
 def delete_fp_dev(dev):
@@ -1386,8 +1385,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 _execute('ip', 'link', 'set', interface, 'address',
                          mac_address, run_as_root=True,
                          check_exit_code=[0, 2, 254])
-            _execute('ip', 'link', 'set', interface, 'up', run_as_root=True,
-                     check_exit_code=[0, 2, 254])
+            nova.privsep.linux_net.set_device_enabled(interface)
         # NOTE(vish): set mtu every time to ensure that changes to mtu get
         #             propagated
         nova.privsep.linux_net.set_device_mtu(interface, mtu)
@@ -1430,7 +1428,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             _execute('brctl', 'setfd', bridge, 0, run_as_root=True)
             # _execute('brctl setageing %s 10' % bridge, run_as_root=True)
             _execute('brctl', 'stp', bridge, 'off', run_as_root=True)
-            _execute('ip', 'link', 'set', bridge, 'up', run_as_root=True)
+            nova.privsep.linux_net.set_device_enabled(bridge)
 
         if interface:
             LOG.debug('Adding interface %(interface)s to bridge %(bridge)s',
@@ -1454,8 +1452,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 _execute('ip', 'link', 'set', bridge, 'address', interface_mac,
                          run_as_root=True)
 
-            out, err = _execute('ip', 'link', 'set', interface, 'up',
-                                check_exit_code=False, run_as_root=True)
+            nova.privsep.linux_net.set_device_enabled(interface)
 
             # NOTE(vish): This will break if there is already an ip on the
             #             interface, so we move any ips to the bridge
@@ -1671,7 +1668,7 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
             _execute('ip', 'link', 'set', dev, 'address', mac_address,
                      run_as_root=True)
             nova.privsep.linux_net.set_device_mtu(dev, network.get('mtu'))
-            _execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
+            nova.privsep.linux_net.set_device_enabled(dev)
             if not gateway:
                 # If we weren't instructed to act as a gateway then add the
                 # appropriate flows to block all non-dhcp traffic.

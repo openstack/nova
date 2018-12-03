@@ -936,7 +936,8 @@ class VlanNetworkTestCase(test.TestCase):
                          self.network.quotas_cls)
 
     @mock.patch('nova.privsep.linux_net.add_bridge', return_value=('', ''))
-    def test_vpn_allocate_fixed_ip(self, mock_add_bridge):
+    @mock.patch('nova.privsep.linux_net.set_device_enabled')
+    def test_vpn_allocate_fixed_ip(self, mock_enabled, mock_add_bridge):
         self.mox.StubOutWithMock(db, 'fixed_ip_associate')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
         self.mox.StubOutWithMock(db,
@@ -970,7 +971,8 @@ class VlanNetworkTestCase(test.TestCase):
                                        vpn=True)
 
     @mock.patch('nova.privsep.linux_net.add_bridge', return_value=('', ''))
-    def test_allocate_fixed_ip(self, mock_add_bridge):
+    @mock.patch('nova.privsep.linux_net.set_device_enabled')
+    def test_allocate_fixed_ip(self, mock_enabled, mock_add_bridge):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
                 lambda *a, **kw: None)
@@ -1688,8 +1690,9 @@ class VlanNetworkTestCase(test.TestCase):
                           mox.IgnoreArg())
 
     @mock.patch('nova.privsep.linux_net.add_bridge', return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.set_device_enabled')
     def test_add_fixed_ip_instance_without_vpn_requested_networks(
-            self, mock_add_bridge):
+            self, mock_enabled, mock_add_bridge):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
                 lambda *a, **kw: None)
@@ -2835,7 +2838,9 @@ class AllocateTestCase(test.TestCase):
 
     @mock.patch('nova.privsep.linux_net.add_bridge', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.set_device_mtu')
-    def test_allocate_for_instance(self, mock_set_mtu, mock_add_bridge):
+    @mock.patch('nova.privsep.linux_net.set_device_enabled')
+    def test_allocate_for_instance(self, mock_set_enabeld, mock_set_mtu,
+                                   mock_add_bridge):
         address = "10.10.10.10"
         self.flags(auto_assign_floating_ip=True)
 
@@ -2901,7 +2906,8 @@ class AllocateTestCase(test.TestCase):
 
     @mock.patch('nova.privsep.linux_net.add_bridge', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.set_device_mtu')
-    def test_allocate_for_instance_with_mac(self, mock_set_mtu,
+    @mock.patch('nova.privsep.linux_net.set_device_enabled')
+    def test_allocate_for_instance_with_mac(self, mock_enabled, mock_set_mtu,
                                             mock_add_bridge):
         available_macs = set(['ca:fe:de:ad:be:ef'])
         inst = db.instance_create(self.context, {'host': HOST,

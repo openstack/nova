@@ -49,8 +49,7 @@ def create_tap_dev(dev, mac_address=None, multiqueue=False):
         if mac_address:
             utils.execute('ip', 'link', 'set', dev, 'address', mac_address,
                           run_as_root=True, check_exit_code=[0, 2, 254])
-        utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
-                      check_exit_code=[0, 2, 254])
+        nova.privsep.linux_net.set_device_enabled(dev)
 
 
 def set_vf_interface_vlan(pci_addr, mac_addr, vlan=0):
