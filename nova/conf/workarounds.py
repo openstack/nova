@@ -246,6 +246,36 @@ Related options:
 
 .. _bug #1289064: https://bugs.launchpad.net/nova/+bug/1289064
 """),
+
+    cfg.BoolOpt(
+        'ensure_libvirt_rbd_instance_dir_cleanup',
+        default=False,
+        help="""
+Ensure the instance directory is removed during clean up when using rbd.
+
+When enabled this workaround will ensure that the instance directory is always
+removed during cleanup on hosts using ``[libvirt]/images_type=rbd``. This
+avoids the following bugs with evacuation and revert resize clean up that lead
+to the instance directory remaining on the host:
+
+https://bugs.launchpad.net/nova/+bug/1414895
+
+https://bugs.launchpad.net/nova/+bug/1761062
+
+Both of these bugs can then result in ``DestinationDiskExists`` errors being
+raised if the instances ever attempt to return to the host.
+
+.. warning:: Operators will need to ensure that the instance directory itself,
+  specified by ``[DEFAULT]/instances_path``, is not shared between computes
+  before enabling this workaround otherwise the console.log, kernels, ramdisks
+  and any additional files being used by the running instance will be lost.
+
+Related options:
+
+* ``compute_driver`` (libvirt)
+* ``[libvirt]/images_type`` (rbd)
+* ``instances_path``
+"""),
 ]
 
 

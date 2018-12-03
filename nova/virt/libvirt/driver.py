@@ -1069,7 +1069,16 @@ class LibvirtDriver(driver.ComputeDriver):
         is_shared_block_storage = False
         if migrate_data and 'is_shared_block_storage' in migrate_data:
             is_shared_block_storage = migrate_data.is_shared_block_storage
-        if destroy_disks or is_shared_block_storage:
+        # NOTE(lyarwood): The following workaround allows operators to ensure
+        # that non-shared instance directories are removed after an evacuation
+        # or revert resize when using the shared RBD imagebackend. This
+        # workaround is not required when cleaning up migrations that provide
+        # migrate_data to this method as the existing is_shared_block_storage
+        # conditional will cause the instance directory to be removed.
+        if ((destroy_disks or is_shared_block_storage) or
+            (CONF.workarounds.ensure_libvirt_rbd_instance_dir_cleanup and
+             CONF.libvirt.images_type == 'rbd')):
+
             attempts = int(instance.system_metadata.get('clean_attempts',
                                                         '0'))
             success = self.delete_instance_files(instance)
