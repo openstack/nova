@@ -1248,7 +1248,7 @@ def delete_bridge_dev(dev):
     """Delete a network bridge."""
     if nova.privsep.linux_net.device_exists(dev):
         try:
-            utils.execute('ip', 'link', 'set', dev, 'down', run_as_root=True)
+            nova.privsep.linux_net.set_device_disabled(dev)
             nova.privsep.linux_net.delete_bridge(dev)
         except processutils.ProcessExecutionError:
             with excutils.save_and_reraise_exception():
