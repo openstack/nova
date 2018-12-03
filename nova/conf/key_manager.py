@@ -27,6 +27,7 @@ key_manager_opts = [
     cfg.StrOpt(
         'fixed_key',
         deprecated_group='keymgr',
+        secret=True,
         help="""
 Fixed key returned by key manager, specified in hex.
 
