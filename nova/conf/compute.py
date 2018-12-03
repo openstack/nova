@@ -569,6 +569,10 @@ Possible values:
 * $state_path/instances where state_path is a config option that specifies
   the top-level directory for maintaining nova's state. (default) or
   Any string representing directory path.
+
+Related options:
+
+* ``[workarounds]/ensure_libvirt_rbd_instance_dir_cleanup``
 """),
     cfg.BoolOpt('instance_usage_audit',
         default=False,

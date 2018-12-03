@@ -17117,6 +17117,27 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(instance.cleaned)
         save.assert_called_once_with()
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'unfilter_instance')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files',
+                       return_value=True)
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_undefine_domain')
+    def test_cleanup_instance_dir_with_rbd_workaround(self,
+            _undefine_domain, save, delete_instance_files, unfilter_instance):
+        self.flags(images_type='rbd', group='libvirt')
+        self.flags(ensure_libvirt_rbd_instance_dir_cleanup=True,
+                   group='workarounds')
+        instance = objects.Instance(self.context, **self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        # destroy_disks=False here as check_instance_shared_storage_local call
+        # would return None when using the rbd imagebackend
+        drvr.cleanup(self.context, instance, network_info={},
+                     destroy_disks=False)
+        delete_instance_files.assert_called_once_with(instance)
+        self.assertEqual(1, int(instance.system_metadata['clean_attempts']))
+        self.assertTrue(instance.cleaned)
+        save.assert_called_once_with()
+
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryption')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_use_native_luks')
     def test_swap_volume_native_luks_blocked(self, mock_use_native_luks,
