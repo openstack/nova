@@ -1145,6 +1145,8 @@ class ComputeTaskManager(base.Base):
                     instance_uuids, return_alternates=True)
         except Exception as exc:
             LOG.exception('Failed to schedule instances')
+            # FIXME(mriedem): If the tags are not persisted with the instance
+            # in cell0 then the API will not show them.
             self._bury_in_cell0(context, request_specs[0], exc,
                                 build_requests=build_requests,
                                 block_device_mapping=block_device_mapping)
@@ -1170,6 +1172,8 @@ class ComputeTaskManager(base.Base):
                     LOG.error('No host-to-cell mapping found for selected '
                               'host %(host)s. Setup is incomplete.',
                               {'host': host.service_host})
+                    # FIXME(mriedem): If the tags are not persisted with the
+                    # instance in cell0 then the API will not show them.
                     self._bury_in_cell0(
                         context, request_spec, exc,
                         build_requests=[build_request], instances=[instance],
@@ -1221,6 +1225,7 @@ class ComputeTaskManager(base.Base):
                     self._cleanup_build_artifacts(context, exc, instances,
                                                   build_requests,
                                                   request_specs,
+                                                  block_device_mapping, tags,
                                                   cell_mapping_cache)
 
         zipped = six.moves.zip(build_requests, request_specs, host_lists,
@@ -1297,7 +1302,8 @@ class ComputeTaskManager(base.Base):
                     limits=host.limits, host_list=host_list)
 
     def _cleanup_build_artifacts(self, context, exc, instances, build_requests,
-                                 request_specs, cell_mapping_cache):
+                                 request_specs, block_device_mappings, tags,
+                                 cell_mapping_cache):
         for (instance, build_request, request_spec) in six.moves.zip(
                 instances, build_requests, request_specs):
             # Skip placeholders that were buried in cell0 or had their
@@ -1317,6 +1323,21 @@ class ComputeTaskManager(base.Base):
                 context, instance.uuid)
             inst_mapping.cell_mapping = cell
             inst_mapping.save()
+
+            # In order to properly clean-up volumes when deleting a server in
+            # ERROR status with no host, we need to store BDMs in the same
+            # cell.
+            if block_device_mappings:
+                self._create_block_device_mapping(
+                    cell, instance.flavor, instance.uuid,
+                    block_device_mappings)
+
+            # Like BDMs, the server tags provided by the user when creating the
+            # server should be persisted in the same cell so they can be shown
+            # from the API.
+            if tags:
+                with nova_context.target_cell(context, cell) as cctxt:
+                    self._create_tags(cctxt, instance.uuid, tags)
 
             # Be paranoid about artifacts being deleted underneath us.
             try:

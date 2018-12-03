@@ -117,14 +117,16 @@ class BootFromVolumeOverQuotaRaceDeleteTest(
             # This would raise InstanceNotFound if the instance isn't in cell1.
             instance = objects.Instance.get_by_uuid(cctxt, server['id'])
             self.assertIsNone(instance.host, 'instance.host should not be set')
+            # Make sure the BDMs and tags also exist in cell1.
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                cctxt, instance.uuid)
+            self.assertEqual(1, len(bdms), 'BDMs were not created in cell1')
+            tags = objects.TagList.get_by_resource_id(cctxt, instance.uuid)
+            self.assertEqual(1, len(tags), 'Tags were not created in cell1')
 
         # Make sure we can still view the tags on the server before it is
         # deleted.
-        # FIXME(mriedem): This is bug 1806064 where the tags are not created
-        # in cell1 along with the instance when the quota check race failure
-        # occurs. Uncomment once fixed.
-        # self.assertEqual(['bfv'], server['tags'])
-        self.assertEqual([], server['tags'])
+        self.assertEqual(['bfv'], server['tags'])
 
         # Now delete the server which, since it does not have a host, will be
         # deleted "locally" from the API.
@@ -132,12 +134,7 @@ class BootFromVolumeOverQuotaRaceDeleteTest(
         self._wait_until_deleted(server)
 
         # The volume should have been detached by the API.
-        # FIXME(mriedem): This is bug 1806064 where the volume is not detached
-        # because the related BDM record was not created in cell1 along with
-        # the instance so the API could not "see" it. Uncomment once fixed.
-        # self.assertIsNone(
-        #     self.cinder_fixture.volume_ids_for_instance(server['id']))
-        self.assertEqual(volume_id,
-                         # volume_ids_for_instance is a generator so listify
-                         list(self.cinder_fixture.volume_ids_for_instance(
-                             server['id']))[0])
+        attached_volumes = self.cinder_fixture.volume_ids_for_instance(
+            server['id'])
+        # volume_ids_for_instance is a generator so listify
+        self.assertEqual(0, len(list(attached_volumes)))
