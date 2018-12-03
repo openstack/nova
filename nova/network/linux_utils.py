@@ -47,8 +47,7 @@ def create_tap_dev(dev, mac_address=None, multiqueue=False):
             # Second option: tunctl
             utils.execute('tunctl', '-b', '-t', dev, run_as_root=True)
         if mac_address:
-            utils.execute('ip', 'link', 'set', dev, 'address', mac_address,
-                          run_as_root=True, check_exit_code=[0, 2, 254])
+            nova.privsep.linux_net.set_device_macaddr(dev, mac_address)
         nova.privsep.linux_net.set_device_enabled(dev)
 
 
@@ -59,20 +58,16 @@ def set_vf_interface_vlan(pci_addr, mac_addr, vlan=0):
     vf_num = pci_utils.get_vf_num_by_pci_address(pci_addr)
 
     # Set the VF's mac address and vlan
-    exit_code = [0, 2, 254]
-    port_state = 'up' if vlan > 0 else 'down'
     utils.execute('ip', 'link', 'set', pf_ifname,
                   'vf', vf_num,
                   'mac', mac_addr,
                   'vlan', vlan,
                   run_as_root=True,
-                  check_exit_code=exit_code)
+                  check_exit_code=[0, 2, 254])
     # Bring up/down the VF's interface
     # TODO(edand): The mac is assigned as a workaround for the following issue
     #              https://bugzilla.redhat.com/show_bug.cgi?id=1372944
     #              once resolved it will be removed
-    utils.execute('ip', 'link', 'set', vf_ifname,
-                  'address', mac_addr,
-                  port_state,
-                  run_as_root=True,
-                  check_exit_code=exit_code)
+    port_state = 'up' if vlan > 0 else 'down'
+    nova.privsep.linux_net.set_device_macaddr(vf_ifname, mac_addr,
+                                              port_state=port_state)

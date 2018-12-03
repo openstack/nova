@@ -1131,8 +1131,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             '_execute': [
                 mock.call('brctl', 'addif', 'bridge', 'eth0',
                           run_as_root=True, check_exit_code=False),
-                mock.call('ip', 'link', 'set', 'bridge', 'address', fake_mac,
-                          run_as_root=True),
                 mock.call('ip', 'route', 'show', 'dev', 'eth0'),
                 mock.call('ip', 'addr', 'show', 'dev', 'eth0', 'scope',
                           'global'),
@@ -1142,9 +1140,11 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             mock.patch('nova.privsep.linux_net.device_exists',
                        return_value=True),
             mock.patch('nova.privsep.linux_net.set_device_enabled'),
+            mock.patch('nova.privsep.linux_net.set_device_macaddr'),
             mock.patch.object(linux_net, '_execute', return_value=('', '')),
             mock.patch.object(netifaces, 'ifaddresses')
-        ) as (device_exists, device_enabled, _execute, ifaddresses):
+        ) as (device_exists, device_enabled, set_device_macaddr,
+              _execute, ifaddresses):
             ifaddresses.return_value = fake_ifaces
             driver = linux_net.LinuxBridgeInterfaceDriver()
             driver.ensure_bridge('bridge', 'eth0')
@@ -1152,6 +1152,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             _execute.assert_has_calls(calls['_execute'])
             ifaddresses.assert_called_once_with('eth0')
             device_enabled.assert_called_once_with('eth0')
+            set_device_macaddr.assert_called_once_with('bridge', fake_mac)
 
     def test_ensure_bridge_brclt_addif_exception(self):
         def fake_execute(*cmd, **kwargs):
@@ -1285,8 +1286,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     @mock.patch('nova.privsep.linux_net.device_exists', return_value=False)
     @mock.patch('nova.privsep.linux_net.set_device_mtu')
     @mock.patch('nova.privsep.linux_net.set_device_enabled')
-    def test_ensure_vlan(self, mock_set_enabled, mock_set_device_mtu,
-                         mock_device_exists, mock_execute):
+    @mock.patch('nova.privsep.linux_net.set_device_macaddr')
+    def test_ensure_vlan(self, mock_set_macaddr, mock_set_enabled,
+                         mock_set_device_mtu, mock_device_exists,
+                         mock_execute):
         interface = linux_net.LinuxBridgeInterfaceDriver.ensure_vlan(
                         1, 'eth0', 'MAC', 'MTU', "vlan_name")
         self.assertEqual("vlan_name", interface)
@@ -1295,13 +1298,12 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         expected_execute_args = [
             mock.call('ip', 'link', 'add', 'link', 'eth0', 'name', 'vlan_name',
                       'type', 'vlan', 'id', 1, check_exit_code=[0, 2, 254],
-                      run_as_root=True),
-            mock.call('ip', 'link', 'set', 'vlan_name', 'address', 'MAC',
-                       check_exit_code=[0, 2, 254], run_as_root=True)
+                      run_as_root=True)
             ]
         self.assertEqual(expected_execute_args, mock_execute.mock_calls)
         mock_set_device_mtu.assert_called_once_with('vlan_name', 'MTU')
         mock_set_enabled.assert_called_once_with('vlan_name')
+        mock_set_macaddr.assert_called_once_with('vlan_name', 'MAC')
 
     @mock.patch.object(linux_net, '_execute')
     @mock.patch('nova.privsep.linux_net.device_exists', return_value=True)

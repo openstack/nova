@@ -2839,8 +2839,9 @@ class AllocateTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.add_bridge', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.set_device_mtu')
     @mock.patch('nova.privsep.linux_net.set_device_enabled')
-    def test_allocate_for_instance(self, mock_set_enabeld, mock_set_mtu,
-                                   mock_add_bridge):
+    @mock.patch('nova.privsep.linux_net.set_device_macaddr')
+    def test_allocate_for_instance(self, mock_set_macaddr, mock_set_enabled,
+                                   mock_set_mtu, mock_add_bridge):
         address = "10.10.10.10"
         self.flags(auto_assign_floating_ip=True)
 
@@ -2907,7 +2908,9 @@ class AllocateTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.add_bridge', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.set_device_mtu')
     @mock.patch('nova.privsep.linux_net.set_device_enabled')
-    def test_allocate_for_instance_with_mac(self, mock_enabled, mock_set_mtu,
+    @mock.patch('nova.privsep.linux_net.set_device_macaddr')
+    def test_allocate_for_instance_with_mac(self, mock_set_addr,
+                                            mock_enabled, mock_set_mtu,
                                             mock_add_bridge):
         available_macs = set(['ca:fe:de:ad:be:ef'])
         inst = db.instance_create(self.context, {'host': HOST,
