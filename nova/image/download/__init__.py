@@ -49,6 +49,6 @@ def load_transfer_modules():
                     'of its use in production clouds. If you are using this '
                     'extension point, please make the nova development team '
                     'aware by contacting us in the #openstack-nova freenode '
-                    'IRC channel or on the openstack-dev mailing list.')
+                    'IRC channel or on the openstack-discuss mailing list.')
 
     return module_dictionary

@@ -20,7 +20,7 @@
 #
 # It is hypothetically possible that a hyper-v continuous deployer exists who
 # will have a poor experience because of this code revert, if that deployer
-# is you, please contact the nova team at openstack-dev@lists.openstack.org
+# is you, please contact the nova team at openstack-discuss@lists.openstack.org
 # and we will walk you through the manual fix required for this problem.
 
 

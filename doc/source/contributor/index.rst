@@ -24,7 +24,7 @@ is important for maintaining the strong ecosystem around nova.
 
 Our process is always evolving, just as nova and the community around nova
 evolves over time. If there are things that seem strange, or you have ideas on
-how to improve things, please bring them forward on IRC or the openstack-dev
+how to improve things, please bring them forward on IRC or the openstack-discuss
 mailing list, so we continue to improve how the nova community operates.
 
 This section looks at the processes and why. The main aim behind all the
