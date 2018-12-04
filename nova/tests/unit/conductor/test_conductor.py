@@ -1985,7 +1985,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                                build_and_run):
         def _fake_bury(ctxt, request_spec, exc,
                        build_requests=None, instances=None,
-                       block_device_mapping=None):
+                       block_device_mapping=None,
+                       tags=None):
             self.assertIn('not mapped to any cell', str(exc))
             self.assertEqual(1, len(build_requests))
             self.assertEqual(1, len(instances))
@@ -1993,6 +1994,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                              instances[0].uuid)
             self.assertEqual(self.params['block_device_mapping'],
                              block_device_mapping)
+            self.assertEqual(self.params['tags'],
+                             tags)
 
         bury.side_effect = _fake_bury
         select_dest.return_value = [[fake_selection1]]
@@ -2208,6 +2211,28 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         for key in ('instance_type', 'num_instances', 'instance_properties',
                     'image'):
             self.assertIn(key, request_spec_dict)
+
+    @mock.patch('nova.compute.utils.notify_about_compute_task_error')
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_create_tags')
+    def test_bury_in_cell0_with_tags(self, mock_create_tags, mock_get_cell,
+                                     mock_notify):
+        mock_get_cell.return_value = self.cell_mappings['cell0']
+
+        inst_br = fake_build_request.fake_req_obj(self.ctxt)
+        del inst_br.instance.id
+        inst_br.create()
+        inst = inst_br.get_new_instance(self.ctxt)
+
+        self.conductor._bury_in_cell0(
+            self.ctxt, self.params['request_specs'][0], Exception('Foo'),
+            build_requests=[inst_br], instances=[inst],
+            tags=self.params['tags'])
+
+        mock_create_tags.assert_called_once_with(
+            test.MatchType(context.RequestContext), inst.uuid,
+            self.params['tags'])
 
     def test_reset(self):
         with mock.patch('nova.compute.rpcapi.ComputeAPI') as mock_rpc:
