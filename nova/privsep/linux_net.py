@@ -107,6 +107,16 @@ def set_device_macaddr(dev, mac_addr, port_state=None):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def set_device_macaddr_and_vlan(dev, vf_num, mac_addr, vlan):
+    processutils.execute('ip', 'link', 'set', dev,
+                         'vf', vf_num,
+                         'mac', mac_addr,
+                         'vlan', vlan,
+                         run_as_root=True,
+                         check_exit_code=[0, 2, 254])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def bind_ip(device, ip, scope_is_link=False):
     if not scope_is_link:
         processutils.execute('ip', 'addr', 'add', str(ip) + '/32',

@@ -57,13 +57,9 @@ def set_vf_interface_vlan(pci_addr, mac_addr, vlan=0):
     vf_ifname = pci_utils.get_ifname_by_pci_address(pci_addr)
     vf_num = pci_utils.get_vf_num_by_pci_address(pci_addr)
 
-    # Set the VF's mac address and vlan
-    utils.execute('ip', 'link', 'set', pf_ifname,
-                  'vf', vf_num,
-                  'mac', mac_addr,
-                  'vlan', vlan,
-                  run_as_root=True,
-                  check_exit_code=[0, 2, 254])
+    nova.privsep.linux_net.set_device_macaddr_and_vlan(
+        pf_ifname, vf_num, mac_addr, vlan)
+
     # Bring up/down the VF's interface
     # TODO(edand): The mac is assigned as a workaround for the following issue
     #              https://bugzilla.redhat.com/show_bug.cgi?id=1372944
