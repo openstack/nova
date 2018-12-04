@@ -1095,23 +1095,6 @@ as well as the other filters that are typically enabled:
    [filter_scheduler]
    enabled_filters=AggregateInstanceExtraSpecsFilter,RetryFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
 
-.. _bug-1804125:
-
-.. note:: Regarding the `AggregateCoreFilter`_, `AggregateDiskFilter`_ and
-   `AggregateRamFilter`_, starting in 15.0.0 (Ocata) there is a behavior
-   change where aggregate-based overcommit ratios will no longer be honored
-   during scheduling for the FilterScheduler. Instead, overcommit values must
-   be set on a per-compute-node basis in the Nova configuration files.
-
-   If you have been relying on per-aggregate overcommit, during your upgrade,
-   you must change to using per-compute-node overcommit ratios in order for
-   your scheduling behavior to stay consistent. Otherwise, you may notice
-   increased NoValidHost scheduling failures as the aggregate-based overcommit
-   is no longer being considered.
-
-   See `bug 1804125 <https://bugs.launchpad.net/nova/+bug/1804125>`_ for more
-   details.
-
 Example: Specify compute hosts with SSDs
 ----------------------------------------
 
@@ -1378,6 +1361,112 @@ XenServer hypervisor pools to support live migration
 When using the XenAPI-based hypervisor, the Compute service uses host
 aggregates to manage XenServer Resource pools, which are used in supporting
 live migration.
+
+Allocation ratios
+~~~~~~~~~~~~~~~~~
+
+The following configuration options exist to control allocation ratios
+per compute node to support over-commit of resources:
+
+* :oslo.config:option:`cpu_allocation_ratio`: allows overriding the VCPU
+  inventory allocation ratio for a compute node
+* :oslo.config:option:`ram_allocation_ratio`: allows overriding the MEMORY_MB
+  inventory allocation ratio for a compute node
+* :oslo.config:option:`disk_allocation_ratio`: allows overriding the DISK_GB
+  inventory allocation ratio for a compute node
+
+Prior to the 19.0.0 Stein release, if left unset, the ``cpu_allocation_ratio``
+defaults to 16.0, the ``ram_allocation_ratio`` defaults to 1.5, and the
+``disk_allocation_ratio`` defaults to 1.0.
+
+Starting with the 19.0.0 Stein release, the following configuration options
+control the initial allocation ratio values for a compute node:
+
+* :oslo.config:option:`initial_cpu_allocation_ratio`: the initial VCPU
+  inventory allocation ratio for a new compute node record, defaults to 16.0
+* :oslo.config:option:`initial_ram_allocation_ratio`: the initial MEMORY_MB
+  inventory allocation ratio for a new compute node record, defaults to 1.5
+* :oslo.config:option:`initial_disk_allocation_ratio`: the initial DISK_GB
+  inventory allocation ratio for a new compute node record, defaults to 1.0
+
+Scheduling considerations
+-------------------------
+
+The allocation ratio configuration is used both during reporting of compute
+node `resource provider inventory`_ to the placement service and during
+scheduling.
+
+The (deprecated) `CoreFilter`_, `DiskFilter`_ and `RamFilter`_ filters will use
+the allocation ratio from the compute node directly when calculating available
+capacity on a given node during scheduling.
+
+The `AggregateCoreFilter`_, `AggregateDiskFilter`_ and `AggregateRamFilter`_
+filters allow overriding per-compute allocation ratios by setting an allocation
+ratio value using host aggregate metadata. This provides a convenient way to
+manage a group of compute hosts with similar allocation ratios while leaving
+the configuration settings alone.
+
+.. _bug-1804125:
+
+.. note:: Regarding the `AggregateCoreFilter`_, `AggregateDiskFilter`_ and
+   `AggregateRamFilter`_, starting in 15.0.0 (Ocata) there is a behavior
+   change where aggregate-based overcommit ratios will no longer be honored
+   during scheduling for the FilterScheduler. Instead, overcommit values must
+   be set on a per-compute-node basis in the Nova configuration files.
+
+   If you have been relying on per-aggregate overcommit, during your upgrade,
+   you must change to using per-compute-node overcommit ratios in order for
+   your scheduling behavior to stay consistent. Otherwise, you may notice
+   increased NoValidHost scheduling failures as the aggregate-based overcommit
+   is no longer being considered.
+
+   See `bug 1804125 <https://bugs.launchpad.net/nova/+bug/1804125>`_ for more
+   details.
+
+.. _resource provider inventory: https://developer.openstack.org/api-ref/placement/?expanded=#resource-provider-inventories
+
+Usage scenarios
+---------------
+
+Since allocation ratios can be set via nova configuration, host aggregate
+metadata and the placement API, it can be confusing to know which should be
+used. This really depends on your scenario. A few common scenarios are detailed
+here.
+
+1. When the deployer wants to **always** set an override value for a resource
+   on a compute node, the deployer would ensure that the
+   ``[DEFAULT]/cpu_allocation_ratio``, ``[DEFAULT]/ram_allocation_ratio`` and
+   ``[DEFAULT]/disk_allocation_ratio`` configuration options are set to a
+   non-None value (or greater than 0.0 before the 19.0.0 Stein release). This
+   will make the ``nova-compute`` service overwrite any externally-set
+   allocation ratio values set via the placement REST API.
+
+2. When the deployer wants to set an **initial** value for a compute node
+   allocation ratio but wants to allow an admin to adjust this afterwards
+   without making any configuration file changes, the deployer would set the
+   ``[DEFAULT]/initial_cpu_allocation_ratio``,
+   ``[DEFAULT]/initial_ram_allocation_ratio`` and
+   ``[DEFAULT]/initial_disk_allocation_ratio`` configuration options and then
+   manage the allocation ratios using the placement REST API (or
+   `osc-placement`_ command line interface). For example:
+
+   .. code-block:: console
+
+     $ openstack resource provider inventory set --resource VCPU:allocation_ratio=1.0 815a5634-86fb-4e1e-8824-8a631fee3e06
+
+   Note the :ref:`bug 1804125 <bug-1804125>` restriction.
+
+3. When the deployer wants to **always** use the placement API to set
+   allocation ratios, then the deployer should ensure that
+   ``[DEFAULT]/xxx_allocation_ratio`` options are all set to None (the
+   default since 19.0.0 Stein, 0.0 before Stein) and then
+   manage the allocation ratios using the placement REST API (or
+   `osc-placement`_ command line interface).
+
+   This scenario is the workaround for
+   `bug 1804125 <https://bugs.launchpad.net/nova/+bug/1804125>`_.
+
+.. _osc-placement: https://docs.openstack.org/osc-placement/latest/index.html
 
 Cells considerations
 ~~~~~~~~~~~~~~~~~~~~

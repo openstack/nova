@@ -486,6 +486,9 @@ ratio.
 This is only used when initially creating the ``computes_nodes`` table record
 for a given nova-compute service.
 
+See https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html
+for more details and usage scenarios.
+
 Related options:
 
 * ``cpu_allocation_ratio``
@@ -500,6 +503,9 @@ ratio.
 This is only used when initially creating the ``computes_nodes`` table record
 for a given nova-compute service.
 
+See https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html
+for more details and usage scenarios.
+
 Related options:
 
 * ``ram_allocation_ratio``
@@ -513,6 +519,9 @@ ratio.
 
 This is only used when initially creating the ``computes_nodes`` table record
 for a given nova-compute service.
+
+See https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html
+for more details and usage scenarios.
 
 Related options:
 
