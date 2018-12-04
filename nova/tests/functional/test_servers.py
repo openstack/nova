@@ -2363,14 +2363,6 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
-    def _check_allocation_during_evacuate(
-            self, flavor, server_uuid, source_root_rp_uuid, dest_root_rp_uuid):
-
-        allocations = self._get_allocations_by_server_uuid(server_uuid)
-        self.assertEqual(2, len(allocations))
-        self.assertFlavorMatchesUsage(source_root_rp_uuid, flavor)
-        self.assertFlavorMatchesUsage(dest_root_rp_uuid, flavor)
-
     def test_evacuate(self):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
