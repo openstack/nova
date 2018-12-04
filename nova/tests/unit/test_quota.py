@@ -153,7 +153,8 @@ class QuotaIntegrationTestCase(test.TestCase):
         for i in range(3):
             self._create_instance(flavor_name='m1.xlarge')
 
-    def test_too_many_addresses(self):
+    @mock.patch('nova.privsep.linux_net.bind_ip')
+    def test_too_many_addresses(self, mock_bind_ip):
         # This test is specifically relying on nova-network.
         self.flags(use_neutron=False,
                    network_manager='nova.network.manager.FlatDHCPManager')
@@ -172,7 +173,8 @@ class QuotaIntegrationTestCase(test.TestCase):
                           self.project_id)
         db.floating_ip_destroy(context.get_admin_context(), address)
 
-    def test_auto_assigned(self):
+    @mock.patch('nova.privsep.linux_net.bind_ip')
+    def test_auto_assigned(self, mock_bind_ip):
         # This test is specifically relying on nova-network.
         self.flags(use_neutron=False,
                    network_manager='nova.network.manager.FlatDHCPManager')
