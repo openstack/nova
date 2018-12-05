@@ -1026,7 +1026,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.privsep.linux_net.device_exists')
     @mock.patch('nova.privsep.libvirt.plug_plumgrid_vif')
-    def test_plug_iovisor(self, mock_plug, device_exists):
+    @mock.patch('nova.privsep.linux_net.create_tap_dev')
+    def test_plug_iovisor(self, mock_create_tap_dev, mock_plug, device_exists):
         device_exists.return_value = True
         d = vif.LibvirtGenericVIFDriver()
         d.plug(self.instance, self.vif_iovisor)
@@ -1119,7 +1120,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.privsep.linux_net.device_exists', return_value=True)
     @mock.patch('nova.privsep.linux_net.set_device_mtu')
-    def test_plug_tap(self, mock_set_mtu, mock_device_exists):
+    @mock.patch('nova.privsep.linux_net.create_tap_dev')
+    def test_plug_tap(self, mock_create_tap_dev, mock_set_mtu,
+                      mock_device_exists):
         d = vif.LibvirtGenericVIFDriver()
         d.plug(self.instance, self.vif_tap)
 

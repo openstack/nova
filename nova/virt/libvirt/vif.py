@@ -648,7 +648,7 @@ class LibvirtGenericVIFDriver(object):
         dev = self.get_vif_devname(vif)
         port_id = vif['id']
         try:
-            linux_net_utils.create_tap_dev(dev)
+            nova.privsep.linux_net.create_tap_dev(dev)
             nova.privsep.libvirt.plug_midonet_vif(port_id, dev)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while plugging vif"), instance=instance)
@@ -661,7 +661,7 @@ class LibvirtGenericVIFDriver(object):
         """
         dev = self.get_vif_devname(vif)
         iface_id = vif['id']
-        linux_net_utils.create_tap_dev(dev)
+        nova.privsep.linux_net.create_tap_dev(dev)
         net_id = vif['network']['id']
         tenant_id = instance.project_id
         try:
@@ -674,7 +674,7 @@ class LibvirtGenericVIFDriver(object):
         """Plug a VIF_TYPE_TAP virtual interface."""
         dev = self.get_vif_devname(vif)
         mac = vif['details'].get(network_model.VIF_DETAILS_TAP_MAC_ADDRESS)
-        linux_net_utils.create_tap_dev(dev, mac)
+        nova.privsep.linux_net.create_tap_dev(dev, mac)
         network = vif.get('network')
         mtu = network.get_meta('mtu') if network else None
         nova.privsep.linux_net.set_device_mtu(dev, mtu)

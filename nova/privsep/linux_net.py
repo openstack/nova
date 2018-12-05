@@ -87,6 +87,10 @@ def _set_device_mtu_inner(dev, mtu):
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def set_device_enabled(dev):
+    _set_device_enabled_inner(dev)
+
+
+def _set_device_enabled_inner(dev):
     processutils.execute('ip', 'link', 'set', dev, 'up',
                          check_exit_code=[0, 2, 254])
 
@@ -98,6 +102,10 @@ def set_device_disabled(dev):
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def set_device_macaddr(dev, mac_addr, port_state=None):
+    _set_device_macaddr_inner(dev, mac_addr, port_state=port_state)
+
+
+def _set_device_macaddr_inner(dev, mac_addr, port_state=None):
     if port_state:
         processutils.execute('ip', 'link', 'set', dev, 'address', mac_addr,
                              port_state, check_exit_code=[0, 2, 254])
@@ -125,3 +133,33 @@ def bind_ip(device, ip, scope_is_link=False):
         processutils.execute('ip', 'addr', 'add', str(ip) + '/32',
                              'scope', 'link', 'dev', device,
                              check_exit_code=[0, 2, 254])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def create_tap_dev(dev, mac_address=None, multiqueue=False):
+    _create_tap_dev_inner(dev, mac_address=mac_address,
+                          multiqueue=multiqueue)
+
+
+def _create_tap_dev_inner(dev, mac_address=None, multiqueue=False):
+    if not device_exists(dev):
+        try:
+            # First, try with 'ip'
+            cmd = ('ip', 'tuntap', 'add', dev, 'mode', 'tap')
+            if multiqueue:
+                cmd = cmd + ('multi_queue', )
+            processutils.execute(*cmd, check_exit_code=[0, 2, 254])
+        except processutils.ProcessExecutionError:
+            if multiqueue:
+                LOG.warning(
+                    'Failed to create a tap device with ip tuntap. '
+                    'tunctl does not support creation of multi-queue '
+                    'enabled devices, skipping fallback.')
+                raise
+
+            # Second option: tunctl
+            processutils.execute('tunctl', '-b', '-t', dev)
+
+        if mac_address:
+            _set_device_macaddr_inner(dev, mac_address)
+        _set_device_enabled_inner(dev)
