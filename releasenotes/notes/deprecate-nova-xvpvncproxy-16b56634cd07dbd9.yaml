@@ -1,0 +1,5 @@
+---
+deprecations:
+  - |
+    The nova-xvpvncproxy service is deprecated as it is Xen specific and has
+    effectively been replaced by noVNC and the nova-novncproxy service.

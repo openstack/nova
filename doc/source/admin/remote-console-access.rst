@@ -315,6 +315,11 @@ XVP-based VNC console
 VNC is a graphical console with wide support among many hypervisors and
 clients. Xen VNC Proxy (XVP) provides VNC support via a simple Java client.
 
+.. deprecated:: 19.0.0
+
+   :program:`nova-xvpvnxproxy` is deprecated since 19.0.0 (Stein) and will be
+   removed in an upcoming release.
+
 Configuration
 ~~~~~~~~~~~~~
 

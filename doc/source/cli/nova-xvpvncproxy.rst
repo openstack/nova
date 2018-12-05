@@ -25,6 +25,11 @@ Description
 Console Proxy service, which provides an XVP-based VNC Console Proxy for use
 with the Xen hypervisor.
 
+.. deprecated:: 19.0.0
+
+   :program:`nova-xvpvnxproxy` is deprecated since 19.0.0 (Stein) and will be
+   removed in an upcoming release.
+
 Options
 =======
 
