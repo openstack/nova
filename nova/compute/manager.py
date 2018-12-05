@@ -664,14 +664,9 @@ class ComputeManager(manager.Manager):
             return
         evacuations = {mig.instance_uuid: mig for mig in evacuations}
 
-        # The instances might be deleted in which case we need to avoid
-        # InstanceNotFound being raised from lazy-loading fields on the
-        # instances while cleaning up this host.
-        read_deleted_context = context.elevated(read_deleted='yes')
         # TODO(mriedem): We could optimize by pre-loading the joined fields
-        # we know we'll use, like info_cache and flavor. We can also replace
-        # this with a generic solution: https://review.openstack.org/575190/
-        local_instances = self._get_instances_on_driver(read_deleted_context)
+        # we know we'll use, like info_cache and flavor.
+        local_instances = self._get_instances_on_driver(context)
         evacuated = [inst for inst in local_instances
                      if inst.uuid in evacuations]
 

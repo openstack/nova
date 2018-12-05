@@ -242,6 +242,24 @@ class _TestInstanceObject(object):
         self.assertNotIn('system_metadata', instance)
         self.assertEqual(0, len(instance.system_metadata))
 
+    def test_lazy_load_flavor_on_deleted_instance(self):
+        # For something like a flavor, we should be reading from the DB
+        # with read_deleted='yes'
+        flavor = objects.Flavor(name='testflavor')
+        instance = objects.Instance(self.context, uuid=uuids.instance,
+                                    flavor=flavor,
+                                    user_id=self.context.user_id,
+                                    project_id=self.context.project_id)
+        instance.create()
+        instance.destroy()
+        # Re-create our local object to make sure it doesn't have sysmeta
+        # filled in by create()
+        instance = objects.Instance(self.context, uuid=uuids.instance,
+                                    user_id=self.context.user_id,
+                                    project_id=self.context.project_id)
+        self.assertNotIn('flavor', instance)
+        self.assertEqual('testflavor', instance.flavor.name)
+
     def test_lazy_load_tags(self):
         instance = objects.Instance(self.context, uuid=uuids.instance,
                                     user_id=self.context.user_id,
