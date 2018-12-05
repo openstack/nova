@@ -524,6 +524,32 @@ class IronicDriver(virt_driver.ComputeDriver):
         if remove_instance_info:
             self._remove_instance_info_from_node(node, instance)
 
+    def _wait_for_available(self, instance, node):
+        """Wait for the node to be marked as ACTIVE in Ironic."""
+        abort_ironic_states = (ironic_states.DEPLOYWAIT,
+                               ironic_states.DEPLOYING,
+                               ironic_states.ACTIVE,
+                               ironic_states.ERROR,
+                               ironic_states.CLEANFAIL)
+        instance.refresh()
+        if (instance.task_state == task_states.DELETING or
+            instance.vm_state in (vm_states.ERROR, vm_states.DELETED)):
+            raise exception.InstanceDeployFailure(
+                _("Instance %s provisioning was aborted") % instance.uuid)
+
+        if node.provision_state == ironic_states.AVAILABLE:
+            # job is done
+            LOG.debug("Ironic node %(node)s is now AVAILABLE",
+                      dict(node=node.uuid), instance=instance)
+            raise loopingcall.LoopingCallDone()
+
+        if (node.target_provision_state in abort_ironic_states or
+            node.provision_state in abort_ironic_states):
+            # ironic is already doing something unexpected with the instance
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
+
+        _log_ironic_polling('become AVAILABLE', node, instance)
+
     def _wait_for_active(self, instance):
         """Wait for the node to be marked as ACTIVE in Ironic."""
         instance.refresh()
@@ -1176,6 +1202,17 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         node = self._get_node(node_uuid)
         flavor = instance.flavor
+
+        timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_available,
+                                                     instance, node)
+        try:
+            timer.start(interval=CONF.ironic.api_retry_interval).wait()
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.error("Error deploying instance %(instance)s on "
+                          "baremetal node %(node)s.",
+                          {'instance': instance.uuid,
+                           'node': node_uuid})
 
         self._add_instance_info_to_node(node, instance, image_meta, flavor,
                                         block_device_info=block_device_info)
