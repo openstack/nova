@@ -3,6 +3,8 @@
 BASE=${BASE:-/opt/stack}
 # Source stackrc to determine the configured VIRT_DRIVER
 source ${BASE}/new/devstack/stackrc
+# Source tempest to determine the build timeout configuration.
+source ${BASE}/new/devstack/lib/tempest
 
 set -e
 # We need to get the admin credentials to run CLIs.
@@ -79,8 +81,8 @@ function evacuate_and_wait_for_error() {
     do
         sleep 1
         count=$((count+1))
-        if [ ${count} -eq 30 ]; then
-            echo "Timed out waiting for server to go to ERROR status"
+        if [ ${count} -eq ${BUILD_TIMEOUT} ]; then
+            echo "Timed out waiting for server ${server} to go to ERROR status"
             exit 4
         fi
         status=$(openstack server show ${server} -f value -c status)
@@ -119,8 +121,8 @@ function evacuate_and_wait_for_active() {
     do
         sleep 1
         count=$((count+1))
-        if [ ${count} -eq 30 ]; then
-            echo "Timed out waiting for server to go to ACTIVE status"
+        if [ ${count} -eq ${BUILD_TIMEOUT} ]; then
+            echo "Timed out waiting for server ${server} to go to ACTIVE status"
             exit 6
         fi
         status=$(openstack server show ${server} -f value -c status)
