@@ -29,6 +29,7 @@ from nova import service
 from nova import version
 
 CONF = cfg.CONF
+LOG = logging.getLogger('nova.console')
 
 
 def main():
@@ -38,6 +39,11 @@ def main():
     gmr_opts.set_defaults(CONF)
 
     gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
+
+    LOG.warning('The nova-console service is deprecated as it is Xen '
+                'specific, does not function properly in a multi-cell '
+                'environment, and has effectively been replaced by noVNC '
+                'and the nova-novncproxy service.')
 
     server = service.Service.create(binary='nova-console',
                                     topic=console_rpcapi.RPC_TOPIC)

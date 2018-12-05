@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    The ``nova-console`` service is deprecated as it is Xen specific, does not
+    function properly in a multi-cell environment, and has effectively been
+    replaced by noVNC and the ``nova-novncproxy`` service.
