@@ -21,6 +21,7 @@ import time
 
 from os_xenapi.client import host_agent
 from os_xenapi.client import XenAPI
+from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
@@ -421,8 +422,8 @@ class SimpleDH(object):
                'pass:%s' % self._shared, '-nosalt']
         if decrypt:
             cmd.append('-d')
-        out, err = utils.execute(*cmd,
-                                 process_input=encodeutils.safe_encode(text))
+        out, err = processutils.execute(
+            *cmd, process_input=encodeutils.safe_encode(text))
         if err:
             raise RuntimeError(_('OpenSSL error: %s') % err)
         return out

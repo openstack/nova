@@ -138,7 +138,7 @@ class GenerateConfigDriveTestCase(VMUtilsTestBase):
     @mock.patch.object(vm_utils, "create_vdi", return_value='vdi_ref')
     @mock.patch.object(vm_utils.instance_metadata, "InstanceMetadata")
     @mock.patch.object(vm_utils.configdrive, 'ConfigDriveBuilder')
-    @mock.patch.object(vm_utils.utils, 'execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch.object(vm_utils.volume_utils, 'stream_to_vdi')
     @mock.patch.object(vm_utils.os.path, 'getsize', return_value=100)
     @mock.patch.object(vm_utils, 'create_vbd', return_value='vbd_ref')
