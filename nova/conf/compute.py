@@ -401,9 +401,6 @@ and defaulted to 16.0. Once set to a non-default value, it is not possible
 to "unset" the config to get back to the default behavior. If you want
 to reset back to the default, explicitly specify 16.0.
 
-NOTE: As of the 16.0.0 Pike release, this configuration option is ignored
-for the ironic.IronicDriver compute driver and is hardcoded to 1.0.
-
 Possible values:
 
 * Any valid positive integer or float value
@@ -429,9 +426,6 @@ set on the scheduler node(s) or compute node(s) will be used and
 defaulted to 1.5. Once set to a non-default value, it is not possible
 to "unset" the config to get back to the default behavior. If you want
 to reset back to the default, explicitly specify 1.5.
-
-NOTE: As of the 16.0.0 Pike release, this configuration option is ignored
-for the ironic.IronicDriver compute driver and is hardcoded to 1.0.
 
 Possible values:
 
@@ -462,9 +456,6 @@ set on the scheduler node(s) or compute node(s) will be used and
 defaulted to 1.0. Once set to a non-default value, it is not possible
 to "unset" the config to get back to the default behavior. If you want
 to reset back to the default, explicitly specify 1.0.
-
-NOTE: As of the 16.0.0 Pike release, this configuration option is ignored
-for the ironic.IronicDriver compute driver and is hardcoded to 1.0.
 
 Possible values:
 
