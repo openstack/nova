@@ -565,9 +565,25 @@ class _TestComputeNodeObject(object):
         self.assertEqual(3.0, compute.ram_allocation_ratio)
         self.assertEqual(0.9, compute.disk_allocation_ratio)
 
-    def test_compat_allocation_ratios_default_values(self):
+    def test_compat_allocation_ratios_zero_conf(self):
+        self.flags(cpu_allocation_ratio=0.0, ram_allocation_ratio=0.0,
+                   disk_allocation_ratio=0.0)
         compute_dict = fake_compute_node.copy()
-        # new computes provide allocation ratios defaulted to 0.0
+        # the computes provide allocation ratios None
+        compute_dict['cpu_allocation_ratio'] = None
+        compute_dict['ram_allocation_ratio'] = None
+        compute_dict['disk_allocation_ratio'] = None
+        cls = objects.ComputeNode
+        compute = cls._from_db_object(self.context, cls(), compute_dict)
+
+        self.assertEqual(16.0, compute.cpu_allocation_ratio)
+        self.assertEqual(1.5, compute.ram_allocation_ratio)
+        self.assertEqual(1.0, compute.disk_allocation_ratio)
+
+    def test_compat_allocation_ratios_None_conf_zero_values(self):
+        # the CONF.x_allocation_ratio is None by default
+        compute_dict = fake_compute_node.copy()
+        # the computes provide allocation ratios 0.0
         compute_dict['cpu_allocation_ratio'] = 0.0
         compute_dict['ram_allocation_ratio'] = 0.0
         compute_dict['disk_allocation_ratio'] = 0.0
@@ -578,9 +594,10 @@ class _TestComputeNodeObject(object):
         self.assertEqual(1.5, compute.ram_allocation_ratio)
         self.assertEqual(1.0, compute.disk_allocation_ratio)
 
-    def test_compat_allocation_ratios_old_compute_default_values(self):
+    def test_compat_allocation_ratios_None_conf_None_values(self):
+        # the CONF.x_allocation_ratio is None by default
         compute_dict = fake_compute_node.copy()
-        # old computes don't provide allocation ratios to the table
+        # # the computes provide allocation ratios None
         compute_dict['cpu_allocation_ratio'] = None
         compute_dict['ram_allocation_ratio'] = None
         compute_dict['disk_allocation_ratio'] = None

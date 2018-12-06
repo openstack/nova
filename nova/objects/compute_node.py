@@ -197,13 +197,16 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                     # or the compute node is updated but the default value has
                     # not been changed
                     value = getattr(CONF, key)
-                    if value == 0.0 and key == 'cpu_allocation_ratio':
+                    if value in (0.0, None) \
+                            and key == 'cpu_allocation_ratio':
                         # It's not specified either on the controller
                         value = 16.0
-                    if value == 0.0 and key == 'ram_allocation_ratio':
+                    if value in (0.0, None) \
+                            and key == 'ram_allocation_ratio':
                         # It's not specified either on the controller
                         value = 1.5
-                    if value == 0.0 and key == 'disk_allocation_ratio':
+                    if value in (0.0, None) \
+                            and key == 'disk_allocation_ratio':
                         # It's not specified either on the controller
                         value = 1.0
             elif key == 'mapped':
