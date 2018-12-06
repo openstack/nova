@@ -1706,67 +1706,6 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
         return dev
 
 
-# plugs interfaces using Linux Bridge when using NeutronManager
-class NeutronLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
-
-    BRIDGE_NAME_PREFIX = 'brq'
-    GATEWAY_INTERFACE_PREFIX = 'gw-'
-
-    def plug(self, network, mac_address, gateway=True):
-        dev = self.get_dev(network)
-        bridge = self.get_bridge(network)
-        if not gateway:
-            # If we weren't instructed to act as a gateway then add the
-            # appropriate flows to block all non-dhcp traffic.
-            # .. and make sure iptbles won't forward it as well.
-            iptables_manager.ipv4['filter'].add_rule('FORWARD',
-                    ('--in-interface %s -j %s'
-                     % (bridge, CONF.iptables_drop_action)))
-            iptables_manager.ipv4['filter'].add_rule('FORWARD',
-                    ('--out-interface %s -j %s'
-                     % (bridge, CONF.iptables_drop_action)))
-            return bridge
-        else:
-            for rule in get_gateway_rules(bridge):
-                iptables_manager.ipv4['filter'].add_rule(*rule)
-
-        linux_net_utils.create_tap_dev(dev, mac_address)
-
-        if not linux_net_utils.device_exists(bridge):
-            LOG.debug("Starting bridge %s ", bridge)
-            utils.execute('brctl', 'addbr', bridge, run_as_root=True)
-            utils.execute('brctl', 'setfd', bridge, str(0), run_as_root=True)
-            utils.execute('brctl', 'stp', bridge, 'off', run_as_root=True)
-            utils.execute('ip', 'link', 'set', bridge, 'address', mac_address,
-                          run_as_root=True, check_exit_code=[0, 2, 254])
-            utils.execute('ip', 'link', 'set', bridge, 'up', run_as_root=True,
-                          check_exit_code=[0, 2, 254])
-            LOG.debug("Done starting bridge %s", bridge)
-
-            full_ip = '%s/%s' % (network['dhcp_server'],
-                                 network['cidr'].rpartition('/')[2])
-            utils.execute('ip', 'address', 'add', full_ip, 'dev', bridge,
-                          run_as_root=True, check_exit_code=[0, 2, 254])
-
-        return dev
-
-    def unplug(self, network):
-        dev = self.get_dev(network)
-        if not linux_net_utils.device_exists(dev):
-            return None
-        else:
-            linux_net_utils.delete_net_dev(dev)
-            return dev
-
-    def get_dev(self, network):
-        dev = self.GATEWAY_INTERFACE_PREFIX + str(network['uuid'][0:11])
-        return dev
-
-    def get_bridge(self, network):
-        bridge = self.BRIDGE_NAME_PREFIX + str(network['uuid'][0:11])
-        return bridge
-
-
 iptables_manager = IptablesManager()
 
 
