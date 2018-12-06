@@ -561,9 +561,9 @@ Emulator threads policy
 
   - ``share``: (default) The emulator threads float across the pCPUs
     associated to the guest. To place a workload's emulator threads on
-    a set of isolated physical CPUs, set ``share``` and
-    ``[compute]/cpu_shared_set`` configuration option to the set of
-    host CPUs that should be used for best-effort CPU resources.
+    a set of isolated physical CPUs, set ``share`` and the
+    :oslo.config:option:`compute.cpu_shared_set` configuration option to the
+    set of host CPUs that should be used for best-effort CPU resources.
 
   - ``isolate``: The emulator threads are isolated on a single pCPU.
 
