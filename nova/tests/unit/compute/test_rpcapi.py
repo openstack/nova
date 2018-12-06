@@ -588,3 +588,14 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             return result
 
         return _test()
+
+    @mock.patch('nova.compute.rpcapi.LOG')
+    @mock.patch('nova.objects.Service.get_minimum_version')
+    def test_version_cap_no_computes_log_once(self, mock_minver, mock_log):
+        self.flags(compute='auto', group='upgrade_levels')
+        mock_minver.return_value = 0
+        compute_rpcapi.NO_COMPUTES_WARNING = False
+        compute_rpcapi.LAST_VERSION = None
+        compute_rpcapi.ComputeAPI()
+        compute_rpcapi.ComputeAPI()
+        self.assertEqual(1, mock_log.debug.call_count)
