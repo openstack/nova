@@ -455,7 +455,7 @@ New Features
     Once all computes are upgraded to Newton, a restart of the nova-api
     service will be required to use this new feature.
   
-  .. _Additional features: http://docs.openstack.org/networking-guide/intro-os-networking-features.html
+  .. _Additional features: https://docs.openstack.org/neutron/rocky/admin/intro-os-networking.html
 
 .. releasenotes/notes/glance_v2-15b080e361804976.yaml @ b'f71cd2ca03693655efdbd1109f406ab6f3b58ee6'
 
