@@ -76,7 +76,8 @@ from nova.policies import servers as servers_policies
 import nova.policy
 from nova import profiler
 from nova import rpc
-from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import query as queryclient
+from nova.scheduler.client import report as reportclient
 from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
 from nova import utils
@@ -253,13 +254,7 @@ class API(base.Base):
         self.image_api = image_api or image.API()
         self.network_api = network_api or network.API()
         self.volume_api = volume_api or cinder.API()
-        # NOTE(mriedem): This looks a bit weird but we get the reportclient
-        # via SchedulerClient since it lazy-loads SchedulerReportClient on
-        # the first usage which helps to avoid a bunch of lockutils spam in
-        # the nova-api logs every time the service is restarted (remember
-        # that pretty much all of the REST API controllers construct this
-        # API class).
-        self.placementclient = scheduler_client.SchedulerClient().reportclient
+        self._placementclient = None  # Lazy-load on first access.
         self.security_group_api = (security_group_api or
             openstack_driver.get_openstack_security_group_driver())
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
@@ -2135,6 +2130,12 @@ class API(base.Base):
             # exist in the DB to destroy it.
             if 'id' in bdm:
                 bdm.destroy()
+
+    @property
+    def placementclient(self):
+        if self._placementclient is None:
+            self._placementclient = reportclient.SchedulerReportClient()
+        return self._placementclient
 
     def _local_delete(self, context, instance, bdms, delete_type, cb):
         if instance.vm_state == vm_states.SHELVED_OFFLOADED:
@@ -5301,9 +5302,15 @@ class AggregateAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host aggregates."""
     def __init__(self, **kwargs):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
-        self.scheduler_client = scheduler_client.SchedulerClient()
-        self.placement_client = self.scheduler_client.reportclient
+        self.scheduler_client = queryclient.SchedulerQueryClient()
+        self._placement_client = None  # Lazy-load on first access.
         super(AggregateAPI, self).__init__(**kwargs)
+
+    @property
+    def placement_client(self):
+        if self._placement_client is None:
+            self._placement_client = reportclient.SchedulerReportClient()
+        return self._placement_client
 
     @wrap_exception()
     def create_aggregate(self, context, aggregate_name, availability_zone):

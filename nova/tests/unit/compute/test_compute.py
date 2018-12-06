@@ -67,7 +67,6 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import fields as obj_fields
 from nova.objects import instance as instance_obj
 from nova.objects import migrate_data as migrate_data_obj
-from nova.scheduler import client as scheduler_client
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.compute import eventlet_utils
@@ -12288,6 +12287,18 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         hosts = aggregate.hosts if 'hosts' in aggregate else None
         self.assertIn(values[0][1][0], hosts)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
+    def test_placement_client_init(self, mock_report_client):
+        """Tests to make sure that the construction of the placement client
+        only happens once per AggregateAPI class instance.
+        """
+        self.assertIsNone(self.api._placement_client)
+        # Access the property twice to make sure SchedulerReportClient is
+        # only loaded once.
+        for x in range(2):
+            self.api.placement_client
+        mock_report_client.assert_called_once_with()
+
 
 class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
     """This is for making sure that all Aggregate API methods which are
@@ -12300,13 +12311,15 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
         self.api = compute_api.AggregateAPI()
         self.context = context.RequestContext('fake', 'fake')
 
-    @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
+    @mock.patch('nova.scheduler.client.query.SchedulerQueryClient.'
+                'update_aggregates')
     def test_create_aggregate(self, update_aggregates):
         with mock.patch.object(objects.Aggregate, 'create'):
             agg = self.api.create_aggregate(self.context, 'fake', None)
         update_aggregates.assert_called_once_with(self.context, [agg])
 
-    @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
+    @mock.patch('nova.scheduler.client.query.SchedulerQueryClient.'
+                'update_aggregates')
     def test_update_aggregate(self, update_aggregates):
         self.api.is_safe_to_update_az = mock.Mock()
         agg = objects.Aggregate()
@@ -12315,7 +12328,8 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
             self.api.update_aggregate(self.context, 1, {})
         update_aggregates.assert_called_once_with(self.context, [agg])
 
-    @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
+    @mock.patch('nova.scheduler.client.query.SchedulerQueryClient.'
+                'update_aggregates')
     def test_update_aggregate_metadata(self, update_aggregates):
         self.api.is_safe_to_update_az = mock.Mock()
         agg = objects.Aggregate()
@@ -12325,7 +12339,8 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
             self.api.update_aggregate_metadata(self.context, 1, {})
         update_aggregates.assert_called_once_with(self.context, [agg])
 
-    @mock.patch.object(scheduler_client.SchedulerClient, 'delete_aggregate')
+    @mock.patch('nova.scheduler.client.query.SchedulerQueryClient.'
+                'delete_aggregate')
     def test_delete_aggregate(self, delete_aggregate):
         self.api.is_safe_to_update_az = mock.Mock()
         agg = objects.Aggregate(uuid=uuids.agg, name='fake-aggregate',
@@ -12340,7 +12355,8 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
                 'aggregate_add_host')
     @mock.patch('nova.compute.utils.notify_about_aggregate_action')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.add_aggregate_host')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
+    @mock.patch('nova.scheduler.client.query.SchedulerQueryClient.'
+                'update_aggregates')
     def test_add_host_to_aggregate(self, update_aggregates, mock_add_agg,
                                    mock_notify, mock_add_host):
         self.api.is_safe_to_update_az = mock.Mock()
@@ -12365,7 +12381,8 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
                 'aggregate_remove_host')
     @mock.patch('nova.compute.utils.notify_about_aggregate_action')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.remove_aggregate_host')
-    @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
+    @mock.patch('nova.scheduler.client.query.SchedulerQueryClient.'
+                'update_aggregates')
     def test_remove_host_from_aggregate(self, update_aggregates,
                                         mock_remove_agg, mock_notify,
                                         mock_remove_host):

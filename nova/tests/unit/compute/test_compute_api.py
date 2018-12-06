@@ -6718,6 +6718,18 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         self.assertTrue(hasattr(self.compute_api, 'host'))
         self.assertEqual(CONF.host, self.compute_api.host)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
+    def test_placement_client_init(self, mock_report_client):
+        """Tests to make sure that the construction of the placement client
+        only happens once per API class instance.
+        """
+        self.assertIsNone(self.compute_api._placementclient)
+        # Access the property twice to make sure SchedulerReportClient is
+        # only loaded once.
+        for x in range(2):
+            self.compute_api.placementclient
+        mock_report_client.assert_called_once_with()
+
 
 class Cellsv1DeprecatedTestMixIn(object):
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
