@@ -1504,7 +1504,8 @@ def fixed_ip_get_by_instance(context, instance_uuid):
 
 @pick_context_manager_reader
 def fixed_ip_get_by_host(context, host):
-    instance_uuids = _instance_get_all_uuids_by_host(context, host)
+    instance_uuids = _instance_get_all_uuids_by_hosts(
+        context, [host]).get(host, [])
     if not instance_uuids:
         return []
 
@@ -2657,23 +2658,30 @@ def instance_get_all_by_host(context, host, columns_to_join=None):
                                     manual_joins=columns_to_join)
 
 
-def _instance_get_all_uuids_by_host(context, host):
-    """Return a list of the instance uuids on a given host.
+def _instance_get_all_uuids_by_hosts(context, hosts):
+    """Return a dict, keyed by hostname, of a list of the instance uuids on the
+    host for each supplied hostname.
 
-    Returns a list of UUIDs, not Instance model objects.
+    Returns a dict, keyed by hostname, of a list of UUIDs, not Instance model
+    objects.
     """
-    uuids = []
-    for tuple in model_query(context, models.Instance, (models.Instance.uuid,),
-                             read_deleted="no").\
-                filter_by(host=host).\
-                all():
-        uuids.append(tuple[0])
-    return uuids
+    itbl = models.Instance.__table__
+    default_deleted_value = itbl.c.deleted.default.arg
+    sel = sql.select([itbl.c.host, itbl.c.uuid])
+    sel = sel.where(sql.and_(
+            itbl.c.deleted == default_deleted_value,
+            itbl.c.host.in_(hosts)))
+
+    # group the instance UUIDs by hostname
+    res = collections.defaultdict(list)
+    for rec in context.session.execute(sel).fetchall():
+        res[rec[0]].append(rec[1])
+    return res
 
 
 @pick_context_manager_reader
-def instance_get_all_uuids_by_host(context, host):
-    return _instance_get_all_uuids_by_host(context, host)
+def instance_get_all_uuids_by_hosts(context, hosts):
+    return _instance_get_all_uuids_by_hosts(context, hosts)
 
 
 @pick_context_manager_reader
