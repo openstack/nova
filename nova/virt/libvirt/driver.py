@@ -5120,6 +5120,45 @@ class LibvirtDriver(driver.ComputeDriver):
             pcierootport = vconfig.LibvirtConfigGuestPCIeRootPortController()
             guest.add_device(pcierootport)
 
+    def _guest_needs_pcie(self, guest, caps):
+        """Check for prerequisites for adding PCIe root port
+        controllers
+        """
+
+        # TODO(kchamart) In the third 'if' conditional below, for 'x86'
+        # arch, we're assuming: when 'os_mach_type' is 'None', you'll
+        # have "pc" machine type.  That assumption, although it is
+        # correct for the "forseeable future", it will be invalid when
+        # libvirt / QEMU changes the default machine types.
+        #
+        # From libvirt 4.7.0 onwards (September 2018), it will ensure
+        # that *if* 'pc' is available, it will be used as the default --
+        # to not break existing applications.  (Refer:
+        # https://libvirt.org/git/?p=libvirt.git;a=commit;h=26cfb1a3
+        # --"qemu: ensure default machine types don't change if QEMU
+        # changes").
+        #
+        # But even if libvirt (>=v4.7.0) handled the default case,
+        # relying on such assumptions is not robust.  Instead we should
+        # get the default machine type for a given architecture reliably
+        # -- by Nova setting it explicitly (we already do it for Arm /
+        # AArch64 & s390x).  A part of this bug is being tracked here:
+        # https://bugs.launchpad.net/nova/+bug/1780138).
+
+        # Add PCIe root port controllers for PCI Express machines
+        # but only if their amount is configured
+
+        if not CONF.libvirt.num_pcie_ports:
+            return False
+        if (caps.host.cpu.arch == fields.Architecture.AARCH64
+                and guest.os_mach_type.startswith('virt')):
+            return True
+        if (caps.host.cpu.arch == fields.Architecture.X86_64
+                and guest.os_mach_type is not None
+                and 'q35' in guest.os_mach_type):
+            return True
+        return False
+
     def _guest_add_usb_host_keyboard(self, guest):
         """Add USB Host controller and keyboard for graphical console use.
 
@@ -5248,14 +5287,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if virt_type in ('qemu', 'kvm'):
             self._set_qemu_guest_agent(guest, flavor, instance, image_meta)
 
-        # Add PCIe root port controllers for PCI Express machines
-        # but only if their amount is configured
-        if (CONF.libvirt.num_pcie_ports and
-                ((caps.host.cpu.arch == fields.Architecture.AARCH64 and
-                guest.os_mach_type.startswith('virt')) or
-                (caps.host.cpu.arch == fields.Architecture.X86_64 and
-                guest.os_mach_type is not None and
-                'q35' in guest.os_mach_type))):
+        if self._guest_needs_pcie(guest, caps):
             self._guest_add_pcie_root_ports(guest)
 
         self._guest_add_pci_devices(guest, instance)
