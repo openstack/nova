@@ -151,6 +151,13 @@ would become:
       }
       provider_tree.update_inventory(nodename, inv_data)
 
+When reporting inventory for the standard resource classes ``VCPU``,
+``MEMORY_MB`` and ``DISK_GB``, implementors of ``update_provider_tree`` may
+need to set the ``allocation_ratio`` and ``reserved`` values in the
+``inv_data`` dict based on configuration to reflect changes on the compute
+for allocation ratios and reserved resource amounts back to the placement
+service.
+
 Porting from get_traits
 ~~~~~~~~~~~~~~~~~~~~~~~
 To replace ``get_traits``, developers should use the

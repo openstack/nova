@@ -498,6 +498,14 @@ class TestUpdateComputeNodeReservedAndAllocationRatio(
                 CONF.reserved_host_disk_mb)
         }
 
+    def _assert_reserved_inventory(self, inventories):
+        reserved = self._get_reserved_host_values_from_config()
+        for rc, res in reserved.items():
+            self.assertIn('reserved', inventories[rc])
+            self.assertEqual(res, inventories[rc]['reserved'],
+                             'Unexpected resource provider inventory '
+                             'reserved value for %s' % rc)
+
     def test_update_inventory_reserved_and_allocation_ratio_from_conf(self):
         # Start a compute service which should create a corresponding resource
         # provider in the placement service.
@@ -524,11 +532,7 @@ class TestUpdateComputeNodeReservedAndAllocationRatio(
             self.assertIn('allocation_ratio', inventories[rc])
             self.assertEqual(ratio, inventories[rc]['allocation_ratio'],
                              'Unexpected allocation ratio for %s' % rc)
-        reserved = self._get_reserved_host_values_from_config()
-        for rc, res in reserved.items():
-            self.assertIn('reserved', inventories[rc])
-            self.assertEqual(res, inventories[rc]['reserved'],
-                             'Unexpected reserved value for %s' % rc)
+        self._assert_reserved_inventory(inventories)
 
         # Now change the configuration values, restart the compute service,
         # and ensure the changes are reflected in the resource provider
@@ -566,18 +570,9 @@ class TestUpdateComputeNodeReservedAndAllocationRatio(
                 ratio, getattr(cn, '%s_allocation_ratio' % attr_map[rc]),
                 'Unexpected ComputeNode allocation ratio for %s' % rc)
             # Make sure the values in placement are updated.
-            # FIXME(mriedem): The config-driven allocation ratio overrides
-            # are not reflected in placement until bug 1799727 is fixed.
-            self.assertNotEqual(ratio, inventories[rc]['allocation_ratio'],
-                                'Unexpected resource provider inventory '
-                                'allocation ratio for %s' % rc)
+            self.assertEqual(ratio, inventories[rc]['allocation_ratio'],
+                             'Unexpected resource provider inventory '
+                             'allocation ratio for %s' % rc)
 
         # The reserved host values should also come from config.
-        reserved = self._get_reserved_host_values_from_config()
-        for rc, res in reserved.items():
-            self.assertIn('reserved', inventories[rc])
-            # FIXME(mriedem): The config-driven reserved overrides
-            # are not reflected in placement until bug 1799727 is fixed.
-            self.assertNotEqual(res, inventories[rc]['reserved'],
-                                'Unexpected resource provider inventory '
-                                'reserved value for %s' % rc)
+        self._assert_reserved_inventory(inventories)
