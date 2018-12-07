@@ -767,6 +767,36 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                              mock.ANY, mock.ANY, mock.ANY)
         mock_save.assert_called_once_with()
 
+    @mock.patch.object(context, 'get_admin_context')
+    @mock.patch.object(objects.InstanceList, 'get_by_host')
+    @mock.patch.object(fake_driver.FakeDriver, 'init_host')
+    @mock.patch('nova.compute.manager.ComputeManager._init_instance')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                  '_destroy_evacuated_instances')
+    def test_init_host_with_in_progress_evacuations(self, mock_destroy_evac,
+            mock_init_instance, mock_init_host, mock_host_get,
+            mock_admin_ctxt):
+        """Assert that init_instance is not called for instances that are
+           evacuating from the host during init_host.
+        """
+        active_instance = fake_instance.fake_instance_obj(
+            self.context, host=self.compute.host, uuid=uuids.active_instance)
+        evacuating_instance = fake_instance.fake_instance_obj(
+            self.context, host=self.compute.host, uuid=uuids.evac_instance)
+        instance_list = objects.InstanceList(self.context,
+            objects=[active_instance, evacuating_instance])
+
+        mock_host_get.return_value = instance_list
+        mock_admin_ctxt.return_value = self.context
+        mock_destroy_evac.return_value = {
+            uuids.evac_instance: evacuating_instance
+        }
+
+        self.compute.init_host()
+
+        mock_init_instance.assert_called_once_with(
+            self.context, active_instance)
+
     def test_init_instance_with_binding_failed_vif_type(self):
         # this instance will plug a 'binding_failed' vif
         instance = fake_instance.fake_instance_obj(
