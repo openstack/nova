@@ -57,6 +57,12 @@ Because of this, there are a few restrictions placed on cells v1:
    tests are added to Tempest which trigger a latent bug in cells v1 it may not
    be fixed. However, regressions in working function should be tracked with
    bugs and fixed.
+#. Changes proposed to nova will not be automatically tested against a Cells v1
+   environment. To manually trigger Cells v1 integration testing on a nova
+   change in Gerrit, leave a review comment of "check experimental" and the
+   *nova-cells-v1* job will run on it, but the job is non-voting, meaning if
+   it fails it will not prevent the patch from being merged if approved by the
+   core team.
 
 **Suffice it to say, new deployments of cells v1 are not encouraged.**
 

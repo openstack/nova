@@ -1,0 +1,9 @@
+---
+other:
+  - |
+    CI testing of Cells v1 has been moved to the ``experimental`` queue meaning
+    changes proposed to nova will not be tested against a Cells v1 setup unless
+    explicitly run through the ``experimental`` queue by leaving a review
+    comment on the patch of "check experimental". Cells v1 has been deprecated
+    since the 16.0.0 Pike release and this is a further step in its eventual
+    removal.

@@ -85,7 +85,16 @@ Integration tests
 -----------------
 
 Today, our integration tests involve running the Tempest test suite on a
-variety of Nova deployment scenarios.
+variety of Nova deployment scenarios. The integration job setup is defined
+in the ``.zuul.yaml`` file in the root of the nova repository. Jobs are
+restricted by queue:
+
+* ``check``: jobs in this queue automatically run on all proposed changes even
+  with non-voting jobs
+* ``gate``: jobs in this queue automatically run on all approved changes
+  (voting jobs only)
+* ``experimental``: jobs in this queue are non-voting and run on-demand by
+  leaving a review comment on the change of "check experimental"
 
 In addition, we have third parties running the tests on their preferred Nova
 deployment scenario.
