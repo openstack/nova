@@ -490,6 +490,29 @@ class FakeDriver(driver.ComputeDriver):
         host_status['cpu_info'] = jsonutils.dumps(cpu_info)
         return host_status
 
+    def update_provider_tree(self, provider_tree, nodename):
+        inventory = {
+            'VCPU': {
+                'total': self.vcpus,
+                'min_unit': 1,
+                'max_unit': self.vcpus,
+                'step_size': 1,
+            },
+            'MEMORY_MB': {
+                'total': self.memory_mb,
+                'min_unit': 1,
+                'max_unit': self.memory_mb,
+                'step_size': 1,
+            },
+            'DISK_GB': {
+                'total': self.local_gb,
+                'min_unit': 1,
+                'max_unit': self.local_gb,
+                'step_size': 1,
+            },
+        }
+        provider_tree.update_inventory(nodename, inventory)
+
     def ensure_filtering_rules_for_instance(self, instance, network_info):
         return
 
