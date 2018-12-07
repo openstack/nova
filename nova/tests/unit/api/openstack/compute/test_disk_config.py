@@ -22,6 +22,8 @@ import six
 from nova.api.openstack import compute
 from nova.compute import api as compute_api
 from nova.compute import flavors
+from nova import context as nova_context
+from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -31,13 +33,7 @@ import nova.tests.unit.image.fake
 MANUAL_INSTANCE_UUID = fakes.FAKE_UUID
 AUTO_INSTANCE_UUID = fakes.FAKE_UUID.replace('a', 'b')
 
-stub_instance = fakes.stub_instance
-
 API_DISK_CONFIG = 'OS-DCF:diskConfig'
-
-
-def instance_addresses(context, instance_id):
-    return None
 
 
 class DiskConfigTestCaseV21(test.TestCase):
@@ -48,39 +44,25 @@ class DiskConfigTestCaseV21(test.TestCase):
         fakes.stub_out_secgroup_api(self)
         self._set_up_app()
         self._setup_fake_image_service()
-
+        ctxt = nova_context.RequestContext(
+            # These values match what is used in fakes.HTTPRequest.blank.
+            user_id='fake_user', project_id='fake')
         FAKE_INSTANCES = [
-            fakes.stub_instance(1,
-                                uuid=MANUAL_INSTANCE_UUID,
-                                auto_disk_config=False),
-            fakes.stub_instance(2,
-                                uuid=AUTO_INSTANCE_UUID,
-                                auto_disk_config=True)
+            fakes.stub_instance_obj(ctxt,
+                                    uuid=MANUAL_INSTANCE_UUID,
+                                    auto_disk_config=False),
+            fakes.stub_instance_obj(ctxt,
+                                    uuid=AUTO_INSTANCE_UUID,
+                                    auto_disk_config=True)
         ]
 
-        def fake_instance_get(context, id_):
+        def fake_instance_get(_self, context, server_id, *args, **kwargs):
             for instance in FAKE_INSTANCES:
-                if id_ == instance['id']:
+                if server_id == instance.uuid:
                     return instance
+            raise exception.InstanceNotFound(instance_id=server_id)
 
-        self.stub_out('nova.db.api.instance_get', fake_instance_get)
-
-        def fake_instance_get_by_uuid(context, uuid,
-                                      columns_to_join=None, use_slave=False):
-            for instance in FAKE_INSTANCES:
-                if uuid == instance['uuid']:
-                    return instance
-
-        self.stub_out('nova.db.api.instance_get_by_uuid',
-                      fake_instance_get_by_uuid)
-
-        def fake_instance_get_all(context, *args, **kwargs):
-            return FAKE_INSTANCES
-
-        self.stub_out('nova.db.api.instance_get_all', fake_instance_get_all)
-        self.stub_out('nova.db.api.instance_get_all_by_filters',
-                      fake_instance_get_all)
-
+        self.stub_out('nova.compute.api.API.get', fake_instance_get)
         self.stub_out('nova.objects.Instance.save',
                       lambda *args, **kwargs: None)
 
@@ -103,26 +85,6 @@ class DiskConfigTestCaseV21(test.TestCase):
                     'security_groups': inst_['security_groups'],
                     'instance_type': flavors.get_default_flavor(),
                     })
-
-            def fake_instance_get_for_create(context, id_, *args, **kwargs):
-                return (inst, inst)
-
-            self.stub_out('nova.db.api.instance_update_and_get_original',
-                          fake_instance_get_for_create)
-
-            def fake_instance_get_all_for_create(context, *args, **kwargs):
-                return [inst]
-            self.stub_out('nova.db.api.instance_get_all',
-                           fake_instance_get_all_for_create)
-            self.stub_out('nova.db.api.instance_get_all_by_filters',
-                           fake_instance_get_all_for_create)
-
-            def fake_instance_add_security_group(context, instance_id,
-                                                 security_group_id):
-                pass
-
-            self.stub_out('nova.db.api.instance_add_security_group',
-                          fake_instance_add_security_group)
 
             return inst
 
