@@ -1815,17 +1815,6 @@ class API(base.Base):
         need to be looked up in a cell db and the normal delete path taken.
         """
         deleted = self._attempt_delete_of_buildrequest(context, instance)
-
-        # After service version 15 deletion of the BuildRequest will halt the
-        # build process in the conductor. In that case run the rest of this
-        # method and consider the instance deleted. If we have not yet reached
-        # service version 15 then just return False so the rest of the delete
-        # process will proceed usually.
-        service_version = objects.Service.get_minimum_version(
-            context, 'nova-osapi_compute')
-        if service_version < 15:
-            return False
-
         if deleted:
             # If we've reached this block the successful deletion of the
             # buildrequest indicates that the build process should be halted by

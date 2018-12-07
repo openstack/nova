@@ -8306,27 +8306,6 @@ class ComputeTestCase(BaseTestCase,
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.objects.Instance.destroy')
-    @mock.patch('nova.objects.Service.get_minimum_version')
-    @mock.patch('nova.compute.utils.notify_about_instance_usage')
-    @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
-    def test_delete_while_booting_instance_not_in_cell_db_cellsv1(
-            self, br_get_by_instance, legacy_notify, minimum_server_version,
-            instance_destroy, notify):
-
-        minimum_server_version.return_value = 14
-
-        instance = self._create_fake_instance_obj()
-        instance.host = None
-        instance.save()
-
-        self.compute_api._delete_instance(self.context, instance)
-
-        test_utils.assert_instance_delete_notification_by_uuid(
-            legacy_notify, notify, instance.uuid, self.compute_api.notifier,
-            self.context)
-
-    @mock.patch('nova.compute.utils.notify_about_instance_action')
-    @mock.patch('nova.objects.Instance.destroy')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
