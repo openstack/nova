@@ -5314,6 +5314,13 @@ class ComputeManager(manager.Manager):
         # terminate all the connections with the volume server and the host
         self._terminate_volume_connections(context, instance, bdms)
 
+        # Free up the resource allocations in the placement service.
+        # This should happen *before* the vm_state is changed to
+        # SHELVED_OFFLOADED in case client-side code is polling the API to
+        # schedule more instances (or unshelve) once this server is offloaded.
+        rt = self._get_resource_tracker()
+        rt.delete_allocation_for_shelve_offloaded_instance(context, instance)
+
         instance.power_state = current_power_state
         # NOTE(mriedem): The vm_state has to be set before updating the
         # resource tracker, see vm_states.ALLOW_RESOURCE_REMOVAL. The host/node
@@ -5326,9 +5333,6 @@ class ComputeManager(manager.Manager):
 
         # NOTE(ndipanov): Free resources from the resource tracker
         self._update_resource_tracker(context, instance)
-
-        rt = self._get_resource_tracker()
-        rt.delete_allocation_for_shelve_offloaded_instance(context, instance)
 
         # NOTE(sfinucan): RPC calls should no longer be attempted against this
         # instance, so ensure any calls result in errors

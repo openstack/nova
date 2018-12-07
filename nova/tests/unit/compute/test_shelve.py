@@ -224,16 +224,24 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         fake_bdms = objects.BlockDeviceMappingList()
         mock_get_bdms.return_value = fake_bdms
 
-        with mock.patch.object(instance, 'save'):
-            self.compute.shelve_offload_instance(self.context, instance,
-                                                 clean_shutdown=clean_shutdown)
-            mock_notify.assert_has_calls([
-                mock.call(self.context, instance, 'fake-mini',
-                          action='shelve_offload', phase='start',
-                          bdms=fake_bdms),
-                mock.call(self.context, instance, 'fake-mini',
-                          action='shelve_offload', phase='end',
-                          bdms=fake_bdms)])
+        def stub_instance_save(inst, *args, **kwargs):
+            # If the vm_state is changed to SHELVED_OFFLOADED make sure we
+            # have already freed up allocations in placement.
+            if inst.vm_state == vm_states.SHELVED_OFFLOADED:
+                self.assertTrue(mock_delete_alloc.called,
+                                'Allocations must be deleted before the '
+                                'vm_status can change to shelved_offloaded.')
+
+        self.stub_out('nova.objects.Instance.save', stub_instance_save)
+        self.compute.shelve_offload_instance(self.context, instance,
+                                             clean_shutdown=clean_shutdown)
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance, 'fake-mini',
+                      action='shelve_offload', phase='start',
+                      bdms=fake_bdms),
+            mock.call(self.context, instance, 'fake-mini',
+                      action='shelve_offload', phase='end',
+                      bdms=fake_bdms)])
 
         self.assertEqual(vm_states.SHELVED_OFFLOADED, instance.vm_state)
         self.assertIsNone(instance.task_state)
