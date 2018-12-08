@@ -185,6 +185,7 @@ openstack_projects = [
     'oslo.messaging',
     'oslo.i18n',
     'oslo.versionedobjects',
+    'placement',
     'python-novaclient',
     'python-openstackclient',
     'reno',

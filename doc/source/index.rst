@@ -81,7 +81,7 @@ resources will help you get started with consuming the API directly.
 * `Placement API Reference <https://developer.openstack.org/api-ref/placement/>`_:
   The complete reference for the placement API, including all methods and
   request / response parameters and their meaning.
-* :ref:`Placement API Microversion History <placement-api-microversion-history>`:
+* :placement-doc:`Placement API Microversion History <#rest-api-version-history>`:
   The placement API evolves over time through `Microversions
   <https://developer.openstack.org/api-guide/compute/microversions.html>`_. This
   provides the history of all those changes. Consider it a "what's new" in the
@@ -142,8 +142,8 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
 * :doc:`Cells v2 Planning </user/cellsv2-layout>`: For large deployments, Cells v2
   allows sharding of your compute environment. Upfront planning is key to a
   successful Cells v2 layout.
-* :doc:`Placement service </user/placement>`: Overview of the placement
-  service, including how it fits in with the rest of nova.
+* :placement-doc:`Placement service <>`: Overview of the placement service,
+  including how it fits in with the rest of nova.
 * :doc:`Running nova-api on wsgi <user/wsgi>`: Considerations for using a real
   WSGI container instead of the baked-in eventlet web server.
 
@@ -215,7 +215,6 @@ looking parts of our architecture. These are collected below.
    contributor/code-review
    contributor/documentation
    contributor/microversions
-   contributor/placement.rst
    contributor/policies.rst
    contributor/releasenotes
    contributor/testing
@@ -254,7 +253,6 @@ looking parts of our architecture. These are collected below.
    user/filter-scheduler
    user/flavors
    user/manage-ip-addresses
-   user/placement
    user/quotas
    user/support-matrix
    user/upgrade

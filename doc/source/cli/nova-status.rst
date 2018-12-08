@@ -95,7 +95,7 @@ Upgrade
     make a successful request to the endpoint. The command also checks to
     see that there are compute node resource providers checking in with the
     Placement service. More information on the Placement service can be found
-    at :nova-doc:`Placement API <user/placement.html>`.
+    at :placement-doc:`Placement API <>`.
 
   **16.0.0 (Pike)**
 

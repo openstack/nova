@@ -83,7 +83,7 @@ same time.
    * Several nova services rely on the external placement service being at the
      latest level. Therefore, you must upgrade placement before any nova
      services. See the
-     :ref:`placement upgrade notes <placement-upgrade-notes>` for more
+     :placement-doc:`placement upgrade notes <#upgrade-notes>` for more
      details on upgrading the placement service.
 
    * For maximum safety (no failed API operations), gracefully shutdown all
