@@ -244,9 +244,13 @@ def ssh_execute(dest, *cmd, **kwargs):
 
 
 def generate_uid(topic, size=8):
+    random_string = generate_random_string(size)
+    return '%s-%s' % (topic, random_string)
+
+
+def generate_random_string(size=8):
     characters = '01234567890abcdefghijklmnopqrstuvwxyz'
-    choices = [random.choice(characters) for _x in range(size)]
-    return '%s-%s' % (topic, ''.join(choices))
+    return ''.join([random.choice(characters) for _x in range(size)])
 
 
 # Default symbols to use for passwords. Avoids visually confusing characters.

@@ -2435,6 +2435,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
+    @mock.patch('nova.privsep.utils.supports_direct_io',
+                new=mock.Mock(return_value=True))
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_numa_host_instance_no_fit(self, is_able):
@@ -2686,6 +2688,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
+    @mock.patch('nova.privsep.utils.supports_direct_io',
+                new=mock.Mock(return_value=True))
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_numa_host_instance_2pci_no_fit(self, is_able):

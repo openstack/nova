@@ -632,6 +632,8 @@ class ServersTest(ServersTestBase):
         self.assertIn('reservation_id', response)
         reservation_id = response['reservation_id']
         self.assertNotIn(reservation_id, ['', None])
+        # Assert that the reservation_id itself has the expected format
+        self.assertRegex(reservation_id, 'r-[0-9a-zA-Z]{8}')
 
         # Create 1 more server, which should not return a reservation_id
         server = self._build_minimal_create_server_request()
