@@ -61,9 +61,6 @@
               if [ -f $BASE/new/nova/gate/post_test_hook.sh ]; then
                   $BASE/new/nova/gate/post_test_hook.sh
               fi
-              if [ -f $BASE/new/nova/gate/post_test_perf_check.sh ]; then
-                  $BASE/new/nova/gate/post_test_perf_check.sh
-              fi
           }
           export -f post_test_hook
           cp devstack-gate/devstack-vm-gate-wrap.sh ./safe-devstack-vm-gate-wrap.sh
