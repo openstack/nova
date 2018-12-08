@@ -799,6 +799,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute.init_virt_events()
         self.assertFalse(mock_register.called)
 
+    @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.scheduler.utils.resources_from_flavor')
     @mock.patch.object(manager.ComputeManager, '_get_instances_on_driver')
@@ -813,10 +814,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_init_host_with_evacuated_instance(self, mock_save, mock_mig_get,
             mock_temp_mut, mock_init_host, mock_destroy, mock_host_get,
             mock_admin_ctxt, mock_init_virt, mock_get_inst, mock_resources,
-            mock_get_node):
+            mock_get_node, mock_elevated):
         our_host = self.compute.host
         not_our_host = 'not-' + our_host
 
+        read_deleted_context = self.context.elevated(read_deleted='yes')
+        mock_elevated.return_value = read_deleted_context
         deleted_instance = fake_instance.fake_instance_obj(
                 self.context, host=not_our_host, uuid=uuids.deleted_instance)
         migration = objects.Migration(instance_uuid=deleted_instance.uuid)
@@ -852,7 +855,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                 expected_attrs=['info_cache', 'metadata'])
         mock_init_virt.assert_called_once_with()
         mock_temp_mut.assert_called_once_with(self.context, read_deleted='yes')
-        mock_get_inst.assert_called_once_with(self.context)
+        mock_get_inst.assert_called_once_with(read_deleted_context)
         mock_get_net.assert_called_once_with(self.context, deleted_instance)
 
         # ensure driver.destroy is called so that driver may
@@ -3760,6 +3763,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance_2.host = 'not-' + our_host
         instance_2.user_id = uuids.user_id
         instance_2.project_id = uuids.project_id
+        instance_2.deleted = False
 
         # Only instance 2 has a migration record
         migration = objects.Migration(instance_uuid=instance_2.uuid)
@@ -3817,6 +3821,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance_1.host = 'not-' + our_host
         instance_1.user_id = uuids.user_id
         instance_1.project_id = uuids.project_id
+        instance_1.deleted = False
         instance_2 = objects.Instance(self.context, flavor=flavor)
         instance_2.uuid = uuids.instance_2
         instance_2.task_state = None
@@ -3824,6 +3829,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance_2.host = 'not-' + our_host
         instance_2.user_id = uuids.user_id
         instance_2.project_id = uuids.project_id
+        instance_2.deleted = False
 
         migration_1 = objects.Migration(instance_uuid=instance_1.uuid)
         # Consider the migration successful but the node was deleted while the
