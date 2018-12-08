@@ -821,6 +821,8 @@ class WarningsFixture(fixtures.Fixture):
         # about any deprecations coming from it
         warnings.filterwarnings('ignore',
             module='mox3.mox')
+        # NOTE(gibi): we can remove this once we get rid of Mox in nova
+        warnings.filterwarnings('ignore', message="Using class 'MoxStubout'")
         # NOTE(mriedem): Ignore scope check UserWarnings from oslo.policy.
         warnings.filterwarnings('ignore',
                                 message="Policy .* failed scope check",
