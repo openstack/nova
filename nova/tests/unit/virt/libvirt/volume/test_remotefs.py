@@ -58,7 +58,7 @@ class RemoteFSTestCase(test.NoDBTestCase):
         mock_umount.assert_has_calls(
             [mock.call(mock.sentinel.mount_path)])
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_remove_remote_file_rsync(self, mock_execute):
         remotefs.RsyncDriver().remove_file('host', 'dest', None, None)
         rsync_call_args = mock.call('rsync', '--archive',
@@ -76,7 +76,7 @@ class RemoteFSTestCase(test.NoDBTestCase):
             'host', 'rm', 'dest',
             on_completion=None, on_execute=None)
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_remove_remote_dir_rsync(self, mock_execute):
         remotefs.RsyncDriver().remove_dir('host', 'dest', None, None)
         rsync_call_args = mock.call('rsync', '--archive',
@@ -99,7 +99,7 @@ class RemoteFSTestCase(test.NoDBTestCase):
             'host', 'rm', '-rf', 'dest', on_completion=None,
             on_execute=None)
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_create_remote_file_rsync(self, mock_execute):
         remotefs.RsyncDriver().create_file('host', 'dest_dir', None, None)
         mkdir_call_args = mock.call('mkdir', '-p', mock.ANY,
@@ -123,7 +123,7 @@ class RemoteFSTestCase(test.NoDBTestCase):
                                                  on_completion=None,
                                                  on_execute=None)
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_create_remote_dir_rsync(self, mock_execute):
         remotefs.RsyncDriver().create_dir('host', 'dest_dir', None, None)
         mkdir_call_args = mock.call('mkdir', '-p', mock.ANY,
@@ -144,7 +144,7 @@ class RemoteFSTestCase(test.NoDBTestCase):
                                                  on_completion=None,
                                                  on_execute=None)
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_remote_copy_file_rsync(self, mock_execute):
         remotefs.RsyncDriver().copy_file('1.2.3.4:/home/star_wars',
                                          '/home/favourite', None, None,
@@ -156,7 +156,7 @@ class RemoteFSTestCase(test.NoDBTestCase):
                                              on_completion=None,
                                              on_execute=None)
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_remote_copy_file_rsync_without_compression(self, mock_execute):
         remotefs.RsyncDriver().copy_file('1.2.3.4:/home/star_wars',
                                          '/home/favourite', None, None,
@@ -167,7 +167,7 @@ class RemoteFSTestCase(test.NoDBTestCase):
                                              on_completion=None,
                                              on_execute=None)
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_remote_copy_file_ssh(self, mock_execute):
         remotefs.SshDriver().copy_file('1.2.3.4:/home/SpaceOdyssey',
                                        '/home/favourite', None, None, True)
@@ -178,7 +178,8 @@ class RemoteFSTestCase(test.NoDBTestCase):
                                              on_execute=None)
 
     def test_rsync_driver_ipv6(self):
-        with mock.patch('nova.utils.execute') as mock_execute:
+        with mock.patch(
+                'oslo_concurrency.processutils.execute') as mock_execute:
             remotefs.RsyncDriver().create_file('2600::', 'dest_dir', None,
                                                None)
             rsync_call_args = mock.call('rsync', '--archive', '--relative',
@@ -187,7 +188,8 @@ class RemoteFSTestCase(test.NoDBTestCase):
                                         on_completion=None, on_execute=None)
             self.assertEqual(mock_execute.mock_calls[2], rsync_call_args)
 
-        with mock.patch('nova.utils.execute') as mock_execute:
+        with mock.patch(
+                'oslo_concurrency.processutils.execute') as mock_execute:
             remotefs.RsyncDriver().create_dir('2600::', 'dest_dir', None, None)
             rsync_call_args = mock.call('rsync', '--archive', '--relative',
                                         '--no-implied-dirs',
@@ -195,7 +197,8 @@ class RemoteFSTestCase(test.NoDBTestCase):
                                         on_completion=None, on_execute=None)
             self.assertEqual(mock_execute.mock_calls[1], rsync_call_args)
 
-        with mock.patch('nova.utils.execute') as mock_execute:
+        with mock.patch(
+                'oslo_concurrency.processutils.execute') as mock_execute:
             remotefs.RsyncDriver().remove_file('2600::', 'dest', None, None)
             rsync_call_args = mock.call('rsync', '--archive',
                                         '--delete', '--include',
@@ -204,7 +207,8 @@ class RemoteFSTestCase(test.NoDBTestCase):
                                         on_completion=None, on_execute=None)
             self.assertEqual(mock_execute.mock_calls[0], rsync_call_args)
 
-        with mock.patch('nova.utils.execute') as mock_execute:
+        with mock.patch(
+                'oslo_concurrency.processutils.execute') as mock_execute:
             remotefs.RsyncDriver().remove_dir('2600::', 'dest', None, None)
             rsync_call_args = mock.call('rsync', '--archive',
                                         '--delete-excluded', mock.ANY,
