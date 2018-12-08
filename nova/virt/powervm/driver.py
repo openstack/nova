@@ -191,35 +191,34 @@ class PowerVMDriver(driver.ComputeDriver):
         # update_available_resource flow.
         data = self._get_available_resource()
 
-        # TODO(efried): Fix these to reflect something like reality
-        # For now, duplicate the logic the resource tracker uses via
-        # update_compute_node when get_inventory/update_provider_tree is not
-        # implemented.
-        cpu_alloc_ratio = CONF.cpu_allocation_ratio or 16.0
+        # NOTE(yikun): If the inv record does not exists, the allocation_ratio
+        # will use the CONF.xxx_allocation_ratio value if xxx_allocation_ratio
+        # is set, and fallback to use the initial_xxx_allocation_ratio
+        # otherwise.
+        inv = provider_tree.data(nodename).inventory
+        ratios = self._get_allocation_ratios(inv)
         cpu_reserved = CONF.reserved_host_cpus
-        mem_alloc_ratio = CONF.ram_allocation_ratio or 1.5
         mem_reserved = CONF.reserved_host_memory_mb
-        disk_alloc_ratio = CONF.disk_allocation_ratio or 1.0
         disk_reserved = self._get_reserved_host_disk_gb_from_config()
 
         inventory = {
             rc_fields.ResourceClass.VCPU: {
                 'total': data['vcpus'],
                 'max_unit': data['vcpus'],
-                'allocation_ratio': cpu_alloc_ratio,
+                'allocation_ratio': ratios[rc_fields.ResourceClass.VCPU],
                 'reserved': cpu_reserved,
             },
             rc_fields.ResourceClass.MEMORY_MB: {
                 'total': data['memory_mb'],
                 'max_unit': data['memory_mb'],
-                'allocation_ratio': mem_alloc_ratio,
+                'allocation_ratio': ratios[rc_fields.ResourceClass.MEMORY_MB],
                 'reserved': mem_reserved,
             },
             rc_fields.ResourceClass.DISK_GB: {
                 # TODO(efried): Proper DISK_GB sharing when SSP driver in play
                 'total': int(data['local_gb']),
                 'max_unit': int(data['local_gb']),
-                'allocation_ratio': disk_alloc_ratio,
+                'allocation_ratio': ratios[rc_fields.ResourceClass.DISK_GB],
                 'reserved': disk_reserved,
             },
         }

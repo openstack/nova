@@ -3,3 +3,20 @@ upgrade:
   - |
     The default value for the "cpu_allocation_ratio", "ram_allocation_ratio"
     and "disk_allocation_ratio" configurations have been changed to ``None``.
+
+    The ``initial_cpu_allocation_ratio``, ``initial_ram_allocation_ratio`` and
+    ``initial_disk_allocation_ratio`` configuration options have been added to
+    the ``DEFAULT`` group:
+
+    - initial_cpu_allocation_ratio with default value 16.0
+    - initial_ram_allocation_ratio with default value 1.5
+    - initial_ram_allocation_ratio with default value 1.0
+
+    These options help operators specify initial virtual CPU/ram/disk to
+    physical CPU/ram/disk allocation ratios. These options are only used when
+    initially creating the ``computes_nodes`` table record for a given
+    nova-compute service.
+
+    For more details, refer to the `spec`__.
+
+    .. __: https://specs.openstack.org/openstack/nova-specs/specs/stein/approved/initial-allocation-ratios.html

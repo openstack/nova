@@ -1238,9 +1238,9 @@ class TestInitComputeNode(BaseTestCase):
             # NOTE(sbauza): ResourceTracker adds host field
             host=_HOSTNAME,
             # NOTE(sbauza): ResourceTracker adds CONF allocation ratios
-            ram_allocation_ratio=1.0,
-            cpu_allocation_ratio=1.0,
-            disk_allocation_ratio=1.0,
+            ram_allocation_ratio=CONF.initial_ram_allocation_ratio,
+            cpu_allocation_ratio=CONF.initial_cpu_allocation_ratio,
+            disk_allocation_ratio=CONF.initial_disk_allocation_ratio,
             stats={'failed_builds': 0},
             pci_device_pools=objects.PciDevicePoolList(objects=[]),
             uuid=uuids.compute_node_uuid

@@ -28,6 +28,7 @@ import six
 
 import nova.conf
 from nova.i18n import _
+from nova import rc_fields
 from nova.virt import event as virtevent
 
 CONF = nova.conf.CONF
@@ -861,6 +862,41 @@ class ComputeDriver(object):
     def _get_reserved_host_disk_gb_from_config():
         import nova.compute.utils as compute_utils  # avoid circular import
         return compute_utils.convert_mb_to_ceil_gb(CONF.reserved_host_disk_mb)
+
+    @staticmethod
+    def _get_allocation_ratios(inventory):
+        """Get the cpu/ram/disk allocation ratios for the given inventory.
+
+        This utility method is used to get the inventory allocation ratio
+        for VCPU, MEMORY_MB and DISK_GB resource classes based on the following
+        precedence:
+
+        * Use ``[DEFAULT]/*_allocation_ratio`` if set - this overrides
+          everything including externally set allocation ratios on the
+          inventory via the placement API
+        * Use ``[DEFAULT]/initial_*_allocation_ratio`` if a value does not
+          exist for a given resource class in the ``inventory`` dict
+        * Use what is already in the ``inventory`` dict for the allocation
+          ratio if the above conditions are false
+
+        :param inventory: dict, keyed by resource class, of inventory
+                          information.
+        :returns: Return a dict, keyed by resource class, of allocation ratio
+        """
+        keys = {'cpu': rc_fields.ResourceClass.VCPU,
+                'ram': rc_fields.ResourceClass.MEMORY_MB,
+                'disk': rc_fields.ResourceClass.DISK_GB}
+        result = {}
+        for res, rc in keys.items():
+            attr = '%s_allocation_ratio' % res
+            conf_ratio = getattr(CONF, attr)
+            if conf_ratio:
+                result[rc] = conf_ratio
+            elif rc not in inventory:
+                result[rc] = getattr(CONF, 'initial_%s' % attr)
+            else:
+                result[rc] = inventory[rc]['allocation_ratio']
+        return result
 
     def update_provider_tree(self, provider_tree, nodename, allocations=None):
         """Update a ProviderTree object with current resource provider and

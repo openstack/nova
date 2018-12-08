@@ -217,7 +217,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
     def test_update_provider_tree_complex_ptree(self):
         # Overrides inventory already on the provider; leaves other providers
         # and aggregates/traits alone.
-        with self._update_provider_tree() as (ptree, _):
+        with self._update_provider_tree() as (ptree, exp_inv):
             ptree.update_inventory('compute_host', {
                 # these should get blown away
                 'VCPU': {
@@ -238,6 +238,11 @@ class TestPowerVMDriver(test.NoDBTestCase):
                                            'for': 'ssp'})
             ptree.update_aggregates('ssp', [uuids.ss_agg])
             ptree.new_child('sriov', 'compute_host', uuid=uuids.sriov)
+            # Since CONF.cpu_allocation_ratio is not set and this is not
+            # the initial upt call (so CONF.initial_cpu_allocation_ratio would
+            # be used), the existing allocation ratio value from the tree is
+            # used.
+            exp_inv['VCPU']['allocation_ratio'] = 1.0
 
         # Make sure the compute's agg and traits were left alone
         cndata = ptree.data('compute_host')

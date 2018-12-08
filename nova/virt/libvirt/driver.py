@@ -6493,17 +6493,19 @@ class LibvirtDriver(driver.ComputeDriver):
         # TODO(sbauza): Use traits to make a better world.
         vgpus = self._get_vgpu_total()
 
-        # TODO(mriedem): The allocation_ratio config usage will change with
-        # blueprint initial-allocation-ratios. For now, the allocation ratio
-        # config values all default to 0.0 and the ComputeNode provides a
-        # facade for giving the real defaults, so we have to mimic that here.
+        # NOTE(yikun): If the inv record does not exists, the allocation_ratio
+        # will use the CONF.xxx_allocation_ratio value if xxx_allocation_ratio
+        # is set, and fallback to use the initial_xxx_allocation_ratio
+        # otherwise.
+        inv = provider_tree.data(nodename).inventory
+        ratios = self._get_allocation_ratios(inv)
         result = {
             rc_fields.ResourceClass.VCPU: {
                 'total': vcpus,
                 'min_unit': 1,
                 'max_unit': vcpus,
                 'step_size': 1,
-                'allocation_ratio': CONF.cpu_allocation_ratio or 16.0,
+                'allocation_ratio': ratios[rc_fields.ResourceClass.VCPU],
                 'reserved': CONF.reserved_host_cpus,
             },
             rc_fields.ResourceClass.MEMORY_MB: {
@@ -6511,7 +6513,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 'min_unit': 1,
                 'max_unit': memory_mb,
                 'step_size': 1,
-                'allocation_ratio': CONF.ram_allocation_ratio or 1.5,
+                'allocation_ratio': ratios[rc_fields.ResourceClass.MEMORY_MB],
                 'reserved': CONF.reserved_host_memory_mb,
             },
         }
@@ -6528,7 +6530,7 @@ class LibvirtDriver(driver.ComputeDriver):
             'min_unit': 1,
             'max_unit': disk_gb,
             'step_size': 1,
-            'allocation_ratio': CONF.disk_allocation_ratio or 1.0,
+            'allocation_ratio': ratios[rc_fields.ResourceClass.DISK_GB],
             'reserved': self._get_reserved_host_disk_gb_from_config(),
         }
 

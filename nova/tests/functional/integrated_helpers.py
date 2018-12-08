@@ -488,6 +488,17 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
             url= ('/resource_providers/%s/inventories' % rp_uuid),
             version='1.15', body=inv_body).body
 
+    def _update_inventory(self, rp_uuid, inv_body):
+        """This will update the inventory for a given resource provider.
+
+        :param rp_uuid: UUID of the resource provider to update
+        :param inv_body: inventory to set on the provider
+        :returns: APIResponse object with the results
+        """
+        return self.placement_api.put(
+            url= ('/resource_providers/%s/inventories' % rp_uuid),
+            body=inv_body).body
+
     def _get_resource_provider_by_uuid(self, rp_uuid):
         return self.placement_api.get(
             '/resource_providers/%s' % rp_uuid, version='1.15').body
