@@ -27,9 +27,10 @@ Compute API reference
 Placement API reference
 -----------------------
 
-* API reference text: ``placement-api-ref/source/*.inc``
-* Parameter definition: ``placement-api-ref/source/parameters.yaml``
-* JSON request/response samples: ``placement-api-ref/source/samples/*``
+The placement project has the API reference files in its own repository
+under `api-ref/source
+<https://github.com/openstack/placement/tree/master/api-ref/source>`_
+directory.
 
 Structure of inc file
 ---------------------
