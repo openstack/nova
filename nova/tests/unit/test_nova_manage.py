@@ -1776,13 +1776,13 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
                                                     True)
 
     def test_validate_transport_url_in_conf(self):
-        from_conf = 'fake://user:pass@host:port/'
+        from_conf = 'fake://user:pass@host:5672/'
         self.flags(transport_url=from_conf)
         self.assertEqual(from_conf,
                          self.commands._validate_transport_url(None))
 
     def test_validate_transport_url_on_command_line(self):
-        from_cli = 'fake://user:pass@host:port/'
+        from_cli = 'fake://user:pass@host:5672/'
         self.assertEqual(from_cli,
                          self.commands._validate_transport_url(from_cli))
 
@@ -1791,10 +1791,14 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertIsNone(self.commands._validate_transport_url(None))
 
     def test_validate_transport_url_favors_command_line(self):
-        self.flags(transport_url='fake://user:pass@host:port/')
-        from_cli = 'fake://otheruser:otherpass@otherhost:otherport'
+        self.flags(transport_url='fake://user:pass@host:5672/')
+        from_cli = 'fake://otheruser:otherpass@otherhost:5673'
         self.assertEqual(from_cli,
                          self.commands._validate_transport_url(from_cli))
+
+    def test_validate_transport_url_invalid_url(self):
+        self.assertIsNone(self.commands._validate_transport_url('not-a-url'))
+        self.assertIn('Invalid transport URL', self.output.getvalue())
 
     def test_non_unique_transport_url_database_connection_checker(self):
         ctxt = context.RequestContext()
@@ -1829,7 +1833,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         ctxt = context.get_context()
         kwargs = dict(
             name='fake-name',
-            transport_url='fake-transport-url',
+            transport_url='http://fake-transport-url',
             database_connection='fake-db-connection')
         status = self.commands.create_cell(verbose=True, **kwargs)
         self.assertEqual(0, status)
@@ -1844,7 +1848,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
 
     def test_create_cell_use_config_values(self):
         settings = dict(
-            transport_url='fake-conf-transport-url',
+            transport_url='http://fake-conf-transport-url',
             database_connection='fake-conf-db-connection')
         self.flags(connection=settings['database_connection'],
                    group='database')
@@ -1863,7 +1867,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
     def test_create_cell_failed_if_non_unique(self):
         kwargs = dict(
             name='fake-name',
-            transport_url='fake-transport-url',
+            transport_url='http://fake-transport-url',
             database_connection='fake-db-connection')
         status1 = self.commands.create_cell(verbose=True, **kwargs)
         status2 = self.commands.create_cell(verbose=True, **kwargs)
@@ -1879,7 +1883,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
 
     def test_create_cell_failed_if_no_database_connection(self):
         self.flags(connection=None, group='database')
-        status = self.commands.create_cell(transport_url='fake-transport-url')
+        status = self.commands.create_cell(transport_url='http://fake-url')
         self.assertEqual(1, status)
         self.assertIn('--database_connection', self.output.getvalue())
 
@@ -1887,7 +1891,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         ctxt = context.get_context()
         kwargs = dict(
             name='fake-name1',
-            transport_url='fake-transport-url1',
+            transport_url='http://fake-transport-url1',
             database_connection='fake-db-connection1')
         status1 = self.commands.create_cell(verbose=True, disabled=True,
                                             **kwargs)
