@@ -18,12 +18,15 @@ Unit Tests for nova.scheduler.rpcapi
 
 import mock
 
+from nova import conf
 from nova import context
 from nova import exception as exc
 from nova import objects
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 from nova.tests import uuidsentinel as uuids
+
+CONF = conf.CONF
 
 
 class SchedulerRpcAPITestCase(test.NoDBTestCase):
@@ -45,6 +48,11 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
             expected_kwargs = expected_args
 
         prepare_kwargs = {}
+        if method == 'select_destinations':
+            prepare_kwargs.update({
+                'call_monitor_timeout': CONF.rpc_response_timeout,
+                'timeout': CONF.long_rpc_timeout
+            })
         if expected_fanout:
             prepare_kwargs['fanout'] = True
         if expected_version:
