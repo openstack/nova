@@ -1,0 +1,25 @@
+{
+    "nova_object.namespace": "nova",
+    "nova_object.data": {
+        "availability_zone": null,
+        "flavor": {
+            "$ref": "FlavorPayload.json#",
+            "nova_object.data": {
+                "extra_specs": {
+                    "hw:numa_cpus.0": "0",
+                    "hw:numa_mem.0": "512",
+                    "hw:numa_nodes": "1"
+                }
+            }
+        },
+        "image": {"$ref": "ImageMetaPayload.json#"},
+        "instance_uuid": "d5e6a7b7-80e5-4166-85a3-cd6115201082",
+        "num_instances": 1,
+        "numa_topology": {"$ref": "InstanceNUMATopologyPayload.json#"},
+        "pci_requests": {"$ref": "InstancePCIRequestsPayload.json#"},
+        "project_id": "6f70656e737461636b20342065766572",
+        "user_id": "fake"
+    },
+    "nova_object.name": "RequestSpecPayload",
+    "nova_object.version": "1.0"
+}

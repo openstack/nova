@@ -1,0 +1,11 @@
+{
+    "event_type": "compute_task.migrate_server.error",
+    "payload": {
+        "$ref":"common_payloads/ComputeTaskPayload.json#",
+        "nova_object.data":{
+            "state": "active"
+        }
+    },
+    "priority": "ERROR",
+    "publisher_id": "nova-conductor:fake-mini"
+}

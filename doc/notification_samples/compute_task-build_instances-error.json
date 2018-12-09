@@ -1,0 +1,6 @@
+{
+    "event_type": "compute_task.build_instances.error",
+    "payload": {"$ref":"common_payloads/ComputeTaskPayload.json#"},
+    "priority": "ERROR",
+    "publisher_id": "nova-conductor:fake-mini"
+}

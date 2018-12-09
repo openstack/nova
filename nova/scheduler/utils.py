@@ -17,6 +17,7 @@
 import collections
 import re
 import sys
+import traceback
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -642,8 +643,10 @@ def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
                    reason=ex)
 
     event_type = '%s.%s' % (service, method)
-    # TODO(mriedem): Send a versioned notification.
     notifier.error(context, event_type, payload)
+    compute_utils.notify_about_compute_task_error(
+        context, method, instance_uuid, request_spec, vm_state, ex,
+        traceback.format_exc())
 
 
 def build_filter_properties(scheduler_hints, forced_host,

@@ -1,0 +1,28 @@
+{
+    "nova_object.namespace": "nova",
+    "nova_object.data": {
+        "checksum": null,
+        "container_format": "raw",
+        "created_at": "2011-01-01T01:02:03Z",
+        "direct_url": null,
+        "disk_format": "raw",
+        "id": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
+        "min_disk": 0,
+        "min_ram": 0,
+        "name": "fakeimage123456",
+        "owner": null,
+        "properties": {"$ref":"ImageMetaPropsPayload.json#"},
+        "protected": false,
+        "size": 25165824,
+        "status": "active",
+        "tags": [
+            "tag1",
+            "tag2"
+        ],
+        "updated_at": "2011-01-01T01:02:03Z",
+        "virtual_size": null,
+        "visibility": "public"
+    },
+    "nova_object.name": "ImageMetaPayload",
+    "nova_object.version": "1.0"
+}
