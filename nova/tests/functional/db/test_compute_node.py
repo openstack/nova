@@ -15,6 +15,7 @@ import nova.conf
 from nova import context
 from nova.db import api as db
 from nova import objects
+from nova.objects import compute_node
 from nova.objects import fields as obj_fields
 from nova import test
 
@@ -188,3 +189,71 @@ class ComputeNodeTestCase(test.TestCase):
             # the ram ratio is refreshed to CONF.initial_xxx_allocation_ratio
             self.assertEqual(CONF.initial_ram_allocation_ratio,
                              cn['ram_allocation_ratio'])
+
+    def test_migrate_empty_ratio(self):
+        # we have 5 records to process, the last of which is deleted
+        for i in range(5):
+            cn = fake_compute_obj.obj_clone()
+            cn._context = self.context
+            cn.host += '-alt-%s' % i
+            cn.create()
+            db.compute_node_update(self.context, cn.id,
+                                   {'cpu_allocation_ratio': 0.0})
+            if i == 4:
+                cn.destroy()
+
+        # first only process 2
+        res = compute_node.migrate_empty_ratio(self.context, 2)
+        self.assertEqual(res, (2, 2))
+
+        # then process others - there should only be 2 found since one
+        # of the remaining compute nodes is deleted and gets filtered out
+        res = compute_node.migrate_empty_ratio(self.context, 999)
+        self.assertEqual(res, (2, 2))
+
+    def test_migrate_none_or_zero_ratio_with_none_ratio_conf(self):
+        cn1 = fake_compute_obj.obj_clone()
+        cn1._context = self.context
+        cn1.create()
+
+        db.compute_node_update(self.context, cn1.id,
+                               {'cpu_allocation_ratio': 0.0,
+                                'disk_allocation_ratio': 0.0,
+                                'ram_allocation_ratio': 0.0})
+
+        self.flags(initial_cpu_allocation_ratio=32.0)
+        self.flags(initial_ram_allocation_ratio=8.0)
+        self.flags(initial_disk_allocation_ratio=2.0)
+
+        res = compute_node.migrate_empty_ratio(self.context, 1)
+        self.assertEqual(res, (1, 1))
+
+        # the ratio is refreshed to CONF.initial_xxx_allocation_ratio
+        # beacause CONF.xxx_allocation_ratio is None
+        cns = db.compute_node_get_all(self.context)
+        # the ratio is refreshed to CONF.xxx_allocation_ratio
+        for cn in cns:
+            for x in ['cpu', 'disk', 'ram']:
+                conf_key = 'initial_%s_allocation_ratio' % x
+                key = '%s_allocation_ratio' % x
+                self.assertEqual(getattr(CONF, conf_key), cn[key])
+
+    def test_migrate_none_or_zero_ratio_with_not_empty_ratio(self):
+        cn1 = fake_compute_obj.obj_clone()
+        cn1._context = self.context
+        cn1.create()
+
+        db.compute_node_update(self.context, cn1.id,
+                               {'cpu_allocation_ratio': 32.0,
+                                'ram_allocation_ratio': 4.0,
+                                'disk_allocation_ratio': 3.0})
+
+        res = compute_node.migrate_empty_ratio(self.context, 1)
+        # the non-empty ratio will not be refreshed
+        self.assertEqual(res, (0, 0))
+
+        cns = db.compute_node_get_all(self.context)
+        for cn in cns:
+            self.assertEqual(32.0, cn['cpu_allocation_ratio'])
+            self.assertEqual(4.0, cn['ram_allocation_ratio'])
+            self.assertEqual(3.0, cn['disk_allocation_ratio'])

@@ -16,6 +16,8 @@
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
+from sqlalchemy import or_
+from sqlalchemy.sql import null
 
 import nova.conf
 from nova.db import api as db
@@ -469,3 +471,39 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         db_computes = cls._db_compute_node_get_by_hv_type(context, hv_type)
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
+
+
+def _get_node_empty_ratio(context, max_count):
+    """Query the DB for non-deleted compute_nodes with 0.0/None alloc ratios
+
+    Results are limited by ``max_count``.
+    """
+    return context.session.query(models.ComputeNode).filter(or_(
+        models.ComputeNode.ram_allocation_ratio == '0.0',
+        models.ComputeNode.cpu_allocation_ratio == '0.0',
+        models.ComputeNode.disk_allocation_ratio == '0.0',
+        models.ComputeNode.ram_allocation_ratio == null(),
+        models.ComputeNode.cpu_allocation_ratio == null(),
+        models.ComputeNode.disk_allocation_ratio == null()
+    )).filter(models.ComputeNode.deleted == 0).limit(max_count).all()
+
+
+@sa_api.pick_context_manager_writer
+def migrate_empty_ratio(context, max_count):
+    cns = _get_node_empty_ratio(context, max_count)
+
+    # NOTE(yikun): If it's an existing record with 0.0 or None values,
+    # we need to migrate this record using 'xxx_allocation_ratio' config
+    # if it's set, and fallback to use the 'initial_xxx_allocation_ratio'
+    # otherwise.
+    for cn in cns:
+        for t in ['cpu', 'disk', 'ram']:
+            current_ratio = getattr(cn, '%s_allocation_ratio' % t)
+            if current_ratio in (0.0, None):
+                r = getattr(CONF, "%s_allocation_ratio" % t)
+                init_x_ratio = getattr(CONF, "initial_%s_allocation_ratio" % t)
+                conf_alloc_ratio = r if r else init_x_ratio
+                setattr(cn, '%s_allocation_ratio' % t, conf_alloc_ratio)
+        context.session.add(cn)
+    found = done = len(cns)
+    return found, done

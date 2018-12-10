@@ -17,6 +17,11 @@ upgrade:
     initially creating the ``computes_nodes`` table record for a given
     nova-compute service.
 
+    Existing ``compute_nodes`` table records with ``0.0`` or ``None`` values
+    for ``cpu_allocation_ratio``, ``ram_allocation_ratio`` or
+    ``disk_allocation_ratio`` will be migrated online when accessed or when
+    the ``nova-manage db online_data_migrations`` command is run.
+
     For more details, refer to the `spec`__.
 
     .. __: https://specs.openstack.org/openstack/nova-specs/specs/stein/approved/initial-allocation-ratios.html
