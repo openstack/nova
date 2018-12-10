@@ -146,6 +146,35 @@ def dhcp_release(dev, address, mac_address):
     processutils.execute('dhcp_release', dev, address, mac_address)
 
 
+def routes_show(dev):
+    # Format of output is:
+    #     192.168.1.0/24  proto kernel  scope link  src 192.168.1.6
+    return processutils.execute('ip', 'route', 'show', 'dev', dev)
+
+
+# TODO(mikal): this is horrid. The calling code takes arguments from a route
+# list and just regurgitates them into new routes. This isn't good enough,
+# but is outside the scope of the privsep transition. Mark it as bonkers and
+# hope we clean it up later.
+@nova.privsep.sys_admin_pctxt.entrypoint
+def route_add_horrid(routes):
+    processutils.execute('ip', 'route', 'add', *routes)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def route_delete(dev, route):
+    processutils.execute('ip', 'route', 'del', route, 'dev', dev)
+
+
+# TODO(mikal): this is horrid. The calling code takes arguments from a route
+# list and just regurgitates them into new routes. This isn't good enough,
+# but is outside the scope of the privsep transition. Mark it as bonkers and
+# hope we clean it up later.
+@nova.privsep.sys_admin_pctxt.entrypoint
+def route_delete_horrid(dev, routes):
+    processutils.execute('ip', 'route', 'del', *routes)
+
+
 @nova.privsep.sys_admin_pctxt.entrypoint
 def create_tap_dev(dev, mac_address=None, multiqueue=False):
     _create_tap_dev_inner(dev, mac_address=mac_address,
