@@ -11,10 +11,14 @@
 #    under the License.
 from oslo_utils.fixture import uuidsentinel
 
+import nova.conf
 from nova import context
+from nova.db import api as db
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova import test
+
+CONF = nova.conf.CONF
 
 _HOSTNAME = 'fake-host'
 _NODENAME = 'fake-node'
@@ -76,6 +80,33 @@ class ComputeNodeTestCase(test.TestCase):
         super(ComputeNodeTestCase, self).setUp()
         self.context = context.RequestContext('fake-user', 'fake-project')
 
+    def _create_zero_and_none_cn(self):
+        cn1 = fake_compute_obj.obj_clone()
+        cn1._context = self.context
+        cn1.create()
+
+        db.compute_node_update(self.context, cn1.id,
+                               {'cpu_allocation_ratio': 0.0,
+                                'disk_allocation_ratio': 0.0,
+                                'ram_allocation_ratio': 0.0})
+        cn1_db = db.compute_node_get(self.context, cn1.id)
+        for x in ['cpu', 'disk', 'ram']:
+            self.assertEqual(0.0, cn1_db['%s_allocation_ratio' % x])
+
+        cn2 = fake_compute_obj.obj_clone()
+        cn2._context = self.context
+        cn2.host += '-alt'
+        cn2.create()
+        # We can't set a cn_obj.xxx_allocation_ratio to None,
+        # so we set ratio to None in db directly
+        db.compute_node_update(self.context, cn2.id,
+                               {'cpu_allocation_ratio': None,
+                                'disk_allocation_ratio': None,
+                                'ram_allocation_ratio': None})
+        cn2_db = db.compute_node_get(self.context, cn2.id)
+        for x in ['cpu', 'disk', 'ram']:
+            self.assertIsNone(None, cn2_db['%s_allocation_ratio' % x])
+
     def test_get_all_by_uuids(self):
         cn1 = fake_compute_obj.obj_clone()
         cn1._context = self.context
@@ -135,3 +166,25 @@ class ComputeNodeTestCase(test.TestCase):
                                                              'ironic')
         self.assertEqual(1, len(cns))
         self.assertEqual(cn1.uuid, cns[0].uuid)
+
+    def test_ratio_online_migration_when_load(self):
+        # set cpu and disk, and leave ram unset(None)
+        self.flags(cpu_allocation_ratio=1.0)
+        self.flags(disk_allocation_ratio=2.0)
+
+        self._create_zero_and_none_cn()
+
+        # trigger online migration
+        objects.ComputeNodeList.get_all(self.context)
+
+        cns = db.compute_node_get_all(self.context)
+
+        for cn in cns:
+            # the cpu/disk ratio is refreshed to CONF.xxx_allocation_ratio
+            self.assertEqual(CONF.cpu_allocation_ratio,
+                             cn['cpu_allocation_ratio'])
+            self.assertEqual(CONF.disk_allocation_ratio,
+                             cn['disk_allocation_ratio'])
+            # the ram ratio is refreshed to CONF.initial_xxx_allocation_ratio
+            self.assertEqual(CONF.initial_ram_allocation_ratio,
+                             cn['ram_allocation_ratio'])
