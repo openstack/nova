@@ -1140,7 +1140,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
     @mock.patch('nova.privsep.linux_net.set_device_enabled')
     @mock.patch('nova.privsep.linux_net.set_device_macaddr')
     @mock.patch('nova.privsep.linux_net.change_ip')
-    def test_spawn_vlanmanager(self, change_ip, mock_set_macaddr,
+    @mock.patch('nova.privsep.linux_net.address_command_deprecated')
+    def test_spawn_vlanmanager(self, mock_address_command_deprecated,
+                               mock_change_ip, mock_set_macaddr,
                                mock_set_enabled, mock_set_mtu, mock_add_bridge,
                                mock_create_vifs):
         self.flags(network_manager='nova.network.manager.VlanManager',

@@ -152,6 +152,18 @@ def change_ip(device, ip):
                          'dev', device)
 
 
+# TODO(mikal): this is horrid. The calling code takes arguments from an
+# interface list and just regurgitates them here. This isn't good enough,
+# but is outside the scope of the privsep transition. Mark it as bonkers and
+# hope we clean it up later.
+@nova.privsep.sys_admin_pctxt.entrypoint
+def address_command_deprecated(device, action, params):
+    cmd = ['ip', 'addr', action]
+    cmd.extend(params)
+    cmd.extend(['dev', device])
+    processutils.execute(*cmd, check_exit_code=[0, 2, 254])
+
+
 @nova.privsep.sys_admin_pctxt.entrypoint
 def dhcp_release(dev, address, mac_address):
     processutils.execute('dhcp_release', dev, address, mac_address)
@@ -168,7 +180,7 @@ def routes_show(dev):
 # but is outside the scope of the privsep transition. Mark it as bonkers and
 # hope we clean it up later.
 @nova.privsep.sys_admin_pctxt.entrypoint
-def route_add_horrid(routes):
+def route_add_deprecated(routes):
     processutils.execute('ip', 'route', 'add', *routes)
 
 
@@ -182,7 +194,7 @@ def route_delete(dev, route):
 # but is outside the scope of the privsep transition. Mark it as bonkers and
 # hope we clean it up later.
 @nova.privsep.sys_admin_pctxt.entrypoint
-def route_delete_horrid(dev, routes):
+def route_delete_deprecated(dev, routes):
     processutils.execute('ip', 'route', 'del', *routes)
 
 

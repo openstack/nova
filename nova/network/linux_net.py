@@ -781,15 +781,15 @@ def initialize_gateway_device(dev, network_ref):
                     old_routes.append(fields)
                     nova.privsep.linux_net.route_delete(dev, fields[0])
         for ip_params in old_ip_params:
-            _execute(*_ip_bridge_cmd('del', ip_params, dev),
-                     run_as_root=True, check_exit_code=[0, 2, 254])
+            nova.privsep.linux_net.address_command_deprecated(
+                dev, 'del', ip_params)
         for ip_params in new_ip_params:
-            _execute(*_ip_bridge_cmd('add', ip_params, dev),
-                     run_as_root=True, check_exit_code=[0, 2, 254])
+            nova.privsep.linux_net.address_command_deprecated(
+                dev, 'add', ip_params)
 
         for fields in old_routes:
             # TODO(mikal): this is horrible and should be re-written
-            nova.privsep.linux_net.route_add_horrid(fields)
+            nova.privsep.linux_net.route_add_deprecated(fields)
         if CONF.send_arp_for_ha and CONF.send_arp_for_ha_count > 0:
             nova.privsep.linux_net.send_arp_for_ip(
                 network_ref['dhcp_server'], dev,
@@ -1182,14 +1182,6 @@ def _ra_pid_for(dev):
             return int(f.read())
 
 
-def _ip_bridge_cmd(action, params, device):
-    """Build commands to add/del IPs to bridges/devices."""
-    cmd = ['ip', 'addr', action]
-    cmd.extend(params)
-    cmd.extend(['dev', device])
-    return cmd
-
-
 def _ovs_vsctl(args):
     full_args = ['ovs-vsctl', '--timeout=%s' % CONF.ovs_vsctl_timeout] + args
     try:
@@ -1432,7 +1424,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 fields = line.split()
                 if fields and 'via' in fields:
                     old_routes.append(fields)
-                    nova.privsep.linux_net.route_delete_horrid(fields)
+                    nova.privsep.linux_net.route_delete_deprecated(fields)
             out, err = nova.privsep.linux_net.lookup_ip(interface)
             for line in out.split('\n'):
                 fields = line.split()
@@ -1441,12 +1433,12 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                         params = fields[1:-2]
                     else:
                         params = fields[1:-1]
-                    _execute(*_ip_bridge_cmd('del', params, fields[-1]),
-                             run_as_root=True, check_exit_code=[0, 2, 254])
-                    _execute(*_ip_bridge_cmd('add', params, bridge),
-                             run_as_root=True, check_exit_code=[0, 2, 254])
+                    nova.privsep.linux_net.address_command_deprecated(
+                        fields[-1], 'del', params)
+                    nova.privsep.linux_net.address_command_deprecated(
+                        bridge, 'add', params)
             for fields in old_routes:
-                nova.privsep.linux_net.route_add_horrid(fields)
+                nova.privsep.linux_net.route_add_deprecated(fields)
 
         if filtering:
             # Don't forward traffic unless we were told to be a gateway
