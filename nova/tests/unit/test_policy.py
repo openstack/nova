@@ -244,6 +244,17 @@ class IsAdminCheckTestCase(test.NoDBTestCase):
         self.assertTrue(check('target', dict(is_admin=False),
                               policy._ENFORCER))
 
+    def test_check_is_admin(self):
+        ctxt = context.RequestContext(
+            user_id='fake-user', project_id='fake-project')
+        with mock.patch('oslo_policy.policy.Enforcer.authorize') as mock_auth:
+            result = policy.check_is_admin(ctxt)
+        self.assertEqual(mock_auth.return_value, result)
+        mock_auth.assert_called_once_with(
+            'context_is_admin',
+            {'user_id': 'fake-user', 'project_id': 'fake-project'},
+            ctxt.to_policy_values())
+
 
 class AdminRolePolicyTestCase(test.NoDBTestCase):
     def setUp(self):
