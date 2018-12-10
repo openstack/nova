@@ -1894,10 +1894,9 @@ class VlanNetworkTestCase(test.TestCase):
             mock.patch.object(network_rpcapi.NetworkAPI, 'release_dhcp',
                               release_dhcp),
             mock.patch.object(db, 'virtual_interface_get', vif_get),
-            mock.patch.object(
-                utils, 'execute',
-                side_effect=processutils.ProcessExecutionError()),
-        ) as (release_dhcp, _vif_get, _execute):
+            mock.patch('nova.privsep.linux_net.dhcp_release',
+                       side_effect=processutils.ProcessExecutionError()),
+        ) as (release_dhcp, _vif_get, privsep_dhcp_release):
             context1 = context.RequestContext('user', fakes.FAKE_PROJECT_ID)
 
             instance = db.instance_create(context1,
@@ -1921,11 +1920,9 @@ class VlanNetworkTestCase(test.TestCase):
                                                  {'allocated': False})
             mock_dev_exists.assert_called_once_with(networks[1]['bridge'])
             if mock_dev_exists.return_value:
-                _execute.assert_called_once_with('dhcp_release',
-                                                 networks[1]['bridge'],
-                                                 fix_addr.address,
-                                                 'DE:AD:BE:EF:00:00',
-                                                 run_as_root=True)
+                privsep_dhcp_release.assert_called_once_with(
+                    networks[1]['bridge'], fix_addr.address,
+                    'DE:AD:BE:EF:00:00')
 
     @mock.patch('nova.privsep.linux_net.device_exists', return_value=True)
     def test_deallocate_fixed_with_dhcp(self, mock_dev_exists):

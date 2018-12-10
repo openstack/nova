@@ -136,6 +136,11 @@ def bind_ip(device, ip, scope_is_link=False):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def dhcp_release(dev, address, mac_address):
+    processutils.execute('dhcp_release', dev, address, mac_address)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def create_tap_dev(dev, mac_address=None, multiqueue=False):
     _create_tap_dev_inner(dev, mac_address=mac_address,
                           multiqueue=multiqueue)
