@@ -5,7 +5,21 @@
     "nova_object.data": {
         "instance_uuid": "d5e6a7b7-80e5-4166-85a3-cd6115201082",
         "reason": {"$ref": "ExceptionPayload.json#"},
-        "request_spec": {"$ref": "RequestSpecPayload.json#"},
+        "request_spec": {
+          "$ref": "RequestSpecPayload.json#",
+          "nova_object.data": {
+            "flavor": {
+              "nova_object.data": {
+                "extra_specs": {
+                  "hw:numa_cpus.0": "0",
+                  "hw:numa_mem.0": "512",
+                  "hw:numa_nodes": "1"
+                }
+              }
+            },
+            "numa_topology": {"$ref": "InstanceNUMATopologyPayload.json#"}
+          }
+        },
         "state": "error"
     }
 }

@@ -61,11 +61,13 @@ class TestServerGroupNotificationSample(
             scheduler_hints={"group": group['id']})
         self._wait_for_notification('instance.update')
         # 0: server_group.add_member
-        # 1: instance.create.start
-        # 2: instance.create.end
-        # 3: instance.update
+        # 1: scheduler-select_destinations-start
+        # 2: scheduler-select_destinations-end
+        # 3: instance.create.start
+        # 4: instance.create.end
+        # 5: instance.update
         #    (Due to adding server tags in the '_boot_a_server' method.)
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'server_group-add_member',
             replacements={'uuid': group['id'],

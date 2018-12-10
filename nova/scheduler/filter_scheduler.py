@@ -24,10 +24,12 @@ import random
 from oslo_log import log as logging
 from six.moves import range
 
+from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import fields as fields_obj
 from nova import rpc
 from nova.scheduler import client
 from nova.scheduler import driver
@@ -85,6 +87,10 @@ class FilterScheduler(driver.Scheduler):
         self.notifier.info(
             context, 'scheduler.select_destinations.start',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
+        compute_utils.notify_about_scheduler_action(
+            context=context, request_spec=spec_obj,
+            action=fields_obj.NotificationAction.SELECT_DESTINATIONS,
+            phase=fields_obj.NotificationPhase.START)
 
         host_selections = self._schedule(context, spec_obj, instance_uuids,
                 alloc_reqs_by_rp_uuid, provider_summaries,
@@ -92,6 +98,10 @@ class FilterScheduler(driver.Scheduler):
         self.notifier.info(
             context, 'scheduler.select_destinations.end',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
+        compute_utils.notify_about_scheduler_action(
+            context=context, request_spec=spec_obj,
+            action=fields_obj.NotificationAction.SELECT_DESTINATIONS,
+            phase=fields_obj.NotificationPhase.END)
         return host_selections
 
     def _schedule(self, context, spec_obj, instance_uuids,

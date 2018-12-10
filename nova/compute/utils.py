@@ -43,6 +43,8 @@ from nova.notifications.objects import instance as instance_notification
 from nova.notifications.objects import keypair as keypair_notification
 from nova.notifications.objects import libvirt as libvirt_notification
 from nova.notifications.objects import metrics as metrics_notification
+from nova.notifications.objects import request_spec as reqspec_notification
+from nova.notifications.objects import scheduler as scheduler_notification
 from nova.notifications.objects import server_group as sg_notification
 from nova.notifications.objects import volume as volume_notification
 from nova import objects
@@ -466,6 +468,31 @@ def notify_about_instance_create(context, instance, host, phase=None,
         event_type=notification_base.EventType(
             object='instance',
             action=fields.NotificationAction.CREATE,
+            phase=phase),
+        payload=payload)
+    notification.emit(context)
+
+
+@rpc.if_notifications_enabled
+def notify_about_scheduler_action(context, request_spec, action, phase=None,
+                                  source=fields.NotificationSource.SCHEDULER):
+    """Send versioned notification about the action made by the scheduler
+    :param context: the RequestContext object
+    :param request_spec: the RequestSpec object
+    :param action: the name of the action
+    :param phase: the phase of the action
+    :param source: the source of the notification
+    """
+    payload = reqspec_notification.RequestSpecPayload(
+        request_spec=request_spec)
+    notification = scheduler_notification.SelectDestinationsNotification(
+        context=context,
+        priority=fields.NotificationPriority.INFO,
+        publisher=notification_base.NotificationPublisher(
+            host=CONF.host, source=source),
+        event_type=notification_base.EventType(
+            object='scheduler',
+            action=action,
             phase=phase),
         payload=payload)
     notification.emit(context)
