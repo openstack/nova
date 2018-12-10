@@ -187,8 +187,8 @@ class CreateInstanceTypeTest(test.TestCase):
         self.assertInvalidInput('foobar\x00', 64, 1, 120)
 
     def test_name_with_non_printable_characters(self):
-        # Names cannot contain printable characters
-        self.assertInvalidInput(u'm1.\u0868 #', 64, 1, 120)
+        # Names cannot contain non printable characters
+        self.assertInvalidInput(u'm1.\u0C77 #', 64, 1, 120)
 
     def test_name_length_checks(self):
         MAX_LEN = 255

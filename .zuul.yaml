@@ -266,3 +266,4 @@
             irrelevant-files: *dsvm-irrelevant-files
         - os-vif-ovs:
             irrelevant-files: *dsvm-irrelevant-files
+        - openstack-tox-py37

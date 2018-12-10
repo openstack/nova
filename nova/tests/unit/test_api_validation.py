@@ -467,7 +467,7 @@ class PatternPropertiesTestCase(APIValidationTestCase):
         # Note(jrosenboom): This is referencing an internal python error
         # string, which is no stable interface. We need a patch in the
         # jsonschema library in order to fix this properly.
-        if sys.version[:3] in ['3.5', '3.6']:
+        if sys.version[:3] in ['3.5', '3.6', '3.7']:
             detail = "expected string or bytes-like object"
         else:
             detail = "expected string or buffer"
