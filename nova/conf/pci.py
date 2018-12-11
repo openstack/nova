@@ -31,6 +31,9 @@ An alias for a PCI passthrough device requirement.
 This allows users to specify the alias in the extra specs for a flavor, without
 needing to repeat all the PCI property requirements.
 
+This should be configured for the ``nova-api`` service and, assuming you wish
+to use move operations, for each ``nova-compute`` service.
+
 Possible Values:
 
 * A dictionary of JSON values which describe the aliases. For example::
