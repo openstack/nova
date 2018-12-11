@@ -34,7 +34,6 @@ import nova.privsep.fs
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.libvirt import fakelibvirt
-from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images
 from nova.virt.libvirt import guest as libvirt_guest
@@ -46,7 +45,7 @@ CONF = cfg.CONF
 @ddt.ddt
 class LibvirtUtilsTestCase(test.NoDBTestCase):
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_copy_image_local(self, mock_execute):
         libvirt_utils.copy_image('src', 'dest')
         mock_execute.assert_called_once_with('cp', '-r', 'src', 'dest')
@@ -92,7 +91,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         self.assertEqual('ploop', d_type)
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_disk_backing(self, mock_execute, mock_exists):
         path = '/myhome/disk.config'
         template_output = """image: %(path)s
@@ -137,7 +136,7 @@ disk size: 96K
                 'vsize_b': i,
                 'path': path,
             })
-            with mock.patch('nova.utils.execute',
+            with mock.patch('oslo_concurrency.processutils.execute',
                 return_value=(output, '')) as mock_execute:
                 self._test_disk_size(mock_execute, path, i)
             output = template_output % ({
@@ -145,12 +144,12 @@ disk size: 96K
                 'vsize_b': i,
                 'path': path,
             })
-            with mock.patch('nova.utils.execute',
+            with mock.patch('oslo_concurrency.processutils.execute',
                 return_value=(output, '')) as mock_execute:
                 self._test_disk_size(mock_execute, path, i)
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_qemu_info_canon(self, mock_execute, mock_exists):
         path = "disk.config"
         example_output = """image: disk.config
@@ -173,7 +172,7 @@ blah BLAH: bb
         self.assertEqual(65536, image_info.cluster_size)
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_qemu_info_canon_qemu_2_10(self, mock_execute, mock_exists):
         images.QEMU_VERSION = images.QEMU_VERSION_REQ_SHARED
         path = "disk.config"
@@ -198,7 +197,7 @@ blah BLAH: bb
         self.assertEqual(65536, image_info.cluster_size)
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_qemu_info_canon2(self, mock_execute, mock_exists):
         path = "disk.config"
         example_output = """image: disk.config
@@ -224,7 +223,7 @@ backing file: /var/lib/nova/a328c7998805951a_2
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('os.path.isdir', return_value=True)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_qemu_info_ploop(self, mock_execute, mock_isdir, mock_exists):
         path = "/var/lib/nova"
         example_output = """image: root.hds
@@ -249,7 +248,7 @@ disk size: 706M
         self.assertEqual(740294656, image_info.disk_size)
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_qemu_backing_file_actual(self,
                                       mock_execute, mock_exists):
         path = "disk.config"
@@ -278,7 +277,7 @@ backing file: /var/lib/nova/a328c7998805951a_2 (actual path: /b/3a988059e51a_2)
                          image_info.backing_file)
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_qemu_info_convert(self, mock_execute, mock_exists):
         path = "disk.config"
         example_output = """image: disk.config
@@ -304,7 +303,7 @@ junk stuff: bbb
         self.assertEqual(98304, image_info.disk_size)
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_qemu_info_snaps(self, mock_execute, mock_exists):
         path = "disk.config"
         example_output = """image: disk.config
@@ -341,7 +340,7 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
     def test_valid_hostname_bad(self):
         self.assertFalse(libvirt_utils.is_valid_hostname("foo/?com=/bin/sh"))
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_create_image(self, mock_execute):
         libvirt_utils.create_image('raw', '/some/path', '10G')
         libvirt_utils.create_image('qcow2', '/some/stuff', '1234567891234')
@@ -352,7 +351,7 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
         self.assertEqual(expected_args, mock_execute.call_args_list)
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_create_cow_image(self, mock_execute, mock_exists):
         mock_execute.return_value = ('stdout', None)
         libvirt_utils.create_cow_image('/some/path', '/the/new/cow')
@@ -405,7 +404,7 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
                 self.assertEqual(result, expected_result)
 
     @mock.patch('nova.privsep.libvirt.xend_probe')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_pick_disk_driver_name_xen(self, mock_execute, mock_xend_probe):
 
         def execute_side_effect(*args, **kwargs):
@@ -461,7 +460,7 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
                     mock_execute.reset_mock()
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_get_disk_size(self, mock_execute, mock_exists):
         path = '/some/path'
         example_output = """image: 00000001
@@ -533,26 +532,26 @@ disk size: 4.4M
         mock_execute.assert_called_once_with(*qemu_img_cmd)
         mock_disk_op_sema.__enter__.assert_called_once()
 
-    @mock.patch.object(utils, 'execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_extract_snapshot_raw(self, mock_execute):
         self._do_test_extract_snapshot(mock_execute)
 
-    @mock.patch.object(utils, 'execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_extract_snapshot_iso(self, mock_execute):
         self._do_test_extract_snapshot(mock_execute, dest_format='iso')
 
-    @mock.patch.object(utils, 'execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_extract_snapshot_qcow2(self, mock_execute):
         self._do_test_extract_snapshot(mock_execute,
                                        dest_format='qcow2', out_format='qcow2')
 
-    @mock.patch.object(utils, 'execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_extract_snapshot_qcow2_and_compression(self, mock_execute):
         self.flags(snapshot_compression=True, group='libvirt')
         self._do_test_extract_snapshot(mock_execute,
                                        dest_format='qcow2', out_format='qcow2')
 
-    @mock.patch.object(utils, 'execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_extract_snapshot_parallels(self, mock_execute):
         self._do_test_extract_snapshot(mock_execute,
                                        src_format='raw',
@@ -738,7 +737,7 @@ disk size: 4.4M
         def return_true(*args, **kwargs):
             return True
 
-        self.stub_out('nova.utils.execute', fake_execute)
+        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
         self.stub_out('os.path.exists', return_true)
 
         out = libvirt_utils.get_disk_backing_file('')

@@ -93,7 +93,7 @@ def create_image(disk_format, path, size):
                  M for Mebibytes, 'G' for Gibibytes, 'T' for Tebibytes).
                  If no suffix is given, it will be interpreted as bytes.
     """
-    utils.execute('qemu-img', 'create', '-f', disk_format, path, size)
+    processutils.execute('qemu-img', 'create', '-f', disk_format, path, size)
 
 
 def create_cow_image(backing_file, path, size=None):
@@ -125,7 +125,7 @@ def create_cow_image(backing_file, path, size=None):
         csv_opts = ",".join(cow_opts)
         cow_opts = ['-o', csv_opts]
     cmd = base_cmd + cow_opts + [path]
-    utils.execute(*cmd)
+    processutils.execute(*cmd)
 
 
 def create_ploop_image(disk_format, path, size, fs_type):
@@ -182,8 +182,8 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
                     return 'qemu'
             # libvirt will use xend/xm toolstack
             try:
-                out, err = utils.execute('tap-ctl', 'check',
-                                         check_exit_code=False)
+                out, err = processutils.execute('tap-ctl', 'check',
+                                                check_exit_code=False)
                 if out == 'ok\n':
                     # 4000000 == 4.0.0
                     if hypervisor_version > 4000000:
@@ -251,7 +251,7 @@ def copy_image(src, dest, host=None, receive=False,
         # rather recreated efficiently.  In addition, since
         # coreutils 8.11, holes can be read efficiently too.
         # we add '-r' argument because ploop disks are directories
-        utils.execute('cp', '-r', src, dest)
+        processutils.execute('cp', '-r', src, dest)
     else:
         if receive:
             src = "%s:%s" % (utils.safe_ip_format(host), src)
@@ -318,7 +318,7 @@ def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
     qemu_img_cmd += (disk_path, out_path)
     # execute operation with disk concurrency semaphore
     with compute_utils.disk_ops_semaphore:
-        utils.execute(*qemu_img_cmd)
+        processutils.execute(*qemu_img_cmd)
 
 
 def load_file(path):
