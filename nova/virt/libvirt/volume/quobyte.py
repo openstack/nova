@@ -58,14 +58,14 @@ def mount_volume(volume, mnt_base, configfile=None):
     LOG.debug('Mounting volume %s at mount point %s ...',
               volume,
               mnt_base)
-    utils.execute(*command)
+    processutils.execute(*command)
     LOG.info('Mounted volume: %s', volume)
 
 
 def umount_volume(mnt_base):
     """Wraps execute calls for unmouting a Quobyte volume"""
     try:
-        utils.execute('umount.quobyte', mnt_base)
+        processutils.execute('umount.quobyte', mnt_base)
     except processutils.ProcessExecutionError as exc:
         if 'Device or resource busy' in six.text_type(exc):
             LOG.error("The Quobyte volume at %s is still in use.", mnt_base)
