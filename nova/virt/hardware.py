@@ -1042,7 +1042,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
             # available page size.
             pagesize = _get_smallest_pagesize(host_cell)
             LOG.debug('No specific pagesize requested for instance, '
-                      'selectionned pagesize: %d', pagesize)
+                      'selected pagesize: %d', pagesize)
             if not host_cell.can_fit_hugepages(
                     pagesize, instance_cell.memory * units.Ki):
                 LOG.debug('Not enough available memory to schedule instance '
