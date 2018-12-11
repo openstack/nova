@@ -204,7 +204,6 @@
               # code; we don't need to run this on all changes, nor do we run
               # it in the gate.
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
-        - nova-cells-v1
         - nova-live-migration
         - nova-lvm
         - nova-multiattach
@@ -224,7 +223,6 @@
       jobs:
         - neutron-grenade:
             irrelevant-files: *dsvm-irrelevant-files
-        - nova-cells-v1
         - nova-live-migration
         - nova-multiattach
         - nova-tox-functional
@@ -254,6 +252,7 @@
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-pg-full:
             irrelevant-files: *dsvm-irrelevant-files
+        - nova-cells-v1
         - nova-tempest-full-oslo.versionedobjects:
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-tempest-dsvm-nova-libvirt-kvm-apr:
