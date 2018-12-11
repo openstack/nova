@@ -1,3 +1,4 @@
+==========
 Vendordata
 ==========
 
@@ -44,51 +45,56 @@ instances. This is done by loading named modules, which must appear in the nova
 source code. We provide two such modules:
 
 - StaticJSON: a module which can include the contents of a static JSON file
-  loaded from disk. This can be used for things which don't change between
-  instances, such as the location of the corporate puppet server.
+  loaded from disk, configurable via the
+  :oslo.config:option:`api.vendordata_jsonfile_path` option. This can be used
+  for things which don't change between instances, such as the location of the
+  corporate puppet server. This is the default provider.
 
 - DynamicJSON: a module which will make a request to an external REST service
   to determine what metadata to add to an instance. This is how we recommend
   you generate things like Active Directory tokens which change per instance.
+
+The vendordata providers are configured via the
+:oslo.config:option:`api.vendordata_providers` option.
 
 Tell me more about DynamicJSON
 ==============================
 
 To use DynamicJSON, you configure it like this:
 
-- Add "DynamicJSON" to the vendordata_providers configuration option. This can
-  also include "StaticJSON" if you'd like.
+- Add "DynamicJSON" to the :oslo.config:option:`api.vendordata_providers`
+  configuration option. This can also include "StaticJSON" if you'd like.
 - Specify the REST services to be contacted to generate metadata in the
-  vendordata_dynamic_targets configuration option. There can be more than one
-  of these, but note that they will be queried once per metadata request from
-  the instance, which can mean a fair bit of traffic depending on your
-  configuration and the configuration of the instance.
+  :oslo.config:option:`api.vendordata_dynamic_targets` configuration option.
+  There can be more than one of these, but note that they will be queried once
+  per metadata request from the instance, which can mean a fair bit of traffic
+  depending on your configuration and the configuration of the instance.
 
-The format for an entry in vendordata_dynamic_targets is like this:
+The format for an entry in *vendordata_dynamic_targets* is like this::
 
-        <name>@<url>
+    <name>@<url>
 
 Where name is a short string not including the '@' character, and where the
 URL can include a port number if so required. An example would be::
 
-        testing@http://127.0.0.1:125
+    testing@http://127.0.0.1:125
 
 Metadata fetched from this target will appear in the metadata service at a
-new file called vendordata2.json, with a path (either in the metadata service
-URL or in the configdrive) like this:
+new file called *vendordata2.json*, with a path (either in the metadata service
+URL or in the config drive) like this::
 
-        openstack/2016-10-06/vendor_data2.json
+    openstack/2016-10-06/vendor_data2.json
 
 For each dynamic target, there will be an entry in the JSON file named after
 that target. For example::
 
-        {
-            "testing": {
-                "value1": 1,
-                "value2": 2,
-                "value3": "three"
-            }
+    {
+        "testing": {
+            "value1": 1,
+            "value2": 2,
+            "value3": "three"
         }
+    }
 
 Do not specify the same name more than once. If you do, we will ignore
 subsequent uses of a previously used name.
@@ -119,7 +125,7 @@ some level of certainty that the request came from nova. This is done by
 providing a service token with the request -- you can then just deploy your
 metadata service with the keystone authentication WSGI middleware. This is
 configured using the keystone authentication parameters in the
-``vendordata_dynamic_auth`` configuration group.
+:oslo.config:group:`vendordata_dynamic_auth` configuration group.
 
 References
 ==========
