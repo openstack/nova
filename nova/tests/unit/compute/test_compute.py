@@ -284,9 +284,10 @@ class BaseTestCase(test.TestCase):
         return fake_instance.fake_instance_obj(None, **updates)
 
     def _create_fake_instance_obj(self, params=None, type_name='m1.tiny',
-                                  services=False, context=None):
+                                  services=False, ctxt=None):
+        ctxt = ctxt or self.context
         flavor = flavors.get_flavor_by_name(type_name)
-        inst = objects.Instance(context=context or self.context)
+        inst = objects.Instance(context=ctxt)
         inst.vm_state = vm_states.ACTIVE
         inst.task_state = None
         inst.power_state = power_state.RUNNING
@@ -321,7 +322,18 @@ class BaseTestCase(test.TestCase):
         if services:
             _create_service_entries(self.context.elevated(),
                                     [['fake_zone', [inst.host]]])
-        inst.create()
+        cell1 = self.cell_mappings[test.CELL1_NAME]
+        with context.target_cell(ctxt, cell1) as cctxt:
+            inst._context = cctxt
+            inst.create()
+
+        # Create an instance mapping in cell1 so the API can get the instance.
+        inst_map = objects.InstanceMapping(
+            ctxt,
+            instance_uuid=inst.uuid,
+            project_id=inst.project_id,
+            cell_mapping=cell1)
+        inst_map.create()
 
         return inst
 
@@ -6270,7 +6282,7 @@ class ComputeTestCase(BaseTestCase,
         c = context.get_admin_context()
         params = {'info_cache': objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([]))}
-        instance = self._create_fake_instance_obj(params=params, context=c)
+        instance = self._create_fake_instance_obj(params=params, ctxt=c)
         instance.host = self.compute.host
         dest = 'desthost'
 
@@ -6326,7 +6338,7 @@ class ComputeTestCase(BaseTestCase,
         c = context.get_admin_context()
         params = {'info_cache': objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([]))}
-        instance = self._create_fake_instance_obj(params=params, context=c)
+        instance = self._create_fake_instance_obj(params=params, ctxt=c)
         instance.host = self.compute.host
         dest = 'desthost'
 
@@ -6430,7 +6442,7 @@ class ComputeTestCase(BaseTestCase,
                                         'host': srchost,
                                         'state_description': 'migrating',
                                         'state': power_state.PAUSED},
-                                                  context=c)
+                                        ctxt=c)
 
         instance.update({'task_state': task_states.MIGRATING,
                         'power_state': power_state.PAUSED})
@@ -6510,7 +6522,7 @@ class ComputeTestCase(BaseTestCase,
                                         'node': srcnode,
                                         'state_description': 'migrating',
                                         'state': power_state.PAUSED},
-                                                  context=c)
+                                        ctxt=c)
 
         instance.update({'task_state': task_states.MIGRATING,
                         'power_state': power_state.PAUSED})
@@ -6561,7 +6573,7 @@ class ComputeTestCase(BaseTestCase,
                                         'host': self.compute.host,
                                         'state_description': 'migrating',
                                         'state': power_state.PAUSED},
-                                                  context=c)
+                                        ctxt=c)
         instance.update({'task_state': task_states.MIGRATING,
                          'power_state': power_state.PAUSED})
         instance.save()
