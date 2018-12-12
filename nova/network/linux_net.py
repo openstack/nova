@@ -734,14 +734,6 @@ def floating_forward_rules(floating_ip, fixed_ip, device):
     return rules
 
 
-def clean_conntrack(fixed_ip):
-    try:
-        _execute('conntrack', '-D', '-r', fixed_ip, run_as_root=True,
-                 check_exit_code=[0, 1])
-    except processutils.ProcessExecutionError:
-        LOG.exception('Error deleting conntrack entries for %s', fixed_ip)
-
-
 def _enable_ipv4_forwarding():
     sysctl_key = 'net.ipv4.ip_forward'
     stdout, stderr = _execute('sysctl', '-n', sysctl_key)

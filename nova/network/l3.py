@@ -121,7 +121,7 @@ class LinuxNetL3(L3Driver):
         nova.privsep.linux_net.unbind_ip(l3_interface_id, floating_ip)
         linux_net.remove_floating_forward(floating_ip, fixed_ip,
                                           l3_interface_id, network)
-        linux_net.clean_conntrack(fixed_ip)
+        nova.privsep.linux_net.clean_conntrack(fixed_ip)
 
     def add_vpn(self, public_ip, port, private_ip):
         linux_net.ensure_vpn_forward(public_ip, port, private_ip)

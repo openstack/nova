@@ -224,3 +224,12 @@ def send_arp_for_ip(ip, device, count):
 
     if err:
         LOG.debug('arping error for IP %s', ip)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def clean_conntrack(fixed_ip):
+    try:
+        processutils.execute('conntrack', '-D', '-r', fixed_ip,
+                             check_exit_code=[0, 1])
+    except processutils.ProcessExecutionError:
+        LOG.exception('Error deleting conntrack entries for %s', fixed_ip)
