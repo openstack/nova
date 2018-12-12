@@ -71,6 +71,35 @@
     timeout: 3600
 
 - job:
+    name: nova-tox-functional-py36
+    parent: openstack-tox
+    nodeset: ubuntu-bionic
+    description: |
+      Run tox-based functional tests for the OpenStack Nova project
+      under cPython version 3.6 with Nova specific irrelevant-files list.
+      Uses tox with the ``functional-py36`` environment.
+    irrelevant-files: *functional-irrelevant-files
+    vars:
+      tox_envlist: functional-py36
+      bindep_profile: test py36
+    timeout: 3600
+
+- job:
+    name: nova-tox-functional-py37
+    parent: openstack-tox
+    nodeset: ubuntu-bionic
+    description: |
+      Run tox-based functional tests for the OpenStack Nova project
+      under cPython version 3.7 with Nova specific irrelevant-files list.
+      Uses tox with the ``functional-py37`` environment.
+    irrelevant-files: *functional-irrelevant-files
+    vars:
+      tox_envlist: functional-py37
+      bindep_profile: test py37
+      python_version: 3.7
+    timeout: 3600
+
+- job:
     name: nova-cells-v1
     parent: nova-dsvm-base
     run: playbooks/legacy/nova-cells-v1/run.yaml
@@ -267,3 +296,7 @@
         - os-vif-ovs:
             irrelevant-files: *dsvm-irrelevant-files
         - openstack-tox-py37
+        # NOTE(mriedem): Consider moving nova-tox-functional-py36 to the
+        # check and gate queues once it's stable (like openstack-python36-jobs)
+        - nova-tox-functional-py36
+        - nova-tox-functional-py37
