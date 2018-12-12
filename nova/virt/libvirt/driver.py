@@ -288,6 +288,9 @@ MIN_QEMU_FILE_BACKED_VERSION = (2, 6, 0)
 MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION = (4, 4, 0)
 MIN_QEMU_FILE_BACKED_DISCARD_VERSION = (2, 10, 0)
 
+MIN_LIBVIRT_NATIVE_TLS_VERSION = (4, 4, 0)
+MIN_QEMU_NATIVE_TLS_VERSION = (2, 11, 0)
+
 VGPU_RESOURCE_SEMAPHORE = "vgpu_resources"
 
 
@@ -543,6 +546,20 @@ class LibvirtDriver(driver.ComputeDriver):
                  'libvirt_ver': libvirt_utils.version_to_string(
                      MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch))})
 
+        # Allowing both "tunnelling via libvirtd" (which will be
+        # deprecated once the MIN_{LIBVIRT,QEMU}_VERSION is sufficiently
+        # new enough) and "native TLS" options at the same time is
+        # nonsensical.
+        if (CONF.libvirt.live_migration_tunnelled and
+            CONF.libvirt.live_migration_with_native_tls):
+                msg = _("Setting both 'live_migration_tunnelled' and"
+                        "'live_migration_with_native_tls' at the same"
+                        "time is invalid. If you have the relevant"
+                        "libvirt and QEMU versions, and TLS configured"
+                        "in your environment, pick"
+                        "'live_migration_with_native_tls'.")
+                raise exception.Invalid(msg)
+
         # TODO(sbauza): Remove this code once mediated devices are persisted
         # across reboots.
         if self._host.has_min_version(MIN_LIBVIRT_MDEV_SUPPORT):
@@ -643,6 +660,16 @@ class LibvirtDriver(driver.ComputeDriver):
             migration_flags |= libvirt.VIR_MIGRATE_TUNNELLED
         return migration_flags
 
+    def _is_native_tls_available(self):
+        return self._host.has_min_version(MIN_LIBVIRT_NATIVE_TLS_VERSION,
+                                          MIN_QEMU_NATIVE_TLS_VERSION)
+
+    def _handle_native_tls(self, migration_flags):
+        if (CONF.libvirt.live_migration_with_native_tls and
+                self._is_native_tls_available()):
+            migration_flags |= libvirt.VIR_MIGRATE_TLS
+        return migration_flags
+
     def _is_post_copy_available(self):
         return self._host.has_min_version(lv_ver=MIN_LIBVIRT_POSTCOPY_VERSION)
 
@@ -680,6 +707,11 @@ class LibvirtDriver(driver.ComputeDriver):
         live_migration_flags = self._handle_live_migration_tunnelled(
             live_migration_flags)
         block_migration_flags = self._handle_live_migration_tunnelled(
+            block_migration_flags)
+
+        live_migration_flags = self._handle_native_tls(
+            live_migration_flags)
+        block_migration_flags = self._handle_native_tls(
             block_migration_flags)
 
         live_migration_flags = self._handle_live_migration_post_copy(

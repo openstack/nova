@@ -1,0 +1,15 @@
+---
+features:
+  - |
+    The libvirt driver now supports "QEMU-native TLS" transport for live
+    migration.  This will provide encryption for all migration streams,
+    namely: guest RAM, device state and disks on a non-shared setup that are
+    transported over NBD (Network Block Device), also called as "block
+    migration".
+
+    This can be configured via a new configuration attribute
+    ``[libvirt]/live_migration_with_native_tls``.  Refer to its
+    documentation in ``nova.conf`` for usage details.  Note that this is
+    the preferred the way to secure all migration streams in an
+    OpenStack network, instead of
+    ``[libvirt]/live_migration_tunnelled``.
