@@ -22,7 +22,9 @@ Description
 ===========
 
 :program:`nova-api-metadata` is a server daemon that serves the Nova Metadata
-API.
+API. This daemon routes database requests via the ``nova-conductor`` service,
+so there are some considerations about using this in a
+:ref:`multi-cell layout <cells-v2-layout-metadata-api>`.
 
 Options
 =======

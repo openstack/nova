@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Added configuration option ``[api]/local_metadata_per_cell`` to allow
+    users to run Nova metadata API service per cell. Doing this could provide
+    performance improvement and data isolation in a multi-cell deployment.
+    But it has some caveats, see the
+    `Metadata api service in cells v2 layout`_ for more details.
+
+    .. _Metadata api service in cells v2 layout: https://docs.openstack.org/nova/latest/user/cellsv2-layout.html#nova-metadata-api-service
