@@ -27,9 +27,6 @@ terminating it.
 
 import base64
 import binascii
-# If py2, concurrent.futures comes from the futures library otherwise it
-# comes from the py3 standard library.
-from concurrent import futures
 import contextlib
 import functools
 import inspect
@@ -43,6 +40,7 @@ import eventlet.event
 from eventlet import greenthread
 import eventlet.semaphore
 import eventlet.timeout
+import futurist
 from keystoneauth1 import exceptions as keystone_exception
 from oslo_log import log as logging
 import oslo_messaging as messaging
@@ -523,13 +521,10 @@ class ComputeManager(manager.Manager):
         else:
             self._build_semaphore = compute_utils.UnlimitedSemaphore()
         if max(CONF.max_concurrent_live_migrations, 0) != 0:
-            self._live_migration_executor = futures.ThreadPoolExecutor(
+            self._live_migration_executor = futurist.GreenThreadPoolExecutor(
                 max_workers=CONF.max_concurrent_live_migrations)
         else:
-            # Starting in python 3.5, this is technically bounded, but it's
-            # ncpu * 5 which is probably much higher than anyone would sanely
-            # use for concurrently running live migrations.
-            self._live_migration_executor = futures.ThreadPoolExecutor()
+            self._live_migration_executor = futurist.GreenThreadPoolExecutor()
         # This is a dict, keyed by instance uuid, to a two-item tuple of
         # migration object and Future for the queued live migration.
         self._waiting_live_migrations = {}
@@ -6353,8 +6348,9 @@ class ComputeManager(manager.Manager):
                 block_migration, migration, migrate_data)
             self._waiting_live_migrations[instance.uuid] = (migration, future)
         except RuntimeError:
-            # ThreadPoolExecutor.submit will raise RuntimeError if the pool
-            # is shutdown, which happens in _cleanup_live_migrations_in_pool.
+            # GreenThreadPoolExecutor.submit will raise RuntimeError if the
+            # pool is shutdown, which happens in
+            # _cleanup_live_migrations_in_pool.
             LOG.info('Migration %s failed to submit as the compute service '
                      'is shutting down.', migration.uuid, instance=instance)
             self._set_migration_status(migration, 'error')

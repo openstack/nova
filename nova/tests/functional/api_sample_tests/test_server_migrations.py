@@ -13,9 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from concurrent import futures
 import datetime
 
+import futurist
 import mock
 
 from nova.conductor import manager as conductor_manager
@@ -241,7 +241,7 @@ class ServerMigrationsSampleJsonTestV2_65(ServerMigrationsSampleJsonTestV2_24):
         self._do_post('servers/%s/action' % self.uuid, 'live-migrate-server',
                       {'hostname': self.compute.host})
         self.compute._waiting_live_migrations[self.uuid] = (
-            self.migration, futures.Future())
+            self.migration, futurist.Future())
         uri = 'servers/%s/migrations/%s' % (self.uuid, self.migration.id)
         response = self._do_delete(uri)
         self.assertEqual(202, response.status_code)
