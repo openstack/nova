@@ -214,3 +214,13 @@ def _create_tap_dev_inner(dev, mac_address=None, multiqueue=False):
         if mac_address:
             _set_device_macaddr_inner(dev, mac_address)
         _set_device_enabled_inner(dev)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def send_arp_for_ip(ip, device, count):
+    out, err = processutils.execute(
+        'arping', '-U', ip, '-A', '-I', device, '-c', str(count),
+        check_exit_code=False)
+
+    if err:
+        LOG.debug('arping error for IP %s', ip)
