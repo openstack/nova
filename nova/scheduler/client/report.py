@@ -47,7 +47,6 @@ DISK_GB = fields.ResourceClass.DISK_GB
 _RE_INV_IN_USE = re.compile("Inventory for (.+) on resource provider "
                             "(.+) in use")
 WARN_EVERY = 10
-PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
 RESHAPER_VERSION = '1.30'
 CONSUMER_GENERATION_VERSION = '1.28'
 NESTED_AC_VERSION = '1.29'
@@ -254,6 +253,10 @@ def get_placement_request_id(response):
         return response.headers.get(request_id.HTTP_RESP_HEADER_REQUEST_ID)
 
 
+# TODO(mriedem): Consider making SchedulerReportClient a global singleton so
+# that things like the compute API do not have to lazy-load it. That would
+# likely require inspecting methods that use a ProviderTree cache to see if
+# they need locks.
 class SchedulerReportClient(object):
     """Client class for updating the scheduler."""
 
@@ -280,7 +283,6 @@ class SchedulerReportClient(object):
         self._provider_tree = provider_tree.ProviderTree()
         self._association_refresh_time = {}
 
-    @utils.synchronized(PLACEMENT_CLIENT_SEMAPHORE)
     def _create_client(self):
         """Create the HTTP session accessing the placement service."""
         # Flush provider tree and associations so we start from a clean slate.
