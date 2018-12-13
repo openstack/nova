@@ -49,7 +49,6 @@ from oslotest import moxstubout
 import six
 import testtools
 
-from nova.api.openstack.placement.objects import resource_provider
 from nova import context
 from nova.db import api as db
 from nova import exception
@@ -260,7 +259,6 @@ class TestCase(testtools.TestCase):
             # NOTE(danms): Full database setup involves a cell0, cell1,
             # and the relevant mappings.
             self.useFixture(nova_fixtures.Database(database='api'))
-            self.useFixture(nova_fixtures.Database(database='placement'))
             self._setup_cells()
             self.useFixture(nova_fixtures.DefaultFlavorsFixture())
         elif not self.USES_DB_SELF:
@@ -281,12 +279,6 @@ class TestCase(testtools.TestCase):
         # caching of that value.
         utils._IS_NEUTRON = None
 
-        # Reset the traits sync and rc cache flags
-        def _reset_traits():
-            resource_provider._TRAITS_SYNCED = False
-        _reset_traits()
-        self.addCleanup(_reset_traits)
-        resource_provider._RC_CACHE = None
         # Reset the global QEMU version flag.
         images.QEMU_VERSION = None
 
@@ -296,8 +288,6 @@ class TestCase(testtools.TestCase):
         self.addCleanup(self._clear_attrs)
         self.useFixture(fixtures.EnvironmentVariable('http_proxy'))
         self.policy = self.useFixture(policy_fixture.PolicyFixture())
-        self.placement_policy = self.useFixture(
-            policy_fixture.PlacementPolicyFixture())
 
         self.useFixture(nova_fixtures.PoisonFunctions())
 

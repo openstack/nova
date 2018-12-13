@@ -16,7 +16,7 @@
 import fixtures
 import mock
 
-from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import test_servers as base
 from nova.tests.unit.virt.libvirt import fake_imagebackend
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
@@ -43,7 +43,7 @@ class ServersTestBase(base.ServersTestBase):
             'nova.virt.libvirt.guest.libvirt',
             fakelibvirt))
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
-        self.useFixture(nova_fixtures.PlacementFixture())
+        self.useFixture(func_fixtures.PlacementFixture())
 
         # Mock the 'get_connection' function, as we're going to need to provide
         # custom capabilities for each test

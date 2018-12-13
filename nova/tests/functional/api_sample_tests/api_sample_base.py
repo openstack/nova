@@ -107,8 +107,6 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
         if not self.SUPPORTS_CELLS:
             self.useFixture(fixtures.Database())
             self.useFixture(fixtures.Database(database='api'))
-            # FIXME(cdent): Placement db already provided by IntegratedHelpers
-            self.useFixture(fixtures.Database(database='placement'))
             self.useFixture(fixtures.DefaultFlavorsFixture())
             self.useFixture(fixtures.SingleCellSimple())
 

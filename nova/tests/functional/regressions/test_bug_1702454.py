@@ -13,6 +13,7 @@
 from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import cast_as_call
 from nova.tests.unit.image import fake as image_fake
@@ -58,7 +59,7 @@ class SchedulerOnlyChecksTargetTest(test.TestCase,
 
         # We need the computes reporting into placement for the filter
         # scheduler to pick a host.
-        self.useFixture(nova_fixtures.PlacementFixture())
+        self.useFixture(func_fixtures.PlacementFixture())
 
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))

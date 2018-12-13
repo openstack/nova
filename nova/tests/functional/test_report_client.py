@@ -14,10 +14,13 @@
 import copy
 from keystoneauth1 import exceptions as kse
 import mock
+from oslo_config import cfg
+from oslo_config import fixture as config_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 import pkg_resources
+from placement import direct
+from placement.tests import fixtures as placement_db
 
-from nova.api.openstack.placement import direct
 from nova.cmd import status
 from nova.compute import provider_tree
 from nova import conf
@@ -81,6 +84,14 @@ class VersionCheckingReportClient(report.SchedulerReportClient):
 
 
 class SchedulerReportClientTestBase(test.TestCase):
+
+    def setUp(self):
+        super(SchedulerReportClientTestBase, self).setUp()
+        # Because these tests use PlacementDirect we need to manage
+        # the database ourselves.
+        config = cfg.ConfigOpts()
+        placement_conf = self.useFixture(config_fixture.Config(config))
+        self.useFixture(placement_db.Database(placement_conf, set_config=True))
 
     def _interceptor(self, app=None, latest_microversion=True):
         """Set up an intercepted placement API to test against.
