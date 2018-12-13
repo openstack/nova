@@ -34,6 +34,7 @@ RPC_TOPIC = "compute"
 
 LOG = logging.getLogger(__name__)
 LAST_VERSION = None
+NO_COMPUTES_WARNING = False
 
 
 def _compute_host(host, instance):
@@ -381,6 +382,7 @@ class ComputeAPI(object):
 
     def _determine_version_cap(self, target):
         global LAST_VERSION
+        global NO_COMPUTES_WARNING
         if LAST_VERSION:
             return LAST_VERSION
         service_version = objects.Service.get_minimum_version(
@@ -393,10 +395,13 @@ class ComputeAPI(object):
         # this result, because we will get a better answer next time.
         # As a sane default, return the current version.
         if service_version == 0:
-            LOG.debug("Not caching compute RPC version_cap, because min "
-                      "service_version is 0. Please ensure a nova-compute "
-                      "service has been started. Defaulting to current "
-                      "version.")
+            if not NO_COMPUTES_WARNING:
+                # NOTE(danms): Only show this warning once
+                LOG.debug("Not caching compute RPC version_cap, because min "
+                          "service_version is 0. Please ensure a nova-compute "
+                          "service has been started. Defaulting to current "
+                          "version.")
+                NO_COMPUTES_WARNING = True
             return history[service_obj.SERVICE_VERSION]['compute_rpc']
 
         try:
