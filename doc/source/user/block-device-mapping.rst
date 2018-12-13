@@ -127,7 +127,7 @@ fields (in addition to the ones that were already there):
   * `snapshot`
   * `blank`
 
-* dest_type  - this can have one of the following values:
+* destination_type  - this can have one of the following values:
 
   * `local`
   * `volume`
@@ -161,10 +161,10 @@ fields (in addition to the ones that were already there):
   usage is to set it to 0 for the boot device and leave it as None for any
   other devices.
 
-Valid source / dest combinations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Valid source / destination combinations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Combination of the ``source_type`` and ``dest_type`` will define the
+Combination of the ``source_type`` and ``destination_type`` will define the
 kind of block device the entry is referring to. The following
 combinations are supported:
 
