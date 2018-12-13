@@ -10706,8 +10706,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api._detach_volume_shelved_offloaded(self.context,
                                                           instance,
                                                           volume)
-        mock_begin_detaching.assert_called_once_with(self.context,
-                                                     volume['id'])
+        mock_begin_detaching.assert_not_called()
         self.assertTrue(mock_local_cleanup.called)
 
     @mock.patch.object(nova.volume.cinder.API, 'begin_detaching',
