@@ -4282,12 +4282,17 @@ class API(base.Base):
         def detach_volume(self, context, instance, bdms):
             self._local_cleanup_bdm_volumes(bdms, instance, context)
 
-        try:
-            self.volume_api.begin_detaching(context, volume['id'])
-        except exception.InvalidInput as exc:
-            raise exception.InvalidVolume(reason=exc.format_message())
         bdms = [objects.BlockDeviceMapping.get_by_volume_id(
                 context, volume['id'], instance.uuid)]
+        # The begin_detaching() call only works with in-use volumes,
+        # which will not be the case for volumes attached to a shelved
+        # offloaded server via the attachments API since those volumes
+        # will have `reserved` status.
+        if not bdms[0].attachment_id:
+            try:
+                self.volume_api.begin_detaching(context, volume['id'])
+            except exception.InvalidInput as exc:
+                raise exception.InvalidVolume(reason=exc.format_message())
         self._record_action_start(
             context, instance,
             instance_actions.DETACH_VOLUME)
