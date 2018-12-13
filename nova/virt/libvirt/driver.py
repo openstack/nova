@@ -3119,52 +3119,47 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = guest.get_xml_desc()
         tree = etree.fromstring(xml)
 
-        # If the guest has a console logging to a file prefer to use that
-        file_consoles = tree.findall("./devices/console[@type='file']")
-        if file_consoles:
-            for file_console in file_consoles:
-                source_node = file_console.find('./source')
-                if source_node is None:
-                    continue
-                path = source_node.get("path")
-                if not path:
-                    continue
-
-                if not os.path.exists(path):
-                    LOG.info('Instance is configured with a file console, '
-                             'but the backing file is not (yet?) present',
-                             instance=instance)
-                    return ""
-
-                return self._get_console_output_file(instance, path)
-
-        # Try 'pty' types
-        pty_consoles = tree.findall("./devices/console[@type='pty']")
-        if pty_consoles:
-            for pty_console in pty_consoles:
-                source_node = pty_console.find('./source')
-                if source_node is None:
-                    continue
-                pty = source_node.get("path")
-                if not pty:
-                    continue
+        # check for different types of consoles
+        path_sources = [
+            ('file', "./devices/console[@type='file']/source[@path]", 'path'),
+            ('pty', "./devices/console[@type='pty']/source[@path]", 'path')]
+        console_type = ""
+        console_path = ""
+        for c_type, epath, attrib in path_sources:
+            node = tree.find(epath)
+            if (node is not None) and node.get(attrib):
+                console_type = c_type
+                console_path = node.get(attrib)
                 break
-            else:
-                raise exception.ConsoleNotAvailable()
-        else:
+
+        # instance has no console at all
+        if not console_path:
             raise exception.ConsoleNotAvailable()
 
-        console_log = self._get_console_log_path(instance)
-        data = nova.privsep.libvirt.readpty(pty)
+        # instance has a console, but file doesn't exist (yet?)
+        if not os.path.exists(console_path):
+            LOG.info('console logfile for instance does not exist',
+                      instance=instance)
+            return ""
 
-        # NOTE(markus_z): The virt_types kvm and qemu are the only ones
-        # which create a dedicated file device for the console logging.
-        # Other virt_types like xen, lxc, uml, parallels depend on the
-        # flush of that pty device into the "console.log" file to ensure
-        # that a series of "get_console_output" calls return the complete
-        # content even after rebooting a guest.
-        nova.privsep.path.writefile(console_log, 'a+', data)
-        return self._get_console_output_file(instance, console_log)
+        # pty consoles need special handling
+        if console_type == 'pty':
+            console_log = self._get_console_log_path(instance)
+            data = nova.privsep.libvirt.readpty(console_path)
+
+            # NOTE(markus_z): The virt_types kvm and qemu are the only ones
+            # which create a dedicated file device for the console logging.
+            # Other virt_types like xen, lxc, uml, parallels depend on the
+            # flush of that pty device into the "console.log" file to ensure
+            # that a series of "get_console_output" calls return the complete
+            # content even after rebooting a guest.
+            nova.privsep.path.writefile(console_log, 'a+', data)
+
+            # set console path to logfile, not to pty device
+            console_path = console_log
+
+        # return logfile content
+        return self._get_console_output_file(instance, console_path)
 
     def get_host_ip_addr(self):
         ips = compute_utils.get_machine_ips()
