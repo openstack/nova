@@ -13398,6 +13398,54 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
             self.assertEqual(b'67890', output)
 
+    # this test resembles test_get_console_output_file() except
+    # that the instance was created with a tcp-based serial console
+    # which results in a different XML
+    @mock.patch('nova.privsep.path.last_bytes',
+                return_value=(b'67891', 0))
+    def test_get_console_output_tcp(self, mock_last_bytes):
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+            # flags to enable the serial console are not necessary
+            # as we use a fake dom
+
+            instance_ref = self.test_instance
+            instance_ref['image_ref'] = 123456
+            instance = objects.Instance(**instance_ref)
+
+            console_dir = (os.path.join(tmpdir, instance['name']))
+            console_log = '%s/console.log' % (console_dir)
+            fake_dom_xml = """
+                <domain type='kvm'>
+                    <devices>
+                        <disk type='file'>
+                            <source file='filename'/>
+                        </disk>
+                        <console type='tcp'>
+                            <log file='%s'/>
+                        </console>
+                    </devices>
+                </domain>
+            """ % console_log
+
+            def fake_lookup(id):
+                return FakeVirtDomain(fake_dom_xml)
+
+            self.create_fake_libvirt_mock()
+            libvirt_driver.LibvirtDriver._conn.lookupByUUIDString = fake_lookup
+
+            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+            try:
+                prev_max = libvirt_driver.MAX_CONSOLE_BYTES
+                libvirt_driver.MAX_CONSOLE_BYTES = 5
+                with mock.patch('os.path.exists', return_value=True):
+                    output = drvr.get_console_output(self.context, instance)
+            finally:
+                libvirt_driver.MAX_CONSOLE_BYTES = prev_max
+
+            self.assertEqual(b'67891', output)
+
     def test_get_console_output_file_missing(self):
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
