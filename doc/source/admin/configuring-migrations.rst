@@ -227,9 +227,9 @@ memory-intensive instances succeed.
    ephemeral storage in GiB is added.
 
    The timeout in seconds is the instance size multiplied by the configurable
-   parameter ``live_migration_completion_timeout``, whose default is 800. For
-   example, shared-storage live migration of an instance with 8GiB memory will
-   time out after 6400 seconds.
+   parameter :oslo.config:option:`libvirt.live_migration_completion_timeout`,
+   whose default is 800. For example, shared-storage live migration of an
+   instance with 8GiB memory will time out after 6400 seconds.
 
 #. **Instance downtime**
 
