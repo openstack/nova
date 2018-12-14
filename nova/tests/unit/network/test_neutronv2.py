@@ -5463,6 +5463,11 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
             else:
                 self.assertNotIn(pci_request.PCI_TRUSTED_TAG, spec)
 
+        # Only the port with a resource_request will have pci_req.requester_id.
+        self.assertEqual(
+            [None, None, None, None, uuids.trusted_port],
+            [pci_req.requester_id for pci_req in pci_requests.requests])
+
         self.assertItemsEqual(
             ['physnet1', 'physnet2', 'physnet3', 'physnet4'],
             network_metadata.physnets)

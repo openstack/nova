@@ -159,6 +159,10 @@ def _translate_alias_to_requests(alias_spec):
         count = int(count)
         numa_policy, spec = pci_aliases[name]
 
+        # NOTE(gibi): InstancePCIRequest has a requester_id field that could
+        # be filled with the flavor.flavorid but currently there is no special
+        # handling for InstancePCIRequests created from the flavor. So it is
+        # left empty.
         pci_requests.append(objects.InstancePCIRequest(
             count=count,
             spec=spec,

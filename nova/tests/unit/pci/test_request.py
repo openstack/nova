@@ -208,12 +208,14 @@ class AliasTestCase(test.NoDBTestCase):
         self.flags(alias=[_fake_alias1, _fake_alias3], group='pci')
         expect_request = [
             {'count': 3,
+             'requester_id': None,
              'spec': [{'vendor_id': '8086', 'product_id': '4443',
                        'dev_type': 'type-PCI',
                        'capability_type': 'pci'}],
                        'alias_name': 'QuicAssist'},
 
             {'count': 1,
+             'requester_id': None,
              'spec': [{'vendor_id': '8086', 'product_id': '1111',
                        'dev_type': "type-PF",
                        'capability_type': 'pci'}],

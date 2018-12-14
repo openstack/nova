@@ -572,7 +572,8 @@ class _TestInstanceObject(object):
     @mock.patch('nova.db.api.instance_extra_update_by_uuid')
     def test_save_object_pci_requests(self, mock_instance_extra_update):
         expected_json = ('[{"count": 1, "alias_name": null, "is_new": false,'
-                         '"request_id": null, "spec": [{"vendor_id": "8086",'
+                         '"request_id": null, "requester_id": null,'
+                         '"spec": [{"vendor_id": "8086", '
                          '"product_id": "1502"}]}]')
 
         inst = objects.Instance()
