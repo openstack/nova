@@ -42,7 +42,13 @@ class ServiceController(wsgi.Controller):
         self.actions = {"enable": self._enable,
                         "disable": self._disable,
                         "disable-log-reason": self._disable_log_reason}
-        self.placementclient = report.SchedulerReportClient()
+        self._placementclient = None  # Lazy-load on first access.
+
+    @property
+    def placementclient(self):
+        if self._placementclient is None:
+            self._placementclient = report.SchedulerReportClient()
+        return self._placementclient
 
     def _get_services(self, req):
         # The API services are filtered out since they are not RPC services
