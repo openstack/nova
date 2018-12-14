@@ -267,15 +267,16 @@ class SchedulerReportClient(object):
         self._adapter = adapter
         # An object that contains a nova-compute-side cache of resource
         # provider and inventory information
-        self._provider_tree = provider_tree.ProviderTree()
+        self._provider_tree = None
         # Track the last time we updated providers' aggregates and traits
-        self._association_refresh_time = {}
+        self._association_refresh_time = None
         self._client = self._create_client()
         # NOTE(danms): Keep track of how naggy we've been
         self._warn_count = 0
 
-    def clear_provider_cache(self):
-        LOG.info("Clearing the report client's provider cache.")
+    def clear_provider_cache(self, init=False):
+        if not init:
+            LOG.info("Clearing the report client's provider cache.")
         self._provider_tree = provider_tree.ProviderTree()
         self._association_refresh_time = {}
 
@@ -283,8 +284,7 @@ class SchedulerReportClient(object):
     def _create_client(self):
         """Create the HTTP session accessing the placement service."""
         # Flush provider tree and associations so we start from a clean slate.
-        self._provider_tree = provider_tree.ProviderTree()
-        self._association_refresh_time = {}
+        self.clear_provider_cache(init=True)
         client = self._adapter or utils.get_ksa_adapter('placement')
         # Set accept header on every request to ensure we notify placement
         # service of our response body media type preferences.
