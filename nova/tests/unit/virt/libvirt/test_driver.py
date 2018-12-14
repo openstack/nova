@@ -15032,7 +15032,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_get_net_name.called_once_with(parent_address)
             mock_dev_lookup.called_once_with(dev_name)
 
-    def test_get_pcidev_info(self):
+    @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
+                return_value='ens1')
+    def test_get_pcidev_info(self, mock_get_ifname):
         self.stub_out('nova.virt.libvirt.host.Host.device_lookup_by_name',
                       lambda self, name: FakeNodeDevice(
                           _fake_NodeDevXml[name]))
@@ -15061,6 +15063,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "label": 'label_8086_1520',
             "dev_type": fields.PciDeviceType.SRIOV_VF,
             "parent_addr": '0000:04:00.3',
+            "parent_ifname": "ens1",
             }
         self.assertEqual(expect_vf, actualvf)
 
@@ -15079,6 +15082,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 "capabilities": {
                     "network": ["rx", "tx", "sg", "tso", "gso", "gro",
                                 "rxvlan", "txvlan"]},
+                "parent_ifname": "ens1",
                 }
             self.assertEqual(expect_vf, actualvf)
 
@@ -15147,10 +15151,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertRaises(fakelibvirt.libvirtError,
                               drvr._get_pci_passthrough_devices)
 
+    @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
+                return_value='ens1')
     @mock.patch.object(host.Host, 'list_pci_devices',
                        return_value=['pci_0000_04_00_3', 'pci_0000_04_10_7',
                                      'pci_0000_04_11_7'])
-    def test_get_pci_passthrough_devices(self, mock_list):
+    def test_get_pci_passthrough_devices(self, mock_list, mock_get_ifname):
         self.stub_out('nova.virt.libvirt.host.Host.device_lookup_by_name',
                       lambda self, name: FakeNodeDevice(
                           _fake_NodeDevXml[name]))
@@ -15176,7 +15182,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 "numa_node": None,
                 "dev_type": fields.PciDeviceType.SRIOV_VF,
                 "phys_function": [('0x0000', '0x04', '0x00', '0x3')],
-                "parent_addr": "0000:04:00.3"},
+                "parent_addr": "0000:04:00.3",
+                "parent_ifname": "ens1",
+            },
             {
                 "dev_id": "pci_0000_04_11_7",
                 "domain": 0,
@@ -15186,7 +15194,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 "numa_node": 0,
                 "dev_type": fields.PciDeviceType.SRIOV_VF,
                 "phys_function": [('0x0000', '0x04', '0x00', '0x3')],
-                "parent_addr": "0000:04:00.3"
+                "parent_addr": "0000:04:00.3",
+                "parent_ifname": "ens1",
             }
         ]
 
@@ -15196,6 +15205,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 if key not in ['phys_function', 'virt_functions', 'label']:
                     self.assertEqual(expectvfs[dev][key], actualvfs[dev][key])
         mock_list.assert_called_once_with()
+
+        # The first call for every VF is to determine parent_ifname and
+        # the second call to determine the MAC address.
+        mock_get_ifname.assert_has_calls([
+            mock.call('0000:04:10.7', pf_interface=True),
+            mock.call('0000:04:10.7', False),
+            mock.call('0000:04:11.7', pf_interface=True),
+            mock.call('0000:04:11.7', False)
+        ])
 
     # TODO(stephenfin): This only has one caller. Flatten it and remove the
     # 'mempages=False' branches or add the missing test

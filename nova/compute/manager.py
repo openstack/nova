@@ -2115,6 +2115,61 @@ class ComputeManager(manager.Manager):
         else:
             return None
 
+    def _update_pci_request_spec_with_allocated_interface_name(
+            self, context, instance, request_group_resource_providers_mapping):
+        if not instance.pci_requests:
+            return
+
+        def needs_update(pci_request, mapping):
+            return (pci_request.requester_id
+                    and pci_request.requester_id in mapping)
+
+        modified = False
+        for pci_request in instance.pci_requests.requests:
+            if needs_update(
+                    pci_request, request_group_resource_providers_mapping):
+
+                provider_uuids = request_group_resource_providers_mapping[
+                    pci_request.requester_id]
+
+                if len(provider_uuids) != 1:
+                    reason = (
+                        'Allocating resources from more than one resource '
+                        'providers %(providers)s for a single pci request '
+                        '%(requester)s is not supported.' %
+                        {'providers': provider_uuids,
+                         'requester': pci_request.requester_id})
+                    raise exception.BuildAbortException(
+                        instance_uuid=instance.uuid,
+                        reason=reason)
+
+                dev_rp_name = self.reportclient.get_resource_provider_name(
+                    context,
+                    provider_uuids[0])
+
+                # NOTE(gibi): the device RP name reported by neutron is
+                # structured like <hostname>:<agentname>:<interfacename>
+                rp_name_pieces = dev_rp_name.split(':')
+                if len(rp_name_pieces) != 3:
+                    reason = (
+                        'Resource provider %(provider)s used to allocate '
+                        'resources for the pci request %(requester)s does not '
+                        'have properly formatted name. Expected name format '
+                        'is <hostname>:<agentname>:<interfacename>, but got '
+                        '%(provider_name)s' %
+                        {'provider': provider_uuids[0],
+                         'requester': pci_request.requester_id,
+                         'provider_name': dev_rp_name})
+                    raise exception.BuildAbortException(
+                        instance_uuid=instance.uuid,
+                        reason=reason)
+
+                for spec in pci_request.spec:
+                    spec['parent_ifname'] = rp_name_pieces[2]
+                    modified = True
+        if modified:
+            instance.save()
+
     def _build_and_run_instance(self, context, instance, image, injected_files,
             admin_password, requested_networks, security_groups,
             block_device_mapping, node, limits, filter_properties,
@@ -2135,6 +2190,13 @@ class ComputeManager(manager.Manager):
 
         self._check_device_tagging(requested_networks, block_device_mapping)
         self._check_trusted_certs(instance)
+
+        request_group_resource_providers_mapping = \
+            self._get_request_group_mapping(request_spec)
+
+        if request_group_resource_providers_mapping:
+            self._update_pci_request_spec_with_allocated_interface_name(
+                context, instance, request_group_resource_providers_mapping)
 
         try:
             scheduler_hints = self._get_scheduler_hints(filter_properties,

@@ -2602,6 +2602,60 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertEqual(set(), ptree_data.aggregates)
         self.assertEqual(5, ptree_data.generation)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_resource_provider', return_value=mock.NonCallableMock)
+    def test_get_resource_provider_name_from_cache(self, mock_placement_get):
+        expected_name = 'rp'
+        self.client._provider_tree.new_root(
+            expected_name, uuids.rp, generation=0)
+
+        actual_name = self.client.get_resource_provider_name(
+            self.context, uuids.rp)
+
+        self.assertEqual(expected_name, actual_name)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_resource_provider')
+    def test_get_resource_provider_name_from_placement(
+            self, mock_placement_get):
+        expected_name = 'rp'
+        mock_placement_get.return_value = {
+            'uuid': uuids.rp,
+            'name': expected_name
+        }
+
+        actual_name = self.client.get_resource_provider_name(
+            self.context, uuids.rp)
+
+        self.assertEqual(expected_name, actual_name)
+        mock_placement_get.assert_called_once_with(self.context, uuids.rp)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_resource_provider')
+    def test_get_resource_provider_name_rp_not_found_in_placement(
+            self, mock_placement_get):
+        mock_placement_get.side_effect = \
+            exception.ResourceProviderNotFound(uuids.rp)
+
+        self.assertRaises(
+            exception.ResourceProviderNotFound,
+            self.client.get_resource_provider_name,
+            self.context, uuids.rp)
+
+        mock_placement_get.assert_called_once_with(self.context, uuids.rp)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_resource_provider')
+    def test_get_resource_provider_name_placement_unavailable(
+            self, mock_placement_get):
+        mock_placement_get.side_effect = \
+            exception.ResourceProviderRetrievalFailed(uuid=uuids.rp)
+
+        self.assertRaises(
+            exception.ResourceProviderRetrievalFailed,
+            self.client.get_resource_provider_name,
+            self.context, uuids.rp)
+
 
 class TestAggregates(SchedulerReportClientTestCase):
     def test_get_provider_aggregates_found(self):

@@ -400,6 +400,27 @@ class SchedulerReportClient(object):
              'status_code': resp.status_code, 'err_text': resp.text})
         raise exception.ResourceProviderTraitRetrievalFailed(uuid=rp_uuid)
 
+    def get_resource_provider_name(self, context, uuid):
+        """Return the name of a RP. It tries to use the internal of RPs or
+        falls back to calling placement directly.
+
+        :param context: The security context
+        :param uuid: UUID identifier for the resource provider to look up
+        :return: The name of the RP
+        :raise: ResourceProviderRetrievalFailed if the RP is not in the cache
+            and the communication with the placement is failed.
+        :raise: ResourceProviderNotFound if the RP does not exists.
+        """
+
+        try:
+            return self._provider_tree.data(uuid).name
+        except ValueError:
+            rsp = self._get_resource_provider(context, uuid)
+            if rsp is None:
+                raise exception.ResourceProviderNotFound(name_or_uuid=uuid)
+            else:
+                return rsp['name']
+
     @safe_connect
     def _get_resource_provider(self, context, uuid):
         """Queries the placement API for a resource provider record with the

@@ -95,6 +95,14 @@ class PciDeviceStats(object):
         pool = {k: getattr(dev, k) for k in self.pool_keys}
         if tags:
             pool.update(tags)
+        # NOTE(gibi): parent_ifname acts like a tag during pci claim but
+        # not provided as part of the whitelist spec as it is auto detected
+        # by the virt driver.
+        # This key is used for match InstancePciRequest backed by neutron ports
+        # that has resource_request and therefore that has resource allocation
+        # already in placement.
+        if dev.extra_info.get('parent_ifname'):
+            pool['parent_ifname'] = dev.extra_info['parent_ifname']
         return pool
 
     def add_device(self, dev):
