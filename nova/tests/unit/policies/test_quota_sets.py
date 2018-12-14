@@ -91,6 +91,10 @@ class QuotaSetsPolicyTest(base.BasePolicyTest):
                     'instances': 50,
                     'cores': 50}
                }
+        mock_update.return_value = {
+            'instances': {'minimum': 0, 'maximum': 100},
+            'cores': {'minimum': 0, 'maximum': 100}
+        }
         self.common_policy_check(self.admin_authorized_contexts,
                                  self.admin_unauthorized_contexts,
                                  rule_name,
