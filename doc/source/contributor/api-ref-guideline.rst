@@ -38,7 +38,13 @@ Structure of inc file
 Each REST API is described in the text file (\*.inc).
 The structure of inc file is as follows:
 
-- Title
+- Title (Resource name)
+
+  - Introductory text and context
+
+    The introductory text and the context for the resource in question should
+    be added. This might include links to the API Concept guide, or building
+    other supporting documents to explain a concept (like versioning).
 
   - API Name
 
@@ -46,8 +52,9 @@ The structure of inc file is as follows:
 
       - URL
       - Description
-      - Normal status code
-      - Error status code
+
+        See the `Description`_ section for more details.
+      - Response codes
       - Request
 
         - Parameters
@@ -94,6 +101,153 @@ what is in the code. For instance, the title for the section on method
 "Get Rdp Console" should be "Get Rdp Console (os-getRDPConsole Action)"
 NOT "Get Rdp Console (Os-Getrdpconsole Action)"
 
+Description
+-----------
+
+The following items should be described in each API.
+Or links to the pages describe them should be added.
+
+* The purpose of the API(s)
+
+  - e.g. Lists, creates, shows details for, updates, and deletes servers.
+  - e.g. Creates a server.
+
+* Microversion
+
+  - Deprecated
+
+    - Warning
+    - Microversion to start deprecation
+    - Alternatives (superseded ways) and
+      their links (if document is available)
+
+  - Added
+
+    - Microversion that the API has been added
+
+  - Changed behavior
+
+    - Microversion to change behavior
+    - Explanation of the behavior
+
+  - Changed HTTP response codes
+
+    - Microversion to change the response code
+    - Explanation of the response code
+
+* Warning if direct use is not recommended
+
+  - e.g. This is an admin level service API only designed to be used by other
+    OpenStack services. The point of this API is to coordinate between Nova
+    and Neutron, Nova and Cinder (and potentially future services) on
+    activities they both need to be involved in, such as network hotplugging.
+    Unless you are writing Neutron or Cinder code you should not be using this API.
+
+* Explanation about statuses of resource in question
+
+  - e.g. The server status.
+
+    - ``ACTIVE``. The server is active.
+
+* Supplementary explanation for parameters
+
+  - Examples of query parameters
+  - Parameters that are not specified at the same time
+  - Values that cannot be specified.
+
+    - e.g. A destination host is the same host.
+
+* Behavior
+
+  - Config options to change the behavior and the effect
+  - Effect to resource status
+
+    - Ephemeral disks, attached volumes, attached network ports and others
+    - Data loss or preserve contents
+
+  - Scheduler
+
+    - Whether the scheduler choose a destination host or not
+
+* Policy
+
+  - Default policy (the admin only, the admin or the owner)
+  - How to change the policy
+
+* Preconditions
+
+  - Server status
+  - Task state
+  - Policy for locked servers
+  - Quota
+  - Limited support
+
+    - e.g. Only qcow2 is supported
+
+  - Compute driver support
+
+    - If very few compute drivers support the operation, add a warning and
+      a link to the support matrix of virt driver.
+
+  - Cases that are not supported
+
+    - e.g. A volume-backed server
+
+* Postconditions
+
+  - If the operation is asynchronous,
+    it should be "Asynchronous postconditions".
+
+  - Describe what status/state resource in question becomes by the operation
+
+    - Server status
+    - Task state
+    - Path of output file
+
+* Troubleshooting
+
+  - e.g. If the server status remains ``BUILDING`` or shows another error status,
+    the request failed. Ensure you meet the preconditions then investigate
+    the compute node.
+
+* Related operations
+
+  - Operations to be paired
+
+    - e.g. Start and stop
+
+  - Subsequent operation
+
+    - e.g. "Confirm resize" after "Resize" operation
+
+* Performance
+
+  - e.g. The progress of this operation depends on the location of
+    the requested image, network I/O, host load, selected flavor, and other
+    factors.
+
+* Progress
+
+  - How to get progress of the operation if the operation is asynchronous.
+
+* Restrictions
+
+  - Range that ID is unique
+
+    - e.g. HostId is unique per account and is not globally unique.
+
+* How to avoid errors
+
+  - e.g. The server to get console log from should set
+    ``export LC_ALL=en_US.UTF-8`` in order to avoid incorrect unicode error.
+
+* Reference
+
+  - Links to the API Concept guide, or building other supporting documents to
+    explain a concept (like versioning).
+
+* Other notices
+
 Response codes
 ~~~~~~~~~~~~~~
 
@@ -122,6 +276,12 @@ The description of typical error response codes are as follows:
      - notImplemented(501)
    * - 503
      - serviceUnavailable(503)
+
+In addition, the following explanations should be described.
+
+- Condition each normal response code is returned
+  (If there are multiple normal response codes.)
+- Condition each error response code is returned
 
 Parameters
 ----------
@@ -228,14 +388,6 @@ included. For example::
 
 Examples for multiple microversions should be included in ascending
 microversion order.
-
-Body
-----
-
-.. TODO::
-
-  The guideline for the introductory text and the context for the resource
-  in question should be added.
 
 Reference
 =========
