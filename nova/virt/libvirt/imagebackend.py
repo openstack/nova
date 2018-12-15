@@ -250,7 +250,7 @@ class Image(object):
 
             if (self.preallocate and self._can_fallocate() and
                     os.access(self.path, os.W_OK)):
-                utils.execute('fallocate', '-n', '-l', size, self.path)
+                processutils.execute('fallocate', '-n', '-l', size, self.path)
 
     def _can_fallocate(self):
         """Check once per class, whether fallocate(1) is available,
