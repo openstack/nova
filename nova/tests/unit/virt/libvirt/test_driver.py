@@ -11285,7 +11285,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_live_migration_monitor_downtime(self, mock_downtime_steps,
                                              mock_set_downtime):
         self.flags(live_migration_completion_timeout=1000000,
-                   live_migration_progress_timeout=1000000,
                    group='libvirt')
         # We've setup 4 fake downtime steps - first value is the
         # time delay, second is the downtime value
@@ -11332,7 +11331,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_live_migration_monitor_completion(self):
         self.flags(live_migration_completion_timeout=100,
-                   live_migration_progress_timeout=1000000,
                    group='libvirt')
         # Each one of these fake times is used for time.time()
         # when a new domain_info_records entry is consumed.
@@ -11361,101 +11359,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self._test_live_migration_monitoring(domain_info_records,
                                              fake_times, self.EXPECT_ABORT,
                                              expected_mig_status='cancelled')
-
-    def test_live_migration_monitor_progress(self):
-        self.flags(live_migration_completion_timeout=1000000,
-                   live_migration_progress_timeout=150,
-                   group='libvirt')
-        # Each one of these fake times is used for time.time()
-        # when a new domain_info_records entry is consumed.
-        fake_times = [0, 40, 80, 120, 160, 200, 240, 280, 320]
-
-        # A normal sequence where see all the normal job states
-        domain_info_records = [
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, data_remaining=90),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, data_remaining=90),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, data_remaining=90),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, data_remaining=90),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, data_remaining=90),
-            "thread-finish",
-            "domain-stop",
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_CANCELLED),
-        ]
-
-        self._test_live_migration_monitoring(domain_info_records,
-                                             fake_times, self.EXPECT_ABORT,
-                                             expected_mig_status='cancelled')
-
-    def test_live_migration_monitor_progress_zero_data_remaining(self):
-        self.flags(live_migration_completion_timeout=1000000,
-                   live_migration_progress_timeout=150,
-                   group='libvirt')
-        # Each one of these fake times is used for time.time()
-        # when a new domain_info_records entry is consumed.
-        fake_times = [0, 40, 80, 120, 160, 200, 240, 280, 320]
-
-        # A normal sequence where see all the normal job states
-        domain_info_records = [
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, data_remaining=0),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, data_remaining=90),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, data_remaining=70),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, data_remaining=50),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, data_remaining=30),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, data_remaining=10),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, data_remaining=0),
-            "thread-finish",
-            "domain-stop",
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_FAILED),
-        ]
-
-        self._test_live_migration_monitoring(domain_info_records,
-                                             fake_times, self.EXPECT_FAILURE)
-
-    @mock.patch('nova.virt.libvirt.migration.should_switch_to_postcopy')
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       "_is_post_copy_enabled")
-    def test_live_migration_monitor_postcopy_switch(self,
-            mock_postcopy_enabled, mock_should_switch):
-        # A normal sequence where migration is switched to postcopy mode
-        mock_postcopy_enabled.return_value = True
-        switch_values = [False, False, True]
-        mock_should_switch.return_value = switch_values
-        domain_info_records = [
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            "thread-finish",
-            "domain-stop",
-            libvirt_guest.JobInfo(
-                type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
-        ]
-
-        self._test_live_migration_monitoring(domain_info_records, [],
-                                             self.EXPECT_SUCCESS,
-                                             expected_switch=True)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_is_post_copy_enabled")

@@ -13,3 +13,17 @@ features:
     The ``[libvirt]/live_migration_completion_timeout`` is restricted by
     minimum 0 and will now raise a ValueError if the configuration option
     value is less than minimum value.
+
+    Note if you configure Nova to have no timeout, post copy will never be
+    automatically triggered. None of this affects triggering post copy via
+    the force live-migration API, that continues to work in the same way.
+upgrade:
+  - |
+    Config option ``[libvirt]/live_migration_progress_timeout`` was deprecated
+    in Ocata, and has now been removed.
+
+    Current logic in libvirt driver to auto trigger post-copy based on
+    progress information is removed as it has `proved impossible`__ to detect
+    when live-migration appears to be making little progress.
+
+    .. __: https://bugs.launchpad.net/nova/+bug/1644248

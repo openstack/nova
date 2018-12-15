@@ -376,23 +376,17 @@ def find_job_type(guest, instance):
             return libvirt.VIR_DOMAIN_JOB_FAILED
 
 
-def should_trigger_timeout_action(instance, now,
-                                  progress_time, progress_timeout,
-                                  elapsed, completion_timeout,
+def should_trigger_timeout_action(instance, elapsed, completion_timeout,
                                   migration_status):
     """Determine if the migration timeout action should be triggered
 
     :param instance: a nova.objects.Instance
-    :param now: current time in secs since epoch
-    :param progress_time: when progress was last made in secs since epoch
-    :param progress_timeout: time in secs to allow for progress
     :param elapsed: total elapsed time of migration in secs
     :param completion_timeout: time in secs to allow for completion
     :param migration_status: current status of the migration
 
-    Check the progress and completion timeouts to determine if either
-    of them have been hit, and should thus cause migration timeout action to
-    be triggered.
+    Check the completion timeout to determine if it has been hit,
+    and should thus cause migration timeout action to be triggered.
 
     Avoid migration to be aborted or triggered post-copy again if it is
     running in post-copy mode
@@ -405,12 +399,6 @@ def should_trigger_timeout_action(instance, now,
 
     if migration_status == 'running (post-copy)':
         return False
-
-    if (progress_timeout != 0 and
-            (now - progress_time) > progress_timeout):
-        LOG.warning("Live migration stuck for %d sec",
-                    (now - progress_time), instance=instance)
-        return True
 
     if elapsed > completion_timeout:
         LOG.warning("Live migration not completed after %d sec",
