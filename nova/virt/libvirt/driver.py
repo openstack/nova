@@ -7379,18 +7379,28 @@ class LibvirtDriver(driver.ComputeDriver):
                 progress_timeout = CONF.libvirt.live_migration_progress_timeout
                 completion_timeout = int(
                     CONF.libvirt.live_migration_completion_timeout * data_gb)
-                if libvirt_migrate.should_abort(instance, now, progress_time,
-                                                progress_timeout, elapsed,
-                                                completion_timeout,
-                                                migration.status):
-                    try:
-                        guest.abort_job()
-                    except libvirt.libvirtError as e:
-                        LOG.warning("Failed to abort migration %s",
-                                encodeutils.exception_to_unicode(e),
-                                instance=instance)
-                        self._clear_empty_migration(instance)
-                        raise
+                # NOTE(yikun): Check the completion timeout to determine
+                # should trigger the timeout action, and there are two choices
+                # ``abort`` (default) or ``force_complete``. If the action is
+                # set to ``force_complete``, the post-copy will be triggered
+                # if available else the VM will be suspended, otherwise the
+                # live migrate operation will be aborted.
+                if libvirt_migrate.should_trigger_timeout_action(
+                        instance, now, progress_time, progress_timeout,
+                        elapsed, completion_timeout, migration.status):
+                    timeout_act = CONF.libvirt.live_migration_timeout_action
+                    if timeout_act == 'force_complete':
+                        self.live_migration_force_complete(instance)
+                    else:
+                        # timeout action is 'abort'
+                        try:
+                            guest.abort_job()
+                        except libvirt.libvirtError as e:
+                            LOG.warning("Failed to abort migration %s",
+                                    encodeutils.exception_to_unicode(e),
+                                    instance=instance)
+                            self._clear_empty_migration(instance)
+                            raise
 
                 if (is_post_copy_enabled and
                     libvirt_migrate.should_switch_to_postcopy(

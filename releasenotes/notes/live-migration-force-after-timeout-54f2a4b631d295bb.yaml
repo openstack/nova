@@ -1,0 +1,15 @@
+---
+features:
+  - |
+    A new configuration option ``[libvirt]/live_migration_timeout_action``
+    is added. This new option will have choices ``abort`` (default)
+    or ``force_complete``. This option will determine what actions will be
+    taken against a VM after ``live_migration_completion_timeout`` expires.
+    Currently nova just aborts the live migrate operation after completion
+    timeout expires. By default, we keep the same behavior of aborting after
+    completion timeout. ``force_complete`` will either pause the VM or trigger
+    post-copy depending on if post copy is enabled and available.
+
+    The ``[libvirt]/live_migration_completion_timeout`` is restricted by
+    minimum 0 and will now raise a ValueError if the configuration option
+    value is less than minimum value.

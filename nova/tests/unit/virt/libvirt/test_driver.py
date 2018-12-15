@@ -11457,6 +11457,38 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                              self.EXPECT_SUCCESS,
                                              expected_switch=True)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_is_post_copy_enabled")
+    def test_live_migration_monitor_force_complete_postcopy(self,
+            mock_postcopy_enabled):
+        self.flags(live_migration_completion_timeout=40,
+                   live_migration_timeout_action='force_complete',
+                   group='libvirt')
+        mock_postcopy_enabled.return_value = True
+
+        # Each one of these fake times is used for time.time()
+        # when a new domain_info_records entry is consumed.
+        fake_times = [0, 40, 80, 120, 160, 200, 240, 280, 320]
+
+        domain_info_records = [
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, fake_times,
+                                             self.EXPECT_SUCCESS,
+                                             expected_switch=True)
+
     @mock.patch.object(host.Host, "get_connection")
     @mock.patch.object(utils, "spawn")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_live_migration_monitor")
