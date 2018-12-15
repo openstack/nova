@@ -2429,8 +2429,8 @@ class LibvirtDriver(driver.ComputeDriver):
         qemu_img_extra_arg.append(active_disk_object.source_path)
         # execute operation with disk concurrency semaphore
         with compute_utils.disk_ops_semaphore:
-            utils.execute("qemu-img", "rebase", "-b", backing_file,
-                          *qemu_img_extra_arg)
+            processutils.execute("qemu-img", "rebase", "-b", backing_file,
+                                 *qemu_img_extra_arg)
 
     def _volume_snapshot_delete(self, context, instance, volume_id,
                                 snapshot_id, delete_info=None):
@@ -8232,7 +8232,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_host_uptime(self):
         """Returns the result of calling "uptime"."""
-        out, err = utils.execute('env', 'LANG=C', 'uptime')
+        out, err = processutils.execute('env', 'LANG=C', 'uptime')
         return out
 
     def manage_image_cache(self, context, all_instances):
@@ -8401,8 +8401,8 @@ class LibvirtDriver(driver.ComputeDriver):
         path_qcow = path + '_qcow'
         # execute operation with disk concurrency semaphore
         with compute_utils.disk_ops_semaphore:
-            utils.execute('qemu-img', 'convert', '-f', 'raw',
-                          '-O', 'qcow2', path, path_qcow)
+            processutils.execute('qemu-img', 'convert', '-f', 'raw',
+                                 '-O', 'qcow2', path, path_qcow)
         os.rename(path_qcow, path)
 
     def finish_migration(self, context, migration, instance, disk_info,
