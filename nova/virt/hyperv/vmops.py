@@ -677,15 +677,15 @@ class VMOps(object):
         if not CONF.hyperv.config_drive_cdrom:
             configdrive_path = self._pathutils.get_configdrive_path(
                 instance.name, constants.DISK_FORMAT_VHD, rescue=rescue)
-            utils.execute(CONF.hyperv.qemu_img_cmd,
-                          'convert',
-                          '-f',
-                          'raw',
-                          '-O',
-                          'vpc',
-                          configdrive_path_iso,
-                          configdrive_path,
-                          attempts=1)
+            processutils.execute(CONF.hyperv.qemu_img_cmd,
+                                 'convert',
+                                 '-f',
+                                 'raw',
+                                 '-O',
+                                 'vpc',
+                                 configdrive_path_iso,
+                                 configdrive_path,
+                                 attempts=1)
             self._pathutils.remove(configdrive_path_iso)
         else:
             configdrive_path = configdrive_path_iso
