@@ -24,7 +24,6 @@ from nova.i18n import _
 from nova import network
 from nova import objects
 from nova.scheduler import utils as scheduler_utils
-from nova import utils
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
@@ -314,25 +313,11 @@ class LiveMigrationTask(base.TaskBase):
             This is generally at least seeded with the source host.
         :returns: nova.objects.RequestSpec object
         """
-        if not self.request_spec:
-            # NOTE(sbauza): We were unable to find an original RequestSpec
-            # object - probably because the instance is old.
-            # We need to mock that the old way
-            image = utils.get_image_from_system_metadata(
-                self.instance.system_metadata)
-            filter_properties = {'ignore_hosts': attempted_hosts}
-            request_spec = objects.RequestSpec.from_components(
-                self.context, self.instance.uuid, image,
-                self.instance.flavor, self.instance.numa_topology,
-                self.instance.pci_requests,
-                filter_properties, None, self.instance.availability_zone
-            )
-        else:
-            request_spec = self.request_spec
-            # NOTE(sbauza): Force_hosts/nodes needs to be reset
-            # if we want to make sure that the next destination
-            # is not forced to be the original host
-            request_spec.reset_forced_destinations()
+        request_spec = self.request_spec
+        # NOTE(sbauza): Force_hosts/nodes needs to be reset
+        # if we want to make sure that the next destination
+        # is not forced to be the original host
+        request_spec.reset_forced_destinations()
         scheduler_utils.setup_instance_group(self.context, request_spec)
 
         # We currently only support live migrating to hosts in the same

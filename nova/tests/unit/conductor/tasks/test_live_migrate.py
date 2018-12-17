@@ -27,7 +27,6 @@ from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
 from nova import test
 from nova.tests.unit import fake_instance
-from nova import utils
 
 
 fake_selection1 = objects.Selection(service_host="host1", nodename="node1",
@@ -357,47 +356,6 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             [self.instance.uuid], return_objects=True, return_alternates=False)
         mock_check.assert_called_once_with('host1')
         mock_call.assert_called_once_with('host1')
-
-    def test_find_destination_works_with_no_request_spec(self):
-        task = live_migrate.LiveMigrationTask(
-            self.context, self.instance, self.destination,
-            self.block_migration, self.disk_over_commit, self.migration,
-            compute_rpcapi.ComputeAPI(), servicegroup.API(),
-            scheduler_client.SchedulerClient(), request_spec=None)
-        another_spec = objects.RequestSpec()
-        self.instance.flavor = objects.Flavor()
-        self.instance.numa_topology = None
-        self.instance.pci_requests = None
-
-        @mock.patch.object(task, '_call_livem_checks_on_host')
-        @mock.patch.object(task, '_check_compatible_with_source_hypervisor')
-        @mock.patch.object(task.scheduler_client, 'select_destinations')
-        @mock.patch.object(objects.RequestSpec, 'from_components')
-        @mock.patch.object(scheduler_utils, 'setup_instance_group')
-        @mock.patch.object(utils, 'get_image_from_system_metadata')
-        def do_test(get_image, setup_ig, from_components, select_dest,
-                    check_compat, call_livem_checks):
-            get_image.return_value = "image"
-            from_components.return_value = another_spec
-            select_dest.return_value = [[fake_selection1]]
-
-            self.assertEqual(("host1", "node1"), task._find_destination())
-
-            get_image.assert_called_once_with(self.instance.system_metadata)
-            setup_ig.assert_called_once_with(self.context, another_spec)
-            self.ensure_network_metadata_mock.assert_called_once_with(
-                self.instance)
-            self.heal_reqspec_is_bfv_mock.assert_called_once_with(
-                self.context, another_spec, self.instance)
-            select_dest.assert_called_once_with(self.context, another_spec,
-                    [self.instance.uuid], return_objects=True,
-                    return_alternates=False)
-            # Make sure the request_spec was updated to include the cell
-            # mapping.
-            self.assertIsNotNone(another_spec.requested_destination.cell)
-            check_compat.assert_called_once_with("host1")
-            call_livem_checks.assert_called_once_with("host1")
-        do_test()
 
     @mock.patch.object(live_migrate.LiveMigrationTask,
                        '_call_livem_checks_on_host')
