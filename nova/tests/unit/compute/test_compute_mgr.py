@@ -7214,7 +7214,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.flags(max_concurrent_live_migrations=0)
         self._test_max_concurrent_live()
 
-    @mock.patch('concurrent.futures.ThreadPoolExecutor')
+    @mock.patch('futurist.GreenThreadPoolExecutor')
     def test_max_concurrent_live_semaphore_limited(self, mock_executor):
         self.flags(max_concurrent_live_migrations=123)
         manager.ComputeManager()
@@ -7224,7 +7224,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def test_max_concurrent_live_semaphore_unlimited(self, max_concurrent):
         self.flags(max_concurrent_live_migrations=max_concurrent)
         with mock.patch(
-                'concurrent.futures.ThreadPoolExecutor') as mock_executor:
+                'futurist.GreenThreadPoolExecutor') as mock_executor:
             manager.ComputeManager()
         mock_executor.assert_called_once_with()
 

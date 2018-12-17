@@ -1065,7 +1065,7 @@ class SpawnIsSynchronousFixture(fixtures.Fixture):
 
 
 class SynchronousThreadPoolExecutorFixture(fixtures.Fixture):
-    """Make ThreadPoolExecutor.submit() synchronous.
+    """Make GreenThreadPoolExecutor.submit() synchronous.
 
     The function passed to submit() will be executed and a mock.Mock
     object will be returned as the Future where Future.result() will
@@ -1076,11 +1076,11 @@ class SynchronousThreadPoolExecutorFixture(fixtures.Fixture):
 
         def fake_submit(_self, fn, *args, **kwargs):
             result = fn(*args, **kwargs)
-            future = mock.Mock(spec='concurrent.futures.Future')
+            future = mock.Mock(spec='futurist.Future')
             future.return_value.result.return_value = result
             return future
         self.useFixture(fixtures.MonkeyPatch(
-            'concurrent.futures.ThreadPoolExecutor.submit',
+            'futurist.GreenThreadPoolExecutor.submit',
             fake_submit))
 
 
