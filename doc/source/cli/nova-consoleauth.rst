@@ -27,7 +27,8 @@ Auth service, which provides authentication for Nova consoles.
 .. deprecated:: 18.0.0
 
    `nova-consoleauth` is deprecated since 18.0.0 (Rocky) and will be removed in
-   an upcoming release.
+   an upcoming release. See
+   :oslo.config:option:`workarounds.enable_consoleauth` for details.
 
 Options
 =======
