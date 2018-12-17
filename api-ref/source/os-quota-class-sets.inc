@@ -64,21 +64,21 @@ Response
 
   - quota_class_set: quota_class_set
   - cores: cores_quota_class
-  - fixed_ips: fixed_ips_quota_class
-  - floating_ips: floating_ips_quota_class
   - id: quota_class_id_body
-  - injected_file_content_bytes: injected_file_content_bytes
-  - injected_file_path_bytes: injected_file_path_bytes
-  - injected_files: injected_files_quota_class
   - instances: instances_quota_class
   - key_pairs: key_pairs_quota_class
   - metadata_items: metadata_items
   - ram: ram_quota_class
+  - fixed_ips: fixed_ips_quota_class
+  - floating_ips: floating_ips_quota_class
+  - networks: networks_quota_optional
   - security_group_rules: security_group_rules_quota_class
   - security_groups: security_groups_quota_class
   - server_groups: server_groups_quota_class
   - server_group_members: server_group_members_quota_class
-  - networks: networks_quota_optional
+  - injected_file_content_bytes: injected_file_content_bytes
+  - injected_file_path_bytes: injected_file_path_bytes
+  - injected_files: injected_files_quota_class
 
 **Example Show A Quota Class: JSON response(2.50)**
 
@@ -108,20 +108,20 @@ Request
   - id: quota_class_id
   - quota_class_set: quota_class_set
   - cores: cores_quota_class_optional
-  - fixed_ips: fixed_ips_quota_class_optional
-  - floating_ips: floating_ips_quota_class_optional
-  - injected_file_content_bytes: injected_file_content_bytes_quota_optional
-  - injected_file_path_bytes: injected_file_path_bytes_quota_optional
-  - injected_files: injected_files_quota_class_optional
   - instances: instances_quota_class_optional
   - key_pairs: key_pairs_quota_class_optional
   - metadata_items: metadata_items_quota_optional
   - ram: ram_quota_class_optional
-  - security_group_rules: security_group_rules_quota_class_optional
-  - security_groups: security_groups_quota_class_optional
   - server_groups: server_groups_quota_class_optional
   - server_group_members: server_group_members_quota_optional
+  - fixed_ips: fixed_ips_quota_class_optional
+  - floating_ips: floating_ips_quota_class_optional
   - networks: networks_quota_optional
+  - security_group_rules: security_group_rules_quota_class_optional
+  - security_groups: security_groups_quota_class_optional
+  - injected_file_content_bytes: injected_file_content_bytes_quota_optional
+  - injected_file_path_bytes: injected_file_path_bytes_quota_optional
+  - injected_files: injected_files_quota_class_optional
 
 **Example Update Quotas: JSON request(2.50)**
 
@@ -135,20 +135,20 @@ Response
 
   - quota_class_set: quota_class_set
   - cores: cores_quota_class
-  - fixed_ips: fixed_ips_quota_class
-  - floating_ips: floating_ips_quota_class
-  - injected_file_content_bytes: injected_file_content_bytes
-  - injected_file_path_bytes: injected_file_path_bytes
-  - injected_files: injected_files_quota_class
   - instances: instances_quota_class
   - key_pairs: key_pairs_quota_class
   - metadata_items: metadata_items
   - ram: ram_quota_class
+  - fixed_ips: fixed_ips_quota_class
+  - floating_ips: floating_ips_quota_class
+  - networks: networks_quota_optional
   - security_group_rules: security_group_rules_quota_class
   - security_groups: security_groups_quota_class
   - server_groups: server_groups_quota_class
   - server_group_members: server_group_members_quota_class
-  - networks: networks_quota_optional
+  - injected_file_content_bytes: injected_file_content_bytes
+  - injected_file_path_bytes: injected_file_path_bytes
+  - injected_files: injected_files_quota_class
 
 **Example Update Quotas: JSON response(2.50)**
 
