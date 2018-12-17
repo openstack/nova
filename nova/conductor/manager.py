@@ -752,6 +752,7 @@ class ComputeTaskManager(base.Base):
                   'instance(s).', timer.elapsed(), len(instance_uuids))
         return host_lists
 
+    # TODO(mriedem): Make request_spec required in ComputeTaskAPI RPC v2.0.
     @targets_cell
     def unshelve_instance(self, context, instance, request_spec=None):
         sys_meta = instance.system_metadata
@@ -794,24 +795,14 @@ class ComputeTaskManager(base.Base):
             try:
                 with compute_utils.EventReporter(context, 'schedule_instances',
                                                  self.host, instance.uuid):
-                    if not request_spec:
-                        # NOTE(sbauza): We were unable to find an original
-                        # RequestSpec object - probably because the instance is
-                        # old. We need to mock that the old way
-                        filter_properties = {}
-                        request_spec = scheduler_utils.build_request_spec(
-                            image, [instance])
-                        request_spec = objects.RequestSpec.from_primitives(
-                            context, request_spec, filter_properties)
-                    else:
-                        # NOTE(sbauza): Force_hosts/nodes needs to be reset
-                        # if we want to make sure that the next destination
-                        # is not forced to be the original host
-                        request_spec.reset_forced_destinations()
-                        # TODO(sbauza): Provide directly the RequestSpec object
-                        # when populate_filter_properties accepts it
-                        filter_properties = request_spec.\
-                            to_legacy_filter_properties_dict()
+                    # NOTE(sbauza): Force_hosts/nodes needs to be reset
+                    # if we want to make sure that the next destination
+                    # is not forced to be the original host
+                    request_spec.reset_forced_destinations()
+                    # TODO(sbauza): Provide directly the RequestSpec object
+                    # when populate_filter_properties accepts it
+                    filter_properties = request_spec.\
+                        to_legacy_filter_properties_dict()
                     # NOTE(cfriesen): Ensure that we restrict the scheduler to
                     # the cell specified by the instance mapping.
                     instance_mapping = \

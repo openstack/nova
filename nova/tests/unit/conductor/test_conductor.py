@@ -336,6 +336,7 @@ class _BaseTaskTestCase(object):
         self.project_id = fakes.FAKE_PROJECT_ID
         self.context = FakeContext(self.user_id, self.project_id)
         fake_server_actions.stub_out_action_events(self)
+        self.request_spec = objects.RequestSpec()
 
         def fake_deserialize_context(serializer, ctxt_dict):
             self.assertEqual(self.context.user_id, ctxt_dict['user_id'])
@@ -1060,7 +1061,8 @@ class _BaseTaskTestCase(object):
         system_metadata['shelved_at'] = timeutils.utcnow()
         system_metadata['shelved_image_id'] = 'fake_image_id'
         system_metadata['shelved_host'] = 'fake-mini'
-        self.conductor_manager.unshelve_instance(self.context, instance)
+        self.conductor_manager.unshelve_instance(
+            self.context, instance, self.request_spec)
 
         mock_start.assert_called_once_with(self.context, instance)
         mock_unshelve.assert_not_called()
@@ -1171,7 +1173,7 @@ class _BaseTaskTestCase(object):
         self.assertRaises(
             exc.UnshelveException,
             self.conductor_manager.unshelve_instance,
-            self.context, instance)
+            self.context, instance, self.request_spec)
         add_instance_fault_from_exc.assert_called_once_with(
             self.context, instance, mock_get.side_effect, mock.ANY,
             fault_message=reason)
@@ -1199,7 +1201,8 @@ class _BaseTaskTestCase(object):
             get_by_instance_uuid.return_value = objects.InstanceMapping(
                 cell_mapping=objects.CellMapping.get_by_uuid(
                     self.context, uuids.cell1))
-            self.conductor_manager.unshelve_instance(self.context, instance)
+            self.conductor_manager.unshelve_instance(
+                self.context, instance, self.request_spec)
             self.assertEqual(1, unshelve_mock.call_count)
 
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'unshelve_instance')
@@ -1208,20 +1211,15 @@ class _BaseTaskTestCase(object):
                        return_value=[[objects.Selection(
                            service_host='fake_host', nodename='fake_node',
                            limits=None)]])
-    @mock.patch.object(scheduler_utils, 'build_request_spec',
-                       return_value='req_spec')
     @mock.patch.object(image_api.API, 'get', return_value='fake_image')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
-    @mock.patch.object(objects.RequestSpec, 'from_primitives')
     def test_unshelve_instance_schedule_and_rebuild(
-            self, fp, mock_im, mock_get, mock_build, mock_schedule,
-            mock_unshelve):
+            self, mock_im, mock_get, mock_schedule, mock_unshelve):
         fake_spec = objects.RequestSpec()
         # Set requested_destination to test setting cell_mapping in
         # existing object.
         fake_spec.requested_destination = objects.Destination(
             host="dummy", cell=None)
-        fp.return_value = fake_spec
         cell_mapping = objects.CellMapping.get_by_uuid(self.context,
                                                        uuids.cell1)
         mock_im.return_value = objects.InstanceMapping(
@@ -1234,17 +1232,19 @@ class _BaseTaskTestCase(object):
         system_metadata['shelved_at'] = timeutils.utcnow()
         system_metadata['shelved_image_id'] = 'fake_image_id'
         system_metadata['shelved_host'] = 'fake-mini'
-        self.conductor_manager.unshelve_instance(self.context, instance)
-        fp.assert_called_once_with(self.context, 'req_spec', mock.ANY)
+        self.conductor_manager.unshelve_instance(
+            self.context, instance, fake_spec)
         self.assertEqual(cell_mapping, fake_spec.requested_destination.cell)
         mock_get.assert_called_once_with(
             self.context, 'fake_image_id', show_deleted=False)
-        mock_build.assert_called_once_with('fake_image', mock.ANY)
         mock_schedule.assert_called_once_with(
             self.context, fake_spec, [instance.uuid], return_alternates=False)
         mock_unshelve.assert_called_once_with(
             self.context, instance, 'fake_host', image='fake_image',
-            filter_properties={'limits': {}}, node='fake_node')
+            filter_properties=dict(
+                # populate_filter_properties adds limits={}
+                fake_spec.to_legacy_filter_properties_dict(), limits={}),
+            node='fake_node')
 
     def test_unshelve_instance_schedule_and_rebuild_novalid_host(self):
         instance = self._create_fake_instance_obj()
@@ -1270,7 +1270,8 @@ class _BaseTaskTestCase(object):
             system_metadata['shelved_at'] = timeutils.utcnow()
             system_metadata['shelved_image_id'] = 'fake_image_id'
             system_metadata['shelved_host'] = 'fake-mini'
-            self.conductor_manager.unshelve_instance(self.context, instance)
+            self.conductor_manager.unshelve_instance(
+                self.context, instance, self.request_spec)
             _get_image.assert_has_calls([mock.call(self.context,
                                       system_metadata['shelved_image_id'],
                                       show_deleted=False)])
@@ -1298,7 +1299,7 @@ class _BaseTaskTestCase(object):
         system_metadata['shelved_host'] = 'fake-mini'
         self.assertRaises(messaging.MessagingTimeout,
                           self.conductor_manager.unshelve_instance,
-                          self.context, instance)
+                          self.context, instance, self.request_spec)
         mock_get_image.assert_has_calls([mock.call(self.context,
                                         system_metadata['shelved_image_id'],
                                         show_deleted=False)])
@@ -1311,14 +1312,10 @@ class _BaseTaskTestCase(object):
                            objects.Selection(service_host='fake_host',
                                              nodename='fake_node',
                                              limits=None)]])
-    @mock.patch.object(scheduler_utils, 'build_request_spec',
-                       return_value='req_spec')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
-    @mock.patch.object(objects.RequestSpec, 'from_primitives')
     def test_unshelve_instance_schedule_and_rebuild_volume_backed(
-            self, fp, mock_im, mock_build, mock_schedule, mock_unshelve):
+            self, mock_im, mock_schedule, mock_unshelve):
         fake_spec = objects.RequestSpec()
-        fp.return_value = fake_spec
         mock_im.return_value = objects.InstanceMapping(
             cell_mapping=objects.CellMapping.get_by_uuid(self.context,
                                                          uuids.cell1))
@@ -1329,9 +1326,8 @@ class _BaseTaskTestCase(object):
 
         system_metadata['shelved_at'] = timeutils.utcnow()
         system_metadata['shelved_host'] = 'fake-mini'
-        self.conductor_manager.unshelve_instance(self.context, instance)
-        fp.assert_called_once_with(self.context, 'req_spec', mock.ANY)
-        mock_build.assert_called_once_with(None, mock.ANY)
+        self.conductor_manager.unshelve_instance(
+            self.context, instance, fake_spec)
         mock_schedule.assert_called_once_with(
             self.context, fake_spec, [instance.uuid], return_alternates=False)
         mock_unshelve.assert_called_once_with(
