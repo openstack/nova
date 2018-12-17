@@ -105,13 +105,13 @@ def query_wrapper(ctx, fn, *args, **kwargs):
             # we won't call into the implementation's comparison routines)
             # wrapping the sentinel indicating timeout.
             yield RecordWrapper(ctx, None, context.did_not_respond_sentinel)
-            raise StopIteration
+            return
         except Exception as e:
             # Here, we yield a RecordWrapper (no sort_ctx needed since
             # we won't call into the implementation's comparison routines)
             # wrapping the exception object indicating failure.
             yield RecordWrapper(ctx, None, e.__class__(e.args))
-            raise StopIteration
+            return
 
 
 @six.add_metaclass(abc.ABCMeta)
