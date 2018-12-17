@@ -1364,30 +1364,21 @@ class _BaseTaskTestCase(object):
                 nodename=expected_node, limits=None)
         rebuild_args, compute_args = self._prepare_rebuild_args(
             {'host': None, 'node': expected_node, 'limits': expected_limits})
-        request_spec = {}
-        filter_properties = {'ignore_hosts': [(inst_obj.host)]}
         fake_spec = objects.RequestSpec()
+        rebuild_args['request_spec'] = fake_spec
         inst_uuids = [inst_obj.uuid]
         with test.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
             mock.patch.object(scheduler_utils, 'setup_instance_group',
                               return_value=False),
-            mock.patch.object(objects.RequestSpec, 'from_primitives',
-                              return_value=fake_spec),
             mock.patch.object(self.conductor_manager.scheduler_client,
                               'select_destinations',
-                              return_value=[[fake_selection]]),
-            mock.patch('nova.scheduler.utils.build_request_spec',
-                       return_value=request_spec)
-        ) as (rebuild_mock, sig_mock, fp_mock, select_dest_mock, bs_mock):
+                              return_value=[[fake_selection]])
+        ) as (rebuild_mock, sig_mock, select_dest_mock):
             self.conductor_manager.rebuild_instance(context=self.context,
                                             instance=inst_obj,
                                             **rebuild_args)
-            bs_mock.assert_called_once_with(
-                obj_base.obj_to_primitive(inst_obj.image_meta), [inst_obj])
-            fp_mock.assert_called_once_with(self.context, request_spec,
-                                            filter_properties)
             self.ensure_network_metadata_mock.assert_called_once_with(
                 inst_obj)
             self.heal_reqspec_is_bfv_mock.assert_called_once_with(
@@ -1410,31 +1401,24 @@ class _BaseTaskTestCase(object):
         inst_obj = self._create_fake_instance_obj()
         inst_obj.host = 'noselect'
         rebuild_args, _ = self._prepare_rebuild_args({'host': None})
-        request_spec = {}
-        filter_properties = {'ignore_hosts': [(inst_obj.host)]}
         fake_spec = objects.RequestSpec()
+        rebuild_args['request_spec'] = fake_spec
 
         with test.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
             mock.patch.object(scheduler_utils, 'setup_instance_group',
                               return_value=False),
-            mock.patch.object(objects.RequestSpec, 'from_primitives',
-                              return_value=fake_spec),
             mock.patch.object(self.conductor_manager.scheduler_client,
                               'select_destinations',
                               side_effect=exc.NoValidHost(reason='')),
-            mock.patch('nova.scheduler.utils.build_request_spec',
-                       return_value=request_spec),
             mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
-        ) as (rebuild_mock, sig_mock, fp_mock,
-              select_dest_mock, bs_mock, set_vm_state_and_notify_mock):
+        ) as (rebuild_mock, sig_mock,
+              select_dest_mock, set_vm_state_and_notify_mock):
             self.assertRaises(exc.NoValidHost,
                               self.conductor_manager.rebuild_instance,
                               context=self.context, instance=inst_obj,
                               **rebuild_args)
-            fp_mock.assert_called_once_with(self.context, request_spec,
-                                            filter_properties)
             select_dest_mock.assert_called_once_with(self.context, fake_spec,
                     [inst_obj.uuid], return_objects=True,
                     return_alternates=False)
@@ -1448,19 +1432,16 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(conductor_manager.scheduler_client.SchedulerClient,
                        'select_destinations')
-    @mock.patch('nova.scheduler.utils.build_request_spec')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify')
     def test_rebuild_instance_with_scheduler_group_failure(self,
                                                            state_mock,
-                                                           bs_mock,
                                                            select_dest_mock,
                                                            sig_mock,
                                                            rebuild_mock):
         inst_obj = self._create_fake_instance_obj()
         rebuild_args, _ = self._prepare_rebuild_args({'host': None})
-        request_spec = {}
-        bs_mock.return_value = request_spec
+        rebuild_args['request_spec'] = self.request_spec
 
         exception = exc.UnsupportedPolicyException(reason='')
         sig_mock.side_effect = exception
