@@ -22,6 +22,7 @@ import os
 from oslo_log import log as logging
 from oslo_utils import encodeutils
 from oslo_utils import secretutils as secutils
+from oslo_utils import strutils
 import six
 import webob.dec
 import webob.exc
@@ -96,7 +97,12 @@ class MetadataRequestHandler(wsgi.Application):
             req.response.content_type = base.MIME_TYPE_TEXT_PLAIN
             return req.response
 
-        LOG.debug('Metadata request headers: %s', req.headers)
+        # Convert webob.headers.EnvironHeaders to a dict and mask any sensitive
+        # details from the logs.
+        if CONF.debug:
+            headers = {k: req.headers[k] for k in req.headers}
+            LOG.debug('Metadata request headers: %s',
+                      strutils.mask_dict_password(headers))
         if CONF.neutron.service_metadata_proxy:
             if req.headers.get('X-Metadata-Provider'):
                 meta_data = self._handle_instance_id_request_from_lb(req)
