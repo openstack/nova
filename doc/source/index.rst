@@ -81,7 +81,8 @@ resources will help you get started with consuming the API directly.
 * `Placement API Reference <https://developer.openstack.org/api-ref/placement/>`_:
   The complete reference for the placement API, including all methods and
   request / response parameters and their meaning.
-* :placement-doc:`Placement API Microversion History <#rest-api-version-history>`:
+* :placement-doc:`Placement API Microversion History
+  <placement-api-microversion-history>`:
   The placement API evolves over time through `Microversions
   <https://developer.openstack.org/api-guide/compute/microversions.html>`_. This
   provides the history of all those changes. Consider it a "what's new" in the
