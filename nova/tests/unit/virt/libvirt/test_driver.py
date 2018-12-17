@@ -17689,7 +17689,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('os.path.exists')
     @mock.patch('os.path.getsize')
     @mock.patch('os.path.isdir')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch.object(host.Host, '_get_domain')
     def test_get_instance_disk_info_parallels_ct(self, mock_get_domain,
                                                  mock_execute,

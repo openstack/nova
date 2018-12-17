@@ -21,7 +21,6 @@ import six
 from nova.compute import utils as compute_utils
 from nova import exception
 from nova import test
-from nova import utils
 from nova.virt import images
 
 
@@ -31,7 +30,7 @@ class QemuTestCase(test.NoDBTestCase):
                           images.qemu_img_info,
                           '/path/that/does/not/exist')
 
-    @mock.patch.object(utils, 'execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch.object(os.path, 'exists', return_value=True)
     def test_qemu_info_with_errors(self, path_exists, mock_exec):
         err = processutils.ProcessExecutionError(
@@ -42,8 +41,8 @@ class QemuTestCase(test.NoDBTestCase):
                           '/fake/path')
 
     @mock.patch.object(os.path, 'exists', return_value=True)
-    @mock.patch.object(utils, 'execute',
-                       return_value=('stdout', None))
+    @mock.patch('oslo_concurrency.processutils.execute',
+                return_value=('stdout', None))
     def test_qemu_info_with_no_errors(self, path_exists,
                                       utils_execute):
         image_info = images.qemu_img_info('/fake/path')
@@ -64,7 +63,7 @@ class QemuTestCase(test.NoDBTestCase):
                           'raw')
         mock_disk_op_sema.__enter__.assert_called_once()
 
-    @mock.patch.object(utils, 'execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch.object(os.path, 'exists', return_value=True)
     def test_convert_image_with_prlimit_fail(self, path, mocked_execute):
         mocked_execute.side_effect = \
@@ -74,7 +73,7 @@ class QemuTestCase(test.NoDBTestCase):
                                 '/fake/path')
         self.assertIn('qemu-img aborted by prlimits', six.text_type(exc))
 
-    @mock.patch.object(utils, 'execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch.object(os.path, 'exists', return_value=True)
     def test_qemu_img_info_with_disk_not_found(self, exists, mocked_execute):
         """Tests that the initial os.path.exists check passes but the qemu-img

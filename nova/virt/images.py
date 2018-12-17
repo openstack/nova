@@ -34,7 +34,6 @@ from nova import exception
 from nova.i18n import _
 from nova import image
 import nova.privsep.qemu
-from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -72,7 +71,7 @@ def qemu_img_info(path, format=None):
         # to add the --force-share flag.
         if QEMU_VERSION and operator.ge(QEMU_VERSION, QEMU_VERSION_REQ_SHARED):
             cmd = cmd + ('--force-share',)
-        out, err = utils.execute(*cmd, prlimit=QEMU_IMG_LIMITS)
+        out, err = processutils.execute(*cmd, prlimit=QEMU_IMG_LIMITS)
     except processutils.ProcessExecutionError as exp:
         if exp.exit_code == -9:
             # this means we hit prlimits, make the exception more specific
