@@ -13,7 +13,6 @@
 from oslo_log import log as logging
 from oslo_utils import versionutils
 import six.moves.urllib.parse as urlparse
-from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql import false
 from sqlalchemy.sql import true
@@ -276,13 +275,14 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
     @staticmethod
     @db_api.api_context_manager.reader
     def _get_by_project_id_from_db(context, project_id):
-        mappings = context.session.query(
-            api_models.InstanceMapping).\
-            filter_by(project_id=project_id).\
-            group_by(api_models.InstanceMapping.cell_id).\
-            options(joinedload('cell_mapping', innerjoin=True)).\
-            all()
-        return (mapping.cell_mapping for mapping in mappings)
+        # SELECT DISTINCT cell_id FROM instance_mappings \
+        #   WHERE project_id = $project_id;
+        cell_ids = context.session.query(
+            api_models.InstanceMapping.cell_id).filter_by(
+            project_id=project_id).distinct().subquery()
+        # SELECT cell_mappings WHERE cell_id IN ($cell_ids);
+        return context.session.query(api_models.CellMapping).filter(
+            api_models.CellMapping.id.in_(cell_ids)).all()
 
     @classmethod
     def get_by_project_id(cls, context, project_id):
