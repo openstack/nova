@@ -105,7 +105,7 @@ Description
 -----------
 
 The following items should be described in each API.
-Or links to the pages describe them should be added.
+Or links to the pages describing them should be added.
 
 * The purpose of the API(s)
 
@@ -123,7 +123,7 @@ Or links to the pages describe them should be added.
 
   - Added
 
-    - Microversion that the API has been added
+    - Microversion in which the API has been added
 
   - Changed behavior
 
@@ -279,9 +279,9 @@ The description of typical error response codes are as follows:
 
 In addition, the following explanations should be described.
 
-- Condition each normal response code is returned
+- Conditions under which each normal response code is returned
   (If there are multiple normal response codes.)
-- Condition each error response code is returned
+- Conditions under which each error response code is returned
 
 Parameters
 ----------
