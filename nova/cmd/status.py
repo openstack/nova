@@ -19,18 +19,15 @@ CLI interface for nova status commands.
 from __future__ import print_function
 
 import collections
-# enum comes from the enum34 package if python < 3.4, else it's stdlib
-import enum
 import functools
 import sys
-import textwrap
 import traceback
 
 from keystoneauth1 import exceptions as ks_exc
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_upgradecheck import upgradecheck
 import pkg_resources
-import prettytable
 from sqlalchemy import func as sqlfunc
 from sqlalchemy import MetaData, Table, and_, select
 from sqlalchemy.sql import false
@@ -59,47 +56,7 @@ PLACEMENT_DOCS_LINK = 'https://docs.openstack.org/nova/latest' \
 MIN_PLACEMENT_MICROVERSION = "1.30"
 
 
-class UpgradeCheckCode(enum.IntEnum):
-    """These are the status codes for the nova-status upgrade check command
-    and internal check commands.
-    """
-
-    # All upgrade readiness checks passed successfully and there is
-    # nothing to do.
-    SUCCESS = 0
-
-    # At least one check encountered an issue and requires further
-    # investigation. This is considered a warning but the upgrade may be OK.
-    WARNING = 1
-
-    # There was an upgrade status check failure that needs to be
-    # investigated. This should be considered something that stops an upgrade.
-    FAILURE = 2
-
-
-UPGRADE_CHECK_MSG_MAP = {
-    UpgradeCheckCode.SUCCESS: _('Success'),
-    UpgradeCheckCode.WARNING: _('Warning'),
-    UpgradeCheckCode.FAILURE: _('Failure'),
-}
-
-
-class UpgradeCheckResult(object):
-    """Class used for 'nova-status upgrade check' results.
-
-    The 'code' attribute is an UpgradeCheckCode enum.
-    The 'details' attribute is a translated message generally only used for
-    checks that result in a warning or failure code. The details should provide
-    information on what issue was discovered along with any remediation.
-    """
-
-    def __init__(self, code, details=None):
-        super(UpgradeCheckResult, self).__init__()
-        self.code = code
-        self.details = details
-
-
-class UpgradeCommands(object):
+class UpgradeCommands(upgradecheck.UpgradeCommands):
     """Commands related to upgrades.
 
     The subcommands here must not rely on the nova object model since they
@@ -152,7 +109,7 @@ class UpgradeCommands(object):
                     'cell0 and one for your first cell. Run command '
                     '\'nova-manage cell_v2 simple_cell_setup\' and then '
                     'retry.')
-            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
 
         count = select([sqlfunc.count()]).select_from(cell_mappings).where(
             cell_mappings.c.uuid ==
@@ -161,7 +118,7 @@ class UpgradeCommands(object):
             msg = _('No cell0 mapping found. Run command '
                     '\'nova-manage cell_v2 simple_cell_setup\' and then '
                     'retry.')
-            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
 
         host_mappings = Table('host_mappings', meta, autoload=True)
         count = select([sqlfunc.count()]).select_from(host_mappings).scalar()
@@ -176,14 +133,14 @@ class UpgradeCommands(object):
                 msg = _('No host mappings found but there are compute nodes. '
                         'Run command \'nova-manage cell_v2 '
                         'simple_cell_setup\' and then retry.')
-                return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+                return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
 
             msg = _('No host mappings or compute nodes were found. Remember '
                     'to run command \'nova-manage cell_v2 discover_hosts\' '
                     'when new compute hosts are deployed.')
-            return UpgradeCheckResult(UpgradeCheckCode.SUCCESS, msg)
+            return upgradecheck.Result(upgradecheck.Code.SUCCESS, msg)
 
-        return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
+        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     @staticmethod
     def _placement_get(path):
@@ -213,24 +170,24 @@ class UpgradeCommands(object):
                 msg = (_('Placement API version %(needed)s needed, '
                          'you have %(current)s.') %
                        {'needed': needs_version, 'current': max_version})
-                return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+                return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
         except ks_exc.MissingAuthPlugin:
             msg = _('No credentials specified for placement API in nova.conf.')
-            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
         except ks_exc.Unauthorized:
             msg = _('Placement service credentials do not work.')
-            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
         except ks_exc.EndpointNotFound:
             msg = _('Placement API endpoint not found.')
-            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
         except ks_exc.DiscoveryFailure:
             msg = _('Discovery for placement API URI failed.')
-            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
         except ks_exc.NotFound:
             msg = _('Placement API does not seem to be running.')
-            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
 
-        return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
+        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     @staticmethod
     def _count_compute_resource_providers():
@@ -319,7 +276,7 @@ class UpgradeCommands(object):
                          '%(placement_docs_link)s for more details.') %
                        {'num_computes': num_computes,
                         'placement_docs_link': PLACEMENT_DOCS_LINK})
-                return UpgradeCheckResult(UpgradeCheckCode.WARNING, msg)
+                return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
 
             # There are no resource providers and no compute nodes so we
             # assume this is a fresh install and move on. We should return a
@@ -330,7 +287,7 @@ class UpgradeCommands(object):
                      'report into the Placement service. See '
                      '%(placement_docs_link)s for more details.') %
                    {'placement_docs_link': PLACEMENT_DOCS_LINK})
-            return UpgradeCheckResult(UpgradeCheckCode.SUCCESS, msg)
+            return upgradecheck.Result(upgradecheck.Code.SUCCESS, msg)
 
         elif num_rps < num_computes:
             # There are fewer resource providers than compute nodes, so return
@@ -349,10 +306,10 @@ class UpgradeCommands(object):
                    {'num_resource_providers': num_rps,
                     'num_compute_nodes': num_computes,
                     'placement_docs_link': PLACEMENT_DOCS_LINK})
-            return UpgradeCheckResult(UpgradeCheckCode.WARNING, msg)
+            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
         else:
             # We have RPs >= CNs which is what we want to see.
-            return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
+            return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     @staticmethod
     def _is_ironic_instance_migrated(extras, inst):
@@ -431,7 +388,7 @@ class UpgradeCommands(object):
             # on this.
             msg = (_('Unable to determine ironic flavor migration without '
                      'cell mappings.'))
-            return UpgradeCheckResult(UpgradeCheckCode.WARNING, msg)
+            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
 
         if unmigrated_instance_count_by_cell:
             # There are unmigrated ironic instances, so we need to fail.
@@ -442,11 +399,11 @@ class UpgradeCommands(object):
                        cell_id, unmigrated_instance_count_by_cell[cell_id])
                             for cell_id in
                             sorted(unmigrated_instance_count_by_cell.keys())))
-            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
 
         # Either there were no ironic compute nodes or all instances for
         # those nodes are already migrated, so there is nothing to do.
-        return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
+        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     def _get_min_service_version(self, context, binary):
         meta = MetaData(bind=db_session.get_engine(context=context))
@@ -475,7 +432,7 @@ class UpgradeCommands(object):
         """
         # If we're using cells v1 then we don't care about this.
         if CONF.cells.enable:
-            return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
+            return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
         meta = MetaData(bind=db_session.get_api_engine())
         cell_mappings = Table('cell_mappings', meta, autoload=True)
@@ -487,7 +444,7 @@ class UpgradeCommands(object):
             # on this.
             msg = (_('Unable to determine API service versions without '
                      'cell mappings.'))
-            return UpgradeCheckResult(UpgradeCheckCode.WARNING, msg)
+            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
 
         ctxt = nova_context.get_admin_context()
         cells_with_old_api_services = []
@@ -513,8 +470,8 @@ class UpgradeCommands(object):
                      "records. See "
                      "https://bugs.launchpad.net/nova/+bug/1759316 for "
                      "details.") % ', '.join(cells_with_old_api_services))
-            return UpgradeCheckResult(UpgradeCheckCode.WARNING, msg)
-        return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
+            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
+        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     def _check_request_spec_migration(self):
         """Checks to make sure request spec migrations are complete.
@@ -535,7 +492,7 @@ class UpgradeCommands(object):
             # on this.
             msg = (_('Unable to determine request spec migrations without '
                      'cell mappings.'))
-            return UpgradeCheckResult(UpgradeCheckCode.WARNING, msg)
+            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
 
         request_specs = Table('request_specs', meta, autoload=True)
         ctxt = nova_context.get_admin_context()
@@ -573,8 +530,8 @@ class UpgradeCommands(object):
                      "'nova-manage db online_data_migrations' on each cell "
                      "to create the missing request specs.") %
                    ', '.join(incomplete_cells))
-            return UpgradeCheckResult(UpgradeCheckCode.FAILURE, msg)
-        return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
+        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     def _check_console_auths(self):
         """Checks for console usage and warns with info for rolling upgrade.
@@ -591,7 +548,7 @@ class UpgradeCommands(object):
         # If the operator has already enabled the workaround, we don't need
         # to check anything.
         if CONF.cells.enable or CONF.workarounds.enable_consoleauth:
-            return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
+            return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
         # We need to check cell0 for nova-consoleauth service records because
         # it's possible a deployment could have services stored in the cell0
@@ -606,7 +563,7 @@ class UpgradeCommands(object):
             # return a warning. The cellsv2 check would have already failed
             # on this.
             msg = (_('Unable to check consoles without cell mappings.'))
-            return UpgradeCheckResult(UpgradeCheckCode.WARNING, msg)
+            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
 
         ctxt = nova_context.get_admin_context()
         # If we find a non-deleted, non-disabled nova-consoleauth service in
@@ -652,15 +609,15 @@ class UpgradeCommands(object):
                                 "console proxy host if you are performing a "
                                 "rolling upgrade to enable consoles to "
                                 "function during a partial upgrade.")
-                        return UpgradeCheckResult(UpgradeCheckCode.WARNING,
+                        return upgradecheck.Result(upgradecheck.Code.WARNING,
                                                   msg)
 
-        return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
+        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
-    # The format of the check functions is to return an UpgradeCheckResult
-    # object with the appropriate UpgradeCheckCode and details set. If the
+    # The format of the check functions is to return an upgradecheck.Result
+    # object with the appropriate upgradecheck.Code and details set. If the
     # check hits warnings or failures then those should be stored in the
-    # returned UpgradeCheckResult's "details" attribute. The summary will
+    # returned upgradecheck.Result's "details" attribute. The summary will
     # be rolled up at the end of the check() function. These functions are
     # intended to be run in order and build on top of each other so order
     # matters.
@@ -680,65 +637,6 @@ class UpgradeCommands(object):
         # Added in Stein (but also useful going back to Rocky)
         (_('Console Auths'), _check_console_auths),
     )
-
-    def _get_details(self, upgrade_check_result):
-        if upgrade_check_result.details is not None:
-            # wrap the text on the details to 60 characters
-            return '\n'.join(textwrap.wrap(upgrade_check_result.details, 60,
-                                           subsequent_indent='  '))
-
-    def check(self):
-        """Performs checks to see if the deployment is ready for upgrade.
-
-        These checks are expected to be run BEFORE services are restarted with
-        new code. These checks also require access to potentially all of the
-        Nova databases (nova, nova_api, nova_api_cell0) and external services
-        such as the placement API service.
-
-        :returns: UpgradeCheckCode
-        """
-        return_code = UpgradeCheckCode.SUCCESS
-        # This is a list if 2-item tuples for the check name and it's results.
-        check_results = []
-        for name, func in self._upgrade_checks:
-            result = func(self)
-            # store the result of the check for the summary table
-            check_results.append((name, result))
-            # we want to end up with the highest level code of all checks
-            if result.code > return_code:
-                return_code = result.code
-
-        # We're going to build a summary table that looks like:
-        # +----------------------------------------------------+
-        # | Upgrade Check Results                              |
-        # +----------------------------------------------------+
-        # | Check: Cells v2                                    |
-        # | Result: Success                                    |
-        # | Details: None                                      |
-        # +----------------------------------------------------+
-        # | Check: Placement API                               |
-        # | Result: Failure                                    |
-        # | Details: There is no placement-api endpoint in the |
-        # |          service catalog.                          |
-        # +----------------------------------------------------+
-        t = prettytable.PrettyTable([_('Upgrade Check Results')],
-                                    hrules=prettytable.ALL)
-        t.align = 'l'
-        for name, result in check_results:
-            cell = (
-                _('Check: %(name)s\n'
-                  'Result: %(result)s\n'
-                  'Details: %(details)s') %
-                {
-                    'name': name,
-                    'result': UPGRADE_CHECK_MSG_MAP[result.code],
-                    'details': self._get_details(result),
-                }
-            )
-            t.add_row([cell])
-        print(t)
-
-        return return_code
 
 
 CATEGORIES = {

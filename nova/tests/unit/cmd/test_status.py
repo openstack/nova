@@ -27,6 +27,7 @@ from six.moves import StringIO
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as keystone
 from keystoneauth1 import session
+from oslo_upgradecheck import upgradecheck
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 from requests import models
@@ -124,7 +125,7 @@ class TestPlacementCheck(test.NoDBTestCase):
         """
         auth.side_effect = ks_exc.MissingAuthPlugin()
         res = self.cmd._check_placement()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
+        self.assertEqual(upgradecheck.Code.FAILURE, res.code)
         self.assertIn('No credentials specified', res.details)
 
     @mock.patch.object(keystone, "load_auth_from_conf_options")
@@ -166,7 +167,7 @@ class TestPlacementCheck(test.NoDBTestCase):
         """
         get.side_effect = ks_exc.Unauthorized()
         res = self.cmd._check_placement()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
+        self.assertEqual(upgradecheck.Code.FAILURE, res.code)
         self.assertIn('Placement service credentials do not work', res.details)
 
     @mock.patch.object(status.UpgradeCommands, "_placement_get")
@@ -179,7 +180,7 @@ class TestPlacementCheck(test.NoDBTestCase):
         """
         get.side_effect = ks_exc.EndpointNotFound()
         res = self.cmd._check_placement()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
+        self.assertEqual(upgradecheck.Code.FAILURE, res.code)
         self.assertIn('Placement API endpoint not found', res.details)
 
     @mock.patch.object(status.UpgradeCommands, "_placement_get")
@@ -192,7 +193,7 @@ class TestPlacementCheck(test.NoDBTestCase):
         """
         get.side_effect = ks_exc.DiscoveryFailure()
         res = self.cmd._check_placement()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
+        self.assertEqual(upgradecheck.Code.FAILURE, res.code)
         self.assertIn('Discovery for placement API URI failed.', res.details)
 
     @mock.patch.object(status.UpgradeCommands, "_placement_get")
@@ -204,7 +205,7 @@ class TestPlacementCheck(test.NoDBTestCase):
         """
         get.side_effect = ks_exc.NotFound()
         res = self.cmd._check_placement()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
+        self.assertEqual(upgradecheck.Code.FAILURE, res.code)
         self.assertIn('Placement API does not seem to be running', res.details)
 
     @mock.patch.object(status.UpgradeCommands, "_placement_get")
@@ -219,7 +220,7 @@ class TestPlacementCheck(test.NoDBTestCase):
             ]
         }
         res = self.cmd._check_placement()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, res.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, res.code)
 
     @mock.patch.object(status.UpgradeCommands, "_placement_get")
     def test_version_comparison_does_not_use_floats(self, get):
@@ -239,7 +240,7 @@ class TestPlacementCheck(test.NoDBTestCase):
             ]
         }
         res = self.cmd._check_placement()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, res.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, res.code)
 
     @mock.patch.object(status.UpgradeCommands, "_placement_get")
     def test_invalid_version(self, get):
@@ -253,107 +254,9 @@ class TestPlacementCheck(test.NoDBTestCase):
             ]
         }
         res = self.cmd._check_placement()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, res.code)
+        self.assertEqual(upgradecheck.Code.FAILURE, res.code)
         self.assertIn('Placement API version %s needed, you have 0.9' %
                       status.MIN_PLACEMENT_MICROVERSION, res.details)
-
-
-class TestUpgradeCheckBasic(test.NoDBTestCase):
-    """Tests for the nova-status upgrade check command.
-
-    The tests in this class should just test basic logic and use mock. Real
-    checks which require more elaborate fixtures or the database should be done
-    in separate test classes as they are more or less specific to a particular
-    release and may be removed in a later release after they are no longer
-    needed.
-    """
-
-    def setUp(self):
-        super(TestUpgradeCheckBasic, self).setUp()
-        self.output = StringIO()
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
-        self.cmd = status.UpgradeCommands()
-
-    def test_check_success(self):
-        fake_checks = (
-            ('good', mock.Mock(return_value=status.UpgradeCheckResult(
-                status.UpgradeCheckCode.SUCCESS
-            ))),
-        )
-        with mock.patch.object(self.cmd, '_upgrade_checks', fake_checks):
-            self.assertEqual(status.UpgradeCheckCode.SUCCESS, self.cmd.check())
-        expected = """\
-+-----------------------+
-| Upgrade Check Results |
-+-----------------------+
-| Check: good           |
-| Result: Success       |
-| Details: None         |
-+-----------------------+
-"""
-        self.assertEqual(expected, self.output.getvalue())
-
-    def test_check_warning(self):
-        fake_checks = (
-            ('good', mock.Mock(return_value=status.UpgradeCheckResult(
-                status.UpgradeCheckCode.SUCCESS
-            ))),
-            ('warn', mock.Mock(return_value=status.UpgradeCheckResult(
-                status.UpgradeCheckCode.WARNING, 'there might be a problem'
-            ))),
-        )
-        with mock.patch.object(self.cmd, '_upgrade_checks', fake_checks):
-            self.assertEqual(status.UpgradeCheckCode.WARNING, self.cmd.check())
-        expected = """\
-+-----------------------------------+
-| Upgrade Check Results             |
-+-----------------------------------+
-| Check: good                       |
-| Result: Success                   |
-| Details: None                     |
-+-----------------------------------+
-| Check: warn                       |
-| Result: Warning                   |
-| Details: there might be a problem |
-+-----------------------------------+
-"""
-        self.assertEqual(expected, self.output.getvalue())
-
-    def test_check_failure(self):
-        # make the error details over 60 characters so we test the wrapping
-        error_details = 'go back to bed' + '!' * 60
-        fake_checks = (
-            ('good', mock.Mock(return_value=status.UpgradeCheckResult(
-                status.UpgradeCheckCode.SUCCESS
-            ))),
-            ('warn', mock.Mock(return_value=status.UpgradeCheckResult(
-                status.UpgradeCheckCode.WARNING, 'there might be a problem'
-            ))),
-            ('fail', mock.Mock(return_value=status.UpgradeCheckResult(
-                status.UpgradeCheckCode.FAILURE, error_details
-            ))),
-        )
-        with mock.patch.object(self.cmd, '_upgrade_checks', fake_checks):
-            self.assertEqual(status.UpgradeCheckCode.FAILURE, self.cmd.check())
-        expected = """\
-+-----------------------------------------------------------------------+
-| Upgrade Check Results                                                 |
-+-----------------------------------------------------------------------+
-| Check: good                                                           |
-| Result: Success                                                       |
-| Details: None                                                         |
-+-----------------------------------------------------------------------+
-| Check: warn                                                           |
-| Result: Warning                                                       |
-| Details: there might be a problem                                     |
-+-----------------------------------------------------------------------+
-| Check: fail                                                           |
-| Result: Failure                                                       |
-| Details: go back to bed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! |
-|   !!!!!!!!!!!!!!                                                      |
-+-----------------------------------------------------------------------+
-"""
-        self.assertEqual(expected, self.output.getvalue())
 
 
 class TestUpgradeCheckCellsV2(test.NoDBTestCase):
@@ -374,7 +277,7 @@ class TestUpgradeCheckCellsV2(test.NoDBTestCase):
         """The cells v2 check should fail because there are no cell mappings.
         """
         result = self.cmd._check_cellsv2()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, result.code)
+        self.assertEqual(upgradecheck.Code.FAILURE, result.code)
         self.assertIn('There needs to be at least two cell mappings',
                       result.details)
 
@@ -395,7 +298,7 @@ class TestUpgradeCheckCellsV2(test.NoDBTestCase):
             self._create_cell_mapping(uuid)
 
         result = self.cmd._check_cellsv2()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, result.code)
+        self.assertEqual(upgradecheck.Code.FAILURE, result.code)
         self.assertIn('No cell0 mapping found', result.details)
 
     def test_check_no_host_mappings_with_computes(self):
@@ -418,7 +321,7 @@ class TestUpgradeCheckCellsV2(test.NoDBTestCase):
         cn.create()
 
         result = self.cmd._check_cellsv2()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, result.code)
+        self.assertEqual(upgradecheck.Code.FAILURE, result.code)
         self.assertIn('No host mappings found but there are compute nodes',
                       result.details)
 
@@ -429,7 +332,7 @@ class TestUpgradeCheckCellsV2(test.NoDBTestCase):
         self._setup_cells()
 
         result = self.cmd._check_cellsv2()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
         self.assertIn('No host mappings or compute nodes were found',
                       result.details)
 
@@ -446,7 +349,7 @@ class TestUpgradeCheckCellsV2(test.NoDBTestCase):
         hm.create()
 
         result = self.cmd._check_cellsv2()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
         self.assertIsNone(result.details)
 
 
@@ -522,7 +425,7 @@ class TestUpgradeCheckIronicFlavorMigration(test.NoDBTestCase):
         warning.
         """
         result = self.cmd._check_ironic_flavor_migration()
-        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
+        self.assertEqual(upgradecheck.Code.WARNING, result.code)
         self.assertIn('Unable to determine ironic flavor migration without '
                       'cell mappings', result.details)
 
@@ -533,7 +436,7 @@ class TestUpgradeCheckIronicFlavorMigration(test.NoDBTestCase):
         """
         self._setup_cells()
         result = self.cmd._check_ironic_flavor_migration()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
 
     def test_mixed_computes_deleted_ironic_instance(self):
         """Tests the scenario where we have a kvm compute node in one cell
@@ -557,7 +460,7 @@ class TestUpgradeCheckIronicFlavorMigration(test.NoDBTestCase):
             ctxt, self.cell_mappings['cell1'], ironic_node, is_deleted=True)
 
         result = self.cmd._check_ironic_flavor_migration()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
 
     def test_unmigrated_ironic_instances(self):
         """Tests a scenario where we have two cells with only ironic compute
@@ -590,7 +493,7 @@ class TestUpgradeCheckIronicFlavorMigration(test.NoDBTestCase):
                 ctxt, cell, ironic_node, flavor_migrated=False)
 
         result = self.cmd._check_ironic_flavor_migration()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, result.code)
+        self.assertEqual(upgradecheck.Code.FAILURE, result.code)
         # Check the message - it should point out cell1 has one unmigrated
         # instance and cell2 has two unmigrated instances.
         unmigrated_instance_count_by_cell = {
@@ -629,12 +532,12 @@ class TestUpgradeCheckAPIServiceVersion(test.NoDBTestCase):
         """
         self.flags(enable=True, group='cells')
         result = self.cmd._check_api_service_version()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
 
     def test_check_no_cell_mappings_warning(self):
         """Warn when there are no cell mappings."""
         result = self.cmd._check_api_service_version()
-        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
+        self.assertEqual(upgradecheck.Code.WARNING, result.code)
         self.assertEqual('Unable to determine API service versions without '
                          'cell mappings.', result.details)
 
@@ -684,7 +587,7 @@ class TestUpgradeCheckAPIServiceVersion(test.NoDBTestCase):
                                  binary='nova-compute', version=14)
 
         result = self.cmd._check_api_service_version()
-        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
+        self.assertEqual(upgradecheck.Code.WARNING, result.code)
         # The only cell in the message should be cell0.
         self.assertIn(cell0.uuid, result.details)
         self.assertNotIn(cell1.uuid, result.details)
@@ -707,7 +610,7 @@ class TestUpgradeCheckAPIServiceVersion(test.NoDBTestCase):
                                  binary='nova-compute', version=15)
 
         result = self.cmd._check_api_service_version()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
 
 
 class TestUpgradeCheckRequestSpecMigration(test.NoDBTestCase):
@@ -758,7 +661,7 @@ class TestUpgradeCheckRequestSpecMigration(test.NoDBTestCase):
         warning.
         """
         result = self.cmd._check_request_spec_migration()
-        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
+        self.assertEqual(upgradecheck.Code.WARNING, result.code)
         self.assertIn('Unable to determine request spec migrations without '
                       'cell mappings.', result.details)
 
@@ -779,7 +682,7 @@ class TestUpgradeCheckRequestSpecMigration(test.NoDBTestCase):
             ctxt, self.cell_mappings['cell2'], create_request_spec=True)
 
         result = self.cmd._check_request_spec_migration()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
 
     def test_unmigrated_request_spec_instances(self):
         """Tests the scenario that we have a migrated instance in cell1 and
@@ -796,7 +699,7 @@ class TestUpgradeCheckRequestSpecMigration(test.NoDBTestCase):
         self._create_instance_in_cell(ctxt, self.cell_mappings['cell2'])
 
         result = self.cmd._check_request_spec_migration()
-        self.assertEqual(status.UpgradeCheckCode.FAILURE, result.code)
+        self.assertEqual(upgradecheck.Code.FAILURE, result.code)
         self.assertIn("The following cells have instances which do not have "
                       "matching request_specs in the API database: %s Run "
                       "'nova-manage db online_data_migrations' on each cell "
@@ -856,7 +759,7 @@ class TestUpgradeCheckConsoles(test.NoDBTestCase):
         """
         self.flags(enable=True, group='cells')
         result = self.cmd._check_console_auths()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
 
     def test_check_workaround_enabled(self):
         """This is a 'success' case since the console auths check is
@@ -864,7 +767,7 @@ class TestUpgradeCheckConsoles(test.NoDBTestCase):
         """
         self.flags(enable_consoleauth=True, group='workarounds')
         result = self.cmd._check_console_auths()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
 
     def test_deleted_disabled_consoleauth(self):
         """Tests that services other than nova-consoleauth and deleted/disabled
@@ -887,7 +790,7 @@ class TestUpgradeCheckConsoles(test.NoDBTestCase):
                                      'nova-consoleauth', disabled=True)
 
         result = self.cmd._check_console_auths()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
 
     def test_consoleauth_with_upgrade_not_started(self):
         """Tests the scenario where the deployment is using consoles but has no
@@ -908,7 +811,7 @@ class TestUpgradeCheckConsoles(test.NoDBTestCase):
                                          'nova-compute', version=30)
 
         result = self.cmd._check_console_auths()
-        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
+        self.assertEqual(upgradecheck.Code.WARNING, result.code)
 
     def test_consoleauth_with_upgrade_complete(self):
         """Tests the scenario where the deployment is using consoles and has
@@ -939,7 +842,7 @@ class TestUpgradeCheckConsoles(test.NoDBTestCase):
                                      'nova-compute', version=30)
 
         result = self.cmd._check_console_auths()
-        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
 
     def test_consoleauth_with_upgrade_partial(self):
         """Tests the scenario where the deployment is using consoles and has
@@ -968,7 +871,7 @@ class TestUpgradeCheckConsoles(test.NoDBTestCase):
 
         result = self.cmd._check_console_auths()
 
-        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
+        self.assertEqual(upgradecheck.Code.WARNING, result.code)
         self.assertIn("One or more cells were found which have nova-compute "
                       "services older than Rocky. "
                       "Please set the '[workarounds]enable_consoleauth' "
