@@ -202,6 +202,9 @@ class MigrationTask(base.TaskBase):
         # is not forced to be the original host
         self.request_spec.reset_forced_destinations()
 
+        # TODO(gibi): We need to make sure that the requested_resources field
+        # is re calculated based on neutron ports.
+
         self._restrict_request_spec_to_cell(legacy_props)
 
         # Once _preallocate_migration() is done, the source node allocation is

@@ -608,6 +608,11 @@ class ComputeTaskManager(base.Base):
             else:
                 # This is not a reschedule, so we need to call the scheduler to
                 # get appropriate hosts for the request.
+                # NOTE(gibi): We only call the scheduler if using cells v1 or
+                # we are rescheduling from a really old compute. In
+                # either case we do not support externally-defined resource
+                # requests, like port QoS. So no requested_resources are set
+                # on the RequestSpec here.
                 host_lists = self._schedule_instances(context, spec_obj,
                         instance_uuids, return_alternates=True)
         except Exception as exc:
@@ -809,6 +814,11 @@ class ComputeTaskManager(base.Base):
                     # when populate_filter_properties accepts it
                     filter_properties = request_spec.\
                         to_legacy_filter_properties_dict()
+
+                    # TODO(gibi): We need to make sure that the
+                    # requested_resources field is re calculated based on
+                    # neutron ports.
+
                     # NOTE(cfriesen): Ensure that we restrict the scheduler to
                     # the cell specified by the instance mapping.
                     instance_mapping = \
@@ -984,6 +994,9 @@ class ComputeTaskManager(base.Base):
                     # if we want to make sure that the next destination
                     # is not forced to be the original host
                     request_spec.reset_forced_destinations()
+                    # TODO(gibi): We need to make sure that the
+                    # requested_resources field is re calculated based on
+                    # neutron ports.
                 try:
                     # if this is a rebuild of instance on the same host with
                     # new image.

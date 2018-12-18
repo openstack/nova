@@ -4595,7 +4595,8 @@ class _ComputeAPIUnitTestMixIn(object):
                             'root_device_name': None,
                             'user_data': None,
                             'numa_topology': None,
-                            'pci_requests': None}
+                            'pci_requests': None,
+                            'port_resource_requests': None}
             security_groups = {}
             block_device_mapping = objects.BlockDeviceMappingList(
                 objects=[objects.BlockDeviceMapping(
@@ -4737,7 +4738,8 @@ class _ComputeAPIUnitTestMixIn(object):
                             'root_device_name': None,
                             'user_data': None,
                             'numa_topology': None,
-                            'pci_requests': None}
+                            'pci_requests': None,
+                            'port_resource_requests': None}
             security_groups = {}
             block_device_mappings = objects.BlockDeviceMappingList(
                 objects=[objects.BlockDeviceMapping(
@@ -4827,7 +4829,8 @@ class _ComputeAPIUnitTestMixIn(object):
                             'root_device_name': None,
                             'user_data': None,
                             'numa_topology': None,
-                            'pci_requests': None}
+                            'pci_requests': None,
+                            'port_resource_requests': None}
             security_groups = {}
             block_device_mapping = objects.BlockDeviceMappingList(
                 objects=[objects.BlockDeviceMapping(
@@ -4924,7 +4927,8 @@ class _ComputeAPIUnitTestMixIn(object):
                             'root_device_name': None,
                             'user_data': None,
                             'numa_topology': None,
-                            'pci_requests': None}
+                            'pci_requests': None,
+                            'port_resource_requests': None}
             security_groups = {}
             block_device_mapping = objects.BlockDeviceMappingList(
                 objects=[objects.BlockDeviceMapping(
@@ -5027,7 +5031,8 @@ class _ComputeAPIUnitTestMixIn(object):
                             'root_device_name': None,
                             'user_data': None,
                             'numa_topology': None,
-                            'pci_requests': None}
+                            'pci_requests': None,
+                            'port_resource_requests': None}
             security_groups = {}
             block_device_mapping = objects.BlockDeviceMappingList(
                 objects=[objects.BlockDeviceMapping(
@@ -5091,7 +5096,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_objects.RequestSpec.from_components.assert_called_once_with(
                 mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY,
                 mock.ANY, mock.ANY, mock.ANY,
-                security_groups=secgroups)
+                security_groups=secgroups, port_resource_requests=mock.ANY)
         test()
 
     def _test_rescue(self, vm_state=vm_states.ACTIVE, rescue_password=None,

@@ -346,6 +346,9 @@ class LiveMigrationTask(base.TaskBase):
         # if we want to make sure that the next destination
         # is not forced to be the original host
         request_spec.reset_forced_destinations()
+
+        # TODO(gibi): We need to make sure that the requested_resources field
+        # is re calculated based on neutron ports.
         scheduler_utils.setup_instance_group(self.context, request_spec)
 
         # We currently only support live migrating to hosts in the same

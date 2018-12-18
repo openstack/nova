@@ -846,7 +846,8 @@ class API(base.Base):
             'progress': 0,
             'pci_requests': pci_request_info,
             'numa_topology': numa_topology,
-            'system_metadata': system_metadata}
+            'system_metadata': system_metadata,
+            'port_resource_requests': port_resource_requests}
 
         options_from_image = self._inherit_properties_from_image(
                 boot_meta, auto_disk_config)
@@ -870,6 +871,7 @@ class API(base.Base):
         security_groups = self.security_group_api.populate_security_groups(
                 security_groups)
         self.security_group_api.ensure_default(context)
+        port_resource_requests = base_options.pop('port_resource_requests')
         LOG.debug("Going to run %s instances...", num_instances)
         instances_to_build = []
         try:
@@ -883,7 +885,8 @@ class API(base.Base):
                         base_options['numa_topology'],
                         base_options['pci_requests'], filter_properties,
                         instance_group, base_options['availability_zone'],
-                        security_groups=security_groups)
+                        security_groups=security_groups,
+                        port_resource_requests=port_resource_requests)
 
                 if block_device_mapping:
                     # Record whether or not we are a BFV instance
