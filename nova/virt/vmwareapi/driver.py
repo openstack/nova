@@ -467,23 +467,32 @@ class VMwareVCDriver(driver.ComputeDriver):
         reserved_disk_gb = compute_utils.convert_mb_to_ceil_gb(
             CONF.reserved_host_disk_mb)
         result = {
-            orc.VCPU: {
+            orc.DISK_GB: {
+                'total': total_disk_capacity // units.Gi,
+                'reserved': reserved_disk_gb,
+                'min_unit': 1,
+                'max_unit': max_free_space // units.Gi,
+                'step_size': 1,
+            }
+        }
+        if stats['cpu']['max_vcpus_per_host'] > 0:
+            result.update({orc.VCPU: {
                 'total': stats['cpu']['vcpus'],
                 'reserved': CONF.reserved_host_cpus,
                 'min_unit': 1,
                 'max_unit': stats['cpu']['max_vcpus_per_host'],
                 'step_size': 1,
                 'allocation_ratio': ratios[orc.VCPU],
-            },
-            orc.MEMORY_MB: {
+            }})
+        if stats['mem']['max_mem_mb_per_host'] > 0:
+            result.update({orc.MEMORY_MB: {
                 'total': stats['mem']['total'],
                 'reserved': CONF.reserved_host_memory_mb,
                 'min_unit': 1,
                 'max_unit': stats['mem']['max_mem_mb_per_host'],
                 'step_size': 1,
                 'allocation_ratio': ratios[orc.MEMORY_MB],
-            },
-        }
+            }})
 
         # If a sharing DISK_GB provider exists in the provider tree, then our
         # storage is shared, and we should not report the DISK_GB inventory in
