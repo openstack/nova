@@ -3122,6 +3122,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # check for different types of consoles
         path_sources = [
             ('file', "./devices/console[@type='file']/source[@path]", 'path'),
+            ('tcp', "./devices/console[@type='tcp']/log[@file]", 'file'),
             ('pty', "./devices/console[@type='pty']/source[@path]", 'path')]
         console_type = ""
         console_path = ""
