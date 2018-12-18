@@ -191,8 +191,10 @@ Abort an in-progress live migration.
 .. note:: With microversion 2.65 or greater, you can abort live migrations
     also in ``queued`` and ``preparing`` status.
 
-.. note:: Not all compute back ends support aborting an in-progress live
+.. note:: Not all `compute back ends`__ support aborting an in-progress live
     migration.
+
+.. __: https://docs.openstack.org/nova/latest/user/support-matrix.html#operation_abort_in_progress_live_migration
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through the
