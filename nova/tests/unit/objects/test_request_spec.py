@@ -844,3 +844,43 @@ class TestRequestGroupObject(test.TestCase):
         self.assertEqual(set(), rg.required_traits)
         self.assertEqual(set(), rg.forbidden_traits)
         self.assertEqual([], rg.aggregates)
+
+    def test_from_port_request(self):
+        port_resource_request = {
+            "resources": {
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1000,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1000},
+            "required": ["CUSTOM_PHYSNET_2",
+                         "CUSTOM_VNIC_TYPE_NORMAL"]
+        }
+        rg = request_spec.RequestGroup.from_port_request(
+            self.context, port_resource_request)
+
+        self.assertTrue(rg.use_same_provider)
+        self.assertEqual(
+            {"NET_BW_IGR_KILOBIT_PER_SEC": 1000,
+             "NET_BW_EGR_KILOBIT_PER_SEC": 1000},
+            rg.resources)
+        self.assertEqual({"CUSTOM_PHYSNET_2", "CUSTOM_VNIC_TYPE_NORMAL"},
+                         rg.required_traits)
+        # and the rest is defaulted
+        self.assertEqual(set(), rg.forbidden_traits)
+        self.assertEqual([], rg.aggregates)
+
+    def test_from_port_request_without_traits(self):
+        port_resource_request = {
+            "resources": {
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1000,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1000}}
+        rg = request_spec.RequestGroup.from_port_request(
+            self.context, port_resource_request)
+
+        self.assertTrue(rg.use_same_provider)
+        self.assertEqual(
+            {"NET_BW_IGR_KILOBIT_PER_SEC": 1000,
+             "NET_BW_EGR_KILOBIT_PER_SEC": 1000},
+            rg.resources)
+        # and the rest is defaulted
+        self.assertEqual(set(), rg.required_traits)
+        self.assertEqual(set(), rg.forbidden_traits)
+        self.assertEqual([], rg.aggregates)
