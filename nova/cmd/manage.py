@@ -66,7 +66,6 @@ from nova.objects import instance as instance_obj
 from nova.objects import instance_mapping as instance_mapping_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
-from nova.objects import request_spec
 from nova import quota
 from nova import rpc
 from nova.scheduler.client import report
@@ -389,12 +388,6 @@ class DbCommands(object):
     # not migratable (or don't need migrating), but all migrations that can
     # complete have finished.
     online_migrations = (
-        # Added in Newton
-        # TODO(mriedem): Remove this in Stein along with the compatibility
-        # code in the api and conductor services; the nova-status upgrade check
-        # added in Rocky is the tool operators can use to make sure they have
-        # completed this migration.
-        request_spec.migrate_instances_add_request_spec,
         # Added in Newton
         keypair_obj.migrate_keypairs_to_api_db,
         # Added in Ocata
