@@ -13,6 +13,7 @@ End user guide
    metadata-service
    certificate-validation
    resize
+   reboot
 
 .. todo:: The rest of this document should probably move to the admin guide.
 
