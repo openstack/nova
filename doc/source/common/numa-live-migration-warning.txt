@@ -1,0 +1,10 @@
+.. important::
+
+   Unless :oslo.config:option:`specifically enabled
+   <workarounds.enable_numa_live_migration>`, live migration is not currently
+   possible for instances with a NUMA topology when using the libvirt driver.
+   A NUMA topology may be specified explicitly or can be added implicitly due
+   to the use of CPU pinning or huge pages. Refer to `bug #1289064`__ for more
+   information.
+
+   __ https://bugs.launchpad.net/nova/+bug/1289064
