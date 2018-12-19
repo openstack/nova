@@ -40,6 +40,7 @@ from nova.i18n import _
 from nova.network import linux_utils as linux_net_utils
 from nova import objects
 from nova.pci import utils as pci_utils
+import nova.privsep.linux_net
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -1250,7 +1251,7 @@ def delete_bridge_dev(dev):
     if linux_net_utils.device_exists(dev):
         try:
             utils.execute('ip', 'link', 'set', dev, 'down', run_as_root=True)
-            utils.execute('brctl', 'delbr', dev, run_as_root=True)
+            nova.privsep.linux_net.delete_bridge(dev)
         except processutils.ProcessExecutionError:
             with excutils.save_and_reraise_exception():
                 LOG.error("Failed removing bridge device: '%s'", dev)
