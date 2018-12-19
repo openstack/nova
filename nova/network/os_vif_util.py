@@ -476,6 +476,18 @@ def _nova_to_osvif_vif_binding_failed(vif):
     raise NotImplementedError()
 
 
+# VIF_TYPE_UNBOUND = 'unbound'
+def _nova_to_osvif_vif_unbound(vif):
+    """Special handler for the "unbound" vif type.
+
+    The "unbound" vif type indicates a port has not been hooked up to backend
+    network driver (OVS, linux bridge, ...). We raise NotImplementedError to
+    indicate to the caller that we cannot handle this type of vif rather than
+    the generic "Unsupported VIF type" error in nova_to_osvif_vif.
+    """
+    raise NotImplementedError()
+
+
 def nova_to_osvif_vif(vif):
     """Convert a Nova VIF model to an os-vif object
 
