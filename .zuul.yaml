@@ -206,7 +206,7 @@
     templates:
       - check-requirements
       - integrated-gate
-      - integrated-gate-py35
+      - integrated-gate-py3
       - openstack-cover-jobs
       - openstack-lower-constraints-jobs
       - openstack-python-jobs
