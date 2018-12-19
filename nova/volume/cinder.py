@@ -200,9 +200,11 @@ def _get_cinderclient_parameters(context):
     service_type, service_name, interface = CONF.cinder.catalog_info.split(':')
 
     service_parameters = {'service_type': service_type,
-                          'service_name': service_name,
                           'interface': interface,
                           'region_name': CONF.cinder.os_region_name}
+    # Only include the service_name if it's provided.
+    if service_name:
+        service_parameters['service_name'] = service_name
 
     if CONF.cinder.endpoint_template:
         url = CONF.cinder.endpoint_template % context.to_dict()
