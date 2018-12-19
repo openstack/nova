@@ -44,7 +44,7 @@ Configure nova-scheduler (Controller)
 
 #. Configure ``nova-scheduler`` as specified in :neutron-doc:`Configure
    nova-scheduler
-   <admin/config-sriov.html#configure-nova-scheduler-controller`.
+   <admin/config-sriov.html#configure-nova-scheduler-controller>`.
 
 #. Restart the ``nova-scheduler`` service.
 
