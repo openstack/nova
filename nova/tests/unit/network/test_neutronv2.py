@@ -4031,6 +4031,9 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         # removed since it does not match with the current host.
         update_port_mock.assert_called_once_with(
             'fake-port-1', {'port': {neutronapi.BINDING_HOST_ID: 'my-host',
+                                    'device_owner':
+                                        'compute:%s' %
+                                        instance.availability_zone,
                                      neutronapi.BINDING_PROFILE: {
                                          'fake_profile': 'fake_data'}}})
 
@@ -4057,7 +4060,10 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         # Assert that update_port was called on the port with a
         # different host but with no binding profile.
         update_port_mock.assert_called_once_with(
-            uuids.portid, {'port': {neutronapi.BINDING_HOST_ID: 'my-host'}})
+            uuids.portid, {'port': {neutronapi.BINDING_HOST_ID: 'my-host',
+                                    'device_owner':
+                                        'compute:%s' %
+                                        instance.availability_zone}})
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_same_host(self,
@@ -4080,7 +4086,9 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         # Assert that update_port was only called on the port without a host.
         update_port_mock.assert_called_once_with(
             'fake-port-2',
-            {'port': {neutronapi.BINDING_HOST_ID: instance.host}})
+            {'port': {neutronapi.BINDING_HOST_ID: instance.host,
+                      'device_owner': 'compute:%s' %
+                                      instance.availability_zone}})
 
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
@@ -4134,6 +4142,7 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
             'fake-port-1',
                 {'port':
                     {neutronapi.BINDING_HOST_ID: 'fake-host',
+                     'device_owner': 'compute:%s' % instance.availability_zone,
                      neutronapi.BINDING_PROFILE:
                         {'pci_slot': '0000:0b:00.1',
                          'physical_network': 'physnet1',
@@ -5609,7 +5618,9 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         ports = {'ports': [{'id': 'test1'}]}
         self.moxed_client.list_ports(**search_opts).AndReturn(ports)
         port_req_body = {'port':
-                         {neutronapi.BINDING_HOST_ID: expected_bind_host}}
+                         {neutronapi.BINDING_HOST_ID: expected_bind_host,
+                          'device_owner': 'compute:%s' %
+                                          self.instance['availability_zone']}}
         self.moxed_client.update_port('test1',
                                       port_req_body).AndReturn(None)
         self.mox.ReplayAll()
