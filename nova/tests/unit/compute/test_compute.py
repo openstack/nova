@@ -8882,7 +8882,8 @@ class ComputeAPITestCase(BaseTestCase):
                 scheduler_hints={'group':
                                      '5b674f73-c8cf-40ef-9965-3b6fe4b304b1'})
 
-    def _test_rebuild(self, vm_state):
+    @mock.patch('nova.objects.RequestSpec')
+    def _test_rebuild(self, mock_reqspec, vm_state=None):
         instance = self._create_fake_instance_obj()
         instance_uuid = instance['uuid']
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
@@ -8913,7 +8914,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         with mock.patch.object(self.compute_api.compute_task_api,
                                'rebuild_instance', fake_rpc_rebuild):
-            image_ref = instance["image_ref"] + '-new_image_ref'
+            image_ref = uuids.new_image_ref
             password = "new_password"
 
             instance.vm_state = vm_state
@@ -8978,7 +8979,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertIn('Unable to find root block device mapping for '
                       'volume-backed instance', six.text_type(ex))
 
-    def test_rebuild_with_deleted_image(self):
+    @mock.patch('nova.objects.RequestSpec')
+    def test_rebuild_with_deleted_image(self, mock_reqspec):
         # If we're given a deleted image by glance, we should not be able to
         # rebuild from it
         instance = self._create_fake_instance_obj(
@@ -8996,7 +8998,8 @@ class ComputeAPITestCase(BaseTestCase):
             self.compute_api.rebuild(self.context, instance,
                                      self.fake_image['id'], 'new_password')
 
-    def test_rebuild_with_too_little_ram(self):
+    @mock.patch('nova.objects.RequestSpec')
+    def test_rebuild_with_too_little_ram(self, mock_reqspec):
         instance = self._create_fake_instance_obj(
             params={'image_ref': FAKE_IMAGE_REF})
         instance.flavor.memory_mb = 64
@@ -9016,7 +9019,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.rebuild(self.context,
                 instance, self.fake_image['id'], 'new_password')
 
-    def test_rebuild_with_too_little_disk(self):
+    @mock.patch('nova.objects.RequestSpec')
+    def test_rebuild_with_too_little_disk(self, mock_reqspec):
         instance = self._create_fake_instance_obj(
             params={'image_ref': FAKE_IMAGE_REF})
 
@@ -9046,7 +9050,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.rebuild(self.context,
                 instance, self.fake_image['id'], 'new_password')
 
-    def test_rebuild_with_just_enough_ram_and_disk(self):
+    @mock.patch('nova.objects.RequestSpec')
+    def test_rebuild_with_just_enough_ram_and_disk(self, mock_reqspec):
         instance = self._create_fake_instance_obj(
             params={'image_ref': FAKE_IMAGE_REF})
 
@@ -9070,7 +9075,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.rebuild(self.context,
                 instance, self.fake_image['id'], 'new_password')
 
-    def test_rebuild_with_no_ram_and_disk_reqs(self):
+    @mock.patch('nova.objects.RequestSpec')
+    def test_rebuild_with_no_ram_and_disk_reqs(self, mock_reqspec):
         instance = self._create_fake_instance_obj(
             params={'image_ref': FAKE_IMAGE_REF})
 
@@ -9091,7 +9097,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.rebuild(self.context,
                 instance, self.fake_image['id'], 'new_password')
 
-    def test_rebuild_with_too_large_image(self):
+    @mock.patch('nova.objects.RequestSpec')
+    def test_rebuild_with_too_large_image(self, mock_reqspec):
         instance = self._create_fake_instance_obj(
             params={'image_ref': FAKE_IMAGE_REF})
 
@@ -12501,7 +12508,8 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         self.assertRaises(exception.FlavorNotFound,
             self.compute_api.create, self.context, self.inst_type, None)
 
-    def test_can_resize_to_visible_instance_type(self):
+    @mock.patch('nova.objects.RequestSpec')
+    def test_can_resize_to_visible_instance_type(self, mock_reqspec):
         instance = self._create_fake_instance_obj()
         orig_get_flavor_by_flavor_id =\
                 flavors.get_flavor_by_flavor_id

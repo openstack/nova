@@ -239,6 +239,18 @@ class ControllerTest(test.TestCase):
         policy.init()
         self.addCleanup(policy.reset)
         fake_network.stub_out_nw_api_get_instance_nw_info(self)
+        # Assume that anything that hits the compute API and looks for a
+        # RequestSpec doesn't care about it, since testing logic that deep
+        # should be done in nova.tests.unit.compute.test_compute_api.
+        mock_reqspec = mock.patch('nova.objects.RequestSpec')
+        mock_reqspec.start()
+        self.addCleanup(mock_reqspec.stop)
+        # Similarly we shouldn't care about anything hitting conductor from
+        # these tests.
+        mock_conductor = mock.patch.object(
+            self.controller.compute_api, 'compute_task_api')
+        mock_conductor.start()
+        self.addCleanup(mock_conductor.stop)
 
 
 class ServersControllerTest(ControllerTest):

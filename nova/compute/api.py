@@ -3304,6 +3304,9 @@ class API(base.Base):
         else:
             orig_image_ref = instance.image_ref
 
+        request_spec = objects.RequestSpec.get_by_instance_uuid(
+            context, instance.uuid)
+
         self._checks_for_create_and_rebuild(context, image_id, image,
                 flavor, metadata, files_to_inject, root_bdm)
 
@@ -3365,38 +3368,31 @@ class API(base.Base):
         # attached RequestSpec object but let's consider that the operator only
         # half migrated all their instances in the meantime.
         host = instance.host
-        try:
-            request_spec = objects.RequestSpec.get_by_instance_uuid(
-                context, instance.uuid)
-            # If a new image is provided on rebuild, we will need to run
-            # through the scheduler again, but we want the instance to be
-            # rebuilt on the same host it's already on.
-            if orig_image_ref != image_href:
-                # We have to modify the request spec that goes to the scheduler
-                # to contain the new image. We persist this since we've already
-                # changed the instance.image_ref above so we're being
-                # consistent.
-                request_spec.image = objects.ImageMeta.from_dict(image)
-                request_spec.save()
-                if 'scheduler_hints' not in request_spec:
-                    request_spec.scheduler_hints = {}
-                # Nuke the id on this so we can't accidentally save
-                # this hint hack later
-                del request_spec.id
+        # If a new image is provided on rebuild, we will need to run
+        # through the scheduler again, but we want the instance to be
+        # rebuilt on the same host it's already on.
+        if orig_image_ref != image_href:
+            # We have to modify the request spec that goes to the scheduler
+            # to contain the new image. We persist this since we've already
+            # changed the instance.image_ref above so we're being
+            # consistent.
+            request_spec.image = objects.ImageMeta.from_dict(image)
+            request_spec.save()
+            if 'scheduler_hints' not in request_spec:
+                request_spec.scheduler_hints = {}
+            # Nuke the id on this so we can't accidentally save
+            # this hint hack later
+            del request_spec.id
 
-                # NOTE(danms): Passing host=None tells conductor to
-                # call the scheduler. The _nova_check_type hint
-                # requires that the scheduler returns only the same
-                # host that we are currently on and only checks
-                # rebuild-related filters.
-                request_spec.scheduler_hints['_nova_check_type'] = ['rebuild']
-                request_spec.force_hosts = [instance.host]
-                request_spec.force_nodes = [instance.node]
-                host = None
-        except exception.RequestSpecNotFound:
-            # Some old instances can still have no RequestSpec object attached
-            # to them, we need to support the old way
-            request_spec = None
+            # NOTE(danms): Passing host=None tells conductor to
+            # call the scheduler. The _nova_check_type hint
+            # requires that the scheduler returns only the same
+            # host that we are currently on and only checks
+            # rebuild-related filters.
+            request_spec.scheduler_hints['_nova_check_type'] = ['rebuild']
+            request_spec.force_hosts = [instance.host]
+            request_spec.force_nodes = [instance.node]
+            host = None
 
         self.compute_task_api.rebuild_instance(context, instance=instance,
                 new_pass=admin_password, injected_files=files_to_inject,
@@ -3453,6 +3449,16 @@ class API(base.Base):
         self._check_quota_for_upsize(context, instance, instance.flavor,
                                      instance.old_flavor)
 
+        # Conductor updated the RequestSpec.flavor during the initial resize
+        # operation to point at the new flavor, so we need to update the
+        # RequestSpec to point back at the original flavor, otherwise
+        # subsequent move operations through the scheduler will be using the
+        # wrong flavor.
+        reqspec = objects.RequestSpec.get_by_instance_uuid(
+            context, instance.uuid)
+        reqspec.flavor = instance.old_flavor
+        reqspec.save()
+
         instance.task_state = task_states.RESIZE_REVERTING
         instance.save(expected_task_state=[None])
 
@@ -3461,21 +3467,6 @@ class API(base.Base):
 
         self._record_action_start(context, instance,
                                   instance_actions.REVERT_RESIZE)
-
-        # Conductor updated the RequestSpec.flavor during the initial resize
-        # operation to point at the new flavor, so we need to update the
-        # RequestSpec to point back at the original flavor, otherwise
-        # subsequent move operations through the scheduler will be using the
-        # wrong flavor.
-        try:
-            reqspec = objects.RequestSpec.get_by_instance_uuid(
-                context, instance.uuid)
-            reqspec.flavor = instance.old_flavor
-            reqspec.save()
-        except exception.RequestSpecNotFound:
-            # TODO(mriedem): Make this a failure in Stein when we drop
-            # compatibility for missing request specs.
-            pass
 
         # TODO(melwitt): We're not rechecking for strict quota here to guard
         # against going over quota during a race at this time because the
@@ -3601,15 +3592,19 @@ class API(base.Base):
                                          current_instance_type,
                                          new_instance_type)
 
-        instance.task_state = task_states.RESIZE_PREP
-        instance.progress = 0
-        instance.update(extra_instance_updates)
-        instance.save(expected_task_state=[None])
-
         filter_properties = {'ignore_hosts': []}
 
         if not CONF.allow_resize_to_same_host:
             filter_properties['ignore_hosts'].append(instance.host)
+
+        request_spec = objects.RequestSpec.get_by_instance_uuid(
+            context, instance.uuid)
+        request_spec.ignore_hosts = filter_properties['ignore_hosts']
+
+        instance.task_state = task_states.RESIZE_PREP
+        instance.progress = 0
+        instance.update(extra_instance_updates)
+        instance.save(expected_task_state=[None])
 
         if self.cell_type == 'api':
             # Create migration record.
@@ -3624,39 +3619,21 @@ class API(base.Base):
             self._record_action_start(context, instance,
                                       instance_actions.RESIZE)
 
-        # NOTE(sbauza): The migration script we provided in Newton should make
-        # sure that all our instances are currently migrated to have an
-        # attached RequestSpec object but let's consider that the operator only
-        # half migrated all their instances in the meantime.
-        try:
-            request_spec = objects.RequestSpec.get_by_instance_uuid(
-                context, instance.uuid)
-            request_spec.ignore_hosts = filter_properties['ignore_hosts']
-        except exception.RequestSpecNotFound:
-            # Some old instances can still have no RequestSpec object attached
-            # to them, we need to support the old way
-            if host_name is not None:
-                # If there is no request spec we cannot honor the request
-                # and we need to fail.
-                raise exception.CannotMigrateWithTargetHost()
-            request_spec = None
-
         # TODO(melwitt): We're not rechecking for strict quota here to guard
         # against going over quota during a race at this time because the
         # resource consumption for this operation is written to the database
         # by compute.
         scheduler_hint = {'filter_properties': filter_properties}
 
-        if request_spec:
-            if host_name is None:
-                # If 'host_name' is not specified,
-                # clear the 'requested_destination' field of the RequestSpec.
-                request_spec.requested_destination = None
-            else:
-                # Set the host and the node so that the scheduler will
-                # validate them.
-                request_spec.requested_destination = objects.Destination(
-                    host=node.host, node=node.hypervisor_hostname)
+        if host_name is None:
+            # If 'host_name' is not specified,
+            # clear the 'requested_destination' field of the RequestSpec.
+            request_spec.requested_destination = None
+        else:
+            # Set the host and the node so that the scheduler will
+            # validate them.
+            request_spec.requested_destination = objects.Destination(
+                host=node.host, node=node.hypervisor_hostname)
 
         self.compute_task_api.resize_instance(context, instance,
                 extra_instance_updates, scheduler_hint=scheduler_hint,
@@ -3707,18 +3684,14 @@ class API(base.Base):
         vm_states.SHELVED_OFFLOADED])
     def unshelve(self, context, instance):
         """Restore a shelved instance."""
+        request_spec = objects.RequestSpec.get_by_instance_uuid(
+            context, instance.uuid)
+
         instance.task_state = task_states.UNSHELVING
         instance.save(expected_task_state=[None])
 
         self._record_action_start(context, instance, instance_actions.UNSHELVE)
 
-        try:
-            request_spec = objects.RequestSpec.get_by_instance_uuid(
-                context, instance.uuid)
-        except exception.RequestSpecNotFound:
-            # Some old instances can still have no RequestSpec object attached
-            # to them, we need to support the old way
-            request_spec = None
         self.compute_task_api.unshelve_instance(context, instance,
                                                 request_spec)
 
@@ -4487,6 +4460,9 @@ class API(base.Base):
             # state.
             nodes = objects.ComputeNodeList.get_all_by_host(context, host_name)
 
+        request_spec = objects.RequestSpec.get_by_instance_uuid(
+            context, instance.uuid)
+
         instance.task_state = task_states.MIGRATING
         instance.save(expected_task_state=[None])
 
@@ -4502,14 +4478,6 @@ class API(base.Base):
             self.consoleauth_rpcapi.delete_tokens_for_instance(
                 context, instance.uuid)
 
-        try:
-            request_spec = objects.RequestSpec.get_by_instance_uuid(
-                context, instance.uuid)
-        except exception.RequestSpecNotFound:
-            # Some old instances can still have no RequestSpec object attached
-            # to them, we need to support the old way
-            request_spec = None
-
         # NOTE(sbauza): Force is a boolean by the new related API version
         if force is False and host_name:
             # Unset the host to make sure we call the scheduler
@@ -4520,19 +4488,13 @@ class API(base.Base):
             # compute per service but doesn't support live migrations,
             # let's provide the first one.
             target = nodes[0]
-            if request_spec:
-                # TODO(sbauza): Hydrate a fake spec for old instances not yet
-                # having a request spec attached to them (particularly true for
-                # cells v1). For the moment, let's keep the same behaviour for
-                # all the instances but provide the destination only if a spec
-                # is found.
-                destination = objects.Destination(
-                    host=target.host,
-                    node=target.hypervisor_hostname
-                )
-                # This is essentially a hint to the scheduler to only consider
-                # the specified host but still run it through the filters.
-                request_spec.requested_destination = destination
+            destination = objects.Destination(
+                host=target.host,
+                node=target.hypervisor_hostname
+            )
+            # This is essentially a hint to the scheduler to only consider
+            # the specified host but still run it through the filters.
+            request_spec.requested_destination = destination
 
         try:
             self.compute_task_api.live_migrate_instance(context, instance,
@@ -4657,6 +4619,9 @@ class API(base.Base):
                       'expected to be down, but it was up.', inst_host)
             raise exception.ComputeServiceInUse(host=inst_host)
 
+        request_spec = objects.RequestSpec.get_by_instance_uuid(
+            context, instance.uuid)
+
         instance.task_state = task_states.REBUILDING
         instance.save(expected_task_state=[None])
         self._record_action_start(context, instance, instance_actions.EVACUATE)
@@ -4680,14 +4645,6 @@ class API(base.Base):
             action=fields_obj.NotificationAction.EVACUATE,
             source=fields_obj.NotificationSource.API)
 
-        try:
-            request_spec = objects.RequestSpec.get_by_instance_uuid(
-                context, instance.uuid)
-        except exception.RequestSpecNotFound:
-            # Some old instances can still have no RequestSpec object attached
-            # to them, we need to support the old way
-            request_spec = None
-
         # NOTE(sbauza): Force is a boolean by the new related API version
         if force is False and host:
             nodes = objects.ComputeNodeList.get_all_by_host(context, host)
@@ -4697,17 +4654,11 @@ class API(base.Base):
             # compute per service but doesn't support evacuations,
             # let's provide the first one.
             target = nodes[0]
-            if request_spec:
-                # TODO(sbauza): Hydrate a fake spec for old instances not yet
-                # having a request spec attached to them (particularly true for
-                # cells v1). For the moment, let's keep the same behaviour for
-                # all the instances but provide the destination only if a spec
-                # is found.
-                destination = objects.Destination(
-                    host=target.host,
-                    node=target.hypervisor_hostname
-                )
-                request_spec.requested_destination = destination
+            destination = objects.Destination(
+                host=target.host,
+                node=target.hypervisor_hostname
+            )
+            request_spec.requested_destination = destination
 
         return self.compute_task_api.rebuild_instance(context,
                        instance=instance,
