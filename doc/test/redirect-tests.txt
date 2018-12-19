@@ -69,3 +69,4 @@
 /nova/latest/vmstates.html 301 /nova/latest/reference/vm-states.html
 /nova/latest/wsgi.html 301 /nova/latest/user/wsgi.html
 /nova/latest/user/cellsv2_layout.html 301 /nova/latest/user/cellsv2-layout.html
+/nova/latest/user/placement.html 301 /placement/latest/
