@@ -87,7 +87,7 @@ Enable PCI passthrough (Compute)
 
 Enable VT-d and IOMMU. For more information, refer to steps one and two in
 :neutron-doc:`Create Virtual Functions
-<admin/config-sriov.html#create-virtual-functions-compute`.
+<admin/config-sriov.html#create-virtual-functions-compute>`.
 
 For Hyper-V compute nodes, the requirements are as follows:
 
