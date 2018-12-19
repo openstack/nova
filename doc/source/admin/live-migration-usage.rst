@@ -312,3 +312,7 @@ To make live-migration succeed, you have several options:
 
      - Post-copy may lead to an increased page fault rate during migration,
        which can slow the instance down.
+
+If live migrations routinely timeout or fail during cleanup operations due
+to the user token timing out, consider configuring nova to use
+:ref:`service user tokens <user_token_timeout>`.
