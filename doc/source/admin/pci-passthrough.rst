@@ -80,7 +80,7 @@ Configure a flavor to request two PCI devices, each with ``vendor_id`` of
    # openstack flavor set m1.large --property "pci_passthrough:alias"="a1:2"
 
 For more information about the syntax for ``pci_passthrough:alias``, refer to
-:doc:`/admin/flavors`.
+:doc:`/user/flavors`.
 
 Enable PCI passthrough (Compute)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
