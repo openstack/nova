@@ -65,6 +65,10 @@ Create a snapshot of the instance
 
       $ openstack server image create --name myInstanceSnapshot myInstance
 
+   If snapshot operations routinely fail because the user token times out
+   while uploading a large disk image, consider configuring nova to use
+   :ref:`service user tokens <user_token_timeout>`.
+
 #. Use the :command:`openstack image list` command to check the status
    until the status is ``ACTIVE``:
 
