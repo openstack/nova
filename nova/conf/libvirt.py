@@ -255,9 +255,9 @@ Related options:
 * ``live_migration_uri``: If ``live_migration_uri`` value is not None, the
   scheme used for live migration is taken from ``live_migration_uri`` instead.
 """),
-    cfg.StrOpt('live_migration_inbound_addr',
-               help="""
-The IP address or hostname to be used as the target for live migration traffic.
+    cfg.HostAddressOpt('live_migration_inbound_addr',
+                       help="""
+Target used for live migration traffic.
 
 If this option is set to None, the hostname of the migration target compute
 node will be used.
@@ -266,10 +266,6 @@ This option is useful in environments where the live-migration traffic can
 impact the network plane significantly. A separate network for live-migration
 traffic can then use this config option and avoids the impact on the
 management network.
-
-Possible values:
-
-* A valid IP address or hostname, else None.
 
 Related options:
 
