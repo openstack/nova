@@ -32,7 +32,6 @@ from sqlalchemy import func as sqlfunc
 from sqlalchemy import MetaData, Table, and_, select
 from sqlalchemy.sql import false
 
-from nova.api.openstack.placement import db_api as placement_db
 from nova.cmd import common as cmd_common
 import nova.conf
 from nova import config
@@ -40,7 +39,6 @@ from nova import context as nova_context
 from nova.db.sqlalchemy import api as db_session
 from nova.i18n import _
 from nova.objects import cell_mapping as cell_mapping_obj
-from nova import rc_fields as fields
 from nova import utils
 from nova import version
 
@@ -190,32 +188,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     @staticmethod
-    def _count_compute_resource_providers():
-        """Returns the number of compute resource providers in the API database
-
-        The resource provider count is filtered based on resource providers
-        which have inventories records for the VCPU resource class, which is
-        assumed to only come from the ResourceTracker in compute nodes.
-        """
-        # TODO(mriedem): If/when we support a separate placement database this
-        # will need to change to just use the REST API.
-
-        # Get the VCPU resource class ID for filtering.
-        vcpu_rc_id = fields.ResourceClass.STANDARD.index(
-            fields.ResourceClass.VCPU)
-
-        # The inventories table has a unique constraint per resource provider
-        # and resource class, so we can simply count the number of inventories
-        # records for the given resource class and those will uniquely identify
-        # the number of resource providers we care about.
-        # FIXME(cdent): This will be a different project soon.
-        meta = MetaData(bind=placement_db.get_placement_engine())
-        inventories = Table('inventories', meta, autoload=True)
-        return select([sqlfunc.count()]).select_from(
-            inventories).where(
-                   inventories.c.resource_class_id == vcpu_rc_id).scalar()
-
-    @staticmethod
     def _get_non_cell0_mappings():
         """Queries the API database for non-cell0 cell mappings."""
         meta = MetaData(bind=db_session.get_api_engine())
@@ -223,93 +195,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         return cell_mappings.select().where(
             cell_mappings.c.uuid !=
                 cell_mapping_obj.CellMapping.CELL0_UUID).execute().fetchall()
-
-    def _check_resource_providers(self):
-        """Checks the status of resource provider reporting.
-
-        This check relies on the cells v2 check passing because it queries the
-        cells for compute nodes using cell mappings.
-
-        This check relies on the placement service running because if it's not
-        then there won't be any resource providers for the filter scheduler to
-        use during instance build and move requests.
-
-        Note that in Ocata, the filter scheduler will only use placement if
-        the minimum nova-compute service version in the deployment is >= 16
-        which signals when nova-compute will fail to start if placement is not
-        configured on the compute. Otherwise the scheduler will fallback
-        to pulling compute nodes from the database directly as it has always
-        done. That fallback will be removed in Pike.
-        """
-
-        # Get the total count of resource providers from the API DB that can
-        # host compute resources. This might be 0 so we have to figure out if
-        # this is a fresh install and if so we don't consider this an error.
-        num_rps = self._count_compute_resource_providers()
-
-        cell_mappings = self._get_non_cell0_mappings()
-        ctxt = nova_context.get_admin_context()
-        num_computes = 0
-        if cell_mappings:
-            for cell_mapping in cell_mappings:
-                with nova_context.target_cell(ctxt, cell_mapping) as cctxt:
-                    num_computes += self._count_compute_nodes(cctxt)
-        else:
-            # There are no cell mappings, cells v2 was maybe not deployed in
-            # Newton, but placement might have been, so let's check the single
-            # database for compute nodes.
-            num_computes = self._count_compute_nodes()
-
-        if num_rps == 0:
-
-            if num_computes != 0:
-                # This is a warning because there are compute nodes in the
-                # database but nothing is reporting resource providers to the
-                # placement service. This will not result in scheduling
-                # failures in Ocata because of the fallback that is in place
-                # but we signal it as a warning since there is work to do.
-                msg = (_('There are no compute resource providers in the '
-                         'Placement service but there are %(num_computes)s '
-                         'compute nodes in the deployment. This means no '
-                         'compute nodes are reporting into the Placement '
-                         'service and need to be upgraded and/or fixed. See '
-                         '%(placement_docs_link)s for more details.') %
-                       {'num_computes': num_computes,
-                        'placement_docs_link': PLACEMENT_DOCS_LINK})
-                return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
-
-            # There are no resource providers and no compute nodes so we
-            # assume this is a fresh install and move on. We should return a
-            # success code with a message here though.
-            msg = (_('There are no compute resource providers in the '
-                     'Placement service nor are there compute nodes in the '
-                     'database. Remember to configure new compute nodes to '
-                     'report into the Placement service. See '
-                     '%(placement_docs_link)s for more details.') %
-                   {'placement_docs_link': PLACEMENT_DOCS_LINK})
-            return upgradecheck.Result(upgradecheck.Code.SUCCESS, msg)
-
-        elif num_rps < num_computes:
-            # There are fewer resource providers than compute nodes, so return
-            # a warning explaining that the deployment might be underutilized.
-            # Technically this is not going to result in scheduling failures in
-            # Ocata because of the fallback that is in place if there are older
-            # compute nodes still, but it is probably OK to leave the wording
-            # on this as-is to prepare for when the fallback is removed in
-            # Pike.
-            msg = (_('There are %(num_resource_providers)s compute resource '
-                     'providers and %(num_compute_nodes)s compute nodes in '
-                     'the deployment. Ideally the number of compute resource '
-                     'providers should equal the number of enabled compute '
-                     'nodes otherwise the cloud may be underutilized. '
-                     'See %(placement_docs_link)s for more details.') %
-                   {'num_resource_providers': num_rps,
-                    'num_compute_nodes': num_computes,
-                    'placement_docs_link': PLACEMENT_DOCS_LINK})
-            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
-        else:
-            # We have RPs >= CNs which is what we want to see.
-            return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     @staticmethod
     def _is_ironic_instance_migrated(extras, inst):
@@ -626,8 +511,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         (_('Cells v2'), _check_cellsv2),
         # Added in Ocata
         (_('Placement API'), _check_placement),
-        # Added in Ocata
-        (_('Resource Providers'), _check_resource_providers),
         # Added in Rocky (but also useful going back to Pike)
         (_('Ironic Flavor Migration'), _check_ironic_flavor_migration),
         # Added in Rocky (but is backportable to Ocata)

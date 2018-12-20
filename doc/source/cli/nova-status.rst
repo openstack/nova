@@ -124,6 +124,9 @@ Upgrade
   * Checks are added for the **nova-consoleauth** service to warn and provide
     additional instructions to set **[workarounds]enable_consoleauth = True**
     while performing a live/rolling upgrade.
+  * The "Resource Providers" upgrade check was removed since the placement
+    service code is being extracted from nova and the related tables are no
+    longer used in the ``nova_api`` database.
 
 See Also
 ========
