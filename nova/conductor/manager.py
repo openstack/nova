@@ -904,6 +904,7 @@ class ComputeTaskManager(base.Base):
                 LOG.warning('Specified host %s for evacuate is '
                             'invalid.', host, instance=instance)
 
+    # TODO(mriedem): Make request_spec required in ComputeTaskAPI RPC v2.0.
     @targets_cell
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
@@ -968,19 +969,7 @@ class ComputeTaskManager(base.Base):
                 # In either case, the API passes host=None but sets up the
                 # RequestSpec.requested_destination field for the specified
                 # host.
-                if not request_spec:
-                    # NOTE(sbauza): We were unable to find an original
-                    # RequestSpec object - probably because the instance is old
-                    # We need to mock that the old way
-                    filter_properties = {'ignore_hosts': [instance.host]}
-                    # build_request_spec expects a primitive image dict
-                    image_meta = nova_object.obj_to_primitive(
-                        instance.image_meta)
-                    request_spec = scheduler_utils.build_request_spec(
-                        image_meta, [instance])
-                    request_spec = objects.RequestSpec.from_primitives(
-                        context, request_spec, filter_properties)
-                elif recreate:
+                if recreate:
                     # NOTE(sbauza): Augment the RequestSpec object by excluding
                     # the source host for avoiding the scheduler to pick it
                     request_spec.ignore_hosts = request_spec.ignore_hosts or []
