@@ -520,11 +520,14 @@ class BuildRequestListTestCase(test.NoDBTestCase):
             sort_dirs=['asc'])
 
         self.assertIsInstance(req_list, objects.BuildRequestList)
-        self.assertEqual(2, len(req_list))
-        for i, req in enumerate(reqs[1:]):
-            self.assertEqual(req.instance_uuid, req_list[i].instance_uuid)
-            objects.base.obj_equal_prims(req.instance,
-                                         req_list[i].instance)
+        self.assertEqual(1, len(req_list))
+        req = req_list[0]
+        expected_req = reqs[2]
+        # The returned build request should be the last one in the reqs list
+        # since the marker is the 2nd item in the list (of 3).
+        self.assertEqual(expected_req.instance_uuid, req.instance_uuid)
+        objects.base.obj_equal_prims(expected_req.instance,
+                                     req.instance)
 
     def test_get_by_filters_marker_not_found(self):
         self._create_req()
@@ -565,7 +568,7 @@ class BuildRequestListTestCase(test.NoDBTestCase):
 
         self.assertIsInstance(req_list, objects.BuildRequestList)
         self.assertEqual(2, len(req_list))
-        for i, req in enumerate(reqs[1:3]):
+        for i, req in enumerate(reqs[2:]):
             self.assertEqual(req.instance_uuid, req_list[i].instance_uuid)
             objects.base.obj_equal_prims(req.instance,
                                          req_list[i].instance)
@@ -585,8 +588,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
             sort_keys=['id'], sort_dirs=['asc'])
 
         self.assertIsInstance(req_list, objects.BuildRequestList)
-        self.assertEqual(3, len(req_list))
-        for i, req in enumerate(reqs[1:]):
+        self.assertEqual(2, len(req_list))
+        for i, req in enumerate(reqs[2:]):
             self.assertEqual(req.instance_uuid, req_list[i].instance_uuid)
             objects.base.obj_equal_prims(req.instance,
                                          req_list[i].instance)
