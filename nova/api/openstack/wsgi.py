@@ -96,8 +96,10 @@ class Request(wsgi.Request):
                     content_type = possible_type
 
             if not content_type:
-                content_type = self.accept.best_match(
+                best_matches = self.accept.acceptable_offers(
                     get_supported_content_types())
+                if best_matches:
+                    content_type = best_matches[0][0]
 
             self.environ['nova.best_content_type'] = (content_type or
                                                       'application/json')
@@ -134,8 +136,19 @@ class Request(wsgi.Request):
         """
         if not self.accept_language:
             return None
-        return self.accept_language.best_match(
-                i18n.get_available_languages())
+
+        # NOTE(takashin): To decide the default behavior, 'default' is
+        # preferred over 'default_tag' because that is return as it is when
+        # no match. This is also little tricky that 'default' value cannot be
+        # None. At least one of default_tag or default must be supplied as
+        # an argument to the method, to define the defaulting behavior.
+        # So passing a sentinal value to return None from this function.
+        best_match = self.accept_language.lookup(
+            i18n.get_available_languages(), default='fake_LANG')
+
+        if best_match == 'fake_LANG':
+            best_match = None
+        return best_match
 
     def set_api_version_request(self):
         """Set API version request based on the request header information."""

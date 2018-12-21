@@ -50,7 +50,7 @@ class RequestTest(MicroversionedTest):
         super(RequestTest, self).setUp()
         self.stub_out('nova.i18n.get_available_languages',
                       lambda *args, **kwargs:
-                      ['en_GB', 'en_AU', 'de', 'zh_CN', 'en_US'])
+                      ['en-GB', 'en-AU', 'de', 'zh-CN', 'en-US', 'ja-JP'])
 
     def test_content_type_missing(self):
         request = wsgi.Request.blank('/tests/123', method='POST')
@@ -76,31 +76,49 @@ class RequestTest(MicroversionedTest):
         result = request.best_match_content_type()
         self.assertEqual(result, "application/json")
 
+    def test_content_type_accept_with_quality_values(self):
+        request = wsgi.Request.blank('/tests/123')
+        request.headers["Accept"] = (
+            "application/json;q=0.4,"
+            "application/vnd.openstack.compute+json;q=0.6")
+        result = request.best_match_content_type()
+        self.assertEqual("application/vnd.openstack.compute+json", result)
+
     def test_from_request(self):
         request = wsgi.Request.blank('/')
         accepted = 'bogus;q=1, en-gb;q=0.7,en-us,en;q=0.5,*;q=0.7'
         request.headers = {'Accept-Language': accepted}
-        self.assertEqual(request.best_match_language(), 'en_US')
+        self.assertEqual(request.best_match_language(), 'en-US')
 
     def test_asterisk(self):
-        # asterisk should match first available if there
-        # are not any other available matches
+        # In the section 3.4 of RFC4647, it says as follows:
+        # If the language range "*"(asterisk) is the only one
+        # in the language priority list or if no other language range
+        # follows, the default value is computed and returned.
+        #
+        # In this case, the default value 'None' is returned.
         request = wsgi.Request.blank('/')
-        accepted = '*,es;q=0.5'
+        accepted = '*;q=0.5'
         request.headers = {'Accept-Language': accepted}
-        self.assertEqual(request.best_match_language(), 'en_GB')
+        self.assertIsNone(request.best_match_language())
 
-    def test_prefix(self):
+    def test_asterisk_followed_by_other_language(self):
         request = wsgi.Request.blank('/')
-        accepted = 'zh'
+        accepted = '*,ja-jp;q=0.5'
         request.headers = {'Accept-Language': accepted}
-        self.assertEqual(request.best_match_language(), 'zh_CN')
+        self.assertEqual('ja-JP', request.best_match_language())
+
+    def test_truncate(self):
+        request = wsgi.Request.blank('/')
+        accepted = 'de-CH'
+        request.headers = {'Accept-Language': accepted}
+        self.assertEqual('de', request.best_match_language())
 
     def test_secondary(self):
         request = wsgi.Request.blank('/')
         accepted = 'nn,en-gb;q=0.5'
         request.headers = {'Accept-Language': accepted}
-        self.assertEqual(request.best_match_language(), 'en_GB')
+        self.assertEqual('en-GB', request.best_match_language())
 
     def test_none_found(self):
         request = wsgi.Request.blank('/')
