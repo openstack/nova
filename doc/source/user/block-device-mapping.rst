@@ -127,7 +127,7 @@ fields (in addition to the ones that were already there):
   * `snapshot`
   * `blank`
 
-* dest_type  - this can have one of the following values:
+* destination_type  - this can have one of the following values:
 
   * `local`
   * `volume`
@@ -169,10 +169,10 @@ fields (in addition to the ones that were already there):
   snapshot will use the same volume_type. If a user wishes to change that
   volume type in the image metadata, they can do so via the image API.
 
-Valid source / dest combinations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Valid source / destination combinations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Combination of the ``source_type`` and ``dest_type`` will define the
+Combination of the ``source_type`` and ``destination_type`` will define the
 kind of block device the entry is referring to. The following
 combinations are supported:
 
