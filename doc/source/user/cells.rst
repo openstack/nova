@@ -83,6 +83,10 @@ Cells V2
 * `Newton Summit Video - Nova Cells V2: What's Going On? <https://www.openstack.org/videos/austin-2016/nova-cells-v2-whats-going-on>`_
 * `Pike Summit Video - Scaling Nova: How CellsV2 Affects Your Deployment <https://www.openstack.org/videos/boston-2017/scaling-nova-how-cellsv2-affects-your-deployment>`_
 * `Queens Summit Video - Add Cellsv2 to your existing Nova deployment <https://www.openstack.org/videos/sydney-2017/adding-cellsv2-to-your-existing-nova-deployment>`_
+* `Rocky Summit Video - Moving from CellsV1 to CellsV2 at CERN
+  <https://www.openstack.org/videos/summits/vancouver-2018/moving-from-cellsv1-to-cellsv2-at-cern>`_
+* `Stein Summit Video - Scaling Nova with CellsV2: The Nova Developer and the CERN Operator perspective
+  <https://www.openstack.org/videos/summits/berlin-2018/scaling-nova-with-cellsv2-the-nova-developer-and-the-cern-operator-perspective>`_
 
 Manifesto
 ~~~~~~~~~
