@@ -5441,7 +5441,10 @@ class ComputeManager(manager.Manager):
         else:
             console_info = self.driver.get_vnc_console(ctxt, instance)
 
-        return console_info.port == port
+        # Some drivers may return an int on console_info.port but the port
+        # variable in this method is a string, so cast to be sure we are
+        # comparing the correct types.
+        return str(console_info.port) == port
 
     @wrap_exception()
     @reverts_task_state
