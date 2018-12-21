@@ -69,8 +69,11 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
             if netdisk_properties['secret_uuid'] is not None:
                 conf.auth_secret_uuid = netdisk_properties['secret_uuid']
             else:
+                # If we're using the rbd_secret_uuid from nova.conf we need to
+                # use the rbd_user from nova.conf as well.
                 LOG.debug('Falling back to Nova configuration for RBD auth '
-                          'secret_uuid value.')
+                          'secret_uuid and username values.')
+                conf.auth_username = CONF.libvirt.rbd_user
                 conf.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid
             # secret_type is always hard-coded to 'ceph' in cinder
             conf.auth_secret_type = netdisk_properties['secret_type']
