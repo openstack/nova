@@ -139,6 +139,9 @@ class TestNeutronClient(test.NoDBTestCase):
         self.assertEqual(['internal', 'public'], cl.httpclient.interface)
         self.assertIsNone(cl.httpclient.region_name)
         self.assertIsNone(cl.httpclient.endpoint_override)
+        self.assertIsNotNone(cl.httpclient.global_request_id)
+        self.assertEqual(my_context.global_id,
+                         cl.httpclient.global_request_id)
 
     def test_ksa_adapter_loading(self):
         """Test ksa loading path with specified values."""
