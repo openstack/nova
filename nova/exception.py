@@ -23,6 +23,7 @@ SHOULD include dedicated exception logging.
 """
 
 from oslo_log import log as logging
+import six
 
 import webob.exc
 from webob import util as woutil
@@ -77,15 +78,16 @@ class NovaException(Exception):
             except AttributeError:
                 pass
 
-        if not message:
-            try:
+        try:
+            if not message:
                 message = self.msg_fmt % kwargs
-
-            except Exception:
-                # NOTE(melwitt): This is done in a separate method so it can be
-                # monkey-patched during testing to make it a hard failure.
-                self._log_exception()
-                message = self.msg_fmt
+            else:
+                message = six.text_type(message)
+        except Exception:
+            # NOTE(melwitt): This is done in a separate method so it can be
+            # monkey-patched during testing to make it a hard failure.
+            self._log_exception()
+            message = self.msg_fmt
 
         self.message = message
         super(NovaException, self).__init__(message)

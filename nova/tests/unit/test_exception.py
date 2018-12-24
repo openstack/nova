@@ -153,6 +153,8 @@ class NovaExceptionTestCase(test.NoDBTestCase):
     def test_error_msg(self):
         self.assertEqual('test',
                          six.text_type(exception.NovaException('test')))
+        self.assertEqual('test',
+                         exception.NovaException(Exception('test')).message)
 
     def test_default_error_msg_with_kwargs(self):
         class FakeNovaException(exception.NovaException):
