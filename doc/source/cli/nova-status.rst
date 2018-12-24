@@ -127,6 +127,8 @@ Upgrade
   * The "Resource Providers" upgrade check was removed since the placement
     service code is being extracted from nova and the related tables are no
     longer used in the ``nova_api`` database.
+  * The "API Service Version" upgrade check was removed since the corresponding
+    code for that check was removed in Stein.
 
 See Also
 ========
