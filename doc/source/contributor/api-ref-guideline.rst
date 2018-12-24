@@ -357,6 +357,45 @@ If a parameter must be specified in the request or always appears
 in the response in the micoversion added or later,
 the parameter must be defined as required (``true``).
 
+Microversion
+~~~~~~~~~~~~
+
+If a parameter is available starting from a microversion,
+the microversion must be described by ``min_version``
+in the parameter file.
+However, if the minimum microversion is the same as a microversion
+that the API itself is added, it is not necessary to describe the microversion.
+
+For example::
+
+  aggregate_uuid:
+    description: |
+      The UUID of the host aggregate.
+    in: body
+    required: true
+    type: string
+    min_version: 2.41
+
+This example describes that ``aggregate_uuid`` is available starting
+from microversion 2.41.
+
+If a parameter is available up to a microversion,
+the microversion must be described by ``max_version``
+in the parameter file.
+
+For example::
+
+  security_group_rules:
+    description: |
+      The number of allowed rules for each security group.
+    in: body
+    required: false
+    type: integer
+    max_version: 2.35
+
+This example describes that ``security_group_rules`` is available up to
+microversion 2.35 (and has been removed since microversion 2.36).
+
 The order of parameters in the parameter file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
