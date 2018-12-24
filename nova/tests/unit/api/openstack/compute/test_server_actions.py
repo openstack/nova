@@ -301,7 +301,9 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertEqual(len(body['server']['adminPass']),
                          CONF.password_length)
 
-        self.assertEqual(robj['location'], self_href.encode('utf-8'))
+        self.assertEqual(robj['location'], self_href)
+        # pep3333 requires applications produces headers which are str
+        self.assertEqual(str, type(robj['location']))
 
     def test_rebuild_instance_with_image_uuid(self):
         info = dict(image_href_in_call=None)
@@ -355,7 +357,9 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertEqual(body['server']['image']['id'], '2')
         self.assertNotIn("adminPass", body['server'])
 
-        self.assertEqual(robj['location'], self_href.encode('utf-8'))
+        self.assertEqual(robj['location'], self_href)
+        # pep3333 requires applications produces headers which are str
+        self.assertEqual(str, type(robj['location']))
 
     def test_rebuild_raises_conflict_on_invalid_state(self):
         body = {

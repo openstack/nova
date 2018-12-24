@@ -67,7 +67,7 @@ class ServersController(wsgi.Controller):
 
         link = [l for l in robj.obj['server']['links'] if l['rel'] == 'self']
         if link:
-            robj['Location'] = utils.utf8(link[0]['href'])
+            robj['Location'] = link[0]['href']
 
         # Convenience return
         return robj
