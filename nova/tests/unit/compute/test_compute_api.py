@@ -1667,18 +1667,6 @@ class _ComputeAPIUnitTestMixIn(object):
                                                                  inst))
             self.assertTrue(build_req_mock.destroy.called)
 
-    @mock.patch.object(objects.Service, 'get_minimum_version', return_value=0)
-    def test_delete_while_booting_low_service_version(self,
-            mock_get_service_version):
-        inst = self._create_instance_obj()
-        with mock.patch.object(self.compute_api,
-                   '_attempt_delete_of_buildrequest') as mock_attempt_delete:
-            self.assertFalse(
-                self.compute_api._delete_while_booting(self.context, inst))
-            self.assertTrue(mock_attempt_delete.called)
-        mock_get_service_version.assert_called_once_with(self.context,
-                                                         'nova-osapi_compute')
-
     def test_delete_while_booting_buildreq_not_deleted(self):
         self.useFixture(nova_fixtures.AllServicesCurrent())
         inst = self._create_instance_obj()
