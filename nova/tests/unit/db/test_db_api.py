@@ -27,7 +27,7 @@ import netaddr
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import enginefacade
-from oslo_db.sqlalchemy import test_base
+from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import update_match
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_serialization import jsonutils
@@ -8832,7 +8832,9 @@ class RetryOnDeadlockTestCase(test.TestCase):
         self.assertTrue(call_api())
 
 
-class TestSqlalchemyTypesRepr(test_base.DbTestCase):
+class TestSqlalchemyTypesRepr(
+        test_fixtures.OpportunisticDBTestMixin, test.NoDBTestCase):
+
     def setUp(self):
         # NOTE(sdague): the oslo_db base test case completely
         # invalidates our logging setup, we actually have to do that
@@ -8841,6 +8843,7 @@ class TestSqlalchemyTypesRepr(test_base.DbTestCase):
         self.useFixture(nova_fixtures.StandardLogging())
 
         super(TestSqlalchemyTypesRepr, self).setUp()
+        self.engine = enginefacade.writer.get_engine()
         meta = MetaData(bind=self.engine)
         self.table = Table(
             'cidr_tbl',
@@ -8867,14 +8870,12 @@ class TestSqlalchemyTypesRepr(test_base.DbTestCase):
                 self.assertEqual(addrs[idx][1], row.addr)
 
 
-class TestMySQLSqlalchemyTypesRepr(TestSqlalchemyTypesRepr,
-        test_base.MySQLOpportunisticTestCase):
-    pass
+class TestMySQLSqlalchemyTypesRepr(TestSqlalchemyTypesRepr):
+    FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
 
-class TestPostgreSQLSqlalchemyTypesRepr(TestSqlalchemyTypesRepr,
-        test_base.PostgreSQLOpportunisticTestCase):
-    pass
+class TestPostgreSQLSqlalchemyTypesRepr(TestSqlalchemyTypesRepr):
+    FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
 
 
 class TestDBInstanceTags(test.TestCase):

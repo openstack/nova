@@ -38,7 +38,8 @@ import os
 from migrate import UniqueConstraint
 from migrate.versioning import repository
 import mock
-from oslo_db.sqlalchemy import test_base
+from oslo_db.sqlalchemy import enginefacade
+from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
 from oslo_db.sqlalchemy import utils as oslodbutils
 import sqlalchemy
@@ -101,6 +102,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.useFixture(nova_fixtures.Timeout(
             os.environ.get('OS_TEST_TIMEOUT', 0),
             self.TIMEOUT_SCALING_FACTOR))
+        self.engine = enginefacade.writer.get_engine()
 
     def assertColumnExists(self, engine, table_name, column):
         self.assertTrue(oslodbutils.column_exists(engine, table_name, column),
@@ -1016,14 +1018,16 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
-                               test_base.DbTestCase,
+                               test_fixtures.OpportunisticDBTestMixin,
                                test.NoDBTestCase):
     pass
 
 
 class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
-                              test_base.MySQLOpportunisticTestCase,
+                              test_fixtures.OpportunisticDBTestMixin,
                               test.NoDBTestCase):
+    FIXTURE = test_fixtures.MySQLOpportunisticFixture
+
     def test_innodb_tables(self):
         with mock.patch.object(sa_migration, 'get_engine',
                                return_value=self.migrate_engine):
@@ -1048,9 +1052,9 @@ class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
 
 
 class TestNovaMigrationsPostgreSQL(NovaMigrationsCheckers,
-                                   test_base.PostgreSQLOpportunisticTestCase,
+                                   test_fixtures.OpportunisticDBTestMixin,
                                    test.NoDBTestCase):
-    pass
+    FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
 
 
 class ProjectTestCase(test.NoDBTestCase):
