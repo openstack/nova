@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    The versioned notification interface of nova is now complete and in
+    feature parity with the legacy interface. The emitted notifications
+    are documented in `notification dev ref`_ with full sample files.
+    The deprecation of the legacy notification interface is under dicussion
+    and will be handled separately.
+
+    .. _notification dev ref: https://docs.openstack.org/nova/latest/reference/notifications.html#existing-versioned-notifications
