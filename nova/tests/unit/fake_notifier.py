@@ -17,11 +17,15 @@ import functools
 import pprint
 import threading
 
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
+from oslo_utils import excutils
 from oslo_utils import timeutils
 
 from nova import rpc
+
+LOG = logging.getLogger(__name__)
 
 
 class _Sub(object):
@@ -96,7 +100,11 @@ class FakeNotifier(object):
                               serializer=self._serializer)
 
     def _notify(self, priority, ctxt, event_type, payload):
-        payload = self._serializer.serialize_entity(ctxt, payload)
+        try:
+            payload = self._serializer.serialize_entity(ctxt, payload)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.error('Error serializing payload: %s', payload)
         # NOTE(sileht): simulate the kombu serializer
         # this permit to raise an exception if something have not
         # been serialized correctly

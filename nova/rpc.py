@@ -33,6 +33,7 @@ from oslo_messaging.rpc import dispatcher
 from oslo_serialization import jsonutils
 from oslo_service import periodic_task
 from oslo_utils import importutils
+import six
 
 import nova.conf
 import nova.context
@@ -118,9 +119,27 @@ def get_allowed_exmods():
 
 
 class JsonPayloadSerializer(messaging.NoOpSerializer):
+
     @staticmethod
-    def serialize_entity(context, entity):
-        return jsonutils.to_primitive(entity, convert_instances=True)
+    def fallback(obj):
+        """Serializer fallback
+
+        This method is used to serialize an object which jsonutils.to_primitive
+        does not otherwise know how to handle.
+
+        This is mostly only needed in tests because of the use of the nova
+        CheatingSerializer fixture which keeps some non-serializable fields
+        on the RequestContext, like db_connection.
+        """
+        if isinstance(obj, nova.context.RequestContext):
+            # This matches RequestContextSerializer.serialize_context().
+            return obj.to_dict()
+        # The default fallback in jsonutils.to_primitive() is six.text_type.
+        return six.text_type(obj)
+
+    def serialize_entity(self, context, entity):
+        return jsonutils.to_primitive(entity, convert_instances=True,
+                                      fallback=self.fallback)
 
 
 class RequestContextSerializer(messaging.Serializer):

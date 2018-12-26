@@ -18,6 +18,7 @@ import mock
 import oslo_messaging as messaging
 from oslo_messaging.rpc import dispatcher
 from oslo_serialization import jsonutils
+import six
 
 from nova import context
 from nova import rpc
@@ -366,10 +367,20 @@ class TestRPC(test.NoDBTestCase):
 
 class TestJsonPayloadSerializer(test.NoDBTestCase):
     def test_serialize_entity(self):
+        serializer = rpc.JsonPayloadSerializer()
         with mock.patch.object(jsonutils, 'to_primitive') as mock_prim:
-            rpc.JsonPayloadSerializer.serialize_entity('context', 'entity')
+            serializer.serialize_entity('context', 'entity')
 
-        mock_prim.assert_called_once_with('entity', convert_instances=True)
+        mock_prim.assert_called_once_with('entity', convert_instances=True,
+                                          fallback=serializer.fallback)
+
+    def test_fallback(self):
+        # Convert RequestContext, should get a dict.
+        primitive = rpc.JsonPayloadSerializer.fallback(context.get_context())
+        self.assertIsInstance(primitive, dict)
+        # Convert anything else, should get a string.
+        primitive = rpc.JsonPayloadSerializer.fallback(mock.sentinel.entity)
+        self.assertIsInstance(primitive, six.text_type)
 
 
 class TestRequestContextSerializer(test.NoDBTestCase):
