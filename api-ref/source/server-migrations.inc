@@ -124,8 +124,10 @@ Specify the ``force_complete`` action in the request body.
 
 .. note:: Microversion 2.22 or greater is required for this API.
 
-.. note:: Not all compute back ends support forcefully completing an
+.. note:: Not all `compute back ends`_ support forcefully completing an
     in-progress live migration.
+
+.. _compute back ends: https://docs.openstack.org/nova/latest/user/support-matrix.html#operation_force_live_migration_to_complete
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through the
@@ -148,9 +150,11 @@ to determine whether the request succeeded.
 
 **Troubleshooting**
 
-If the server status remains ``ACTIVE`` for an inordinate amount of time, the
-request may have failed. Ensure you meet the preconditions and run the request
-again. If the request fails again, investigate the compute back end.
+If the server status remains ``MIGRATING`` for an inordinate amount of time,
+the request may have failed. Ensure you meet the preconditions and run the
+request again. If the request fails again, investigate the compute back end.
+More details can be found in the
+`admin guide <https://docs.openstack.org/nova/latest/admin/live-migration-usage.html#what-to-do-when-the-migration-times-out>`_.
 
 Normal response codes: 202
 
@@ -215,7 +219,7 @@ using::
 
 **Troubleshooting**
 
-If the server task_state remains ``migrating`` for an inordinate amount of
+If the server status remains ``MIGRATING`` for an inordinate amount of
 time, the request may have failed. Ensure you meet the preconditions and run
 the request again. If the request fails again, investigate the compute back
 end.
