@@ -570,6 +570,34 @@ class GuestTestCase(test.NoDBTestCase):
             self.guest.get_interface_by_cfg(cfg))
         self.assertIsNone(self.guest.get_interface_by_cfg(None))
 
+    def test_get_interface_by_cfg_vhostuser(self):
+        self.domain.XMLDesc.return_value = """<domain>
+  <devices>
+    <interface type="vhostuser">
+      <mac address='fa:16:3e:55:3e:e4'/>
+      <source type='unix' path='/var/run/openvswitch/vhued80c655-4e'
+       mode='server'/>
+      <target dev='vhued80c655-4e'/>
+      <model type='virtio'/>
+      <alias name='net0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
+       function='0x0'/>
+    </interface>
+  </devices>
+</domain>"""
+        cfg = vconfig.LibvirtConfigGuestInterface()
+        cfg.parse_str("""<interface type="vhostuser">
+  <mac address='fa:16:3e:55:3e:e4'/>
+  <model type="virtio"/>
+  <source type='unix' path='/var/run/openvswitch/vhued80c655-4e'
+   mode='server'/>
+  <alias name='net0'/>
+  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+  </interface>""")
+        self.assertIsNotNone(
+            self.guest.get_interface_by_cfg(cfg))
+        self.assertIsNone(self.guest.get_interface_by_cfg(None))
+
     def test_get_info(self):
         self.domain.info.return_value = (1, 2, 3, 4, 5)
         self.domain.ID.return_value = 6
