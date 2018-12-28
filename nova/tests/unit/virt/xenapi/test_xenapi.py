@@ -1135,7 +1135,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                                                              mock.ANY)
 
     @mock.patch.object(vmops.VMOps, '_create_vifs')
-    def test_spawn_vlanmanager(self, mock_create_vifs):
+    @mock.patch('nova.privsep.linux_net.add_bridge', return_value=('', ''))
+    def test_spawn_vlanmanager(self, mock_add_bridge, mock_create_vifs):
         self.flags(network_manager='nova.network.manager.VlanManager',
                    vlan_interface='fake0')
         # Reset network table

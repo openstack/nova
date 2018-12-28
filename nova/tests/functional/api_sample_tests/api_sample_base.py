@@ -120,5 +120,10 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
         # this is used to generate sample docs
         self.generate_samples = os.getenv('GENERATE_SAMPLES') is not None
 
+        # NOTE(mikal): this is used to stub away privsep helpers
+        def fake_noop(*args, **kwargs):
+            return '', ''
+        self.stub_out('nova.privsep.linux_net.add_bridge', fake_noop)
+
     def _setup_services(self):
         pass
