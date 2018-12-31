@@ -14,7 +14,9 @@ import collections
 import copy
 
 from oslo_log import log as logging
+import oslo_messaging as messaging
 
+from nova import availability_zones
 from nova.conductor.tasks import base
 from nova import context as nova_context
 from nova import exception
@@ -64,17 +66,19 @@ class TargetDBSetupTask(base.TaskBase):
     This is needed before any work can be done with the instance in the target
     cell, like validating the selected target compute host.
     """
-    def __init__(self, context, instance, migration, target_cell_context):
+    def __init__(self, context, instance, source_migration,
+                 target_cell_context):
         """Initialize this task.
 
         :param context: source-cell targeted auth RequestContext
         :param instance: source-cell Instance object
-        :param migration: source-cell Migration object for this operation
+        :param source_migration: source-cell Migration object for this
+            operation
         :param target_cell_context: target-cell targeted auth RequestContext
         """
         super(TargetDBSetupTask, self).__init__(context, instance)
         self.target_ctx = target_cell_context
-        self.migration = migration
+        self.source_migration = source_migration
 
         self._target_cell_instance = None
 
@@ -89,7 +93,7 @@ class TargetDBSetupTask(base.TaskBase):
         for migration in migrations:
             migration = clone_creatable_object(self.target_ctx, migration)
             migration.create()
-            if self.migration.uuid == migration.uuid:
+            if self.source_migration.uuid == migration.uuid:
                 # Save this off so subsequent tasks don't need to look it up.
                 target_cell_migration = migration
         return target_cell_migration
@@ -195,11 +199,175 @@ class TargetDBSetupTask(base.TaskBase):
             self._target_cell_instance.destroy(hard_delete=True)
 
 
+class PrepResizeAtDestTask(base.TaskBase):
+    """Task used to verify a given target host in a target cell.
+
+    Upon successful completion, port bindings and volume attachments
+    should be created for the target host in the target cell and resources
+    should be claimed on the target host for the resize. Also, the instance
+    task_state should be ``resize_prep``.
+    """
+
+    def __init__(self, context, instance, flavor, target_migration,
+                 request_spec, compute_rpcapi, host_selection, network_api,
+                 volume_api):
+        """Construct the PrepResizeAtDestTask instance
+
+        :param context: The user request auth context. This should be targeted
+            at the target cell.
+        :param instance: The instance being migrated (this is the target cell
+            copy of the instance record).
+        :param flavor: The new flavor if performing resize and not just a
+            cold migration
+        :param target_migration: The Migration object from the target cell DB.
+        :param request_spec: nova.objects.RequestSpec object for the operation
+        :param compute_rpcapi: instance of nova.compute.rpcapi.ComputeAPI
+        :param host_selection: nova.objects.Selection which is a possible
+            target host for the cross-cell resize
+        :param network_api: The neutron (client side) networking API.
+        :param volume_api: The cinder (client side) block-storage API.
+        """
+        super(PrepResizeAtDestTask, self).__init__(context, instance)
+        self.flavor = flavor
+        self.target_migration = target_migration
+        self.request_spec = request_spec
+        self.compute_rpcapi = compute_rpcapi
+        self.host_selection = host_selection
+        self.network_api = network_api
+        self.volume_api = volume_api
+
+        # Keep track of anything we created so we can rollback.
+        self._bindings_by_port_id = {}
+        self._created_volume_attachment_ids = []
+
+    def _create_port_bindings(self):
+        """Creates inactive port bindings against the selected target host
+        for the ports attached to the instance.
+
+        The ``self._bindings_by_port_id`` variable will be set upon successful
+        completion.
+
+        :raises: MigrationPreCheckError if port binding failed
+        """
+        LOG.debug('Creating port bindings for destination host %s',
+                  self.host_selection.service_host)
+        try:
+            self._bindings_by_port_id = self.network_api.bind_ports_to_host(
+                self.context, self.instance, self.host_selection.service_host)
+        except exception.PortBindingFailed:
+            raise exception.MigrationPreCheckError(reason=_(
+                'Failed to create port bindings for host %s') %
+                self.host_selection.service_host)
+
+    def _create_volume_attachments(self):
+        """Create empty volume attachments for volume BDMs attached to the
+        instance in the target cell.
+
+        The BlockDeviceMapping.attachment_id field is updated for each
+        volume BDM processed. Remember that these BDM records are from the
+        target cell database so the changes will only go there.
+
+        :return: BlockDeviceMappingList of volume BDMs with an updated
+            attachment_id field for the newly created empty attachment for
+            that BDM
+        """
+        LOG.debug('Creating volume attachments for destination host %s',
+                  self.host_selection.service_host)
+        volume_bdms = objects.BlockDeviceMappingList(objects=[
+            bdm for bdm in self.instance.get_bdms() if bdm.is_volume])
+        for bdm in volume_bdms:
+            # Create the empty (no host connector) attachment.
+            attach_ref = self.volume_api.attachment_create(
+                self.context, bdm.volume_id, bdm.instance_uuid)
+            # Keep track of what we create for rollbacks.
+            self._created_volume_attachment_ids.append(attach_ref['id'])
+            # Update the BDM in the target cell database.
+            bdm.attachment_id = attach_ref['id']
+            # Note that ultimately the BDMs in the target cell are either
+            # pointing at attachments that we can use, or this sub-task has
+            # failed in which case we will fail the main task and should
+            # rollback and delete the instance and its BDMs in the target cell
+            # database, so that is why we do not track the original attachment
+            # IDs in order to roll them back on the BDM records.
+            bdm.save()
+        return volume_bdms
+
+    def _execute(self):
+        """Performs pre-cross-cell resize checks/claims on the targeted host
+
+        This ensures things like networking (ports) will continue to work on
+        the target host in the other cell before we initiate the migration of
+        the server.
+
+        Resources are also claimed on the target host which in turn creates the
+        MigrationContext for the instance in the target cell database.
+
+        :returns: MigrationContext created in the target cell database during
+            the resize_claim in the destination compute service.
+        :raises: nova.exception.MigrationPreCheckError if the pre-check
+            validation fails for the given host selection; this indicates an
+            alternative host *may* work but this one does not.
+        """
+        destination = self.host_selection.service_host
+        LOG.debug('Verifying selected host %s for cross-cell resize.',
+                  destination, instance=self.instance)
+
+        # Validate networking by creating port bindings for this host.
+        self._create_port_bindings()
+
+        # Create new empty volume attachments for the volume BDMs attached
+        # to the instance. Technically this is not host specific and we could
+        # do this outside of the PrepResizeAtDestTask sub-task but volume
+        # attachments are meant to be cheap and plentiful so it is nice to
+        # keep them self-contained within each execution of this task and
+        # rollback anything we created if we fail.
+        self._create_volume_attachments()
+
+        try:
+            LOG.debug('Calling destination host %s to prepare for cross-cell '
+                      'resize and claim resources.', destination)
+            return self.compute_rpcapi.prep_snapshot_based_resize_at_dest(
+                self.context, self.instance, self.flavor,
+                self.host_selection.nodename, self.target_migration,
+                self.host_selection.limits, self.request_spec, destination)
+        except messaging.MessagingTimeout:
+            msg = _('RPC timeout while checking if we can cross-cell migrate '
+                    'to host: %s') % destination
+            raise exception.MigrationPreCheckError(reason=msg)
+
+    def rollback(self):
+        # Rollback anything we created.
+        host = self.host_selection.service_host
+        # Cleanup any destination host port bindings.
+        LOG.debug('Cleaning up port bindings for destination host %s', host)
+        for port_id in self._bindings_by_port_id:
+            try:
+                self.network_api.delete_port_binding(
+                    self.context, port_id, host)
+            except Exception:
+                # Don't raise if we fail to cleanup, just log it.
+                LOG.exception('An error occurred while cleaning up binding '
+                              'for port %s on host %s.', port_id, host,
+                              instance=self.instance)
+
+        # Cleanup any destination host volume attachments.
+        LOG.debug(
+            'Cleaning up volume attachments for destination host %s', host)
+        for attachment_id in self._created_volume_attachment_ids:
+            try:
+                self.volume_api.attachment_delete(self.context, attachment_id)
+            except Exception:
+                # Don't raise if we fail to cleanup, just log it.
+                LOG.exception('An error occurred while cleaning up volume '
+                              'attachment %s.', attachment_id,
+                              instance=self.instance)
+
+
 class CrossCellMigrationTask(base.TaskBase):
     """Orchestrates a cross-cell cold migration (resize)."""
 
     def __init__(self, context, instance, flavor,
-                 request_spec, migration, compute_rpcapi,
+                 request_spec, source_migration, compute_rpcapi,
                  host_selection, alternate_hosts):
         """Construct the CrossCellMigrationTask instance
 
@@ -209,8 +377,8 @@ class CrossCellMigrationTask(base.TaskBase):
         :param flavor: The new flavor if performing resize and not just a
             cold migration
         :param request_spec: nova.objects.RequestSpec with scheduling details
-        :param migration: nova.objects.Migration record for this operation
-            (from the source cell)
+        :param source_migration: nova.objects.Migration record for this
+            operation (from the source cell)
         :param compute_rpcapi: instance of nova.compute.rpcapi.ComputeAPI
         :param host_selection: nova.objects.Selection of the initial
             selected target host from the scheduler where the selected host
@@ -223,7 +391,7 @@ class CrossCellMigrationTask(base.TaskBase):
         super(CrossCellMigrationTask, self).__init__(context, instance)
         self.request_spec = request_spec
         self.flavor = flavor
-        self.migration = migration
+        self.source_migration = source_migration
         self.compute_rpcapi = compute_rpcapi
         self.host_selection = host_selection
         self.alternate_hosts = alternate_hosts
@@ -267,7 +435,7 @@ class CrossCellMigrationTask(base.TaskBase):
         nova_context.set_target_cell(
             self._target_cell_context, target_cell_mapping)
         task = TargetDBSetupTask(
-            self.context, self.instance, self.migration,
+            self.context, self.instance, self.source_migration,
             self._target_cell_context)
         self._target_cell_instance, target_cell_migration = task.execute()
         self._completed_tasks['TargetDBSetupTask'] = task
@@ -289,6 +457,83 @@ class CrossCellMigrationTask(base.TaskBase):
                          "not found.") %
                 neutron_constants.PORT_BINDING_EXTENDED)
 
+    def _prep_resize_at_dest(self, target_cell_migration):
+        """Executes PrepResizeAtDestTask and updates the source migration.
+
+        :param target_cell_migration: Migration record from the target cell DB
+        :returns: Refreshed Migration record from the target cell DB after the
+            resize_claim on the destination host has updated the record.
+        """
+        # TODO(mriedem): Check alternates if the primary selected host fails;
+        # note that alternates are always in the same cell as the selected host
+        # so if the primary fails pre-checks, the alternates may also fail. We
+        # could reschedule but the scheduler does not yet have an ignore_cells
+        # capability like ignore_hosts.
+
+        # We set the target cell instance new_flavor attribute now since the
+        # ResourceTracker.resize_claim on the destination host uses it.
+        self._target_cell_instance.new_flavor = self.flavor
+
+        verify_task = PrepResizeAtDestTask(
+            self._target_cell_context, self._target_cell_instance, self.flavor,
+            target_cell_migration, self.request_spec, self.compute_rpcapi,
+            self.host_selection, self.network_api, self.volume_api)
+        target_cell_migration_context = verify_task.execute()
+        self._completed_tasks['PrepResizeAtDestTask'] = verify_task
+
+        # Stash the old vm_state so we can set the resized/reverted instance
+        # back to the same state later, i.e. if STOPPED do not power on the
+        # guest.
+        self._target_cell_instance.system_metadata['old_vm_state'] = (
+            self._target_cell_instance.vm_state)
+        # Update the target cell instance availability zone now that we have
+        # prepared the resize on the destination host. We do this in conductor
+        # to avoid the "up-call" from the compute service to the API database.
+        self._target_cell_instance.availability_zone = (
+            availability_zones.get_host_availability_zone(
+                self.context, self.host_selection.service_host))
+        self._target_cell_instance.save()
+
+        # We need to mirror the MigrationContext, created in the target cell
+        # database, into the source cell database. Keep in mind that the
+        # MigrationContext has pci_devices and a migration_id in it which
+        # are specific to the target cell database. The only one we care about
+        # correcting for the source cell database is migration_id since that
+        # is used to route neutron external events to the source and target
+        # hosts.
+        self.instance.migration_context = (
+            target_cell_migration_context.obj_clone())
+        self.instance.migration_context.migration_id = self.source_migration.id
+        self.instance.save()
+
+        return self._update_migration_from_dest_after_claim(
+            target_cell_migration)
+
+    def _update_migration_from_dest_after_claim(self, target_cell_migration):
+        """Update the source cell migration record with target cell info.
+
+        The PrepResizeAtDestTask runs a resize_claim on the target compute
+        host service in the target cell which sets fields about the destination
+        in the migration record in the target cell. We need to reflect those
+        changes back into the migration record in the source cell.
+
+        :param target_cell_migration: Migration record from the target cell DB
+        :returns: Refreshed Migration record from the target cell DB after the
+            resize_claim on the destination host has updated the record.
+        """
+        # Copy information about the dest compute that was set on the dest
+        # migration record during the resize claim on the dest host.
+        # We have to get a fresh copy of the target cell migration record to
+        # pick up the changes made in the dest compute service.
+        target_cell_migration = objects.Migration.get_by_uuid(
+            self._target_cell_context, target_cell_migration.uuid)
+        self.source_migration.dest_compute = target_cell_migration.dest_compute
+        self.source_migration.dest_node = target_cell_migration.dest_node
+        self.source_migration.dest_host = target_cell_migration.dest_host
+        self.source_migration.save()
+
+        return target_cell_migration
+
     def _execute(self):
         """Execute high-level orchestration of the cross-cell resize"""
         # We are committed to a cross-cell move at this point so update the
@@ -297,8 +542,8 @@ class CrossCellMigrationTask(base.TaskBase):
         # migration, so we set the cross_cell_move flag early for audit/debug
         # in case something fails later and the operator wants to know if this
         # was a cross-cell or same-cell move operation.
-        self.migration.cross_cell_move = True
-        self.migration.save()
+        self.source_migration.cross_cell_move = True
+        self.source_migration.save()
         # Make sure neutron APIs we need are available.
         self._perform_external_api_checks()
 
@@ -309,7 +554,25 @@ class CrossCellMigrationTask(base.TaskBase):
         # cannot simply pass the source cell context and instance over RPC
         # to the target compute host and assume changes get mirrored back to
         # the source cell database.
-        self._setup_target_cell_db()
+        target_cell_migration = self._setup_target_cell_db()
+
+        # Claim resources and validate the selected host in the target cell.
+        target_cell_migration = self._prep_resize_at_dest(
+            target_cell_migration)
+
+        # TODO(mriedem): If image-backed, snapshot the server from source host
+        # and store it in the migration_context for spawn. Should we do this
+        # in PrepResizeAtDestTask? Re-using compute_rpcapi.snapshot_instance()
+        # would be nice but it sets the task_state=None and sends different
+        # notifications from a normal resize (but do those matter?).
+        # TODO(mriedem): Stop the server on the source host.
+        # TODO(mriedem): Copy data to dest cell DB.
+        # TODO(mriedem): Update instance mapping to dest cell DB.
+        # TODO(mriedem): Spawn in target cell host:
+        # - Use new flavor to spawn guest
+        # - Wait for ACTIVE or keep powered off
+        # - Activate target host port bindings
+        # - Update/complete volume attachments and update BDM.attachment_id.
 
     def rollback(self):
         """Rollback based on how sub-tasks completed
