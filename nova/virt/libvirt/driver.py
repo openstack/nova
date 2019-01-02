@@ -9028,7 +9028,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     vconfig.LibvirtConfigCPUFeature(name=f.name))
 
         xml_str = caps.host.cpu.to_xml()
-        LOG.info("Libvirt baseline CPU %s", xml_str)
+        LOG.debug("Libvirt baseline CPU %s", xml_str)
         # TODO(lei-zh): baselineCPU is not supported on all platforms.
         # There is some work going on in the libvirt community to replace the
         # baseline call. Consider using the new apis when they are ready. See
