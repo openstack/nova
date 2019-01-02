@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    The "API unexpected exception" message can now be configured by the cloud
+    provider to point to a custom support page.
+    By default it continues to show "http://bugs.launchpad.net/nova/".
+    It can be configured using the release file.

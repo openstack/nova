@@ -34,7 +34,8 @@ class VersionTestCase(test.NoDBTestCase):
                      "[Nova]\n"
                      "vendor = ACME Corporation\n"
                      "product = ACME Nova\n"
-                     "package = 1337\n")
+                     "package = 1337\n"
+                     "support = Contact ACME support\n")
     def test_release_file(self):
         version.loaded = False
         real_find_file = cfg.CONF.find_file
@@ -49,3 +50,4 @@ class VersionTestCase(test.NoDBTestCase):
         self.assertEqual(version.vendor_string(), "ACME Corporation")
         self.assertEqual(version.product_string(), "ACME Nova")
         self.assertEqual(version.package_string(), "1337")
+        self.assertEqual(version.support_string(), "Contact ACME support")
