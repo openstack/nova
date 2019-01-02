@@ -228,13 +228,14 @@ class InstanceCreatePayload(InstanceActionPayload):
     #              InstanceCreatePayload
     #         1.10: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
-    VERSION = '1.10'
-
+    #         1.11: Added instance_name to InstanceCreatePayload
+    VERSION = '1.11'
     fields = {
         'keypairs': fields.ListOfObjectsField('KeypairPayload'),
         'tags': fields.ListOfStringsField(),
         'trusted_image_certificates': fields.ListOfStringsField(
-            nullable=True)
+            nullable=True),
+        'instance_name': fields.StringField(nullable=True),
     }
 
     def __init__(self, context, instance, fault, bdms):
@@ -250,6 +251,7 @@ class InstanceCreatePayload(InstanceActionPayload):
         self.trusted_image_certificates = None
         if instance.trusted_certs:
             self.trusted_image_certificates = instance.trusted_certs.ids
+        self.instance_name = instance.name
 
 
 @nova_base.NovaObjectRegistry.register_notification

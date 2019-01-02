@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    The field ``instance_name`` has been added to the
+    ``InstanceCreatePayload`` in the following versioned notifications:
+
+    * ``instance.create.start``
+    * ``instance.create.end``
+    * ``instance.create.error``
