@@ -104,19 +104,6 @@ class SoftAffinityWeigherTestCase(SoftWeigherTestBase):
                       expected_weight=2.0,
                       expected_host='host2')
 
-    @mock.patch.object(affinity, 'LOG')
-    def test_soft_affinity_weight_multiplier_negative_value(self, mock_log):
-        self.flags(soft_affinity_weight_multiplier=-1.0,
-                   group='filter_scheduler')
-        self._do_test(policy='soft-affinity',
-                      expected_weight=0.0,
-                      expected_host='host3')
-        # call twice and assert that only one warning is emitted
-        self._do_test(policy='soft-affinity',
-                      expected_weight=0.0,
-                      expected_host='host3')
-        self.assertEqual(1, mock_log.warning.call_count)
-
 
 class SoftAntiAffinityWeigherTestCase(SoftWeigherTestBase):
 
@@ -143,17 +130,3 @@ class SoftAntiAffinityWeigherTestCase(SoftWeigherTestBase):
         self._do_test(policy='soft-anti-affinity',
                       expected_weight=2.0,
                       expected_host='host3')
-
-    @mock.patch.object(affinity, 'LOG')
-    def test_soft_anti_affinity_weight_multiplier_negative_value(self,
-                                                                 mock_log):
-        self.flags(soft_anti_affinity_weight_multiplier=-1.0,
-                   group='filter_scheduler')
-        self._do_test(policy='soft-anti-affinity',
-                      expected_weight=0.0,
-                      expected_host='host2')
-        # call twice and assert that only one warning is emitted
-        self._do_test(policy='soft-anti-affinity',
-                      expected_weight=0.0,
-                      expected_host='host2')
-        self.assertEqual(1, mock_log.warning.call_count)

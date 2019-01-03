@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    The ``[filter_scheduler]/soft_affinity_weight_multiplier`` and
+    ``[filter_scheduler]/soft_anti_affinity_weight_multiplier`` configuration
+    options now have a hard minimum value of 0.0. Also, the deprecated alias
+    to the ``[DEFAULT]`` group has been removed so the options must appear in
+    the ``[filter_scheduler]`` group.
