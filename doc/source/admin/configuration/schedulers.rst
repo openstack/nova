@@ -856,6 +856,24 @@ Hosts and cells are weighted based on the following options in the
      - By default, the scheduler spreads instances across all hosts evenly.
        Set the ``ram_weight_multiplier`` option to a negative number if you
        prefer stacking instead of spreading. Use a floating-point value.
+       If the per aggregate ``ram_weight_multiplier``
+       metadata is set, this multiplier will override the configuration option
+       value.
+   * - [DEFAULT]
+     - ``disk_weight_multiplier``
+     - By default, the scheduler spreads instances across all hosts evenly.
+       Set the ``disk_weight_multiplier`` option to a negative number if you
+       prefer stacking instead of spreading. Use a floating-point value.
+       If the per aggregate ``disk_weight_multiplier``
+       metadata is set, this multiplier will override the configuration option
+       value.
+   * - [DEFAULT]
+     - ``cpu_weight_multiplier``
+     - By default, the scheduler spreads instances across all hosts evenly.
+       Set the ``cpu_weight_multiplier`` option to a negative number if you
+       prefer stacking instead of spreading. Use a floating-point value.
+       If the per aggregate ``cpu_weight_multiplier`` metadata is set, this
+       multiplier will override the configuration option value.
    * - [DEFAULT]
      - ``scheduler_host_subset_size``
      - New instances are scheduled on a host that is chosen randomly from a
@@ -871,22 +889,37 @@ Hosts and cells are weighted based on the following options in the
      - ``io_ops_weight_multiplier``
      - Multiplier used for weighing host I/O operations. A negative value means
        a preference to choose light workload compute hosts.
+       If the per aggregate ``io_ops_weight_multiplier``
+       metadata is set, this multiplier will override the configuration option
+       value.
    * - [filter_scheduler]
      - ``soft_affinity_weight_multiplier``
      - Multiplier used for weighing hosts for group soft-affinity.  Only a
        positive value is allowed.
    * - [filter_scheduler]
+       If the per aggregate ``soft_affinity_weight_multiplier``
+       metadata is set, this multiplier will override the configuration option
+       value.
      - ``soft_anti_affinity_weight_multiplier``
      - Multiplier used for weighing hosts for group soft-anti-affinity.  Only a
        positive value is allowed.
+       If the per aggregate ``soft_anti_affinity_weight_multiplier``
+       metadata is set, this multiplier will override the configuration option
+       value.
    * - [filter_scheduler]
      - ``build_failure_weight_multiplier``
      - Multiplier used for weighing hosts which have recent build failures. A
        positive value increases the significance of build failures reported by
        the host recently, making them less likely to be chosen.
+       If the per aggregate ``build_failure_weight_multiplier``
+       metadata is set, this multiplier will override the configuration option
+       value.
    * - [metrics]
      - ``weight_multiplier``
      - Multiplier for weighting meters. Use a floating-point value.
+       If the per aggregate ``metrics_weight_multiplier``
+       metadata is set, this multiplier will override the configuration option
+       value.
    * - [metrics]
      - ``weight_setting``
      - Determines how meters are weighted. Use a comma-separated list of
@@ -991,8 +1024,9 @@ map flavors to host aggregates.  Administrators do this by setting metadata on
 a host aggregate, and matching flavor extra specifications.  The scheduler then
 endeavors to match user requests for instance of the given flavor to a host
 aggregate with the same key-value pair in its metadata.  Compute nodes can be
-in more than one host aggregate.
-
+in more than one host aggregate. Weight multipliers can be controlled on a
+per-aggregate basis by setting the desired ``xxx_weight_multiplier`` aggregate
+metadata.
 Administrators are able to optionally expose a host aggregate as an
 availability zone. Availability zones are different from host aggregates in
 that they are explicitly exposed to the user, and hosts can only be in a single

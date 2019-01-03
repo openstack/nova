@@ -403,24 +403,54 @@ The Filter Scheduler weighs hosts based on the config option
   :oslo.config:option:`filter_scheduler.ram_weight_multiplier`, is negative, the
   host with least RAM available will win (useful for stacking hosts, instead
   of spreading).
+  Starting with the Stein release, if per-aggregate value with the key
+  `ram_weight_multiplier` is found, this value would be chosen as the ram
+  weight multiplier. Otherwise, it will fall back to the
+  :oslo.config:option:`filter_scheduler.ram_weight_multiplier`. If more than
+  one value is found for a host in aggregate metadata, the minimum value will
+  be used.
 * |CPUWeigher| Compute weight based on available vCPUs on the compute node.
   Sort with the largest weight winning. If the multiplier,
   :oslo.config:option:`filter_scheduler.cpu_weight_multiplier`, is negative, the
   host with least CPUs available will win (useful for stacking hosts, instead
   of spreading).
+  Starting with the Stein release, if per-aggregate value with the key
+  `cpu_weight_multiplier` is found, this value would be chosen as the cpu
+  weight multiplier. Otherwise, it will fall back to the
+  :oslo.config:option:`filter_scheduler.cpu_weight_multiplier`. If more than
+  one value is found for a host in aggregate metadata, the minimum value will
+  be used.
 * |DiskWeigher| Hosts are weighted and sorted by free disk space with the largest
   weight winning.  If the multiplier is negative, the host with less disk space available
   will win (useful for stacking hosts, instead of spreading).
+  Starting with the Stein release, if per-aggregate value with the key
+  `disk_weight_multiplier` is found, this value would be chosen as the disk
+  weight multiplier. Otherwise, it will fall back to the
+  :oslo.config:option:`filter_scheduler.disk_weight_multiplier`. If more than
+  one value is found for a host in aggregate metadata, the minimum value will
+  be used.
 * |MetricsWeigher| This weigher can compute the weight based on the compute node
   host's various metrics. The to-be weighed metrics and their weighing ratio
   are specified in the configuration file as the followings::
 
     metrics_weight_setting = name1=1.0, name2=-1.0
 
+  Starting with the Stein release, if per-aggregate value with the key
+  `metrics_weight_multiplier` is found, this value would be chosen as the
+  metrics weight multiplier. Otherwise, it will fall back to the
+  :oslo.config:option:`metrics.weight_multiplier`. If more than
+  one value is found for a host in aggregate metadata, the minimum value will
+  be used.
 * |IoOpsWeigher| The weigher can compute the weight based on the compute node
   host's workload. The default is to preferably choose light workload compute
   hosts. If the multiplier is positive, the weigher prefer choosing heavy
   workload compute hosts, the weighing has the opposite effect of the default.
+  Starting with the Stein release, if per-aggregate value with the key
+  `io_ops_weight_multiplier` is found, this value would be chosen as the IO
+  ops weight multiplier. Otherwise, it will fall back to the
+  :oslo.config:option:`filter_scheduler.io_ops_weight_multiplier`. If more than
+  one value is found for a host in aggregate metadata, the minimum value will
+  be used.
 
 * |PCIWeigher| Compute a weighting based on the number of PCI devices on the
   host and the number of PCI devices requested by the instance. For example,
@@ -440,19 +470,43 @@ The Filter Scheduler weighs hosts based on the config option
     force non-PCI instances away from non-PCI hosts, thus, causing future
     scheduling issues.
 
+  Starting with the Stein release, if per-aggregate value with the key
+  `pci_weight_multiplier` is found, this value would be chosen as the pci
+  weight multiplier. Otherwise, it will fall back to the
+  :oslo.config:option:`filter_scheduler.pci_weight_multiplier`. If more than
+  one value is found for a host in aggregate metadata, the minimum value will
+  be used.
 * |ServerGroupSoftAffinityWeigher| The weigher can compute the weight based
   on the number of instances that run on the same server group. The largest
   weight defines the preferred host for the new instance. For the multiplier
   only a positive value is allowed for the calculation.
+  Starting with the Stein release, if per-aggregate value with the key
+  `soft_affinity_weight_multiplier` is found, this value would be chosen
+  as the soft affinity weight multiplier. Otherwise, it will fall back to the
+  :oslo.config:option:`filter_scheduler.soft_affinity_weight_multiplier`.
+  If more than one value is found for a host in aggregate metadata, the
+  minimum value will be used.
 
 * |ServerGroupSoftAntiAffinityWeigher| The weigher can compute the weight based
   on the number of instances that run on the same server group as a negative
   value. The largest weight defines the preferred host for the new instance.
   For the multiplier only a positive value is allowed for the calculation.
+  Starting with the Stein release, if per-aggregate value with the key
+  `soft_anti_affinity_weight_multiplier` is found, this value would be chosen
+  as the soft anti-affinity weight multiplier. Otherwise, it will fall back to
+  the :oslo.config:option:`filter_scheduler.soft_anti_affinity_weight_multiplier`.
+  If more than one value is found for a host in aggregate metadata, the
+  minimum value will be used.
 
 * |BuildFailureWeigher| Weigh hosts by the number of recent failed boot attempts.
   It considers the build failure counter and can negatively weigh hosts with
   recent failures. This avoids taking computes fully out of rotation.
+  Starting with the Stein release, if per-aggregate value with the key
+  `build_failure_weight_multiplier` is found, this value would be chosen
+  as the build failure weight multiplier. Otherwise, it will fall back to the
+  :oslo.config:option:`filter_scheduler.build_failure_weight_multiplier`.
+  If more than one value is found for a host in aggregate metadata, the
+  minimum value will be used.
 
 Filter Scheduler makes a local list of acceptable hosts by repeated filtering and
 weighing. Each time it chooses a host, it virtually consumes resources on it,

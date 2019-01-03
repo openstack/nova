@@ -17,11 +17,13 @@
 CPU Weigher.  Weigh hosts by their CPU usage.
 
 The default is to spread instances across all hosts evenly.  If you prefer
-stacking, you can set the 'cpu_weight_multiplier' option to a negative
-number and the weighing has the opposite effect of the default.
+stacking, you can set the 'cpu_weight_multiplier' option (by configuration
+or aggregate metadata) to a negative number and the weighing has the opposite
+effect of the default.
 """
 
 import nova.conf
+from nova.scheduler import utils
 from nova.scheduler import weights
 
 CONF = nova.conf.CONF
@@ -30,9 +32,11 @@ CONF = nova.conf.CONF
 class CPUWeigher(weights.BaseHostWeigher):
     minval = 0
 
-    def weight_multiplier(self):
+    def weight_multiplier(self, host_state):
         """Override the weight multiplier."""
-        return CONF.filter_scheduler.cpu_weight_multiplier
+        return utils.get_weight_multiplier(
+            host_state, 'cpu_weight_multiplier',
+            CONF.filter_scheduler.cpu_weight_multiplier)
 
     def _weigh_object(self, host_state, weight_properties):
         """Higher weights win.  We want spreading to be the default."""

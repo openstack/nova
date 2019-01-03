@@ -17,11 +17,12 @@ Io Ops Weigher. Weigh hosts by their io ops number.
 
 The default is to preferably choose light workload compute hosts. If you prefer
 choosing heavy workload compute hosts, you can set 'io_ops_weight_multiplier'
-option to a positive number and the weighing has the opposite effect of the
-default.
+option (by configuration or aggregate metadata) to a positive number and the
+weighing has the opposite effect of the default.
 """
 
 import nova.conf
+from nova.scheduler import utils
 from nova.scheduler import weights
 
 CONF = nova.conf.CONF
@@ -30,9 +31,11 @@ CONF = nova.conf.CONF
 class IoOpsWeigher(weights.BaseHostWeigher):
     minval = 0
 
-    def weight_multiplier(self):
+    def weight_multiplier(self, host_state):
         """Override the weight multiplier."""
-        return CONF.filter_scheduler.io_ops_weight_multiplier
+        return utils.get_weight_multiplier(
+            host_state, 'io_ops_weight_multiplier',
+            CONF.filter_scheduler.io_ops_weight_multiplier)
 
     def _weigh_object(self, host_state, weight_properties):
         """Higher weights win. We want to choose light workload host

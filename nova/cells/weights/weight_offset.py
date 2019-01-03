@@ -31,7 +31,7 @@ class WeightOffsetWeigher(weights.BaseCellWeigher):
     its weight_offset to 999999999999999 (highest weight wins)
     """
 
-    def weight_multiplier(self):
+    def weight_multiplier(self, host_state):
         return CONF.cells.offset_weight_multiplier
 
     def _weigh_object(self, cell, weight_properties):

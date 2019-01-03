@@ -25,6 +25,7 @@ by preferring the hosts that has less instances from the given group.
 from oslo_config import cfg
 from oslo_log import log as logging
 
+from nova.scheduler import utils
 from nova.scheduler import weights
 
 CONF = cfg.CONF
@@ -55,15 +56,19 @@ class _SoftAffinityWeigherBase(weights.BaseHostWeigher):
 class ServerGroupSoftAffinityWeigher(_SoftAffinityWeigherBase):
     policy_name = 'soft-affinity'
 
-    def weight_multiplier(self):
-        return CONF.filter_scheduler.soft_affinity_weight_multiplier
+    def weight_multiplier(self, host_state):
+        return utils.get_weight_multiplier(
+            host_state, 'soft_affinity_weight_multiplier',
+            CONF.filter_scheduler.soft_affinity_weight_multiplier)
 
 
 class ServerGroupSoftAntiAffinityWeigher(_SoftAffinityWeigherBase):
     policy_name = 'soft-anti-affinity'
 
-    def weight_multiplier(self):
-        return CONF.filter_scheduler.soft_anti_affinity_weight_multiplier
+    def weight_multiplier(self, host_state):
+        return utils.get_weight_multiplier(
+            host_state, 'soft_anti_affinity_weight_multiplier',
+            CONF.filter_scheduler.soft_anti_affinity_weight_multiplier)
 
     def _weigh_object(self, host_state, request_spec):
         weight = super(ServerGroupSoftAntiAffinityWeigher, self)._weigh_object(

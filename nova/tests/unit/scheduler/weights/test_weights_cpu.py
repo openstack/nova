@@ -16,6 +16,7 @@
 Tests For Scheduler CPU weights.
 """
 
+from nova import objects
 from nova.scheduler import weights
 from nova.scheduler.weights import cpu
 from nova import test
@@ -27,6 +28,7 @@ class CPUWeigherTestCase(test.NoDBTestCase):
         super(CPUWeigherTestCase, self).setUp()
         self.weight_handler = weights.HostWeightHandler()
         self.weighers = [cpu.CPUWeigher()]
+        self.cpu_weigher = cpu.CPUWeigher()
 
     def _get_weighed_host(self, hosts, weight_properties=None):
         if weight_properties is None:
@@ -127,3 +129,62 @@ class CPUWeigherTestCase(test.NoDBTestCase):
         weighed_host = weights[-1]
         self.assertEqual(0, weighed_host.weight)
         self.assertEqual('negative', weighed_host.obj.host)
+
+    def test_cpu_weigher_multiplier(self):
+        self.flags(cpu_weight_multiplier=-1.0, group='filter_scheduler')
+        host_attr = {'vcpus_total': 4, 'vcpus_used': 6,
+                     'cpu_allocation_ratio': 1.0}
+        host1 = fakes.FakeHostState('fake-host', 'node', host_attr)
+        # By default, return the cpu_weight_multiplier configuration directly
+        self.assertEqual(-1, self.cpu_weigher.weight_multiplier(host1))
+
+        host1.aggregates = [
+            objects.Aggregate(
+                id=1,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'cpu_weight_multiplier': '2'},
+            )]
+        # read the weight multiplier from metadata to override the config
+        self.assertEqual(2.0, self.cpu_weigher.weight_multiplier(host1))
+
+        host1.aggregates = [
+            objects.Aggregate(
+                id=1,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'cpu_weight_multiplier': '2'},
+            ),
+            objects.Aggregate(
+                id=2,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'cpu_weight_multiplier': '1.5'},
+            )]
+        # If the host is in multiple aggs and there are conflict weight values
+        # in the metadata, we will use the min value among them
+        self.assertEqual(1.5, self.cpu_weigher.weight_multiplier(host1))
+
+    def test_host_with_agg(self):
+        self.flags(cpu_weight_multiplier=-1.0, group='filter_scheduler')
+        hostinfo_list = self._get_all_hosts()
+        aggs = [
+            objects.Aggregate(
+                id=1,
+                name='foo',
+                hosts=['host1', 'host2', 'host3', 'host4'],
+                metadata={'cpu_weight_multiplier': '1.5'},
+            )]
+        for h in hostinfo_list:
+            h.aggregates = aggs
+        # host1: vcpus_free=0
+        # host2: vcpus_free=2
+        # host3: vcpus_free=6
+        # host4: vcpus_free=8
+
+        # so, host4 should win
+        weights = self.weight_handler.get_weighed_objects(self.weighers,
+                                                          hostinfo_list, {})
+        weighed_host = weights[0]
+        self.assertEqual(1.5, weighed_host.weight)
+        self.assertEqual('host4', weighed_host.obj.host)

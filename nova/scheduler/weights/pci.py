@@ -18,10 +18,11 @@ PCI Affinity Weigher.  Weigh hosts by their PCI availability.
 
 Prefer hosts with PCI devices for instances with PCI requirements and vice
 versa. Configure the importance of this affinitization using the
-'pci_weight_multiplier' option.
+'pci_weight_multiplier' option (by configuration or aggregate metadata).
 """
 
 import nova.conf
+from nova.scheduler import utils
 from nova.scheduler import weights
 
 CONF = nova.conf.CONF
@@ -37,9 +38,11 @@ MAX_DEVS = 100
 
 class PCIWeigher(weights.BaseHostWeigher):
 
-    def weight_multiplier(self):
+    def weight_multiplier(self, host_state):
         """Override the weight multiplier."""
-        return CONF.filter_scheduler.pci_weight_multiplier
+        return utils.get_weight_multiplier(
+            host_state, 'pci_weight_multiplier',
+            CONF.filter_scheduler.pci_weight_multiplier)
 
     def _weigh_object(self, host_state, request_spec):
         """Higher weights win. We want to keep PCI hosts free unless needed.

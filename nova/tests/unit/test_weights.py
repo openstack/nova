@@ -32,7 +32,7 @@ class TestWeigher(test.NoDBTestCase):
                 pass
 
         self.assertEqual(1.0,
-                         FakeWeigher().weight_multiplier())
+                         FakeWeigher().weight_multiplier(None))
 
     def test_no_weight_object(self):
         class FakeWeigher(weights.BaseWeigher):

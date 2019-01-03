@@ -13,6 +13,7 @@
 Tests For Scheduler IoOpsWeigher weights
 """
 
+from nova import objects
 from nova.scheduler import weights
 from nova.scheduler.weights import io_ops
 from nova import test
@@ -25,6 +26,7 @@ class IoOpsWeigherTestCase(test.NoDBTestCase):
         super(IoOpsWeigherTestCase, self).setUp()
         self.weight_handler = weights.HostWeightHandler()
         self.weighers = [io_ops.IoOpsWeigher()]
+        self.ioops_weigher = io_ops.IoOpsWeigher()
 
     def _get_weighed_host(self, hosts, io_ops_weight_multiplier):
         if io_ops_weight_multiplier is not None:
@@ -67,3 +69,58 @@ class IoOpsWeigherTestCase(test.NoDBTestCase):
         self._do_test(io_ops_weight_multiplier=2.0,
                       expected_weight=2.0,
                       expected_host='host4')
+
+    def test_io_ops_weight_multiplier(self):
+        self.flags(io_ops_weight_multiplier=0.0,
+                   group='filter_scheduler')
+        host_attr = {'num_io_ops': 1}
+        host1 = fakes.FakeHostState('fake-host', 'node', host_attr)
+        # By default, return the weight_multiplier configuration directly
+        self.assertEqual(0.0, self.ioops_weigher.weight_multiplier(host1))
+
+        host1.aggregates = [
+            objects.Aggregate(
+                id=1,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'io_ops_weight_multiplier': '1'},
+            )]
+        # read the weight multiplier from metadata to override the config
+        self.assertEqual(1.0, self.ioops_weigher.weight_multiplier(host1))
+
+        host1.aggregates = [
+            objects.Aggregate(
+                id=1,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'io_ops_weight_multiplier': '1'},
+            ),
+            objects.Aggregate(
+                id=2,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'io_ops_weight_multiplier': '0.5'},
+            )]
+        # If the host is in multiple aggs and there are conflict weight values
+        # in the metadata, we will use the min value among them
+        self.assertEqual(0.5, self.ioops_weigher.weight_multiplier(host1))
+
+    def test_host_with_agg(self):
+        self.flags(io_ops_weight_multiplier=0.0,
+                   group='filter_scheduler')
+        hostinfo_list = self._get_all_hosts()
+        aggs = [
+            objects.Aggregate(
+                id=1,
+                name='foo',
+                hosts=['host1', 'host2', 'host3', 'host4'],
+                metadata={'io_ops_weight_multiplier': '1.5'},
+            )]
+        for h in hostinfo_list:
+            h.aggregates = aggs
+
+        weights = self.weight_handler.get_weighed_objects(self.weighers,
+                                                          hostinfo_list, {})
+        weighed_host = weights[0]
+        self.assertEqual(1.0 * 1.5, weighed_host.weight)
+        self.assertEqual('host4', weighed_host.obj.host)

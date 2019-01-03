@@ -16,15 +16,18 @@ BuildFailure Weigher. Weigh hosts by the number of recent failed boot attempts.
 """
 
 import nova.conf
+from nova.scheduler import utils
 from nova.scheduler import weights
 
 CONF = nova.conf.CONF
 
 
 class BuildFailureWeigher(weights.BaseHostWeigher):
-    def weight_multiplier(self):
+    def weight_multiplier(self, host_state):
         """Override the weight multiplier. Note this is negated."""
-        return -1 * CONF.filter_scheduler.build_failure_weight_multiplier
+        return -1 * utils.get_weight_multiplier(
+            host_state, 'build_failure_weight_multiplier',
+            CONF.filter_scheduler.build_failure_weight_multiplier)
 
     def _weigh_object(self, host_state, weight_properties):
         """Higher weights win.  Our multiplier is negative, so reduce our

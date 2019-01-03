@@ -20,6 +20,7 @@ from nova.scheduler.client import report
 from nova.scheduler import utils
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests.unit.scheduler import fakes
 
 
 class TestUtils(test.NoDBTestCase):
@@ -888,3 +889,52 @@ class TestUtils(test.NoDBTestCase):
         self.assertTrue(res)
         mock_is_rebuild.assert_called_once_with(mock.sentinel.spec_obj)
         self.assertFalse(mock_client.claim_resources.called)
+
+    def test_get_weight_multiplier(self):
+        host_attr = {'vcpus_total': 4, 'vcpus_used': 6,
+                     'cpu_allocation_ratio': 1.0}
+        host1 = fakes.FakeHostState('fake-host', 'node', host_attr)
+
+        host1.aggregates = [
+            objects.Aggregate(
+                id=1,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'cpu_weight_multiplier': 'invalid'},
+            )]
+        # Get value from default given value if the agg meta is invalid.
+        self.assertEqual(
+            1.0,
+            utils.get_weight_multiplier(host1, 'cpu_weight_multiplier', 1.0)
+        )
+
+        host1.aggregates = [
+            objects.Aggregate(
+                id=1,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'cpu_weight_multiplier': '1.9'},
+            )]
+        # Get value from aggregate metadata
+        self.assertEqual(
+            1.9,
+            utils.get_weight_multiplier(host1, 'cpu_weight_multiplier', 1.0)
+        )
+
+        host1.aggregates = [
+            objects.Aggregate(
+                id=1,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'cpu_weight_multiplier': '1.9'}),
+            objects.Aggregate(
+                id=2,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'cpu_weight_multiplier': '1.8'}),
+        ]
+        # Get min value from aggregate metadata
+        self.assertEqual(
+            1.8,
+            utils.get_weight_multiplier(host1, 'cpu_weight_multiplier', 1.0)
+        )
