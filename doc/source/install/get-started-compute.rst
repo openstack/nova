@@ -8,12 +8,13 @@ Use OpenStack Compute to host and manage cloud computing systems.  OpenStack
 Compute is a major part of an Infrastructure-as-a-Service (IaaS) system. The
 main modules are implemented in Python.
 
-OpenStack Compute interacts with OpenStack Identity for authentication;
-OpenStack Image service for disk and server images; and OpenStack Dashboard for
-the user and administrative interface. Image access is limited by projects, and
-by users; quotas are limited per project (the number of instances, for
-example). OpenStack Compute can scale horizontally on standard hardware, and
-download images to launch instances.
+OpenStack Compute interacts with OpenStack Identity for authentication,
+OpenStack Placement for resource inventory tracking and selection, OpenStack
+Image service for disk and server images, and OpenStack Dashboard for the user
+and administrative interface. Image access is limited by projects, and by
+users; quotas are limited per project (the number of instances, for example).
+OpenStack Compute can scale horizontally on standard hardware, and download
+images to launch instances.
 
 OpenStack Compute consists of the following areas and their components:
 
@@ -41,10 +42,6 @@ OpenStack Compute consists of the following areas and their components:
   Processing is fairly complex. Basically, the daemon accepts actions from the
   queue and performs a series of system commands such as launching a KVM
   instance and updating its state in the database.
-
-``nova-placement-api`` service
-  Tracks the inventory and usage of each provider. For details, see
-  :placement-doc:`Placement <>`.
 
 ``nova-scheduler`` service
   Takes a virtual machine instance request from the queue and determines on
