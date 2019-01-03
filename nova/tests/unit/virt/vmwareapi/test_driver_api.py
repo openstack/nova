@@ -24,6 +24,7 @@ import datetime
 
 from eventlet import greenthread
 import mock
+import os_resource_classes as orc
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import units
@@ -43,7 +44,6 @@ from nova import exception
 from nova.image import glance
 from nova.network import model as network_model
 from nova import objects
-from nova import rc_fields as fields
 from nova import test
 from nova.tests.unit import fake_diagnostics
 from nova.tests.unit import fake_instance
@@ -2139,21 +2139,21 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         mock_get_avail_ds.return_value = [ds1, ds2, ds3]
         inv = self.conn.get_inventory(self.node_name)
         expected = {
-            fields.ResourceClass.VCPU: {
+            orc.VCPU: {
                 'total': 32,
                 'reserved': 0,
                 'min_unit': 1,
                 'max_unit': 16,
                 'step_size': 1,
             },
-            fields.ResourceClass.MEMORY_MB: {
+            orc.MEMORY_MB: {
                 'total': 2048,
                 'reserved': 512,
                 'min_unit': 1,
                 'max_unit': 1024,
                 'step_size': 1,
             },
-            fields.ResourceClass.DISK_GB: {
+            orc.DISK_GB: {
                 'total': 95,
                 'reserved': 0,
                 'min_unit': 1,

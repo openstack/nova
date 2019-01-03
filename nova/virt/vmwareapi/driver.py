@@ -22,6 +22,7 @@ A connection to the VMware vCenter platform.
 import os
 import re
 
+import os_resource_classes as orc
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import units
@@ -40,7 +41,6 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 import nova.privsep.path
-from nova import rc_fields as fields
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
@@ -432,21 +432,21 @@ class VMwareVCDriver(driver.ComputeDriver):
         reserved_disk_gb = compute_utils.convert_mb_to_ceil_gb(
             CONF.reserved_host_disk_mb)
         result = {
-            fields.ResourceClass.VCPU: {
+            orc.VCPU: {
                 'total': stats['cpu']['vcpus'],
                 'reserved': CONF.reserved_host_cpus,
                 'min_unit': 1,
                 'max_unit': stats['cpu']['max_vcpus_per_host'],
                 'step_size': 1,
             },
-            fields.ResourceClass.MEMORY_MB: {
+            orc.MEMORY_MB: {
                 'total': stats['mem']['total'],
                 'reserved': CONF.reserved_host_memory_mb,
                 'min_unit': 1,
                 'max_unit': stats['mem']['max_mem_mb_per_host'],
                 'step_size': 1,
             },
-            fields.ResourceClass.DISK_GB: {
+            orc.DISK_GB: {
                 'total': total_disk_capacity // units.Gi,
                 'reserved': reserved_disk_gb,
                 'min_unit': 1,

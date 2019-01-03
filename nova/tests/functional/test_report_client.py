@@ -14,6 +14,7 @@
 import copy
 from keystoneauth1 import exceptions as kse
 import mock
+import os_resource_classes as orc
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -32,7 +33,6 @@ from nova import context
 # and is not testing the placement service itself.
 from nova import exception
 from nova import objects
-from nova import rc_fields as fields
 from nova.scheduler.client import report
 from nova.scheduler import utils
 from nova import test
@@ -179,7 +179,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
         # TODO(cdent): We should probably also have a test that
         # tests that when allocation or inventory errors happen, we
         # are resilient.
-        res_class = fields.ResourceClass.VCPU
+        res_class = orc.VCPU
         with self._interceptor():
             # When we start out there are no resource providers.
             rp = self.client._get_resource_provider(self.context,
@@ -356,7 +356,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                     parent_provider_uuid=self.compute_uuid)
                 self.client.set_inventory_for_provider(
                     self.context, uuid, {
-                        fields.ResourceClass.SRIOV_NET_VF: {
+                        orc.SRIOV_NET_VF: {
                             'total': 24 * x,
                             'reserved': x,
                             'min_unit': 1,
@@ -388,7 +388,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                                                       name=name)
                 self.client.set_inventory_for_provider(
                     self.context, uuid, {
-                        fields.ResourceClass.DISK_GB: {
+                        orc.DISK_GB: {
                             'total': 100 * x,
                             'reserved': x,
                             'min_unit': 1,
@@ -411,7 +411,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                                                   name='sip')
             self.client.set_inventory_for_provider(
                 self.context, uuids.sip, {
-                    fields.ResourceClass.IPV4_ADDRESS: {
+                    orc.IPV4_ADDRESS: {
                         'total': 128,
                         'reserved': 0,
                         'min_unit': 1,
@@ -482,7 +482,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
 
             # Make sure we can set reserved value equal to total
             inv = {
-                fields.ResourceClass.SRIOV_NET_VF: {
+                orc.SRIOV_NET_VF: {
                     'total': 24,
                     'reserved': 24,
                     'min_unit': 1,
@@ -503,7 +503,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
         """
         with self._interceptor():
             inv = {
-                fields.ResourceClass.SRIOV_NET_VF: {
+                orc.SRIOV_NET_VF: {
                     'total': 24,
                     'reserved': 1,
                     'min_unit': 1,
@@ -538,7 +538,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
 
             # Make sure we can change it
             inv = {
-                fields.ResourceClass.SRIOV_NET_VF: {
+                orc.SRIOV_NET_VF: {
                     'total': 24,
                     'reserved': 1,
                     'min_unit': 1,
@@ -546,7 +546,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                     'step_size': 1,
                     'allocation_ratio': 1.0,
                 },
-                fields.ResourceClass.IPV4_ADDRESS: {
+                orc.IPV4_ADDRESS: {
                     'total': 128,
                     'reserved': 0,
                     'min_unit': 1,
@@ -566,7 +566,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             self.assertFalse(
                 self.client.get('/resource_classes/CUSTOM_BANDWIDTH'))
             inv = {
-                fields.ResourceClass.SRIOV_NET_VF: {
+                orc.SRIOV_NET_VF: {
                     'total': 24,
                     'reserved': 1,
                     'min_unit': 1,
@@ -574,7 +574,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                     'step_size': 1,
                     'allocation_ratio': 1.0,
                 },
-                fields.ResourceClass.IPV4_ADDRESS: {
+                orc.IPV4_ADDRESS: {
                     'total': 128,
                     'reserved': 0,
                     'min_unit': 1,
@@ -624,7 +624,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
 
             # Create a generation conflict by doing an "out of band" update
             oob_inv = {
-                fields.ResourceClass.IPV4_ADDRESS: {
+                orc.IPV4_ADDRESS: {
                     'total': 128,
                     'reserved': 0,
                     'min_unit': 1,
@@ -646,7 +646,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
 
             # Now try to update again.
             inv = {
-                fields.ResourceClass.SRIOV_NET_VF: {
+                orc.SRIOV_NET_VF: {
                     'total': 24,
                     'reserved': 1,
                     'min_unit': 1,
@@ -687,7 +687,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             self.assertTrue(
                 self.client.put_allocations(
                     self.context, uuids.cn, uuids.consumer,
-                    {fields.ResourceClass.SRIOV_NET_VF: 1},
+                    {orc.SRIOV_NET_VF: 1},
                     uuids.proj, uuids.user, None))
             # ...and trying to delete the provider's VF inventory
             bad_inv = {
@@ -779,7 +779,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             new_tree.update_traits(uuids.gc1_1, ['CUSTOM_PHYSNET_2'])
             new_tree.new_root('ssp', uuids.ssp)
             new_tree.update_inventory('ssp', {
-                fields.ResourceClass.DISK_GB: {
+                orc.DISK_GB: {
                     'total': 100,
                     'reserved': 1,
                     'min_unit': 1,
@@ -794,7 +794,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             # Swizzle properties
             # Give the root some everything
             new_tree.update_inventory(uuids.root, {
-                fields.ResourceClass.VCPU: {
+                orc.VCPU: {
                     'total': 10,
                     'reserved': 0,
                     'min_unit': 1,
@@ -802,7 +802,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                     'step_size': 1,
                     'allocation_ratio': 10.0,
                 },
-                fields.ResourceClass.MEMORY_MB: {
+                orc.MEMORY_MB: {
                     'total': 1048576,
                     'reserved': 2048,
                     'min_unit': 1024,
@@ -818,7 +818,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             new_tree.update_aggregates(uuids.child1, [])
             # Grandchild gets some inventory
             ipv4_inv = {
-                fields.ResourceClass.IPV4_ADDRESS: {
+                orc.IPV4_ADDRESS: {
                     'total': 128,
                     'reserved': 0,
                     'min_unit': 1,

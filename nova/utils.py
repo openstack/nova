@@ -34,6 +34,7 @@ import eventlet
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as ks_loading
 import netaddr
+import os_resource_classes as orc
 from os_service_types import service_types
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
@@ -1363,3 +1364,15 @@ def run_once(message, logger, cleanup=None):
         wrapper.reset = functools.partial(reset, wrapper)
         return wrapper
     return outer_wrapper
+
+
+def normalize_rc_name(rc_name):
+    """Normalize a resource class name to standard form."""
+    if rc_name is None:
+        return None
+    # Replace non-alphanumeric characters with underscores
+    norm_name = re.sub('[^0-9A-Za-z]+', '_', rc_name)
+    # Bug #1762789: Do .upper after replacing non alphanumerics.
+    norm_name = norm_name.upper()
+    norm_name = orc.CUSTOM_NAMESPACE + norm_name
+    return norm_name

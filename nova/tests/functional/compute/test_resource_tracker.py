@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+import os_resource_classes as orc
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import power_state
@@ -21,7 +22,6 @@ from nova.compute import vm_states
 from nova import conf
 from nova import context
 from nova import objects
-from nova import rc_fields as fields
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional import test_report_client as test_base
@@ -29,9 +29,9 @@ from nova.virt import driver as virt_driver
 
 
 CONF = conf.CONF
-VCPU = fields.ResourceClass.VCPU
-MEMORY_MB = fields.ResourceClass.MEMORY_MB
-DISK_GB = fields.ResourceClass.DISK_GB
+VCPU = orc.VCPU
+MEMORY_MB = orc.MEMORY_MB
+DISK_GB = orc.DISK_GB
 COMPUTE_HOST = 'compute-host'
 
 

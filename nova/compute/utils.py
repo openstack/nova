@@ -22,6 +22,7 @@ import math
 import traceback
 
 import netifaces
+import os_resource_classes as orc
 from oslo_log import log
 from oslo_serialization import jsonutils
 import six
@@ -48,7 +49,6 @@ from nova.notifications.objects import server_group as sg_notification
 from nova.notifications.objects import volume as volume_notification
 from nova import objects
 from nova.objects import fields
-from nova import rc_fields
 from nova import rpc
 from nova import safe_utils
 from nova import utils
@@ -1305,7 +1305,7 @@ def compute_node_to_inventory_dict(compute_node):
     # NOTE(jaypipes): Ironic virt driver will return 0 values for vcpus,
     # memory_mb and disk_gb if the Ironic node is not available/operable
     if compute_node.vcpus > 0:
-        result[rc_fields.ResourceClass.VCPU] = {
+        result[orc.VCPU] = {
             'total': compute_node.vcpus,
             'reserved': CONF.reserved_host_cpus,
             'min_unit': 1,
@@ -1314,7 +1314,7 @@ def compute_node_to_inventory_dict(compute_node):
             'allocation_ratio': compute_node.cpu_allocation_ratio,
         }
     if compute_node.memory_mb > 0:
-        result[rc_fields.ResourceClass.MEMORY_MB] = {
+        result[orc.MEMORY_MB] = {
             'total': compute_node.memory_mb,
             'reserved': CONF.reserved_host_memory_mb,
             'min_unit': 1,
@@ -1327,7 +1327,7 @@ def compute_node_to_inventory_dict(compute_node):
         # or start tracking DISK_MB.
         reserved_disk_gb = convert_mb_to_ceil_gb(
             CONF.reserved_host_disk_mb)
-        result[rc_fields.ResourceClass.DISK_GB] = {
+        result[orc.DISK_GB] = {
             'total': compute_node.local_gb,
             'reserved': reserved_disk_gb,
             'min_unit': 1,

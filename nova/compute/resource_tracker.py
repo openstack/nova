@@ -22,6 +22,7 @@ import collections
 import copy
 
 from keystoneauth1 import exceptions as ks_exc
+import os_resource_classes as orc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import retrying
@@ -40,7 +41,6 @@ from nova.objects import base as obj_base
 from nova.objects import migration as migration_obj
 from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
-from nova import rc_fields as fields
 from nova import rpc
 from nova.scheduler.client import query
 from nova.scheduler.client import report
@@ -101,22 +101,22 @@ def _normalize_inventory_from_cn_obj(inv_data, cn):
                      returned from virt driver's get_inventory() method
     :param compute_node: `objects.ComputeNode` describing the compute node
     """
-    if fields.ResourceClass.VCPU in inv_data:
-        cpu_inv = inv_data[fields.ResourceClass.VCPU]
+    if orc.VCPU in inv_data:
+        cpu_inv = inv_data[orc.VCPU]
         if 'allocation_ratio' not in cpu_inv:
             cpu_inv['allocation_ratio'] = cn.cpu_allocation_ratio
         if 'reserved' not in cpu_inv:
             cpu_inv['reserved'] = CONF.reserved_host_cpus
 
-    if fields.ResourceClass.MEMORY_MB in inv_data:
-        mem_inv = inv_data[fields.ResourceClass.MEMORY_MB]
+    if orc.MEMORY_MB in inv_data:
+        mem_inv = inv_data[orc.MEMORY_MB]
         if 'allocation_ratio' not in mem_inv:
             mem_inv['allocation_ratio'] = cn.ram_allocation_ratio
         if 'reserved' not in mem_inv:
             mem_inv['reserved'] = CONF.reserved_host_memory_mb
 
-    if fields.ResourceClass.DISK_GB in inv_data:
-        disk_inv = inv_data[fields.ResourceClass.DISK_GB]
+    if orc.DISK_GB in inv_data:
+        disk_inv = inv_data[orc.DISK_GB]
         if 'allocation_ratio' not in disk_inv:
             disk_inv['allocation_ratio'] = cn.disk_allocation_ratio
         if 'reserved' not in disk_inv:

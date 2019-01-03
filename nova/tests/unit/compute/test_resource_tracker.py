@@ -15,6 +15,7 @@ import datetime
 
 from keystoneauth1 import exceptions as ks_exc
 import mock
+import os_resource_classes as orc
 from oslo_config import cfg
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
@@ -34,7 +35,6 @@ from nova.objects import base as obj_base
 from nova.objects import fields as obj_fields
 from nova.objects import pci_device
 from nova.pci import manager as pci_manager
-from nova import rc_fields
 from nova.scheduler.client import report
 from nova import test
 from nova.tests.unit import fake_notifier
@@ -1403,7 +1403,7 @@ class TestUpdateComputeNode(BaseTestCase):
         client instead.
         """
         fake_inv = {
-            rc_fields.ResourceClass.VCPU: {
+            orc.VCPU: {
                 'total': 2,
                 'min_unit': 1,
                 'max_unit': 2,
@@ -1411,7 +1411,7 @@ class TestUpdateComputeNode(BaseTestCase):
                 'allocation_ratio': 16.0,
                 'reserved': 1,
             },
-            rc_fields.ResourceClass.MEMORY_MB: {
+            orc.MEMORY_MB: {
                 'total': 4096,
                 'min_unit': 1,
                 'max_unit': 4096,
@@ -1419,7 +1419,7 @@ class TestUpdateComputeNode(BaseTestCase):
                 'allocation_ratio': 1.5,
                 'reserved': 512,
             },
-            rc_fields.ResourceClass.DISK_GB: {
+            orc.DISK_GB: {
                 'total': 500,
                 'min_unit': 1,
                 'max_unit': 500,
@@ -1466,13 +1466,13 @@ class TestUpdateComputeNode(BaseTestCase):
         self.driver_mock.get_inventory.assert_not_called()
         exp_inv = copy.deepcopy(fake_inv)
         # These ratios and reserved amounts come from fake_upt
-        exp_inv[rc_fields.ResourceClass.VCPU]['allocation_ratio'] = 16.0
-        exp_inv[rc_fields.ResourceClass.MEMORY_MB]['allocation_ratio'] = 1.5
-        exp_inv[rc_fields.ResourceClass.DISK_GB]['allocation_ratio'] = 1.0
-        exp_inv[rc_fields.ResourceClass.VCPU]['reserved'] = 1
-        exp_inv[rc_fields.ResourceClass.MEMORY_MB]['reserved'] = 512
+        exp_inv[orc.VCPU]['allocation_ratio'] = 16.0
+        exp_inv[orc.MEMORY_MB]['allocation_ratio'] = 1.5
+        exp_inv[orc.DISK_GB]['allocation_ratio'] = 1.0
+        exp_inv[orc.VCPU]['reserved'] = 1
+        exp_inv[orc.MEMORY_MB]['reserved'] = 512
         # 1024MB in GB
-        exp_inv[rc_fields.ResourceClass.DISK_GB]['reserved'] = 1
+        exp_inv[orc.DISK_GB]['reserved'] = 1
         self.assertEqual(exp_inv, ptree.data(new_compute.uuid).inventory)
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
@@ -1605,19 +1605,19 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
         # allocation_ratio or reserved amounts for some resources. Verify that
         # the information on the compute node fills in this information...
         inv = {
-            rc_fields.ResourceClass.VCPU: {
+            orc.VCPU: {
                 'total': vcpus,
                 'min_unit': 1,
                 'max_unit': vcpus,
                 'step_size': 1,
             },
-            rc_fields.ResourceClass.MEMORY_MB: {
+            orc.MEMORY_MB: {
                 'total': memory_mb,
                 'min_unit': 1,
                 'max_unit': memory_mb,
                 'step_size': 1,
             },
-            rc_fields.ResourceClass.DISK_GB: {
+            orc.DISK_GB: {
                 'total': disk_gb,
                 'min_unit': 1,
                 'max_unit': disk_gb,
@@ -1625,7 +1625,7 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
             },
         }
         expected = {
-            rc_fields.ResourceClass.VCPU: {
+            orc.VCPU: {
                 'total': vcpus,
                 'reserved': 1,
                 'min_unit': 1,
@@ -1633,7 +1633,7 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
                 'step_size': 1,
                 'allocation_ratio': 16.0,
             },
-            rc_fields.ResourceClass.MEMORY_MB: {
+            orc.MEMORY_MB: {
                 'total': memory_mb,
                 'reserved': 10,
                 'min_unit': 1,
@@ -1641,7 +1641,7 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
                 'step_size': 1,
                 'allocation_ratio': 1.5,
             },
-            rc_fields.ResourceClass.DISK_GB: {
+            orc.DISK_GB: {
                 'total': disk_gb,
                 'reserved': 1,  # Rounded up from CONF.reserved_host_disk_mb
                 'min_unit': 1,
@@ -1678,7 +1678,7 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
         # blocks for VCPU, MEMORY_MB, DISK_GB and the custom resource class
         # inventory items
         inv = {
-            rc_fields.ResourceClass.VCPU: {
+            orc.VCPU: {
                 'total': vcpus,
                 'reserved': 0,
                 'min_unit': 1,
@@ -1686,7 +1686,7 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
                 'step_size': 1,
                 'allocation_ratio': 1.0,
             },
-            rc_fields.ResourceClass.MEMORY_MB: {
+            orc.MEMORY_MB: {
                 'total': memory_mb,
                 'reserved': 0,
                 'min_unit': 1,
@@ -1694,7 +1694,7 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
                 'step_size': 1,
                 'allocation_ratio': 1.0,
             },
-            rc_fields.ResourceClass.DISK_GB: {
+            orc.DISK_GB: {
                 'total': disk_gb,
                 'reserved': 0,
                 'min_unit': 1,

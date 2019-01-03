@@ -28,6 +28,7 @@ import contextlib
 import copy
 import time
 
+import os_resource_classes as orc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
@@ -41,7 +42,6 @@ from nova import exception
 from nova.objects import diagnostics as diagnostics_obj
 from nova.objects import fields as obj_fields
 from nova.objects import migrate_data
-from nova import rc_fields
 from nova.virt import driver
 from nova.virt import hardware
 from nova.virt import virtapi
@@ -519,7 +519,7 @@ class FakeDriver(driver.ComputeDriver):
                 'min_unit': 1,
                 'max_unit': self.vcpus,
                 'step_size': 1,
-                'allocation_ratio': ratios[rc_fields.ResourceClass.VCPU],
+                'allocation_ratio': ratios[orc.VCPU],
                 'reserved': CONF.reserved_host_cpus,
             },
             'MEMORY_MB': {
@@ -527,7 +527,7 @@ class FakeDriver(driver.ComputeDriver):
                 'min_unit': 1,
                 'max_unit': self.memory_mb,
                 'step_size': 1,
-                'allocation_ratio': ratios[rc_fields.ResourceClass.MEMORY_MB],
+                'allocation_ratio': ratios[orc.MEMORY_MB],
                 'reserved': CONF.reserved_host_memory_mb,
             },
             'DISK_GB': {
@@ -535,7 +535,7 @@ class FakeDriver(driver.ComputeDriver):
                 'min_unit': 1,
                 'max_unit': self.local_gb,
                 'step_size': 1,
-                'allocation_ratio': ratios[rc_fields.ResourceClass.DISK_GB],
+                'allocation_ratio': ratios[orc.DISK_GB],
                 'reserved': self._get_reserved_host_disk_gb_from_config(),
             },
         }

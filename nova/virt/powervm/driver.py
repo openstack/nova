@@ -13,6 +13,7 @@
 #    under the License.
 """Connection to PowerVM hypervisor through NovaLink."""
 
+import os_resource_classes as orc
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import importutils
@@ -34,7 +35,6 @@ from nova.console import type as console_type
 from nova import exception as exc
 from nova.i18n import _
 from nova import image
-from nova import rc_fields
 from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt.powervm import host as pvm_host
@@ -203,23 +203,23 @@ class PowerVMDriver(driver.ComputeDriver):
         disk_reserved = self._get_reserved_host_disk_gb_from_config()
 
         inventory = {
-            rc_fields.ResourceClass.VCPU: {
+            orc.VCPU: {
                 'total': data['vcpus'],
                 'max_unit': data['vcpus'],
-                'allocation_ratio': ratios[rc_fields.ResourceClass.VCPU],
+                'allocation_ratio': ratios[orc.VCPU],
                 'reserved': cpu_reserved,
             },
-            rc_fields.ResourceClass.MEMORY_MB: {
+            orc.MEMORY_MB: {
                 'total': data['memory_mb'],
                 'max_unit': data['memory_mb'],
-                'allocation_ratio': ratios[rc_fields.ResourceClass.MEMORY_MB],
+                'allocation_ratio': ratios[orc.MEMORY_MB],
                 'reserved': mem_reserved,
             },
-            rc_fields.ResourceClass.DISK_GB: {
+            orc.DISK_GB: {
                 # TODO(efried): Proper DISK_GB sharing when SSP driver in play
                 'total': int(data['local_gb']),
                 'max_unit': int(data['local_gb']),
-                'allocation_ratio': ratios[rc_fields.ResourceClass.DISK_GB],
+                'allocation_ratio': ratios[orc.DISK_GB],
                 'reserved': disk_reserved,
             },
         }

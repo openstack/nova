@@ -25,6 +25,7 @@ A driver for XenServer or Xen Cloud Platform.
 
 import math
 
+import os_resource_classes as orc
 from os_xenapi.client import session
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -36,7 +37,6 @@ import six.moves.urllib.parse as urlparse
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova import rc_fields as fields
 from nova.virt import driver
 from nova.virt.xenapi import host
 from nova.virt.xenapi import pool
@@ -175,7 +175,7 @@ class XenAPIDriver(driver.ComputeDriver):
         if not allocations:
             # If no allocations, there is no vGPU request.
             return False
-        RC_VGPU = fields.ResourceClass.VGPU
+        RC_VGPU = orc.VGPU
         for rp in allocations:
             res = allocations[rp]['resources']
             if res and RC_VGPU in res and res[RC_VGPU] > 0:
@@ -481,19 +481,19 @@ class XenAPIDriver(driver.ComputeDriver):
         vgpus = self._get_vgpu_total(host_stats['vgpu_stats'])
 
         result = {
-            fields.ResourceClass.VCPU: {
+            orc.VCPU: {
                 'total': vcpus,
                 'min_unit': 1,
                 'max_unit': vcpus,
                 'step_size': 1,
             },
-            fields.ResourceClass.MEMORY_MB: {
+            orc.MEMORY_MB: {
                 'total': memory_mb,
                 'min_unit': 1,
                 'max_unit': memory_mb,
                 'step_size': 1,
             },
-            fields.ResourceClass.DISK_GB: {
+            orc.DISK_GB: {
                 'total': disk_gb,
                 'min_unit': 1,
                 'max_unit': disk_gb,
@@ -506,7 +506,7 @@ class XenAPIDriver(driver.ComputeDriver):
             # so max_unit is 1.
             result.update(
                 {
-                    fields.ResourceClass.VGPU: {
+                    orc.VGPU: {
                         'total': vgpus,
                         'min_unit': 1,
                         'max_unit': 1,

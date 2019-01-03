@@ -28,6 +28,7 @@ import warnings
 import fixtures
 import mock
 from neutronclient.common import exceptions as neutron_client_exc
+import os_resource_classes as orc
 from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_db import exception as db_exc
@@ -54,7 +55,6 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
 from nova import quota as nova_quota
-from nova import rc_fields
 from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
@@ -1263,8 +1263,8 @@ class NeutronFixture(fixtures.Fixture):
         'tenant_id': tenant_id,
         'resource_request': {
             "resources": {
-                    rc_fields.ResourceClass.NET_BW_IGR_KILOBIT_PER_SEC: 1000,
-                    rc_fields.ResourceClass.NET_BW_EGR_KILOBIT_PER_SEC: 1000},
+                    orc.NET_BW_IGR_KILOBIT_PER_SEC: 1000,
+                    orc.NET_BW_EGR_KILOBIT_PER_SEC: 1000},
             "required": ["CUSTOM_PHYSNET_2", "CUSTOM_VNIC_TYPE_NORMAL"]
         }
     }

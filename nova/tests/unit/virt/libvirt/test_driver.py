@@ -40,6 +40,7 @@ import mock
 from os_brick import encryptors
 from os_brick import exception as brick_exception
 from os_brick.initiator import connector
+import os_resource_classes as orc
 import os_vif
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
@@ -77,7 +78,6 @@ from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 import nova.privsep.fs
 import nova.privsep.libvirt
-from nova import rc_fields
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_diagnostics
@@ -18182,7 +18182,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
 
     def _get_inventory(self):
         return {
-            rc_fields.ResourceClass.VCPU: {
+            orc.VCPU: {
                 'total': self.vcpus,
                 'min_unit': 1,
                 'max_unit': self.vcpus,
@@ -18190,7 +18190,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 'allocation_ratio': 16.0,
                 'reserved': 0,
             },
-            rc_fields.ResourceClass.MEMORY_MB: {
+            orc.MEMORY_MB: {
                 'total': self.memory_mb,
                 'min_unit': 1,
                 'max_unit': self.memory_mb,
@@ -18198,7 +18198,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 'allocation_ratio': 1.5,
                 'reserved': 512,
             },
-            rc_fields.ResourceClass.DISK_GB: {
+            orc.DISK_GB: {
                 'total': self.disk_gb,
                 'min_unit': 1,
                 'max_unit': self.disk_gb,
@@ -18234,10 +18234,10 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         self._test_update_provider_tree(total_vgpus=8)
         inventory = self._get_inventory()
         # Add VGPU in the expected inventory
-        inventory[rc_fields.ResourceClass.VGPU] = {'step_size': 1,
-                                                   'min_unit': 1,
-                                                   'max_unit': 8,
-                                                   'total': 8}
+        inventory[orc.VGPU] = {'step_size': 1,
+                               'min_unit': 1,
+                               'max_unit': 8,
+                               'total': 8}
         self.assertEqual(inventory,
                          (self.pt.data(self.cn_rp['uuid'])).inventory)
 
@@ -18258,7 +18258,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         """
 
         shared_rp_inv = {
-            rc_fields.ResourceClass.DISK_GB: {
+            orc.DISK_GB: {
                 'total': self.disk_gb,
                 'min_unit': 1,
                 'max_unit': self.disk_gb,
@@ -18278,7 +18278,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         inventory = self._get_inventory()
         # Remove DISK_GB resource from inventory as you don't expect it to be
         # reported by the compute node resource provider.
-        del inventory[rc_fields.ResourceClass.DISK_GB]
+        del inventory[orc.DISK_GB]
 
         self.assertEqual(inventory,
                          (self.pt.data(self.cn_rp['uuid'])).inventory)
@@ -20667,7 +20667,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             'rp1': {
                 'resources': {
                     # Just any resource class but VGPU
-                    rc_fields.ResourceClass.VCPU: 1,
+                    orc.VCPU: 1,
                 }
             }
         }
@@ -20680,7 +20680,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         allocations = {
             'rp1': {
                 'resources': {
-                    rc_fields.ResourceClass.VGPU: 1,
+                    orc.VGPU: 1,
                 }
             }
         }
@@ -20702,7 +20702,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         allocations = {
             'rp1': {
                 'resources': {
-                    rc_fields.ResourceClass.VGPU: 1,
+                    orc.VGPU: 1,
                 }
             }
         }
@@ -20736,7 +20736,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         allocations = {
             'rp1': {
                 'resources': {
-                    rc_fields.ResourceClass.VGPU: 1,
+                    orc.VGPU: 1,
                 }
             }
         }

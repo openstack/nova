@@ -1419,3 +1419,24 @@ class RunOnceTests(test.NoDBTestCase):
         self.assertRaises(ValueError, f.reset)
         self.assertFalse(f.called)
         mock_clean.assert_called_once_with()
+
+
+class TestResourceClassNormalize(test.NoDBTestCase):
+
+    def test_normalize_name(self):
+        values = [
+            ("foo", "CUSTOM_FOO"),
+            ("VCPU", "CUSTOM_VCPU"),
+            ("CUSTOM_BOB", "CUSTOM_CUSTOM_BOB"),
+            ("CUSTM_BOB", "CUSTOM_CUSTM_BOB"),
+        ]
+        for test_value, expected in values:
+            result = utils.normalize_rc_name(test_value)
+            self.assertEqual(expected, result)
+
+    def test_normalize_name_bug_1762789(self):
+        """The .upper() builtin treats sharp S (\xdf) differently in py2 vs.
+        py3.  Make sure normalize_name handles it properly.
+        """
+        name = u'Fu\xdfball'
+        self.assertEqual(u'CUSTOM_FU_BALL', utils.normalize_rc_name(name))

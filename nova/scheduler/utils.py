@@ -19,6 +19,7 @@ import re
 import sys
 import traceback
 
+import os_resource_classes as orc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from six.moves.urllib import parse
@@ -32,7 +33,6 @@ from nova.i18n import _
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import instance as obj_instance
-from nova import rc_fields as fields
 from nova import rpc
 from nova.scheduler.filters import utils as filters_utils
 
@@ -88,8 +88,8 @@ class ResourceRequest(object):
 
     def _add_resource(self, groupid, rclass, amount):
         # Validate the class.
-        if not (rclass.startswith(fields.ResourceClass.CUSTOM_NAMESPACE) or
-                        rclass in fields.ResourceClass.STANDARD):
+        if not (rclass.startswith(orc.CUSTOM_NAMESPACE) or
+                        rclass in orc.STANDARDS):
             LOG.warning(
                 "Received an invalid ResourceClass '%(key)s' in extra_specs.",
                 {"key": rclass})
@@ -376,9 +376,9 @@ def resources_from_flavor(instance, flavor):
             swap_in_gb + flavor.ephemeral_gb)
 
     resources = {
-        fields.ResourceClass.VCPU: flavor.vcpus,
-        fields.ResourceClass.MEMORY_MB: flavor.memory_mb,
-        fields.ResourceClass.DISK_GB: disk,
+        orc.VCPU: flavor.vcpus,
+        orc.MEMORY_MB: flavor.memory_mb,
+        orc.DISK_GB: disk,
     }
     if "extra_specs" in flavor:
         # TODO(efried): This method is currently only used from places that
@@ -414,8 +414,8 @@ def resources_from_request_spec(spec_obj):
     traits, and aggregates it represents.
     """
     spec_resources = {
-        fields.ResourceClass.VCPU: spec_obj.vcpus,
-        fields.ResourceClass.MEMORY_MB: spec_obj.memory_mb,
+        orc.VCPU: spec_obj.vcpus,
+        orc.MEMORY_MB: spec_obj.memory_mb,
     }
 
     requested_disk_mb = ((1024 * spec_obj.ephemeral_gb) +
@@ -441,7 +441,7 @@ def resources_from_request_spec(spec_obj):
     # NOTE(sbauza): Some flavors provide zero size for disk values, we need
     # to avoid asking for disk usage.
     if requested_disk_gb != 0:
-        spec_resources[fields.ResourceClass.DISK_GB] = requested_disk_gb
+        spec_resources[orc.DISK_GB] = requested_disk_gb
 
     # Process extra_specs
     if "extra_specs" in spec_obj.flavor:

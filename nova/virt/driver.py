@@ -22,13 +22,13 @@ Driver base-classes:
 
 import sys
 
+import os_resource_classes as orc
 from oslo_log import log as logging
 from oslo_utils import importutils
 import six
 
 import nova.conf
 from nova.i18n import _
-from nova import rc_fields
 from nova.virt import event as virtevent
 
 CONF = nova.conf.CONF
@@ -887,9 +887,9 @@ class ComputeDriver(object):
                           information.
         :returns: Return a dict, keyed by resource class, of allocation ratio
         """
-        keys = {'cpu': rc_fields.ResourceClass.VCPU,
-                'ram': rc_fields.ResourceClass.MEMORY_MB,
-                'disk': rc_fields.ResourceClass.DISK_GB}
+        keys = {'cpu': orc.VCPU,
+                'ram': orc.MEMORY_MB,
+                'disk': orc.DISK_GB}
         result = {}
         for res, rc in keys.items():
             attr = '%s_allocation_ratio' % res

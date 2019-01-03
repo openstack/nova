@@ -36,7 +36,6 @@ from nova import context as nova_context
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
-from nova import rc_fields as fields
 from nova import servicegroup
 from nova import test
 from nova.tests import fixtures
@@ -45,6 +44,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers as nova_matchers
 from nova.tests.unit import utils
 from nova.tests.unit.virt.ironic import utils as ironic_utils
+from nova import utils as nova_utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt import driver
@@ -2890,7 +2890,7 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
         self.assertTrue(mock_get_by_uuid.called)
         self.assertTrue(mock_save.called)
 
-    @mock.patch.object(fields.ResourceClass, 'normalize_name')
+    @mock.patch.object(nova_utils, 'normalize_rc_name')
     @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
     def test_pike_flavor_migration_empty_node(self, mock_node_from_cache,
             mock_normalize):
@@ -2898,7 +2898,7 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
         self.driver._pike_flavor_migration([uuids.node])
         mock_normalize.assert_not_called()
 
-    @mock.patch.object(fields.ResourceClass, 'normalize_name')
+    @mock.patch.object(nova_utils, 'normalize_rc_name')
     @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
     def test_pike_flavor_migration_already_migrated(self, mock_node_from_cache,
             mock_normalize):
