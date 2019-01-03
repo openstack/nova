@@ -2,7 +2,7 @@
 API reference guideline
 =======================
 
-The API reference should be updated when compute or placement APIs are modified
+The API reference should be updated when compute APIs are modified
 (microversion is bumped, etc.).
 This page describes the guideline for updating the API reference.
 
@@ -10,7 +10,6 @@ API reference
 =============
 
 * `Compute API reference <https://developer.openstack.org/api-ref/compute/>`_
-* `Placement API reference <https://developer.openstack.org/api-ref/placement/>`_
 
 The guideline to write the API reference
 ========================================
@@ -23,14 +22,6 @@ Compute API reference
 * API reference text: ``api-ref/source/*.inc``
 * Parameter definition: ``api-ref/source/parameters.yaml``
 * JSON request/response samples: ``doc/api_samples/*``
-
-Placement API reference
------------------------
-
-The placement project has the API reference files in its own repository
-under `api-ref/source
-<https://github.com/openstack/placement/tree/master/api-ref/source>`_
-directory.
 
 Structure of inc file
 ---------------------
