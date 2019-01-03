@@ -36,15 +36,15 @@ class SupportDirectIOTestCase(test.NoDBTestCase):
         self.einval.errno = errno.EINVAL
         self.enoent = OSError()
         self.enoent.errno = errno.ENOENT
-        self.test_path = os.path.join('.', '.directio.test.abc123')
+        self.test_path = os.path.join('.', '.directio.test.123')
         self.io_flags = os.O_CREAT | os.O_WRONLY | os.O_DIRECT
 
         open_patcher = mock.patch('os.open')
         write_patcher = mock.patch('os.write')
         close_patcher = mock.patch('os.close')
         unlink_patcher = mock.patch('os.unlink')
-        random_string_patcher = mock.patch('nova.utils.generate_random_string',
-                                           return_value='abc123')
+        random_string_patcher = mock.patch(
+            'nova.privsep.utils.generate_random_string', return_value='123')
         self.addCleanup(open_patcher.stop)
         self.addCleanup(write_patcher.stop)
         self.addCleanup(close_patcher.stop)
