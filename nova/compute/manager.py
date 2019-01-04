@@ -32,6 +32,7 @@ import copy
 import functools
 import inspect
 import math
+import random
 import sys
 import time
 import traceback
@@ -10332,6 +10333,8 @@ class ComputeManager(manager.Manager):
                 self._query_driver_power_state_and_sync(context, db_instance)
 
             try:
+                greenthread.sleep(random.randint(
+                    1, CONF.sync_power_state_interval))
                 query_driver_power_state_and_sync()
             except Exception:
                 LOG.exception("Periodic sync_power_state task had an "
