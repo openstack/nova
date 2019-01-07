@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Fixes `bug 1773342`_ where the Hyper-v driver always deleted unused images
+    ignoring ``remove_unused_images`` config option. This change will now allow
+    deployers to disable the auto-removal of old images.
+
+    .. _bug 1773342: https://bugs.launchpad.net/nova/+bug/1773342
