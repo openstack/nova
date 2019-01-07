@@ -130,10 +130,10 @@
     run: playbooks/legacy/nova-lvm/run.yaml
     post-run: playbooks/legacy/nova-lvm/post.yaml
     # Copy irrelevant-files from nova-dsvm-base and then exclude anything
-    # that is not in the nova/virt/libvirt/* tree (besides the actual zuul
-    # playbook and tempest rc files so this can be self-testing).
+    # that is not in nova/virt/libvirt/* or nova/privsep/* (besides the actual
+    # zuul playbook and tempest rc files so this can be self-testing).
     irrelevant-files:
-      - ^(?!.zuul.yaml)(?!playbooks/legacy/nova-lvm/)(?!devstack/tempest-dsvm-lvm-rc)(?!nova/virt/libvirt/).*$
+      - ^(?!.zuul.yaml)(?!playbooks/legacy/nova-lvm/)(?!devstack/tempest-dsvm-lvm-rc)(?!nova/virt/libvirt/)(?!nova/privsep/).*$
       - ^api-.*$
       - ^(test-|)requirements.txt$
       - ^.*\.rst$
