@@ -884,23 +884,23 @@ class ResourceTracker(object):
             ucpu = 0
         pci_stats = (list(cn.pci_device_pools) if
             cn.pci_device_pools else [])
-        LOG.info("Final resource view: "
-                 "name=%(node)s "
-                 "phys_ram=%(phys_ram)sMB "
-                 "used_ram=%(used_ram)sMB "
-                 "phys_disk=%(phys_disk)sGB "
-                 "used_disk=%(used_disk)sGB "
-                 "total_vcpus=%(total_vcpus)s "
-                 "used_vcpus=%(used_vcpus)s "
-                 "pci_stats=%(pci_stats)s",
-                 {'node': nodename,
-                  'phys_ram': cn.memory_mb,
-                  'used_ram': cn.memory_mb_used,
-                  'phys_disk': cn.local_gb,
-                  'used_disk': cn.local_gb_used,
-                  'total_vcpus': tcpu,
-                  'used_vcpus': ucpu,
-                  'pci_stats': pci_stats})
+        LOG.debug("Final resource view: "
+                  "name=%(node)s "
+                  "phys_ram=%(phys_ram)sMB "
+                  "used_ram=%(used_ram)sMB "
+                  "phys_disk=%(phys_disk)sGB "
+                  "used_disk=%(used_disk)sGB "
+                  "total_vcpus=%(total_vcpus)s "
+                  "used_vcpus=%(used_vcpus)s "
+                  "pci_stats=%(pci_stats)s",
+                  {'node': nodename,
+                   'phys_ram': cn.memory_mb,
+                   'used_ram': cn.memory_mb_used,
+                   'phys_disk': cn.local_gb,
+                   'used_disk': cn.local_gb_used,
+                   'total_vcpus': tcpu,
+                   'used_vcpus': ucpu,
+                   'pci_stats': pci_stats})
 
     def _resource_change(self, compute_node):
         """Check to see if any resources have changed."""
