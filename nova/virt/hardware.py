@@ -636,7 +636,7 @@ def _numa_cell_supports_pagesize_request(host_cell, inst_cell):
     def verify_pagesizes(host_cell, inst_cell, avail_pagesize):
         inst_cell_mem = inst_cell.memory * units.Ki
         for pagesize in avail_pagesize:
-            if host_cell.can_fit_hugepages(pagesize, inst_cell_mem):
+            if host_cell.can_fit_pagesize(pagesize, inst_cell_mem):
                 return pagesize
 
     if inst_cell.pagesize == MEMPAGES_SMALL:
@@ -1038,13 +1038,16 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
         # The instance provides a NUMA topology but does not define any
         # particular page size for its memory.
         if host_cell.mempages:
-            # The host supports explicit page sizes.  Use the smallest
-            # available page size.
+            # The host supports explicit page sizes. Use a pagesize-aware
+            # memory check using the smallest available page size.
             pagesize = _get_smallest_pagesize(host_cell)
             LOG.debug('No specific pagesize requested for instance, '
                       'selected pagesize: %d', pagesize)
-            if not host_cell.can_fit_hugepages(
-                    pagesize, instance_cell.memory * units.Ki):
+            # we want to allow overcommit in this case as we're not using
+            # hugepages
+            if not host_cell.can_fit_pagesize(pagesize,
+                                              instance_cell.memory * units.Ki,
+                                              use_free=False):
                 LOG.debug('Not enough available memory to schedule instance '
                           'with pagesize %(pagesize)d. Required: '
                           '%(required)s, available: %(available)s, total: '
@@ -1055,8 +1058,12 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
                            'pagesize': pagesize})
                 return
         else:
-            # NOTE (ndipanov): do not allow an instance to overcommit against
-            # itself on any NUMA cell
+            # The host does not support explicit page sizes. Ignore pagesizes
+            # completely.
+            # NOTE(stephenfin): Do not allow an instance to overcommit against
+            # itself on any NUMA cell, i.e. with 'ram_allocation_ratio = 2.0'
+            # on a host with 1GB RAM, we should allow two 1GB instances but not
+            # one 2GB instance.
             if instance_cell.memory > host_cell.memory:
                 LOG.debug('Not enough host cell memory to fit instance cell. '
                           'Required: %(required)d, actual: %(actual)d',
