@@ -385,8 +385,15 @@ class ComputeAPI(object):
         global NO_COMPUTES_WARNING
         if LAST_VERSION:
             return LAST_VERSION
-        service_version = objects.Service.get_minimum_version(
-            context.get_admin_context(), 'nova-compute')
+
+        # NOTE(danms): If we have a connection to the api database,
+        # we should iterate all cells. If not, we must only look locally.
+        if CONF.api_database.connection:
+            service_version = service_obj.get_minimum_version_all_cells(
+                context.get_admin_context(), ['nova-compute'])
+        else:
+            service_version = objects.Service.get_minimum_version(
+                context.get_admin_context(), 'nova-compute')
 
         history = service_obj.SERVICE_VERSION_HISTORY
 
