@@ -558,19 +558,22 @@ class ServersController(wsgi.Controller):
                     flavor_id, ctxt=context, read_deleted="no")
 
             supports_multiattach = common.supports_multiattach_volume(req)
+            supports_port_resource_request = \
+                common.supports_port_resource_request(req)
             (instances, resv_id) = self.compute_api.create(context,
-                            inst_type,
-                            image_uuid,
-                            display_name=name,
-                            display_description=description,
-                            availability_zone=availability_zone,
-                            forced_host=host, forced_node=node,
-                            metadata=server_dict.get('metadata', {}),
-                            admin_password=password,
-                            requested_networks=requested_networks,
-                            check_server_group_quota=True,
-                            supports_multiattach=supports_multiattach,
-                            **create_kwargs)
+                inst_type,
+                image_uuid,
+                display_name=name,
+                display_description=description,
+                availability_zone=availability_zone,
+                forced_host=host, forced_node=node,
+                metadata=server_dict.get('metadata', {}),
+                admin_password=password,
+                requested_networks=requested_networks,
+                check_server_group_quota=True,
+                supports_multiattach=supports_multiattach,
+                supports_port_resource_request=supports_port_resource_request,
+                **create_kwargs)
         except (exception.QuotaError,
                 exception.PortLimitExceeded) as error:
             raise exc.HTTPForbidden(
@@ -645,7 +648,8 @@ class ServersController(wsgi.Controller):
                 exception.SnapshotNotFound,
                 exception.UnableToAutoAllocateNetwork,
                 exception.MultiattachNotSupportedOldMicroversion,
-                exception.CertificateValidationFailed) as error:
+                exception.CertificateValidationFailed,
+                exception.ServerCreateWithQoSPortNotSupported) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.InstanceExists,

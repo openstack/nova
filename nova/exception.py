@@ -2153,6 +2153,11 @@ class NetworksWithQoSPolicyNotSupported(Invalid):
                 "instance %(instance_uuid)s. (Network ID is %(network_id)s)")
 
 
+class ServerCreateWithQoSPortNotSupported(Invalid):
+    msg_fmt = _("Creating server with port having QoS policy is not "
+                "supported.")
+
+
 class InvalidReservedMemoryPagesOption(Invalid):
     msg_fmt = _("The format of the option 'reserved_huge_pages' is invalid. "
                 "(found '%(conf)s') Please refer to the nova "

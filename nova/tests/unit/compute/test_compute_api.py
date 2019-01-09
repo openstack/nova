@@ -6402,6 +6402,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         requested_networks = objects.NetworkRequestList(objects=[
             objects.NetworkRequest(network_id='none')])
         max_count = 1
+        supports_port_resource_request = False
         with mock.patch.object(
                 self.compute_api.security_group_api, 'get',
                 return_value={'id': uuids.secgroup_uuid}) as scget:
@@ -6413,7 +6414,8 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
                     'fake-display-name', 'fake-description', key_name,
                     key_data, requested_secgroups, 'fake-az', user_data,
                     metadata, access_ip_v4, access_ip_v6, requested_networks,
-                    config_drive, auto_disk_config, reservation_id, max_count
+                    config_drive, auto_disk_config, reservation_id, max_count,
+                    supports_port_resource_request
                 )
             )
         # Assert the neutron security group API get method was called once
@@ -6422,6 +6424,50 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         # Assert we translated the non-default secgroup name to uuid.
         self.assertItemsEqual(['default', uuids.secgroup_uuid],
                               security_groups)
+
+    @mock.patch('nova.network.neutronv2.api.API.validate_networks')
+    @mock.patch('nova.network.neutronv2.api.API.create_resource_requests')
+    def test_validate_and_build_base_options_checks_resource_request(
+            self, mock_neutron_create_resource_requests,
+            mock_validate_network):
+        """Checks that validate_and_build_base_options raises if the request
+        contains port with resource request but API request does not use the
+        microversion enabling such support.
+        """
+        instance_type = objects.Flavor(**test_flavor.fake_flavor)
+        boot_meta = metadata = {}
+        kernel_id = ramdisk_id = key_name = key_data = user_data = \
+            access_ip_v4 = access_ip_v6 = config_drive = \
+                auto_disk_config = reservation_id = None
+        requested_secgroups = ['default']
+        requested_networks = objects.NetworkRequestList(objects=[
+            objects.NetworkRequest(port_id=uuids.port_id)])
+        mock_neutron_create_resource_requests.return_value = (
+            None, [objects.RequestGroup()])
+        max_count = 1
+
+        # This expected not to raise
+        supports_port_resource_request = True
+        self.compute_api._validate_and_build_base_options(
+            self.context, instance_type, boot_meta, uuids.image_href,
+            mock.sentinel.image_id, kernel_id, ramdisk_id,
+            'fake-display-name', 'fake-description', key_name,
+            key_data, requested_secgroups, 'fake-az', user_data,
+            metadata, access_ip_v4, access_ip_v6, requested_networks,
+            config_drive, auto_disk_config, reservation_id, max_count,
+            supports_port_resource_request)
+
+        supports_port_resource_request = False
+        self.assertRaises(
+            exception.ServerCreateWithQoSPortNotSupported,
+            self.compute_api._validate_and_build_base_options,
+            self.context, instance_type, boot_meta, uuids.image_href,
+            mock.sentinel.image_id, kernel_id, ramdisk_id,
+            'fake-display-name', 'fake-description', key_name,
+            key_data, requested_secgroups, 'fake-az', user_data,
+            metadata, access_ip_v4, access_ip_v6, requested_networks,
+            config_drive, auto_disk_config, reservation_id, max_count,
+            supports_port_resource_request)
 
     @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_interface')
