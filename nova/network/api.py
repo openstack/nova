@@ -390,10 +390,22 @@ class API(base_api.NetworkAPI):
                                  pci_requests=None):
         """Retrieve all information for the networks passed at the time of
         creating the server.
+
+        :param context: The request context.
+        :param requested_networks: The networks requested for the server.
+        :type requested_networks: nova.objects.NetworkRequestList
+        :param pci_requests: The list of PCI requests to which additional PCI
+            requests created here will be added.
+        :type pci_requests: nova.objects.InstancePCIRequests
+
+        :returns: A tuple with an instance of ``objects.NetworkMetadata`` for
+                  use by the scheduler or None and a list of RequestGroup
+                  objects representing the resource needs of each requested
+                  port
         """
         # This is NOOP for Nova network since it doesn't support SR-IOV or
         # NUMA-aware vSwitch functionality.
-        pass
+        return None, []
 
     def get_dns_domains(self, context):
         """Returns a list of available dns domains.
