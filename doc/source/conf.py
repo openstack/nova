@@ -172,6 +172,11 @@ latex_documents = [
 # -- Options for openstackdocstheme -------------------------------------------
 
 # keep this ordered to keep mriedem happy
+#
+# NOTE(kchamart): Versioned TripleO Docs is not a yet a "thing".  Remove
+# this note when they can be versioned, and add 'tripleo-docs' to the
+# set of projects below.
+
 openstack_projects = [
     'ceilometer',
     'cinder',
