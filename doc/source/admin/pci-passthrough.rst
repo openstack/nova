@@ -98,10 +98,10 @@ For Hyper-V compute nodes, the requirements are as follows:
 In order to check the requirements above and if there are any assignable PCI
 devices, run the following Powershell commands:
 
-   .. code-block:: console
+.. code-block:: console
 
-       Start-BitsTransfer https://raw.githubusercontent.com/Microsoft/Virtualization-Documentation/master/hyperv-samples/benarm-powershell/DDA/survey-dda.ps1
-        .\survey-dda.ps1
+    Start-BitsTransfer https://raw.githubusercontent.com/Microsoft/Virtualization-Documentation/master/hyperv-samples/benarm-powershell/DDA/survey-dda.ps1
+     .\survey-dda.ps1
 
 If the compute node passes all the requirements, the desired assignable PCI
 devices to be disabled and unmounted from the host, in order to be assignable
