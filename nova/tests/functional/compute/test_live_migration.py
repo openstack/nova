@@ -45,6 +45,7 @@ class LiveMigrationCinderFailure(integrated_helpers._IntegratedTestBase,
                                  integrated_helpers.InstanceHelperMixin):
     api_major_version = 'v2.1'
     microversion = 'latest'
+    USE_NEUTRON = True
 
     def setUp(self):
         super(LiveMigrationCinderFailure, self).setUp()

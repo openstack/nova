@@ -5486,3 +5486,56 @@ class PortResourceRequestBasedSchedulingTest(
         self.assertIn(
             'The resize server operation with port having QoS policy is not '
             'supported.', six.text_type(ex))
+
+    def test_migrate_server_with_port_resource_request_old_microversion(self):
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_1['id']}])
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # We need to simulate that the above server has a port that has
+        # resource request, we cannot boot with such a port but legacy servers
+        # can exists with such a port.
+        bound_port = self.neutron._ports[self.neutron.port_1['id']]
+        fake_resource_request = self.neutron.port_with_resource_request[
+            'resource_request']
+        bound_port['resource_request'] = fake_resource_request
+
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self.api.post_server_action, server['id'], {'migrate': None})
+
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn(
+            'The migrate server operation with port having QoS policy is not '
+            'supported.', six.text_type(ex))
+
+    def test_live_migrate_server_with_port_resource_request_old_microversion(
+            self):
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_1['id']}])
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # We need to simulate that the above server has a port that has
+        # resource request, we cannot boot with such a port but legacy servers
+        # can exists with such a port.
+        bound_port = self.neutron._ports[self.neutron.port_1['id']]
+        fake_resource_request = self.neutron.port_with_resource_request[
+            'resource_request']
+        bound_port['resource_request'] = fake_resource_request
+
+        post = {
+            'os-migrateLive': {
+                'host': None,
+                'block_migration': False,
+            }
+        }
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self.api.post_server_action, server['id'], post)
+
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn(
+            'The live migrate server operation with port having QoS policy is '
+            'not supported.', six.text_type(ex))
