@@ -15,9 +15,11 @@
 import mock
 from oslo_policy import policy as oslo_policy
 from oslo_utils.fixture import uuidsentinel
+import six
 import webob
 
 from nova.api.openstack.compute import shelve as shelve_v21
+from nova.compute import vm_states
 from nova import exception
 from nova import policy
 from nova import test
@@ -60,6 +62,27 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._shelve_offload,
                           self.req, uuidsentinel.fake, {})
+
+    @mock.patch('nova.network.neutronv2.api.API.list_ports')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_unshelve_offloaded_with_port_resource_request_old_microversion(
+            self, get_instance_mock, mock_list_ports):
+        mock_list_ports.return_value = {'ports': [
+            {'resource_request': {
+                "resources": {'CUSTOM_FOO': 1}}}]
+        }
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'])
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        get_instance_mock.return_value = instance
+
+        ex = self.assertRaises(
+            webob.exc.HTTPBadRequest, self.controller._unshelve, self.req,
+            uuidsentinel.fake, {})
+
+        self.assertIn(
+            'The unshelve server operation on a shelve offloaded server with '
+            'port having QoS policy is not supported.', six.text_type(ex))
 
 
 class ShelvePolicyEnforcementV21(test.NoDBTestCase):
