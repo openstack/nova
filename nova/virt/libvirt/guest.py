@@ -636,6 +636,7 @@ class Guest(object):
            VIR_MIGRATE_UNSAFE Force migration even if it is considered
                               unsafe.
            VIR_MIGRATE_OFFLINE Migrate offline
+           VIR_MIGRATE_TLS Use QEMU-native TLS
         :param bandwidth: The maximum bandwidth in MiB/s
         """
         params = {}

@@ -459,6 +459,44 @@ Determine the snapshot image format when sending to the image service.
 If set, this decides what format is used when sending the snapshot to the
 image service. If not set, defaults to same type as source image.
 """),
+    cfg.BoolOpt('live_migration_with_native_tls',
+                default=False,
+                help="""
+
+This option will allow both migration stream (guest RAM plus device
+state) *and* disk stream to be transported over native TLS, i.e. TLS
+support built into QEMU.
+
+Prerequisite: TLS environment is configured correctly on all relevant
+Compute nodes.  This means, Certificate Authority (CA), server, client
+certificates, their corresponding keys, and their file permisssions are
+in place, and are validated.
+
+Notes:
+
+* To have encryption for migration stream and disk stream (also called:
+  "block migration"), ``live_migration_with_native_tls`` is the
+  preferred config attribute instead of ``live_migration_tunnelled``.
+
+* The ``live_migration_tunnelled`` will be deprecated in the long-term,
+  for two main reasons: (a) it incurs a huge performance penalty; and
+  it's not compatible with block migration.
+
+* The ``live_migration_tunnelled`` and
+  ``live_migration_with_native_tls`` should not be used at the same
+  time.
+
+* Unlike ``live_migration_tunnelled``, the
+  ``live_migration_with_native_tls`` *is* compatible with block
+  migration.  That is, with this option, NBD stream, over which disks
+  are migrated to a target host, will be encrypted.
+
+Related options:
+
+``live_migration_tunnelled``: This transports migration stream (but not
+disk stream) over libvirtd.
+
+"""),
     cfg.StrOpt('disk_prefix',
                help="""
 Override the default disk prefix for the devices attached to an instance.
