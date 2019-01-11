@@ -25,6 +25,7 @@ from nova import compute
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova import network
 from nova.policies import evacuate as evac_policies
 from nova import utils
 
@@ -36,6 +37,7 @@ class EvacuateController(wsgi.Controller):
         super(EvacuateController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
         self.host_api = compute.HostAPI()
+        self.network_api = network.API()
 
     def _get_on_shared_storage(self, req, evacuate_body):
         if api_version_request.is_supported(req, min_version='2.14'):
@@ -112,6 +114,13 @@ class EvacuateController(wsgi.Controller):
 
         if instance.host == host:
             msg = _("The target host can't be the same one.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        if (common.instance_has_port_with_resource_request(
+                    context, instance.uuid, self.network_api) and not
+                common.supports_port_resource_request_during_move(req)):
+            msg = _("The evacuate server operation with port having QoS "
+                    "policy is not supported.")
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
