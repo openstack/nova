@@ -87,7 +87,7 @@ resume              Suspended           N/A                   Active
 rescue              Active, Shutoff     Resize Verify, unset  Rescued
 unrescue            Rescued             N/A                   Active
 set admin password  Active              N/A                   Active
-rebuild             Active, Shutoff     Resize Verify, unset  Active
+rebuild             Active, Shutoff     Resize Verify, unset  Active, Shutoff
 force delete        Soft Deleted        N/A                   Deleted
 restore             Soft Deleted        N/A                   Active
 soft delete         Active, Shutoff,    N/A                   Soft Deleted
