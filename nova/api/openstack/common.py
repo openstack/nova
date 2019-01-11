@@ -550,3 +550,28 @@ def supports_port_resource_request(req):
         port resource request support, False otherwise.
     """
     return False
+
+
+def supports_port_resource_request_during_move(req):
+    """Check to see if the requested API version is high enough for support
+    port resource request during move operation.
+
+    NOTE: At the moment there is no such microversion that supports port
+    resource request during move. This function is added as a preparation for
+    that microversion.
+
+    :param req: The incoming API request
+    :returns: True if the requested API microversion is high enough for
+        port resource request move support, False otherwise.
+    """
+    return False
+
+
+def instance_has_port_with_resource_request(
+        context, instance_uuid, network_api):
+
+    search_opts = {'device_id': instance_uuid}
+    ports = network_api.list_ports(context, **search_opts).get('ports', [])
+    ports_with_resource_request = [port for port in ports
+                                   if port.get('resource_request', None)]
+    return bool(ports_with_resource_request)

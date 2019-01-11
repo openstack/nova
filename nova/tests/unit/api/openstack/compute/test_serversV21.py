@@ -7694,13 +7694,16 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             rule, rule_name, self.controller.update, self.req,
             FAKE_UUID, body=body)
 
+    @mock.patch('nova.api.openstack.common.'
+                'instance_has_port_with_resource_request', return_value=False)
     @mock.patch('nova.api.openstack.compute.views.servers.ViewBuilder.show')
     @mock.patch.object(compute_api.API, 'update_instance')
     @mock.patch.object(common, 'get_instance')
     def test_update_overridden_policy_pass_with_same_user(self,
                                                           get_instance_mock,
                                                           update_instance_mock,
-                                                          view_show_mock):
+                                                          view_show_mock,
+                                                          mock_port_check):
         instance = fake_instance.fake_instance_obj(
             self.req.environ['nova.context'],
             user_id=self.req.environ['nova.context'].user_id)
@@ -7747,11 +7750,14 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             rule, rule_name, self.controller._action_resize, self.req,
             FAKE_UUID, body=body)
 
+    @mock.patch('nova.api.openstack.common.'
+                'instance_has_port_with_resource_request', return_value=False)
     @mock.patch('nova.compute.api.API.resize')
     @mock.patch('nova.api.openstack.common.get_instance')
     def test_resize_overridden_policy_pass_with_same_project(self,
                                                              get_instance_mock,
-                                                             resize_mock):
+                                                             resize_mock,
+                                                             mock_post_check):
         instance = fake_instance.fake_instance_obj(
             self.req.environ['nova.context'],
             project_id=self.req.environ['nova.context'].project_id)
@@ -7777,11 +7783,14 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             rule, rule_name, self.controller._action_resize, self.req,
             FAKE_UUID, body=body)
 
+    @mock.patch('nova.api.openstack.common.'
+                'instance_has_port_with_resource_request', return_value=False)
     @mock.patch('nova.compute.api.API.resize')
     @mock.patch('nova.api.openstack.common.get_instance')
     def test_resize_overridden_policy_pass_with_same_user(self,
                                                         get_instance_mock,
-                                                        resize_mock):
+                                                        resize_mock,
+                                                        mock_port_check):
         instance = fake_instance.fake_instance_obj(
             self.req.environ['nova.context'],
             user_id=self.req.environ['nova.context'].user_id)
