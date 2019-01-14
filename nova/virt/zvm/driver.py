@@ -339,7 +339,6 @@ class ZVMDriver(driver.ComputeDriver):
 
         # Save image to glance
         new_image_meta = {
-            'is_public': False,
             'status': 'active',
             'properties': {
                  'image_location': 'snapshot',

@@ -454,7 +454,6 @@ def upload_image_stream_optimized(context, image_id, instance, session,
     # which will not be the image size after upload, since it is converted
     # to a stream-optimized sparse disk.
     image_metadata = {'disk_format': constants.DISK_FORMAT_VMDK,
-                      'is_public': metadata['is_public'],
                       'name': metadata['name'],
                       'status': 'active',
                       'container_format': constants.CONTAINER_FORMAT_BARE,

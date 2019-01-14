@@ -246,6 +246,12 @@ class _FakeImageService(object):
         # is mostly a lie on a newly created image.
         if 'status' not in metadata:
             image_meta['status'] = 'active'
+        # The owner of the image is by default the request context project_id.
+        if context and 'owner' not in image_meta.get('properties', {}):
+            # Note that normally "owner" is a top-level field in an image
+            # resource in glance but we have to fake this out for the images
+            # proxy API by throwing it into the generic "properties" dict.
+            image_meta.get('properties', {})['owner'] = context.project_id
         self.images[image_id] = image_meta
         if data:
             self._imagedata[image_id] = data.read()

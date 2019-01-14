@@ -1164,7 +1164,7 @@ def create_image(context, instance, name, image_type, image_api,
     properties.update(extra_properties or {})
 
     image_meta = initialize_instance_snapshot_metadata(
-        instance, name, properties)
+        context, instance, name, properties)
     # if we're making a snapshot, omit the disk and container formats,
     # since the image may have been converted to another format, and the
     # original values won't be accurate.  The driver will populate these
@@ -1175,10 +1175,13 @@ def create_image(context, instance, name, image_type, image_api,
     return image_api.create(context, image_meta)
 
 
-def initialize_instance_snapshot_metadata(instance, name,
+def initialize_instance_snapshot_metadata(context, instance, name,
                                           extra_properties=None):
     """Initialize new metadata for a snapshot of the given instance.
 
+    :param context: authenticated RequestContext; note that this may not
+            be the owner of the instance itself, e.g. an admin creates a
+            snapshot image of some user instance
     :param instance: nova.objects.instance.Instance object
     :param name: string for name of the snapshot
     :param extra_properties: dict of extra metadata properties to include
@@ -1187,8 +1190,27 @@ def initialize_instance_snapshot_metadata(instance, name,
     """
     image_meta = utils.get_image_from_system_metadata(
         instance.system_metadata)
-    image_meta.update({'name': name,
-                       'is_public': False})
+    image_meta['name'] = name
+
+    # If the user creating the snapshot is not in the same project as
+    # the owner of the instance, then the image visibility should be
+    # "shared" so the owner of the instance has access to the image, like
+    # in the case of an admin creating a snapshot of another user's
+    # server, either directly via the createImage API or via shelve.
+    extra_properties = extra_properties or {}
+    if context.project_id != instance.project_id:
+        # The glance API client-side code will use this to add the
+        # instance project as a member of the image for access.
+        image_meta['visibility'] = 'shared'
+        extra_properties['instance_owner'] = instance.project_id
+        # TODO(mriedem): Should owner_project_name and owner_user_name
+        # be removed from image_meta['properties'] here, or added to
+        # [DEFAULT]/non_inheritable_image_properties? It is confusing
+        # otherwise to see the owner project not match those values.
+    else:
+        # The request comes from the owner of the instance so make the
+        # image private.
+        image_meta['visibility'] = 'private'
 
     # Delete properties that are non-inheritable
     properties = image_meta['properties']
@@ -1196,7 +1218,7 @@ def initialize_instance_snapshot_metadata(instance, name,
         properties.pop(key, None)
 
     # The properties in extra_properties have precedence
-    properties.update(extra_properties or {})
+    properties.update(extra_properties)
 
     return image_meta
 

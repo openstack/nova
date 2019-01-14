@@ -468,11 +468,18 @@ class GlanceImageServiceV2(object):
         # empty data.
         force_activate = data is None and image_meta.get('size') == 0
 
+        # The "instance_owner" property is set in the API if a user, who is
+        # not the owner of an instance, is creating the image, e.g. admin
+        # snapshots or shelves another user's instance. This is used to add
+        # member access to the image for the instance owner.
+        sharing_member_id = image_meta.get('properties', {}).pop(
+            'instance_owner', None)
         sent_service_image_meta = _translate_to_glance(image_meta)
 
         try:
             image = self._create_v2(context, sent_service_image_meta,
-                                    data, force_activate)
+                                    data, force_activate,
+                                    sharing_member_id=sharing_member_id)
         except glanceclient.exc.HTTPException:
             _reraise_translated_exception()
 
@@ -483,6 +490,23 @@ class GlanceImageServiceV2(object):
         try:
             return self._client.call(
                 context, 2, 'add_location', args=(image_id, location, {}))
+        except glanceclient.exc.HTTPBadRequest:
+            _reraise_translated_exception()
+
+    def _add_image_member(self, context, image_id, member_id):
+        """Grant access to another project that does not own the image
+
+        :param context: nova auth RequestContext where context.project_id is
+            the owner of the image
+        :param image_id: ID of the image on which to grant access
+        :param member_id: ID of the member project to grant access to the
+            image; this should not be the owner of the image
+        :returns: A Member schema object of the created image member
+        """
+        try:
+            return self._client.call(
+                context, 2, 'create', controller='image_members',
+                args=(image_id, member_id))
         except glanceclient.exc.HTTPBadRequest:
             _reraise_translated_exception()
 
@@ -534,7 +558,7 @@ class GlanceImageServiceV2(object):
         return preferred_disk_formats[0]
 
     def _create_v2(self, context, sent_service_image_meta, data=None,
-                   force_activate=False):
+                   force_activate=False, sharing_member_id=None):
         # Glance v1 allows image activation without setting disk and
         # container formats, v2 doesn't. It leads to the dirtiest workaround
         # where we have to hardcode this parameters.
@@ -555,6 +579,12 @@ class GlanceImageServiceV2(object):
         # Sending image location in a separate request.
         if location:
             image = self._add_location(context, image_id, location)
+
+        # Add image membership in a separate request.
+        if sharing_member_id:
+            LOG.debug('Adding access for member %s to image %s',
+                      sharing_member_id, image_id)
+            self._add_image_member(context, image_id, sharing_member_id)
 
         # If we have some data we have to send it in separate request and
         # update the image then.
