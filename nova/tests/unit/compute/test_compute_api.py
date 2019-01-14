@@ -2853,7 +2853,6 @@ class _ComputeAPIUnitTestMixIn(object):
         # carried from sys_meta into image property...since it should be set
         # explicitly by _create_image() in compute api.
         fake_image_meta = {
-            'is_public': True,
             'name': 'base-name',
             'disk_format': 'fake',
             'container_format': 'fake',
@@ -2871,7 +2870,7 @@ class _ComputeAPIUnitTestMixIn(object):
         }
         image_type = is_snapshot and 'snapshot' or 'backup'
         sent_meta = {
-            'is_public': False,
+            'visibility': 'private',
             'name': 'fake-name',
             'disk_format': 'fake',
             'container_format': 'fake',
@@ -3137,7 +3136,7 @@ class _ComputeAPIUnitTestMixIn(object):
                            'ram_disk': 'fake_ram_disk_id'},
             'size': 0,
             'min_disk': '22',
-            'is_public': False,
+            'visibility': 'private',
             'min_ram': '11',
         }
         if quiesce_required:

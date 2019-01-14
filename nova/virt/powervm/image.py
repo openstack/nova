@@ -50,7 +50,6 @@ def generate_snapshot_metadata(context, image_api, image_id, instance):
     # TODO(esberglu): Update this to v2 metadata
     metadata = {
         'name': image['name'],
-        'is_public': False,
         'status': 'active',
         'disk_format': 'raw',
         'container_format': 'bare',

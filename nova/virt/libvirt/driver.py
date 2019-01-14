@@ -1794,8 +1794,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _create_snapshot_metadata(self, image_meta, instance,
                                   img_fmt, snp_name):
-        metadata = {'is_public': False,
-                    'status': 'active',
+        metadata = {'status': 'active',
                     'name': snp_name,
                     'properties': {
                                    'kernel_id': instance.kernel_id,
