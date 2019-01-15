@@ -1566,6 +1566,17 @@ class ComputeManager(manager.Manager):
                 requested_networks, macs, security_groups, is_vpn)
 
     def _default_root_device_name(self, instance, image_meta, root_bdm):
+        """Gets a default root device name from the driver.
+
+        :param nova.objects.Instance instance:
+            The instance for which to get the root device name.
+        :param nova.objects.ImageMeta image_meta:
+            The metadata of the image of the instance.
+        :param nova.objects.BlockDeviceMapping root_bdm:
+            The description of the root device.
+        :returns: str -- The default root device name.
+        :raises: InternalError, TooManyDiskDevices
+        """
         try:
             return self.driver.default_root_device_name(instance,
                                                         image_meta,
@@ -1576,6 +1587,15 @@ class ComputeManager(manager.Manager):
     def _default_device_names_for_instance(self, instance,
                                            root_device_name,
                                            *block_device_lists):
+        """Default the missing device names in the BDM from the driver.
+
+        :param nova.objects.Instance instance:
+            The instance for which to get default device names.
+        :param str root_device_name: The root device name.
+        :param list block_device_lists: List of block device mappings.
+        :returns: None
+        :raises: InternalError, TooManyDiskDevices
+        """
         try:
             self.driver.default_device_names_for_instance(instance,
                                                           root_device_name,
@@ -1585,6 +1605,18 @@ class ComputeManager(manager.Manager):
                 instance, root_device_name, *block_device_lists)
 
     def _get_device_name_for_instance(self, instance, bdms, block_device_obj):
+        """Get the next device name from the driver, based on the BDM.
+
+        :param nova.objects.Instance instance:
+            The instance whose volume is requesting a device name.
+        :param nova.objects.BlockDeviceMappingList bdms:
+            The block device mappings for the instance.
+        :param nova.objects.BlockDeviceMapping block_device_obj:
+            A block device mapping containing info about the requested block
+            device.
+        :returns: The next device name.
+        :raises: InternalError, TooManyDiskDevices
+        """
         # NOTE(ndipanov): Copy obj to avoid changing the original
         block_device_obj = block_device_obj.obj_clone()
         try:

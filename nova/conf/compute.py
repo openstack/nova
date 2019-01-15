@@ -803,6 +803,50 @@ image format conversions, etc.) that we will do in parallel.  If this is set
 too high then response time suffers.
 The default value of 0 means no limit.
  """),
+    cfg.IntOpt('max_disk_devices_to_attach',
+        default=-1,
+        min=-1,
+        help="""
+Maximum number of disk devices allowed to attach to a single server. Note
+that the number of disks supported by an server depends on the bus used. For
+example, the ``ide`` disk bus is limited to 4 attached devices. The configured
+maximum is enforced during server create, rebuild, evacuate, unshelve, live
+migrate, and attach volume.
+
+Usually, disk bus is determined automatically from the device type or disk
+device, and the virtualization type. However, disk bus
+can also be specified via a block device mapping or an image property.
+See the ``disk_bus`` field in :doc:`/user/block-device-mapping` for more
+information about specifying disk bus in a block device mapping, and
+see https://docs.openstack.org/glance/latest/admin/useful-image-properties.html
+for more information about the ``hw_disk_bus`` image property.
+
+Operators changing the ``[compute]/max_disk_devices_to_attach`` on a compute
+service that is hosting servers should be aware that it could cause rebuilds to
+fail, if the maximum is decreased lower than the number of devices already
+attached to servers. For example, if server A has 26 devices attached and an
+operators changes ``[compute]/max_disk_devices_to_attach`` to 20, a request to
+rebuild server A will fail and go into ERROR state because 26 devices are
+already attached and exceed the new configured maximum of 20.
+
+Operators setting ``[compute]/max_disk_devices_to_attach`` should also be aware
+that during a cold migration, the configured maximum is only enforced in-place
+and the destination is not checked before the move. This means if an operator
+has set a maximum of 26 on compute host A and a maximum of 20 on compute host
+B, a cold migration of a server with 26 attached devices from compute host A to
+compute host B will succeed. Then, once the server is on compute host B, a
+subsequent request to rebuild the server will fail and go into ERROR state
+because 26 devices are already attached and exceed the configured maximum of 20
+on compute host B.
+
+The configured maximum is not enforced on shelved offloaded servers, as they
+have no compute host.
+
+Possible values:
+
+* -1 means unlimited
+* Any integer >= 0 represents the maximum allowed
+"""),
 ]
 
 interval_opts = [
