@@ -291,14 +291,35 @@ documentation
 <configuration/opts.html#oslo_messaging_notifications.transport_url>` for more
 details.
 
+.. _cells-v2-layout-metadata-api:
+
 Nova Metadata API service
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Nova metadata API service should be global across all cells, and
-thus be configured as an API-level service with access to the
-``[api_database]/connection`` information. The nova metadata API service must
-not be run as a standalone service (e.g. must not be run via the
-nova-api-metadata script).
+Starting from the Stein release, the Nova Metadata API service
+can be run either globally or per cell using the
+:oslo.config:option:`api.local_metadata_per_cell` configuration option.
+
+**Global**
+
+If you have networks that span cells, you might need to run Nova metadata API
+globally. When running globally, it should be configured as an API-level
+service with access to the :oslo.config:option:`api_database.connection`
+information. The nova metadata API service must not be run as a standalone
+service in this case (e.g. must not be run via the nova-api-metadata script).
+
+**Local per cell**
+
+Running Nova metadata API per cell can have better performance and data
+isolation in a muli-cell deployment. If your networks are segmented along
+cell boundaries, then you can run Nova metadata API service per cell. If
+you choose to run it per cell, you should also configure each
+`Neutron metadata-agent`_ to point to the corresponding nova-metadata-api.
+The nova metadata API service must be run as a standalone service in this
+case (e.g. must be run via the nova-api-metadata script).
+
+.. _Neutron metadata-agent: https://docs.openstack.org/neutron/latest/configuration/metadata-agent.html?#DEFAULT.nova_metadata_host
+
 
 Consoleauth service and console proxies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

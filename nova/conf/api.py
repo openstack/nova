@@ -196,6 +196,19 @@ performance reasons. Increasing this setting should improve response times
 of the metadata API when under heavy load. Higher values may increase memory
 usage, and result in longer times for host metadata changes to take effect.
 """),
+    cfg.BoolOpt("local_metadata_per_cell",
+                default=False,
+                help="""
+Indicates that the nova-metadata API service has been deployed per-cell, so
+that we can have better performance and data isolation in a multi-cell
+deployment. Users should consider the use of this configuration depending on
+how neutron is setup. If you have networks that span cells, you might need to
+run nova-metadata API service globally. If your networks are segmented along
+cell boundaries, then you can run nova-metadata API service per cell. When
+running nova-metadata API service per cell, you should also configure each
+Neutron metadata-agent to point to the corresponding nova-metadata API
+service.
+"""),
 ]
 
 file_opts = [
