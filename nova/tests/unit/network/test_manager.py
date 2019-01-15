@@ -1922,11 +1922,11 @@ class VlanNetworkTestCase(test.TestCase):
                                                  'DE:AD:BE:EF:00:00',
                                                  run_as_root=True)
 
-    @mock.patch('nova.network.linux_utils.device_exists', return_value=True)
+    @mock.patch('nova.privsep.linux_net.device_exists', return_value=True)
     def test_deallocate_fixed_with_dhcp(self, mock_dev_exists):
         self._deallocate_fixed_with_dhcp(mock_dev_exists)
 
-    @mock.patch('nova.network.linux_utils.device_exists', return_value=False)
+    @mock.patch('nova.privsep.linux_net.device_exists', return_value=False)
     def test_deallocate_fixed_without_dhcp(self, mock_dev_exists):
         self._deallocate_fixed_with_dhcp(mock_dev_exists)
 
@@ -2834,7 +2834,8 @@ class AllocateTestCase(test.TestCase):
                                                    fakes.FAKE_PROJECT_ID)
 
     @mock.patch('nova.privsep.linux_net.add_bridge', return_value=('', ''))
-    def test_allocate_for_instance(self, mock_add_bridge):
+    @mock.patch('nova.privsep.linux_net.set_device_mtu')
+    def test_allocate_for_instance(self, mock_set_mtu, mock_add_bridge):
         address = "10.10.10.10"
         self.flags(auto_assign_floating_ip=True)
 
@@ -2899,7 +2900,9 @@ class AllocateTestCase(test.TestCase):
             requested_networks=requested_networks)
 
     @mock.patch('nova.privsep.linux_net.add_bridge', return_value=('', ''))
-    def test_allocate_for_instance_with_mac(self, mock_add_bridge):
+    @mock.patch('nova.privsep.linux_net.set_device_mtu')
+    def test_allocate_for_instance_with_mac(self, mock_set_mtu,
+                                            mock_add_bridge):
         available_macs = set(['ca:fe:de:ad:be:ef'])
         inst = db.instance_create(self.context, {'host': HOST,
                                                  'display_name': HOST,
