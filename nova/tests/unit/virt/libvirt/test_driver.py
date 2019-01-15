@@ -10460,7 +10460,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml',
                 return_value='')
     @mock.patch('nova.virt.libvirt.guest.Guest.get_xml_desc', return_value='')
-    def test_block_live_migration_native_tls_migrateToURI3(
+    def test_block_live_migration_native_tls(
             self, mock_old_xml, mock_new_xml,
             mock_migrateToURI3, mock_min_version):
         self.flags(live_migration_with_native_tls=True, group='libvirt')

@@ -462,6 +462,7 @@ image service. If not set, defaults to same type as source image.
     cfg.BoolOpt('live_migration_with_native_tls',
                 default=False,
                 help="""
+Use QEMU-native TLS encryption when live migrating.
 
 This option will allow both migration stream (guest RAM plus device
 state) *and* disk stream to be transported over native TLS, i.e. TLS
@@ -478,9 +479,11 @@ Notes:
   "block migration"), ``live_migration_with_native_tls`` is the
   preferred config attribute instead of ``live_migration_tunnelled``.
 
-* The ``live_migration_tunnelled`` will be deprecated in the long-term,
+* The ``live_migration_tunnelled`` will be deprecated in the long-term
   for two main reasons: (a) it incurs a huge performance penalty; and
-  it's not compatible with block migration.
+  (b) it is not compatible with block migration.  Therefore, if your
+  compute nodes have at least libvirt 4.4.0 and QEMU 2.11.0, it is
+  strongly recommended to use ``live_migration_with_native_tls``.
 
 * The ``live_migration_tunnelled`` and
   ``live_migration_with_native_tls`` should not be used at the same

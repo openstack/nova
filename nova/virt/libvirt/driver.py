@@ -655,6 +655,20 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return (live_migration_flags, block_migration_flags)
 
+    # TODO(kchamart) Once the MIN_LIBVIRT_VERSION and MIN_QEMU_VERSION
+    # reach 4.4.0 and 2.11.0, which provide "native TLS" support by
+    # default, deprecate and remove the support for "tunnelled live
+    # migration" (and related config attribute), because:
+    #
+    #  (a) it cannot handle live migration of disks in a non-shared
+    #      storage setup (a.k.a. "block migration");
+    #
+    #  (b) has a huge performance overhead and latency, because it burns
+    #      more CPU and memory bandwidth due to increased number of data
+    #      copies on both source and destination hosts.
+    #
+    # Both the above limitations are addressed by the QEMU-native TLS
+    # support (`live_migration_with_native_tls`).
     def _handle_live_migration_tunnelled(self, migration_flags):
         if CONF.libvirt.live_migration_tunnelled:
             migration_flags |= libvirt.VIR_MIGRATE_TUNNELLED
