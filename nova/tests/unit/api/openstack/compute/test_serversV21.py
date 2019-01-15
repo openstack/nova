@@ -906,7 +906,8 @@ class ServersControllerTest(ControllerTest):
                           self.controller.detail, req)
 
     def test_get_servers_invalid_sort_key(self):
-        req = self.req('/fake/servers?sort_key=foo&sort_dir=desc')
+        # "hidden" is a real field for instances but not exposed in the API.
+        req = self.req('/fake/servers?sort_key=hidden&sort_dir=desc')
         self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 
@@ -1482,6 +1483,9 @@ class ServersControllerTest(ControllerTest):
             # Allowed only by admins with admin API on
             self.assertIn('ip', search_opts)
             self.assertNotIn('unknown_option', search_opts)
+            # "hidden" is ignored as a filter parameter since it is only used
+            # internally
+            self.assertNotIn('hidden', search_opts)
             return objects.InstanceList(
                 objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
 
@@ -1494,7 +1498,7 @@ class ServersControllerTest(ControllerTest):
         self.mock_get_all.side_effect = fake_get_all
 
         query_str = ("name=foo&ip=10.*&status=active&unknown_option=meow&"
-                     "terminated_at=^2016-02-01.*")
+                     "terminated_at=^2016-02-01.*&hidden=true")
         req = self.req('/fake/servers?%s' % query_str)
         servers = self.controller.index(req)['servers']
 

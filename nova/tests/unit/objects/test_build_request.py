@@ -152,16 +152,17 @@ class _TestBuildRequestObject(object):
             self.assertEqual(getattr(build_request.instance, field),
                              getattr(instance, field))
 
-    def test_from_db_object_set_deleted(self):
+    def test_from_db_object_set_deleted_hidden(self):
         # Assert that if we persisted an instance not yet having the deleted
-        # field being set, we still return a value for that field.
+        # or hidden field being set, we still return a value for that field.
         fake_req = fake_build_request.fake_db_req()
         with mock.patch.object(o_vo_base.VersionedObject,
                                'obj_set_defaults') as mock_obj_set_defaults:
             build_request = objects.BuildRequest._from_db_object(
                 self.context, objects.BuildRequest(), fake_req)
-        mock_obj_set_defaults.assert_called_once_with('deleted')
+        mock_obj_set_defaults.assert_called_once_with('deleted', 'hidden')
         self.assertFalse(build_request.instance.deleted)
+        self.assertFalse(build_request.instance.hidden)
 
     def test_obj_make_compatible_pre_1_3(self):
         obj = fake_build_request.fake_req_obj(self.context)

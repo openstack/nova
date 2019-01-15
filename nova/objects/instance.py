@@ -21,6 +21,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import versionutils
 from sqlalchemy import or_
+from sqlalchemy.sql import false
 from sqlalchemy.sql import func
 from sqlalchemy.sql import null
 
@@ -112,7 +113,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 2.3: Added device_metadata
     # Version 2.4: Added trusted_certs
     # Version 2.5: Added hard_delete kwarg in destroy
-    VERSION = '2.5'
+    # Version 2.6: Added hidden
+    VERSION = '2.6'
 
     fields = {
         'id': fields.IntegerField(),
@@ -214,6 +216,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                                                 nullable=True),
         'keypairs': fields.ObjectField('KeyPairList'),
         'trusted_certs': fields.ObjectField('TrustedCerts', nullable=True),
+        'hidden': fields.BooleanField(default=False),
         }
 
     obj_extra_fields = ['name']
@@ -221,6 +224,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def obj_make_compatible(self, primitive, target_version):
         super(Instance, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (2, 6) and 'hidden' in primitive:
+            del primitive['hidden']
         if target_version < (2, 4) and 'trusted_certs' in primitive:
             del primitive['trusted_certs']
         if target_version < (2, 3) and 'device_metadata' in primitive:
@@ -1458,6 +1463,10 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             filter_by(deleted=0).\
             filter(not_soft_deleted).\
             filter_by(project_id=project_id)
+        # NOTE(mriedem): Filter out hidden instances since there should be a
+        # non-hidden version of the instance in another cell database and the
+        # API will only show one of them, so we don't count the hidden copy.
+        project_query = project_query.filter_by(hidden=false())
 
         project_result = project_query.first()
         fields = ('instances', 'cores', 'ram')

@@ -2737,6 +2737,23 @@ class API(base.Base):
             seen_uuids = set()
 
             def _filter(instance):
+                # During a cross-cell move operation we could have the instance
+                # in more than one cell database so we not only have to filter
+                # duplicates but we want to make sure we only return the
+                # "current" one which should also be the one that the instance
+                # mapping points to, but we don't want to do that expensive
+                # lookup here. The DB API will filter out hidden instances by
+                # default but there is a small window where two copies of an
+                # instance could be hidden=False in separate cell DBs.
+                # NOTE(mriedem): We could make this better in the case that we
+                # have duplicate instances that are both hidden=False by
+                # showing the one with the newer updated_at value, but that
+                # could be tricky if the user is filtering on
+                # changes-since/before or updated_at, or sorting on updated_at,
+                # but technically that was already potentially broken with this
+                # _filter method if we return an older BuildRequest.instance,
+                # and given the window should be very small where we have
+                # duplicates, it's probably not worth the complexity.
                 if instance.uuid in seen_uuids:
                     return False
                 seen_uuids.add(instance.uuid)
