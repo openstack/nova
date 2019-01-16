@@ -68,7 +68,7 @@ class BuildRequest(base.NovaObject):
             LOG.debug('Failed to load instance from BuildRequest with uuid '
                       '%s because it is None', self.instance_uuid)
             raise exception.BuildRequestNotFound(uuid=self.instance_uuid)
-        except ovoo_exc.IncompatibleObjectVersion as exc:
+        except ovoo_exc.IncompatibleObjectVersion:
             # This should only happen if proper service upgrade strategies are
             # not followed. Log the exception and raise BuildRequestNotFound.
             # If the instance can't be loaded this object is useless and may
@@ -77,7 +77,8 @@ class BuildRequest(base.NovaObject):
                       'with uuid %(instance_uuid)s. Found version %(version)s '
                       'which is not supported here.',
                       dict(instance_uuid=self.instance_uuid,
-                          version=exc.objver))
+                           version=jsonutils.loads(
+                               db_instance)["nova_object.version"]))
             LOG.exception(_LE('Could not deserialize instance in '
                               'BuildRequest'))
             raise exception.BuildRequestNotFound(uuid=self.instance_uuid)
