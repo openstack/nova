@@ -447,11 +447,15 @@ class _TestComputeNodeObject(object):
                          comparators=self.comparators())
 
     def test_compat_numa_topology(self):
-        compute = compute_node.ComputeNode()
+        compute = compute_node.ComputeNode(numa_topology='fake-numa-topology')
         versions = ovo_base.obj_tree_get_versions('ComputeNode')
         primitive = compute.obj_to_primitive(target_version='1.4',
                                              version_manifest=versions)
-        self.assertNotIn('numa_topology', primitive)
+        self.assertNotIn('numa_topology', primitive['nova_object.data'])
+
+        primitive = compute.obj_to_primitive(target_version='1.5',
+                                             version_manifest=versions)
+        self.assertIn('numa_topology', primitive['nova_object.data'])
 
     def test_compat_supported_hv_specs(self):
         compute = compute_node.ComputeNode()
@@ -459,12 +463,20 @@ class _TestComputeNodeObject(object):
         versions = ovo_base.obj_tree_get_versions('ComputeNode')
         primitive = compute.obj_to_primitive(target_version='1.5',
                                              version_manifest=versions)
-        self.assertNotIn('supported_hv_specs', primitive)
+        self.assertNotIn('supported_hv_specs', primitive['nova_object.data'])
 
-    def test_compat_host(self):
-        compute = compute_node.ComputeNode()
+        primitive = compute.obj_to_primitive(target_version='1.6',
+                                             version_manifest=versions)
+        self.assertIn('supported_hv_specs', primitive['nova_object.data'])
+
+    @mock.patch('nova.objects.service.Service.get_by_compute_host')
+    def test_compat_host(self, mock_get_compute):
+        compute = compute_node.ComputeNode(host='fake-host')
         primitive = compute.obj_to_primitive(target_version='1.6')
-        self.assertNotIn('host', primitive)
+        self.assertNotIn('host', primitive['nova_object.data'])
+
+        primitive = compute.obj_to_primitive(target_version='1.7')
+        self.assertIn('host', primitive['nova_object.data'])
 
     def test_compat_pci_device_pools(self):
         compute = compute_node.ComputeNode()
@@ -472,7 +484,11 @@ class _TestComputeNodeObject(object):
         versions = ovo_base.obj_tree_get_versions('ComputeNode')
         primitive = compute.obj_to_primitive(target_version='1.8',
                                              version_manifest=versions)
-        self.assertNotIn('pci_device_pools', primitive)
+        self.assertNotIn('pci_device_pools', primitive['nova_object.data'])
+
+        primitive = compute.obj_to_primitive(target_version='1.9',
+                                             version_manifest=versions)
+        self.assertIn('pci_device_pools', primitive['nova_object.data'])
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     def test_compat_service_id(self, mock_get):
@@ -543,15 +559,24 @@ class _TestComputeNodeObject(object):
                           compute.update_from_virt_driver, resources)
 
     def test_compat_allocation_ratios(self):
-        compute = compute_node.ComputeNode()
+        compute = compute_node.ComputeNode(
+            cpu_allocation_ratio=1.0, ram_allocation_ratio=1.0)
         primitive = compute.obj_to_primitive(target_version='1.13')
-        self.assertNotIn('cpu_allocation_ratio', primitive)
-        self.assertNotIn('ram_allocation_ratio', primitive)
+        self.assertNotIn('cpu_allocation_ratio', primitive['nova_object.data'])
+        self.assertNotIn('ram_allocation_ratio', primitive['nova_object.data'])
+
+        primitive = compute.obj_to_primitive(target_version='1.14')
+        self.assertIn('cpu_allocation_ratio', primitive['nova_object.data'])
+        self.assertIn('ram_allocation_ratio', primitive['nova_object.data'])
 
     def test_compat_disk_allocation_ratio(self):
-        compute = compute_node.ComputeNode()
+        compute = compute_node.ComputeNode(disk_allocation_ratio=1.0)
         primitive = compute.obj_to_primitive(target_version='1.15')
-        self.assertNotIn('disk_allocation_ratio', primitive)
+        self.assertNotIn(
+            'disk_allocation_ratio', primitive['nova_object.data'])
+
+        primitive = compute.obj_to_primitive(target_version='1.16')
+        self.assertIn('disk_allocation_ratio', primitive['nova_object.data'])
 
     @mock.patch('nova.db.api.compute_node_update')
     def test_compat_allocation_ratios_old_compute(self, mock_update):
