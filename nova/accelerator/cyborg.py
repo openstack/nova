@@ -80,6 +80,7 @@ def get_device_profile_request_groups(context, dp_name):
 
 class _CyborgClient(object):
     DEVICE_PROFILE_URL = "/device_profiles"
+    ARQ_URL = "/accelerator_requests"
 
     def __init__(self, context):
         auth = service_auth.get_auth_plugin(context)
@@ -145,3 +146,120 @@ class _CyborgClient(object):
                     rg.add_trait(trait_name=name, trait_type=val)
             request_groups.append(rg)
         return request_groups
+
+    def _create_arqs(self, dp_name):
+        data = {"device_profile_name": dp_name}
+        resp, err_msg = self._call_cyborg(self._client.post,
+             self.ARQ_URL, json=data)
+
+        if err_msg:
+            raise exception.AcceleratorRequestOpFailed(
+                op=_('create'), msg=err_msg)
+
+        return resp.json().get('arqs')
+
+    def create_arqs_and_match_resource_providers(self, dp_name, rg_rp_map):
+        """Create ARQs, match them with request groups and thereby
+          determine their corresponding RPs.
+
+        :param dp_name: Device profile name
+        :param rg_rp_map: Request group - Resource Provider map
+            {requester_id: [resource_provider_uuid]}
+        :returns:
+            [arq], with each ARQ associated with an RP
+        :raises: DeviceProfileError, AcceleratorRequestOpFailed
+        """
+        LOG.info('Creating ARQs for device profile %s', dp_name)
+        arqs = self._create_arqs(dp_name)
+        if not arqs or len(arqs) == 0:
+            msg = _('device profile name %s') % dp_name
+            raise exception.AcceleratorRequestOpFailed(op=_('create'), msg=msg)
+        for arq in arqs:
+            dp_group_id = arq['device_profile_group_id']
+            arq['device_rp_uuid'] = None
+            requester_id = (
+                get_device_profile_group_requester_id(dp_group_id))
+            arq['device_rp_uuid'] = rg_rp_map[requester_id][0]
+        return arqs
+
+    def bind_arqs(self, bindings):
+        """Initiate Cyborg bindings.
+
+           Handles RFC 6902-compliant JSON patching, sparing
+           calling Nova code from those details.
+
+           :param bindings:
+               { "$arq_uuid": {
+                     "hostname": STRING
+                     "device_rp_uuid": UUID
+                     "instance_uuid": UUID
+                  },
+                  ...
+                }
+           :returns: nothing
+           :raises: AcceleratorRequestOpFailed
+        """
+        LOG.info('Binding ARQs.')
+        # Create a JSON patch in RFC 6902 format
+        patch_list = {}
+        for arq_uuid, binding in bindings.items():
+            patch = [{"path": "/" + field,
+                      "op": "add",
+                      "value": value
+                     } for field, value in binding.items()]
+            patch_list[arq_uuid] = patch
+
+        resp, err_msg = self._call_cyborg(self._client.patch,
+             self.ARQ_URL, json=patch_list)
+        if err_msg:
+            msg = _(' Binding failed for ARQ UUIDs: ')
+            err_msg = err_msg + msg + ','.join(bindings.keys())
+            raise exception.AcceleratorRequestOpFailed(
+                op=_('bind'), msg=err_msg)
+
+    def get_arqs_for_instance(self, instance_uuid, only_resolved=False):
+        """Get ARQs for the instance.
+
+           :param instance_uuid: Instance UUID
+           :param only_resolved: flag to return only resolved ARQs
+           :returns: List of ARQs for the instance:
+               if only_resolved: only those ARQs which have completed binding
+               else: all ARQs
+            The format of the returned data structure is as below:
+               [
+                {'uuid': $arq_uuid,
+                 'device_profile_name': $dp_name,
+                 'device_profile_group_id': $dp_request_group_index,
+                 'state': 'Bound',
+                 'device_rp_uuid': $resource_provider_uuid,
+                 'hostname': $host_nodename,
+                 'instance_uuid': $instance_uuid,
+                 'attach_handle_info': {  # PCI bdf
+                     'bus': '0c', 'device': '0',
+                     'domain': '0000', 'function': '0'},
+                 'attach_handle_type': 'PCI'
+                      # or 'TEST_PCI' for Cyborg fake driver
+                }
+               ]
+           :raises: AcceleratorRequestOpFailed
+        """
+        query = {"instance": instance_uuid}
+        resp, err_msg = self._call_cyborg(self._client.get,
+            self.ARQ_URL, params=query)
+
+        if err_msg:
+            err_msg = err_msg + _(' Instance %s') % instance_uuid
+            raise exception.AcceleratorRequestOpFailed(
+                op=_('get'), msg=err_msg)
+
+        arqs = resp.json().get('arqs')
+        if not arqs:
+            err_msg = _('Cyborg returned no accelerator requests for '
+                        'instance %s') % instance_uuid
+            raise exception.AcceleratorRequestOpFailed(
+                op=_('get'), msg=err_msg)
+
+        if only_resolved:
+            arqs = [arq for arq in arqs if
+                    arq['state'] in ['Bound', 'BindFailed', 'Deleting']]
+        return arqs

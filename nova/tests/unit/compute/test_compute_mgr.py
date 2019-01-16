@@ -5993,6 +5993,188 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_hooks.setdefault().run_post.assert_called_once_with(
             'build_instance', result, mock.ANY, mock.ANY, f=None)
 
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_default_block_device_names')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_prep_block_device')
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'prepare_for_spawn')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_build_networks_for_instance')
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'prepare_networks_before_block_device_mapping')
+    def _test_accel_build_resources(self, mock_prep_net, mock_build_net,
+            mock_prep_spawn, mock_prep_bd, mock_bdnames, mock_save):
+
+        args = (self.context, self.instance, self.requested_networks,
+                self.security_groups, self.image, self.block_device_mapping,
+                self.resource_provider_mapping)
+
+        resources = []
+        with self.compute._build_resources(*args) as resources:
+            pass
+
+        return resources
+
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_get_bound_arq_resources')
+    def test_accel_build_resources_no_device_profile(self, mock_get_arqs):
+        # If dp_name is None, accel path is a no-op.
+        self.instance.flavor.extra_specs = {}
+        self._test_accel_build_resources()
+        mock_get_arqs.assert_not_called()
+
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_get_bound_arq_resources')
+    def test_accel_build_resources(self, mock_get_arqs):
+        # Happy path for accels in build_resources
+        dp_name = "mydp"
+        self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
+        arq_list = fixtures.CyborgFixture.bound_arq_list
+        mock_get_arqs.return_value = arq_list
+
+        resources = self._test_accel_build_resources()
+
+        mock_get_arqs.assert_called_once_with(self.context,
+            dp_name, self.instance)
+        self.assertEqual(sorted(resources['accel_info']), sorted(arq_list))
+
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'clean_networks_preparation')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_get_bound_arq_resources')
+    def test_accel_build_resources_exception(self, mock_get_arqs,
+                                             mock_clean_net):
+        dp_name = "mydp"
+        self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
+        mock_get_arqs.side_effect = (
+            exception.AcceleratorRequestOpFailed(op='get', msg=''))
+
+        self.assertRaises(exception.NovaException,
+                          self._test_accel_build_resources)
+        mock_clean_net.assert_called_once()
+
+    @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
+                       'exit_wait_early')
+    @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
+                       'wait_for_instance_event')
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'get_arqs_for_instance')
+    def test_arq_bind_wait_exit_early(self, mock_get_arqs,
+            mock_wait_inst_ev, mock_exit_wait_early):
+        # Bound ARQs available on first query, quit early.
+        dp_name = fixtures.CyborgFixture.dp_name
+        arq_list = fixtures.CyborgFixture.bound_arq_list
+        self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
+        arq_events = [('accelerator-request-bound', arq['uuid'])
+                      for arq in arq_list]
+
+        # get_arqs_for_instance() is called twice, once to get all ARQs
+        # for the instance, once to get only the resolved ARQs
+        mock_get_arqs.return_value = arq_list
+
+        ret_arqs = self.compute._get_bound_arq_resources(
+            self.context, dp_name, self.instance)
+
+        mock_wait_inst_ev.assert_called_once_with(
+            self.instance, arq_events, deadline=mock.ANY)
+        mock_exit_wait_early.assert_called_once_with(arq_events)
+
+        mock_get_arqs.assert_has_calls([
+            mock.call(self.instance.uuid),
+            mock.call(self.instance.uuid, only_resolved=True)])
+
+        self.assertEqual(sorted(ret_arqs), sorted(arq_list))
+
+    @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
+                       'exit_wait_early')
+    @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
+                       'wait_for_instance_event')
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'get_arqs_for_instance')
+    def test_arq_bind_wait(self, mock_get_arqs,
+            mock_wait_inst_ev, mock_exit_wait_early):
+        # If binding is in progress, must wait.
+        dp_name = fixtures.CyborgFixture.dp_name
+        arq_list = fixtures.CyborgFixture.bound_arq_list
+        self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
+        arq_events = [('accelerator-request-bound', arq['uuid'])
+                      for arq in arq_list]
+        # get_arqs_for_instance gets called 3 times, returning the full
+        # ARQ list first, [] as resolved ARQs next, and the full list finally
+        mock_get_arqs.side_effect = [arq_list, [], arq_list]
+
+        ret_arqs = self.compute._get_bound_arq_resources(
+            self.context, dp_name, self.instance)
+
+        mock_wait_inst_ev.assert_called_once_with(
+            self.instance, arq_events, deadline=mock.ANY)
+        mock_exit_wait_early.assert_not_called()
+        self.assertEqual(sorted(ret_arqs), sorted(arq_list))
+        mock_get_arqs.assert_has_calls([
+            mock.call(self.instance.uuid),
+            mock.call(self.instance.uuid, only_resolved=True),
+            mock.call(self.instance.uuid)])
+
+    @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
+                       'exit_wait_early')
+    @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
+                       'wait_for_instance_event')
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'get_arqs_for_instance')
+    def test_arq_bind_timeout(self, mock_get_arqs,
+            mock_wait_inst_ev, mock_exit_wait_early):
+        # If binding fails even after wait, exception is thrown
+        dp_name = fixtures.CyborgFixture.dp_name
+        arq_list = fixtures.CyborgFixture.bound_arq_list
+        self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
+        arq_events = [('accelerator-request-bound', arq['uuid'])
+                      for arq in arq_list]
+
+        mock_get_arqs.return_value = arq_list
+        mock_wait_inst_ev.side_effect = eventlet_timeout.Timeout
+
+        self.assertRaises(eventlet_timeout.Timeout,
+            self.compute._get_bound_arq_resources,
+            self.context, dp_name, self.instance)
+
+        mock_wait_inst_ev.assert_called_once_with(
+            self.instance, arq_events, deadline=mock.ANY)
+        mock_exit_wait_early.assert_not_called()
+        mock_get_arqs.assert_called_once_with(self.instance.uuid)
+
+    @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
+                       'exit_wait_early')
+    @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
+                       'wait_for_instance_event')
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'get_arqs_for_instance')
+    def test_arq_bind_exception(self, mock_get_arqs,
+            mock_wait_inst_ev, mock_exit_wait_early):
+        # If the code inside the context manager of _get_bound_arq_resources
+        # raises an exception, that exception must be handled.
+        dp_name = fixtures.CyborgFixture.dp_name
+        arq_list = fixtures.CyborgFixture.bound_arq_list
+        self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
+        arq_events = [('accelerator-request-bound', arq['uuid'])
+                      for arq in arq_list]
+
+        mock_get_arqs.side_effect = [
+            arq_list,
+            exception.AcceleratorRequestOpFailed(op='', msg='')]
+
+        self.assertRaises(exception.AcceleratorRequestOpFailed,
+            self.compute._get_bound_arq_resources,
+            self.context, dp_name, self.instance)
+
+        mock_wait_inst_ev.assert_called_once_with(
+            self.instance, arq_events, deadline=mock.ANY)
+        mock_exit_wait_early.assert_not_called()
+        mock_get_arqs.assert_has_calls([
+            mock.call(self.instance.uuid),
+            mock.call(self.instance.uuid, only_resolved=True)])
+
     def test_build_and_run_instance_called_with_proper_args(self):
         self._test_build_and_run_instance()
 

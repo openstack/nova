@@ -31,6 +31,7 @@ from oslo_utils import timeutils
 from oslo_utils import versionutils
 import six
 
+from nova.accelerator import cyborg
 from nova import availability_zones
 from nova.compute import instance_actions
 from nova.compute import rpcapi as compute_rpcapi
@@ -835,6 +836,18 @@ class ComputeTaskManager(base.Base):
             LOG.debug("Selected host: %s; Selected node: %s; Alternates: %s",
                     host.service_host, host.nodename, alts, instance=instance)
 
+            try:
+                resource_provider_mapping = (
+                    local_reqspec.get_request_group_mapping())
+                self._create_and_bind_arqs(
+                    context, instance.uuid, instance.flavor.extra_specs,
+                    host.nodename, resource_provider_mapping)
+            except Exception as exc:
+                LOG.exception('Failed to reschedule. Reason: %s', exc)
+                self._cleanup_when_reschedule_fails(context, instance, exc,
+                     legacy_request_spec, requested_networks)
+                continue
+
             self.compute_rpcapi.build_and_run_instance(context,
                     instance=instance, host=host.service_host, image=image,
                     request_spec=local_reqspec,
@@ -1604,6 +1617,21 @@ class ComputeTaskManager(base.Base):
                 # this one.
                 continue
 
+            try:
+                resource_provider_mapping = (
+                    request_spec.get_request_group_mapping())
+                # Using nodename instead of hostname. See:
+                # http://lists.openstack.org/pipermail/openstack-discuss/2019-November/011044.html  # noqa
+                self._create_and_bind_arqs(
+                    context, instance.uuid, instance.flavor.extra_specs,
+                    host.nodename, resource_provider_mapping)
+            except Exception as exc:
+                # If anything failed here we need to cleanup and bail out.
+                with excutils.save_and_reraise_exception():
+                    self._cleanup_build_artifacts(
+                        context, exc, instances, build_requests, request_specs,
+                        block_device_mapping, tags, cell_mapping_cache)
+
             # NOTE(danms): Compute RPC expects security group names or ids
             # not objects, so convert this to a list of names until we can
             # pass the objects.
@@ -1621,6 +1649,33 @@ class ComputeTaskManager(base.Base):
                     block_device_mapping=instance_bdms,
                     host=host.service_host, node=host.nodename,
                     limits=host.limits, host_list=host_list)
+
+    def _create_and_bind_arqs(self, context, instance_uuid, extra_specs,
+                              hostname, resource_provider_mapping):
+        """Create ARQs, determine their RPs and initiate ARQ binding.
+
+           The binding is asynchronous; Cyborg will notify on completion.
+           The notification will be handled in the compute manager.
+        """
+        dp_name = extra_specs.get('accel:device_profile')
+        if not dp_name:
+            return
+
+        LOG.debug('Calling Cyborg to get ARQs. dp_name=%s instance=%s',
+                  dp_name, instance_uuid)
+        cyclient = cyborg.get_client(context)
+        arqs = cyclient.create_arqs_and_match_resource_providers(
+            dp_name, resource_provider_mapping)
+        LOG.debug('Got ARQs with resource provider mapping %s', arqs)
+
+        bindings = {arq['uuid']:
+                       {"hostname": hostname,
+                        "device_rp_uuid": arq['device_rp_uuid'],
+                        "instance_uuid": instance_uuid
+                       }
+                    for arq in arqs}
+        # Initiate Cyborg binding asynchronously
+        cyclient.bind_arqs(bindings=bindings)
 
     @staticmethod
     def _map_instance_to_cell(context, instance, cell):

@@ -2293,3 +2293,7 @@ class UnexpectedResourceProviderNameForPCIRequest(NovaException):
 
 class DeviceProfileError(NovaException):
     msg_fmt = _("Device profile name %(name)s: %(msg)s")
+
+
+class AcceleratorRequestOpFailed(NovaException):
+    msg_fmt = _("Failed to %(op)s accelerator requests: %(msg)s")

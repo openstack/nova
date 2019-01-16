@@ -56,6 +56,7 @@ from oslo_utils import units
 import six
 from six.moves import range
 
+from nova.accelerator import cyborg
 from nova import block_device
 from nova.compute import api as compute
 from nova.compute import build_results
@@ -2512,6 +2513,14 @@ class ComputeManager(manager.Manager):
                 self.host, phase=fields.NotificationPhase.END,
                 bdms=block_device_mapping)
 
+    def _build_resources_cleanup(self, instance, network_info):
+        # Make sure the async call finishes
+        if network_info is not None:
+            network_info.wait(do_raise=False)
+            self.driver.clean_networks_preparation(instance,
+                                                   network_info)
+        self.driver.failed_spawn_cleanup(instance)
+
     @contextlib.contextmanager
     def _build_resources(self, context, instance, requested_networks,
                          security_groups, image_meta, block_device_mapping,
@@ -2566,32 +2575,33 @@ class ComputeManager(manager.Manager):
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError):
             with excutils.save_and_reraise_exception():
-                # Make sure the async call finishes
-                if network_info is not None:
-                    network_info.wait(do_raise=False)
-                    self.driver.clean_networks_preparation(instance,
-                                                           network_info)
-                self.driver.failed_spawn_cleanup(instance)
+                self._build_resources_cleanup(instance, network_info)
         except (exception.UnexpectedTaskStateError,
                 exception.OverQuota, exception.InvalidBDM) as e:
-            # Make sure the async call finishes
-            if network_info is not None:
-                network_info.wait(do_raise=False)
-                self.driver.clean_networks_preparation(instance, network_info)
-            self.driver.failed_spawn_cleanup(instance)
+            self._build_resources_cleanup(instance, network_info)
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=e.format_message())
         except Exception:
             LOG.exception('Failure prepping block device',
                           instance=instance)
-            # Make sure the async call finishes
-            if network_info is not None:
-                network_info.wait(do_raise=False)
-                self.driver.clean_networks_preparation(instance, network_info)
-            self.driver.failed_spawn_cleanup(instance)
+            self._build_resources_cleanup(instance, network_info)
             msg = _('Failure prepping block device.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
+
+        arqs = []
+        dp_name = instance.flavor.extra_specs.get('accel:device_profile')
+        try:
+            if dp_name:
+                arqs = self._get_bound_arq_resources(
+                        context, dp_name, instance)
+        except (Exception, eventlet.timeout.Timeout) as exc:
+            LOG.exception(exc.format_message())
+            self._build_resources_cleanup(instance, network_info)
+            msg = _('Failure getting accelerator requests.')
+            raise exception.BuildAbortException(instance_uuid=instance.uuid,
+                    reason=msg)
+        resources['accel_info'] = arqs
 
         try:
             yield resources
@@ -2622,6 +2632,48 @@ class ComputeManager(manager.Manager):
                     raise exception.BuildAbortException(
                             instance_uuid=instance.uuid,
                             reason=six.text_type(exc))
+
+    def _get_bound_arq_resources(self, context, dp_name, instance):
+        """Get bound accelerator requests.
+
+        The ARQ binding was kicked off in the conductor as an async
+        operation. Here we wait for the notification from Cyborg.
+
+        If the notification arrived before this point, which can happen
+        in many/most cases (see [1]), it will be lost. To handle that,
+        we use exit_wait_early.
+        [1] https://review.opendev.org/#/c/631244/46/nova/compute/
+            manager.py@2627
+
+        :param dp_name: Device profile name. Caller ensures this is valid.
+        :param instance: instance object
+        :returns: List of ARQs for which bindings have completed,
+                  successfully or otherwise
+        """
+
+        cyclient = cyborg.get_client(context)
+        arqs = cyclient.get_arqs_for_instance(instance.uuid)
+        events = [('accelerator-request-bound', arq['uuid']) for arq in arqs]
+        timeout = CONF.arq_binding_timeout
+        with self.virtapi.wait_for_instance_event(
+                instance, events, deadline=timeout):
+            resolved_arqs = cyclient.get_arqs_for_instance(
+                    instance.uuid, only_resolved=True)
+            # Events for these resolved ARQs may have already arrived.
+            # Such 'early' events need to be ignored.
+            early_events = [('accelerator-request-bound', arq['uuid'])
+                             for arq in resolved_arqs]
+            if early_events:
+                self.virtapi.exit_wait_early(early_events)
+
+        # Since a timeout in wait_for_instance_event will raise, we get
+        # here only if all binding events have been received.
+        if sorted(resolved_arqs) != sorted(arqs):
+            # Query Cyborg to get all.
+            arqs = cyclient.get_arqs_for_instance(instance.uuid)
+        else:
+            arqs = resolved_arqs  # latter has the right arq.state
+        return arqs
 
     def _cleanup_allocated_networks(self, context, instance,
             requested_networks):

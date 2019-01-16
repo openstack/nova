@@ -177,6 +177,17 @@ Related options:
   ``vif_plugging_is_fatal`` is False, events should not be expected to
   arrive at all.
 """),
+    cfg.IntOpt('arq_binding_timeout',
+        default=300,
+        min=1,
+        help="""
+Timeout for Accelerator Request (ARQ) bind event message arrival.
+
+Number of seconds to wait for ARQ bind resolution event to arrive.
+The event indicates that every ARQ for an instance has either bound
+successfully or failed to bind. If it does not arrive, instance bringup
+is aborted with an exception.
+"""),
     cfg.StrOpt('injected_network_template',
         default=paths.basedir_def('nova/virt/interfaces.template'),
         help="""Path to '/etc/network/interfaces' template.
