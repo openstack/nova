@@ -730,11 +730,17 @@ class _TestRequestSpecObject(object):
         mock_reset.assert_called_once_with(['force_hosts', 'force_nodes'])
 
     def test_compat_requested_destination(self):
-        req_obj = objects.RequestSpec()
+        req_obj = objects.RequestSpec(
+            requested_destination=objects.Destination())
         versions = ovo_base.obj_tree_get_versions('RequestSpec')
         primitive = req_obj.obj_to_primitive(target_version='1.5',
                                              version_manifest=versions)
-        self.assertNotIn('requested_destination', primitive)
+        self.assertNotIn(
+            'requested_destination', primitive['nova_object.data'])
+
+        primitive = req_obj.obj_to_primitive(target_version='1.6',
+                                             version_manifest=versions)
+        self.assertIn('requested_destination', primitive['nova_object.data'])
 
     def test_compat_security_groups(self):
         sgl = objects.SecurityGroupList(objects=[])
@@ -742,7 +748,11 @@ class _TestRequestSpecObject(object):
         versions = ovo_base.obj_tree_get_versions('RequestSpec')
         primitive = req_obj.obj_to_primitive(target_version='1.7',
                                              version_manifest=versions)
-        self.assertNotIn('security_groups', primitive)
+        self.assertNotIn('security_groups', primitive['nova_object.data'])
+
+        primitive = req_obj.obj_to_primitive(target_version='1.8',
+                                             version_manifest=versions)
+        self.assertIn('security_groups', primitive['nova_object.data'])
 
     def test_compat_user_id(self):
         req_obj = objects.RequestSpec(project_id=fakes.FAKE_PROJECT_ID,

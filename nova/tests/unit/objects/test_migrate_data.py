@@ -272,7 +272,12 @@ class _TestLibvirtLiveMigrateData(object):
         obj = migrate_data.LibvirtLiveMigrateBDMInfo(
             encryption_secret_uuid=uuids.encryption_secret_uuid)
         primitive = obj.obj_to_primitive(target_version='1.0')
-        self.assertNotIn('encryption_secret_uuid', primitive)
+        self.assertNotIn(
+            'encryption_secret_uuid', primitive['nova_object.data'])
+
+        primitive = obj.obj_to_primitive(target_version='1.1')
+        self.assertIn(
+            'encryption_secret_uuid', primitive['nova_object.data'])
 
     def test_vif_migrate_data(self):
         source_vif = network_model.VIF(
