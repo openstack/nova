@@ -46,3 +46,4 @@ operating system, and exposes functionality over a web-based API.
    ssh-configuration.rst
    support-compute.rst
    system-admin.rst
+   secure-live-migration-with-qemu-native-tls.rst
