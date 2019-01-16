@@ -20,8 +20,9 @@
         "trusted_image_certificates": [
             "cert-id-1",
             "cert-id-2"
-        ]
+        ],
+        "instance_name": "instance-00000001"
     },
     "nova_object.name":"InstanceCreatePayload",
-    "nova_object.version": "1.10"
+    "nova_object.version": "1.11"
 }
