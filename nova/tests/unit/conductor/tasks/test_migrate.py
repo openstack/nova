@@ -94,7 +94,6 @@ class MigrationTaskTestCase(test.NoDBTestCase):
                 self.request_spec.requested_destination)
 
         task = self._generate_task()
-        legacy_request_spec = self.request_spec.to_legacy_request_spec_dict()
         gmv_mock.return_value = 23
 
         # We just need this hook point to set a uuid on the
@@ -120,9 +119,9 @@ class MigrationTaskTestCase(test.NoDBTestCase):
             return_objects=True, return_alternates=True)
         selection = self.host_lists[0][0]
         prep_resize_mock.assert_called_once_with(
-            self.context, self.instance, legacy_request_spec['image'],
+            self.context, self.instance, self.request_spec.image,
             self.flavor, selection.service_host, task._migration,
-            request_spec=legacy_request_spec,
+            request_spec=self.request_spec,
             filter_properties=self.filter_properties, node=selection.nodename,
             clean_shutdown=self.clean_shutdown, host_list=[])
         az_mock.assert_called_once_with(self.context, 'host1')

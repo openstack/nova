@@ -144,8 +144,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 kwargs['cast'] = False
             else:
                 kwargs['do_cast'] = False
-        elif method == 'prep_resize' and 'migration' not in expected_args:
-            del expected_kwargs['migration']
         if 'host' in kwargs:
             host = kwargs['host']
         elif 'instances' in kwargs:
@@ -385,8 +383,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                timeout=1234)
 
     def test_prep_resize(self):
-        expected_args = {'migration': 'migration'}
-        self._test_compute_api('prep_resize', 'cast', expected_args,
+        self._test_compute_api('prep_resize', 'cast',
                 instance=self.fake_instance_obj,
                 instance_type=self.fake_flavor_obj,
                 image='fake_image', host='host',
@@ -394,7 +391,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 filter_properties={'fakeprop': 'fakeval'},
                 migration='migration',
                 node='node', clean_shutdown=True, host_list=None,
-                version='5.0')
+                version='5.1')
 
     def test_reboot_instance(self):
         self.maxDiff = None

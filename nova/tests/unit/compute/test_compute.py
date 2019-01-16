@@ -144,8 +144,10 @@ def unify_instance(instance):
 
 class FakeComputeTaskAPI(object):
 
-    def resize_instance(self, context, instance, extra_instance_updates,
-                        scheduler_hint, flavor, reservationsi, host_list=None):
+    def resize_instance(self, ctxt, instance, extra_instance_updates,
+                        scheduler_hint, flavor, reservations=None,
+                        clean_shutdown=True, request_spec=None,
+                        host_list=None):
         pass
 
 
@@ -12566,12 +12568,6 @@ class ComputeReschedulingTestCase(BaseTestCase):
         filter_properties = {}
         self.assertFalse(self._reschedule(filter_properties=filter_properties))
 
-    def test_reschedule_no_request_spec(self):
-        # no request spec will also disable re-scheduling.
-        retry = dict(num_attempts=1)
-        filter_properties = dict(retry=retry)
-        self.assertFalse(self._reschedule(filter_properties=filter_properties))
-
     def test_reschedule_success(self):
         retry = dict(num_attempts=1)
         filter_properties = dict(retry=retry)
@@ -12617,13 +12613,14 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         self.compute.prep_resize(self.context, image=None,
                                  instance=inst_obj,
                                  instance_type=self.instance_type,
-                                 request_spec={},
+                                 request_spec=mock.sentinel.reqspec,
                                  filter_properties={}, migration=mock.Mock(),
                                  node=None,
                                  clean_shutdown=True, host_list=None)
 
-        mock_res.assert_called_once_with(mock.ANY, None, inst_obj, mock.ANY,
-                                         self.instance_type, {}, {}, None)
+        mock_res.assert_called_once_with(mock.ANY, inst_obj, mock.ANY,
+                                         self.instance_type,
+                                         mock.sentinel.reqspec, {}, None)
 
     @mock.patch.object(compute_manager.ComputeManager, "_reschedule")
     @mock.patch('nova.compute.utils.notify_about_instance_action')
@@ -12640,12 +12637,14 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             raise test.TestingException("Original")
         except Exception:
             exc_info = sys.exc_info()
+            reqspec = objects.RequestSpec()
             self.assertRaises(test.TestingException,
                     self.compute._reschedule_resize_or_reraise, self.context,
-                    None, instance, exc_info, self.instance_type, {}, {}, None)
+                    instance, exc_info, self.instance_type, reqspec,
+                    {}, None)
 
             mock_res.assert_called_once_with(
-                    self.context, {}, {}, instance,
+                    self.context, reqspec, {}, instance,
                     self.compute.compute_task_api.resize_instance, method_args,
                     task_states.RESIZE_PREP, exc_info, host_list=None)
             mock_notify.assert_called_once_with(
@@ -12666,12 +12665,14 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             raise test.TestingException("Original")
         except Exception:
             exc_info = sys.exc_info()
+            reqspec = objects.RequestSpec()
             self.assertRaises(test.TestingException,
                     self.compute._reschedule_resize_or_reraise, self.context,
-                    None, instance, exc_info, self.instance_type, {}, {}, None)
+                    instance, exc_info, self.instance_type, reqspec,
+                    {}, None)
 
             mock_res.assert_called_once_with(
-                self.context, {}, {}, instance,
+                self.context, reqspec, {}, instance,
                 self.compute.compute_task_api.resize_instance, method_args,
                 task_states.RESIZE_PREP, exc_info, host_list=None)
 
@@ -12689,11 +12690,12 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             exc_info = sys.exc_info()
             mock_res.return_value = True
 
+            reqspec = objects.RequestSpec()
             self.compute._reschedule_resize_or_reraise(
-                    self.context, None, instance, exc_info,
-                    self.instance_type, {}, {}, None)
+                    self.context, instance, exc_info,
+                    self.instance_type, reqspec, {}, None)
 
-            mock_res.assert_called_once_with(self.context, {}, {},
+            mock_res.assert_called_once_with(self.context, reqspec, {},
                     instance, self.compute.compute_task_api.resize_instance,
                     method_args, task_states.RESIZE_PREP, exc_info,
                     host_list=None)
