@@ -231,6 +231,13 @@ class NovaProxyRequestHandlerBase(object):
             origin = urlparse.urlparse(origin_url)
             origin_hostname = origin.hostname
             origin_scheme = origin.scheme
+            # If the console connection was forwarded by a proxy (example:
+            # haproxy), the original protocol could be contained in the
+            # X-Forwarded-Proto header instead of the Origin header. Prefer the
+            # forwarded protocol if it is present.
+            forwarded_proto = self.headers.get('X-Forwarded-Proto')
+            if forwarded_proto is not None:
+                origin_scheme = forwarded_proto
             if origin_hostname == '' or origin_scheme == '':
                 detail = _("Origin header not valid.")
                 raise exception.ValidationError(detail=detail)

@@ -631,6 +631,38 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
     @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
+    def test_new_websocket_client_http_forwarded_proto_https(self, validate,
+                                                             check_port):
+        params = {
+            'id': 1,
+            'token': '123-456-789',
+            'instance_uuid': uuids.instance,
+            'host': 'node1',
+            'port': '10000',
+            'console_type': 'serial',
+            'access_url_base': 'wss://example.net:6080'
+        }
+        validate.return_value = objects.ConsoleAuthToken(**params)
+
+        header = {
+            'cookie': 'token="123-456-789"',
+            'Origin': 'http://example.net:6080',
+            'Host': 'example.net:6080',
+            'X-Forwarded-Proto': 'https'
+        }
+        self.wh.socket.return_value = '<socket>'
+        self.wh.path = "https://127.0.0.1/"
+        self.wh.headers = header
+
+        self.wh.new_websocket_client()
+
+        validate.assert_called_with(mock.ANY, "123-456-789")
+        self.wh.socket.assert_called_with('node1', 10000, connect=True)
+        self.wh.do_proxy.assert_called_with('<socket>')
+
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+                '_check_console_port')
+    @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_novnc_bad_console_type(self, validate,
                                                          check_port):
         params = {
