@@ -149,7 +149,7 @@ class LiveMigrationTask(base.TaskBase):
             raise exception.InstanceInvalidState(
                     instance_uuid=self.instance.uuid,
                     attr='power_state',
-                    state=self.instance.power_state,
+                    state=power_state.STATE_MAP[self.instance.power_state],
                     method='live migrate')
 
     def _check_instance_has_no_numa(self):
