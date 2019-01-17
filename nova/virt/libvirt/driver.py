@@ -7301,6 +7301,9 @@ class LibvirtDriver(driver.ComputeDriver):
         self._update_provider_tree_for_vgpu(
            provider_tree, nodename, allocations=allocations)
 
+        self._update_provider_tree_for_pcpu(
+            provider_tree, nodename, allocations=allocations)
+
         self._update_provider_tree_for_vpmems(
             provider_tree, nodename, result, resources)
 
@@ -7708,6 +7711,151 @@ class LibvirtDriver(driver.ComputeDriver):
             if orc.VGPU in root_node.inventory:
                 del root_node.inventory[orc.VGPU]
                 provider_tree.update_inventory(nodename, root_node.inventory)
+
+    def _update_provider_tree_for_pcpu(self, provider_tree, nodename,
+                                       allocations=None):
+        """Updates the provider tree for PCPU inventory.
+
+        Before Train, pinned instances consumed VCPU inventory just like
+        unpinned instances. Starting in Train, these instances now consume PCPU
+        inventory. The function can reshape the inventory, changing allocations
+        of VCPUs to PCPUs.
+
+        :param provider_tree: The ProviderTree to update.
+        :param nodename: The ComputeNode.hypervisor_hostname, also known as
+            the name of the root node provider in the tree for this host.
+        :param allocations: A dict, keyed by consumer UUID, of allocation
+            records, or None::
+
+                {
+                    $CONSUMER_UUID: {
+                        "allocations": {
+                            $RP_UUID: {
+                                "generation": $RP_GEN,
+                                "resources": {
+                                    $RESOURCE_CLASS: $AMOUNT,
+                                    ...
+                                },
+                            },
+                            ...
+                        },
+                        "project_id": $PROJ_ID,
+                        "user_id": $USER_ID,
+                        "consumer_generation": $CONSUMER_GEN,
+                    },
+                    ...
+                }
+
+            If provided, this indicates a reshape was requested and should be
+            performed.
+        :raises: nova.exception.ReshapeNeeded if ``allocations`` is None and
+            the method determines a reshape of the tree is needed, i.e. VCPU
+            inventory and allocations must be migrated to PCPU resources.
+        :raises: nova.exception.ReshapeFailed if the requested tree reshape
+            fails for whatever reason.
+        """
+        # If we're not configuring PCPUs, then we've nothing to worry about
+        # (yet)
+        if not CONF.compute.cpu_dedicated_set:
+            return
+
+        root_node = provider_tree.data(nodename)
+
+        # Similarly, if PCPU inventories are already reported then there is no
+        # need to reshape
+        if orc.PCPU in root_node.inventory:
+            return
+
+        ctx = nova_context.get_admin_context()
+        compute_node = objects.ComputeNode.get_by_nodename(ctx, nodename)
+
+        # Finally, if the compute node doesn't appear to support NUMA, move
+        # swiftly on
+        if not compute_node.numa_topology:
+            return
+
+        # The ComputeNode.numa_topology is a StringField, deserialize
+        numa = objects.NUMATopology.obj_from_db_obj(compute_node.numa_topology)
+
+        # If the host doesn't know of any pinned CPUs, we can continue
+        if not any(cell.pinned_cpus for cell in numa.cells):
+            return
+
+        # At this point, we know there's something to be migrated here but not
+        # how much. If the allocations are None, we're at the startup of the
+        # compute node and a Reshape is needed. Indicate this by raising the
+        # ReshapeNeeded exception
+
+        if allocations is None:
+            LOG.info(
+                'Requesting provider tree reshape in order to move '
+                'VCPU to PCPU allocations to the compute node '
+                'provider %s', nodename)
+            raise exception.ReshapeNeeded()
+
+        # Go figure out how many VCPUs to migrate to PCPUs. We've been telling
+        # people for years *not* to mix pinned and unpinned instances, meaning
+        # we should be able to move all VCPUs to PCPUs, but we never actually
+        # enforced this in code and there's an all-too-high chance someone
+        # didn't get the memo
+
+        allocations_needing_reshape = []
+
+        # we need to tackle the allocations against instances on this host...
+
+        instances = objects.InstanceList.get_by_host(
+            ctx, compute_node.host, expected_attrs=['numa_topology'])
+        for instance in instances:
+            if not instance.numa_topology:
+                continue
+
+            if not instance.numa_topology.cpu_pinning_requested:
+                continue
+
+            allocations_needing_reshape.append(instance.uuid)
+
+        # ...and those for any migrations
+
+        migrations = objects.MigrationList.get_in_progress_by_host_and_node(
+            ctx, compute_node.host, compute_node.hypervisor_hostname)
+        for migration in migrations:
+            # we don't care about migrations that have landed here, since we
+            # already have those instances above
+            if not migration.dest_compute or (
+                    migration.dest_compute == compute_node.host):
+                continue
+
+            instance = objects.Instance.get_by_uuid(
+                ctx, migration.instance_uuid, expected_attrs=['numa_topology'])
+
+            if not instance.numa_topology:
+                continue
+
+            if not instance.numa_topology.cpu_pinning_requested:
+                continue
+
+            allocations_needing_reshape.append(migration.uuid)
+
+        for allocation_uuid in allocations_needing_reshape:
+            consumer_allocations = allocations.get(allocation_uuid, {}).get(
+                'allocations', {})
+            # TODO(stephenfin): We can probably just check the allocations for
+            # ComputeNode.uuid since compute nodes are the only (?) provider of
+            # VCPU and PCPU resources
+            for rp_uuid in consumer_allocations:
+                resources = consumer_allocations[rp_uuid]['resources']
+
+                if orc.PCPU in resources or orc.VCPU not in resources:
+                    # Either this has been migrated or it's not a compute node
+                    continue
+
+                # Switch stuff around. We can do a straight swap since an
+                # instance is either pinned or unpinned. By doing this, we're
+                # modifying the provided 'allocations' dict, which will
+                # eventually be used by the resource tracker to update
+                # placement
+                resources['PCPU'] = resources['VCPU']
+                del resources[orc.VCPU]
 
     def get_available_resource(self, nodename):
         """Retrieve resource information.

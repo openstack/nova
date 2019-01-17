@@ -28,6 +28,7 @@ import random
 import re
 import shutil
 import signal
+import testtools
 import threading
 import time
 import unittest
@@ -900,6 +901,7 @@ def _create_test_instance():
         'ephemeral_key_uuid': None,
         'vcpu_model': None,
         'host': 'fake-host',
+        'node': 'fake-node',
         'task_state': None,
         'vm_state': None,
         'trusted_certs': None,
@@ -19726,6 +19728,9 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 new=mock.Mock(return_value=range(pcpus)))
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_available',
                 new=mock.Mock(return_value=range(vcpus)))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_update_provider_tree_for_pcpu',
+                new=mock.Mock())
     def _test_update_provider_tree(
             self, mock_gpu_invs, gpu_invs=None, vpmems=None):
         if gpu_invs:
@@ -19923,6 +19928,9 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 new=mock.Mock(return_value=range(pcpus)))
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_available',
                 new=mock.Mock(return_value=range(vcpus)))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_update_provider_tree_for_pcpu',
+                new=mock.Mock())
     def test_update_provider_tree_for_vgpu_reshape(
             self, mock_gpus, mock_get_devs, mock_get_mdev_info):
         """Tests the VGPU reshape scenario."""
@@ -19978,24 +19986,25 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         allocations = {
             uuids.consumer1: {
                 'allocations': {
-                    # This consumer has ram and vgpu allocations on the root
-                    # node provider and should be changed.
+                    # This consumer has vGPU allocations on the root
+                    # node provider and *should* be changed.
                     self.cn_rp['uuid']: {
                         'resources': {
                             orc.MEMORY_MB: 512,
-                            orc.VGPU: 1
+                            orc.VCPU: 2,
+                            orc.VGPU: 1,
                         }
                     }
                 }
             },
             uuids.consumer2: {
                 'allocations': {
-                    # This consumer has ram and vcpu allocations on the root
-                    # node provider and should not be changed.
+                    # This consumer has no vGPU allocations on the root
+                    # node provider and *should not* be changed.
                     self.cn_rp['uuid']: {
                         'resources': {
                             orc.MEMORY_MB: 256,
-                            orc.VCPU: 2
+                            orc.VCPU: 2,
                         }
                     }
                 }
@@ -20031,7 +20040,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         # provider.
         consumer1_allocs = allocations[uuids.consumer1]['allocations']
         self.assertEqual(2, len(consumer1_allocs))
-        self.assertEqual({orc.MEMORY_MB: 512},
+        self.assertEqual({orc.MEMORY_MB: 512, orc.VCPU: 2},
                          consumer1_allocs[self.cn_rp['uuid']]['resources'])
         # Make sure the VGPU allocation moved to the corresponding child RP
         self.assertEqual(
@@ -20111,6 +20120,220 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                                allocations=allocations)
         self.assertIn('Unexpected VGPU resource allocation on provider %s'
                       % uuids.other_rp, six.text_type(ex))
+
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch('nova.objects.migration.MigrationList'
+                '.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.instance.InstanceList.get_by_host')
+    @mock.patch('nova.objects.compute_node.ComputeNode.get_by_nodename')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_update_provider_tree_for_vgpu',
+                new=mock.Mock())
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_cpu_traits',
+                new=mock.Mock(return_value=cpu_traits))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_local_gb_info',
+                new=mock.Mock(return_value={'total': disk_gb}))
+    @mock.patch('nova.virt.libvirt.host.Host.get_memory_mb_total',
+                new=mock.Mock(return_value=memory_mb))
+    @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus',
+                new=mock.Mock(return_value=range(pcpus + vcpus)))
+    def test_update_provider_tree_for_pcpu_reshape(self,
+            mock_get_cn, mock_get_instances, mock_get_migrations,
+            mock_get_instance):
+        """Tests the CPU reshape scenario."""
+
+        # configure the 'cpu_dedicated_set' and 'cpu_shared_set' fields to
+        # something useful. Note that because we're setting this, we haven't
+        # mocked out '_get_pcpu_available' and '_get_vcpu_available' but
+        # instead have mocked out 'get_online_cpus'. This isn't very "unit
+        # testy" but it's a more realistic test
+
+        self.flags(cpu_shared_set='0-11,18-29',
+                   cpu_dedicated_set='12-17,30-35',
+                   group='compute')
+
+        # define a host topology with a single NUMA cell and four cores
+
+        numa_topology = objects.NUMATopology(cells=[
+            objects.NUMACell(
+                id=0,
+                cpuset=set(range(0, 12)) | set(range(18, 30)),
+                pcpuset=set(range(12, 18)) | set(range(30, 36)),
+                memory=8192,
+                cpu_usage=6,
+                memory_usage=0,
+                mempages=[],
+                siblings=[],  # no hyperthreading
+                pinned_cpus=set([2, 3]))])
+
+        cn = objects.ComputeNode(
+            uuid=self.cn_rp['uuid'],
+            host='host1',
+            hypervisor_hostname=self.cn_rp['name'],
+            numa_topology=numa_topology._to_json(),
+        )
+
+        # define three instances, one with a NUMA topology but no pinning, one
+        # with pinning (and an implicit NUMA topology), and one with neither
+        # pinning nor a NUMA topology. In practice, this shouldn't happen since
+        # they should all be on separate hosts, but since we don't enforce that
+        # we can't rely on it
+
+        base_instance = _create_test_instance()
+        base_instance.pop('id')
+        base_instance.pop('uuid')
+
+        instance_a = objects.Instance(
+            id=1, uuid=uuids.instance_a, **base_instance)
+        instance_a.numa_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0,
+                cpuset=set([0, 1]),
+                memory=1024)])
+
+        instance_b = objects.Instance(
+            id=2, uuid=uuids.instance_b, **base_instance)
+        instance_b.numa_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0,
+                cpuset=set([0, 1]),
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_pinning={0: 2, 1: 3},
+                memory=1024)])
+
+        instance_c = objects.Instance(
+            id=3, uuid=uuids.instance_c, **base_instance)
+        instance_c.numa_topology = None
+
+        instances = objects.InstanceList(objects=[
+            instance_a, instance_b, instance_c])
+
+        instance_d = objects.Instance(
+            id=4, uuid=uuids.instance_d, **base_instance)
+        instance_d.numa_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0,
+                cpuset=set([0, 1]),
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_pinning={0: 0, 1: 1},
+                memory=1024)])
+
+        migration = objects.Migration(
+            id=42,
+            uuid=uuids.migration,
+            source_compute=cn.host,
+            dest_compute='host2',
+            instance_uuid=instance_d.uuid)
+
+        migrations = objects.MigrationList(objects=[migration])
+
+        # use the ComputeNode and InstanceList objects in our mocks
+
+        mock_get_cn.return_value = cn
+        mock_get_instances.return_value = instances
+
+        # ditto for the migration and corresponding instance (which is
+        # theoretically on another host now, but still has allocation here)
+
+        mock_get_instance.return_value = instance_d
+        mock_get_migrations.return_value = migrations
+
+        # mock the inventory of an pre-Trait compute node, where PCPUs have not
+        # yet been reported
+
+        initial_inventory = self._get_inventory()
+        expected_inventory = copy.copy(initial_inventory)
+
+        initial_inventory.pop(orc.PCPU)
+        self.pt.update_inventory(cn.uuid, initial_inventory)
+
+        # call 'update_provider_tree' to ensure it raises 'ReshapeNeeded'
+        # since there is a reshape needed and no allocations provided
+
+        with testtools.ExpectedException(exception.ReshapeNeeded):
+            self.driver.update_provider_tree(
+                  self.pt, cn.hypervisor_hostname)
+
+        # now prepare the allocations, which are all using VCPUs since we
+        # haven't reshaped anything yet
+
+        allocations = {
+            uuids.instance_a: {
+                'allocations': {
+                    cn.uuid: {
+                        'resources': {
+                            orc.MEMORY_MB: 1000,
+                            orc.VCPU: 2,
+                            orc.DISK_GB: 30,
+                        }
+                    }
+                }
+            },
+            uuids.instance_b: {
+                'allocations': {
+                    cn.uuid: {
+                        'resources': {
+                            orc.MEMORY_MB: 1000,
+                            orc.VCPU: 2,
+                            orc.DISK_GB: 30,
+                        }
+                    }
+                }
+            },
+            uuids.instance_c: {
+                'allocations': {
+                    cn.uuid: {
+                        'resources': {
+                            orc.MEMORY_MB: 1000,
+                            orc.VCPU: 2,
+                            orc.DISK_GB: 30,
+                        }
+                    }
+                }
+            },
+            uuids.migration: {
+                'allocations': {
+                    cn.uuid: {
+                        'resources': {
+                            orc.MEMORY_MB: 1000,
+                            orc.VCPU: 2,
+                            orc.DISK_GB: 30,
+                        }
+                    }
+                }
+            },
+        }
+
+        # post reshape, only the allocations for instance_b and the migration
+        # should change since those are the only instances (by way of
+        # instance_d in the case of the migration) with CPU pinning
+
+        expected_allocations = copy.deepcopy(allocations)
+        expected_allocations[uuids.instance_b]['allocations'][cn.uuid] = {
+            'resources': {
+                orc.MEMORY_MB: 1000,
+                orc.PCPU: 2,
+                orc.DISK_GB: 30,
+            }
+        }
+        expected_allocations[uuids.migration]['allocations'][cn.uuid] = {
+            'resources': {
+                orc.MEMORY_MB: 1000,
+                orc.PCPU: 2,
+                orc.DISK_GB: 30,
+            }
+        }
+
+        # initiate the reshape
+
+        self.driver.update_provider_tree(
+            self.pt, cn.hypervisor_hostname, allocations=allocations)
+
+        # check both the VCPU and PCPU inventory are now reported and the
+        # allocations have been updated
+
+        self.assertEqual(expected_inventory, self.pt.data(cn.uuid).inventory)
+        self.assertEqual(expected_allocations, allocations)
 
 
 class TraitsComparisonMixin(object):
