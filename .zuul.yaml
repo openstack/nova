@@ -219,7 +219,7 @@
       jobs:
         # We define our own irrelevant-files so we don't run the job
         # on things like nova docs-only changes.
-        - ironic-tempest-dsvm-ipa-wholedisk-bios-agent_ipmitool-tinyipa:
+        - ironic-tempest-ipa-wholedisk-bios-agent_ipmitool-tinyipa:
             voting: false
             irrelevant-files: *dsvm-irrelevant-files
         - devstack-plugin-ceph-tempest:
@@ -275,9 +275,9 @@
             irrelevant-files: *dsvm-irrelevant-files
     experimental:
       jobs:
-        - ironic-tempest-dsvm-bfv:
+        - ironic-tempest-bfv:
             irrelevant-files: *dsvm-irrelevant-files
-        - ironic-tempest-dsvm-ipa-wholedisk-agent_ipmitool-tinyipa-multinode:
+        - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode:
             irrelevant-files: *dsvm-irrelevant-files
         - barbican-simple-crypto-devstack-tempest:
             irrelevant-files: *dsvm-irrelevant-files
