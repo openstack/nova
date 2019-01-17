@@ -172,6 +172,11 @@ VF_DRIVER_NAME = 'ixgbevf'
 VF_SLOT = '10'
 PF_SLOT = '00'
 
+NVIDIA_11_VGPU_TYPE = 'nvidia-11'
+PGPU1_PCI_ADDR = 'pci_0000_06_00_0'
+PGPU2_PCI_ADDR = 'pci_0000_07_00_0'
+PGPU3_PCI_ADDR = 'pci_0000_08_00_0'
+
 
 class FakePciDevice(object):
     pci_dev_template = """<device>
@@ -291,6 +296,57 @@ class HostPciSRIOVDevicesInfo(object):
     def get_device_by_name(self, device_name):
         pci_dev = self.devices.get(device_name)
         return pci_dev
+
+
+class FakeMdevDevice(object):
+    template = """
+    <device>
+      <name>%(dev_name)s</name>
+      <path>/sys/devices/pci0000:00/0000:00:02.0/%(path)s</path>
+      <parent>%(parent)s</parent>
+      <driver>
+        <name>vfio_mdev</name>
+      </driver>
+      <capability type='mdev'>
+        <type id='%(type_id)s'/>
+        <iommuGroup number='12'/>
+      </capability>
+    </device>
+    """
+
+    def __init__(self, dev_name, type_id, parent):
+        self.xml = self.template % {
+            'dev_name': dev_name, 'type_id': type_id,
+            'path': dev_name[len('mdev_'):],
+            'parent': parent}
+
+    def XMLDesc(self, flags):
+        return self.xml
+
+
+class HostMdevDevicesInfo(object):
+    def __init__(self):
+        self.devices = {
+            'mdev_4b20d080_1b54_4048_85b3_a6a62d165c01':
+                FakeMdevDevice(
+                    dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c01',
+                    type_id=NVIDIA_11_VGPU_TYPE, parent=PGPU1_PCI_ADDR),
+            'mdev_4b20d080_1b54_4048_85b3_a6a62d165c02':
+                FakeMdevDevice(
+                    dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c02',
+                    type_id=NVIDIA_11_VGPU_TYPE, parent=PGPU2_PCI_ADDR),
+            'mdev_4b20d080_1b54_4048_85b3_a6a62d165c03':
+                FakeMdevDevice(
+                    dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c03',
+                    type_id=NVIDIA_11_VGPU_TYPE, parent=PGPU3_PCI_ADDR),
+        }
+
+    def get_all_devices(self):
+        return self.devices.keys()
+
+    def get_device_by_name(self, device_name):
+        dev = self.devices[device_name]
+        return dev
 
 
 class HostInfo(object):
@@ -705,6 +761,20 @@ class Domain(object):
 
             devices['nics'] = nics_info
 
+            hostdev_info = []
+            hostdevs = device_nodes.findall('./hostdev')
+            for hostdev in hostdevs:
+                address = hostdev.find('./source/address')
+                # NOTE(gibi): only handle mdevs as pci is complicated
+                dev_type = hostdev.get('type')
+                if dev_type == 'mdev':
+                    hostdev_info.append({
+                        'type': dev_type,
+                        'model': hostdev.get('model'),
+                        'address_uuid': address.get('uuid')
+                    })
+            devices['hostdevs'] = hostdev_info
+
         definition['devices'] = devices
 
         return definition
@@ -844,6 +914,15 @@ class Domain(object):
                function='0x0'/>
     </interface>''' % nic
 
+        hostdevs = ''
+        for hostdev in self._def['devices']['hostdevs']:
+            hostdevs += '''<hostdev mode='subsystem' type='%(type)s' model='%(model)s'>
+    <source>
+      <address uuid='%(address_uuid)s'/>
+    </source>
+    </hostdev>
+            ''' % hostdev
+
         return '''<domain type='kvm'>
   <name>%(name)s</name>
   <uuid>%(uuid)s</uuid>
@@ -899,6 +978,7 @@ class Domain(object):
       <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
                function='0x0'/>
     </memballoon>
+    %(hostdevs)s
   </devices>
 </domain>''' % {'name': self._def['name'],
                 'uuid': self._def['uuid'],
@@ -906,7 +986,8 @@ class Domain(object):
                 'vcpu': self._def['vcpu'],
                 'arch': self._def['os']['arch'],
                 'disks': disks,
-                'nics': nics}
+                'nics': nics,
+                'hostdevs': hostdevs}
 
     def managedSave(self, flags):
         self._connection._mark_not_running(self)
@@ -995,7 +1076,8 @@ class DomainSnapshot(object):
 
 class Connection(object):
     def __init__(self, uri=None, readonly=False, version=FAKE_LIBVIRT_VERSION,
-                 hv_version=FAKE_QEMU_VERSION, host_info=None, pci_info=None):
+                 hv_version=FAKE_QEMU_VERSION, host_info=None, pci_info=None,
+                 mdev_info=None):
         if not uri or uri == '':
             if allow_default_uri_connection:
                 uri = 'qemu:///session'
@@ -1031,6 +1113,7 @@ class Connection(object):
         self.host_info = host_info or HostInfo()
         self.pci_info = pci_info or HostPciSRIOVDevicesInfo(num_pfs=0,
                                                             num_vfs=0)
+        self.mdev_info = mdev_info or []
 
     def _add_filter(self, nwfilter):
         self._nwfilters[nwfilter._name] = nwfilter
@@ -1439,6 +1522,9 @@ class Connection(object):
         return self.pci_info.get_device_by_name(dev_name)
 
     def nodeDeviceLookupByName(self, name):
+        if name.startswith('mdev'):
+            return self.mdev_info.get_device_by_name(name)
+
         pci_dev = self.pci_info.get_device_by_name(name)
         if pci_dev:
             return pci_dev
@@ -1452,7 +1538,17 @@ class Connection(object):
                     error_domain=VIR_FROM_NODEDEV)
 
     def listDevices(self, cap, flags):
-        return self.pci_info.get_all_devices()
+        if cap == 'pci':
+            return self.pci_info.get_all_devices()
+        if cap == 'mdev':
+            return self.mdev_info.get_all_devices()
+        if cap == 'mdev_types':
+            # TODO(gibi): We should return something like
+            # https://libvirt.org/drvnodedev.html#MDEVCap but I tried and it
+            # did not work for me.
+            return None
+        else:
+            raise ValueError('Capability "%s" is not supported' % cap)
 
     def baselineCPU(self, cpu, flag):
         """Add new libvirt API."""
