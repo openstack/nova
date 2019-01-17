@@ -564,13 +564,61 @@ Server actions
 
 -  **Lock**, **Unlock**
 
-   Lock a server so no further actions are allowed to the server. This can
-   be done by either administrator or the server's owner. By default, only owner
-   or administrator can lock the sever, and administrator can overwrite owner's lock.
+   Lock a server so the following actions by non-admin users are not
+   allowed to the server.
+
+   - Delete Server
+   - Change Administrative Password (changePassword Action)
+   - Confirm Resized Server (confirmResize Action)
+   - Force-Delete Server (forceDelete Action)
+   - Pause Server (pause Action)
+   - Reboot Server (reboot Action)
+   - Rebuild Server (rebuild Action)
+   - Rescue Server (rescue Action)
+   - Resize Server (resize Action)
+   - Restore Soft-Deleted Instance (restore Action)
+   - Resume Suspended Server (resume Action)
+   - Revert Resized Server (revertResize Action)
+   - Shelf-Offload (Remove) Server (shelveOffload Action)
+   - Shelve Server (shelve Action)
+   - Start Server (os-start Action)
+   - Stop Server (os-stop Action)
+   - Suspend Server (suspend Action)
+   - Trigger Crash Dump In Server
+   - Unpause Server (unpause Action)
+   - Unrescue Server (unrescue Action)
+   - Unshelve (Restore) Shelved Server (unshelve Action)
+   - Attach a volume to an instance
+   - Update a volume attachment
+   - Detach a volume from an instance
+   - Create Interface
+   - Detach Interface
+   - Create Or Update Metadata Item
+   - Create or Update Metadata Items
+   - Delete Metadata Item
+   - Replace Metadata Items
+   - Add (Associate) Fixed Ip (addFixedIp Action) (DEPRECATED)
+   - Remove (Disassociate) Fixed Ip (removeFixedIp Action) (DEPRECATED)
+
+   ..
+     NOTE(takashin):
+     The following APIs can be performed by administrators only by default.
+     So they are not listed in the above list.
+
+     - Migrate Server (migrate Action)
+     - Live-Migrate Server (os-migrateLive Action)
+     - Force Migration Complete Action (force_complete Action)
+     - Delete (Abort) Migration
+     - Inject Network Information (injectNetworkInfo Action)
+     - Reset Networking On A Server (resetNetwork Action)
+
+   But administrators can perform the actions on the server
+   even though the server is locked. By default, only owner or administrator
+   can lock the sever, and administrator can overwrite owner's lock.
 
    Unlock will unlock a server in locked state so additional
-   operations can be performed on the server. By default, only owner or
-   administrator can unlock the server.
+   operations can be performed on the server by non-admin users.
+   By default, only owner or administrator can unlock the server.
 
 -  **Rescue**, **Unrescue**
 
