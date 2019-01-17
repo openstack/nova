@@ -1847,6 +1847,31 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(kwargs['transport_url'], cell2.transport_url)
         self.assertIs(cell2.disabled, False)
 
+    def test_create_cell_use_params_with_template(self):
+        ctxt = context.get_context()
+        self.flags(transport_url='rabbit://host:1234')
+        kwargs = dict(
+            name='fake-name',
+            transport_url='{scheme}://other-{hostname}:{port}',
+            database_connection='fake-db-connection')
+        status = self.commands.create_cell(verbose=True, **kwargs)
+        self.assertEqual(0, status)
+        cell2_uuid = self.output.getvalue().strip()
+        self.commands.create_cell(**kwargs)
+
+        # Make sure it ended up as a template in the database
+        db_cm = objects.CellMapping._get_by_uuid_from_db(ctxt, cell2_uuid)
+        self.assertEqual('{scheme}://other-{hostname}:{port}',
+                         db_cm.transport_url)
+
+        # Make sure it gets translated if we load by object
+        cell2 = objects.CellMapping.get_by_uuid(ctxt, cell2_uuid)
+        self.assertEqual(kwargs['name'], cell2.name)
+        self.assertEqual(kwargs['database_connection'],
+                         cell2.database_connection)
+        self.assertEqual('rabbit://other-host:1234', cell2.transport_url)
+        self.assertIs(cell2.disabled, False)
+
     def test_create_cell_use_config_values(self):
         settings = dict(
             transport_url='http://fake-conf-transport-url',

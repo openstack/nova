@@ -1058,7 +1058,9 @@ class CellV2Commands(object):
             return None
 
         try:
-            messaging.TransportURL.parse(conf=CONF, url=transport_url)
+            messaging.TransportURL.parse(conf=CONF,
+                                         url=objects.CellMapping.format_mq_url(
+                                             transport_url))
         except (messaging.InvalidTransportURL, ValueError) as e:
             print(_('Invalid transport URL: %s') % six.text_type(e))
             return None
