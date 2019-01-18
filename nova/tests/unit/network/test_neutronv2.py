@@ -1574,8 +1574,13 @@ class TestNeutronv2(TestNeutronv2Base):
             self.moxed_client)
         if requested_networks:
             for net, fip, port, request_id in requested_networks:
-                self.moxed_client.show_port(port, fields='binding:profile'
-                        ).AndReturn({'port': ret_data[0]})
+                self.moxed_client.show_port(port, fields=[
+                                            'binding:profile', 'network_id']
+                                            ).AndReturn({'port': ret_data[0]})
+                self.moxed_client.show_network(
+                    ret_data[0]['network_id'],
+                    fields=['dns_domain']).AndReturn(
+                        {'network': {'id': ret_data[0]['network_id']}})
                 self.moxed_client.update_port(port)
         for port in ports:
             self.moxed_client.delete_port(port).InAnyOrder("delete_port_group")
@@ -4685,8 +4690,14 @@ class TestNeutronv2WithMock(test.TestCase):
                           self.context)
 
     @mock.patch('nova.network.neutronv2.api.API._show_port')
-    def test_unbind_ports_reset_dns_name(self, mock_show):
+    def test_unbind_ports_reset_dns_name_by_admin(self, mock_show):
         neutron = mock.Mock()
+        neutron.show_network.return_value = {
+            'network': {
+                'id': 'net1',
+                'dns_domain': None
+            }
+        }
         port_client = mock.Mock()
         self.api.extensions = [constants.DNS_INTEGRATION]
         ports = [uuids.port_id]
@@ -4699,6 +4710,31 @@ class TestNeutronv2WithMock(test.TestCase):
                                   'dns_name': ''}}
         port_client.update_port.assert_called_once_with(
             uuids.port_id, port_req_body)
+        neutron.update_port.assert_not_called()
+
+    @mock.patch('nova.network.neutronv2.api.API._show_port')
+    def test_unbind_ports_reset_dns_name_by_non_admin(self, mock_show):
+        neutron = mock.Mock()
+        neutron.show_network.return_value = {
+            'network': {
+                'id': 'net1',
+                'dns_domain': 'test.domain'
+            }
+        }
+        port_client = mock.Mock()
+        self.api.extensions = [constants.DNS_INTEGRATION]
+        ports = [uuids.port_id]
+        mock_show.return_value = {'id': uuids.port}
+        self.api._unbind_ports(self.context, ports, neutron, port_client)
+        admin_port_req_body = {'port': {'binding:host_id': None,
+                                        'binding:profile': {},
+                                        'device_id': '',
+                                        'device_owner': ''}}
+        non_admin_port_req_body = {'port': {'dns_name': ''}}
+        port_client.update_port.assert_called_once_with(
+            uuids.port_id, admin_port_req_body)
+        neutron.update_port.assert_called_once_with(
+            uuids.port_id, non_admin_port_req_body)
 
     @mock.patch('nova.network.neutronv2.api.API._show_port')
     def test_unbind_ports_reset_binding_profile(self, mock_show):
@@ -4864,7 +4900,7 @@ class TestNeutronv2WithMock(test.TestCase):
                           neutron_client, neutron_client)
         mock_show.assert_called_once_with(
             mock.ANY, uuids.port_id,
-            fields='binding:profile',
+            fields=['binding:profile', 'network_id'],
             neutron_client=mock.ANY)
         mock_log.assert_not_called()
 
