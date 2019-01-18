@@ -22,7 +22,7 @@ inline callbacks.
 """
 
 import eventlet  # noqa
-eventlet.monkey_patch(os=False)
+eventlet.monkey_patch()
 
 import abc
 import copy

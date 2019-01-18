@@ -22,4 +22,4 @@
 
 import eventlet
 
-eventlet.monkey_patch(os=False)
+eventlet.monkey_patch()
