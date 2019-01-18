@@ -191,8 +191,7 @@ def find_disk_dev_for_disk_bus(mapping, bus,
             if disk_dev not in assigned_devices:
                 return disk_dev
 
-    msg = _("No free disk device names for prefix '%s'") % dev_prefix
-    raise exception.InternalError(msg)
+    raise exception.TooManyDiskDevices(maximum=max_dev)
 
 
 def is_disk_bus_valid_for_virt(virt_type, disk_bus):

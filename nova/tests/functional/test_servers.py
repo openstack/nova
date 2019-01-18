@@ -834,6 +834,31 @@ class ServersTest(ServersTestBase):
                                created_server_id, post)
         self.assertEqual(403, ex.response.status_code)
 
+    def test_attach_vol_maximum_disk_devices_exceeded(self):
+        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+
+        server = self._build_minimal_create_server_request()
+        created_server = self.api.post_server({"server": server})
+        server_id = created_server['id']
+        self._wait_for_state_change(created_server, 'BUILD')
+
+        volume_id = '9a695496-44aa-4404-b2cc-ccab2501f87e'
+        LOG.info('Attaching volume %s to server %s', volume_id, server_id)
+
+        # The fake driver doesn't implement get_device_name_for_instance, so
+        # we'll just raise the exception directly here, instead of simuluating
+        # an instance with 26 disk devices already attached.
+        with mock.patch.object(self.compute.driver,
+                               'get_device_name_for_instance') as mock_get:
+            mock_get.side_effect = exception.TooManyDiskDevices(maximum=26)
+            ex = self.assertRaises(
+                client.OpenStackApiException, self.api.post_server_volume,
+                server_id, dict(volumeAttachment=dict(volumeId=volume_id)))
+            expected = ('The maximum allowed number of disk devices (26) to '
+                        'attach to a single instance has been exceeded.')
+            self.assertEqual(403, ex.response.status_code)
+            self.assertIn(expected, six.text_type(ex))
+
 
 class ServersTestV21(ServersTest):
     api_major_version = 'v2.1'

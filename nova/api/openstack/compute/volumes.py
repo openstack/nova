@@ -310,7 +310,7 @@ class VolumeAttachmentController(wsgi.Controller):
             assigned_mountpoint)}
 
     # TODO(mriedem): This API should return a 202 instead of a 200 response.
-    @wsgi.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 403, 404, 409))
     @validation.schema(volumes_schema.create_volume_attachment, '2.0', '2.48')
     @validation.schema(volumes_schema.create_volume_attachment_v249, '2.49')
     def create(self, req, server_id, body):
@@ -352,6 +352,8 @@ class VolumeAttachmentController(wsgi.Controller):
                 exception.MultiattachNotSupportedOldMicroversion,
                 exception.MultiattachToShelvedNotSupported) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.TooManyDiskDevices as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
 
         # The attach is async
         attachment = {}
