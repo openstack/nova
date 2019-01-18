@@ -135,7 +135,8 @@ class _TestNUMA(object):
         self.assertEqual(512, pages_topology.free)
         self.assertEqual(1048576, pages_topology.free_kb)
 
-    def test_can_fit_hugepages(self):
+    def test_can_fit_pagesize(self):
+        # NOTE(stephenfin): '**' is Python's "power of" symbol
         cell = objects.NUMACell(
             id=0, cpuset=set([1, 2]), memory=1024,
             siblings=[set([1]), set([2])], pinned_cpus=set([]),
@@ -148,18 +149,42 @@ class _TestNUMA(object):
                     size_kb=1048576, total=4, used=1, reserved=1)])
 
         pagesize = 2048
-        self.assertTrue(cell.can_fit_hugepages(pagesize, 2 ** 20))
-        self.assertFalse(cell.can_fit_hugepages(pagesize, 2 ** 21))
-        self.assertFalse(cell.can_fit_hugepages(pagesize, 2 ** 19 + 1))
+        self.assertTrue(cell.can_fit_pagesize(pagesize, 2 ** 20))
+        self.assertFalse(cell.can_fit_pagesize(pagesize, 2 ** 21))
+        self.assertFalse(cell.can_fit_pagesize(pagesize, 2 ** 19 + 1))
 
         pagesize = 1048576
-        self.assertTrue(cell.can_fit_hugepages(pagesize, 2 ** 20))
-        self.assertTrue(cell.can_fit_hugepages(pagesize, 2 ** 20 * 2))
-        self.assertFalse(cell.can_fit_hugepages(pagesize, 2 ** 20 * 3))
+        self.assertTrue(cell.can_fit_pagesize(pagesize, 2 ** 20))
+        self.assertTrue(cell.can_fit_pagesize(pagesize, 2 ** 20 * 2))
+        self.assertFalse(cell.can_fit_pagesize(pagesize, 2 ** 20 * 3))
 
         self.assertRaises(
             exception.MemoryPageSizeNotSupported,
-            cell.can_fit_hugepages, 12345, 2 ** 20)
+            cell.can_fit_pagesize, 12345, 2 ** 20)
+
+    def test_can_fit_pagesize_oversubscription(self):
+        """Validate behavior when using page oversubscription.
+
+        While hugepages aren't themselves oversubscribable, we also track small
+        pages which are.
+        """
+        # NOTE(stephenfin): '**' is Python's "power of" symbol
+        cell = objects.NUMACell(
+            id=0, cpuset=set([1, 2]), memory=1024,
+            siblings=[set([1]), set([2])], pinned_cpus=set([]),
+            mempages=[
+                # 1 GiB total, all used
+                objects.NUMAPagesTopology(
+                    size_kb=4, total=2 ** 18, used=2 ** 18),
+            ])
+
+        pagesize = 4
+        # request 2^20 KiB (so 1 GiB)
+        self.assertTrue(cell.can_fit_pagesize(
+            pagesize, 2 ** 20, use_free=False))
+        # request 2^20 + 1 KiB (so # > 1 GiB)
+        self.assertFalse(cell.can_fit_pagesize(
+            pagesize, 2 ** 20 + 1, use_free=False))
 
     def test_default_behavior(self):
         inst_cell = objects.NUMACell()
