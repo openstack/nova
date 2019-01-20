@@ -15,6 +15,7 @@
 
 from nova import exception
 from nova.network import api as network_api
+from nova import objects
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit import fake_network_cache_model
 
@@ -98,18 +99,23 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
         subs['ip_address'] = vanilla_regexes['ip']
         return subs
 
+    def _get_subs(self):
+        """Allows sub-classes to override the subs dict used for verification.
+        """
+        return {
+            'ip_address': '192.168.1.3',
+            'subnet_id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef',
+            'mac_addr': 'fa:16:3e:4c:2c:30',
+            'net_id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
+            'port_id': 'ce531f90-199f-48c0-816c-13e38010b442',
+            'port_state': 'ACTIVE'
+        }
+
     def test_list_interfaces(self):
         instance_uuid = self._post_server()
         response = self._do_get('servers/%s/os-interface'
                                 % instance_uuid)
-        subs = {
-                'ip_address': '192.168.1.3',
-                'subnet_id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef',
-                'mac_addr': 'fa:16:3e:4c:2c:30',
-                'net_id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
-                'port_id': 'ce531f90-199f-48c0-816c-13e38010b442',
-                'port_state': 'ACTIVE'
-                }
+        subs = self._get_subs()
         self._verify_response('attach-interfaces-list-resp', subs,
                               response, 200)
 
@@ -125,28 +131,14 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
         self._stub_show_for_instance(instance_uuid, port_id)
         response = self._do_get('servers/%s/os-interface/%s' %
                                 (instance_uuid, port_id))
-        subs = {
-                'ip_address': '192.168.1.3',
-                'subnet_id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef',
-                'mac_addr': 'fa:16:3e:4c:2c:30',
-                'net_id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
-                'port_id': port_id,
-                'port_state': 'ACTIVE'
-                }
+        subs = self._get_subs()
         self._verify_response('attach-interfaces-show-resp', subs,
                               response, 200)
 
     def test_create_interfaces(self, instance_uuid=None):
         if instance_uuid is None:
             instance_uuid = self._post_server()
-        subs = {
-                'net_id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
-                'port_id': 'ce531f90-199f-48c0-816c-13e38010b442',
-                'subnet_id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef',
-                'ip_address': '192.168.1.3',
-                'port_state': 'ACTIVE',
-                'mac_addr': 'fa:16:3e:4c:2c:30',
-                }
+        subs = self._get_subs()
         self._stub_show_for_instance(instance_uuid, subs['port_id'])
         response = self._do_post('servers/%s/os-interface'
                                  % instance_uuid,
@@ -158,14 +150,7 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
                                                          instance_uuid=None):
         if instance_uuid is None:
             instance_uuid = self._post_server()
-        subs = {
-                'net_id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
-                'port_id': 'ce531f90-199f-48c0-816c-13e38010b442',
-                'subnet_id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef',
-                'ip_address': '192.168.1.3',
-                'port_state': 'ACTIVE',
-                'mac_addr': 'fa:16:3e:4c:2c:30',
-                }
+        subs = self._get_subs()
         self._stub_show_for_instance(instance_uuid, subs['port_id'])
         response = self._do_post('servers/%s/os-interface'
                                  % instance_uuid,
@@ -251,3 +236,35 @@ class AttachInterfacesSampleV249JsonTest(test_servers.ServersSampleBase):
                                  'attach-interfaces-create-req', subs)
         self._verify_response('attach-interfaces-create-resp', subs,
                               response, 200)
+
+
+class AttachInterfacesSampleV270JsonTest(AttachInterfacesSampleJsonTest):
+    """Tests for the 2.70 microversion in the os-interface API
+    which returns the 'tag' field in response bodies to GET and POST methods.
+    """
+    microversion = '2.70'
+    scenarios = [('v2_70', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(AttachInterfacesSampleV270JsonTest, self).setUp()
+        port_id = 'ce531f90-199f-48c0-816c-13e38010b442'
+
+        def fake_virtual_interface_list_by_instance_uuid(*args, **kwargs):
+            return objects.VirtualInterfaceList(objects=[
+                objects.VirtualInterface(
+                    # All these tests care about is the uuid and tag.
+                    uuid=port_id, tag='public')])
+
+        def fake_virtual_interface_get_by_uuid(*args, **kwargs):
+            return objects.VirtualInterface(uuid=port_id, tag='public')
+
+        self.stub_out('nova.objects.VirtualInterface.get_by_uuid',
+                      fake_virtual_interface_get_by_uuid)
+        self.stub_out('nova.objects.VirtualInterfaceList.get_by_instance_uuid',
+                      fake_virtual_interface_list_by_instance_uuid)
+
+    def _get_subs(self):
+        subs = super(AttachInterfacesSampleV270JsonTest, self)._get_subs()
+        # 2.70 adds the tag parameter to the request and response.
+        subs['tag'] = 'public'
+        return subs

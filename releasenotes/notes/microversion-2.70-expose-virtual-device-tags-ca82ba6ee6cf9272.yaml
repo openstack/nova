@@ -1,0 +1,18 @@
+---
+features:
+  - |
+    The 2.70 compute API microversion exposes virtual device tags for volume
+    attachments and virtual interfaces (ports). A ``tag`` parameter is added
+    to the response body for the following APIs:
+
+    **Volumes**
+
+    * GET /servers/{server_id}/os-volume_attachments (list)
+    * GET /servers/{server_id}/os-volume_attachments/{volume_id} (show)
+    * POST /servers/{server_id}/os-volume_attachments (attach)
+
+    **Ports**
+
+    * GET /servers/{server_id}/os-interface (list)
+    * GET /servers/{server_id}/os-interface/{port_id} (show)
+    * POST /servers/{server_id}/os-interface (attach)
