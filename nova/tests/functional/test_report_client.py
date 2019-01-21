@@ -898,12 +898,18 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             self.assertRaises(
                 exception.ResourceProviderSyncFailed,
                 self.client.update_from_provider_tree, self.context, new_tree)
-            # The inventory update didn't get synced...
+            # The inventory update didn't get synced.
             self.assertIsNone(self.client._get_inventory(
                 self.context, uuids.grandchild1_1))
-            # ...and the grandchild was removed from the cache
-            self.assertFalse(
-                self.client._provider_tree.exists('grandchild1_1'))
+            # We invalidated the cache for the entire tree around grandchild1_1
+            # but did not invalidate the other root (the SSP)
+            self.assertEqual([uuids.ssp],
+                             self.client._provider_tree.get_provider_uuids())
+            # This is a little under-the-hood-looking, but make sure we cleared
+            # the association refresh timers for everything in the grandchild's
+            # tree
+            self.assertEqual(set([uuids.ssp]),
+                             set(self.client._association_refresh_time))
 
             # Fix that problem so we can try the next one
             new_tree.update_inventory(
@@ -955,7 +961,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                                                'STORAGE_DISK_SSD',
                                                'CUSTOM_FAST'])
             self.assertRaises(
-                exception.ResourceProviderSyncFailed,
+                exception.ResourceProviderUpdateConflict,
                 self.client.update_from_provider_tree, self.context, new_tree)
             # ...but the next iteration will refresh the cache with the latest
             # generation and so the next attempt should succeed.
@@ -1118,29 +1124,12 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
         )
 
         # A sharing provider that's not part of the compute node's tree.
-        # We avoid the report client's convenience methods to get bonus
-        # coverage of the subsequent update_from_provider_tree pulling it
-        # into the cache for us.
-        resp = self.client.post(
-            '/resource_providers',
-            {'uuid': uuids.ssp, 'name': 'ssp'}, version='1.20')
-        inv = {'DISK_GB': {'total': 500}}
-        resp = self.client.put(
-            '/resource_providers/%s/inventories' % uuids.ssp,
-            {'inventories': inv,
-             'resource_provider_generation': resp.json()['generation']})
+        ptree.new_root('ssp', uuids.ssp)
+        inv = dict(DISK_GB={'total': 500})
+        ptree.update_inventory(uuids.ssp, inv)
         # Part of the shared storage aggregate
-        resp = self.client.put(
-            '/resource_providers/%s/aggregates' % uuids.ssp,
-            {'aggregates': [uuids.agg1],
-             'resource_provider_generation':
-                 resp.json()['resource_provider_generation']},
-            version='1.19')
-        self.client.put(
-            '/resource_providers/%s/traits' % uuids.ssp,
-            {'traits': ['MISC_SHARES_VIA_AGGREGATE'],
-             'resource_provider_generation':
-                 resp.json()['resource_provider_generation']})
+        ptree.update_aggregates(uuids.ssp, [uuids.agg1])
+        ptree.update_traits(uuids.ssp, ['MISC_SHARES_VIA_AGGREGATE'])
         ret[uuids.ssp] = dict(
             name='ssp',
             parent_uuid=None,

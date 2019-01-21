@@ -236,10 +236,10 @@ class ProviderTree(object):
 
     def get_provider_uuids(self, name_or_uuid=None):
         """Return a list, in top-down traversable order, of the UUIDs of all
-        providers (in a subtree).
+        providers (in a (sub)tree).
 
         :param name_or_uuid: Provider name or UUID representing the root of a
-                             subtree for which to return UUIDs.  If not
+                             (sub)tree for which to return UUIDs.  If not
                              specified, the method returns all UUIDs in the
                              ProviderTree.
         """
@@ -253,6 +253,18 @@ class ProviderTree(object):
             for root in self.roots:
                 ret.extend(root.get_provider_uuids())
         return ret
+
+    def get_provider_uuids_in_tree(self, name_or_uuid):
+        """Returns a list, in top-down traversable order, of the UUIDs of all
+        providers in the whole tree of which the provider identified by
+        ``name_or_uuid`` is a member.
+
+        :param name_or_uuid: Provider name or UUID representing any member of
+                             whole tree for which to return UUIDs.
+        """
+        with self.lock:
+            return self._find_with_lock(
+                name_or_uuid, return_root=True).get_provider_uuids()
 
     def populate_from_iterable(self, provider_dicts):
         """Populates this ProviderTree from an iterable of provider dicts.
@@ -384,11 +396,11 @@ class ProviderTree(object):
             self.roots.append(p)
             return p.uuid
 
-    def _find_with_lock(self, name_or_uuid):
+    def _find_with_lock(self, name_or_uuid, return_root=False):
         for root in self.roots:
             found = root.find(name_or_uuid)
             if found:
-                return found
+                return root if return_root else found
         raise ValueError(_("No such provider %s") % name_or_uuid)
 
     def data(self, name_or_uuid):

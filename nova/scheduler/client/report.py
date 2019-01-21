@@ -25,6 +25,7 @@ from keystoneauth1 import exceptions as ks_exc
 import os_traits
 from oslo_log import log as logging
 from oslo_middleware import request_id
+from oslo_utils import excutils
 from oslo_utils import versionutils
 import retrying
 
@@ -282,6 +283,35 @@ class SchedulerReportClient(object):
             LOG.info("Clearing the report client's provider cache.")
         self._provider_tree = provider_tree.ProviderTree()
         self._association_refresh_time = {}
+
+    def _clear_provider_cache_for_tree(self, rp_uuid):
+        """Clear the provider cache for only the tree containing rp_uuid.
+
+        This exists for situations where we encounter an error updating
+        placement, and therefore need to refresh the provider tree cache before
+        redriving the update. However, it would be wasteful and inefficient to
+        clear the *entire* cache, which may contain many separate trees (e.g.
+        ironic nodes or sharing providers) which should be unaffected by the
+        error.
+
+        :param rp_uuid: UUID of a resource provider, which may be anywhere in a
+                        a tree hierarchy, i.e. need not be a root. For non-root
+                        providers, we still clear the cache for the entire tree
+                        including descendants, ancestors up to the root,
+                        siblings/cousins and *their* ancestors/descendants.
+        """
+        try:
+            uuids = self._provider_tree.get_provider_uuids_in_tree(rp_uuid)
+        except ValueError:
+            # If the provider isn't in the tree, it should also not be in the
+            # timer dict, so nothing to clear.
+            return
+
+        # get_provider_uuids returns UUIDs in top-down order, so the first one
+        # is the root; and .remove() is recursive.
+        self._provider_tree.remove(uuids[0])
+        for uuid in uuids:
+            self._association_refresh_time.pop(uuid, None)
 
     def _create_client(self):
         """Create the HTTP session accessing the placement service."""
@@ -657,55 +687,58 @@ class SchedulerReportClient(object):
         # NOTE(efried): We currently have no code path where we need to set the
         # parent_provider_uuid on a previously-parent-less provider - so we do
         # NOT handle that scenario here.
-        # TODO(efried): Reinstate this optimization if possible.
-        # For now, this is removed due to the following:
-        # - update_provider_tree adds a child with some bogus inventory (bad
-        #   resource class) or trait (invalid trait name).
-        # - update_from_provider_tree creates the child in placement and adds
-        #   it to the cache, then attempts to add the bogus inventory/trait.
-        #   The latter fails, so update_from_provider_tree invalidates the
-        #   cache entry by removing the child from the cache.
-        # - Ordinarily, we would rely on the code below (_get_providers_in_tree
-        #   and _provider_tree.populate_from_iterable) to restore the child to
-        #   the cache on the next iteration.  BUT since the root is still
-        #   present in the cache, the commented-out block will cause that part
-        #   of this method to be skipped.
-        # if self._provider_tree.exists(uuid):
-        #     # If we had the requested provider locally, refresh it and its
-        #     # descendants, but only if stale.
-        #     for u in self._provider_tree.get_provider_uuids(uuid):
-        #         self._refresh_associations(context, u, force=False)
-        #     return uuid
 
-        # We don't have it locally; check placement or create it.
-        created_rp = None
-        rps_to_refresh = self._get_providers_in_tree(context, uuid)
-        if not rps_to_refresh:
-            created_rp = self._create_resource_provider(
-                context, uuid, name or uuid,
-                parent_provider_uuid=parent_provider_uuid)
-            # If @safe_connect can't establish a connection to the placement
-            # service, like if placement isn't running or nova-compute is
-            # mis-configured for authentication, we'll get None back and need
-            # to treat it like we couldn't create the provider (because we
-            # couldn't).
-            if created_rp is None:
-                raise exception.ResourceProviderCreationFailed(
-                    name=name or uuid)
-            # Don't add the created_rp to rps_to_refresh.  Since we just
-            # created it, it has no aggregates or traits.
+        # If we already have the root provider in the cache, and it's not
+        # stale, don't refresh it; and use the cache to determine the
+        # descendants to (soft) refresh.
+        # NOTE(efried): This assumes the compute service only cares about
+        # providers it "owns". If that ever changes, we'll need a way to find
+        # out about out-of-band changes here. Options that have been
+        # brainstormed at this time:
+        # - Make this condition more frequently True
+        # - Some kind of notification subscription so a separate thread is
+        #   alerted when <thing we care about happens in placement>.
+        # - "Cascading generations" - i.e. a change to a leaf node percolates
+        #   generation bump up the tree so that we bounce 409 the next time we
+        #   try to update anything and have to refresh.
+        if (self._provider_tree.exists(uuid)
+                and not self._associations_stale(uuid)):
+            uuids_to_refresh = [
+                u for u in self._provider_tree.get_provider_uuids(uuid)
+                if self._associations_stale(u)]
+        else:
+            # We either don't have it locally or it's stale. Pull or create it.
+            created_rp = None
+            rps_to_refresh = self._get_providers_in_tree(context, uuid)
+            if not rps_to_refresh:
+                created_rp = self._create_resource_provider(
+                    context, uuid, name or uuid,
+                    parent_provider_uuid=parent_provider_uuid)
+                # If @safe_connect can't establish a connection to the
+                # placement service, like if placement isn't running or
+                # nova-compute is mis-configured for authentication, we'll get
+                # None back and need to treat it like we couldn't create the
+                # provider (because we couldn't).
+                if created_rp is None:
+                    raise exception.ResourceProviderCreationFailed(
+                        name=name or uuid)
+                # Don't add the created_rp to rps_to_refresh.  Since we just
+                # created it, it has no aggregates or traits.
+                # But do mark it as having just been "refreshed".
+                self._association_refresh_time[uuid] = time.time()
 
-        self._provider_tree.populate_from_iterable(
-            rps_to_refresh or [created_rp])
+            self._provider_tree.populate_from_iterable(
+                rps_to_refresh or [created_rp])
+
+            uuids_to_refresh = [rp['uuid'] for rp in rps_to_refresh]
 
         # At this point, the whole tree exists in the local cache.
 
-        for rp_to_refresh in rps_to_refresh:
+        for uuid_to_refresh in uuids_to_refresh:
             # NOTE(efried): _refresh_associations doesn't refresh inventory
             # (yet) - see that method's docstring for the why.
-            self._refresh_and_get_inventory(context, rp_to_refresh['uuid'])
-            self._refresh_associations(context, rp_to_refresh['uuid'],
-                                       force=True)
+            self._refresh_and_get_inventory(context, uuid_to_refresh)
+            self._refresh_associations(context, uuid_to_refresh, force=True)
 
         return uuid
 
@@ -1545,6 +1578,9 @@ class SchedulerReportClient(object):
                             comprehensive final picture of the allocations for
                             each consumer therein. A value of None indicates
                             that no reshape is being performed.
+        :raises: ResourceProviderUpdateConflict if a generation conflict was
+                 encountered - i.e. we are attempting to update placement based
+                 on a stale view of it.
         :raises: ResourceProviderSyncFailed if any errors were encountered
                  attempting to perform the necessary API operations, except
                  reshape (see below).
@@ -1558,12 +1594,14 @@ class SchedulerReportClient(object):
         @contextlib.contextmanager
         def catch_all(rp_uuid):
             """Convert all "expected" exceptions from placement API helpers to
-            True or False.  Saves having to do try/except for every helper call
-            below.
+            ResourceProviderSyncFailed* and invalidate the caches for the tree
+            around `rp_uuid`.
+
+            * Except ResourceProviderUpdateConflict, which signals the caller
+              to redrive the operation; and ReshapeFailed, which triggers
+              special error handling behavior in the resource tracker and
+              compute manager.
             """
-            class Status(object):
-                success = True
-            s = Status()
             # TODO(efried): Make a base exception class from which all these
             # can inherit.
             helper_exceptions = (
@@ -1574,7 +1612,6 @@ class SchedulerReportClient(object):
                 exception.ResourceProviderInUse,
                 exception.ResourceProviderRetrievalFailed,
                 exception.ResourceProviderTraitRetrievalFailed,
-                exception.ResourceProviderUpdateConflict,
                 exception.ResourceProviderUpdateFailed,
                 exception.TraitCreationFailed,
                 exception.TraitRetrievalFailed,
@@ -1582,18 +1619,19 @@ class SchedulerReportClient(object):
                 # needs to bubble up right away and be handled specially.
             )
             try:
-                yield s
+                yield
+            except exception.ResourceProviderUpdateConflict:
+                # Invalidate the tree around the failing provider and reraise
+                # the conflict exception. This signals the resource tracker to
+                # redrive the update right away rather than waiting until the
+                # next periodic.
+                with excutils.save_and_reraise_exception():
+                    self._clear_provider_cache_for_tree(rp_uuid)
             except helper_exceptions:
-                s.success = False
-                # Invalidate the caches
-                try:
-                    self._provider_tree.remove(rp_uuid)
-                except ValueError:
-                    pass
-                self._association_refresh_time.pop(rp_uuid, None)
-
-        # Overall indicator of success.  Will be set to False on any exception.
-        success = True
+                # Invalidate the relevant part of the cache. It gets rebuilt on
+                # the next pass.
+                self._clear_provider_cache_for_tree(rp_uuid)
+                raise exception.ResourceProviderSyncFailed()
 
         # Helper methods herein will be updating the local cache (this is
         # intentional) so we need to grab up front any data we need to operate
@@ -1612,7 +1650,7 @@ class SchedulerReportClient(object):
             if uuid not in uuids_to_add:
                 continue
             provider = new_tree.data(uuid)
-            with catch_all(uuid) as status:
+            with catch_all(uuid):
                 self._ensure_resource_provider(
                     context, uuid, name=provider.name,
                     parent_provider_uuid=provider.parent_uuid)
@@ -1624,7 +1662,6 @@ class SchedulerReportClient(object):
                 new_tree.update_inventory(
                     uuid, new_tree.data(uuid).inventory,
                     generation=self._provider_tree.data(uuid).generation)
-                success = success and status.success
 
         # If we need to reshape, do it here.
         if allocations is not None:
@@ -1640,9 +1677,8 @@ class SchedulerReportClient(object):
                 # TODO(efried): GET /resource_providers?uuid=in:[list] would be
                 # handy here. Meanwhile, this is an already-written, if not
                 # obvious, way to refresh provider generations in the cache.
-                with catch_all(uuid) as status:
+                with catch_all(uuid):
                     self._refresh_and_get_inventory(context, uuid)
-                success = success and status.success
 
         # Now we can do provider deletions, because we should have moved any
         # allocations off of them via reshape.
@@ -1653,9 +1689,8 @@ class SchedulerReportClient(object):
         for uuid in reversed(old_uuids):
             if uuid not in uuids_to_remove:
                 continue
-            with catch_all(uuid) as status:
+            with catch_all(uuid):
                 self._delete_provider(uuid)
-            success = success and status.success
 
         # At this point the local cache should have all the same providers as
         # new_tree.  Whether we added them or not, walk through and diff/flush
@@ -1671,16 +1706,12 @@ class SchedulerReportClient(object):
         # given to us in top-down order per ProviderTree.get_provider_uuids().)
         for uuid in reversed(new_uuids):
             pd = new_tree.data(uuid)
-            with catch_all(pd.uuid) as status:
+            with catch_all(pd.uuid):
                 self._set_inventory_for_provider(
                     context, pd.uuid, pd.inventory)
                 self.set_aggregates_for_provider(
                     context, pd.uuid, pd.aggregates)
                 self.set_traits_for_provider(context, pd.uuid, pd.traits)
-            success = success and status.success
-
-        if not success:
-            raise exception.ResourceProviderSyncFailed()
 
     # TODO(efried): Cut users of this method over to get_allocs_for_consumer
     def get_allocations_for_consumer(self, context, consumer):
