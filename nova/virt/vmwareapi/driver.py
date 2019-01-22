@@ -34,6 +34,7 @@ from oslo_vmware import vim_util
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
+from nova.compute import vm_states
 import nova.conf
 from nova import context as nova_context
 from nova import exception
@@ -351,7 +352,10 @@ class VMwareVCDriver(driver.ComputeDriver):
         return self._vmops.get_vnc_console(instance)
 
     def get_mks_console(self, context, instance):
-        return self._vmops.get_mks_console(instance)
+        valid_states = (vm_states.ACTIVE, vm_states.RESCUED, vm_states.RESIZED)
+        if instance.vm_state in valid_states:
+            return self._vmops.get_mks_console(instance)
+        raise exception.ConsoleTypeUnavailable(console_type='mks')
 
     def get_console_output(self, context, instance):
         if not CONF.vmware.serial_log_dir:
