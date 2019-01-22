@@ -53,6 +53,7 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
 from nova import quota as nova_quota
+from nova import rc_fields
 from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
@@ -1234,6 +1235,27 @@ class NeutronFixture(fixtures.Fixture):
         'binding:vif_type': 'ovs'
     }
 
+    port_with_resource_request = {
+        'id': '2f2613ce-95a9-490a-b3c4-5f1c28c1f886',
+        'network_id': network_1['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c3',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.1.42',
+                'subnet_id': subnet_1['id']
+            }
+        ],
+        'tenant_id': tenant_id,
+        'resource_request': {
+            "resources": {
+                    rc_fields.ResourceClass.NET_BW_IGR_KILOBIT_PER_SEC: 1000,
+                    rc_fields.ResourceClass.NET_BW_EGR_KILOBIT_PER_SEC: 1000},
+            "required": ["CUSTOM_PHYSNET_2", "CUSTOM_VNIC_TYPE_NORMAL"]
+        }
+    }
+
     nw_info = [{
         "profile": {},
         "ovs_interfaceid": "b71f1699-42be-4515-930a-f3ef01f94aa7",
@@ -1289,7 +1311,9 @@ class NeutronFixture(fixtures.Fixture):
         # The fixture allows port update so we need to deepcopy the class
         # variables to avoid test case interference.
         self._ports = {
-            NeutronFixture.port_1['id']: copy.deepcopy(NeutronFixture.port_1)
+            NeutronFixture.port_1['id']: copy.deepcopy(NeutronFixture.port_1),
+            NeutronFixture.port_with_resource_request['id']:
+                copy.deepcopy(NeutronFixture.port_with_resource_request)
         }
         # The fixture does not allow network update so we don't have to
         # deepcopy here
