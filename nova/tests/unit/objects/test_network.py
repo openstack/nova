@@ -217,10 +217,16 @@ class _TestNetworkObject(object):
                                                       network_obj.Network(),
                                                       fake_network)
         primitive = network.obj_to_primitive(target_version='1.1')
-        self.assertNotIn('mtu', primitive)
-        self.assertNotIn('enable_dhcp', primitive)
-        self.assertNotIn('dhcp_server', primitive)
-        self.assertNotIn('share_address', primitive)
+        self.assertNotIn('mtu', primitive['nova_object.data'])
+        self.assertNotIn('enable_dhcp', primitive['nova_object.data'])
+        self.assertNotIn('dhcp_server', primitive['nova_object.data'])
+        self.assertNotIn('share_address', primitive['nova_object.data'])
+
+        primitive = network.obj_to_primitive(target_version='1.2')
+        self.assertIn('mtu', primitive['nova_object.data'])
+        self.assertIn('enable_dhcp', primitive['nova_object.data'])
+        self.assertIn('dhcp_server', primitive['nova_object.data'])
+        self.assertIn('share_address', primitive['nova_object.data'])
 
 
 class TestNetworkObject(test_objects._LocalTest,
