@@ -234,9 +234,6 @@ NEXT_MIN_QEMU_VERSION = (2, 11, 0)
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
 
-# Ability to set the user guest password with parallels
-MIN_LIBVIRT_PARALLELS_SET_ADMIN_PASSWD = (2, 0, 0)
-
 # aarch64 architecture with KVM
 # 'chardev' support got sorted out in 3.6.0
 MIN_LIBVIRT_KVM_AARCH64_VERSION = (3, 6, 0)
@@ -2060,14 +2057,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _can_set_admin_password(self, image_meta):
 
-        if CONF.libvirt.virt_type == 'parallels':
-            if not self._host.has_min_version(
-                   MIN_LIBVIRT_PARALLELS_SET_ADMIN_PASSWD):
-                raise exception.SetAdminPasswdNotSupported()
-        elif CONF.libvirt.virt_type in ('kvm', 'qemu'):
+        if CONF.libvirt.virt_type in ('kvm', 'qemu'):
             if not image_meta.properties.get('hw_qemu_guest_agent', False):
                 raise exception.QemuGuestAgentNotEnabled()
-        else:
+        elif not CONF.libvirt.virt_type == 'parallels':
             raise exception.SetAdminPasswdNotSupported()
 
     # TODO(melwitt): Combine this with the similar xenapi code at some point.
