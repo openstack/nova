@@ -871,16 +871,14 @@ Hosts and cells are weighted based on the following options in the
      - ``io_ops_weight_multiplier``
      - Multiplier used for weighing host I/O operations. A negative value means
        a preference to choose light workload compute hosts.
-   * - [DEFAULT]
+   * - [filter_scheduler]
      - ``soft_affinity_weight_multiplier``
      - Multiplier used for weighing hosts for group soft-affinity.  Only a
-       positive value is meaningful. Negative means that the behavior will
-       change to the opposite, which is soft-anti-affinity.
-   * - [DEFAULT]
+       positive value is allowed.
+   * - [filter_scheduler]
      - ``soft_anti_affinity_weight_multiplier``
      - Multiplier used for weighing hosts for group soft-anti-affinity.  Only a
-       positive value is meaningful. Negative means that the behavior will
-       change to the opposite, which is soft-affinity.
+       positive value is allowed.
    * - [filter_scheduler]
      - ``build_failure_weight_multiplier``
      - Multiplier used for weighing hosts which have recent build failures. A

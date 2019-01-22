@@ -443,15 +443,12 @@ The Filter Scheduler weighs hosts based on the config option
 * |ServerGroupSoftAffinityWeigher| The weigher can compute the weight based
   on the number of instances that run on the same server group. The largest
   weight defines the preferred host for the new instance. For the multiplier
-  only a positive value is meaningful for the calculation as a negative value
-  would mean that the affinity weigher would prefer non collocating placement.
+  only a positive value is allowed for the calculation.
 
 * |ServerGroupSoftAntiAffinityWeigher| The weigher can compute the weight based
   on the number of instances that run on the same server group as a negative
   value. The largest weight defines the preferred host for the new instance.
-  For the multiplier only a positive value is meaningful for the calculation as
-  a negative value would mean that the anti-affinity weigher would prefer
-  collocating placement.
+  For the multiplier only a positive value is allowed for the calculation.
 
 * |BuildFailureWeigher| Weigh hosts by the number of recent failed boot attempts.
   It considers the build failure counter and can negatively weigh hosts with

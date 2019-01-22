@@ -467,10 +467,9 @@ Possible values:
 * A positive integer or float value, where the value corresponds to the
   multiplier ratio for this weigher.
 """),
-    # TODO(sfinucan): Add 'min' parameter and remove warning in 'affinity.py'
     cfg.FloatOpt("soft_affinity_weight_multiplier",
         default=1.0,
-        deprecated_group="DEFAULT",
+        min=0.0,
         help="""
 Multiplier used for weighing hosts for group soft-affinity.
 
@@ -483,7 +482,7 @@ Possible values:
     cfg.FloatOpt(
         "soft_anti_affinity_weight_multiplier",
         default=1.0,
-        deprecated_group="DEFAULT",
+        min=0.0,
         help="""
 Multiplier used for weighing hosts for group soft-anti-affinity.
 
