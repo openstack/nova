@@ -266,8 +266,8 @@ class Guest(object):
                 flags |= libvirt.VIR_DOMAIN_UNDEFINE_NVRAM
             self._domain.undefineFlags(flags)
         except libvirt.libvirtError:
-            LOG.debug("Error from libvirt during undefineFlags. %d"
-                      "Retrying with undefine", self.id)
+            LOG.debug("Error from libvirt during undefineFlags for guest "
+                      "%d. Retrying with undefine", self.id)
             self._domain.undefine()
         except AttributeError:
             # Older versions of libvirt don't support undefine flags,
