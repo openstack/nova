@@ -31,6 +31,7 @@ import math
 import re
 
 import netaddr
+from oslo_concurrency import processutils
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_service import periodic_task
@@ -67,7 +68,7 @@ CONF = nova.conf.CONF
 
 def get_my_linklocal(interface):
     try:
-        if_str = utils.execute(
+        if_str = processutils.execute(
             'ip', '-f', 'inet6', '-o', 'addr', 'show', interface)
         condition = '\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link'
         links = [re.search(condition, x) for x in if_str[0].split('\n')]
