@@ -3833,7 +3833,7 @@ class ComputeTestCase(BaseTestCase,
                        fake_driver_get_console)
 
         self.assertTrue(self.compute.validate_console_port(
-            context=self.context, instance=instance, port=5900,
+            context=self.context, instance=instance, port="5900",
             console_type="novnc"))
 
     def test_validate_console_port_spice(self):
@@ -3848,7 +3848,7 @@ class ComputeTestCase(BaseTestCase,
                        fake_driver_get_console)
 
         self.assertTrue(self.compute.validate_console_port(
-            context=self.context, instance=instance, port=5900,
+            context=self.context, instance=instance, port="5900",
             console_type="spice-html5"))
 
     def test_validate_console_port_rdp(self):
@@ -3862,8 +3862,22 @@ class ComputeTestCase(BaseTestCase,
                        fake_driver_get_console)
 
         self.assertTrue(self.compute.validate_console_port(
-            context=self.context, instance=instance, port=5900,
+            context=self.context, instance=instance, port="5900",
             console_type="rdp-html5"))
+
+    def test_validate_console_port_serial(self):
+        self.flags(enabled=True, group='serial_console')
+        instance = self._create_fake_instance_obj()
+
+        def fake_driver_get_console(*args, **kwargs):
+            return ctype.ConsoleSerial(host="fake_host", port=5900)
+
+        self.stub_out("nova.virt.fake.FakeDriver.get_serial_console",
+                       fake_driver_get_console)
+
+        self.assertTrue(self.compute.validate_console_port(
+            context=self.context, instance=instance, port="5900",
+            console_type="serial"))
 
     def test_validate_console_port_mks(self):
         self.flags(enabled=True, group='mks')
@@ -3873,7 +3887,7 @@ class ComputeTestCase(BaseTestCase,
             mock_getmks.return_value = ctype.ConsoleMKS(host="fake_host",
                                                         port=5900)
             result = self.compute.validate_console_port(context=self.context,
-                        instance=instance, port=5900, console_type="webmks")
+                        instance=instance, port="5900", console_type="webmks")
             self.assertTrue(result)
 
     def test_validate_console_port_wrong_port(self):
