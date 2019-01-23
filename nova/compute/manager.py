@@ -5344,8 +5344,16 @@ class ComputeManager(manager.Manager):
                                'mountpoint': bdm['mount_device']},
                               instance=instance)
                 if bdm['attachment_id']:
-                    self.volume_api.attachment_delete(context,
-                                                      bdm['attachment_id'])
+                    # Try to delete the attachment to make the volume
+                    # available again. Note that DriverVolumeBlockDevice
+                    # may have already deleted the attachment so ignore
+                    # VolumeAttachmentNotFound.
+                    try:
+                        self.volume_api.attachment_delete(
+                            context, bdm['attachment_id'])
+                    except exception.VolumeAttachmentNotFound as exc:
+                        LOG.debug('Ignoring VolumeAttachmentNotFound: %s',
+                                  exc, instance=instance)
                 else:
                     self.volume_api.unreserve_volume(context, bdm.volume_id)
                 compute_utils.notify_about_volume_attach_detach(
