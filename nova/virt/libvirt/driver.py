@@ -1256,8 +1256,15 @@ class LibvirtDriver(driver.ComputeDriver):
                         encryption=None, allow_native_luks=True):
         vol_driver = self._get_volume_driver(connection_info)
         vol_driver.connect_volume(connection_info, instance)
-        self._attach_encryptor(context, connection_info, encryption,
-                               allow_native_luks)
+        try:
+            self._attach_encryptor(
+                context, connection_info, encryption, allow_native_luks)
+        except Exception:
+            # Encryption failed so rollback the volume connection.
+            with excutils.save_and_reraise_exception(logger=LOG):
+                LOG.exception("Failure attaching encryptor; rolling back "
+                              "volume connection", instance=instance)
+                vol_driver.disconnect_volume(connection_info, instance)
 
     def _should_disconnect_target(self, context, connection_info, instance):
         connection_count = 0
