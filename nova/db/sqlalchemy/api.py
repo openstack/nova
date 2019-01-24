@@ -4296,6 +4296,7 @@ def migration_create(context, values):
     return migration
 
 
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
 def migration_update(context, id, values):
     migration = migration_get(context, id)
