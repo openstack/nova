@@ -76,12 +76,17 @@ class BaseWeigher(object):
     minval = None
     maxval = None
 
-    def weight_multiplier(self):
+    def weight_multiplier(self, host_state):
         """How weighted this weigher should be.
 
         Override this method in a subclass, so that the returned value is
         read from a configuration option to permit operators specify a
-        multiplier for the weigher.
+        multiplier for the weigher. If the host is in an aggregate, this
+        method of subclass can read the ``weight_multiplier`` from aggregate
+        metadata of ``host_state``, and use it to overwrite multiplier
+        configuration.
+
+        :param host_state: The HostState object.
         """
         return 1.0
 
@@ -138,6 +143,6 @@ class BaseWeightHandler(loadables.BaseLoader):
 
             for i, weight in enumerate(weights):
                 obj = weighed_objs[i]
-                obj.weight += weigher.weight_multiplier() * weight
+                obj.weight += weigher.weight_multiplier(obj.obj) * weight
 
         return sorted(weighed_objs, key=lambda x: x.weight, reverse=True)

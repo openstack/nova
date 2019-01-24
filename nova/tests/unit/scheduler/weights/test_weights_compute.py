@@ -14,6 +14,7 @@
 Tests For Scheduler build failure weights.
 """
 
+from nova import objects
 from nova.scheduler import weights
 from nova.scheduler.weights import compute
 from nova import test
@@ -25,6 +26,7 @@ class BuildFailureWeigherTestCase(test.NoDBTestCase):
         super(BuildFailureWeigherTestCase, self).setUp()
         self.weight_handler = weights.HostWeightHandler()
         self.weighers = [compute.BuildFailureWeigher()]
+        self.buildfailure_weigher = compute.BuildFailureWeigher()
 
     def _get_weighed_host(self, hosts):
         return self.weight_handler.get_weighed_objects(self.weighers,
@@ -55,3 +57,60 @@ class BuildFailureWeigherTestCase(test.NoDBTestCase):
         weighed_hosts = self._get_weighed_host(hosts)
         self.assertEqual([0, -10, -100, -1000],
                          [wh.weight for wh in weighed_hosts])
+
+    def test_build_failure_weight_multiplier(self):
+        self.flags(build_failure_weight_multiplier=0.0,
+                   group='filter_scheduler')
+        host_attr = {'failed_builds': 1}
+        host1 = fakes.FakeHostState('fake-host', 'node', host_attr)
+        # By default, return the weight_multiplier configuration directly
+        self.assertEqual(0.0,
+                         self.buildfailure_weigher.weight_multiplier(host1))
+
+        host1.aggregates = [
+            objects.Aggregate(
+                id=1,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'build_failure_weight_multiplier': '1000.0'},
+            )]
+        # read the weight multiplier from metadata to override the config
+        self.assertEqual(-1000,
+                         self.buildfailure_weigher.weight_multiplier(host1))
+
+        host1.aggregates = [
+            objects.Aggregate(
+                id=1,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'build_failure_weight_multiplier': '500'},
+            ),
+            objects.Aggregate(
+                id=2,
+                name='foo',
+                hosts=['fake-host'],
+                metadata={'build_failure_weight_multiplier': '1000'},
+            )]
+        # If the host is in multiple aggs and there are conflict weight values
+        # in the metadata, we will use the min value among them
+        self.assertEqual(-500,
+                         self.buildfailure_weigher.weight_multiplier(host1))
+
+    def test_host_with_agg(self):
+        self.flags(build_failure_weight_multiplier=0.0,
+                   group='filter_scheduler')
+        hostinfo_list = self._get_all_hosts()
+        aggs = [
+            objects.Aggregate(
+                id=1,
+                name='foo',
+                hosts=['host1', 'host2', 'host3', 'host4'],
+                metadata={'build_failure_weight_multiplier': '1000'},
+            )]
+        for h in hostinfo_list:
+            h.aggregates = aggs
+
+        weights = self.weight_handler.get_weighed_objects(self.weighers,
+                                                          hostinfo_list, {})
+        self.assertEqual([0, -10, -100, -1000],
+                         [wh.weight for wh in weights])

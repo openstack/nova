@@ -45,9 +45,11 @@ class MetricsWeigher(weights.BaseHostWeigher):
                                            converter=float,
                                            name="metrics.weight_setting")
 
-    def weight_multiplier(self):
+    def weight_multiplier(self, host_state):
         """Override the weight multiplier."""
-        return CONF.metrics.weight_multiplier
+        return utils.get_weight_multiplier(
+            host_state, 'metrics_weight_multiplier',
+            CONF.metrics.weight_multiplier)
 
     def _weigh_object(self, host_state, weight_properties):
         value = 0.0
@@ -69,7 +71,7 @@ class MetricsWeigher(weights.BaseHostWeigher):
                     # factor, i.e. set the value to make this obj would be
                     # at the end of the ordered weighed obj list
                     # Do nothing if ratio or weight_multiplier is 0.
-                    if ratio * self.weight_multiplier() != 0:
+                    if ratio * self.weight_multiplier(host_state) != 0:
                         return CONF.metrics.weight_of_unavailable
 
         return value

@@ -34,6 +34,7 @@ from nova.objects import base as obj_base
 from nova.objects import instance as obj_instance
 from nova import rc_fields as fields
 from nova import rpc
+from nova.scheduler.filters import utils as filters_utils
 
 
 LOG = logging.getLogger(__name__)
@@ -1007,3 +1008,30 @@ def claim_resources(ctx, client, spec_obj, instance_uuid, alloc_req,
     return client.claim_resources(ctx, instance_uuid, alloc_req, project_id,
             user_id, allocation_request_version=allocation_request_version,
             consumer_generation=None)
+
+
+def get_weight_multiplier(host_state, multiplier_name, multiplier_config):
+    """Given a HostState object, multplier_type name and multiplier_config,
+    returns the weight multiplier.
+
+    It reads the "multiplier_name" from "aggregate metadata" in host_state
+    to override the multiplier_config. If the aggregate metadata doesn't
+    contain the multiplier_name, the multiplier_config will be returned
+    directly.
+
+    :param host_state: The HostState object, which contains aggregate metadata
+    :param multiplier_name: The weight multiplier name, like
+           "cpu_weight_multiplier".
+    :param multiplier_config: The weight multiplier configuration value
+    """
+    aggregate_vals = filters_utils.aggregate_values_from_key(host_state,
+                                                             multiplier_name)
+    try:
+        value = filters_utils.validate_num_values(
+            aggregate_vals, multiplier_config, cast_to=float)
+    except ValueError as e:
+        LOG.warning("Could not decode '%(name)s' weight multiplier: %(exce)s",
+                    {'exce': e, 'name': multiplier_name})
+        value = multiplier_config
+
+    return value

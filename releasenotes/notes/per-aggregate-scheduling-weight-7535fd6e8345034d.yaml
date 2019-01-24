@@ -1,0 +1,15 @@
+---
+features:
+  - |
+    Added the ability to allow users to use
+    ``Aggregate``'s ``metadata`` to override the global config options
+    for weights to achieve more fine-grained control over resource
+    weights.
+
+    Such as, for the CPUWeigher, it weighs hosts based on available vCPUs
+    on the compute node, and multiplies it by the cpu weight multiplier. If
+    per-aggregate value (which the key is "cpu_weight_multiplier") is found,
+    this value would be chosen as the cpu weight multiplier. Otherwise, it
+    will fall back to the ``[filter_scheduler]/cpu_weight_multiplier``. If
+    more than one value is found for a host in aggregate metadata, the minimum
+    value will be used.
