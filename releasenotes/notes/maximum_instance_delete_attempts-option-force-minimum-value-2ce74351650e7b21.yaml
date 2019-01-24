@@ -1,0 +1,5 @@
+---
+upgrade:
+  - The ``maximum_instance_delete_attempts`` configuration option has been
+    restricted by the minimum value and now raises a ValueError
+    if the value is less than 1.
