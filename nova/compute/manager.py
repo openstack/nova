@@ -8251,29 +8251,60 @@ class ComputeManager(manager.Manager):
     @contextlib.contextmanager
     def _error_out_instance_on_exception(self, context, instance,
                                          instance_state=vm_states.ACTIVE):
+        """Context manager to set instance.vm_state after some operation raises
+
+        Used to handle NotImplementedError and InstanceFaultRollback errors
+        and reset the instance vm_state and task_state. The vm_state is set
+        to the $instance_state parameter and task_state is set to None.
+        For all other types of exceptions, the vm_state is set to ERROR and
+        the task_state is left unchanged (although most callers will have the
+        @reverts_task_state decorator which will set the task_state to None).
+
+        Re-raises the original exception *except* in the case of
+        InstanceFaultRollback in which case the wrapped `inner_exception` is
+        re-raised.
+
+        :param context: The nova auth request context for the operation.
+        :param instance: The instance to update. The vm_state will be set by
+            this context manager when an exception is raised.
+        :param instance_state: For NotImplementedError and
+            InstanceFaultRollback this is the vm_state to set the instance to
+            when handling one of those types of exceptions. By default the
+            instance will be set to ACTIVE, but the caller should control this
+            in case there have been no changes to the running state of the
+            instance. For example, resizing a stopped server where prep_resize
+            fails early and does not change the power state of the guest should
+            not set the instance status to ACTIVE but remain STOPPED.
+            This parameter is ignored for all other types of exceptions and the
+            instance vm_state is set to ERROR.
+        """
+        # NOTE(mriedem): Why doesn't this method just save off the
+        # original instance.vm_state here rather than use a parameter? Or use
+        # instance_state=None as an override but default to the current
+        # vm_state when rolling back.
         instance_uuid = instance.uuid
         try:
             yield
-        except NotImplementedError as error:
-            with excutils.save_and_reraise_exception():
-                LOG.info("Setting instance back to %(state)s after: "
-                         "%(error)s",
+        except (NotImplementedError, exception.InstanceFaultRollback) as error:
+            # Use reraise=False to determine if we want to raise the original
+            # exception or something else.
+            with excutils.save_and_reraise_exception(reraise=False) as ctxt:
+                LOG.info("Setting instance back to %(state)s after: %(error)s",
                          {'state': instance_state, 'error': error},
                          instance_uuid=instance_uuid)
                 self._instance_update(context, instance,
                                       vm_state=instance_state,
                                       task_state=None)
-        except exception.InstanceFaultRollback as error:
-            LOG.info("Setting instance back to ACTIVE after: %s",
-                     error, instance_uuid=instance_uuid)
-            self._instance_update(context, instance,
-                                  vm_state=vm_states.ACTIVE,
-                                  task_state=None)
-            raise error.inner_exception
+                if isinstance(error, exception.InstanceFaultRollback):
+                    # Raise the wrapped exception.
+                    raise error.inner_exception
+                # Else re-raise the NotImplementedError.
+                ctxt.reraise = True
         except Exception:
             LOG.exception('Setting instance vm_state to ERROR',
                           instance_uuid=instance_uuid)
             with excutils.save_and_reraise_exception():
+                # NOTE(mriedem): Why don't we pass clean_task_state=True here?
                 self._set_instance_obj_error_state(context, instance)
 
     @wrap_exception()
