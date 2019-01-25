@@ -588,9 +588,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                    security_group_rules=20,
                    server_groups=10,
                    server_group_members=10,
-                   reservation_expire=86400,
-                   until_refresh=0,
-                   max_age=0,
                    group='quota'
                    )
 
@@ -1980,9 +1977,6 @@ class NoopQuotaDriverTestCase(test.TestCase):
                    injected_file_path_length=255,
                    security_groups=10,
                    security_group_rules=20,
-                   reservation_expire=86400,
-                   until_refresh=0,
-                   max_age=0,
                    group='quota'
                    )
 
