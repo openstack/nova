@@ -8790,6 +8790,68 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
         doit()
 
+    def test_prep_resize_fails_unable_to_migrate_to_self(self):
+        """Asserts that _prep_resize handles UnableToMigrateToSelf when
+        _prep_resize is called on the host on which the instance lives and
+        the flavor is not changing.
+        """
+        instance = fake_instance.fake_instance_obj(
+            self.context, host=self.compute.host,
+            expected_attrs=['system_metadata', 'flavor'])
+        migration = mock.MagicMock(spec='nova.objects.Migration')
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             {'supports_migrate_to_same_host': False}):
+            ex = self.assertRaises(
+                exception.InstanceFaultRollback, self.compute._prep_resize,
+                self.context, instance.image_meta, instance, instance.flavor,
+                filter_properties={}, node=instance.node, migration=migration)
+        self.assertIsInstance(
+            ex.inner_exception, exception.UnableToMigrateToSelf)
+
+    @mock.patch('nova.compute.utils.notify_usage_exists')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch('nova.compute.utils.notify_about_resize_prep_instance')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.manager.ComputeManager._revert_allocation')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_reschedule_resize_or_reraise')
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    def test_prep_resize_fails_rollback(
+            self, add_instance_fault_from_exc, _reschedule_resize_or_reraise,
+            _revert_allocation, mock_instance_save,
+            notify_about_resize_prep_instance, _notify_about_instance_usage,
+            notify_usage_exists):
+        """Tests that if _prep_resize raises InstanceFaultRollback, the
+        instance.vm_state is reset properly in _error_out_instance_on_exception
+        """
+        instance = fake_instance.fake_instance_obj(
+            self.context, host=self.compute.host, vm_state=vm_states.STOPPED,
+            expected_attrs=['system_metadata', 'flavor'])
+        migration = mock.MagicMock(spec='nova.objects.Migration')
+        request_spec = mock.MagicMock(spec='nova.objects.RequestSpec')
+        ex = exception.InstanceFaultRollback(
+            inner_exception=exception.UnableToMigrateToSelf(
+                instance_id=instance.uuid, host=instance.host))
+
+        def fake_reschedule_resize_or_reraise(*args, **kwargs):
+            raise ex
+
+        _reschedule_resize_or_reraise.side_effect = (
+            fake_reschedule_resize_or_reraise)
+
+        with mock.patch.object(self.compute, '_prep_resize', side_effect=ex):
+            self.assertRaises(
+                # _error_out_instance_on_exception should reraise the
+                # UnableToMigrateToSelf inside InstanceFaultRollback.
+                exception.UnableToMigrateToSelf, self.compute.prep_resize,
+                self.context, instance.image_meta, instance, instance.flavor,
+                request_spec, filter_properties={}, node=instance.node,
+                clean_shutdown=True, migration=migration, host_list=[])
+        # The instance.vm_state should remain unchanged
+        # (_error_out_instance_on_exception will set to ACTIVE by default).
+        self.assertEqual(vm_states.STOPPED, instance.vm_state)
+
     def test__claim_pci_for_instance_vifs(self):
         @mock.patch.object(self.compute, 'rt')
         @mock.patch.object(pci_request, 'get_instance_pci_request_from_vif')
