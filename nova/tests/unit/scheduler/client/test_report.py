@@ -2685,6 +2685,18 @@ class TestTraits(SchedulerReportClientTestCase):
             self.ks_adap_mock.get.reset_mock()
             log_mock.reset_mock()
 
+    def test_get_provider_traits_placement_comm_error(self):
+        """ksa ClientException raises through."""
+        uuid = uuids.compute_node
+        self.ks_adap_mock.get.side_effect = ks_exc.EndpointNotFound()
+        self.assertRaises(ks_exc.ClientException,
+                          self.client._get_provider_traits, self.context, uuid)
+        expected_url = '/resource_providers/' + uuid + '/traits'
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url,
+            headers={'X-Openstack-Request-Id': self.context.global_id},
+            **self.trait_api_kwargs)
+
     def test_ensure_traits(self):
         """Successful paths, various permutations of traits existing or needing
         to be created.
