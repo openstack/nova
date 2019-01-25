@@ -30,6 +30,7 @@ Operations with RPC calls that utilize this value:
 * scheduling
 * enabling/disabling a compute service
 * image pre-caching
+* snapshot-based / cross-cell resize
 
 Related options:
 

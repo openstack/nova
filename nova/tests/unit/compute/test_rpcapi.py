@@ -19,10 +19,12 @@ Unit Tests for nova.compute.rpcapi
 import mock
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
+import six
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova import exception
+from nova import objects
 from nova.objects import block_device as objects_block_dev
 from nova.objects import migration as migration_obj
 from nova.objects import service as service_obj
@@ -493,6 +495,45 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 migration='migration',
                 node='node', clean_shutdown=True, host_list=None,
                 version='5.1')
+
+    def test_prep_snapshot_based_resize_at_dest(self):
+        """Tests happy path for prep_snapshot_based_resize_at_dest rpc call"""
+        self.flags(long_rpc_timeout=1234)
+        self._test_compute_api(
+            'prep_snapshot_based_resize_at_dest', 'call',
+            # compute method kwargs
+            instance=self.fake_instance_obj,
+            flavor=self.fake_flavor_obj,
+            nodename='node',
+            migration=migration_obj.Migration(),
+            limits={},
+            request_spec=objects.RequestSpec(),
+            destination='dest',
+            # client.prepare kwargs
+            version='5.5', call_monitor_timeout=60, timeout=1234,
+            # assert the expected return value
+            _return_value=mock.sentinel.migration_context)
+
+    @mock.patch('nova.rpc.ClientRouter.client')
+    def test_prep_snapshot_based_resize_at_dest_old_compute(self, mock_client):
+        """Tests when the destination compute service is too old to call
+        prep_snapshot_based_resize_at_dest so MigrationPreCheckError is
+        raised.
+        """
+        mock_client.return_value.can_send_version.return_value = False
+        rpcapi = compute_rpcapi.ComputeAPI()
+        ex = self.assertRaises(
+            exception.MigrationPreCheckError,
+            rpcapi.prep_snapshot_based_resize_at_dest,
+            self.context,
+            instance=self.fake_instance_obj,
+            flavor=self.fake_flavor_obj,
+            nodename='node',
+            migration=migration_obj.Migration(),
+            limits={},
+            request_spec=objects.RequestSpec(),
+            destination='dest')
+        self.assertIn('Compute too old', six.text_type(ex))
 
     def test_reboot_instance(self):
         self.maxDiff = None

@@ -10167,6 +10167,141 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertEqual(new_dev.address,
                          updated_nw_info[1]['profile']['pci_slot'])
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocs_for_consumer')
+    def test_prep_snapshot_based_resize_at_dest(self, get_allocs):
+        """Tests happy path for prep_snapshot_based_resize_at_dest"""
+        # Setup mocks.
+        flavor = self.instance.flavor
+        limits = objects.SchedulerLimits()
+        request_spec = objects.RequestSpec()
+        # resize_claim normally sets instance.migration_context and returns
+        # a MoveClaim which is a context manager. Rather than deal with
+        # mocking a context manager we just set the migration_context on the
+        # fake instance ahead of time to ensure it is returned as expected.
+        self.instance.migration_context = objects.MigrationContext()
+        with test.nested(
+            mock.patch.object(self.compute, '_send_prep_resize_notifications'),
+            mock.patch.object(self.compute.rt, 'resize_claim'),
+        ) as (
+            _send_prep_resize_notifications, resize_claim,
+        ):
+            # Run the code.
+            mc = self.compute.prep_snapshot_based_resize_at_dest(
+                self.context, self.instance, flavor, 'nodename',
+                self.migration, limits, request_spec)
+            self.assertIs(mc, self.instance.migration_context)
+        # Assert the mock calls.
+        _send_prep_resize_notifications.assert_has_calls([
+            mock.call(self.context, self.instance,
+                      fields.NotificationPhase.START, flavor),
+            mock.call(self.context, self.instance,
+                      fields.NotificationPhase.END, flavor)])
+        resize_claim.assert_called_once_with(
+            self.context, self.instance, flavor, 'nodename', self.migration,
+            get_allocs.return_value['allocations'],
+            image_meta=test.MatchType(objects.ImageMeta), limits=limits)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocs_for_consumer')
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    def test_prep_snapshot_based_resize_at_dest_get_allocs_fails(
+            self, add_fault, get_allocs):
+        """Tests that getting allocations fails and ExpectedException
+        is raised with the MigrationPreCheckError inside.
+        """
+        # Setup mocks.
+        flavor = self.instance.flavor
+        limits = objects.SchedulerLimits()
+        request_spec = objects.RequestSpec()
+        ex1 = exception.ConsumerAllocationRetrievalFailed(
+            consumer_uuid=self.instance.uuid, error='oops')
+        get_allocs.side_effect = ex1
+        with test.nested(
+            mock.patch.object(self.compute,
+                              '_send_prep_resize_notifications'),
+            mock.patch.object(self.compute.rt, 'resize_claim')
+        ) as (
+            _send_prep_resize_notifications, resize_claim,
+        ):
+            # Run the code.
+            ex2 = self.assertRaises(
+                messaging.ExpectedException,
+                self.compute.prep_snapshot_based_resize_at_dest,
+                self.context, self.instance, flavor, 'nodename',
+                self.migration, limits, request_spec)
+            wrapped_exc = ex2.exc_info[1]
+            # The original error should be in the MigrationPreCheckError which
+            # itself is in the ExpectedException.
+            self.assertIn(ex1.format_message(), six.text_type(wrapped_exc))
+        # Assert the mock calls.
+        _send_prep_resize_notifications.assert_has_calls([
+            mock.call(self.context, self.instance,
+                      fields.NotificationPhase.START, flavor),
+            mock.call(self.context, self.instance,
+                      fields.NotificationPhase.END, flavor)])
+        resize_claim.assert_not_called()
+        # Assert the decorators that are triggered on error
+        add_fault.assert_called_once_with(
+            self.context, self.instance, wrapped_exc, mock.ANY)
+        # There would really be three notifications but because we mocked out
+        # _send_prep_resize_notifications there is just the one error
+        # notification from the wrap_exception decorator.
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(
+            'compute.%s' % fields.NotificationAction.EXCEPTION,
+            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocs_for_consumer')
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    def test_prep_snapshot_based_resize_at_dest_claim_fails(
+            self, add_fault, get_allocs):
+        """Tests that the resize_claim fails and ExpectedException
+        is raised with the MigrationPreCheckError inside.
+        """
+        # Setup mocks.
+        flavor = self.instance.flavor
+        limits = objects.SchedulerLimits()
+        request_spec = objects.RequestSpec()
+        ex1 = exception.ComputeResourcesUnavailable(reason='numa')
+        with test.nested(
+            mock.patch.object(self.compute, '_send_prep_resize_notifications'),
+            mock.patch.object(self.compute.rt, 'resize_claim', side_effect=ex1)
+        ) as (
+            _send_prep_resize_notifications, resize_claim,
+        ):
+            # Run the code.
+            ex2 = self.assertRaises(
+                messaging.ExpectedException,
+                self.compute.prep_snapshot_based_resize_at_dest,
+                self.context, self.instance, flavor, 'nodename',
+                self.migration, limits, request_spec)
+            wrapped_exc = ex2.exc_info[1]
+            # The original error should be in the MigrationPreCheckError which
+            # itself is in the ExpectedException.
+            self.assertIn(ex1.format_message(), six.text_type(wrapped_exc))
+        # Assert the mock calls.
+        _send_prep_resize_notifications.assert_has_calls([
+            mock.call(self.context, self.instance,
+                      fields.NotificationPhase.START, flavor),
+            mock.call(self.context, self.instance,
+                      fields.NotificationPhase.END, flavor)])
+        resize_claim.assert_called_once_with(
+            self.context, self.instance, flavor, 'nodename', self.migration,
+            get_allocs.return_value['allocations'],
+            image_meta=test.MatchType(objects.ImageMeta), limits=limits)
+        # Assert the decorators that are triggered on error
+        add_fault.assert_called_once_with(
+            self.context, self.instance, wrapped_exc, mock.ANY)
+        # There would really be three notifications but because we mocked out
+        # _send_prep_resize_notifications there is just the one error
+        # notification from the wrap_exception decorator.
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(
+            'compute.%s' % fields.NotificationAction.EXCEPTION,
+            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+
 
 class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
     def setUp(self):
