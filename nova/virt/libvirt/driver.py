@@ -552,11 +552,11 @@ class LibvirtDriver(driver.ComputeDriver):
         # nonsensical.
         if (CONF.libvirt.live_migration_tunnelled and
             CONF.libvirt.live_migration_with_native_tls):
-                msg = _("Setting both 'live_migration_tunnelled' and"
-                        "'live_migration_with_native_tls' at the same"
-                        "time is invalid. If you have the relevant"
-                        "libvirt and QEMU versions, and TLS configured"
-                        "in your environment, pick"
+                msg = _("Setting both 'live_migration_tunnelled' and "
+                        "'live_migration_with_native_tls' at the same "
+                        "time is invalid. If you have the relevant "
+                        "libvirt and QEMU versions, and TLS configured "
+                        "in your environment, pick "
                         "'live_migration_with_native_tls'.")
                 raise exception.Invalid(msg)
 
@@ -5731,7 +5731,7 @@ class LibvirtDriver(driver.ComputeDriver):
             total_pcpus = self._host.get_cpu_count()
         except libvirt.libvirtError:
             LOG.warning("Cannot get the number of cpu, because this "
-                        "function is not implemented for this platform. ")
+                        "function is not implemented for this platform.")
             return 0
 
         if not CONF.vcpu_pin_set:
@@ -7108,7 +7108,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.serial_console.enabled:
 
             msg = _('Your destination node does not support'
-                    ' retrieving listen addresses.  In order'
+                    ' retrieving listen addresses. In order'
                     ' for live migration to work properly you'
                     ' must disable serial console.')
             raise exception.MigrationError(reason=msg)
