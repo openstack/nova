@@ -591,7 +591,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     @mock.patch.object(linux_net.iptables_manager.ipv4['filter'], 'add_rule')
     @mock.patch('nova.privsep.linux_net.add_bridge',
                 return_value=('', ''))
-    def test_linux_bridge_driver_plug(self, mock_add_bridge, mock_add_rule):
+    @mock.patch('nova.privsep.linux_net.set_device_enabled')
+    def test_linux_bridge_driver_plug(self, mock_enabled, mock_add_bridge,
+                                      mock_add_rule):
         """Makes sure plug doesn't drop FORWARD by default.
 
         Ensures bug 890195 doesn't reappear.
@@ -1131,8 +1133,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                           run_as_root=True, check_exit_code=False),
                 mock.call('ip', 'link', 'set', 'bridge', 'address', fake_mac,
                           run_as_root=True),
-                mock.call('ip', 'link', 'set', 'eth0', 'up',
-                          run_as_root=True, check_exit_code=False),
                 mock.call('ip', 'route', 'show', 'dev', 'eth0'),
                 mock.call('ip', 'addr', 'show', 'dev', 'eth0', 'scope',
                           'global'),
@@ -1141,15 +1141,17 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         with test.nested(
             mock.patch('nova.privsep.linux_net.device_exists',
                        return_value=True),
+            mock.patch('nova.privsep.linux_net.set_device_enabled'),
             mock.patch.object(linux_net, '_execute', return_value=('', '')),
             mock.patch.object(netifaces, 'ifaddresses')
-        ) as (device_exists, _execute, ifaddresses):
+        ) as (device_exists, device_enabled, _execute, ifaddresses):
             ifaddresses.return_value = fake_ifaces
             driver = linux_net.LinuxBridgeInterfaceDriver()
             driver.ensure_bridge('bridge', 'eth0')
             device_exists.assert_has_calls(calls['device_exists'])
             _execute.assert_has_calls(calls['_execute'])
             ifaddresses.assert_called_once_with('eth0')
+            device_enabled.assert_called_once_with('eth0')
 
     def test_ensure_bridge_brclt_addif_exception(self):
         def fake_execute(*cmd, **kwargs):
@@ -1168,7 +1170,8 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                               driver.ensure_bridge, 'bridge', 'eth0')
             device_exists.assert_called_once_with('bridge')
 
-    def test_ensure_bridge_brclt_addbr_neutron_race(self):
+    @mock.patch('nova.privsep.linux_net.set_device_enabled')
+    def test_ensure_bridge_brclt_addbr_neutron_race(self, mock_enabled):
         def fake_execute(*cmd, **kwargs):
             if ('brctl', 'addbr', 'brq1234567-89') == cmd:
                 return ('', "device brq1234567-89 already exists; "
@@ -1281,8 +1284,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     @mock.patch.object(linux_net, '_execute')
     @mock.patch('nova.privsep.linux_net.device_exists', return_value=False)
     @mock.patch('nova.privsep.linux_net.set_device_mtu')
-    def test_ensure_vlan(self, mock_set_device_mtu, mock_device_exists,
-                         mock_execute):
+    @mock.patch('nova.privsep.linux_net.set_device_enabled')
+    def test_ensure_vlan(self, mock_set_enabled, mock_set_device_mtu,
+                         mock_device_exists, mock_execute):
         interface = linux_net.LinuxBridgeInterfaceDriver.ensure_vlan(
                         1, 'eth0', 'MAC', 'MTU', "vlan_name")
         self.assertEqual("vlan_name", interface)
@@ -1293,11 +1297,11 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                       'type', 'vlan', 'id', 1, check_exit_code=[0, 2, 254],
                       run_as_root=True),
             mock.call('ip', 'link', 'set', 'vlan_name', 'address', 'MAC',
-                       check_exit_code=[0, 2, 254], run_as_root=True),
-            mock.call('ip', 'link', 'set', 'vlan_name', 'up',
-                      check_exit_code=[0, 2, 254], run_as_root=True)]
+                       check_exit_code=[0, 2, 254], run_as_root=True)
+            ]
         self.assertEqual(expected_execute_args, mock_execute.mock_calls)
         mock_set_device_mtu.assert_called_once_with('vlan_name', 'MTU')
+        mock_set_enabled.assert_called_once_with('vlan_name')
 
     @mock.patch.object(linux_net, '_execute')
     @mock.patch('nova.privsep.linux_net.device_exists', return_value=True)

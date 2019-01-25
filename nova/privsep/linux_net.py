@@ -86,6 +86,12 @@ def _set_device_mtu_inner(dev, mtu):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def set_device_enabled(dev):
+    processutils.execute('ip', 'link', 'set', dev, 'up',
+                         check_exit_code=[0, 2, 254])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def create_veth_pair(dev1_name, dev2_name, mtu=None):
     """Create a pair of veth devices with the specified names,
     deleting any previous devices with those names.
