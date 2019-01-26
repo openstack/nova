@@ -127,8 +127,12 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                 # Setting to -1 will, if value is later used result in a
                 # ServiceNotFound, so should be safe.
                 primitive['service_id'] = -1
+        if target_version < (1, 9) and 'pci_device_pools' in primitive:
+            del primitive['pci_device_pools']
         if target_version < (1, 7) and 'host' in primitive:
             del primitive['host']
+        if target_version < (1, 6) and 'supported_hv_specs' in primitive:
+            del primitive['supported_hv_specs']
         if target_version < (1, 5) and 'numa_topology' in primitive:
             del primitive['numa_topology']
         if target_version < (1, 4) and 'host_ip' in primitive:
