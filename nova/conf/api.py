@@ -106,7 +106,7 @@ Related options:
         deprecated_group="DEFAULT",
         help="""
 A list of targets for the dynamic vendordata provider. These targets are of
-the form <name>@<url>.
+the form ``<name>@<url>``.
 
 The dynamic vendordata provider collects metadata by contacting external REST
 services and querying them for information about the instance. This behaviour
@@ -221,10 +221,14 @@ config-drive. The default class for this, JsonFileVendorData, loads this
 information from a JSON file, whose path is configured by this option. If
 there is no path set by this option, the class returns an empty dictionary.
 
+Note that when using this to provide static vendor data to a configuration
+drive, the nova-compute service must be configured with this option and the
+file must be accessible from the nova-compute host.
+
 Possible values:
 
 * Any string representing the path to the data file, or an empty string
-    (default).
+  (default).
 """)
 ]
 

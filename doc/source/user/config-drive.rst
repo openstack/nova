@@ -171,6 +171,9 @@ In this example, the contents of the configuration drive are as follows::
 The files that appear on the configuration drive depend on the arguments
 that you pass to the :command:`openstack server create` command.
 
+Vendor-specific data can also be exposed to a guest in the configuration
+drive. See :doc:`Vendordata </user/vendordata>` for details.
+
 OpenStack metadata format
 -------------------------
 
