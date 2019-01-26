@@ -10,8 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
+
 from oslo_log import log as logging
 from oslo_utils import versionutils
+import six
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import false
 from sqlalchemy.sql import or_
@@ -25,6 +28,7 @@ from nova import objects
 from nova.objects import base
 from nova.objects import cell_mapping
 from nova.objects import fields
+from nova.objects import virtual_interface
 
 
 LOG = logging.getLogger(__name__)
@@ -216,6 +220,73 @@ def populate_queued_for_delete(context, max_count):
             break
 
     return processed, processed
+
+
+@db_api.api_context_manager.writer
+def populate_user_id(context, max_count):
+    cells = objects.CellMappingList.get_all(context)
+    cms_by_id = {cell.id: cell for cell in cells}
+    done = 0
+    unmigratable_ims = False
+    ims = (
+        # Get a list of instance mappings which do not have user_id populated.
+        # We need to include records with queued_for_delete=True because they
+        # include SOFT_DELETED instances, which could be restored at any time
+        # in the future. If we don't migrate SOFT_DELETED instances now, we
+        # wouldn't be able to retire this migration code later. Also filter
+        # out the marker instance created by the virtual interface migration.
+        context.session.query(api_models.InstanceMapping)
+        .filter_by(user_id=None)
+        .filter(api_models.InstanceMapping.project_id !=
+                virtual_interface.FAKE_UUID)
+        .limit(max_count).all())
+    found = len(ims)
+    ims_by_inst_uuid = {}
+    inst_uuids_by_cell_id = collections.defaultdict(set)
+    for im in ims:
+        ims_by_inst_uuid[im.instance_uuid] = im
+        inst_uuids_by_cell_id[im.cell_id].add(im.instance_uuid)
+    for cell_id, inst_uuids in inst_uuids_by_cell_id.items():
+        # We cannot migrate instance mappings that don't have a cell yet.
+        if cell_id is None:
+            unmigratable_ims = True
+            continue
+        with nova_context.target_cell(context, cms_by_id[cell_id]) as cctxt:
+            # We need to migrate SOFT_DELETED instances because they could be
+            # restored at any time in the future, preventing us from being able
+            # to remove any other interim online data migration code we have,
+            # if we don't migrate them here.
+            # NOTE: it's not possible to query only for SOFT_DELETED instances.
+            # We must query for both deleted and SOFT_DELETED instances.
+            filters = {'uuid': inst_uuids}
+            try:
+                instances = objects.InstanceList.get_by_filters(
+                    cctxt, filters, expected_attrs=[])
+            except Exception as exp:
+                LOG.warning('Encountered exception: "%s" while querying '
+                            'instances from cell: %s. Continuing to the next '
+                            'cell.', six.text_type(exp),
+                            cms_by_id[cell_id].identity)
+                continue
+        # Walk through every instance that has a mapping needing to be updated
+        # and update it.
+        for instance in instances:
+            im = ims_by_inst_uuid.pop(instance.uuid)
+            im.user_id = instance.user_id
+            context.session.add(im)
+            done += 1
+        if ims_by_inst_uuid:
+            unmigratable_ims = True
+        if done >= max_count:
+            break
+
+    if unmigratable_ims:
+        LOG.warning('Some instance mappings were not migratable. This may '
+                    'be transient due to in-flight instance builds, or could '
+                    'be due to stale data that will be cleaned up after '
+                    'running "nova-manage db archive_deleted_rows --purge".')
+
+    return found, done
 
 
 @base.NovaObjectRegistry.register
