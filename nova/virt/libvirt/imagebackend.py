@@ -16,6 +16,7 @@
 import abc
 import base64
 import contextlib
+import errno
 import functools
 import os
 import shutil
@@ -50,6 +51,31 @@ CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 IMAGE_API = image.API()
+
+
+# NOTE(neiljerram): Don't worry if this fails. This sometimes happens, with
+# EACCES (Permission Denied), when the base file is on an NFS client
+# filesystem. I don't understand why, but wonder if it's a similar problem as
+# the one that motivated using touch instead of utime in ec9d5e375e2.  In any
+# case, IIUC, timing isn't the primary thing that the image cache manager uses
+# to determine when the base file is in use. The primary mechanism for that is
+# whether there is a matching disk file for a current instance. The timestamp
+# on the base file is only used when deciding whether to delete a base file
+# that is _not_ in use; so it is not a big deal if that deletion happens
+# slightly earlier, for an unused base file, because of one of these preceding
+# utime calls having failed.
+# NOTE(mdbooth): Only use this method for updating the utime of an image cache
+# entry during disk creation.
+# TODO(mdbooth): Remove or rework this when we understand the problem.
+def _update_utime_ignore_eacces(path):
+    try:
+        nova.privsep.path.utime(path)
+    except OSError as e:
+        with excutils.save_and_reraise_exception(logger=LOG) as ctxt:
+            if e.errno == errno.EACCES:
+                LOG.warning("Ignoring failure to update utime of %(path)s: "
+                            "%(error)s", {'path': path, 'error': e})
+                ctxt.reraise = False
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -542,7 +568,7 @@ class Flat(Image):
 
             # NOTE(mikal): Update the mtime of the base file so the image
             # cache manager knows it is in use.
-            nova.privsep.path.utime(base)
+            _update_utime_ignore_eacces(base)
             self.verify_base_size(base, size)
             if not os.path.exists(self.path):
                 with fileutils.remove_path_on_error(self.path):
@@ -598,7 +624,7 @@ class Qcow2(Image):
 
         # NOTE(ankit): Update the mtime of the base file so the image
         # cache manager knows it is in use.
-        nova.privsep.path.utime(base)
+        _update_utime_ignore_eacces(base)
         self.verify_base_size(base, size)
 
         legacy_backing_size = None
@@ -1092,7 +1118,7 @@ class Ploop(Image):
                 prepare_template(target=base, *args, **kwargs)
             else:
                 # Disk already exists in cache, just update time
-                nova.privsep.path.utime(base)
+                _update_utime_ignore_eacces(base)
             self.verify_base_size(base, size)
 
             if os.path.exists(self.path):
