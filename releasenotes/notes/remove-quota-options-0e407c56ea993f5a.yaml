@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The following configuration options in the ``quota`` group have been
+    removed because they have not been used since 17.0.0.
+
+    - ``reservation_expire``
+    - ``until_refresh``
+    - ``max_age``
