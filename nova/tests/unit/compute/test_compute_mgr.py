@@ -7223,10 +7223,19 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     @ddt.data(0, -2)
     def test_max_concurrent_live_semaphore_unlimited(self, max_concurrent):
         self.flags(max_concurrent_live_migrations=max_concurrent)
-        with mock.patch(
-                'futurist.GreenThreadPoolExecutor') as mock_executor:
+        with test.nested(
+            mock.patch('futurist.GreenThreadPoolExecutor'),
+            mock.patch('nova.compute.manager.LOG'),
+        ) as (mock_executor, mock_log):
             manager.ComputeManager()
         mock_executor.assert_called_once_with()
+        if max_concurrent < 0:
+            mock_log.warning.assert_called_once_with(
+                'The value of the max_concurrent_live_migrations config '
+                'option is less than 0. It is treated as 0 and will raise '
+                'ValueError in a future release.')
+        else:
+            mock_log.warning.assert_not_called()
 
     def test_pre_live_migration_cinder_v3_api(self):
         # This tests that pre_live_migration with a bdm with an
