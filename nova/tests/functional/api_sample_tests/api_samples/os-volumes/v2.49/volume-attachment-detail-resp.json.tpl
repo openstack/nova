@@ -1,8 +1,8 @@
 {
     "volumeAttachment": {
-        "device": "/dev/vdd",
+        "device": "/dev/sdd",
         "id": "a26887c6-c47b-4654-abb5-dfadf7d3f803",
-        "serverId": "189dc814-35bc-428b-bba4-8d5ac0d1e087",
+        "serverId": "%(uuid)s",
         "volumeId": "a26887c6-c47b-4654-abb5-dfadf7d3f803"
     }
 }
