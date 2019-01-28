@@ -259,8 +259,8 @@ class SchedulerReportClient(object):
             # timer dict, so nothing to clear.
             return
 
-        # get_provider_uuids returns UUIDs in top-down order, so the first one
-        # is the root; and .remove() is recursive.
+        # get_provider_uuids_in_tree returns UUIDs in top-down order, so the
+        # first one is the root; and .remove() is recursive.
         self._provider_tree.remove(uuids[0])
         for uuid in uuids:
             self._association_refresh_time.pop(uuid, None)
@@ -757,8 +757,8 @@ class SchedulerReportClient(object):
 
     def _refresh_associations(self, context, rp_uuid, force=False,
                               refresh_sharing=True):
-        """Refresh aggregates, traits, and (optionally) aggregate-associated
-        sharing providers for the specified resource provider uuid.
+        """Refresh inventories, aggregates, traits, and (optionally) aggregate-
+        associated sharing providers for the specified resource provider uuid.
 
         Only refresh if there has been no refresh during the lifetime of
         this process, CONF.compute.resource_provider_association_refresh
@@ -820,11 +820,11 @@ class SchedulerReportClient(object):
                         self._provider_tree.new_root(
                             rp['name'], rp['uuid'],
                             generation=rp['generation'])
-                    # Now we have to (populate or) refresh that guy's traits,
-                    # aggregates, and inventories (but not *his* aggregate-
-                    # associated providers). No need to override force=True for
-                    # newly- added providers - the missing timestamp will
-                    # always trigger them to refresh.
+                    # Now we have to (populate or) refresh that provider's
+                    # traits, aggregates, and inventories (but not *its*
+                    # aggregate-associated providers). No need to override
+                    # force=True for newly-added providers - the missing
+                    # timestamp will always trigger them to refresh.
                     self._refresh_associations(context, rp['uuid'],
                                                force=force,
                                                refresh_sharing=False)
@@ -1050,7 +1050,7 @@ class SchedulerReportClient(object):
 
         url = '/resource_providers/%s/traits' % rp_uuid
         # NOTE(efried): Don't use the DELETE API when traits is empty, because
-        # that guy doesn't return content, and we need to update the cached
+        # that method doesn't return content, and we need to update the cached
         # provider tree with the new generation.
         traits = list(traits) if traits else []
         generation = self._provider_tree.data(rp_uuid).generation
