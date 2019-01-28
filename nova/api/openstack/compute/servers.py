@@ -443,6 +443,36 @@ class ServersController(wsgi.Controller):
                     msg = _('Block device tags are not yet supported.')
                     raise exc.HTTPBadRequest(explanation=msg)
 
+    def _process_networks_for_create(
+            self, context, target, server_dict, create_kwargs,
+            supports_device_tagging):
+        """Processes networks request parameter for server create
+
+        :param context: The nova auth request context
+        :param target: The target dict for ``context.can`` policy checks
+        :param server_dict: The POST /servers request body "server" entry
+        :param create_kwargs: dict that gets populated by this method and
+            passed to nova.comptue.api.API.create()
+        :param supports_device_tagging: True if a suitable microversion was
+            provided for VIF tags during server create, False otherwise
+        :raises: webob.exc.HTTPBadRequest if the request parameters are invalid
+        :raises: nova.exception.Forbidden if a policy check fails
+        """
+        requested_networks = server_dict.get('networks', None)
+
+        if requested_networks is not None:
+            requested_networks = self._get_requested_networks(
+                requested_networks, supports_device_tagging)
+
+        # Skip policy check for 'create:attach_network' if there is no
+        # network allocation request.
+        if requested_networks and len(requested_networks) and \
+                not requested_networks.no_allocate:
+            context.can(server_policies.SERVERS % 'create:attach_network',
+                        target)
+
+        create_kwargs['requested_networks'] = requested_networks
+
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 409))
     @validation.schema(schema_servers.base_create_v20, '2.0', '2.0')
@@ -549,18 +579,9 @@ class ServersController(wsgi.Controller):
 
         image_uuid = self._image_from_req_data(server_dict, create_kwargs)
 
-        requested_networks = server_dict.get('networks', None)
-
-        if requested_networks is not None:
-            requested_networks = self._get_requested_networks(
-                requested_networks, supports_device_tagging)
-
-        # Skip policy check for 'create:attach_network' if there is no
-        # network allocation request.
-        if requested_networks and len(requested_networks) and \
-                not requested_networks.no_allocate:
-            context.can(server_policies.SERVERS % 'create:attach_network',
-                        target)
+        self._process_networks_for_create(
+            context, target, server_dict, create_kwargs,
+            supports_device_tagging)
 
         flavor_id = self._flavor_id_from_req_data(body)
         try:
@@ -579,7 +600,6 @@ class ServersController(wsgi.Controller):
                 forced_host=host, forced_node=node,
                 metadata=server_dict.get('metadata', {}),
                 admin_password=password,
-                requested_networks=requested_networks,
                 check_server_group_quota=True,
                 supports_multiattach=supports_multiattach,
                 supports_port_resource_request=supports_port_resource_request,
