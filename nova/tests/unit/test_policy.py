@@ -411,7 +411,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-rescue",
 "os_compute_api:os-security-groups",
 "os_compute_api:os-server-password",
-"os_compute_api:os-server-groups",
 "os_compute_api:os-server-tags:delete",
 "os_compute_api:os-server-tags:delete_all",
 "os_compute_api:os-server-tags:index",

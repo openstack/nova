@@ -18,20 +18,13 @@ from oslo_policy import policy
 from nova.policies import base
 
 
-BASE_POLICY_NAME = 'os_compute_api:os-server-groups'
 POLICY_ROOT = 'os_compute_api:os-server-groups:%s'
-BASE_POLICY_RULE = 'rule:%s' % BASE_POLICY_NAME
 
 
 server_groups_policies = [
-    # TODO(Kevin_Zheng): remove this rule as this not used by any API
-    policy.RuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER,
-        description='Deprecated in Pike and will be removed in next release'),
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'create',
-        BASE_POLICY_RULE,
+        base.RULE_ADMIN_OR_OWNER,
         "Create a new server group",
         [
             {
@@ -42,7 +35,7 @@ server_groups_policies = [
     ),
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'delete',
-        BASE_POLICY_RULE,
+        base.RULE_ADMIN_OR_OWNER,
         "Delete a server group",
         [
             {
@@ -53,7 +46,7 @@ server_groups_policies = [
     ),
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'index',
-        BASE_POLICY_RULE,
+        base.RULE_ADMIN_OR_OWNER,
         "List all server groups",
         [
             {
@@ -64,7 +57,7 @@ server_groups_policies = [
     ),
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'show',
-        BASE_POLICY_RULE,
+        base.RULE_ADMIN_OR_OWNER,
         "Show details of a server group",
         [
             {

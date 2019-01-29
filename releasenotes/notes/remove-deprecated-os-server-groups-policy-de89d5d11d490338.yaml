@@ -1,0 +1,4 @@
+---
+upgrade:
+  - The ``os_compute_api:os-server-groups`` policy deprecated in 16.0.0
+    has been removed.
