@@ -19,8 +19,10 @@ manage flavors. To see information for this command, run:
 .. note::
 
    Configuration rights can be delegated to additional users by redefining
-   the access controls for ``os_compute_api:os-flavor-manage`` in
-   ``/etc/nova/policy.json`` on the ``nova-api`` server.
+   the access controls for ``os_compute_api:os-flavor-manage:create``,
+   ``os_compute_api:os-flavor-manage:update`` and
+   ``os_compute_api:os-flavor-manage:delete`` in ``/etc/nova/policy.json``
+   on the ``nova-api`` server.
 
 .. note::
 

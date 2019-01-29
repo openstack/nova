@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The ``os_compute_api:os-flavor-manage`` policy has been removed
+    because it has been deprecated since 16.0.0.
+    Use the following policies instead:
+
+    * ``os_compute_api:os-flavor-manage:create``
+    * ``os_compute_api:os-flavor-manage:delete``
