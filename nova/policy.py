@@ -234,10 +234,10 @@ def verify_deprecated_policy(old_policy, new_policy, default_rule, context):
         current_rule = None
 
     if current_rule != default_rule:
-        LOG.warning("Start using the new action '{0}'. The existing "
-                    "action '{1}' is being deprecated and will be "
-                    "removed in future release.".format(new_policy,
-                                                        old_policy))
+        LOG.warning("Start using the new action '%(new_policy)s'. "
+                    "The existing action '%(old_policy)s' is being deprecated "
+                    "and will be removed in future release.",
+                    {'new_policy': new_policy, 'old_policy': old_policy})
         context.can(old_policy)
         return True
     else:
