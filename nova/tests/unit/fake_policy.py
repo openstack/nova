@@ -45,6 +45,7 @@ policy_data = """
     "os_compute_api:os-flavor-extra-specs:show": "",
     "os_compute_api:os-flavor-manage": "",
     "os_compute_api:os-flavor-manage:create": "",
+    "os_compute_api:os-flavor-manage:update": "",
     "os_compute_api:os-flavor-manage:delete": "",
     "os_compute_api:os-floating-ip-pools": "",
     "os_compute_api:os-floating-ips": "",
