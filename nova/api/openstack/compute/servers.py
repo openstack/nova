@@ -651,7 +651,7 @@ class ServersController(wsgi.Controller):
                 exception.UnableToAutoAllocateNetwork,
                 exception.MultiattachNotSupportedOldMicroversion,
                 exception.CertificateValidationFailed,
-                exception.ServerCreateWithQoSPortNotSupported) as error:
+                exception.CreateWithPortResourceRequestOldVersion) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.InstanceExists,

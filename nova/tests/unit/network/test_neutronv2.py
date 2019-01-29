@@ -3070,7 +3070,7 @@ class TestNeutronv2(TestNeutronv2Base):
         self._test_get_port_vnic_info(mock_get_client, None,
                                       model.VNIC_TYPE_NORMAL)
 
-    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    @mock.patch.object(neutronapi, 'get_client')
     def test_get_port_vnic_info_requested_resources(self, mock_get_client):
         self._test_get_port_vnic_info(
             mock_get_client, None, model.VNIC_TYPE_NORMAL,
@@ -5256,7 +5256,7 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
     @mock.patch.object(neutronapi, 'get_client')
     def test_create_resource_requests(self, getclient,
             mock_get_port_vnic_info, mock_get_physnet_tunneled_info,
-            mock_request_spec):
+            mock_from_port_request):
         requested_networks = objects.NetworkRequestList(
             objects = [
                 objects.NetworkRequest(port_id=uuids.portid_1),
@@ -5288,7 +5288,7 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         ]
         api = neutronapi.API()
 
-        mock_request_spec.side_effect = [
+        mock_from_port_request.side_effect = [
             mock.sentinel.request_group1,
             mock.sentinel.request_group2,
         ]
@@ -5322,7 +5322,7 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
             ['physnet1', 'physnet2', 'physnet3', 'physnet4'],
             network_metadata.physnets)
         self.assertTrue(network_metadata.tunneled)
-        mock_request_spec.assert_has_calls([
+        mock_from_port_request.assert_has_calls([
             mock.call(
                 context=None,
                 port_resource_request=mock.sentinel.resource_request1),
