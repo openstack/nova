@@ -357,6 +357,19 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
     read_iter = IMAGE_API.download(context, image_ref)
     read_handle = rw_handles.ImageReadHandle(read_iter)
 
+    imported_vm_ref = _import_image(session, read_handle, vm_import_spec,
+                                    vm_name, vm_folder_ref, res_pool_ref,
+                                    file_size)
+
+    LOG.info("Downloaded image file data %(image_ref)s",
+             {'image_ref': instance.image_ref}, instance=instance)
+    vmdk = vm_util.get_vmdk_info(session, imported_vm_ref, vm_name)
+    vm_util.mark_vm_as_template(session, instance, imported_vm_ref)
+    return vmdk.capacity_in_bytes, vmdk.path
+
+
+def _import_image(session, read_handle, vm_import_spec, vm_name, vm_folder_ref,
+                  res_pool_ref, file_size):
     # retry in order to handle conflicts in case of parallel execution
     # (multiple agents or previously failed import of the same image
     max_attempts = 3
@@ -394,14 +407,10 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
                     pass
 
     if not imported_vm_ref:
-        raise vexc.VMwareDriverException("Could not import image %s within "
-            "%d attempts." % (vm_name, max_attempts))
-
-    LOG.info("Downloaded image file data %(image_ref)s",
-             {'image_ref': instance.image_ref}, instance=instance)
-    vmdk = vm_util.get_vmdk_info(session, imported_vm_ref, vm_name)
-    vm_util.mark_vm_as_template(session, instance, imported_vm_ref)
-    return vmdk.capacity_in_bytes, vmdk.path
+        raise vexc.VMwareDriverException("Could not import image"
+                                         " %s within %d attempts."
+                                         % (vm_name, max_attempts))
+    return imported_vm_ref
 
 
 def _wait_for_import_task(session, vm_ref):
@@ -489,28 +498,18 @@ def fetch_image_ova(context, instance, session, vm_name, ds_name,
             elif vmdk_name and tar_info.name.startswith(vmdk_name):
                 # Actual file name is <vmdk_name>.XXXXXXX
                 extracted = tar.extractfile(tar_info)
-                write_handle = rw_handles.VmdkWriteHandle(
-                    session,
-                    session._host,
-                    session._port,
-                    res_pool_ref,
-                    vm_folder_ref,
-                    vm_import_spec,
-                    file_size)
-                image_transfer(extracted, write_handle)
+                imported_vm_ref = _import_image(session, extracted,
+                                                vm_import_spec, vm_name,
+                                                vm_folder_ref, res_pool_ref,
+                                                file_size)
+
                 LOG.info("Downloaded OVA image file %(image_ref)s",
                          {'image_ref': instance.image_ref}, instance=instance)
-                imported_vm_ref = write_handle.get_imported_vm()
                 vmdk = vm_util.get_vmdk_info(session,
                                              imported_vm_ref,
                                              vm_name)
                 vm_util.mark_vm_as_template(session, instance, imported_vm_ref)
-                try:
-                    return vmdk.capacity_in_bytes, vmdk.path.parent
-                except AttributeError:
-                    from oslo_vmware.objects.datastore import DatastorePath
-                    return (vmdk.capacity_in_bytes,
-                        DatastorePath.parse(vmdk.path).parent)
+                return vmdk.capacity_in_bytes, vmdk.path
         raise exception.ImageUnacceptable(
             reason=_("Extracting vmdk from OVA failed."),
             image_id=image_ref)
