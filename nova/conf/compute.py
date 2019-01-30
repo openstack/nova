@@ -717,10 +717,10 @@ Related options:
         # all about. Reference bug(s). Unless we're just going to remove it.
         help="""
 Interval for updating nova-compute-side cache of the compute node resource
-provider's aggregates and traits info.
+provider's inventories, aggregates, and traits.
 
 This option specifies the number of seconds between attempts to update a
-provider's aggregates and traits information in the local cache of the compute
+provider's inventories, aggregates and traits in the local cache of the compute
 node.
 
 A value of zero disables cache refresh completely.

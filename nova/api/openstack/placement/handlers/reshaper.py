@@ -67,9 +67,10 @@ def reshape(req):
         generation = inventory_data['resource_provider_generation']
         if generation != resource_provider.generation:
             raise webob.exc.HTTPConflict(
-                _('resource provider generation conflict: '
+                _('resource provider generation conflict for provider %(rp)s: '
                   'actual: %(actual)s, given: %(given)s') %
-                {'actual': resource_provider.generation,
+                {'rp': rp_uuid,
+                 'actual': resource_provider.generation,
                  'given': generation},
                 comment=errors.CONCURRENT_UPDATE)
 

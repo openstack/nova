@@ -736,9 +736,6 @@ class SchedulerReportClient(object):
         # At this point, the whole tree exists in the local cache.
 
         for uuid_to_refresh in uuids_to_refresh:
-            # NOTE(efried): _refresh_associations doesn't refresh inventory
-            # (yet) - see that method's docstring for the why.
-            self._refresh_and_get_inventory(context, uuid_to_refresh)
             self._refresh_associations(context, uuid_to_refresh, force=True)
 
         return uuid
@@ -816,18 +813,14 @@ class SchedulerReportClient(object):
         this process, CONF.compute.resource_provider_association_refresh
         seconds have passed, or the force arg has been set to True.
 
-        Note that we do *not* refresh inventories.  The reason is largely
-        historical: all code paths that get us here are doing inventory refresh
-        themselves.
-
         :param context: The security context
         :param rp_uuid: UUID of the resource provider to check for fresh
-                        aggregates and traits
+                        inventories, aggregates, and traits
         :param force: If True, force the refresh
         :param refresh_sharing: If True, fetch all the providers associated
                                 by aggregate with the specified provider,
-                                including their traits and aggregates (but not
-                                *their* sharing providers).
+                                including their inventories, traits, and
+                                aggregates (but not *their* sharing providers).
         :raise: On various placement API errors, one of:
                 - ResourceProviderAggregateRetrievalFailed
                 - ResourceProviderTraitRetrievalFailed
@@ -836,6 +829,10 @@ class SchedulerReportClient(object):
                 communication fails.
         """
         if force or self._associations_stale(rp_uuid):
+            # Refresh inventories
+            msg = "Refreshing inventories for resource provider %s"
+            LOG.debug(msg, rp_uuid)
+            self._refresh_and_get_inventory(context, rp_uuid)
             # Refresh aggregates
             agg_info = self._get_provider_aggregates(context, rp_uuid)
             # If @safe_connect makes the above return None, this will raise
@@ -872,11 +869,11 @@ class SchedulerReportClient(object):
                         self._provider_tree.new_root(
                             rp['name'], rp['uuid'],
                             generation=rp['generation'])
-                    # Now we have to (populate or) refresh that guy's traits
-                    # and aggregates (but not *his* aggregate-associated
-                    # providers).  No need to override force=True for newly-
-                    # added providers - the missing timestamp will always
-                    # trigger them to refresh.
+                    # Now we have to (populate or) refresh that guy's traits,
+                    # aggregates, and inventories (but not *his* aggregate-
+                    # associated providers). No need to override force=True for
+                    # newly- added providers - the missing timestamp will
+                    # always trigger them to refresh.
                     self._refresh_associations(context, rp['uuid'],
                                                force=force,
                                                refresh_sharing=False)
@@ -1069,9 +1066,6 @@ class SchedulerReportClient(object):
         self._ensure_resource_provider(
             context, rp_uuid, name=name,
             parent_provider_uuid=parent_provider_uuid)
-        # Ensure inventories are up to date (for *all* cached RPs)
-        for uuid in self._provider_tree.get_provider_uuids():
-            self._refresh_and_get_inventory(context, uuid)
         # Return a *copy* of the tree.
         return copy.deepcopy(self._provider_tree)
 
