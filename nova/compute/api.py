@@ -4382,6 +4382,17 @@ class API(base.Base):
         """Use hotplug to add an network adapter to an instance."""
         self._record_action_start(
             context, instance, instance_actions.ATTACH_INTERFACE)
+
+        # NOTE(gibi): Checking if the requested port has resource request as
+        # such ports are currently not supported as they would at least
+        # need resource allocation manipulation in placement but might also
+        # need a new scheduling if resource on this host is not available.
+        if port_id:
+            port = self.network_api.show_port(context, port_id)
+            if port['port'].get('resource_request'):
+                raise exception.AttachInterfaceWithQoSPolicyNotSupported(
+                    instance_uuid=instance.uuid)
+
         return self.compute_rpcapi.attach_interface(context,
             instance=instance, network_id=network_id, port_id=port_id,
             requested_ip=requested_ip, tag=tag)

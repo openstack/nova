@@ -6435,6 +6435,23 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             self.context, instance, instance_actions.ATTACH_INTERFACE)
 
     @mock.patch('nova.compute.api.API._record_action_start')
+    def test_attach_interface_qos_aware_port(self, mock_record):
+        instance = self._create_instance_obj()
+        with mock.patch.object(
+                self.compute_api.network_api, 'show_port',
+                return_value={'port': {
+                    'resource_request': {
+                        'resources': {'CUSTOM_RESOURCE_CLASS': 42}
+                }}}) as mock_show_port:
+            self.assertRaises(
+                exception.AttachInterfaceWithQoSPolicyNotSupported,
+                self.compute_api.attach_interface,
+                self.context, instance,
+                'foo_net_id', 'foo_port_id', None
+            )
+        mock_show_port.assert_called_once_with(self.context, 'foo_port_id')
+
+    @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'detach_interface')
     def test_detach_interface(self, mock_detach, mock_record):
         instance = self._create_instance_obj()

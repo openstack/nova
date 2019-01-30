@@ -367,7 +367,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         super(ProviderUsageBaseTestCase, self).setUp()
 
         self.useFixture(policy_fixture.RealPolicyFixture())
-        self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(nova_fixtures.AllServicesCurrent())
 
         fake_notifier.stub_notifier(self)
