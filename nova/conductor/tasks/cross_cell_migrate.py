@@ -11,10 +11,12 @@
 #    under the License.
 
 import collections
+import copy
 
 from oslo_log import log as logging
 
 from nova.conductor.tasks import base
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import network
@@ -226,12 +228,50 @@ class CrossCellMigrationTask(base.TaskBase):
         self.host_selection = host_selection
         self.alternate_hosts = alternate_hosts
 
+        self._target_cell_instance = None
+        self._target_cell_context = None
+
         self.network_api = network.API()
         self.volume_api = cinder.API()
 
         # Keep an ordered dict of the sub-tasks completed so we can call their
         # rollback routines if something fails.
         self._completed_tasks = collections.OrderedDict()
+
+    def _get_target_cell_mapping(self):
+        """Get the target host CellMapping for the selected host
+
+        :returns: nova.objects.CellMapping for the cell of the selected target
+            host
+        :raises: nova.exception.CellMappingNotFound if the cell mapping for
+            the selected target host cannot be found (this should not happen
+            if the scheduler just selected it)
+        """
+        return objects.CellMapping.get_by_uuid(
+            self.context, self.host_selection.cell_uuid)
+
+    def _setup_target_cell_db(self):
+        """Creates the instance and its related records in the target cell
+
+        Upon successful completion the self._target_cell_context and
+        self._target_cell_instance variables are set.
+
+        :returns: The active Migration object from the target cell DB.
+        """
+        LOG.debug('Setting up the target cell database for the instance and '
+                  'its related records.', instance=self.instance)
+        target_cell_mapping = self._get_target_cell_mapping()
+        # Clone the context targeted at the source cell and then target the
+        # clone at the target cell.
+        self._target_cell_context = copy.copy(self.context)
+        nova_context.set_target_cell(
+            self._target_cell_context, target_cell_mapping)
+        task = TargetDBSetupTask(
+            self.context, self.instance, self.migration,
+            self._target_cell_context)
+        self._target_cell_instance, target_cell_migration = task.execute()
+        self._completed_tasks['TargetDBSetupTask'] = task
+        return target_cell_migration
 
     def _perform_external_api_checks(self):
         """Performs checks on external service APIs for support.
@@ -267,6 +307,15 @@ class CrossCellMigrationTask(base.TaskBase):
         self.migration.save()
         # Make sure neutron and cinder APIs we need are available.
         self._perform_external_api_checks()
+
+        # Before preparing the target host create the instance record data
+        # in the target cell database since we cannot do anything in the
+        # target cell without having an instance record there. Remember that
+        # we lose the cell-targeting on the request context over RPC so we
+        # cannot simply pass the source cell context and instance over RPC
+        # to the target compute host and assume changes get mirrored back to
+        # the source cell database.
+        self._setup_target_cell_db()
 
     def rollback(self):
         """Rollback based on how sub-tasks completed

@@ -392,8 +392,10 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         with test.nested(
             mock.patch.object(self.task.migration, 'save'),
             mock.patch.object(self.task, '_perform_external_api_checks'),
+            mock.patch.object(self.task, '_setup_target_cell_db'),
         ) as (
             mock_migration_save, mock_perform_external_api_checks,
+            mock_setup_target_cell_db,
         ):
             self.task.execute()
         # Assert the calls
@@ -401,6 +403,7 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
                         'Migration.cross_cell_move should be True.')
         mock_migration_save.assert_called_once_with()
         mock_perform_external_api_checks.assert_called_once_with()
+        mock_setup_target_cell_db.assert_called_once_with()
         # Now rollback the completed sub-tasks
         self.task.rollback()
 
@@ -467,3 +470,36 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         # The 2nd task rollback should have raised and been logged.
         mock_log_exception.assert_called_once()
         self.assertEqual('1', mock_log_exception.call_args[0][1])
+
+    @mock.patch('nova.objects.CellMapping.get_by_uuid')
+    @mock.patch('nova.context.set_target_cell')
+    @mock.patch.object(cross_cell_migrate.TargetDBSetupTask, 'execute')
+    def test_setup_target_cell_db(self, mock_target_db_set_task_execute,
+                                  mock_set_target_cell, mock_get_cell_mapping):
+        """Tests setting up and executing TargetDBSetupTask"""
+        mock_target_db_set_task_execute.return_value = (
+            mock.sentinel.target_cell_instance,
+            mock.sentinel.target_cell_migration)
+        result = self.task._setup_target_cell_db()
+        mock_target_db_set_task_execute.assert_called_once_with()
+        mock_get_cell_mapping.assert_called_once_with(
+            self.task.context, self.task.host_selection.cell_uuid)
+        # The target_cell_context should be set on the main task but as a copy
+        # of the source context.
+        self.assertIsNotNone(self.task._target_cell_context)
+        self.assertIsNot(self.task._target_cell_context, self.task.context)
+        # The target cell context should have been targeted to the target
+        # cell mapping.
+        mock_set_target_cell.assert_called_once_with(
+            self.task._target_cell_context, mock_get_cell_mapping.return_value)
+        # The resulting migration record from TargetDBSetupTask should have
+        # been returned.
+        self.assertIs(result, mock.sentinel.target_cell_migration)
+        # The target_cell_instance should be set on the main task.
+        self.assertIsNotNone(self.task._target_cell_instance)
+        self.assertIs(self.task._target_cell_instance,
+                      mock.sentinel.target_cell_instance)
+        # And the completed task should have been recorded for rollbacks.
+        self.assertIn('TargetDBSetupTask', self.task._completed_tasks)
+        self.assertIsInstance(self.task._completed_tasks['TargetDBSetupTask'],
+                              cross_cell_migrate.TargetDBSetupTask)
