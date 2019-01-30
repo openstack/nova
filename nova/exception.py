@@ -244,6 +244,12 @@ class InvalidBDMVolumeNotBootable(InvalidBDM):
     msg_fmt = _("Block Device %(id)s is not bootable.")
 
 
+class TooManyDiskDevices(InvalidBDM):
+    msg_fmt = _('The maximum allowed number of disk devices (%(maximum)d) to '
+                'attach to a single instance has been exceeded.')
+    code = 403
+
+
 class InvalidAttribute(Invalid):
     msg_fmt = _("Attribute not supported: %(attr)s")
 
