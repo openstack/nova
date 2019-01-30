@@ -541,7 +541,10 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             port_profile=osv_objects.vif.VIFPortProfileOVSRepresentor(
                 interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
                 representor_name="nicdc065497-3c",
-                representor_address="0000:08:08.5"),
+                representor_address="0000:08:08.5",
+                datapath_offload=osv_objects.vif.DatapathOffloadRepresentor(
+                    representor_name="nicdc065497-3c",
+                    representor_address="0000:08:08.5")),
             preserve_on_delete=False,
             vif_name="nicdc065497-3c",
             network=osv_objects.network.Network(
@@ -584,7 +587,10 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             port_profile=osv_objects.vif.VIFPortProfileOVSRepresentor(
                 interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
                 representor_address="0000:08:08.5",
-                representor_name="nicdc065497-3c",),
+                representor_name="nicdc065497-3c",
+                datapath_offload=osv_objects.vif.DatapathOffloadRepresentor(
+                    representor_name="nicdc065497-3c",
+                    representor_address="0000:08:08.5")),
             preserve_on_delete=False,
             vif_name="nicdc065497-3c",
             path='/fake/socket',
@@ -701,7 +707,10 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             port_profile=osv_objects.vif.VIFPortProfileOVSRepresentor(
                 interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
                 representor_name="nicdc065497-3c",
-                representor_address="0000:0a:00.1"),
+                representor_address="0000:0a:00.1",
+                datapath_offload=osv_objects.vif.DatapathOffloadRepresentor(
+                    representor_name="nicdc065497-3c",
+                    representor_address="0000:0a:00.1")),
             has_traffic_filtering=False,
             preserve_on_delete=False,
             network=osv_objects.network.Network(
