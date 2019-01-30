@@ -1505,6 +1505,17 @@ class Connection(object):
     <gic supported='no'/>
   </features>'''
 
+    _domain_capability_features_with_SEV = '''  <features>
+    <gic supported='no'/>
+    <sev supported='yes'>
+      <cbitpos>47</cbitpos>
+      <reducedPhysBits>1</reducedPhysBits>
+    </sev>
+  </features>'''
+
+    _domain_capability_features_with_SEV_unsupported = \
+        _domain_capability_features_with_SEV.replace('yes', 'no')
+
     def getCapabilities(self):
         """Return spoofed capabilities."""
         numa_topology = self.host_info.numa_topology

@@ -147,7 +147,8 @@ class LibvirtConfigDomainCapsFeatures(LibvirtConfigObject):
 
         for c in xmldoc.getchildren():
             feature = None
-            # TODO(aspiers): add supported features here
+            if c.tag == "sev":
+                feature = LibvirtConfigDomainCapsFeatureSev()
             if feature:
                 feature.parse_dom(c)
                 self.features.append(feature)
@@ -163,6 +164,20 @@ class LibvirtConfigDomainCapsFeatures(LibvirtConfigObject):
     # calls.
     def format_dom(self):
         raise RuntimeError(_('BUG: tried to generate domainCapabilities XML'))
+
+
+class LibvirtConfigDomainCapsFeatureSev(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigDomainCapsFeatureSev, self).__init__(
+            root_name='sev', **kwargs)
+        self.supported = False
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigDomainCapsFeatureSev, self).parse_dom(xmldoc)
+
+        if xmldoc.get('supported') == 'yes':
+            self.supported = True
 
 
 class LibvirtConfigCapsNUMATopology(LibvirtConfigObject):
