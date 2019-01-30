@@ -426,6 +426,21 @@ def _nova_to_osvif_vif_ivs(vif):
     return obj
 
 
+# VIF_TYPE_VROUTER = 'vrouter'
+def _nova_to_osvif_vif_vrouter(vif):
+    vnic_type = vif.get('vnic_type', model.VNIC_TYPE_NORMAL)
+    if vnic_type == model.VNIC_TYPE_NORMAL:
+        obj = _get_vif_instance(
+            vif,
+            objects.vif.VIFGeneric,
+            plugin="vrouter",
+            vif_name=_get_vif_name(vif)
+        )
+    else:
+        raise NotImplementedError()
+    return obj
+
+
 # VIF_TYPE_DVS = 'dvs'
 def _nova_to_osvif_vif_dvs(vif):
     raise NotImplementedError()
@@ -458,11 +473,6 @@ def _nova_to_osvif_vif_ib_hostdev(vif):
 
 # VIF_TYPE_MIDONET = 'midonet'
 def _nova_to_osvif_vif_midonet(vif):
-    raise NotImplementedError()
-
-
-# VIF_TYPE_VROUTER = 'vrouter'
-def _nova_to_osvif_vif_vrouter(vif):
     raise NotImplementedError()
 
 
