@@ -563,10 +563,11 @@ class FlavorManagerPolicyEnforcementV21(test.TestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % default_flavor_policy,
             exc.format_message())
-        mock_warning.assert_called_with("Start using the new "
-            "action '{0}'. The existing action '{1}' is being deprecated and "
-            "will be removed in future release.".format(create_flavor_policy,
-                                                        default_flavor_policy))
+        mock_warning.assert_called_with("Start using the new action "
+            "'%(new_policy)s'. The existing action '%(old_policy)s' is being "
+            "deprecated and will be removed in future release.",
+            {'new_policy': create_flavor_policy,
+             'old_policy': default_flavor_policy})
 
     @mock.patch.object(policy.LOG, 'warning')
     def test_delete_policy_rbac_inherit_default(self, mock_warning):
@@ -597,9 +598,10 @@ class FlavorManagerPolicyEnforcementV21(test.TestCase):
         }
         self.flavor = self.controller._create(self.adm_req, body=body)
         mock_warning.assert_called_once_with("Start using the new "
-            "action '{0}'. The existing action '{1}' is being deprecated and "
-            "will be removed in future release.".format(create_flavor_policy,
-                                                        default_flavor_policy))
+            "action '%(new_policy)s'. The existing action '%(old_policy)s' "
+            "is being deprecated and will be removed in future release.",
+            {'new_policy': create_flavor_policy,
+             'old_policy': default_flavor_policy})
         # check for success as admin
         flavor = self.flavor
         self.controller._delete(self.adm_req, flavor['flavor']['id'])
@@ -614,9 +616,10 @@ class FlavorManagerPolicyEnforcementV21(test.TestCase):
             "Policy doesn't allow %s to be performed." % default_flavor_policy,
             exc.format_message())
         mock_warning.assert_called_with("Start using the new "
-            "action '{0}'. The existing action '{1}' is being deprecated and "
-            "will be removed in future release.".format(delete_flavor_policy,
-                                                        default_flavor_policy))
+            "action '%(new_policy)s'. The existing action '%(old_policy)s' "
+            "is being deprecated and will be removed in future release.",
+            {'new_policy': delete_flavor_policy,
+             'old_policy': default_flavor_policy})
 
     def test_create_policy_rbac_no_change_to_default_action_rule(self):
         """Test to verify the correct action is being enforced. When the

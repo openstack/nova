@@ -210,10 +210,9 @@ class RBDDriver(object):
             return False
 
         if image_meta.get('disk_format') != 'raw':
-            reason = ("rbd image clone requires image format to be "
-                      "'raw' but image {0} is '{1}'").format(
-                          url, image_meta.get('disk_format'))
-            LOG.debug(reason)
+            LOG.debug("rbd image clone requires image format to be "
+                      "'raw' but image %s is '%s'",
+                      url, image_meta.get('disk_format'))
             return False
 
         # check that we can read the image

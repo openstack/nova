@@ -193,9 +193,9 @@ class PolicyTestCase(test.NoDBTestCase):
             old_policy, new_policy, default_rule, self.context)
 
         mock_warning.assert_called_once_with("Start using the new "
-            "action '{0}'. The existing action '{1}' is being deprecated and "
-            "will be removed in future release.".format(new_policy,
-                                                        old_policy))
+            "action '%(new_policy)s'. The existing action '%(old_policy)s' "
+            "is being deprecated and will be removed in future release.",
+            {'new_policy': new_policy, 'old_policy': old_policy})
         self.assertTrue(using_old_action)
 
     def test_verify_deprecated_policy_using_new_action(self):
