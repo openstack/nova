@@ -112,6 +112,59 @@ class LibvirtConfigCaps(LibvirtConfigObject):
         return caps
 
 
+class LibvirtConfigDomainCaps(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigDomainCaps, self).__init__(
+            root_name="domainCapabilities", **kwargs)
+        self._features = None
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigDomainCaps, self).parse_dom(xmldoc)
+
+        for c in xmldoc.getchildren():
+            if c.tag == "features":
+                features = LibvirtConfigDomainCapsFeatures()
+                features.parse_dom(c)
+                self._features = features
+
+    @property
+    def features(self):
+        if self._features is None:
+            return []
+        return self._features.features
+
+
+class LibvirtConfigDomainCapsFeatures(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigDomainCapsFeatures, self).__init__(
+            root_name="features", **kwargs)
+        self.features = []
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigDomainCapsFeatures, self).parse_dom(xmldoc)
+
+        for c in xmldoc.getchildren():
+            feature = None
+            # TODO(aspiers): add supported features here
+            if feature:
+                feature.parse_dom(c)
+                self.features.append(feature)
+
+            # There are many other features and domain capabilities,
+            # but we don't need to regenerate the XML (it's read-only
+            # data provided by libvirtd), so there's no point parsing
+            # them until we actually need their values.
+
+    # For the same reason, we do not need a format_dom() method, but
+    # it's a bug if this ever gets called and we inherited one from
+    # the base class, so override that to watch out for accidental
+    # calls.
+    def format_dom(self):
+        raise RuntimeError(_('BUG: tried to generate domainCapabilities XML'))
+
+
 class LibvirtConfigCapsNUMATopology(LibvirtConfigObject):
 
     def __init__(self, **kwargs):

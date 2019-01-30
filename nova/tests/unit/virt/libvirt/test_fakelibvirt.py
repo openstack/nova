@@ -277,6 +277,11 @@ class FakeLibvirtTests(test.NoDBTestCase):
         conn = self.get_openAuth_curry_func()('qemu:///system')
         etree.fromstring(conn.getCapabilities())
 
+    def test_getDomainCapabilities(self):
+        conn = self.get_openAuth_curry_func()('qemu:///system')
+        etree.fromstring(conn.getDomainCapabilities(
+            '/usr/bin/qemu-kvm', 'x86_64', 'q35', 'kvm', 0))
+
     def test_nwfilter_define_undefine(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
         # Will raise an exception if it's not valid XML

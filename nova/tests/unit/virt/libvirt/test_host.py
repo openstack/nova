@@ -637,6 +637,27 @@ class HostTestCase(test.NoDBTestCase):
             self.assertIsNone(caps.host.cpu.model)
             self.assertEqual(0, len(caps.host.cpu.features))
 
+    def _test_get_domain_capabilities(self):
+        caps = self.host.get_domain_capabilities()
+        self.assertIn('x86_64', caps.keys())
+        self.assertEqual(['q35'], list(caps['x86_64']))
+        return caps['x86_64']['q35']
+
+    def test_get_domain_capabilities(self):
+        caps = self._test_get_domain_capabilities()
+        self.assertEqual(vconfig.LibvirtConfigDomainCaps, type(caps))
+        # There is a <gic supported='no'/> feature in the fixture but
+        # we don't parse that because nothing currently cares about it.
+        self.assertEqual(0, len(caps.features))
+
+    @mock.patch.object(fakelibvirt.virConnect, '_domain_capability_features',
+                       new='')
+    def test_get_domain_capabilities_no_features(self):
+        caps = self._test_get_domain_capabilities()
+        self.assertEqual(vconfig.LibvirtConfigDomainCaps, type(caps))
+        features = caps.features
+        self.assertEqual([], features)
+
     @mock.patch.object(fakelibvirt.virConnect, "getHostname")
     def test_get_hostname_caching(self, mock_hostname):
         mock_hostname.return_value = "foo"

@@ -27,6 +27,7 @@ the raw libvirt API. These APIs are then used by all
 the other libvirt related classes
 """
 
+from collections import defaultdict
 import operator
 import os
 import socket
@@ -56,6 +57,7 @@ from nova import utils
 from nova.virt import event as virtevent
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import guest as libvirt_guest
+from nova.virt.libvirt import utils as libvirt_utils
 
 libvirt = None
 
@@ -91,6 +93,7 @@ class Host(object):
         self._conn_event_handler_queue = six.moves.queue.Queue()
         self._lifecycle_event_handler = lifecycle_event_handler
         self._caps = None
+        self._domain_caps = None
         self._hostname = None
 
         self._wrapped_conn = None
@@ -666,6 +669,117 @@ class Host(object):
                     else:
                         raise
         return self._caps
+
+    def get_domain_capabilities(self):
+        """Returns the capabilities you can request when creating a
+        domain (VM) with that hypervisor, for various combinations of
+        architecture and machine type.
+
+        In this context the fuzzy word "hypervisor" implies QEMU
+        binary, libvirt itself and the host config.  libvirt provides
+        this in order that callers can determine what the underlying
+        emulator and/or libvirt is capable of, prior to creating a domain
+        (for instance via virDomainCreateXML or virDomainDefineXML).
+        However nova needs to know the capabilities much earlier, when
+        the host's compute service is first initialised, in order that
+        placement decisions can be made across many compute hosts.
+        Therefore this is expected to be called during the init_host()
+        phase of the driver lifecycle rather than just before booting
+        an instance.
+
+        This causes an additional complication since the Python
+        binding for this libvirt API call requires the architecture
+        and machine type to be provided.  So in order to gain a full
+        picture of the hypervisor's capabilities, technically we need
+        to call it with the right parameters, once for each
+        (architecture, machine_type) combination which we care about.
+        However the libvirt experts have advised us that in practice
+        the domain capabilities do not (yet, at least) vary enough
+        across machine types to justify the cost of calling
+        getDomainCapabilities() once for every single (architecture,
+        machine_type) combination.  In particular, SEV support isn't
+        reported per-machine type, and since there are usually many
+        machine types, we follow the advice of the experts that for
+        now it's sufficient to call it once per host architecture:
+
+            https://bugzilla.redhat.com/show_bug.cgi?id=1683471#c7
+
+        However, future domain capabilities might report SEV in a more
+        fine-grained manner, and we also expect to use this method to
+        detect other features, such as for gracefully handling machine
+        types and potentially for detecting OVMF binaries.  Therefore
+        we memoize the results of the API calls in a nested dict where
+        the top-level keys are architectures, and second-level keys
+        are machine types, in order to allow easy expansion later.
+
+        Whenever libvirt/QEMU are updated, cached domCapabilities
+        would get outdated (because QEMU will contain new features and
+        the capabilities will vary).  However, this should not be a
+        problem here, because when libvirt/QEMU gets updated, the
+        nova-compute agent also needs restarting, at which point the
+        memoization will vanish because it's not persisted to disk.
+
+        Note: The result is cached in the member attribute
+        _domain_caps.
+
+        :returns: a nested dict of dicts which maps architectures to
+        machine types to instances of config.LibvirtConfigDomainCaps
+        representing the domain capabilities of the host for that arch
+        and machine type:
+
+        { arch:
+          { machine_type: LibvirtConfigDomainCaps }
+        }
+        """
+        if self._domain_caps:
+            return self._domain_caps
+
+        domain_caps = defaultdict(dict)
+        caps = self.get_capabilities()
+        virt_type = CONF.libvirt.virt_type
+
+        for guest in caps.guests:
+            arch = guest.arch
+            machine_type = \
+                libvirt_utils.get_default_machine_type(arch) or 'q35'
+
+            emulator_bin = guest.emulator
+            if virt_type in guest.domemulator:
+                emulator_bin = guest.domemulator[virt_type]
+
+            # It is expected that each <guest> will have a different
+            # architecture, but it doesn't hurt to add a safety net to
+            # avoid needlessly calling libvirt's API more times than
+            # we need.
+            if machine_type in domain_caps[arch]:
+                continue
+
+            domain_caps[arch][machine_type] = \
+                self._get_domain_capabilities(emulator_bin, arch,
+                                              machine_type, virt_type)
+
+        # NOTE(aspiers): Use a temporary variable to update the
+        # instance variable atomically, otherwise if some API
+        # calls succeeded and then one failed, we might
+        # accidentally memoize a partial result.
+        self._domain_caps = domain_caps
+
+        return self._domain_caps
+
+    def _get_domain_capabilities(self, emulator_bin, arch, machine_type,
+                                 virt_type, flags=0):
+        xmlstr = self.get_connection().getDomainCapabilities(
+            emulator_bin,
+            arch,
+            machine_type,
+            virt_type,
+            flags
+        )
+        LOG.info("Libvirt host hypervisor capabilities for arch=%s and "
+                 "machine_type=%s:\n%s", arch, machine_type, xmlstr)
+        caps = vconfig.LibvirtConfigDomainCaps()
+        caps.parse_str(xmlstr)
+        return caps
 
     def get_driver_type(self):
         """Get hypervisor type.
