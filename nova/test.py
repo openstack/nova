@@ -21,8 +21,7 @@ inline callbacks.
 
 """
 
-import eventlet  # noqa
-eventlet.monkey_patch()
+import nova.monkey_patch  # noqa
 
 import abc
 import copy
