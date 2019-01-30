@@ -49,10 +49,8 @@ from oslo_utils import timeutils
 from oslo_utils import units
 import six
 from six.moves import range
-from six.moves import reload_module
 
 import nova.conf
-from nova import debugger
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 import nova.network
@@ -1291,25 +1289,6 @@ def generate_hostid(host, project_id):
         sha_hash = hashlib.sha224(data)
         return sha_hash.hexdigest()
     return ""
-
-
-def monkey_patch():
-    if debugger.enabled():
-        # turn off thread patching to enable the remote debugger
-        eventlet.monkey_patch(thread=False)
-    elif os.name == 'nt':
-        # for nova-compute running on Windows(Hyper-v)
-        # pipes don't support non-blocking I/O
-        eventlet.monkey_patch(os=False)
-    else:
-        eventlet.monkey_patch()
-
-    # NOTE(rgerganov): oslo.context is storing a global thread-local variable
-    # which keeps the request context for the current thread. If oslo.context
-    # is imported before calling monkey_patch(), then this thread-local won't
-    # be green. To workaround this, reload the module after calling
-    # monkey_patch()
-    reload_module(importutils.import_module('oslo_context.context'))
 
 
 if six.PY2:
