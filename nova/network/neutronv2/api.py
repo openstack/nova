@@ -594,8 +594,8 @@ class API(base_api.NetworkAPI):
 
     def _unbind_ports(self, context, ports,
                       neutron, port_client=None):
-        """Unbind the given ports by clearing their device_id and
-        device_owner.
+        """Unbind the given ports by clearing their device_id,
+        device_owner and dns_name.
 
         :param context: The request context.
         :param ports: list of port IDs.
@@ -606,6 +606,7 @@ class API(base_api.NetworkAPI):
         if port_client is None:
             # Requires admin creds to set port bindings
             port_client = get_client(context, admin=True)
+        networks = {}
         for port_id in ports:
             # A port_id is optional in the NetworkRequest object so check here
             # in case the caller forgot to filter the list.
@@ -616,19 +617,28 @@ class API(base_api.NetworkAPI):
             try:
                 port = self._show_port(context, port_id,
                                        neutron_client=neutron,
-                                       fields=BINDING_PROFILE)
+                                       fields=[BINDING_PROFILE, 'network_id'])
             except exception.PortNotFound:
                 LOG.debug('Unable to show port %s as it no longer '
                           'exists.', port_id)
                 return
             except Exception:
-                # NOTE: In case we can't retrieve the binding:profile assume
-                # that they are empty
+                # NOTE: In case we can't retrieve the binding:profile or
+                # network info assume that they are empty
                 LOG.exception("Unable to get binding:profile for port '%s'",
                               port_id)
                 port_profile = {}
+                network = {}
             else:
                 port_profile = port.get(BINDING_PROFILE, {})
+                net_id = port.get('network_id')
+                if net_id in networks:
+                    network = networks.get(net_id)
+                else:
+                    network = neutron.show_network(net_id,
+                                                   fields=['dns_domain']
+                                                   ).get('network')
+                    networks[net_id] = network
 
             # NOTE: We're doing this to remove the binding information
             # for the physical device but don't want to overwrite the other
@@ -637,9 +647,12 @@ class API(base_api.NetworkAPI):
                 if profile_key in port_profile:
                     del port_profile[profile_key]
             port_req_body['port'][BINDING_PROFILE] = port_profile
-            if self._has_dns_extension():
-                port_req_body['port']['dns_name'] = ''
 
+            # NOTE: For internal DNS integration (network does not have a
+            # dns_domain), or if we cannot retrieve network info, we use the
+            # admin client to reset dns_name.
+            if self._has_dns_extension() and not network.get('dns_domain'):
+                port_req_body['port']['dns_name'] = ''
             try:
                 port_client.update_port(port_id, port_req_body)
             except neutron_client_exc.PortNotFoundClient:
@@ -648,6 +661,10 @@ class API(base_api.NetworkAPI):
             except Exception:
                 LOG.exception("Unable to clear device ID for port '%s'",
                               port_id)
+            # NOTE: For external DNS integration, we use the neutron client
+            # with user's context to reset the dns_name since the recordset is
+            # under user's zone.
+            self._reset_port_dns_name(network, port_id, neutron)
 
     def _validate_requested_port_ids(self, context, instance, neutron,
                                      requested_networks, attach=False):
@@ -1509,6 +1526,23 @@ class API(base_api.NetworkAPI):
                 msg = (_('Instance hostname %(hostname)s is not a valid DNS '
                          'name') % {'hostname': instance.hostname})
                 raise exception.InvalidInput(reason=msg)
+
+    def _reset_port_dns_name(self, network, port_id, neutron_client):
+        """Reset an instance port dns_name attribute to empty when using
+        external DNS service.
+
+        _unbind_ports uses a client with admin context to reset the dns_name if
+        the DNS extension is enabled and network does not have dns_domain set.
+        When external DNS service is enabled, we use this method to make the
+        request with a Neutron client using user's context, so that the DNS
+        record can be found under user's zone and domain.
+        """
+        if self._has_dns_extension() and network.get('dns_domain'):
+            try:
+                port_req_body = {'port': {'dns_name': ''}}
+                neutron_client.update_port(port_id, port_req_body)
+            except neutron_client_exc.NeutronClientException:
+                LOG.exception("Failed to reset dns_name for port %s", port_id)
 
     def _delete_ports(self, neutron, instance, ports, raise_if_fail=False):
         exceptions = []
