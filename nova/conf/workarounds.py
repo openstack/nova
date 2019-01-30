@@ -115,8 +115,7 @@ instances that get out of sync between the hypervisor and the Nova database
 will have to be synchronized manually.
 
 For more information, refer to the bug report:
-
-  https://bugs.launchpad.net/bugs/1444630
+https://bugs.launchpad.net/bugs/1444630
 
 Interdependencies to other options:
 
