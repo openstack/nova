@@ -171,7 +171,7 @@ class ImageCache(imagecache.ImageCacheManager):
                 # change the timestamp on the image so as to reflect the last
                 # time it was used
                 self._update_image_timestamp(img)
-            else:
+            elif CONF.remove_unused_base_images:
                 self._remove_if_old_image(img)
 
     def _update_image_timestamp(self, image):
