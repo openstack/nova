@@ -895,7 +895,7 @@ Possible values:
 
 Related options:
 
-* If ``handle_virt_lifecycle_events`` in workarounds_group is
+* If ``handle_virt_lifecycle_events`` in the ``workarounds`` group is
   false and this option is negative, then instances that get out
   of sync between the hypervisor and the Nova database will have
   to be synchronized manually.
