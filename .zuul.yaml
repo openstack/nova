@@ -252,7 +252,7 @@
         - tempest-multinode-full:
             voting: false
             irrelevant-files: *dsvm-irrelevant-files
-        - tempest-slow:
+        - tempest-slow-py3:
             irrelevant-files: *dsvm-irrelevant-files
         - grenade-py3:
             irrelevant-files: *dsvm-irrelevant-files
@@ -269,7 +269,7 @@
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-full-py3:
             irrelevant-files: *dsvm-irrelevant-files
-        - tempest-slow:
+        - tempest-slow-py3:
             irrelevant-files: *dsvm-irrelevant-files
         - grenade-py3:
             irrelevant-files: *dsvm-irrelevant-files
