@@ -1475,8 +1475,9 @@ class TestUpdateComputeNode(BaseTestCase):
         exp_inv[rc_fields.ResourceClass.DISK_GB]['reserved'] = 1
         self.assertEqual(exp_inv, ptree.data(new_compute.uuid).inventory)
 
-    @mock.patch('nova.objects.ComputeNode.save', new=mock.Mock())
-    def test_update_retry_success(self):
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_resource_change', return_value=False)
+    def test_update_retry_success(self, mock_resource_change):
         self._setup_rt()
         orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self.rt.compute_nodes[_NODENAME] = orig_compute
@@ -1497,9 +1498,12 @@ class TestUpdateComputeNode(BaseTestCase):
         self.rt._update(mock.sentinel.ctx, new_compute)
 
         self.assertEqual(2, ufpt_mock.call_count)
+        # The retry is restricted to _update_to_placement
+        self.assertEqual(1, mock_resource_change.call_count)
 
-    @mock.patch('nova.objects.ComputeNode.save', new=mock.Mock())
-    def test_update_retry_raises(self):
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_resource_change', return_value=False)
+    def test_update_retry_raises(self, mock_resource_change):
         self._setup_rt()
         orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self.rt.compute_nodes[_NODENAME] = orig_compute
@@ -1521,6 +1525,8 @@ class TestUpdateComputeNode(BaseTestCase):
                           self.rt._update, mock.sentinel.ctx, new_compute)
 
         self.assertEqual(4, ufpt_mock.call_count)
+        # The retry is restricted to _update_to_placement
+        self.assertEqual(1, mock_resource_change.call_count)
 
     def test_copy_resources_no_update_allocation_ratios(self):
         """Tests that a ComputeNode object's allocation ratio fields are
