@@ -68,7 +68,8 @@ OpenStack Compute consists of the following areas and their components:
   .. deprecated:: 18.0.0
 
     ``nova-consoleauth`` is deprecated since 18.0.0 (Rocky) and will be removed
-    in an upcoming release.
+    in an upcoming release. See
+    :oslo.config:option:`workarounds.enable_consoleauth` for details.
 
 ``nova-novncproxy`` daemon
   Provides a proxy for accessing running instances through a VNC connection.
