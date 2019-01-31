@@ -19,7 +19,6 @@ import functools
 import inspect
 import itertools
 import math
-import string
 import traceback
 
 import netifaces
@@ -117,6 +116,9 @@ def get_device_name_for_instance(instance, bdms, device):
 
     This method is a wrapper for get_next_device_name that gets the list
     of used devices and the root device from a block device mapping.
+
+    :raises TooManyDiskDevices: if the maxmimum allowed devices to attach to a
+                                single instance is exceeded.
     """
     mappings = block_device.instance_block_mapping(instance, bdms)
     return get_next_device_name(instance, mappings.values(),
@@ -125,7 +127,12 @@ def get_device_name_for_instance(instance, bdms, device):
 
 def default_device_names_for_instance(instance, root_device_name,
                                       *block_device_lists):
-    """Generate missing device names for an instance."""
+    """Generate missing device names for an instance.
+
+
+    :raises TooManyDiskDevices: if the maxmimum allowed devices to attach to a
+                                single instance is exceeded.
+    """
 
     dev_list = [bdm.device_name
                 for bdm in itertools.chain(*block_device_lists)
@@ -143,6 +150,15 @@ def default_device_names_for_instance(instance, root_device_name,
             dev_list.append(dev)
 
 
+def check_max_disk_devices_to_attach(num_devices):
+    maximum = CONF.compute.max_disk_devices_to_attach
+    if maximum < 0:
+        return
+
+    if num_devices > maximum:
+        raise exception.TooManyDiskDevices(maximum=maximum)
+
+
 def get_next_device_name(instance, device_name_list,
                          root_device_name=None, device=None):
     """Validates (or generates) a device name for instance.
@@ -153,6 +169,9 @@ def get_next_device_name(instance, device_name_list,
     name is valid but applicable to a different backend (for example
     /dev/vdc is specified but the backend uses /dev/xvdc), the device
     name will be converted to the appropriate format.
+
+    :raises TooManyDiskDevices: if the maxmimum allowed devices to attach to a
+                                single instance is exceeded.
     """
 
     req_prefix = None
@@ -195,6 +214,8 @@ def get_next_device_name(instance, device_name_list,
 
         if flavor.swap:
             used_letters.add('c')
+
+    check_max_disk_devices_to_attach(len(used_letters) + 1)
 
     if not req_letter:
         req_letter = _get_unused_letter(used_letters)
@@ -261,13 +282,13 @@ def convert_mb_to_ceil_gb(mb_value):
 
 
 def _get_unused_letter(used_letters):
-    doubles = [first + second for second in string.ascii_lowercase
-               for first in string.ascii_lowercase]
-    all_letters = set(list(string.ascii_lowercase) + doubles)
-    letters = list(all_letters - used_letters)
-    # NOTE(vish): prepend ` so all shorter sequences sort first
-    letters.sort(key=lambda x: x.rjust(2, '`'))
-    return letters[0]
+    # Return the first unused device letter
+    index = 0
+    while True:
+        letter = block_device.generate_device_letter(index)
+        if letter not in used_letters:
+            return letter
+        index += 1
 
 
 def get_value_from_system_metadata(instance, key, type, default):

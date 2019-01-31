@@ -48,6 +48,12 @@ When we talk about block device mapping, we usually refer to one of two things
    virt driver code). We will refer to this format as 'Driver BDMs' from now
    on.
 
+.. note::
+
+   The maximum limit on the number of disk devices allowed to attach to
+   a single server is configurable with the option
+   :oslo.config:option:`compute.max_disk_devices_to_attach`.
+
 
 Data format and its history
 ----------------------------

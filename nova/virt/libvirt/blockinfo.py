@@ -153,13 +153,16 @@ def get_dev_count_for_disk_bus(disk_bus):
        Determine how many disks can be supported in
        a single VM for a particular disk bus.
 
-       Returns the number of disks supported.
+       Returns the number of disks supported or None
+       if there is no limit.
     """
 
     if disk_bus == "ide":
         return 4
     else:
-        return 26
+        if CONF.compute.max_disk_devices_to_attach < 0:
+            return None
+        return CONF.compute.max_disk_devices_to_attach
 
 
 def find_disk_dev_for_disk_bus(mapping, bus,
@@ -183,13 +186,16 @@ def find_disk_dev_for_disk_bus(mapping, bus,
         assigned_devices = []
 
     max_dev = get_dev_count_for_disk_bus(bus)
-    devs = range(max_dev)
 
-    for idx in devs:
-        disk_dev = dev_prefix + chr(ord('a') + idx)
+    idx = 0
+    while True:
+        if max_dev is not None and idx >= max_dev:
+            raise exception.TooManyDiskDevices(maximum=max_dev)
+        disk_dev = block_device.generate_device_name(dev_prefix, idx)
         if not has_disk_dev(mapping, disk_dev):
             if disk_dev not in assigned_devices:
                 return disk_dev
+        idx += 1
 
     raise exception.TooManyDiskDevices(maximum=max_dev)
 

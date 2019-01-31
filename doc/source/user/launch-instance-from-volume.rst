@@ -39,6 +39,12 @@ To complete these tasks, use these parameters on the
    :cinder-doc:`Cinder documentation
    <cli/cli-manage-volumes.html#attach-a-volume-to-an-instance>`.
 
+.. note::
+
+   The maximum limit on the number of disk devices allowed to attach to
+   a single server is configurable with the option
+   :oslo.config:option:`compute.max_disk_devices_to_attach`.
+
 .. _Boot_instance_from_image_and_attach_non-bootable_volume:
 
 Boot instance from image and attach non-bootable volume
