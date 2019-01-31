@@ -1,0 +1,10 @@
+---
+upgrade:
+  - The ``nova-manage db online_data_migrations`` command
+    will now fill missing ``virtual_interfaces`` records for instances
+    created before the Newton release. This is related to a fix for
+    https://launchpad.net/bugs/1751923 which makes the
+    _heal_instance_info_cache periodic task in the ``nova-compute``
+    service regenerate an instance network info cache from the current
+    neutron port list, and the VIFs from the database are needed to
+    maintain the port order for the instance.

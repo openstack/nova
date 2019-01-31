@@ -66,6 +66,7 @@ from nova.objects import instance as instance_obj
 from nova.objects import instance_mapping as instance_mapping_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
+from nova.objects import virtual_interface as virtual_interface_obj
 from nova import quota
 from nova import rpc
 from nova.scheduler.client import report
@@ -416,6 +417,8 @@ class DbCommands(object):
         instance_mapping_obj.populate_queued_for_delete,
         # Added in Stein
         compute_node_obj.migrate_empty_ratio,
+        # Added in Stein
+        virtual_interface_obj.fill_virtual_interface_list,
     )
 
     def __init__(self):
