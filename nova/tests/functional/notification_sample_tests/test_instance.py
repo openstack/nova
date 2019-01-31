@@ -334,13 +334,6 @@ class TestInstanceNotificationSample(
             time.sleep(0.5)
         self.fail('Volume swap operation failed.')
 
-    def _wait_until_swap_volume_error(self):
-        for i in range(50):
-            if self.cinder.swap_error:
-                return
-            time.sleep(0.5)
-        self.fail("Timed out waiting for volume swap error to occur.")
-
     def test_instance_action(self):
         # A single test case is used to test most of the instance action
         # notifications to avoid booting up an instance for every action
@@ -1397,13 +1390,9 @@ class TestInstanceNotificationSample(
 
         self._volume_swap_server(server, self.cinder.SWAP_ERR_OLD_VOL,
                                  self.cinder.SWAP_ERR_NEW_VOL)
-        self._wait_until_swap_volume_error()
+        self._wait_for_notification('compute.exception')
 
-        # Seven versioned notifications are generated. We only rely on the
-        # first six because _wait_until_swap_volume_error will return True
-        # after volume_api.unreserve is called on the cinder fixture, and that
-        # happens before the instance fault is handled in the compute manager
-        # which generates the last notification (compute.exception).
+        # Eight versioned notifications are generated.
         # 0. instance-create-start
         # 1. instance-create-end
         # 2. instance-update
