@@ -7166,14 +7166,14 @@ class ComputeTestCase(BaseTestCase,
             return instance_map[instance_uuid]
 
         # NOTE(comstud): Override the stub in setUp()
-        def fake_get_instance_nw_info(cls, context, instance,
-                                      use_slave=False):
+        def fake_get_instance_nw_info(cls, context, instance, **kwargs):
             # Note that this exception gets caught in compute/manager
             # and is ignored.  However, the below increment of
             # 'get_nw_info' won't happen, and you'll get an assert
             # failure checking it below.
             self.assertEqual(call_info['expected_instance']['uuid'],
                              instance['uuid'])
+            self.assertTrue(kwargs['force_refresh'])
             call_info['get_nw_info'] += 1
             if _get_instance_nw_info_raise:
                 raise exception.InstanceNotFound(instance_id=instance['uuid'])

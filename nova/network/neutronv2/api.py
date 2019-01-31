@@ -1692,7 +1692,8 @@ class API(base_api.NetworkAPI):
     def _get_instance_nw_info(self, context, instance, networks=None,
                               port_ids=None, admin_client=None,
                               preexisting_port_ids=None,
-                              refresh_vif_id=None, **kwargs):
+                              refresh_vif_id=None, force_refresh=False,
+                              **kwargs):
         # NOTE(danms): This is an inner method intended to be called
         # by other code that updates instance nwinfo. It *must* be
         # called with the refresh_cache-%(instance_uuid) lock held!
@@ -1704,12 +1705,17 @@ class API(base_api.NetworkAPI):
         nw_info = self._build_network_info_model(context, instance, networks,
                                                  port_ids, admin_client,
                                                  preexisting_port_ids,
-                                                 refresh_vif_id)
+                                                 refresh_vif_id,
+                                                 force_refresh=force_refresh)
         return network_model.NetworkInfo.hydrate(nw_info)
 
     def _gather_port_ids_and_networks(self, context, instance, networks=None,
                                       port_ids=None, neutron=None):
-        """Return an instance's complete list of port_ids and networks."""
+        """Return an instance's complete list of port_ids and networks.
+
+        The results are based on the instance info_cache in the nova db, not
+        the instance's current list of ports in neutron.
+        """
 
         if ((networks is None and port_ids is not None) or
             (port_ids is None and networks is not None)):
@@ -2415,7 +2421,8 @@ class API(base_api.NetworkAPI):
         return port['device_id']
 
     def get_vifs_by_instance(self, context, instance):
-        raise NotImplementedError()
+        return objects.VirtualInterfaceList.get_by_instance_uuid(context,
+                                                                 instance.uuid)
 
     def get_vif_by_mac_address(self, context, mac_address):
         raise NotImplementedError()
@@ -2808,7 +2815,7 @@ class API(base_api.NetworkAPI):
     def _build_network_info_model(self, context, instance, networks=None,
                                   port_ids=None, admin_client=None,
                                   preexisting_port_ids=None,
-                                  refresh_vif_id=None):
+                                  refresh_vif_id=None, force_refresh=False):
         """Return list of ordered VIFs attached to instance.
 
         :param context: Request context.
@@ -2830,6 +2837,10 @@ class API(base_api.NetworkAPI):
                         cache rather than the entire cache. This can be
                         triggered via a "network-changed" server external event
                         from Neutron.
+        :param force_refresh: If ``networks`` and ``port_ids`` are both None,
+                        by default the instance.info_cache will be used to
+                        populate the network info. Pass ``True`` to force
+                        collection of ports and networks from neutron directly.
         """
 
         search_opts = {'tenant_id': instance.project_id,
@@ -2901,11 +2912,28 @@ class API(base_api.NetworkAPI):
                 return nw_info
             # else there is no existing cache and we need to build it
 
+        # Determine if we're doing a full refresh (_heal_instance_info_cache)
+        # or if we are refreshing because we have attached/detached a port.
+        # TODO(mriedem); we should leverage refresh_vif_id in the latter case
+        # since we are unnecessarily rebuilding the entire cache for one port
         nw_info_refresh = networks is None and port_ids is None
-        networks, port_ids = self._gather_port_ids_and_networks(
-                context, instance, networks, port_ids, client)
-        nw_info = network_model.NetworkInfo()
+        if nw_info_refresh and force_refresh:
+            # Use the current set of ports from neutron rather than the cache.
+            port_ids = self._get_ordered_port_list(context, instance,
+                                                   current_neutron_ports)
+            net_ids = [current_neutron_port_map.get(port_id).get('network_id')
+                       for port_id in port_ids]
 
+            # This is copied from _gather_port_ids_and_networks.
+            networks = self._get_available_networks(
+                context, instance.project_id, net_ids, client)
+        else:
+            # We are refreshing the full cache using the existing cache rather
+            # than what is currently in neutron.
+            networks, port_ids = self._gather_port_ids_and_networks(
+                    context, instance, networks, port_ids, client)
+
+        nw_info = network_model.NetworkInfo()
         for port_id in port_ids:
             current_neutron_port = current_neutron_port_map.get(port_id)
             if current_neutron_port:
@@ -2920,6 +2948,43 @@ class API(base_api.NetworkAPI):
                          instance=instance)
 
         return nw_info
+
+    def _get_ordered_port_list(self, context, instance, current_neutron_ports):
+        """Returns ordered port list using nova virtual_interface data."""
+
+        # a dict, keyed by port UUID, of the port's "index"
+        # so that we can order the returned port UUIDs by the
+        # original insertion order followed by any newly-attached
+        # ports
+        port_uuid_to_index_map = {}
+        port_order_list = []
+        ports_without_order = []
+
+        # Get set of ports from nova vifs
+        vifs = self.get_vifs_by_instance(context, instance)
+        for port in current_neutron_ports:
+            # NOTE(mjozefcz): For each port check if we have its index from
+            # nova virtual_interfaces objects. If not - it seems
+            # to be a new port - add it at the end of list.
+
+            # Find port index if it was attached before.
+            for vif in vifs:
+                if vif.uuid == port['id']:
+                    port_uuid_to_index_map[port['id']] = vif.id
+                    break
+
+            if port['id'] not in port_uuid_to_index_map:
+                # Assume that it's new port and add it to the end of port list.
+                ports_without_order.append(port['id'])
+
+        # Lets sort created port order_list by given index.
+        port_order_list = sorted(port_uuid_to_index_map,
+                                 key=lambda k: port_uuid_to_index_map[k])
+
+        # Add ports without order to the end of list
+        port_order_list.extend(ports_without_order)
+
+        return port_order_list
 
     def _get_subnets_from_port(self, context, port, client=None):
         """Return the subnets for a given port."""
