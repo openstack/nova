@@ -91,9 +91,6 @@ class TestParseArgs(test.NoDBTestCase):
         m = mock.patch('nova.db.sqlalchemy.api.configure')
         self.nova_db_config_mock = m.start()
         self.addCleanup(self.nova_db_config_mock.stop)
-        m = mock.patch('nova.api.openstack.placement.db_api.configure')
-        self.placement_db_config_mock = m.start()
-        self.addCleanup(self.placement_db_config_mock.stop)
 
     @mock.patch.object(config.log, 'register_options')
     def test_parse_args_glance_debug_false(self, register_options):
@@ -101,7 +98,6 @@ class TestParseArgs(test.NoDBTestCase):
         config.parse_args([], configure_db=False, init_rpc=False)
         self.assertIn('glanceclient=WARN', config.CONF.default_log_levels)
         self.nova_db_config_mock.assert_not_called()
-        self.placement_db_config_mock.assert_not_called()
 
     @mock.patch.object(config.log, 'register_options')
     def test_parse_args_glance_debug_true(self, register_options):
@@ -109,4 +105,3 @@ class TestParseArgs(test.NoDBTestCase):
         config.parse_args([], configure_db=True, init_rpc=False)
         self.assertIn('glanceclient=DEBUG', config.CONF.default_log_levels)
         self.nova_db_config_mock.assert_called_once_with(config.CONF)
-        self.placement_db_config_mock.assert_called_once_with(config.CONF)
