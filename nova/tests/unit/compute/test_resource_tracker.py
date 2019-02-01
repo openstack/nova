@@ -1313,11 +1313,7 @@ class TestUpdateComputeNode(BaseTestCase):
         self.rt._update(mock.sentinel.ctx, new_compute)
         self.assertFalse(save_mock.called)
         # Even the compute node is not updated, get_inventory still got called.
-        # And update_compute_node() is also called when get_inventory() is not
-        # implemented.
         self.driver_mock.get_inventory.assert_called_once_with(_NODENAME)
-        ucn_mock = self.sched_client_mock.update_compute_node
-        ucn_mock.assert_called_once_with(mock.sentinel.ctx, new_compute)
 
     @mock.patch('nova.objects.ComputeNode.save')
     def test_existing_compute_node_updated_diff_updated_at(self, save_mock):
@@ -1362,10 +1358,8 @@ class TestUpdateComputeNode(BaseTestCase):
         self.rt._update(mock.sentinel.ctx, new_compute)
         save_mock.assert_called_once_with()
         # The get_inventory() is not implemented, it shouldn't call
-        # _normalize_inventory_from_cn_obj but call update_compute_node().
-        self.assertFalse(norm_mock.called)
-        ucn_mock = self.sched_client_mock.update_compute_node
-        ucn_mock.assert_called_once_with(mock.sentinel.ctx, new_compute)
+        # _normalize_inventory_from_cn_obj
+        norm_mock.assert_not_called()
 
     @mock.patch('nova.compute.resource_tracker.'
                 '_normalize_inventory_from_cn_obj')
@@ -1374,10 +1368,7 @@ class TestUpdateComputeNode(BaseTestCase):
             norm_mock):
         """The get_inventory() virt driver method is only implemented for some
         virt drivers. This method returns inventory information for a
-        node/provider in a way that the placement API better understands, and
-        if this method doesn't raise a NotImplementedError, this triggers
-        _update() to call the set_inventory_for_provider() method of the
-        reporting client instead of the update_compute_node() method.
+        node/provider in a way that the placement API better understands.
         """
         self._setup_rt()
 
@@ -1393,17 +1384,9 @@ class TestUpdateComputeNode(BaseTestCase):
         new_compute = orig_compute.obj_clone()
         new_compute.local_gb = 210000
 
-        ucn_mock = self.sched_client_mock.update_compute_node
-        sifp_mock = self.sched_client_mock.set_inventory_for_provider
         self.rt._update(mock.sentinel.ctx, new_compute)
         save_mock.assert_called_once_with()
-        sifp_mock.assert_called_once_with(
-            mock.sentinel.ctx,
-            new_compute.uuid,
-            new_compute.hypervisor_hostname,
-            mock.sentinel.inv_data,
-        )
-        self.assertFalse(ucn_mock.called)
+        norm_mock.assert_called_once_with(mock.sentinel.inv_data, new_compute)
 
     @mock.patch('nova.objects.ComputeNode.save')
     def test_existing_node_update_provider_tree_implemented(self, save_mock):
@@ -1411,9 +1394,10 @@ class TestUpdateComputeNode(BaseTestCase):
         for some virt drivers. This method returns inventory, trait, and
         aggregate information for resource providers in a tree associated with
         the compute node.  If this method doesn't raise a NotImplementedError,
-        it triggers _update() to call the update_from_provider_tree() method of
-        the reporting client instead of set_inventory_for_provider() (old) or
-        update_compute_node() (older).
+        it triggers _update() to try get_inventory() and then
+        compute_node_to_inventory_dict() to produce the inventory data with
+        which to call the update_from_provider_tree() method of the reporting
+        client instead.
         """
         fake_inv = {
             rc_fields.ResourceClass.VCPU: {
@@ -1476,8 +1460,7 @@ class TestUpdateComputeNode(BaseTestCase):
             ptree, new_compute.hypervisor_hostname)
         rc_mock.update_from_provider_tree.assert_called_once_with(
             mock.sentinel.ctx, ptree, allocations=None)
-        self.sched_client_mock.update_compute_node.assert_not_called()
-        self.sched_client_mock.set_inventory_for_provider.assert_not_called()
+        self.driver_mock.get_inventory.assert_not_called()
         exp_inv = copy.deepcopy(fake_inv)
         # These ratios and reserved amounts come from fake_upt
         exp_inv[rc_fields.ResourceClass.VCPU]['allocation_ratio'] = 16.0
