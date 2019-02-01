@@ -245,7 +245,7 @@ def _nova_to_osvif_network(network):
     return netobj
 
 
-def _get_vif_instance(vif, cls, **kwargs):
+def _get_vif_instance(vif, cls, plugin, **kwargs):
     """Instantiate an os-vif VIF instance
 
     :param vif: the nova.network.model.VIF instance
@@ -261,6 +261,7 @@ def _get_vif_instance(vif, cls, **kwargs):
         has_traffic_filtering=vif.is_neutron_filtering_enabled(),
         preserve_on_delete=vif['preserve_on_delete'],
         active=vif['active'],
+        plugin=plugin,
         **kwargs)
 
 
