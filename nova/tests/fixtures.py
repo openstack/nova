@@ -37,6 +37,7 @@ from oslo_privsep import daemon as privsep_daemon
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
 from requests import adapters
+from sqlalchemy import exc as sqla_exc
 from wsgi_intercept import interceptor
 
 from nova.api.openstack.compute import tenant_networks
@@ -835,6 +836,12 @@ class WarningsFixture(fixtures.Fixture):
             message="Cannot convert <oslo_db.sqlalchemy.enginefacade"
                     "._Default object at ",
             category=UserWarning)
+
+        # TODO(mriedem): Change (or remove) this SAWarning to an error once
+        # https://bugs.launchpad.net/oslo.db/+bug/1814199 is fixed.
+        warnings.filterwarnings(
+            'ignore', message='Evaluating non-mapped column expression',
+            category=sqla_exc.SAWarning)
 
         self.addCleanup(warnings.resetwarnings)
 
