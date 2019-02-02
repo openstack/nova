@@ -472,6 +472,15 @@ class API(base_api.NetworkAPI):
 
         return nets
 
+    def _cleanup_created_port(self, port_client, port_id, instance):
+        try:
+            port_client.delete_port(port_id)
+        except neutron_client_exc.NeutronClientException:
+            LOG.exception(
+                'Failed to delete port %(port_id)s while cleaning up after an '
+                'error.', {'port_id': port_id},
+                instance=instance)
+
     def _create_port_minimal(self, port_client, instance, network_id,
                              fixed_ip=None, security_group_ids=None):
         """Attempts to create a port for the instance on the given network.
@@ -487,6 +496,8 @@ class API(base_api.NetworkAPI):
         :raises NoMoreFixedIps: If neutron fails with
             IpAddressGenerationFailure error.
         :raises: PortBindingFailed: If port binding failed.
+        :raises NetworksWithQoSPolicyNotSupported: if the created port has
+                resource request.
         """
         # Set the device_id so it's clear who this port was created for,
         # and to stop other instances trying to use it
@@ -505,6 +516,19 @@ class API(base_api.NetworkAPI):
 
             port = port_response['port']
             port_id = port['id']
+
+            # NOTE(gibi): Checking if the created port has resource request as
+            # such ports are currently not supported as they would at least
+            # need resource allocation manipulation in placement but might also
+            # need a new scheduling if resource on this host is not available.
+            if port.get('resource_request', None):
+                self._cleanup_created_port(port_client, port_id, instance)
+                # NOTE(gibi): This limitation regarding server create can be
+                # removed when the port creation is moved to the conductor. But
+                # this code also limits attaching a network that has QoS
+                # minimum bandwidth rule.
+                raise exception.NetworksWithQoSPolicyNotSupported(
+                    instance_uuid=instance.uuid, network_id=network_id)
             try:
                 _ensure_no_port_binding_failure(port)
             except exception.PortBindingFailed:

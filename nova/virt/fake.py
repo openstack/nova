@@ -191,6 +191,12 @@ class FakeDriver(driver.ComputeDriver):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
               block_device_info=None):
+
+        # simulate a real driver triggering the async network allocation as it
+        # might cause an error
+        if network_info:
+            [ip for vif in network_info for ip in vif.fixed_ips()]
+
         uuid = instance.uuid
         state = power_state.RUNNING
         flavor = instance.flavor

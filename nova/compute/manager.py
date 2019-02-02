@@ -2205,7 +2205,8 @@ class ComputeManager(manager.Manager):
         except (exception.VirtualInterfaceCreateException,
                 exception.VirtualInterfaceMacAddressException,
                 exception.FixedIpInvalidOnHost,
-                exception.UnableToAutoAllocateNetwork) as e:
+                exception.UnableToAutoAllocateNetwork,
+                exception.NetworksWithQoSPolicyNotSupported) as e:
             LOG.exception('Failed to allocate network(s)',
                           instance=instance)
             self._notify_about_instance_usage(context, instance,
