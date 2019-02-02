@@ -4077,6 +4077,12 @@ class API:
                       instance=instance)
             new_flavor = current_flavor
         else:
+            if CONF.always_resize_on_same_host:
+                LOG.info('Setting resize to the same host')
+                host_name = instance.host
+                node = (
+                    objects.ComputeNode.get_first_node_by_host_for_old_compat(
+                        context, host_name, use_slave=True))
             new_flavor = flavors.get_flavor_by_flavor_id(
                 flavor_id, read_deleted="no")
             # NOTE(wenping): We use this instead of the 'block_accelerator'
