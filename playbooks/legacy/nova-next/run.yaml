@@ -29,6 +29,12 @@
 
         # Enable TLS between the noVNC proxy & compute nodes; this requires
         # the tls-proxy service to be enabled.
+
+        # Switch off the provider association refresh, which should reduce the
+        # number of placement calls in steady state.
+        # TODO(efried): Due to bug #1802143, nova-cpu.conf gets overwritten
+        # after post-config|$NOVA_CPU_CONF gets effected, so use $NOVA_CONF
+        # instead for now.
         cmd: |
           set -e
           set -x
@@ -37,6 +43,10 @@
           NOVA_USE_SERVICE_TOKEN=True
           NOVA_CONSOLE_PROXY_COMPUTE_TLS=True
           PLACEMENT_DB_ENABLED=True
+
+          [[post-config|$NOVA_CONF]]
+          [compute]
+          resource_provider_association_refresh = 0
 
           EOF
         executable: /bin/bash
