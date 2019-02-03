@@ -432,6 +432,42 @@ class TestUtils(test.NoDBTestCase):
         )
         self.assertEqual(expected_querystring, resources.to_querystring())
 
+    def test_resources_from_request_spec_having_requested_resources(self):
+        flavor = objects.Flavor(
+                vcpus=1,
+                memory_mb=1024,
+                root_gb=10,
+                ephemeral_gb=5,
+                swap=0)
+        rg1 = objects.RequestGroup()
+        rg2 = objects.RequestGroup()
+        reqspec = objects.RequestSpec(flavor=flavor,
+                                      requested_resources=[rg1, rg2])
+        req = utils.resources_from_request_spec(reqspec)
+        self.assertEqual({'MEMORY_MB': 1024, 'DISK_GB': 15, 'VCPU': 1},
+                         req.get_request_group(None).resources)
+        self.assertIs(rg1, req.get_request_group(1))
+        self.assertIs(rg2, req.get_request_group(2))
+
+    def test_resources_from_request_spec_requested_resources_unfilled(self):
+        flavor = objects.Flavor(
+                vcpus=1,
+                memory_mb=1024,
+                root_gb=10,
+                ephemeral_gb=5,
+                swap=0)
+        reqspec = objects.RequestSpec(flavor=flavor)
+        req = utils.resources_from_request_spec(reqspec)
+        self.assertEqual({'MEMORY_MB': 1024, 'DISK_GB': 15, 'VCPU': 1},
+                         req.get_request_group(None).resources)
+        self.assertEqual(1, len(list(req.resource_groups())))
+
+        reqspec = objects.RequestSpec(flavor=flavor, requested_resources=[])
+        req = utils.resources_from_request_spec(reqspec)
+        self.assertEqual({'MEMORY_MB': 1024, 'DISK_GB': 15, 'VCPU': 1},
+                         req.get_request_group(None).resources)
+        self.assertEqual(1, len(list(req.resource_groups())))
+
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     def test_resources_from_flavor_no_bfv(self, mock_is_bfv):
@@ -667,6 +703,29 @@ class TestUtils(test.NoDBTestCase):
         self.assertResourceRequestsEqual(
             expected, utils.ResourceRequest.from_image_props(image_meta_props,
                                                              req=existing_req))
+
+    def test_resource_request_add_group_inserts_the_group(self):
+        req = utils.ResourceRequest()
+        rg1 = objects.RequestGroup()
+        req.add_request_group(rg1)
+        rg2 = objects.RequestGroup()
+        req.add_request_group(rg2)
+        self.assertIs(rg1, req.get_request_group(1))
+        self.assertIs(rg2, req.get_request_group(2))
+
+    def test_resource_request_add_group_inserts_the_group_implicit_group(self):
+        req = utils.ResourceRequest()
+        # this implicitly creates the unnumbered group
+        unnumbered_rg = req.get_request_group(None)
+
+        rg1 = objects.RequestGroup()
+        req.add_request_group(rg1)
+        rg2 = objects.RequestGroup()
+        req.add_request_group(rg2)
+
+        self.assertIs(rg1, req.get_request_group(1))
+        self.assertIs(rg2, req.get_request_group(2))
+        self.assertIs(unnumbered_rg, req.get_request_group(None))
 
     def test_merge_resources(self):
         resources = {

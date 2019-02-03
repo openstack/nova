@@ -72,6 +72,20 @@ class ResourceRequest(object):
             self._rg_by_id[ident] = rq_grp
         return self._rg_by_id[ident]
 
+    def add_request_group(self, request_group):
+        """Inserts the existing group with a unique integer id
+
+        The groups coming from the flavor can have arbitrary ids but every id
+        is an integer. So this function can ensure unique ids by using bigger
+        ids than the maximum of existing ids.
+
+        :param request_group: the RequestGroup to be added
+        """
+        # NOTE(gibi) [0] just here to always have a defined maximum
+        group_idents = [0] + [int(ident) for ident in self._rg_by_id if ident]
+        ident = max(group_idents) + 1
+        self._rg_by_id[ident] = request_group
+
     def _add_resource(self, groupid, rclass, amount):
         # Validate the class.
         if not (rclass.startswith(fields.ResourceClass.CUSTOM_NAMESPACE) or
@@ -453,6 +467,13 @@ def resources_from_request_spec(spec_obj):
     # Add the (remaining) items from the spec_resources to the sharing group
     for rclass, amount in spec_resources.items():
         res_req.get_request_group(None).resources[rclass] = amount
+
+    requested_resources = (spec_obj.requested_resources
+                           if 'requested_resources' in spec_obj
+                              and spec_obj.requested_resources
+                           else [])
+    for group in requested_resources:
+        res_req.add_request_group(group)
 
     if 'requested_destination' in spec_obj:
         destination = spec_obj.requested_destination
