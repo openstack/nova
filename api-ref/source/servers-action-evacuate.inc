@@ -11,6 +11,10 @@ Evacuates a server from a failed host to a new host.
 - In the request body, if ``onSharedStorage`` is set, then do not set ``adminPass``.
 - The target host should not be the same as the instance host.
 
+Starting from API version 2.68, the ``force`` parameter is no longer accepted
+as this could not be meaningfully supported by servers with complex resource
+allocations.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),

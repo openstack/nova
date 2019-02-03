@@ -68,3 +68,7 @@ migrate_live_v2_25['properties']['os-migrateLive']['required'] = (
 migrate_live_v2_30 = copy.deepcopy(migrate_live_v2_25)
 migrate_live_v2_30['properties']['os-migrateLive']['properties'][
     'force'] = parameter_types.boolean
+
+# v2.68 removes the 'force' parameter added in v2.30, meaning it is identical
+# to v2.25
+migrate_live_v2_68 = copy.deepcopy(migrate_live_v2_25)

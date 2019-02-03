@@ -137,6 +137,10 @@ Nova responds immediately, and no pre-live-migration checks are returned.
 The instance will not immediately change state to ``ERROR``, if a failure of
 the live-migration checks occurs.
 
+Starting from API version 2.68, the ``force`` parameter is no longer accepted
+as this could not be meaningfully supported by servers with complex resource
+allocations.
+
 Normal response codes: 202
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403)

@@ -84,7 +84,8 @@ class MigrateServerController(wsgi.Controller):
     @wsgi.action('os-migrateLive')
     @validation.schema(migrate_server.migrate_live, "2.0", "2.24")
     @validation.schema(migrate_server.migrate_live_v2_25, "2.25", "2.29")
-    @validation.schema(migrate_server.migrate_live_v2_30, "2.30")
+    @validation.schema(migrate_server.migrate_live_v2_30, "2.30", "2.67")
+    @validation.schema(migrate_server.migrate_live_v2_68, "2.68")
     def _migrate_live(self, req, id, body):
         """Permit admins to (live) migrate a server to a new host."""
         context = req.environ["nova.context"]

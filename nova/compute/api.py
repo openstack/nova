@@ -4659,6 +4659,8 @@ class API(base.Base):
             source=fields_obj.NotificationSource.API)
 
         # NOTE(sbauza): Force is a boolean by the new related API version
+        # TODO(stephenfin): Any reason we can't use 'not force' here to handle
+        # the pre-v2.29 API microversion, which wouldn't set force
         if force is False and host:
             nodes = objects.ComputeNodeList.get_all_by_host(context, host)
             # NOTE(sbauza): Unset the host to make sure we call the scheduler

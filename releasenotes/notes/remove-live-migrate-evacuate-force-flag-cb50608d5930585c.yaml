@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    It is no longer possible to force server live migrations or evacuations
+    to a specific destination host starting with API microversion 2.68.
+    This is because it is not possible to support these requests for servers
+    with complex resource allocations. It is still possible to request a
+    destination host but it will be validated by the scheduler.

@@ -2450,6 +2450,9 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
 
+        # the ability to force evacuate a server is removed entirely in 2.68
+        self.api.microversion = '2.67'
+
         server = self._boot_and_check_allocations(
             self.flavor1, source_hostname)
 
@@ -2513,6 +2516,29 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
+    def test_evacuate_forced_host_v268(self):
+        """Evacuating a server with a forced host was removed in API
+        microversion 2.68. This test ensures that the request is rejected.
+        """
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        # evacuate the server and force the destination host which bypasses
+        # the scheduler
+        post = {
+            'evacuate': {
+                'host': dest_hostname,
+                'force': True
+            }
+        }
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_action,
+                               server['id'], post)
+        self.assertIn("'force' was unexpected", six.text_type(ex))
+
     # NOTE(gibi): there is a similar test in SchedulerOnlyChecksTargetTest but
     # we want this test here as well because ServerMovingTest is a parent class
     # of multiple test classes that run this test case with different compute
@@ -2542,7 +2568,6 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         post = {
             'evacuate': {
                 'host': dest_hostname,
-                'force': False
             }
         }
         self.api.post_server_action(server['id'], post)
@@ -2863,8 +2888,15 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
         dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
 
+        # the ability to force live migrate a server is removed entirely in
+        # 2.68
+        self.api.microversion = '2.67'
+
         server = self._boot_and_check_allocations(
             self.flavor1, source_hostname)
+
+        # live migrate the server and force the destination host which bypasses
+        # the scheduler
         post = {
             'os-migrateLive': {
                 'host': dest_hostname,
@@ -2893,6 +2925,31 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
                                            dest_rp_uuid)
 
         self._delete_and_check_allocations(server)
+
+    def test_live_migrate_forced_v268(self):
+        """Live migrating a server with a forced host was removed in API
+        microversion 2.68. This test ensures that the request is rejected.
+        """
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        # live migrate the server and force the destination host which bypasses
+        # the scheduler
+        post = {
+            'os-migrateLive': {
+                'host': dest_hostname,
+                'block_migration': True,
+                'force': True,
+            }
+        }
+
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_action,
+                               server['id'], post)
+        self.assertIn("'force' was unexpected", six.text_type(ex))
 
     def test_live_migrate(self):
         source_hostname = self.compute1.host
@@ -3010,6 +3067,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         dest_hostname = self.compute2.host
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
         dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        # the ability to force live migrate a server is removed entirely in
+        # 2.68
+        self.api.microversion = '2.67'
 
         server = self._boot_and_check_allocations(
             self.flavor1, source_hostname)
@@ -4769,6 +4830,10 @@ class ConsumerGenerationConflictTest(
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
 
+        # the ability to force live migrate a server is removed entirely in
+        # 2.68
+        self.api.microversion = '2.67'
+
         server = self._boot_and_check_allocations(
             self.flavor, source_hostname)
 
@@ -4809,6 +4874,10 @@ class ConsumerGenerationConflictTest(
         dest_hostname = self.compute2.host
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
         dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        # the ability to force live migrate a server is removed entirely in
+        # 2.68
+        self.api.microversion = '2.67'
 
         server = self._boot_and_check_allocations(
             self.flavor, source_hostname)
@@ -4893,6 +4962,9 @@ class ConsumerGenerationConflictTest(
     def _test_evacuate_fails_allocating_on_dest_host(self, force):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
+
+        # the ability to force evacuate a server is removed entirely in 2.68
+        self.api.microversion = '2.67'
 
         server = self._boot_and_check_allocations(
             self.flavor, source_hostname)
@@ -5072,6 +5144,10 @@ class ServerMovingTestsWithNestedResourceRequests(
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
         dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
 
+        # the ability to force live migrate a server is removed entirely in
+        # 2.68
+        self.api.microversion = '2.67'
+
         server = self._boot_and_check_allocations(
             self.flavor1, source_hostname)
         post = {
@@ -5115,6 +5191,9 @@ class ServerMovingTestsWithNestedResourceRequests(
 
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
+
+        # the ability to force evacuate a server is removed entirely in 2.68
+        self.api.microversion = '2.67'
 
         server = self._boot_and_check_allocations(
             self.flavor1, source_hostname)
@@ -5213,6 +5292,10 @@ class ServerMovingTestsFromFlatToNested(
         # CUSTOM_MAGIC inventory to the root compute RP
         orig_update_provider_tree = fake.MediumFakeDriver.update_provider_tree
 
+        # the ability to force live migrate a server is removed entirely in
+        # 2.68
+        self.api.microversion = '2.67'
+
         def stub_update_provider_tree(self, provider_tree, nodename,
                                       allocations=None):
             # do the regular inventory update
@@ -5292,6 +5375,9 @@ class ServerMovingTestsFromFlatToNested(
         # first compute will start with the flat RP tree but we add
         # CUSTOM_MAGIC inventory to the root compute RP
         orig_update_provider_tree = fake.MediumFakeDriver.update_provider_tree
+
+        # the ability to force evacuate a server is removed entirely in 2.68
+        self.api.microversion = '2.67'
 
         def stub_update_provider_tree(self, provider_tree, nodename,
                                       allocations=None):

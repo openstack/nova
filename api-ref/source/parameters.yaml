@@ -3143,6 +3143,7 @@ force_evacuate:
   required: false
   type: boolean
   min_version: 2.29
+  max_version: 2.67
 force_live_migrate:
   description: |
     Force a live-migration by not verifying the provided destination host by
@@ -3156,6 +3157,7 @@ force_live_migrate:
   required: false
   type: boolean
   min_version: 2.30
+  max_version: 2.67
 force_migration_complete:
   description: |
     The action to force an in-progress live migration to complete.

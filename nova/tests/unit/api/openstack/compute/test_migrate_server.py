@@ -372,13 +372,13 @@ class MigrateServerTestsV230(MigrateServerTestsV225):
 
     def _test_live_migrate(self, force=False):
         if force is True:
-            litteral_force = 'true'
+            literal_force = 'true'
         else:
-            litteral_force = 'false'
+            literal_force = 'false'
         method_translations = {'_migrate_live': 'live_migrate'}
         body_map = {'_migrate_live': {'os-migrateLive': {'host': 'hostname',
                                       'block_migration': 'auto',
-                                      'force': litteral_force}}}
+                                      'force': literal_force}}}
         args_map = {'_migrate_live': ((None, None, 'hostname', force,
                                        self.async_), {})}
         self._test_actions(['_migrate_live'], body_map=body_map,
@@ -600,6 +600,34 @@ class MigrateServerTestsV256(MigrateServerTestsV234):
     def test_migrate_to_same_host(self):
         exc_info = exception.CannotMigrateToSameHost()
         self._test_migrate_exception(exc_info, webob.exc.HTTPBadRequest)
+
+
+class MigrateServerTestsV268(MigrateServerTestsV256):
+    force = False
+
+    def setUp(self):
+        super(MigrateServerTestsV268, self).setUp()
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.68')
+
+    def test_live_migrate(self):
+        method_translations = {'_migrate_live': 'live_migrate'}
+        body_map = {'_migrate_live': {'os-migrateLive': {'host': 'hostname',
+                                      'block_migration': 'auto'}}}
+        args_map = {'_migrate_live': ((None, None, 'hostname', False,
+                                       self.async_), {})}
+        self._test_actions(['_migrate_live'], body_map=body_map,
+                           method_translations=method_translations,
+                           args_map=args_map)
+
+    def test_live_migrate_with_forced_host(self):
+        body = {'os-migrateLive': {'host': 'hostname',
+                                   'block_migration': 'auto',
+                                   'force': 'true'}}
+        ex = self.assertRaises(self.validation_error,
+                               self.controller._migrate_live,
+                               self.req, fakes.FAKE_UUID, body=body)
+        self.assertIn('force', six.text_type(ex))
 
 
 class MigrateServerPolicyEnforcementV21(test.NoDBTestCase):
