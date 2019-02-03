@@ -2846,8 +2846,9 @@ class TestLiveMigration(BaseTestCase):
             mock.patch.object(objects.Instance, 'save'),
             mock.patch.object(self.rt, '_update'),
             mock.patch.object(self.rt.pci_tracker, 'claim_instance'),
+            mock.patch.object(self.rt, '_update_usage_from_migration')
         ) as (mock_from_instance, mock_migration_save, mock_instance_save,
-              mock_update, mock_pci_claim_instance):
+              mock_update, mock_pci_claim_instance, mock_update_usage):
             claim = self.rt.live_migration_claim(ctxt, instance, _NODENAME,
                                                  migration, limits=None)
             self.assertEqual(42, claim.migration.id)
@@ -2859,23 +2860,11 @@ class TestLiveMigration(BaseTestCase):
             mock_update.assert_called_with(
                 mock.ANY, _COMPUTE_NODE_FIXTURES[0])
             mock_pci_claim_instance.assert_not_called()
+            mock_update_usage.assert_called_with(ctxt, instance, migration,
+                                                 _NODENAME)
 
 
 class TestUpdateUsageFromMigration(test.NoDBTestCase):
-    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
-                '_get_instance_type')
-    def test_unsupported_move_type(self, get_mock):
-        rt = resource_tracker.ResourceTracker(_HOSTNAME,
-                                              mock.sentinel.virt_driver)
-        migration = objects.Migration(migration_type='live-migration')
-        # For same-node migrations, the RT's _get_instance_type() method is
-        # called if there is a migration that is trackable. Here, we want to
-        # ensure that this method isn't called for live-migration migrations.
-        rt._update_usage_from_migration(mock.sentinel.ctx,
-                                        mock.sentinel.instance,
-                                        migration,
-                                        _NODENAME)
-        self.assertFalse(get_mock.called)
 
     def test_missing_old_flavor_outbound_resize(self):
         """Tests the case that an instance is not being tracked on the source
@@ -3038,6 +3027,25 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
             mock_update_usage.assert_called_once_with(
                 mock.sentinel.ctx, instance, migration, _NODENAME)
             mock_update_usage.reset_mock()
+
+    @mock.patch('nova.objects.migration.Migration.save')
+    @mock.patch.object(resource_tracker.ResourceTracker,
+                       '_update_usage_from_migration')
+    def test_live_migrating_state(self, mock_update_usage, mock_save):
+        self._setup_rt()
+        migration_context = objects.MigrationContext(migration_id=1)
+        instance = objects.Instance(
+            vm_state=vm_states.ACTIVE, task_state=task_states.MIGRATING,
+            migration_context=migration_context)
+        migration = objects.Migration(
+            source_compute='other-host', source_node='other-node',
+            dest_compute=_HOSTNAME, dest_node=_NODENAME,
+            instance_uuid=uuids.instance, id=1, instance=instance,
+            migration_type='live-migration')
+        self.rt._update_usage_from_migrations(
+            mock.sentinel.ctx, [migration], _NODENAME)
+        mock_update_usage.assert_called_once_with(
+            mock.sentinel.ctx, instance, migration, _NODENAME)
 
 
 class TestUpdateUsageFromInstance(BaseTestCase):
@@ -3461,6 +3469,38 @@ class TestInstanceInResizeState(test.NoDBTestCase):
         self.assertTrue(resource_tracker._instance_in_resize_state(instance))
 
 
+class TestInstanceIsLiveMigrating(test.NoDBTestCase):
+    def test_migrating_active(self):
+        instance = objects.Instance(vm_state=vm_states.ACTIVE,
+                                    task_state=task_states.MIGRATING)
+        self.assertTrue(
+            resource_tracker._instance_is_live_migrating(instance))
+
+    def test_migrating_paused(self):
+        instance = objects.Instance(vm_state=vm_states.PAUSED,
+                                    task_state=task_states.MIGRATING)
+        self.assertTrue(
+            resource_tracker._instance_is_live_migrating(instance))
+
+    def test_migrating_other(self):
+        instance = objects.Instance(vm_state=vm_states.STOPPED,
+                                    task_state=task_states.MIGRATING)
+        self.assertFalse(
+            resource_tracker._instance_is_live_migrating(instance))
+
+    def test_non_migrating_active(self):
+        instance = objects.Instance(vm_state=vm_states.ACTIVE,
+                                    task_state=None)
+        self.assertFalse(
+            resource_tracker._instance_is_live_migrating(instance))
+
+    def test_non_migrating_paused(self):
+        instance = objects.Instance(vm_state=vm_states.PAUSED,
+                                    task_state=None)
+        self.assertFalse(
+            resource_tracker._instance_is_live_migrating(instance))
+
+
 class TestSetInstanceHostAndNode(BaseTestCase):
 
     def setUp(self):
@@ -3577,22 +3617,6 @@ class ComputeMonitorTestCase(BaseTestCase):
                 self.assertEqual(payload[p_key], msg.payload[p_key])
 
         self.assertEqual(metrics, expected_metrics)
-
-
-class TestIsTrackableMigration(test.NoDBTestCase):
-    def test_true(self):
-        mig = objects.Migration()
-        for mig_type in ('resize', 'migration', 'evacuation'):
-            mig.migration_type = mig_type
-
-            self.assertTrue(resource_tracker._is_trackable_migration(mig))
-
-    def test_false(self):
-        mig = objects.Migration()
-        for mig_type in ('live-migration',):
-            mig.migration_type = mig_type
-
-            self.assertFalse(resource_tracker._is_trackable_migration(mig))
 
 
 class OverCommitTestCase(BaseTestCase):

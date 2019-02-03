@@ -9880,6 +9880,34 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          result.obj_to_primitive()['nova_object.data'])
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_create_shared_storage_test_file',
+                       return_value='fake')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_compare_cpu')
+    def test_check_can_live_migrate_dest_numa_lm(
+            self, mock_cpu, mock_test_file):
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell()])
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
+        result = drvr.check_can_live_migrate_destination(
+            self.context, instance_ref, compute_info, compute_info)
+        self.assertTrue(result.dst_supports_numa_live_migration)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_create_shared_storage_test_file',
+                       return_value='fake')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_compare_cpu')
+    def test_check_can_live_migrate_dest_numa_lm_no_instance_numa(
+            self, mock_cpu, mock_test_file):
+        instance_ref = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
+        result = drvr.check_can_live_migrate_destination(
+            self.context, instance_ref, compute_info, compute_info)
+        self.assertNotIn('dst_supports_numa_live_migration', result)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_no_instance_cpu_info(
@@ -10153,8 +10181,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                       is_shared_block_storage=False,
                                       is_shared_instance_path=False,
                                       disk_available_mb=1024,
-                                      exception=None):
+                                      exception=None,
+                                      numa_lm=True):
         instance = objects.Instance(**self.test_instance)
+        if numa_lm:
+            instance.numa_topology = objects.InstanceNUMATopology(cells=[
+                objects.InstanceNUMACell()])
         dest_check_data = objects.LibvirtLiveMigrateData(
             filename='file',
             image_type='default',
@@ -10172,6 +10204,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         else:
             ret = drvr.check_can_live_migrate_source(self.context, instance,
                                                      dest_check_data)
+            if numa_lm:
+                self.assertTrue(ret.src_supports_numa_live_migration)
+            else:
+                self.assertNotIn('src_supports_numa_live_migration', ret)
 
         mock_is_shared.assert_called_once_with(instance, dest_check_data, None)
         mock_check_shared.assert_called_once_with('file', instance)
@@ -10203,6 +10239,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_assert_dest.assert_called_once_with(
             self.context, instance, dest_check_data.disk_available_mb,
             False, None)
+
+    def test_check_can_live_migrate_source_numa_lm(self):
+        self._test_can_live_migrate_source(is_shared_block_storage=True,
+                                           numa_lm=True)
+        self._test_can_live_migrate_source(is_shared_block_storage=True,
+                                           numa_lm=False)
 
     def test_check_can_live_migrate_source_shared_block_storage(self):
         self._test_can_live_migrate_source(is_shared_block_storage=True)

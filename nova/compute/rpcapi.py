@@ -367,6 +367,9 @@ class ComputeAPI(object):
         * 5.2 - Add request_spec parameter for the following: resize_instance,
                 finish_resize, revert_resize, finish_revert_resize,
                 unshelve_instance
+        * 5.3 - Add migration and limits parameters to
+                check_can_live_migrate_destination(), and a new
+                drop_move_claim_at_destination() method
     '''
 
     VERSION_ALIASES = {
@@ -545,16 +548,25 @@ class ComputeAPI(object):
                    instance=instance, diff=diff)
 
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
-                                           block_migration, disk_over_commit):
-        version = '5.0'
+                                           block_migration, disk_over_commit,
+                                           migration, limits):
         client = self.router.client(ctxt)
+        version = '5.3'
+        kwargs = {
+            'instance': instance,
+            'block_migration': block_migration,
+            'disk_over_commit': disk_over_commit,
+            'migration': migration,
+            'limits': limits
+        }
+        if not client.can_send_version(version):
+            kwargs.pop('migration')
+            kwargs.pop('limits')
+            version = '5.0'
         cctxt = client.prepare(server=destination, version=version,
                                call_monitor_timeout=CONF.rpc_response_timeout,
                                timeout=CONF.long_rpc_timeout)
-        return cctxt.call(ctxt, 'check_can_live_migrate_destination',
-                          instance=instance,
-                          block_migration=block_migration,
-                          disk_over_commit=disk_over_commit)
+        return cctxt.call(ctxt, 'check_can_live_migrate_destination', **kwargs)
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         version = '5.0'
@@ -960,6 +972,26 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'rollback_live_migration_at_destination',
                    instance=instance, destroy_disks=destroy_disks,
                    migrate_data=migrate_data)
+
+    def supports_numa_live_migration(self, ctxt):
+        """Returns whether we can send 5.3, needed for NUMA live migration.
+        """
+        client = self.router.client(ctxt)
+        return client.can_send_version('5.3')
+
+    def drop_move_claim_at_destination(self, ctxt, instance, host):
+        """Called by the source of a live migration that's being rolled back.
+        This is a call not because we care about the return value, but because
+        dropping the move claim depends on instance.migration_context being
+        set, and we drop the migration context on the source. Thus, to avoid
+        races, we call the destination synchronously to make sure it's done
+        dropping the move claim before we drop the migration context from the
+        instance.
+        """
+        version = '5.3'
+        client = self.router.client(ctxt)
+        cctxt = client.prepare(server=host, version=version)
+        cctxt.call(ctxt, 'drop_move_claim_at_destination', instance=instance)
 
     def set_admin_password(self, ctxt, instance, new_pass):
         version = '5.0'

@@ -73,13 +73,13 @@ def _instance_in_resize_state(instance):
     return False
 
 
-def _is_trackable_migration(migration):
-    # Only look at resize/migrate migration and evacuation records
-    # NOTE(danms): RT should probably examine live migration
-    # records as well and do something smart. However, ignore
-    # those for now to avoid them being included in below calculations.
-    return migration.migration_type in ('resize', 'migration',
-                                        'evacuation')
+def _instance_is_live_migrating(instance):
+    vm = instance.vm_state
+    task = instance.task_state
+    if task == task_states.MIGRATING and vm in [vm_states.ACTIVE,
+                                                vm_states.PAUSED]:
+        return True
+    return False
 
 
 def _normalize_inventory_from_cn_obj(inv_data, cn):
@@ -1138,9 +1138,6 @@ class ResourceTracker(object):
         """Update usage for a single migration.  The record may
         represent an incoming or outbound migration.
         """
-        if not _is_trackable_migration(migration):
-            return
-
         uuid = migration.instance_uuid
         LOG.info("Updating resource usage from migration %s", migration.uuid,
                  instance_uuid=uuid)
@@ -1238,10 +1235,12 @@ class ResourceTracker(object):
                 LOG.debug('Migration instance not found: %s', e)
                 continue
 
-            # skip migration if instance isn't in a resize state:
-            if not _instance_in_resize_state(instances[uuid]):
-                LOG.warning("Instance not resizing, skipping migration.",
-                            instance_uuid=uuid)
+            # Skip migation if instance is neither in a resize state nor is
+            # live-migrating.
+            if (not _instance_in_resize_state(instances[uuid]) and not
+                    _instance_is_live_migrating(instances[uuid])):
+                LOG.debug('Skipping migration as instance is neither '
+                          'resizing nor live-migrating.', instance_uuid=uuid)
                 continue
 
             # filter to most recently updated migration for each instance:

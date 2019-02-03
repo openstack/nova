@@ -70,6 +70,7 @@ class LiveMigrationTask(base.TaskBase):
         self.migration = migration
         self.source = instance.host
         self.migrate_data = None
+        self.limits = None
 
         self.compute_rpcapi = compute_rpcapi
         self.servicegroup_api = servicegroup_api
@@ -99,7 +100,7 @@ class LiveMigrationTask(base.TaskBase):
             # wants the scheduler to pick a destination host, or a host was
             # specified but is not forcing it, so they want the scheduler
             # filters to run on the specified host, like a scheduler hint.
-            self.destination, dest_node = self._find_destination()
+            self.destination, dest_node, self.limits = self._find_destination()
         else:
             # This is the case that the user specified the 'force' flag when
             # live migrating with a specific destination host so the scheduler
@@ -319,7 +320,8 @@ class LiveMigrationTask(base.TaskBase):
         try:
             self.migrate_data = self.compute_rpcapi.\
                 check_can_live_migrate_destination(self.context, self.instance,
-                    destination, self.block_migration, self.disk_over_commit)
+                    destination, self.block_migration, self.disk_over_commit,
+                    self.migration, self.limits)
         except messaging.MessagingTimeout:
             msg = _("Timeout while checking if we can live migrate to host: "
                     "%s") % destination
@@ -489,7 +491,9 @@ class LiveMigrationTask(base.TaskBase):
                 # those before moving on.
                 self._remove_host_allocations(host, selection.nodename)
                 host = None
-        return selection.service_host, selection.nodename
+        # TODO(artom) We should probably just return the whole selection object
+        # at this point.
+        return (selection.service_host, selection.nodename, selection.limits)
 
     def _remove_host_allocations(self, host, node):
         """Removes instance allocations against the given host from Placement

@@ -6691,7 +6691,9 @@ class ComputeTestCase(BaseTestCase,
         c = context.get_admin_context()
         instance = mock.MagicMock()
         migration = objects.Migration(uuid=uuids.migration)
-        migrate_data = objects.LibvirtLiveMigrateData(migration=migration)
+        migrate_data = objects.LibvirtLiveMigrateData(
+            migration=migration,
+            src_supports_numa_live_migration=True)
         source_bdms = objects.BlockDeviceMappingList()
 
         dest_node = objects.ComputeNode(host='foo', uuid=uuids.dest_node)
@@ -6704,7 +6706,10 @@ class ComputeTestCase(BaseTestCase,
         @mock.patch.object(self.compute, '_revert_allocation')
         @mock.patch.object(self.compute, '_live_migration_cleanup_flags')
         @mock.patch.object(self.compute, 'network_api')
-        def _test(mock_nw_api, mock_lmcf, mock_ra, mock_mig_save, mock_notify):
+        @mock.patch.object(compute_rpcapi.ComputeAPI,
+                           'drop_move_claim_at_destination')
+        def _test(mock_drop_claim, mock_nw_api, mock_lmcf, mock_ra,
+                  mock_mig_save, mock_notify):
             mock_lmcf.return_value = False, False
             if migration_status:
                 self.compute._rollback_live_migration(
@@ -6715,6 +6720,7 @@ class ComputeTestCase(BaseTestCase,
                 self.compute._rollback_live_migration(
                     c, instance, 'foo', migrate_data=migrate_data,
                     source_bdms=source_bdms)
+            mock_drop_claim.assert_called_once_with(c, instance, 'foo')
             mock_notify.assert_has_calls([
                 mock.call(c, instance, self.compute.host,
                           action='live_migration_rollback', phase='start',
