@@ -273,19 +273,21 @@ class NetworkAPI(base.Base):
         """
         raise NotImplementedError()
 
-    def create_resource_requests(self, context, requested_networks):
+    def create_resource_requests(self, context, requested_networks,
+                                 pci_requests=None):
         """Retrieve all information for the networks passed at the time of
         creating the server.
 
         :param context: The request context.
         :param requested_networks: The networks requested for the server.
-        :type requested_networks: nova.objects.RequestedNetworkList
+        :type requested_networks: nova.objects.NetworkRequestList
         :param pci_requests: The list of PCI requests to which additional PCI
-            requests created here will be added.
+                             requests created here will be added.
         :type pci_requests: nova.objects.InstancePCIRequests
 
-        :returns: An instance of ``objects.NetworkMetadata`` for use by the
-            scheduler or None.
+        :returns: A tuple with an instance of ``objects.NetworkMetadata`` for
+                  use by the scheduler or None and a list of RequestGroup
+                  objects representing the resource needs of each request ports
         """
         raise NotImplementedError()
 

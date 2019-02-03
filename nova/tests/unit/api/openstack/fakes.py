@@ -203,7 +203,7 @@ def stub_out_nw_api(test, cls=None, private=None, publics=None):
 
         def create_resource_requests(self, context, requested_networks,
                                      pci_requests):
-            pass
+            return None, []
 
     if cls is None:
         cls = Fake

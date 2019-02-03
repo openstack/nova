@@ -3024,7 +3024,8 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def _test_get_port_vnic_info(self, mock_get_client,
                                  binding_vnic_type,
-                                 expected_vnic_type):
+                                 expected_vnic_type,
+                                 port_resource_request=None):
         api = neutronapi.API()
         self.mox.ResetAll()
         test_port = {
@@ -3035,19 +3036,24 @@ class TestNeutronv2(TestNeutronv2Base):
 
         if binding_vnic_type:
             test_port['port']['binding:vnic_type'] = binding_vnic_type
+        if port_resource_request:
+            test_port['port']['resource_request'] = port_resource_request
 
         mock_get_client.reset_mock()
         mock_client = mock_get_client()
         mock_client.show_port.return_value = test_port
 
-        vnic_type, trusted, network_id = api._get_port_vnic_info(
+        result = api._get_port_vnic_info(
             self.context, mock_client, test_port['port']['id'])
+        vnic_type, trusted, network_id, resource_request = result
 
         mock_client.show_port.assert_called_once_with(test_port['port']['id'],
-            fields=['binding:vnic_type', 'binding:profile', 'network_id'])
+            fields=['binding:vnic_type', 'binding:profile', 'network_id',
+                    'resource_request'])
         self.assertEqual(expected_vnic_type, vnic_type)
         self.assertEqual('net-id', network_id)
         self.assertIsNone(trusted)
+        self.assertEqual(port_resource_request, resource_request)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.MagicMock())
     def test_get_port_vnic_info_1(self, mock_get_client):
@@ -3063,6 +3069,22 @@ class TestNeutronv2(TestNeutronv2Base):
     def test_get_port_vnic_info_3(self, mock_get_client):
         self._test_get_port_vnic_info(mock_get_client, None,
                                       model.VNIC_TYPE_NORMAL)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_get_port_vnic_info_requested_resources(self, mock_get_client):
+        self._test_get_port_vnic_info(
+            mock_get_client, None, model.VNIC_TYPE_NORMAL,
+            port_resource_request={
+                "resources": {
+                    "NET_BW_EGR_KILOBIT_PER_SEC": 6000,
+                    "NET_BW_IGR_KILOBIT_PER_SEC": 6000,
+                     },
+                "required": [
+                    "CUSTOM_PHYSNET_PHYSNET0",
+                    "CUSTOM_VNIC_TYPE_NORMAL"
+                ]
+            }
+        )
 
 
 class TestNeutronv2WithMock(_TestNeutronv2Common):
@@ -3410,14 +3432,17 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         mock_client = mock_get_client()
         mock_client.show_port.return_value = test_port
         mock_client.list_extensions.return_value = test_ext_list
-        vnic_type, trusted, network_id = self.api._get_port_vnic_info(
+        result = self.api._get_port_vnic_info(
             self.context, mock_client, test_port['port']['id'])
+        vnic_type, trusted, network_id, resource_requests = result
 
         mock_client.show_port.assert_called_once_with(test_port['port']['id'],
-            fields=['binding:vnic_type', 'binding:profile', 'network_id'])
+            fields=['binding:vnic_type', 'binding:profile', 'network_id',
+                    'resource_request'])
         self.assertEqual(model.VNIC_TYPE_DIRECT, vnic_type)
         self.assertEqual('net-id', network_id)
         self.assertTrue(trusted)
+        self.assertIsNone(resource_requests)
 
     @mock.patch('nova.network.neutronv2.api.API._show_port')
     def test_deferred_ip_port_immediate_allocation(self, mock_show):
@@ -5194,11 +5219,13 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         pci_requests = objects.InstancePCIRequests()
         api = neutronapi.API()
 
-        network_metadata = api.create_resource_requests(
+        result = api.create_resource_requests(
             self.context, requested_networks, pci_requests)
+        network_metadata, port_resource_requests = result
 
         self.assertFalse(mock_get_client.called)
         self.assertIsNone(network_metadata)
+        self.assertEqual([], port_resource_requests)
 
     @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info')
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
@@ -5214,18 +5241,22 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         pci_requests = objects.InstancePCIRequests()
         api = neutronapi.API()
 
-        network_metadata = api.create_resource_requests(
+        result = api.create_resource_requests(
             self.context, requested_networks, pci_requests)
+        network_metadata, port_resource_requests = result
 
         mock_get_physnet_tunneled_info.assert_not_called()
         self.assertEqual(set(), network_metadata.physnets)
         self.assertFalse(network_metadata.tunneled)
+        self.assertEqual([], port_resource_requests)
 
+    @mock.patch('nova.objects.request_spec.RequestGroup.from_port_request')
     @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info')
     @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
     @mock.patch.object(neutronapi, 'get_client')
     def test_create_resource_requests(self, getclient,
-            mock_get_port_vnic_info, mock_get_physnet_tunneled_info):
+            mock_get_port_vnic_info, mock_get_physnet_tunneled_info,
+            mock_request_spec):
         requested_networks = objects.NetworkRequestList(
             objects = [
                 objects.NetworkRequest(port_id=uuids.portid_1),
@@ -5239,12 +5270,14 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         # _get_port_vnic_info should be called for every NetworkRequest with a
         # port_id attribute (so six times)
         mock_get_port_vnic_info.side_effect = [
-            (model.VNIC_TYPE_DIRECT, None, 'netN'),
-            (model.VNIC_TYPE_NORMAL, None, 'netN'),
-            (model.VNIC_TYPE_MACVTAP, None, 'netN'),
-            (model.VNIC_TYPE_MACVTAP, None, 'netN'),
-            (model.VNIC_TYPE_DIRECT_PHYSICAL, None, 'netN'),
-            (model.VNIC_TYPE_DIRECT, True, 'netN'),
+            (model.VNIC_TYPE_DIRECT, None, 'netN', None),
+            (model.VNIC_TYPE_NORMAL, None, 'netN',
+             mock.sentinel.resource_request1),
+            (model.VNIC_TYPE_MACVTAP, None, 'netN', None),
+            (model.VNIC_TYPE_MACVTAP, None, 'netN', None),
+            (model.VNIC_TYPE_DIRECT_PHYSICAL, None, 'netN', None),
+            (model.VNIC_TYPE_DIRECT, True, 'netN',
+             mock.sentinel.resource_request2),
         ]
         # _get_physnet_tunneled_info should be called for every NetworkRequest
         # (so seven times)
@@ -5255,9 +5288,19 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         ]
         api = neutronapi.API()
 
-        network_metadata = api.create_resource_requests(
-            self.context, requested_networks, pci_requests)
+        mock_request_spec.side_effect = [
+            mock.sentinel.request_group1,
+            mock.sentinel.request_group2,
+        ]
 
+        result = api.create_resource_requests(
+            self.context, requested_networks, pci_requests)
+        network_metadata, port_resource_requests = result
+
+        self.assertEqual([
+                mock.sentinel.request_group1,
+                mock.sentinel.request_group2],
+            port_resource_requests)
         self.assertEqual(5, len(pci_requests.requests))
         has_pci_request_id = [net.pci_request_id is not None for net in
                               requested_networks.objects]
@@ -5279,6 +5322,14 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
             ['physnet1', 'physnet2', 'physnet3', 'physnet4'],
             network_metadata.physnets)
         self.assertTrue(network_metadata.tunneled)
+        mock_request_spec.assert_has_calls([
+            mock.call(
+                context=None,
+                port_resource_request=mock.sentinel.resource_request1),
+            mock.call(
+                context=None,
+                port_resource_request=mock.sentinel.resource_request2),
+        ])
 
     @mock.patch.object(neutronapi, 'get_client')
     def test_associate_floating_ip_conflict(self, mock_get_client):

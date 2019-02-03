@@ -1916,13 +1916,13 @@ class API(base_api.NetworkAPI):
         :param neutron: The Neutron client
         :param port_id: The id of port to be queried
 
-        :return: A tuple of vNIC type, trusted status and network ID. Trusted
-            status only affects SR-IOV ports and will always be None for other
-            port types.
+        :return: A tuple of vNIC type, trusted status, network ID and resource
+                 request of the port if any. Trusted status only affects SR-IOV
+                 ports and will always be None for other port types.
         """
         port = self._show_port(context, port_id, neutron_client=neutron,
                                fields=['binding:vnic_type', BINDING_PROFILE,
-                                       'network_id'])
+                                       'network_id', 'resource_request'])
         network_id = port.get('network_id')
         trusted = None
         vnic_type = port.get('binding:vnic_type',
@@ -1930,7 +1930,12 @@ class API(base_api.NetworkAPI):
         if vnic_type in network_model.VNIC_TYPES_SRIOV:
             trusted = self._get_trusted_mode_from_port(port)
 
-        return vnic_type, trusted, network_id
+        # NOTE(gibi): Get the port resource_request which may or may not be
+        # set depending on neutron configuration, e.g. if QoS rules are
+        # applied to the port/network and the resource_request API extension is
+        # enabled.
+        resource_request = port.get('resource_request', None)
+        return vnic_type, trusted, network_id, resource_request
 
     def create_resource_requests(self, context, requested_networks,
                                  pci_requests=None):
@@ -1939,21 +1944,25 @@ class API(base_api.NetworkAPI):
 
         :param context: The request context.
         :param requested_networks: The networks requested for the server.
-        :type requested_networks: nova.objects.RequestedNetworkList
+        :type requested_networks: nova.objects.NetworkRequestList
         :param pci_requests: The list of PCI requests to which additional PCI
             requests created here will be added.
         :type pci_requests: nova.objects.InstancePCIRequests
 
-        :returns: An instance of ``objects.NetworkMetadata`` for use by the
-            scheduler or None.
+        :returns: A tuple with an instance of ``objects.NetworkMetadata`` for
+                  use by the scheduler or None and a list of RequestGroup
+                  objects representing the resource needs of each requested
+                  port
         """
         if not requested_networks or requested_networks.no_allocate:
-            return None
+            return None, []
 
         physnets = set()
         tunneled = False
 
         neutron = get_client(context, admin=True)
+        resource_requests = []
+
         for request_net in requested_networks:
             physnet = None
             trusted = None
@@ -1962,10 +1971,20 @@ class API(base_api.NetworkAPI):
             pci_request_id = None
 
             if request_net.port_id:
-                vnic_type, trusted, network_id = self._get_port_vnic_info(
+                result = self._get_port_vnic_info(
                     context, neutron, request_net.port_id)
+                vnic_type, trusted, network_id, resource_request = result
                 physnet, tunneled_ = self._get_physnet_tunneled_info(
                     context, neutron, network_id)
+
+                if resource_request:
+                    # NOTE(gibi): explicitly orphan the RequestGroup as we
+                    # never intended to save it to the DB.
+                    resource_requests.append(
+                        objects.RequestGroup.from_port_request(
+                            context=None,
+                            port_resource_request=resource_request))
+
             elif request_net.network_id and not request_net.auto_allocate:
                 network_id = request_net.network_id
                 physnet, tunneled_ = self._get_physnet_tunneled_info(
@@ -2009,7 +2028,8 @@ class API(base_api.NetworkAPI):
             # Add pci_request_id into the requested network
             request_net.pci_request_id = pci_request_id
 
-        return objects.NetworkMetadata(physnets=physnets, tunneled=tunneled)
+        return (objects.NetworkMetadata(physnets=physnets, tunneled=tunneled),
+                resource_requests)
 
     def _can_auto_allocate_network(self, context, neutron):
         """Helper method to determine if we can auto-allocate networks
