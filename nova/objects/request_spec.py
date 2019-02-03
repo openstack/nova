@@ -816,3 +816,35 @@ class RequestGroup(base.NovaObject):
     def __init__(self, context=None, **kwargs):
         super(RequestGroup, self).__init__(context=context, **kwargs)
         self.obj_set_defaults()
+
+    @classmethod
+    def from_port_request(cls, context, port_resource_request):
+        """Init the group from the resource request of a neutron port
+
+        :param context: the request context
+        :param port_resource_request: the resource_request attribute of the
+                                      neutron port
+        For example:
+
+            port_resource_request = {
+                "resources": {
+                    "NET_BW_IGR_KILOBIT_PER_SEC": 1000,
+                    "NET_BW_EGR_KILOBIT_PER_SEC": 1000},
+                "required": ["CUSTOM_PHYSNET_2",
+                             "CUSTOM_VNIC_TYPE_NORMAL"]
+            }
+        """
+
+        # NOTE(gibi): Assumptions:
+        # * a port requests resource from a single provider.
+        # * a port only specifies resources and required traits
+        # NOTE(gibi): Placement rejects allocation candidates where a request
+        # group has traits but no resources specified. This is why resources
+        # are handled as mandatory below but not traits.
+        obj = cls(context=context,
+                  use_same_provider=True,
+                  resources=port_resource_request['resources'],
+                  required_traits=set(port_resource_request.get(
+                      'required', [])))
+        obj.obj_set_defaults()
+        return obj
