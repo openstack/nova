@@ -41,6 +41,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.image import api as image_api
+from nova import network as network_api
 from nova import objects
 from nova.objects import service as service_obj
 from nova.policies import servers as server_policies
@@ -76,6 +77,7 @@ class ServersController(wsgi.Controller):
 
         super(ServersController, self).__init__(**kwargs)
         self.compute_api = compute.API()
+        self.network_api = network_api.API()
 
     @wsgi.expected_errors((400, 403))
     @validation.query_schema(schema_servers.query_params_v266, '2.66')
@@ -805,6 +807,13 @@ class ServersController(wsgi.Controller):
         context.can(server_policies.SERVERS % 'resize',
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})
+
+        if (common.instance_has_port_with_resource_request(
+                    context, instance_id, self.network_api) and not
+                common.supports_port_resource_request_during_move(req)):
+            msg = _("The resize server operation with port having QoS policy "
+                    "is not supported.")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         try:
             self.compute_api.resize(context, instance, flavor_id, **kwargs)

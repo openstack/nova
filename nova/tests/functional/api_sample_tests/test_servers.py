@@ -412,6 +412,7 @@ class _ServersActionsJsonTestMixin(object):
 
 
 class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
+    USE_NEUTRON = True
 
     def test_server_reboot_hard(self):
         uuid = self._post_server()
@@ -462,6 +463,12 @@ class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
         self._test_server_action(uuid, "confirmResize",
                                  'server-action-confirm-resize',
                                  code=204)
+
+
+class ServersActionsJsonTestNovaNet(
+        ServersSampleBase, _ServersActionsJsonTestMixin):
+    # TODO(gibi): fix the tests to work with neutron as nova net is deprecated
+    USE_NEUTRON = False
 
     def _wait_for_active_server(self, uuid):
         """Wait 10 seconds for the server to be ACTIVE, else fail.
