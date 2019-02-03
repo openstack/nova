@@ -748,7 +748,8 @@ class API(base.Base):
                                          metadata, access_ip_v4, access_ip_v6,
                                          requested_networks, config_drive,
                                          auto_disk_config, reservation_id,
-                                         max_count):
+                                         max_count,
+                                         supports_port_resource_request):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed.
         """
@@ -812,6 +813,9 @@ class API(base.Base):
         result = self.network_api.create_resource_requests(
             context, requested_networks, pci_request_info)
         network_metadata, port_resource_requests = result
+
+        if port_resource_requests and not supports_port_resource_request:
+            raise exception.ServerCreateWithQoSPortNotSupported()
 
         base_options = {
             'reservation_id': reservation_id,
@@ -1114,7 +1118,8 @@ class API(base.Base):
                block_device_mapping, auto_disk_config, filter_properties,
                reservation_id=None, legacy_bdm=True, shutdown_terminate=False,
                check_server_group_quota=False, tags=None,
-               supports_multiattach=False, trusted_certs=None):
+               supports_multiattach=False, trusted_certs=None,
+               supports_port_resource_request=False):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
         creation.
@@ -1154,7 +1159,7 @@ class API(base.Base):
                     key_name, key_data, security_groups, availability_zone,
                     user_data, metadata, access_ip_v4, access_ip_v6,
                     requested_networks, config_drive, auto_disk_config,
-                    reservation_id, max_count)
+                    reservation_id, max_count, supports_port_resource_request)
 
         # max_net_count is the maximum number of instances requested by the
         # user adjusted for any network quota constraints, including
@@ -1689,7 +1694,8 @@ class API(base.Base):
                config_drive=None, auto_disk_config=None, scheduler_hints=None,
                legacy_bdm=True, shutdown_terminate=False,
                check_server_group_quota=False, tags=None,
-               supports_multiattach=False, trusted_certs=None):
+               supports_multiattach=False, trusted_certs=None,
+               supports_port_resource_request=False):
         """Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
         go and will handle creating the DB entries.
@@ -1715,22 +1721,23 @@ class API(base.Base):
                 scheduler_hints, forced_host, forced_node, instance_type)
 
         return self._create_instance(
-                       context, instance_type,
-                       image_href, kernel_id, ramdisk_id,
-                       min_count, max_count,
-                       display_name, display_description,
-                       key_name, key_data, security_groups,
-                       availability_zone, user_data, metadata,
-                       injected_files, admin_password,
-                       access_ip_v4, access_ip_v6,
-                       requested_networks, config_drive,
-                       block_device_mapping, auto_disk_config,
-                       filter_properties=filter_properties,
-                       legacy_bdm=legacy_bdm,
-                       shutdown_terminate=shutdown_terminate,
-                       check_server_group_quota=check_server_group_quota,
-                       tags=tags, supports_multiattach=supports_multiattach,
-                       trusted_certs=trusted_certs)
+            context, instance_type,
+            image_href, kernel_id, ramdisk_id,
+            min_count, max_count,
+            display_name, display_description,
+            key_name, key_data, security_groups,
+            availability_zone, user_data, metadata,
+            injected_files, admin_password,
+            access_ip_v4, access_ip_v6,
+            requested_networks, config_drive,
+            block_device_mapping, auto_disk_config,
+            filter_properties=filter_properties,
+            legacy_bdm=legacy_bdm,
+            shutdown_terminate=shutdown_terminate,
+            check_server_group_quota=check_server_group_quota,
+            tags=tags, supports_multiattach=supports_multiattach,
+            trusted_certs=trusted_certs,
+            supports_port_resource_request=supports_port_resource_request)
 
     def _check_auto_disk_config(self, instance=None, image=None,
                                 **extra_instance_updates):
