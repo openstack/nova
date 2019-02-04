@@ -9,8 +9,9 @@ a compute node to the instances that run on that node. Another common problem
 is trying to run 32-bit images on a 64-bit compute node.  This section shows
 you how to troubleshoot Compute.
 
+
 Compute service logging
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 Compute stores a log file for each service in ``/var/log/nova``. For example,
 ``nova-compute.log`` is the log for the ``nova-compute`` service. You can set
@@ -31,8 +32,9 @@ settings. In ``nova.conf``, include the ``logfile`` option to enable logging.
 Alternatively you can set ``use_syslog = 1`` so that the nova daemon logs to
 syslog.
 
+
 Guru Meditation reports
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 A Guru Meditation report is sent by the Compute service upon receipt of the
 ``SIGUSR2`` signal (``SIGUSR1`` before Mitaka). This report is a
@@ -66,10 +68,11 @@ The report has the following sections:
 
 For more information, see :doc:`/reference/gmr`.
 
+
 .. _compute-common-errors-and-fixes:
 
 Common errors and fixes for Compute
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------------
 
 The `ask.openstack.org <http://ask.openstack.org>`_ site offers a place to ask
 and answer questions, and you can also mark questions as frequently asked
@@ -77,16 +80,17 @@ questions. This section describes some errors people have posted previously.
 Bugs are constantly being fixed, so online resources are a great way to get the
 most up-to-date errors and fixes.
 
+
 Credential errors, 401, and 403 forbidden errors
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------------------------
 
 Problem
--------
+~~~~~~~
 
 Missing credentials cause a ``403 forbidden`` error.
 
 Solution
---------
+~~~~~~~~
 
 To resolve this issue, use one of these methods:
 
@@ -107,11 +111,12 @@ services.  When your CA information is available, create your ZIP file.
 Also, check your HTTP proxy settings to see whether they cause problems with
 ``novarc`` creation.
 
+
 Instance errors
-~~~~~~~~~~~~~~~
+---------------
 
 Problem
--------
+~~~~~~~
 
 Sometimes a particular instance shows ``pending`` or you cannot SSH to it.
 Sometimes the image itself is the problem. For example, when you use flat
@@ -119,7 +124,7 @@ manager networking, you do not have a DHCP server and certain images do not
 support interface injection; you cannot connect to them.
 
 Solution
---------
+~~~~~~~~
 
 To fix instance errors use an image that does support this method, such as
 Ubuntu, which obtains an IP address correctly with FlatManager network
@@ -153,11 +158,12 @@ if this command returns an error:
 
    # virsh create libvirt.xml
 
+
 Empty log output for Linux instances
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------------
 
 Problem
--------
+~~~~~~~
 
 You can view the log output of running instances from either the
 :guilabel:`Log` tab of the dashboard or the output of :command:`nova
@@ -169,7 +175,7 @@ instance via a serial console while the instance itself is not configured to
 send output to the console.
 
 Solution
---------
+~~~~~~~~
 
 To rectify this, append the following parameters to kernel arguments specified
 in the instance's boot loader:
@@ -181,16 +187,17 @@ in the instance's boot loader:
 Upon rebooting, the instance will be configured to send output to the Compute
 service.
 
+
 Reset the state of an instance
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------
 
 Problem
--------
+~~~~~~~
 
 Instances can remain in an intermediate state, such as ``deleting``.
 
 Solution
---------
+~~~~~~~~
 
 You can use the :command:`nova reset-state` command to manually reset the state
 of an instance to an error state. You can then delete the instance. For
@@ -208,17 +215,18 @@ active state instead of an error state. For example:
 
    $ nova reset-state --active c6bbbf26-b40a-47e7-8d5c-eb17bf65c485
 
+
 Injection problems
-~~~~~~~~~~~~~~~~~~
+------------------
 
 Problem
--------
+~~~~~~~
 
 Instances may boot slowly, or do not boot. File injection can cause this
 problem.
 
 Solution
---------
+~~~~~~~~
 
 To disable injection in libvirt, set the following in ``nova.conf``:
 
@@ -234,18 +242,19 @@ To disable injection in libvirt, set the following in ``nova.conf``:
    performance and avoid boot failure if injection fails, you must disable
    injection.
 
+
 Disable live snapshotting
-~~~~~~~~~~~~~~~~~~~~~~~~~
+-------------------------
 
 Problem
--------
+~~~~~~~
 
 Administrators using libvirt version ``1.2.2`` may experience problems with
 live snapshot creation. Occasionally, libvirt version ``1.2.2`` fails to create
 live snapshots under the load of creating concurrent snapshot.
 
 Solution
---------
+~~~~~~~~
 
 To effectively disable the libvirt live snapshotting, until the problem is
 resolved, configure the ``disable_libvirt_livesnapshot`` option.  You can turn
@@ -257,17 +266,18 @@ off the live snapshotting mechanism by setting up its value to ``True`` in the
    [workarounds]
    disable_libvirt_livesnapshot = True
 
+
 Cannot find suitable emulator for x86_64
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------------------
 
 Problem
--------
+~~~~~~~
 
 When you attempt to create a VM, the error shows the VM is in the ``BUILD``
 then ``ERROR`` state.
 
 Solution
---------
+~~~~~~~~
 
 On the KVM host, run :command:`cat /proc/cpuinfo`. Make sure the ``vmx`` or
 ``svm`` flags are set.
@@ -276,16 +286,17 @@ Follow the instructions in the :ref:`enable-kvm`
 section in the Nova Configuration Reference to enable hardware
 virtualization support in your BIOS.
 
+
 Failed to attach volume after detaching
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------------
 
 Problem
--------
+~~~~~~~
 
 Failed to attach a volume after detaching the same volume.
 
 Solution
---------
+~~~~~~~~
 
 You must change the device name on the :command:`nova-attach` command. The VM
 might not clean up after a :command:`nova-detach` command runs. This example
@@ -311,11 +322,12 @@ You might also have this problem after attaching and detaching the same volume
 from the same VM with the same mount point multiple times. In this case,
 restart the KVM host.
 
+
 Failed to attach volume, systool is not installed
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-------------------------------------------------
 
 Problem
--------
+~~~~~~~
 
 This warning and error occurs if you do not have the required ``sysfsutils``
 package installed on the compute node:
@@ -332,7 +344,7 @@ package installed on the compute node:
    Failed to attach volume 13d5c633-903a-4764-a5a0-3336945b1db1 at /dev/vdk.
 
 Solution
---------
+~~~~~~~~
 
 Install the ``sysfsutils`` package on the compute node. For example:
 
@@ -340,11 +352,12 @@ Install the ``sysfsutils`` package on the compute node. For example:
 
    # apt-get install sysfsutils
 
+
 Failed to connect volume in FC SAN
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------------
 
 Problem
--------
+~~~~~~~
 
 The compute node failed to connect to a volume in a Fibre Channel (FC) SAN
 configuration. The WWN may not be zoned correctly in your FC SAN that links the
@@ -364,16 +377,17 @@ compute host to the storage array:
    operation.(HTTP 500)(Request-ID: req-71e5132b-21aa-46ee-b3cc-19b5b4ab2f00)
 
 Solution
---------
+~~~~~~~~
 
 The network administrator must configure the FC SAN fabric by correctly zoning
 the WWN (port names) from your compute node HBAs.
 
+
 Multipath call failed exit
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------
 
 Problem
--------
+~~~~~~~
 
 Multipath call failed exit. This warning occurs in the Compute log if you do
 not have the optional ``multipath-tools`` package installed on the compute
@@ -389,7 +403,7 @@ your message are unique to your system.
    Multipath call failed exit (96)
 
 Solution
---------
+~~~~~~~~
 
 Install the ``multipath-tools`` package on the compute node. For example:
 
@@ -397,11 +411,12 @@ Install the ``multipath-tools`` package on the compute node. For example:
 
    # apt-get install multipath-tools
 
+
 Failed to Attach Volume, Missing sg_scan
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------------------
 
 Problem
--------
+~~~~~~~
 
 Failed to attach volume to an instance, ``sg_scan`` file not found. This error
 occurs when the sg3-utils package is not installed on the compute node.  The
@@ -416,7 +431,7 @@ IDs in your message are unique to your system:
    Stdout: '/usr/local/bin/nova-rootwrap: Executable not found: /usr/bin/sg_scan'
 
 Solution
---------
+~~~~~~~~
 
 Install the ``sg3-utils`` package on the compute node. For example:
 
@@ -424,11 +439,12 @@ Install the ``sg3-utils`` package on the compute node. For example:
 
    # apt-get install sg3-utils
 
+
 Requested microversions are ignored
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------------
 
 Problem
--------
+~~~~~~~
 
 When making a request with a microversion beyond 2.1, for example:
 
@@ -443,20 +459,21 @@ thought it is allowed with the `2.15 microversion`_.
 .. _2.15 microversion: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#id13
 
 Solution
---------
+~~~~~~~~
 
 Ensure the ``compute`` endpoint in the identity service catalog is pointing
 at ``/v2.1`` instead of ``/v2``. The former route supports microversions,
 while the latter route is considered the legacy v2.0 compatibility-mode
 route which renders all requests as if they were made on the legacy v2.0 API.
 
+
 .. _user_token_timeout:
 
 User token times out during long-running operations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------------------------
 
 Problem
--------
+~~~~~~~
 
 Long-running operations such as live migration or snapshot can sometimes
 overrun the expiry of the user token. In such cases, post operations such
@@ -475,7 +492,7 @@ For example:
   2018-12-17 13:47:32.450 16987 ERROR nova.volume.cinder [req-7bc758de-b2e4-461b-a971-f79be6cd4703 313d1247d7b845da9c731eec53e50a26 2f693c782fa748c2baece8db95b4ba5b - default default] Delete attachment failed for attachment 58997d5b-24f0-4073-819e-97916fb1ee19. Error: The request you have made requires authentication. (HTTP 401) Code: 401: Unauthorized: The request you have made requires authentication. (HTTP 401)
 
 Solution
---------
+~~~~~~~~
 
 Configure nova to use service user tokens to supplement the regular user token
 used to initiate the operation. The identity service (keystone) will then
