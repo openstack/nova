@@ -4375,15 +4375,11 @@ class ComputeManager(manager.Manager):
             instance.task_state = task_states.RESIZE_MIGRATING
             instance.save(expected_task_state=task_states.RESIZE_PREP)
 
-            self._notify_about_instance_usage(
-                context, instance, "resize.start", network_info=network_info)
-
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
-
-            compute_utils.notify_about_instance_action(context, instance,
-                   self.host, action=fields.NotificationAction.RESIZE,
-                   phase=fields.NotificationPhase.START, bdms=bdms)
+            self._send_resize_instance_notifications(
+                context, instance, bdms, network_info,
+                fields.NotificationPhase.START)
 
             block_device_info = self._get_instance_block_device_info(
                                 context, instance, bdms=bdms)
@@ -4416,13 +4412,32 @@ class ComputeManager(manager.Manager):
             self.compute_rpcapi.finish_resize(context, instance,
                     migration, image, disk_info, migration.dest_compute)
 
-        self._notify_about_instance_usage(context, instance, "resize.end",
-                                          network_info=network_info)
-
-        compute_utils.notify_about_instance_action(context, instance,
-               self.host, action=fields.NotificationAction.RESIZE,
-               phase=fields.NotificationPhase.END, bdms=bdms)
+        self._send_resize_instance_notifications(
+            context, instance, bdms, network_info,
+            fields.NotificationPhase.END)
         self.instance_events.clear_events_for_instance(instance)
+
+    def _send_resize_instance_notifications(
+            self, context, instance, bdms, network_info, phase):
+        """Send "resize.(start|end)" notifications.
+
+        :param context: nova auth request context
+        :param instance: The instance being resized
+        :param bdms: BlockDeviceMappingList for the BDMs associated with the
+            instance
+        :param network_info: NetworkInfo for the instance info cache of ports
+        :param phase: The phase of the action (NotificationPhase enum, either
+            ``start`` or ``end``)
+        """
+        action = fields.NotificationAction.RESIZE
+        # Send the legacy unversioned notification.
+        self._notify_about_instance_usage(
+            context, instance, "%s.%s" % (action, phase),
+            network_info=network_info)
+        # Send the versioned notification.
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host, action=action, phase=phase,
+            bdms=bdms)
 
     def _terminate_volume_connections(self, context, instance, bdms):
         connector = None
