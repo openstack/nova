@@ -11,6 +11,10 @@ Compute does not include virtualization software. Instead, it defines drivers
 that interact with underlying virtualization mechanisms that run on your host
 operating system, and exposes functionality over a web-based API.
 
+.. TODO(mriedem): This index page has a lot of content which should be
+   organized into groups for things like configuration, operations,
+   troubleshooting, etc.
+
 .. toctree::
    :maxdepth: 2
 
@@ -18,6 +22,7 @@ operating system, and exposes functionality over a web-based API.
    adv-config.rst
    arch.rst
    availability-zones.rst
+   configuration/index.rst
    configuring-migrations.rst
    cpu-topologies.rst
    default-ports.rst
