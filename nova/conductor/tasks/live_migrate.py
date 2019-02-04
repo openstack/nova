@@ -46,7 +46,7 @@ def supports_extended_port_binding(context, host):
 class LiveMigrationTask(base.TaskBase):
     def __init__(self, context, instance, destination,
                  block_migration, disk_over_commit, migration, compute_rpcapi,
-                 servicegroup_api, scheduler_client, report_client,
+                 servicegroup_api, query_client, report_client,
                  request_spec=None):
         super(LiveMigrationTask, self).__init__(context, instance)
         self.destination = destination
@@ -58,7 +58,7 @@ class LiveMigrationTask(base.TaskBase):
 
         self.compute_rpcapi = compute_rpcapi
         self.servicegroup_api = servicegroup_api
-        self.scheduler_client = scheduler_client
+        self.query_client = query_client
         self.report_client = report_client
         self.request_spec = request_spec
         self._source_cn = None
@@ -380,7 +380,7 @@ class LiveMigrationTask(base.TaskBase):
             self._check_not_over_max_retries(attempted_hosts)
             request_spec.ignore_hosts = attempted_hosts
             try:
-                selection_lists = self.scheduler_client.select_destinations(
+                selection_lists = self.query_client.select_destinations(
                         self.context, request_spec, [self.instance.uuid],
                         return_objects=True, return_alternates=False)
                 # We only need the first item in the first list, as there is

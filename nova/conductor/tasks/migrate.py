@@ -112,14 +112,14 @@ def revert_allocation_for_migration(context, source_cn, instance, migration):
 class MigrationTask(base.TaskBase):
     def __init__(self, context, instance, flavor,
                  request_spec, clean_shutdown, compute_rpcapi,
-                 scheduler_client, report_client, host_list):
+                 query_client, report_client, host_list):
         super(MigrationTask, self).__init__(context, instance)
         self.clean_shutdown = clean_shutdown
         self.request_spec = request_spec
         self.flavor = flavor
 
         self.compute_rpcapi = compute_rpcapi
-        self.scheduler_client = scheduler_client
+        self.query_client = query_client
         self.reportclient = report_client
         self.host_list = host_list
 
@@ -226,7 +226,7 @@ class MigrationTask(base.TaskBase):
         # pop the first alternate from the list to use for the destination, and
         # pass the remaining alternates to the compute.
         if self.host_list is None:
-            selection_lists = self.scheduler_client.select_destinations(
+            selection_lists = self.query_client.select_destinations(
                     self.context, self.request_spec, [self.instance.uuid],
                     return_objects=True, return_alternates=True)
             # Since there is only ever one instance to migrate per call, we

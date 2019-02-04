@@ -4577,7 +4577,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         self.assertFalse(log_mock.called)
 
-    @mock.patch.object(nova.scheduler.client.SchedulerClient,
+    @mock.patch.object(nova.scheduler.client.query.SchedulerQueryClient,
                        'update_instance_info')
     def test_update_scheduler_instance_info(self, mock_update):
         instance = objects.Instance(uuid=uuids.instance)
@@ -4592,7 +4592,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertIsInstance(args[2], objects.InstanceList)
         self.assertEqual(args[2].objects[0], instance)
 
-    @mock.patch.object(nova.scheduler.client.SchedulerClient,
+    @mock.patch.object(nova.scheduler.client.query.SchedulerQueryClient,
                        'delete_instance_info')
     def test_delete_scheduler_instance_info(self, mock_delete):
         self.compute._delete_scheduler_instance_info(self.context,
@@ -4660,7 +4660,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     @mock.patch.object(nova.context.RequestContext, 'elevated')
     @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
-    @mock.patch.object(nova.scheduler.client.SchedulerClient,
+    @mock.patch.object(nova.scheduler.client.query.SchedulerQueryClient,
                        'sync_instance_info')
     def test_sync_scheduler_instance_info(self, mock_sync, mock_get_by_host,
             mock_elevated):
@@ -4679,11 +4679,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_sync.assert_called_once_with(fake_elevated, self.compute.host,
                                           exp_uuids)
 
-    @mock.patch.object(nova.scheduler.client.SchedulerClient,
+    @mock.patch.object(nova.scheduler.client.query.SchedulerQueryClient,
                        'sync_instance_info')
-    @mock.patch.object(nova.scheduler.client.SchedulerClient,
+    @mock.patch.object(nova.scheduler.client.query.SchedulerQueryClient,
                        'delete_instance_info')
-    @mock.patch.object(nova.scheduler.client.SchedulerClient,
+    @mock.patch.object(nova.scheduler.client.query.SchedulerQueryClient,
                        'update_instance_info')
     def test_scheduler_info_updates_off(self, mock_update, mock_delete,
                                         mock_sync):

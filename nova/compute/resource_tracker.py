@@ -42,7 +42,7 @@ from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
 from nova import rc_fields as fields
 from nova import rpc
-from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import query
 from nova.scheduler.client import report
 from nova import utils
 from nova.virt import hardware
@@ -147,7 +147,7 @@ class ResourceTracker(object):
         monitor_handler = monitors.MonitorHandler(self)
         self.monitors = monitor_handler.monitors
         self.old_resources = collections.defaultdict(objects.ComputeNode)
-        self.scheduler_client = scheduler_client.SchedulerClient()
+        self.query_client = query.SchedulerQueryClient()
         self.reportclient = report.SchedulerReportClient()
         self.ram_allocation_ratio = CONF.ram_allocation_ratio
         self.cpu_allocation_ratio = CONF.cpu_allocation_ratio
@@ -919,8 +919,8 @@ class ResourceTracker(object):
         # object of compute_node; instead the inventory data for these
         # resource is reported by driver's get_inventory(). So even there
         # is no resource change for compute_node as above, we need proceed
-        # to get inventory and use scheduler_client interfaces to update
-        # inventory to placement. It's scheduler_client's responsibility to
+        # to get inventory and use report client interfaces to update
+        # inventory to placement. It's report client's responsibility to
         # ensure the update request to placement only happens when inventory
         # is changed.
         nodename = compute_node.hypervisor_hostname
