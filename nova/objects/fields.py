@@ -1262,3 +1262,7 @@ class ListOfListsOfStringsField(fields.AutoTypedField):
 # when https://review.opendev.org/#/c/634700/ is released.
 class ListOfUUIDField(AutoTypedField):
     AUTO_TYPE = List(fields.UUID())
+
+
+class DictOfSetOfIntegersField(fields.AutoTypedField):
+    AUTO_TYPE = Dict(Set(fields.Integer()))
