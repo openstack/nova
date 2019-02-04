@@ -25,6 +25,7 @@ from oslo_log import log as logging
 from nova.compute import power_state
 import nova.conf
 from nova import exception
+from nova.virt import hardware
 from nova.virt.libvirt import config as vconfig
 
 LOG = logging.getLogger(__name__)
@@ -88,7 +89,50 @@ def get_updated_guest_xml(guest, migrate_data, get_volume_config,
     xml_doc = _update_memory_backing_xml(xml_doc, migrate_data)
     if get_vif_config is not None:
         xml_doc = _update_vif_xml(xml_doc, migrate_data, get_vif_config)
+    if 'dst_numa_info' in migrate_data:
+        xml_doc = _update_numa_xml(xml_doc, migrate_data)
     return etree.tostring(xml_doc, encoding='unicode')
+
+
+def _update_numa_xml(xml_doc, migrate_data):
+    LOG.debug('_update_numa_xml input xml=%s',
+              etree.tostring(xml_doc, encoding='unicode', pretty_print=True))
+    info = migrate_data.dst_numa_info
+    # NOTE(artom) cpu_pins, cell_pins and emulator_pins should always come
+    # together, or not at all.
+    if ('cpu_pins' in info and
+          'cell_pins' in info and
+          'emulator_pins' in info):
+        for guest_id, host_ids in info.cpu_pins.items():
+            vcpupin = xml_doc.find(
+                './cputune/vcpupin[@vcpu="%d"]' % int(guest_id))
+            vcpupin.set('cpuset',
+                        hardware.format_cpu_spec(host_ids))
+
+        emulatorpin = xml_doc.find('./cputune/emulatorpin')
+        emulatorpin.set('cpuset',
+                        hardware.format_cpu_spec(info.emulator_pins))
+
+        all_cells = []
+        for guest_id, host_ids in info.cell_pins.items():
+            all_cells.extend(host_ids)
+            memnode = xml_doc.find(
+                './numatune/memnode[@cellid="%d"]' % int(guest_id))
+            memnode.set('nodeset',
+                        hardware.format_cpu_spec(host_ids))
+
+        memory = xml_doc.find('./numatune/memory')
+        memory.set('nodeset', hardware.format_cpu_spec(set(all_cells)))
+
+    if 'sched_vcpus' and 'sched_priority' in info:
+        vcpusched = xml_doc.find('./cputune/vcpusched')
+        vcpusched.set('vcpus', hardware.format_cpu_spec(info.sched_vcpus))
+        vcpusched.set('priority', str(info.sched_priority))
+
+    LOG.debug('_update_numa_xml output xml=%s',
+              etree.tostring(xml_doc, encoding='unicode', pretty_print=True))
+
+    return xml_doc
 
 
 def _update_graphics_xml(xml_doc, migrate_data):

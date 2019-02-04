@@ -855,6 +855,13 @@ class AbstractDriverTestCase(_VirtDriverTestCase, test.TestCase):
         self.skipTest('Live migration is not implemented in the base '
                       'virt driver.')
 
+    def test_post_claim_migrate_data(self):
+        self.assertEqual(
+            'fake-migrate-data',
+            self.connection.post_claim_migrate_data(
+                'fake-context', 'fake-instance', 'fake-migrate-data',
+                'fake-claim'))
+
 
 class FakeConnectionTestCase(_VirtDriverTestCase, test.TestCase):
     def setUp(self):

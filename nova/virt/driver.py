@@ -1245,6 +1245,22 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def post_claim_migrate_data(self, context, instance, migrate_data, claim):
+        """Returns migrate_data augmented with any information obtained from
+        the claim. Intended to run on the destination of a live-migration
+        operation, after resources have been claimed on it.
+
+        :param context: The request context.
+        :param instance: The instance being live-migrated.
+        :param migrate_data: The existing LiveMigrateData object for this live
+                             migration.
+        :param claim: The MoveClaim that was made on the destination for this
+                      live migration.
+        :returns: A LiveMigrateData object augmented with information obtained
+                  from the Claim.
+        """
+        return migrate_data
+
     def cleanup_live_migration_destination_check(self, context,
                                                  dest_check_data):
         """Do required cleanup on dest host after check_can_live_migrate calls
