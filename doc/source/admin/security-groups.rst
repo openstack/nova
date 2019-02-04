@@ -12,31 +12,17 @@ that has no other defined security group. Unless you change the default, this
 security group denies all incoming traffic and allows only outgoing traffic to
 your instance.
 
-You can use the ``allow_same_net_traffic`` option in the
-``/etc/nova/nova.conf`` file to globally control whether the rules apply to
-hosts which share a network. There are two possible values:
+By default, security groups (and their quota) are managed by the
+:neutron-doc:`Neutron networking service </admin/archives/adv-features.html#security-groups>`.
 
-``True`` (default)
-  Hosts on the same subnet are not filtered and are allowed to pass all types
-  of traffic between them. On a flat network, this allows all instances from
-  all projects unfiltered communication.  With VLAN networking, this allows
-  access between instances within the same project. You can also simulate this
-  setting by configuring the default security group to allow all traffic from
-  the subnet.
-
-``False``
-  Security groups are enforced for all connections.
-
-Additionally, the number of maximum rules per security group is controlled by
-the ``security_group_rules`` and the number of allowed security groups per
-project is controlled by the ``security_groups`` quota (see
-:ref:`manage-quotas`).
-
-List and view current security groups
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Working with security groups
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 From the command-line you can get a list of security groups for the project,
-using the :command:`openstack` and :command:`nova` commands:
+using the :command:`openstack` commands.
+
+List and view current security groups
+-------------------------------------
 
 #. Ensure your system variables are set for the user and project for which you
    are checking security group rules. For example:
@@ -83,7 +69,7 @@ using the :command:`openstack` and :command:`nova` commands:
    allowed from all IPs.
 
 Create a security group
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 When adding a new security group, you should pick a descriptive but brief name.
 This name shows up in brief descriptions of the instances that use it where the
@@ -203,7 +189,7 @@ or "secgrp1".
       +--------------------------------------+-------------+-----------+-----------------+-----------------------+
 
 Delete a security group
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 #. Ensure your system variables are set for the user and project for which you
    are deleting a security group.
@@ -221,7 +207,7 @@ Delete a security group
       $ openstack security group delete global_http
 
 Create security group rules for a cluster of instances
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------------------------------
 
 Source Groups are a special, dynamic way of defining the CIDR of allowed
 sources. The user specifies a Source Group (Security Group name), and all the
@@ -249,3 +235,27 @@ member of the cluster.
 
    The ``cluster`` rule allows SSH access from any other instance that uses the
    ``global_http`` group.
+
+
+nova-network configuration (deprecated)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can use the :oslo.config:option:`allow_same_net_traffic` option in the
+``/etc/nova/nova.conf`` file to globally control whether the rules apply to
+hosts which share a network. There are two possible values:
+
+``True`` (default)
+  Hosts on the same subnet are not filtered and are allowed to pass all types
+  of traffic between them. On a flat network, this allows all instances from
+  all projects unfiltered communication.  With VLAN networking, this allows
+  access between instances within the same project. You can also simulate this
+  setting by configuring the default security group to allow all traffic from
+  the subnet.
+
+``False``
+  Security groups are enforced for all connections.
+
+Additionally, the number of maximum rules per security group is controlled by
+the ``security_group_rules`` and the number of allowed security groups per
+project is controlled by the ``security_groups`` quota (see
+:ref:`manage-quotas`).
