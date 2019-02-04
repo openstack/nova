@@ -521,7 +521,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.5')
+    target = messaging.Target(version='5.6')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4875,6 +4875,140 @@ class ComputeManager(manager.Manager):
 
         # ResourceTracker.resize_claim() sets instance.migration_context.
         return instance.migration_context
+
+    @messaging.expected_exceptions(exception.InstancePowerOffFailure)
+    @wrap_exception()
+    @reverts_task_state
+    @wrap_instance_event(prefix='compute')
+    @errors_out_migration
+    @wrap_instance_fault
+    def prep_snapshot_based_resize_at_source(
+            self, ctxt, instance, migration, snapshot_id=None):
+        """Prepares the instance at the source host for cross-cell resize
+
+        Performs actions like powering off the guest, upload snapshot data if
+        the instance is not volume-backed, disconnecting volumes, unplugging
+        VIFs and activating the destination host port bindings.
+
+        :param ctxt: user auth request context targeted at source cell
+        :param instance: nova.objects.Instance; the instance being resized.
+            The expected instance.task_state is "resize_migrating" when calling
+            this method, and the expected task_state upon successful completion
+            is "resize_migrated".
+        :param migration: nova.objects.Migration object for the operation.
+            The expected migration.status is "pre-migrating" when calling this
+            method and the expected status upon successful completion is
+            "post-migrating".
+        :param snapshot_id: ID of the image snapshot to upload if not a
+            volume-backed instance
+        :raises: nova.exception.InstancePowerOffFailure if stopping the
+            instance fails
+        """
+        # Note that if anything fails here, the migration-based allocations
+        # created in conductor should be reverted by conductor as well,
+        # see MigrationTask.rollback.
+        self._prep_snapshot_based_resize_at_source(
+            ctxt, instance, migration, snapshot_id=snapshot_id)
+
+    @delete_image_on_error
+    def _snapshot_for_resize(self, ctxt, image_id, instance):
+        """Uploads snapshot for the instance during a snapshot-based resize
+
+        If the snapshot operation fails the image will be deleted.
+
+        :param ctxt: the nova auth request context for the resize operation
+        :param image_id: the snapshot image ID
+        :param instance: the instance to snapshot/resize
+        """
+        LOG.debug('Uploading snapshot data for image %s', image_id,
+                  instance=instance)
+        # Note that we do not track the snapshot phase task states
+        # during resize since we do not want to reflect those into the
+        # actual instance.task_state.
+        update_task_state = lambda *args, **kwargs: None
+        with timeutils.StopWatch() as timer:
+            self.driver.snapshot(ctxt, instance, image_id, update_task_state)
+            LOG.debug('Took %0.2f seconds to snapshot the instance on '
+                      'the hypervisor.', timer.elapsed(), instance=instance)
+
+    def _prep_snapshot_based_resize_at_source(
+            self, ctxt, instance, migration, snapshot_id=None):
+        """Private method for prep_snapshot_based_resize_at_source so calling
+        code can handle errors and perform rollbacks as necessary.
+        """
+        # Fetch and update the instance.info_cache.
+        network_info = self.network_api.get_instance_nw_info(ctxt, instance)
+        # Get the BDMs attached to this instance on this source host.
+        bdms = instance.get_bdms()
+        # Send the resize.start notification.
+        self._send_resize_instance_notifications(
+            ctxt, instance, bdms, network_info, fields.NotificationPhase.START)
+        # Update the migration status from "pre-migrating" to "migrating".
+        migration.status = 'migrating'
+        migration.save()
+
+        # Since the instance is going to be left on the source host during the
+        # resize, we need to power it off so we do not have the instance
+        # potentially running in two places.
+        LOG.debug('Stopping instance', instance=instance)
+        try:
+            self._power_off_instance(ctxt, instance)
+        except Exception as e:
+            LOG.exception('Failed to power off instance.', instance=instance)
+            raise exception.InstancePowerOffFailure(reason=six.text_type(e))
+        instance.power_state = self._get_power_state(ctxt, instance)
+
+        # If a snapshot image ID was provided, we need to snapshot the guest
+        # disk image and upload it to the image service.
+        if snapshot_id:
+            self._snapshot_for_resize(ctxt, snapshot_id, instance)
+
+        block_device_info = self._get_instance_block_device_info(
+            ctxt, instance, bdms=bdms)
+
+        # If something fails at this point the instance must go to ERROR
+        # status for operator intervention or to reboot/rebuild the instance.
+        with self._error_out_instance_on_exception(
+                ctxt, instance, instance_state=vm_states.ERROR):
+
+            # Destroy the guest on the source host which will disconnect
+            # volumes and unplug VIFs. Note that we DO NOT destroy disks since
+            # we want to leave those on the source host in case of a later
+            # failure and disks are needed to recover the guest or in case the
+            # resize is reverted.
+            LOG.debug('Destroying guest on source host but retaining disks.',
+                      instance=instance)
+            self.driver.destroy(
+                ctxt, instance, network_info,
+                block_device_info=block_device_info, destroy_disks=False)
+
+            # At this point the volumes are disconnected from this source host.
+            # Delete the old volume attachment records and create new empty
+            # ones which will be used later if the resize is reverted.
+            LOG.debug('Deleting volume attachments for the source host.',
+                      instance=instance)
+            self._terminate_volume_connections(ctxt, instance, bdms)
+
+            # At this point the VIFs are unplugged from this source host.
+            # Activate the dest host port bindings created by conductor.
+            self.network_api.migrate_instance_start(ctxt, instance, migration)
+
+            # Update the migration status from "migrating" to "post-migrating".
+            migration.status = 'post-migrating'
+            migration.save()
+
+            # At this point, the traditional resize_instance would update the
+            # instance host/node values to point at the dest host/node because
+            # that is where the disk is transferred during resize_instance, but
+            # with cross-cell resize the instance is not yet at the dest host
+            # so we do not make that update here.
+            instance.task_state = task_states.RESIZE_MIGRATED
+            instance.save(expected_task_state=task_states.RESIZE_MIGRATING)
+
+        self._send_resize_instance_notifications(
+            ctxt, instance, bdms, network_info,
+            fields.NotificationPhase.END)
+        self.instance_events.clear_events_for_instance(instance)
 
     @wrap_exception()
     @reverts_task_state

@@ -372,6 +372,7 @@ class ComputeAPI(object):
                 drop_move_claim_at_destination() method
         * 5.4 - Add cache_images() support
         * 5.5 - Add prep_snapshot_based_resize_at_dest()
+        * 5.6 - Add prep_snapshot_based_resize_at_source()
     '''
 
     VERSION_ALIASES = {
@@ -891,6 +892,44 @@ class ComputeAPI(object):
                           instance=instance, flavor=flavor, nodename=nodename,
                           migration=migration, limits=limits,
                           request_spec=request_spec)
+
+    def prep_snapshot_based_resize_at_source(
+            self, ctxt, instance, migration, snapshot_id=None):
+        """Prepares the instance at the source host for cross-cell resize
+
+        Performs actions like powering off the guest, upload snapshot data if
+        the instance is not volume-backed, disconnecting volumes, unplugging
+        VIFs and activating the destination host port bindings.
+
+        :param ctxt: user auth request context targeted at source cell
+        :param instance: nova.objects.Instance; the instance being resized.
+            The expected instance.task_state is "resize_migrating" when calling
+            this method, and the expected task_state upon successful completion
+            is "resize_migrated".
+        :param migration: nova.objects.Migration object for the operation.
+            The expected migration.status is "pre-migrating" when calling this
+            method and the expected status upon successful completion is
+            "post-migrating".
+        :param snapshot_id: ID of the image snapshot to upload if not a
+            volume-backed instance
+        :raises: nova.exception.InstancePowerOffFailure if stopping the
+            instance fails
+        :raises: nova.exception.MigrationError if the source compute is too
+            old to perform the operation
+        :raises: oslo_messaging.exceptions.MessagingTimeout if the RPC call
+            times out
+        """
+        version = '5.6'
+        client = self.router.client(ctxt)
+        if not client.can_send_version(version):
+            raise exception.MigrationError(reason=_('Compute too old'))
+        cctxt = client.prepare(server=_compute_host(None, instance),
+                               version=version,
+                               call_monitor_timeout=CONF.rpc_response_timeout,
+                               timeout=CONF.long_rpc_timeout)
+        return cctxt.call(
+            ctxt, 'prep_snapshot_based_resize_at_source',
+            instance=instance, migration=migration, snapshot_id=snapshot_id)
 
     def reboot_instance(self, ctxt, instance, block_device_info,
                         reboot_type):
