@@ -54,11 +54,16 @@ class MigrateServerController(wsgi.Controller):
 
         instance = common.get_instance(self.compute_api, context, id)
 
+        # We could potentially move this check to conductor and avoid the
+        # extra API call to neutron when we support move operations with ports
+        # having resource requests.
         if (common.instance_has_port_with_resource_request(
                     context, instance.uuid, self.network_api) and not
                 common.supports_port_resource_request_during_move(req)):
-            msg = _("The migrate server operation with port having QoS policy "
-                    "is not supported.")
+            msg = _("The migrate action on a server with ports having "
+                    "resource requests, like a port with a QoS minimum "
+                    "bandwidth policy, is not supported with this "
+                    "microversion")
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
@@ -118,11 +123,16 @@ class MigrateServerController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, id,
                                        expected_attrs=['numa_topology'])
 
+        # We could potentially move this check to conductor and avoid the
+        # extra API call to neutron when we support move operations with ports
+        # having resource requests.
         if (common.instance_has_port_with_resource_request(
                     context, instance.uuid, self.network_api) and not
                 common.supports_port_resource_request_during_move(req)):
-            msg = _("The live migrate server operation with port having QoS "
-                    "policy is not supported.")
+            msg = _("The os-migrateLive action on a server with ports having "
+                    "resource requests, like a port with a QoS minimum "
+                    "bandwidth policy, is not supported with this "
+                    "microversion")
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:

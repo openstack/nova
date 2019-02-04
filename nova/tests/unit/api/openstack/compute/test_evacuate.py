@@ -243,21 +243,6 @@ class EvacuateTestV21(test.NoDBTestCase):
         else:
             self.assertIsNone(res)
 
-    def test_evacuate_with_port_resource_request_old_microversion(self):
-        self.mock_list_port.return_value = {'ports': [
-            {'resource_request': {
-                "resources": {'CUSTOM_FOO': 1}}}]
-        }
-
-        admin_pass = 'MyNewPass'
-        ex = self.assertRaises(
-            webob.exc.HTTPBadRequest, self._get_evacuate_response,
-            {'host': 'my-host', 'onSharedStorage': 'False',
-             'adminPass': admin_pass})
-
-        self.assertIn('The evacuate server operation with port having QoS '
-                      'policy is not supported.', six.text_type(ex))
-
 
 class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
 

@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
@@ -95,6 +96,11 @@ class ServerActionsControllerTestV21(test.TestCase):
             self.controller.compute_api, 'compute_task_api')
         mock_conductor.start()
         self.addCleanup(mock_conductor.stop)
+        # Assume that none of the tests are using ports with resource requests.
+        self.mock_list_port = self.useFixture(
+            fixtures.MockPatch(
+                'nova.network.neutronv2.api.API.list_ports')).mock
+        self.mock_list_port.return_value = {'ports': []}
 
     def _get_controller(self):
         return self.servers.ServersController()
@@ -123,10 +129,7 @@ class ServerActionsControllerTestV21(test.TestCase):
             mock.patch.object(compute_api.API, method,
                               side_effect=exception.InstanceIsLocked(
                                   instance_uuid=instance['uuid'])),
-            mock.patch('nova.api.openstack.common.'
-                       'instance_has_port_with_resource_request',
-                       return_value=False)
-        ) as (mock_get, mock_method, mock_port_check):
+        ) as (mock_get, mock_method):
 
             controller_function = 'self.controller.' + action
             self.assertRaises(webob.exc.HTTPConflict,
@@ -620,11 +623,8 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertEqual(instance_meta['kernel_id'], uuids.kernel_image_id)
         self.assertEqual(instance_meta['ramdisk_id'], uuids.ramdisk_image_id)
 
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request', return_value=False)
     @mock.patch.object(compute_api.API, 'rebuild')
-    def test_rebuild_instance_raise_auto_disk_config_exc(
-            self, mock_rebuild, mock_port_check):
+    def test_rebuild_instance_raise_auto_disk_config_exc(self, mock_rebuild):
         body = {
             "rebuild": {
                 "imageRef": self._image_href,
@@ -638,10 +638,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=body)
 
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request',
-                return_value=False)
-    def test_resize_server(self, mock_port_check):
+    def test_resize_server(self):
 
         body = dict(resize=dict(flavorRef="http://localhost/3"))
 
@@ -693,9 +690,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                               self.controller._action_resize,
                               self.req, FAKE_UUID, body=body)
 
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request', return_value=False)
-    def test_resize_with_image_exceptions(self, mock_port_check):
+    def test_resize_with_image_exceptions(self):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
         self.resize_called = 0
         image_id = 'fake_image_id'
@@ -736,33 +731,24 @@ class ServerActionsControllerTestV21(test.TestCase):
                                  ' disk resize disabled.')
             self.assertEqual(self.resize_called, call_no + 1)
 
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request', return_value=False)
     @mock.patch('nova.compute.api.API.resize',
                 side_effect=exception.CannotResizeDisk(reason=''))
-    def test_resize_raises_cannot_resize_disk(
-            self, mock_resize, mock_port_check):
+    def test_resize_raises_cannot_resize_disk(self, mock_resize):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
                           self.req, FAKE_UUID, body=body)
 
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request', return_value=False)
     @mock.patch('nova.compute.api.API.resize',
                 side_effect=exception.FlavorNotFound(reason='',
                                                      flavor_id='fake_id'))
-    def test_resize_raises_flavor_not_found(
-            self, mock_resize, mock_port_check):
+    def test_resize_raises_flavor_not_found(self, mock_resize):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
                           self.req, FAKE_UUID, body=body)
 
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request',
-                return_value=False)
-    def test_resize_with_too_many_instances(self, mock_port_check):
+    def test_resize_with_too_many_instances(self):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
 
         def fake_resize(*args, **kwargs):
@@ -774,9 +760,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.controller._action_resize,
                           self.req, FAKE_UUID, body=body)
 
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request', return_value=False)
-    def test_resize_raises_conflict_on_invalid_state(self, mock_port_check):
+    def test_resize_raises_conflict_on_invalid_state(self):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
 
         def fake_resize(*args, **kwargs):
@@ -790,24 +774,17 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.controller._action_resize,
                           self.req, FAKE_UUID, body=body)
 
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request',
-                return_value=False)
     @mock.patch('nova.compute.api.API.resize',
                 side_effect=exception.NoValidHost(reason=''))
-    def test_resize_raises_no_valid_host(self, mock_resize, mock_port_check):
+    def test_resize_raises_no_valid_host(self, mock_resize):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
                           self.req, FAKE_UUID, body=body)
 
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request',
-                return_value=False)
     @mock.patch.object(compute_api.API, 'resize')
-    def test_resize_instance_raise_auto_disk_config_exc(
-            self, mock_resize, mock_port_check):
+    def test_resize_instance_raise_auto_disk_config_exc(self, mock_resize):
         mock_resize.side_effect = exception.AutoDiskConfigDisabledByImage(
             image='dummy')
 
@@ -817,12 +794,10 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.controller._action_resize,
                           self.req, FAKE_UUID, body=body)
 
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request', return_value=False)
     @mock.patch('nova.compute.api.API.resize',
                 side_effect=exception.PciRequestAliasNotDefined(
                     alias='fake_name'))
-    def test_resize_pci_alias_not_defined(self, mock_resize, mock_check_port):
+    def test_resize_pci_alias_not_defined(self, mock_resize):
         # Tests that PciRequestAliasNotDefined is translated to a 400 error.
         body = dict(resize=dict(flavorRef="http://localhost/3"))
         self.assertRaises(webob.exc.HTTPBadRequest,

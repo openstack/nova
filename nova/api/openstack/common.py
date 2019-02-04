@@ -558,7 +558,8 @@ def supports_port_resource_request_during_move(req):
 
     NOTE: At the moment there is no such microversion that supports port
     resource request during move. This function is added as a preparation for
-    that microversion.
+    that microversion (assuming there will be a new microversion, which is
+    yet to be decided).
 
     :param req: The incoming API request
     :returns: True if the requested API microversion is high enough for
@@ -570,8 +571,12 @@ def supports_port_resource_request_during_move(req):
 def instance_has_port_with_resource_request(
         context, instance_uuid, network_api):
 
-    search_opts = {'device_id': instance_uuid}
+    # If we ever store any information about resource requests in the
+    # instance info cache then we can replace this neutron API call.
+    search_opts = {'device_id': instance_uuid,
+                   'fields': ['resource_request']}
     ports = network_api.list_ports(context, **search_opts).get('ports', [])
-    ports_with_resource_request = [port for port in ports
-                                   if port.get('resource_request', None)]
-    return bool(ports_with_resource_request)
+    for port in ports:
+        if port.get('resource_request'):
+            return True
+    return False
