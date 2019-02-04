@@ -4154,7 +4154,10 @@ class LibvirtDriver(driver.ComputeDriver):
         sysinfo.system_product = version.product_string()
         sysinfo.system_version = version.version_string_with_package()
 
-        sysinfo.system_serial = self._sysinfo_serial_func()
+        if CONF.libvirt.sysinfo_serial == 'unique':
+            sysinfo.system_serial = instance.uuid
+        else:
+            sysinfo.system_serial = self._sysinfo_serial_func()
         sysinfo.system_uuid = instance.uuid
 
         sysinfo.system_family = "Virtual Machine"

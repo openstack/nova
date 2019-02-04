@@ -17927,6 +17927,8 @@ class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
                          cfg.system_product)
         self.assertEqual(version.version_string_with_package(),
                          cfg.system_version)
+        if expected_serial == 'instance_uuid':
+            expected_serial = instance_ref['uuid']
         self.assertEqual(expected_serial,
                          cfg.system_serial)
         self.assertEqual(instance_ref['uuid'],
@@ -18024,6 +18026,10 @@ class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
             mock_open.side_effect = fake_open
 
             self._test_get_guest_config_sysinfo_serial(theuuid)
+
+    def test_get_guest_config_sysinfo_serial_unique(self):
+        self.flags(sysinfo_serial="unique", group="libvirt")
+        self._test_get_guest_config_sysinfo_serial('instance_uuid')
 
 
 class HostStateTestCase(test.NoDBTestCase):
