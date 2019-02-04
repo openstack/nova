@@ -13,6 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
+
+
 from nova.compute import resource_tracker
 
 
@@ -21,3 +24,9 @@ class FakeResourceTracker(resource_tracker.ResourceTracker):
 
     def _update(self, context, compute_node, startup=False):
         pass
+
+
+class RTMockMixin(object):
+    def _mock_rt(self, **kwargs):
+        return self.useFixture(fixtures.MockPatchObject(
+            self.compute, 'rt', **kwargs)).mock

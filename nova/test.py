@@ -49,6 +49,7 @@ from oslotest import moxstubout
 import six
 import testtools
 
+from nova.compute import resource_tracker
 from nova import context
 from nova.db import api as db
 from nova import exception
@@ -415,8 +416,9 @@ class TestCase(testtools.TestCase):
         # So this helper method tries to simulate a better compute service
         # restart by cleaning up some of the internal state of the compute
         # manager.
+        host, driver = compute.manager.host, compute.manager.driver
         compute.stop()
-        compute.manager._resource_tracker = None
+        compute.manager.rt = resource_tracker.ResourceTracker(host, driver)
         compute.start()
 
     def assertJsonEqual(self, expected, observed, message=''):
