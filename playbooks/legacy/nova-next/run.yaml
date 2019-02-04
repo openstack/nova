@@ -24,9 +24,6 @@
       environment: '{{ zuul | zuul_legacy_vars }}'
 
     - shell:
-        # TODO(mriedem): Consider setting USE_PYTHON3=True here to make this
-        # job run under python 3.5 which is a "next" type thing.
-
         # Enable TLS between the noVNC proxy & compute nodes; this requires
         # the tls-proxy service to be enabled.
 
@@ -43,6 +40,7 @@
           NOVA_USE_SERVICE_TOKEN=True
           NOVA_CONSOLE_PROXY_COMPUTE_TLS=True
           PLACEMENT_DB_ENABLED=True
+          USE_PYTHON3=True
 
           [[post-config|$NOVA_CONF]]
           [compute]

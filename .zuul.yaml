@@ -173,6 +173,7 @@
       post-test scripts to ensure those scripts are still working,
       e.g. archive_deleted_rows. In Queens, this job started testing the
       TLS console proxy code in the libvirt driver.
+      Starting in Stein, the job was changed to run with python 3.
     run: playbooks/legacy/nova-next/run.yaml
     post-run: playbooks/legacy/nova-next/post.yaml
 
