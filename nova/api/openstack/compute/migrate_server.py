@@ -26,6 +26,7 @@ from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
+from nova import network
 from nova.policies import migrate_server as ms_policies
 
 LOG = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ class MigrateServerController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(MigrateServerController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
+        self.network_api = network.API()
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
@@ -51,6 +53,14 @@ class MigrateServerController(wsgi.Controller):
             host_name = body['migrate'].get('host')
 
         instance = common.get_instance(self.compute_api, context, id)
+
+        if (common.instance_has_port_with_resource_request(
+                    context, instance.uuid, self.network_api) and not
+                common.supports_port_resource_request_during_move(req)):
+            msg = _("The migrate server operation with port having QoS policy "
+                    "is not supported.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
         try:
             self.compute_api.resize(req.environ['nova.context'], instance,
                                     host_name=host_name)
@@ -106,6 +116,14 @@ class MigrateServerController(wsgi.Controller):
         # conductor
         instance = common.get_instance(self.compute_api, context, id,
                                        expected_attrs=['numa_topology'])
+
+        if (common.instance_has_port_with_resource_request(
+                    context, instance.uuid, self.network_api) and not
+                common.supports_port_resource_request_during_move(req)):
+            msg = _("The live migrate server operation with port having QoS "
+                    "policy is not supported.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
         try:
             self.compute_api.live_migrate(context, instance, block_migration,
                                           disk_over_commit, host, force,
