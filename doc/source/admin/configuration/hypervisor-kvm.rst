@@ -2,7 +2,7 @@
 KVM
 ===
 
-.. todo:: This is really installation guide material and should probably be
+.. todo:: Some of this is installation guide material and should probably be
      moved.
 
 KVM is configured as the default hypervisor for Compute.
@@ -283,6 +283,11 @@ define which type of CPU model is exposed to the hypervisor when using KVM:
 
 The ``cpu_mode`` option can take one of the following values: ``none``,
 ``host-passthrough``, ``host-model``, and ``custom``.
+
+See `Effective Virtual CPU configuration in Nova`_ for a recorded presentation
+about this topic.
+
+.. _Effective Virtual CPU configuration in Nova: https://www.openstack.org/videos/summits/berlin-2018/effective-virtual-cpu-configuration-in-nova
 
 Host model (default for KVM & QEMU)
 -----------------------------------
