@@ -112,6 +112,35 @@ Also, check your HTTP proxy settings to see whether they cause problems with
 ``novarc`` creation.
 
 
+Live migration permission issues
+--------------------------------
+
+Problem
+~~~~~~~
+
+When live migrating an instance, you may see errors like the below:
+
+.. code-block:: shell
+
+    libvirtError: operation failed: Failed to connect to remote libvirt URI
+    qemu+ssh://stack@cld6b16/system: Cannot recv data: Host key verification
+    failed.: Connection reset by peer
+
+Solution
+~~~~~~~~
+
+Ensure you have completed all the steps outlined in
+:doc:`/admin/ssh-configuration`. In particular, it's important to note
+that the ``libvirt`` process runs as ``root`` even though it may be connecting
+to a different user (``stack`` in the above example). You can ensure everything
+is correctly configured by attempting to connect to the remote host via the
+``root`` user. Using the above example once again:
+
+.. code-block:: shell
+
+    $ su - -c 'ssh stack@cld6b16'
+
+
 Instance errors
 ---------------
 
