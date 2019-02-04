@@ -507,7 +507,7 @@ class ComputeManager(manager.Manager):
             openstack_driver.is_neutron_security_groups())
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         self.scheduler_client = scheduler_client.SchedulerClient()
-        self.reportclient = self.scheduler_client.reportclient
+        self._reportclient = None
         self._resource_tracker = None
         self.instance_events = InstanceEvents()
         self._sync_power_pool = eventlet.GreenPool(
@@ -555,6 +555,12 @@ class ComputeManager(manager.Manager):
             rt = resource_tracker.ResourceTracker(self.host, self.driver)
             self._resource_tracker = rt
         return self._resource_tracker
+
+    @property
+    def reportclient(self):
+        if not self._reportclient:
+            self._reportclient = self._get_resource_tracker().reportclient
+        return self._reportclient
 
     def _update_resource_tracker(self, context, instance):
         """Let the resource tracker know that an instance has changed state."""
@@ -768,8 +774,8 @@ class ComputeManager(manager.Manager):
     def _complete_deletion(self, context, instance):
         self._update_resource_tracker(context, instance)
 
-        rt = self._get_resource_tracker()
-        rt.reportclient.delete_allocation_for_instance(context, instance.uuid)
+        self.reportclient.delete_allocation_for_instance(context,
+                                                         instance.uuid)
 
         self._clean_instance_console_tokens(context, instance)
         self._delete_scheduler_instance_info(context, instance.uuid)
@@ -1882,8 +1888,8 @@ class ComputeManager(manager.Manager):
                         # call this for a reschedule, as the allocations will
                         # have already been removed in
                         # self._do_build_and_run_instance().
-                        self._delete_allocation_for_instance(context,
-                                                             instance.uuid)
+                        self.reportclient.delete_allocation_for_instance(
+                            context, instance.uuid)
 
                     if result in (build_results.FAILED,
                                   build_results.RESCHEDULED):
@@ -1899,10 +1905,6 @@ class ComputeManager(manager.Manager):
                       filter_properties, admin_password, injected_files,
                       requested_networks, security_groups,
                       block_device_mapping, node, limits, host_list)
-
-    def _delete_allocation_for_instance(self, context, instance_uuid):
-        rt = self._get_resource_tracker()
-        rt.reportclient.delete_allocation_for_instance(context, instance_uuid)
 
     def _check_device_tagging(self, requested_networks, block_device_mapping):
         tagging_requested = False
@@ -2031,7 +2033,8 @@ class ComputeManager(manager.Manager):
             # to unclaim those resources before casting to the conductor, so
             # that if there are alternate hosts available for a retry, it can
             # claim resources on that new host for the instance.
-            self._delete_allocation_for_instance(context, instance.uuid)
+            self.reportclient.delete_allocation_for_instance(context,
+                                                             instance.uuid)
 
             self.compute_task_api.build_instances(context, [instance],
                     image, filter_properties, admin_password,
@@ -5087,8 +5090,8 @@ class ComputeManager(manager.Manager):
                 # the instance claim failed with ComputeResourcesUnavailable
                 # or if we did claim but the spawn failed, because aborting the
                 # instance claim will not remove the allocations.
-                rt.reportclient.delete_allocation_for_instance(context,
-                                                               instance.uuid)
+                self.reportclient.delete_allocation_for_instance(context,
+                                                                 instance.uuid)
                 # FIXME: Umm, shouldn't we be rolling back port bindings too?
                 self._terminate_volume_connections(context, instance, bdms)
                 # The reverts_task_state decorator on unshelve_instance will
@@ -7804,9 +7807,8 @@ class ComputeManager(manager.Manager):
                 rt.remove_node(cn.hypervisor_hostname)
                 # Delete the corresponding resource provider in placement,
                 # along with any associated allocations and inventory.
-                # TODO(cdent): Move use of reportclient into resource tracker.
-                self.scheduler_client.reportclient.delete_resource_provider(
-                    context, cn, cascade=True)
+                self.reportclient.delete_resource_provider(context, cn,
+                                                           cascade=True)
 
         for nodename in nodenames:
             self._update_available_resource_for_node(context, nodename,

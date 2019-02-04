@@ -19,6 +19,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.scheduler import client as scheduler_client
+from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit.conductor.test_conductor import FakeContext
@@ -65,6 +66,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
                                      self.clean_shutdown,
                                      compute_rpcapi.ComputeAPI(),
                                      scheduler_client.SchedulerClient(),
+                                     report.SchedulerReportClient(),
                                      host_list=None)
 
     @mock.patch.object(objects.MigrationList, 'get_by_filters')

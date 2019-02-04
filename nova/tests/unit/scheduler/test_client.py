@@ -32,7 +32,6 @@ class SchedulerClientTestCase(test.NoDBTestCase):
 
     def test_constructor(self):
         self.assertIsNotNone(self.client.queryclient)
-        self.assertIsNotNone(self.client.reportclient)
 
     @mock.patch.object(scheduler_query_client.SchedulerQueryClient,
                        'select_destinations')

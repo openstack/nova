@@ -23,7 +23,6 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from nova import exception
 from nova import objects
 from nova.scheduler import client
-from nova.scheduler.client import report
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import utils as scheduler_utils
@@ -59,12 +58,11 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     @mock.patch('nova.scheduler.client.SchedulerClient')
     def setUp(self, mock_client):
-        pc_client = mock.Mock(spec=report.SchedulerReportClient)
         sched_client = mock.Mock(spec=client.SchedulerClient)
-        sched_client.reportclient = pc_client
         mock_client.return_value = sched_client
-        self.placement_client = pc_client
-        super(FilterSchedulerTestCase, self).setUp()
+        with mock.patch('nova.scheduler.client.report.SchedulerReportClient',
+                        autospec=True):
+            super(FilterSchedulerTestCase, self).setUp()
 
     @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -239,7 +237,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             mock.sentinel.provider_summaries)
         mock_get_hosts.assert_called()
         mock_claim.assert_called_once_with(ctx.elevated.return_value,
-                self.placement_client, spec_obj, uuids.instance,
+                self.driver.placement_client, spec_obj, uuids.instance,
                 alloc_reqs_by_rp_uuid[uuids.cn1][0],
                 allocation_request_version=None)
 
@@ -307,7 +305,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             mock.sentinel.provider_summaries)
         mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
         mock_claim.assert_called_once_with(ctx.elevated.return_value,
-                self.placement_client, spec_obj, uuids.instance,
+                self.driver.placement_client, spec_obj, uuids.instance,
                 alloc_reqs_by_rp_uuid[uuids.cn1][0],
             allocation_request_version=fake_version)
 
@@ -562,11 +560,11 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # Check that we called claim_resources() for both the first and second
         # host state
         claim_calls = [
-            mock.call(ctx.elevated.return_value, self.placement_client,
+            mock.call(ctx.elevated.return_value, self.driver.placement_client,
                     spec_obj, uuids.instance0,
                     alloc_reqs_by_rp_uuid[uuids.cn2][0],
                     allocation_request_version=None),
-            mock.call(ctx.elevated.return_value, self.placement_client,
+            mock.call(ctx.elevated.return_value, self.driver.placement_client,
                     spec_obj, uuids.instance1,
                     alloc_reqs_by_rp_uuid[uuids.cn1][0],
                     allocation_request_version=None),
@@ -735,7 +733,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         instance_uuids = []
         # Check we don't do anything if there's no instance UUIDs to cleanup
         # allocations for
-        pc = self.placement_client
+        pc = self.driver.placement_client
 
         self.driver._cleanup_allocations(self.context, instance_uuids)
         self.assertFalse(pc.delete_allocation_for_instance.called)

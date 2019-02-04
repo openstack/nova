@@ -434,6 +434,7 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
                               object. Defaults to returning zero overhead.
     """
     sched_client_mock = mock.MagicMock()
+    report_client_mock = mock.MagicMock()
     notifier_mock = mock.MagicMock()
     vd = mock.MagicMock(autospec=driver.ComputeDriver)
     # Make sure we don't change any global fixtures during tests
@@ -448,9 +449,11 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
     with test.nested(
             mock.patch('nova.scheduler.client.SchedulerClient',
                        return_value=sched_client_mock),
+            mock.patch('nova.scheduler.client.report.SchedulerReportClient',
+                       return_value=report_client_mock),
             mock.patch('nova.rpc.get_notifier', return_value=notifier_mock)):
         rt = resource_tracker.ResourceTracker(hostname, vd)
-    return (rt, sched_client_mock, vd)
+    return (rt, sched_client_mock, report_client_mock, vd)
 
 
 def compute_update_usage(resources, flavor, sign=1):
@@ -474,7 +477,7 @@ class BaseTestCase(test.NoDBTestCase):
 
     def _setup_rt(self, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
                   estimate_overhead=overhead_zero):
-        (self.rt, self.sched_client_mock,
+        (self.rt, self.sched_client_mock, self.report_client_mock,
          self.driver_mock) = setup_rt(
                  _HOSTNAME, virt_resources, estimate_overhead)
 
@@ -3005,13 +3008,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # Scheduled instances should not have their allocations removed
         rc.delete_allocation_for_instance.assert_not_called()
 
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_allocations_for_resource_provider')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete_allocation_for_instance')
-    @mock.patch('nova.objects.Instance.get_by_uuid')
-    def test_remove_deleted_instances_allocations_move_ops(self, mock_get,
-            mock_delete_allocs, mock_get_allocs):
+    def test_remove_deleted_instances_allocations_move_ops(self):
         """Test that we do NOT delete allocations for instances that are
         currently undergoing move operations.
         """
@@ -3022,14 +3019,16 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # Instances in resizing/move will be ACTIVE or STOPPED
         instance.vm_state = vm_states.ACTIVE
         # Mock out the allocation call
-        allocs = {uuids.inst0: mock.sentinel.moving_instance}
-        mock_get_allocs.return_value = allocs
-        mock_get.return_value = instance
+        rpt_clt = self.report_client_mock
+        allocs = report.ProviderAllocInfo(
+            allocations={uuids.inst0: mock.sentinel.moving_instance})
+        rpt_clt.get_allocations_for_resource_provider.return_value = allocs
 
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.MagicMock()
-        self.rt._remove_deleted_instances_allocations(ctx, cn, [], mock.ANY)
-        mock_delete_allocs.assert_not_called()
+        self.rt._remove_deleted_instances_allocations(
+            ctx, cn, [], {uuids.inst0: instance})
+        rpt_clt.delete_allocation_for_instance.assert_not_called()
 
     def test_remove_deleted_instances_allocations_known_instance(self):
         """Tests the case that actively tracked instances for the

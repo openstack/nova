@@ -31,7 +31,7 @@ from nova.i18n import _
 from nova import objects
 from nova.objects import fields as fields_obj
 from nova import rpc
-from nova.scheduler import client
+from nova.scheduler.client import report
 from nova.scheduler import driver
 from nova.scheduler import utils
 
@@ -44,8 +44,7 @@ class FilterScheduler(driver.Scheduler):
     def __init__(self, *args, **kwargs):
         super(FilterScheduler, self).__init__(*args, **kwargs)
         self.notifier = rpc.get_notifier('scheduler')
-        scheduler_client = client.SchedulerClient()
-        self.placement_client = scheduler_client.reportclient
+        self.placement_client = report.SchedulerReportClient()
 
     def select_destinations(self, context, spec_obj, instance_uuids,
             alloc_reqs_by_rp_uuid, provider_summaries,

@@ -6245,7 +6245,7 @@ class ComputeTestCase(BaseTestCase,
         migration = objects.Migration(uuid=uuids.migration)
 
         @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
-        @mock.patch.object(self.compute, 'reportclient')
+        @mock.patch.object(self.compute, '_reportclient')
         def do_it(mock_client, mock_setup):
             mock_client.get_allocations_for_consumer.return_value = {
                 mock.sentinel.source: {
