@@ -44,17 +44,18 @@ class NetUtilsTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.utils.execute')
     @mock.patch('nova.privsep.linux_net.set_device_enabled')
-    def test_create_tap_dev_mac(self, mock_enabled, mock_execute):
+    @mock.patch('nova.privsep.linux_net.set_device_macaddr')
+    def test_create_tap_dev_mac(self, mock_set_macaddr, mock_enabled,
+                                mock_execute):
         net_utils.create_tap_dev('tap42', '00:11:22:33:44:55')
 
         mock_execute.assert_has_calls([
             mock.call('ip', 'tuntap', 'add', 'tap42', 'mode', 'tap',
-                      run_as_root=True, check_exit_code=[0, 2, 254]),
-            mock.call('ip', 'link', 'set', 'tap42',
-                      'address', '00:11:22:33:44:55',
                       run_as_root=True, check_exit_code=[0, 2, 254])
         ])
         mock_enabled.assert_called_once_with('tap42')
+        mock_set_macaddr.assert_has_calls([
+            mock.call('tap42', '00:11:22:33:44:55')])
 
     @mock.patch('nova.utils.execute')
     @mock.patch('nova.privsep.linux_net.set_device_enabled')

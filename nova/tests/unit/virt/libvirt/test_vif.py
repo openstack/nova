@@ -969,8 +969,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     @mock.patch.object(utils, 'execute')
     @mock.patch.object(pci_utils, 'get_ifname_by_pci_address')
     @mock.patch.object(pci_utils, 'get_vf_num_by_pci_address', return_value=1)
-    def _test_hw_veb_op(self, op, vlan, mock_get_vf_num, mock_get_ifname,
-                        mock_execute):
+    @mock.patch('nova.privsep.linux_net.set_device_macaddr')
+    def _test_hw_veb_op(self, op, vlan, mock_set_macaddr, mock_get_vf_num,
+                        mock_get_ifname, mock_execute):
         mock_get_ifname.side_effect = ['eth1', 'eth13']
         exit_code = [0, 2, 254]
         port_state = 'up' if vlan > 0 else 'down'
@@ -986,18 +987,16 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                   self.vif_hw_veb_macvtap['address'],
                                   'vlan', vlan,
                                   run_as_root=True,
-                                  check_exit_code=exit_code),
-                        mock.call('ip', 'link', 'set',
-                                  'eth13', 'address',
-                                  self.vif_hw_veb_macvtap['address'],
-                                  port_state,
-                                  run_as_root=True,
-                                  check_exit_code=exit_code)]
+                                  check_exit_code=exit_code)],
+            'set_macaddr': [mock.call('eth13',
+                                      self.vif_hw_veb_macvtap['address'],
+                                      port_state=port_state)]
         }
         op(self.instance, self.vif_hw_veb_macvtap)
         mock_get_ifname.assert_has_calls(calls['get_ifname'])
         mock_get_vf_num.assert_has_calls(calls['get_vf_num'])
         mock_execute.assert_has_calls(calls['execute'])
+        mock_set_macaddr.assert_has_calls(calls['set_macaddr'])
 
     def test_plug_hw_veb(self):
         d = vif.LibvirtGenericVIFDriver()

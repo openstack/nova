@@ -1382,9 +1382,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             # (danwent) the bridge will inherit this address, so we want to
             # make sure it is the value set from the NetworkManager
             if mac_address:
-                _execute('ip', 'link', 'set', interface, 'address',
-                         mac_address, run_as_root=True,
-                         check_exit_code=[0, 2, 254])
+                nova.privsep.linux_net.set_device_macaddr(
+                    interface, mac_address)
             nova.privsep.linux_net.set_device_enabled(interface)
         # NOTE(vish): set mtu every time to ensure that changes to mtu get
         #             propagated
@@ -1449,8 +1448,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             if not CONF.fake_network:
                 interface_addrs = netifaces.ifaddresses(interface)
                 interface_mac = interface_addrs[netifaces.AF_LINK][0]['addr']
-                _execute('ip', 'link', 'set', bridge, 'address', interface_mac,
-                         run_as_root=True)
+                nova.privsep.linux_net.set_device_macaddr(
+                    bridge, interface_mac)
 
             nova.privsep.linux_net.set_device_enabled(interface)
 
@@ -1665,8 +1664,8 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                         'external-ids:iface-status=active',
                         '--', 'set', 'Interface', dev,
                         'external-ids:attached-mac=%s' % mac_address])
-            _execute('ip', 'link', 'set', dev, 'address', mac_address,
-                     run_as_root=True)
+            nova.privsep.linux_net.set_device_macaddr(
+                dev, mac_address)
             nova.privsep.linux_net.set_device_mtu(dev, network.get('mtu'))
             nova.privsep.linux_net.set_device_enabled(dev)
             if not gateway:

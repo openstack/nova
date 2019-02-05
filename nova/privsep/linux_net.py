@@ -92,6 +92,16 @@ def set_device_enabled(dev):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def set_device_macaddr(dev, mac_addr, port_state=None):
+    if port_state:
+        processutils.execute('ip', 'link', 'set', dev, 'address', mac_addr,
+                             port_state, check_exit_code=[0, 2, 254])
+    else:
+        processutils.execute('ip', 'link', 'set', dev, 'address', mac_addr,
+                             check_exit_code=[0, 2, 254])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def create_veth_pair(dev1_name, dev2_name, mtu=None):
     """Create a pair of veth devices with the specified names,
     deleting any previous devices with those names.
