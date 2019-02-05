@@ -92,6 +92,11 @@ def set_device_enabled(dev):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def set_device_disabled(dev):
+    processutils.execute('ip', 'link', 'set', dev, 'down')
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def set_device_macaddr(dev, mac_addr, port_state=None):
     if port_state:
         processutils.execute('ip', 'link', 'set', dev, 'address', mac_addr,

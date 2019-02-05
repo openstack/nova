@@ -1270,17 +1270,15 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             self.assertEqual(2, len(executes))
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('nova.privsep.linux_net.set_device_disabled')
     @mock.patch('nova.privsep.linux_net.delete_bridge')
-    def test_remove_bridge(self, mock_delete, mock_execute, mock_exists):
+    def test_remove_bridge(self, mock_delete, mock_disabled, mock_exists):
         linux_net.LinuxBridgeInterfaceDriver.remove_bridge('fake-bridge')
 
         self.assertIn(mock.call('/sys/class/net/fake-bridge'),
                       mock_exists.mock_calls)
-        self.assertEqual([mock.call('ip', 'link', 'set', 'fake-bridge',
-                                   'down', run_as_root=True)],
-                         mock_execute.mock_calls)
-        self.assertEqual([mock.call('fake-bridge')], mock_delete.mock_calls)
+        mock_disabled.assert_called_once_with('fake-bridge')
+        mock_delete.assert_called_once_with('fake-bridge')
 
     @mock.patch.object(linux_net, '_execute')
     @mock.patch('nova.privsep.linux_net.device_exists', return_value=False)
@@ -1317,7 +1315,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         mock_set_device_mtu.assert_called_once_with('vlan1', None)
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.utils.execute',
+    @mock.patch('nova.privsep.linux_net.set_device_disabled',
                 side_effect=processutils.ProcessExecutionError())
     def test_remove_bridge_negative(self, mock_execute, mock_exists):
         self.assertRaises(processutils.ProcessExecutionError,
