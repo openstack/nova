@@ -79,6 +79,28 @@ Related options:
         min=0,
         help='Timeout (seconds) to wait for node serial console state '
              'changed. Set to 0 to disable timeout.'),
+    cfg.StrOpt(
+        'partition_key',
+        default=None,
+        mutable=True,
+        max_length=255,
+        regex=r'^[a-zA-Z0-9_.-]*$',
+        help='Case-insensitive key to limit the set of nodes that may be '
+             'managed by this service to the set of nodes in Ironic which '
+             'have a matching conductor_group property. If unset, all '
+             'available nodes will be eligible to be managed by this '
+             'service. Note that setting this to the empty string (``""``) '
+             'will match the default conductor group, and is different than '
+             'leaving the option unset.'),
+    cfg.ListOpt(
+        'peer_list',
+        default=[],
+        mutable=True,
+        help='List of hostnames for other nova-compute services with the same '
+             'partition_key config value. Nodes matching the partition_key '
+             'value will be distributed between this service and the other '
+             'services specified here. If partition_key is unset, this option '
+             'is ignored.'),
 ]
 
 deprecated_opts = {

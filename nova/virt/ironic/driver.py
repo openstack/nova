@@ -131,6 +131,27 @@ def _log_ironic_polling(what, node, instance):
               instance=instance)
 
 
+def _check_peer_list():
+    # these configs are mutable; need to check at runtime and init
+    if CONF.ironic.partition_key is not None:
+        peer_list = set(CONF.ironic.peer_list)
+        if not peer_list:
+            LOG.error('FATAL: Peer list is not configured in the '
+                      '[ironic]/peer_list option; cannot map '
+                      'ironic nodes to compute services.')
+            raise exception.InvalidPeerList(host=CONF.host)
+        if CONF.host not in peer_list:
+            LOG.error('FATAL: Peer list does not contain this '
+                      'compute service hostname (%s); add it to '
+                      'the [ironic]/peer_list option.', CONF.host)
+            raise exception.InvalidPeerList(host=CONF.host)
+        if set([CONF.host]) == peer_list:
+            LOG.warning('This compute service (%s) is the only service '
+                        'present in the [ironic]/peer_list option. '
+                        'Are you sure this should not include more '
+                        'hosts?', CONF.host)
+
+
 class IronicDriver(virt_driver.ComputeDriver):
     """Hypervisor driver for Ironic - bare metal provisioning."""
 
@@ -667,13 +688,40 @@ class IronicDriver(virt_driver.ComputeDriver):
             return False
 
     def _refresh_hash_ring(self, ctxt):
+        peer_list = None
+        # NOTE(jroll) if this is set, we need to limit the set of other
+        # compute services in the hash ring to hosts that are currently up
+        # and specified in the peer_list config option, as there's no way
+        # to check which partition_key other compute services are using.
+        if CONF.ironic.partition_key is not None:
+            try:
+                # NOTE(jroll) first we need to make sure the Ironic API can
+                # filter by conductor_group. If it cannot, limiting to
+                # peer_list could end up with a node being managed by multiple
+                # compute services.
+                self._can_send_version(min_version='1.46')
+
+                peer_list = set(CONF.ironic.peer_list)
+                # these configs are mutable; need to check at runtime and init.
+                # luckily, we run this method from init_host.
+                _check_peer_list()
+                LOG.debug('Limiting peer list to %s', peer_list)
+            except exception.IronicAPIVersionNotAvailable:
+                pass
+
+        # TODO(jroll) optimize this to limit to the peer_list
         service_list = objects.ServiceList.get_all_computes_by_hv_type(
             ctxt, self._get_hypervisor_type())
         services = set()
         for svc in service_list:
-            is_up = self.servicegroup_api.service_is_up(svc)
-            if is_up:
-                services.add(svc.host)
+            # NOTE(jroll) if peer_list is None, we aren't partitioning by
+            # conductor group, so we check all compute services for liveness.
+            # if we have a peer_list, don't check liveness for compute
+            # services that aren't in the list.
+            if peer_list is None or svc.host in peer_list:
+                is_up = self.servicegroup_api.service_is_up(svc)
+                if is_up:
+                    services.add(svc.host)
         # NOTE(jroll): always make sure this service is in the list, because
         # only services that have something registered in the compute_nodes
         # table will be here so far, and we might be brand new.
@@ -690,7 +738,31 @@ class IronicDriver(virt_driver.ComputeDriver):
         instances = objects.InstanceList.get_uuids_by_host(ctxt, CONF.host)
         node_cache = {}
 
-        for node in self._get_node_list(fields=_NODE_FIELDS, limit=0):
+        def _get_node_list(**kwargs):
+            return self._get_node_list(fields=_NODE_FIELDS, limit=0, **kwargs)
+
+        # NOTE(jroll) if partition_key is set, we need to limit nodes that
+        # can be managed to nodes that have a matching conductor_group
+        # attribute. If the API isn't new enough to support conductor groups,
+        # we fall back to managing all nodes. If it is new enough, we can
+        # filter it in the API.
+        partition_key = CONF.ironic.partition_key
+        if partition_key is not None:
+            try:
+                self._can_send_version(min_version='1.46')
+                nodes = _get_node_list(conductor_group=partition_key)
+                LOG.debug('Limiting manageable ironic nodes to conductor '
+                          'group %s', partition_key)
+            except exception.IronicAPIVersionNotAvailable:
+                LOG.error('Required Ironic API version 1.46 is not '
+                          'available to filter nodes by conductor group. '
+                          'All nodes will be eligible to be managed by '
+                          'this compute service.')
+                nodes = _get_node_list()
+        else:
+            nodes = _get_node_list()
+
+        for node in nodes:
             # NOTE(jroll): we always manage the nodes for instances we manage
             if node.instance_uuid in instances:
                 node_cache[node.uuid] = node
