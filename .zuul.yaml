@@ -195,7 +195,6 @@
     # Please try to keep the list of job names sorted alphabetically.
     templates:
       - check-requirements
-      - integrated-gate
       - integrated-gate-py3
       - openstack-cover-jobs
       - openstack-lower-constraints-jobs
@@ -235,8 +234,6 @@
               - ^tests-py3.txt$
               - ^tools/.*$
               - ^tox.ini$
-        - neutron-grenade:
-            irrelevant-files: *dsvm-irrelevant-files
         - neutron-grenade-multinode:
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-linuxbridge:
@@ -251,8 +248,6 @@
         - nova-next
         - nova-tox-functional
         - nova-tox-functional-py35
-        - tempest-full:
-            irrelevant-files: *dsvm-irrelevant-files
         - tempest-full-py3:
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-multinode-full:
@@ -264,14 +259,10 @@
             irrelevant-files: *dsvm-irrelevant-files
     gate:
       jobs:
-        - neutron-grenade:
-            irrelevant-files: *dsvm-irrelevant-files
         - nova-live-migration
         - nova-tox-functional
         - nova-tox-functional-py35
         - nova-next
-        - tempest-full:
-            irrelevant-files: *dsvm-irrelevant-files
         - tempest-full-py3:
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-slow-py3:
