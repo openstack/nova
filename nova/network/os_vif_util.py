@@ -279,16 +279,26 @@ def _nova_to_osvif_vif_bridge(vif):
 
 # VIF_TYPE_OVS = 'ovs'
 def _nova_to_osvif_vif_ovs(vif):
+    vif_name = _get_vif_name(vif)
     vnic_type = vif.get('vnic_type', model.VNIC_TYPE_NORMAL)
     profile = objects.vif.VIFPortProfileOpenVSwitch(
         interface_id=vif.get('ovs_interfaceid') or vif['id'],
         datapath_type=vif['details'].get(
             model.VIF_DETAILS_OVS_DATAPATH_TYPE))
     if vnic_type == model.VNIC_TYPE_DIRECT:
+        datapath_offload = objects.vif.DatapathOffloadRepresentor(
+            representor_name=vif_name,
+            representor_address=vif["profile"]["pci_slot"]
+        )
+        # NOTE(jangutter): in accordance with the generic-os-vif-offloads spec,
+        # the datapath offload info is duplicated in both interfaces for Stein.
+        # The port profile should be transitioned to
+        # VIFPortProfileOpenVSwitch during Train.
         profile = objects.vif.VIFPortProfileOVSRepresentor(
             interface_id=vif.get('ovs_interfaceid') or vif['id'],
-            representor_name=_get_vif_name(vif),
-            representor_address=vif["profile"]['pci_slot'])
+            representor_name=vif_name,
+            representor_address=vif["profile"]['pci_slot'],
+            datapath_offload=datapath_offload)
         obj = _get_vif_instance(
             vif,
             objects.vif.VIFHostDevice,
@@ -304,7 +314,7 @@ def _nova_to_osvif_vif_ovs(vif):
             objects.vif.VIFBridge,
             port_profile=profile,
             plugin="ovs",
-            vif_name=_get_vif_name(vif),
+            vif_name=vif_name,
             bridge_name=_get_hybrid_bridge_name(vif))
     else:
         obj = _get_vif_instance(
@@ -312,7 +322,7 @@ def _nova_to_osvif_vif_ovs(vif):
             objects.vif.VIFOpenVSwitch,
             port_profile=profile,
             plugin="ovs",
-            vif_name=_get_vif_name(vif))
+            vif_name=vif_name)
         if vif["network"]["bridge"] is not None:
             obj.bridge_name = vif["network"]["bridge"]
     return obj
@@ -332,10 +342,19 @@ def _nova_to_osvif_vif_agilio_ovs(vif):
         # VIF.port_profile.representor_address is used by the os-vif plugin's
         # plug/unplug, this should be the same as VIF.dev_address in the
         # VNIC_TYPE_DIRECT case.
+        datapath_offload = objects.vif.DatapathOffloadRepresentor(
+            representor_name=vif_name,
+            representor_address=vif["profile"]["pci_slot"]
+        )
+        # NOTE(jangutter): in accordance with the generic-os-vif-offloads spec,
+        # the datapath offload info is duplicated in both interfaces for Stein.
+        # The port profile should be transitioned to
+        # VIFPortProfileOpenVSwitch during Train.
         profile = objects.vif.VIFPortProfileOVSRepresentor(
             interface_id=vif.get('ovs_interfaceid') or vif['id'],
             representor_name=vif_name,
-            representor_address=vif["profile"]["pci_slot"])
+            representor_address=vif["profile"]["pci_slot"],
+            datapath_offload=datapath_offload)
     if vnic_type == model.VNIC_TYPE_DIRECT:
         # VIF.dev_address is used by the hypervisor to plug the instance into
         # the PCI device.
@@ -429,17 +448,18 @@ def _nova_to_osvif_vif_ivs(vif):
 
 # VIF_TYPE_VROUTER = 'vrouter'
 def _nova_to_osvif_vif_vrouter(vif):
+    vif_name = _get_vif_name(vif)
     vnic_type = vif.get('vnic_type', model.VNIC_TYPE_NORMAL)
     if vnic_type == model.VNIC_TYPE_NORMAL:
         obj = _get_vif_instance(
             vif,
             objects.vif.VIFGeneric,
             plugin="vrouter",
-            vif_name=_get_vif_name(vif)
+            vif_name=vif_name
         )
     elif vnic_type == model.VNIC_TYPE_DIRECT:
         datapath_offload = objects.vif.DatapathOffloadRepresentor(
-            representor_name=_get_vif_name(vif),
+            representor_name=vif_name,
             representor_address=vif["profile"]["pci_slot"]
         )
         profile = objects.vif.VIFPortProfileBase(
@@ -455,7 +475,7 @@ def _nova_to_osvif_vif_vrouter(vif):
         )
     elif vnic_type == model.VNIC_TYPE_VIRTIO_FORWARDER:
         datapath_offload = objects.vif.DatapathOffloadRepresentor(
-            representor_name=_get_vif_name(vif),
+            representor_name=vif_name,
             representor_address=vif["profile"]["pci_slot"]
         )
         profile = objects.vif.VIFPortProfileBase(
@@ -466,7 +486,7 @@ def _nova_to_osvif_vif_vrouter(vif):
             objects.vif.VIFVHostUser,
             port_profile=profile,
             plugin="vrouter",
-            vif_name=_get_vif_name(vif)
+            vif_name=vif_name
         )
         _set_vhostuser_settings(vif, obj)
     else:
