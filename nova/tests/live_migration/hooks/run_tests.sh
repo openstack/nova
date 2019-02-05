@@ -41,23 +41,25 @@ echo '2. NFS testing is skipped due to setup failures with Ubuntu 16.04'
 #run_tempest  "NFS shared storage test" "live_migration"
 #nfs_teardown
 
-echo '3. test with Ceph for root + ephemeral disks'
-prepare_ceph
-GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
-configure_and_start_glance
-
-# Deal with grenade craziness...
 if [ "$GRENADE_OLD_BRANCH" ]; then
-    # NOTE(mriedem): Grenade runs in singleconductor mode, so it won't use
-    # /etc/nova/nova-cpu.conf so we have to overwrite NOVA_CPU_CONF which is
-    # read in configure_and_start_nova.
-    if ! is_service_enabled n-super-cond; then
-        NOVA_CPU_CONF=$NOVA_CONF
-    fi
-fi
+    # NOTE(mriedem): Testing with ceph in the grenade live migration job is
+    # disabled because of a mess of changes in devstack from queens which
+    # result in the pike node running with nova.conf and the queens node
+    # running with nova-cpu.conf and _ceph_configure_nova (in ceph.sh) does
+    # not configure the nodes properly for rbd auth which makes rbd-backed
+    # live migration fail (because the nodes on shared storage can't
+    # communicate). Fixing that is non-trivial so we just skip ceph testing
+    # in the grenade case.
+    echo '2. test with Ceph is skipped due to bug 1813216'
+else
+    echo '3. test with Ceph for root + ephemeral disks'
+    prepare_ceph
+    GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
+    configure_and_start_glance
 
-configure_and_start_nova
-run_tempest "Ceph nova&glance test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
+    configure_and_start_nova
+    run_tempest "Ceph nova&glance test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
+fi
 
 set +e
 #echo '4. test with Ceph for volumes and root + ephemeral disk'
