@@ -843,6 +843,12 @@ class WarningsFixture(fixtures.Fixture):
             'ignore', message='Evaluating non-mapped column expression',
             category=sqla_exc.SAWarning)
 
+        # TODO(jangutter): Change (or remove) this to an error during the Train
+        # cycle when the os-vif port profile is no longer used.
+        warnings.filterwarnings(
+            'ignore', message=".* 'VIFPortProfileOVSRepresentor' .* "
+            "is deprecated", category=PendingDeprecationWarning)
+
         self.addCleanup(warnings.resetwarnings)
 
 
