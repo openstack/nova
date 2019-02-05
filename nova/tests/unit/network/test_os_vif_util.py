@@ -1128,3 +1128,91 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
                     objects=[])))
 
         self.assertObjEqual(expect, actual)
+
+    def test_nova_to_osvif_vrouter_direct(self):
+        """Test for Contrail / Tungsten Fabric direct offloaded datapath."""
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type=model.VIF_TYPE_VROUTER,
+            address="22:52:25:62:e2:aa",
+            profile={
+                "pci_slot": "0000:08:08.5",
+            },
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                subnets=[]),
+            vnic_type=model.VNIC_TYPE_DIRECT,
+        )
+
+        actual = os_vif_util.nova_to_osvif_vif(vif)
+
+        expect = osv_objects.vif.VIFHostDevice(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            active=False,
+            has_traffic_filtering=False,
+            address="22:52:25:62:e2:aa",
+            dev_type=osv_objects.fields.VIFHostDeviceDevType.ETHERNET,
+            dev_address="0000:08:08.5",
+            plugin="vrouter",
+            port_profile=osv_objects.vif.VIFPortProfileBase(
+                datapath_offload=osv_objects.vif.DatapathOffloadRepresentor(
+                    representor_name="nicdc065497-3c",
+                    representor_address="0000:08:08.5")
+                ),
+            preserve_on_delete=False,
+            vif_name="nicdc065497-3c",
+            network=osv_objects.network.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                bridge_interface=None,
+                label="Demo Net",
+                subnets=osv_objects.subnet.SubnetList(
+                    objects=[])))
+
+        self.assertObjEqual(expect, actual)
+
+    def test_nova_to_osvif_vrouter_forwarder(self):
+        """Test for Contrail / Tungsten Fabric indirect offloaded datapath."""
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type=model.VIF_TYPE_VROUTER,
+            address="22:52:25:62:e2:aa",
+            profile={
+                "pci_slot": "0000:08:08.5",
+            },
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                subnets=[]),
+            details={
+                model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
+                model.VIF_DETAILS_VHOSTUSER_SOCKET: '/fake/socket',
+            },
+            vnic_type=model.VNIC_TYPE_VIRTIO_FORWARDER,
+        )
+
+        actual = os_vif_util.nova_to_osvif_vif(vif)
+
+        expect = osv_objects.vif.VIFVHostUser(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            active=False,
+            address="22:52:25:62:e2:aa",
+            plugin="vrouter",
+            vif_name="nicdc065497-3c",
+            path='/fake/socket',
+            mode='client',
+            has_traffic_filtering=False,
+            port_profile=osv_objects.vif.VIFPortProfileBase(
+                datapath_offload=osv_objects.vif.DatapathOffloadRepresentor(
+                    representor_address="0000:08:08.5",
+                    representor_name="nicdc065497-3c")
+                ),
+            preserve_on_delete=False,
+            network=osv_objects.network.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                bridge_interface=None,
+                label="Demo Net",
+                subnets=osv_objects.subnet.SubnetList(
+                    objects=[])))
+
+        self.assertObjEqual(expect, actual)

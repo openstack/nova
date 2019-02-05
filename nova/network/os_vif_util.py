@@ -437,6 +437,38 @@ def _nova_to_osvif_vif_vrouter(vif):
             plugin="vrouter",
             vif_name=_get_vif_name(vif)
         )
+    elif vnic_type == model.VNIC_TYPE_DIRECT:
+        datapath_offload = objects.vif.DatapathOffloadRepresentor(
+            representor_name=_get_vif_name(vif),
+            representor_address=vif["profile"]["pci_slot"]
+        )
+        profile = objects.vif.VIFPortProfileBase(
+            datapath_offload=datapath_offload
+        )
+        obj = _get_vif_instance(
+            vif,
+            objects.vif.VIFHostDevice,
+            port_profile=profile,
+            plugin="vrouter",
+            dev_address=vif["profile"]["pci_slot"],
+            dev_type=objects.fields.VIFHostDeviceDevType.ETHERNET
+        )
+    elif vnic_type == model.VNIC_TYPE_VIRTIO_FORWARDER:
+        datapath_offload = objects.vif.DatapathOffloadRepresentor(
+            representor_name=_get_vif_name(vif),
+            representor_address=vif["profile"]["pci_slot"]
+        )
+        profile = objects.vif.VIFPortProfileBase(
+            datapath_offload=datapath_offload
+        )
+        obj = _get_vif_instance(
+            vif,
+            objects.vif.VIFVHostUser,
+            port_profile=profile,
+            plugin="vrouter",
+            vif_name=_get_vif_name(vif)
+        )
+        _set_vhostuser_settings(vif, obj)
     else:
         raise NotImplementedError()
     return obj
