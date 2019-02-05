@@ -366,6 +366,9 @@ class LibvirtDriver(driver.ComputeDriver):
         self._volume_api = cinder.API()
         self._image_api = image.API()
 
+        # The default choice for the sysinfo_serial config option is "unique"
+        # which does not have a special function since the value is just the
+        # instance.uuid.
         sysinfo_serial_funcs = {
             'none': lambda: None,
             'hardware': self._get_host_sysinfo_serial_hardware,

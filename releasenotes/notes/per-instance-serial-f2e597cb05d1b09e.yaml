@@ -3,5 +3,7 @@ upgrade:
   - |
     Added a new ``unique`` choice to the ``[libvirt]/sysinfo_serial``
     configuration which if set will result in the guest serial number being
-    set to ``instance.uuid`` on this host. This is now the default value
-    of ``[libvirt]/sysinfo_serial`` config option.
+    set to ``instance.uuid``. This is now the default value
+    of the ``[libvirt]/sysinfo_serial`` config option and is the recommended
+    choice since it ensures the guest serial is the same even if the instance
+    is migrated between hosts.

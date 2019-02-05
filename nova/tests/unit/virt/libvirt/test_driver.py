@@ -17928,7 +17928,7 @@ class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
         self.assertEqual(version.version_string_with_package(),
                          cfg.system_version)
         if expected_serial == 'instance_uuid':
-            expected_serial = instance_ref['uuid']
+            expected_serial = instance_ref.uuid
         self.assertEqual(expected_serial,
                          cfg.system_serial)
         self.assertEqual(instance_ref['uuid'],
