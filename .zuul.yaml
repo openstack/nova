@@ -225,9 +225,26 @@
         - devstack-plugin-ceph-tempest:
             voting: false
             irrelevant-files: *dsvm-irrelevant-files
+        # TODO(mriedem): We need to move this job definition in-tree from
+        # openstack-zuul-jobs.
         - legacy-grenade-dsvm-neutron-multinode-live-migration:
             voting: false
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files:
+              # We define our own irrelevant-files because we need to run
+              # this if there are changes to nova/tests/live_migration/.
+              - ^api-.*$
+              - ^(test-|)requirements.txt$
+              - ^.*\.rst$
+              - ^.git.*$
+              - ^doc/.*$
+              - ^nova/hacking/.*$
+              - ^nova/locale/.*$
+              - ^(?!nova/tests/live_migration/).*$
+              - ^releasenotes/.*$
+              - ^setup.cfg$
+              - ^tests-py3.txt$
+              - ^tools/.*$
+              - ^tox.ini$
         - neutron-grenade:
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-grenade-multinode:
