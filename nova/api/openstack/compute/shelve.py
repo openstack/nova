@@ -19,7 +19,10 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova import compute
+from nova.compute import vm_states
 from nova import exception
+from nova.i18n import _
+from nova import network
 from nova.policies import shelve as shelve_policies
 
 
@@ -27,6 +30,7 @@ class ShelveController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ShelveController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
+        self.network_api = network.API()
 
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409))
@@ -70,13 +74,23 @@ class ShelveController(wsgi.Controller):
                                                               id)
 
     @wsgi.response(202)
-    @wsgi.expected_errors((404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('unshelve')
     def _unshelve(self, req, id, body):
         """Restore an instance from shelved mode."""
         context = req.environ["nova.context"]
         context.can(shelve_policies.POLICY_ROOT % 'unshelve')
         instance = common.get_instance(self.compute_api, context, id)
+
+        if (instance.vm_state == vm_states.SHELVED_OFFLOADED
+                and common.instance_has_port_with_resource_request(
+                    context, instance.uuid, self.network_api)
+                and not common.supports_port_resource_request_during_move(
+                    req)):
+            msg = _("The unshelve server operation on a shelve offloaded "
+                    "server with port having QoS policy is not supported.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
         try:
             self.compute_api.unshelve(context, instance)
         except exception.InstanceUnknownCell as e:

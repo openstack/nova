@@ -5584,3 +5584,67 @@ class PortResourceRequestBasedSchedulingTest(
         self.assertIn(
             'The evacuate server operation with port having QoS policy is '
             'not supported.', six.text_type(ex))
+
+    def test_unshelve_offloaded_server_with_port_resource_request_old_version(
+            self):
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_1['id']}])
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # with default config shelve means immediate offload as well
+        req = {
+            'shelve': {}
+        }
+        self.api.post_server_action(server['id'], req)
+        self._wait_for_server_parameter(
+            self.api, server, {'status': 'SHELVED_OFFLOADED'})
+
+        # We need to simulate that the above server has a port that has
+        # resource request, we cannot boot with such a port but legacy servers
+        # can exists with such a port.
+        bound_port = self.neutron._ports[self.neutron.port_1['id']]
+        fake_resource_request = self.neutron.port_with_resource_request[
+            'resource_request']
+        bound_port['resource_request'] = fake_resource_request
+
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self.api.post_server_action, server['id'], {'unshelve': {}})
+
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn(
+            'The unshelve server operation on a shelve offloaded server with '
+            'port having QoS policy is not supported.', six.text_type(ex))
+
+    def test_unshelve_not_offloaded_server_with_port_resource_request(
+            self):
+        """If the server is not offloaded then unshelving does not cause a new
+        resource allocation therefore having port resource request is
+        irrelevant. This test asserts that such unshelve request is not
+        rejected.
+        """
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_1['id']}])
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # avoid automatic shelve offloading
+        self.flags(shelved_offload_time=-1)
+        req = {
+            'shelve': {}
+        }
+        self.api.post_server_action(server['id'], req)
+        self._wait_for_server_parameter(
+            self.api, server, {'status': 'SHELVED'})
+
+        # We need to simulate that the above server has a port that has
+        # resource request, we cannot boot with such a port but legacy servers
+        # can exists with such a port.
+        bound_port = self.neutron._ports[self.neutron.port_1['id']]
+        fake_resource_request = self.neutron.port_with_resource_request[
+            'resource_request']
+        bound_port['resource_request'] = fake_resource_request
+
+        self.api.post_server_action(server['id'], {'unshelve': {}})
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
