@@ -39,7 +39,6 @@
           [[local|localrc]]
           NOVA_USE_SERVICE_TOKEN=True
           NOVA_CONSOLE_PROXY_COMPUTE_TLS=True
-          PLACEMENT_DB_ENABLED=True
           USE_PYTHON3=True
 
           [[post-config|$NOVA_CONF]]
