@@ -12,8 +12,10 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+import fixtures
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
+import six
 import testtools
 import webob
 
@@ -66,6 +68,10 @@ class EvacuateTestV21(test.NoDBTestCase):
         self.stub_out('nova.compute.api.API.get', fake_compute_api_get)
         self.stub_out('nova.compute.api.HostAPI.service_get_by_compute_host',
                       fake_service_get_by_compute_host)
+        self.mock_list_port = self.useFixture(
+            fixtures.MockPatch(
+                'nova.network.neutronv2.api.API.list_ports')).mock
+        self.mock_list_port.return_value = {'ports': []}
         self.UUID = uuids.fake
         for _method in self._methods:
             self.stub_out('nova.compute.api.API.%s' % _method,
@@ -238,6 +244,21 @@ class EvacuateTestV21(test.NoDBTestCase):
         else:
             self.assertIsNone(res)
 
+    def test_evacuate_with_port_resource_request_old_microversion(self):
+        self.mock_list_port.return_value = {'ports': [
+            {'resource_request': {
+                "resources": {'CUSTOM_FOO': 1}}}]
+        }
+
+        admin_pass = 'MyNewPass'
+        ex = self.assertRaises(
+            webob.exc.HTTPBadRequest, self._get_evacuate_response,
+            {'host': 'my-host', 'onSharedStorage': 'False',
+             'adminPass': admin_pass})
+
+        self.assertIn('The evacuate server operation with port having QoS '
+                      'policy is not supported.', six.text_type(ex))
+
 
 class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
 
@@ -257,6 +278,10 @@ class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
 
         self.stub_out(
             'nova.api.openstack.common.get_instance', fake_get_instance)
+        self.mock_list_port = self.useFixture(
+            fixtures.MockPatch(
+                'nova.network.neutronv2.api.API.list_ports')).mock
+        self.mock_list_port.return_value = {'ports': []}
 
     def test_evacuate_policy_failed_with_other_project(self):
         rule_name = "os_compute_api:os-evacuate"
