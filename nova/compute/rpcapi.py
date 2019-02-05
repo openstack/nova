@@ -373,6 +373,7 @@ class ComputeAPI(object):
         * 5.4 - Add cache_images() support
         * 5.5 - Add prep_snapshot_based_resize_at_dest()
         * 5.6 - Add prep_snapshot_based_resize_at_source()
+        * 5.7 - Add finish_snapshot_based_resize_at_dest()
     '''
 
     VERSION_ALIASES = {
@@ -654,6 +655,46 @@ class ComputeAPI(object):
         cctxt = client.prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'finish_revert_resize', **msg_args)
+
+    def finish_snapshot_based_resize_at_dest(
+            self, ctxt, instance, migration, snapshot_id, request_spec):
+        """Finishes the snapshot-based resize at the destination compute.
+
+        Sets up block devices and networking on the destination compute and
+        spawns the guest.
+
+        This is a synchronous RPC call using the ``long_rpc_timeout``
+        configuration option.
+
+        :param ctxt: nova auth request context targeted at the target cell DB
+        :param instance: The Instance object being resized with the
+            ``migration_context`` field set. Upon successful completion of this
+            method the vm_state should be "resized", the task_state should be
+            None, and migration context, host/node and flavor-related fields
+            should be set on the instance.
+        :param migration: The Migration object for this resize operation. Upon
+            successful completion of this method the migration status should
+            be "finished".
+        :param snapshot_id: ID of the image snapshot created for a
+            non-volume-backed instance, else None.
+        :param request_spec: nova.objects.RequestSpec object for the operation
+        :raises: nova.exception.MigrationError if the destination compute
+            service is too old for this method
+        :raises: oslo_messaging.exceptions.MessagingTimeout if the pre-check
+            RPC call times out
+        """
+        client = self.router.client(ctxt)
+        version = '5.7'
+        if not client.can_send_version(version):
+            raise exception.MigrationError(reason=_('Compute too old'))
+        cctxt = client.prepare(
+            server=migration.dest_compute, version=version,
+            call_monitor_timeout=CONF.rpc_response_timeout,
+            timeout=CONF.long_rpc_timeout)
+        return cctxt.call(
+            ctxt, 'finish_snapshot_based_resize_at_dest',
+            instance=instance, migration=migration, snapshot_id=snapshot_id,
+            request_spec=request_spec)
 
     def get_console_output(self, ctxt, instance, tail_length):
         version = '5.0'

@@ -10504,6 +10504,342 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertIsNone(self.instance.task_state)
         instance_save.assert_called_once_with()
 
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    @mock.patch('nova.objects.Instance.save')
+    def test_finish_snapshot_based_resize_at_dest_outer_error(
+            self, instance_save, add_fault):
+        """Tests the error handling on the finish_snapshot_based_resize_at_dest
+        method.
+        """
+        request_spec = objects.RequestSpec()
+        self.instance.task_state = task_states.RESIZE_MIGRATED
+        with mock.patch.object(
+                self.compute, '_finish_snapshot_based_resize_at_dest',
+                side_effect=test.TestingException('oops')) as _finish:
+            ex = self.assertRaises(
+                test.TestingException,
+                self.compute.finish_snapshot_based_resize_at_dest,
+                self.context, self.instance, self.migration, uuids.snapshot_id,
+                request_spec)
+        # Assert the non-decorator mock calls.
+        _finish.assert_called_once_with(
+            self.context, self.instance, self.migration, uuids.snapshot_id)
+        # Assert _error_out_instance_on_exception is called.
+        self.assertEqual(vm_states.ERROR, self.instance.vm_state)
+        # Assert wrap_instance_fault is called.
+        add_fault.assert_called_once_with(
+            self.context, self.instance, ex, mock.ANY)
+        # Assert wrap_exception is called.
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(
+            'compute.%s' % fields.NotificationAction.EXCEPTION,
+            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+        # Assert errors_out_migration is called.
+        self.assertEqual('error', self.migration.status)
+        self.migration.save.assert_called_once_with()
+        # Assert reverts_task_state is called.
+        self.assertIsNone(self.instance.task_state)
+        # Instance.save is called twice:
+        # 1. _error_out_instance_on_exception
+        # 2. reverts_task_state
+        self.assertEqual(2, instance_save.call_count)
+
+    @mock.patch('nova.objects.Instance.get_bdms')
+    @mock.patch('nova.objects.Instance.apply_migration_context')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_send_finish_resize_notifications')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_finish_snapshot_based_resize_at_dest_spawn')
+    @mock.patch('nova.objects.ImageMeta.from_image_ref')
+    @mock.patch('nova.compute.utils.delete_image')
+    def _test_finish_snapshot_based_resize_at_dest(
+            self, delete_image, from_image_ref, _finish_spawn, notify,
+            inst_save, apply_migration_context, get_bdms, snapshot_id=None):
+        """Happy path test for finish_snapshot_based_resize_at_dest."""
+        # Setup the fake instance.
+        request_spec = objects.RequestSpec()
+        self.instance.task_state = task_states.RESIZE_MIGRATED
+        nwinfo = network_model.NetworkInfo([
+            network_model.VIF(id=uuids.port_id)])
+        self.instance.info_cache = objects.InstanceInfoCache(
+            network_info=nwinfo)
+        self.instance.new_flavor = fake_flavor.fake_flavor_obj(self.context)
+        old_flavor = self.instance.flavor
+        # Mock out ImageMeta.
+        if snapshot_id:
+            from_image_ref.return_value = objects.ImageMeta()
+        # Setup the fake migration.
+        self.migration.migration_type = 'resize'
+        self.migration.dest_compute = uuids.dest
+        self.migration.dest_node = uuids.dest
+
+        with mock.patch.object(self.compute, 'network_api') as network_api:
+            network_api.get_instance_nw_info.return_value = nwinfo
+            # Run that big beautiful code!
+            self.compute.finish_snapshot_based_resize_at_dest(
+                self.context, self.instance, self.migration, snapshot_id,
+                request_spec)
+        # Check the changes to the instance and migration object.
+        self.assertEqual(vm_states.RESIZED, self.instance.vm_state)
+        self.assertIsNone(self.instance.task_state)
+        self.assertIs(self.instance.flavor, self.instance.new_flavor)
+        self.assertIs(self.instance.old_flavor, old_flavor)
+        self.assertEqual(self.migration.dest_compute, self.instance.host)
+        self.assertEqual(self.migration.dest_node, self.instance.node)
+        self.assertEqual('finished', self.migration.status)
+        # Assert the mock calls.
+        if snapshot_id:
+            from_image_ref.assert_called_once_with(
+                self.context, self.compute.image_api, snapshot_id)
+            delete_image.assert_called_once_with(
+                self.context, self.instance, self.compute.image_api,
+                snapshot_id)
+        else:
+            from_image_ref.assert_not_called()
+            delete_image.assert_not_called()
+        # The instance migration context was applied and changes were saved
+        # to the instance twice.
+        apply_migration_context.assert_called_once_with()
+        inst_save.assert_has_calls([
+            mock.call(expected_task_state=task_states.RESIZE_MIGRATED),
+            mock.call(expected_task_state=task_states.RESIZE_FINISH)])
+        self.migration.save.assert_called_once_with()
+        # Start and end notifications were sent.
+        notify.assert_has_calls([
+            mock.call(self.context, self.instance, get_bdms.return_value,
+                      nwinfo, fields.NotificationPhase.START),
+            mock.call(self.context, self.instance, get_bdms.return_value,
+                      nwinfo, fields.NotificationPhase.END)])
+        # Volumes and networking were setup prior to calling driver spawn.
+        spawn_image_meta = from_image_ref.return_value \
+            if snapshot_id else test.MatchType(objects.ImageMeta)
+        _finish_spawn.assert_called_once_with(
+            self.context, self.instance, self.migration, spawn_image_meta,
+            get_bdms.return_value)
+
+    def test_finish_snapshot_based_resize_at_dest_image_backed(self):
+        """Happy path test for finish_snapshot_based_resize_at_dest with
+        an image-backed server where snapshot_id is provided.
+        """
+        self._test_finish_snapshot_based_resize_at_dest(
+            snapshot_id=uuids.snapshot_id)
+
+    def test_finish_snapshot_based_resize_at_dest_volume_backed(self):
+        """Happy path test for finish_snapshot_based_resize_at_dest with
+        a volume-backed server where snapshot_id is None.
+        """
+        self._test_finish_snapshot_based_resize_at_dest(snapshot_id=None)
+
+    @mock.patch('nova.compute.manager.ComputeManager._prep_block_device')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_remove_volume_connection')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer')
+    def _test_finish_snapshot_based_resize_at_dest_spawn_fails(
+            self, get_allocs, remove_volume_connection, _prep_block_device,
+            volume_backed=False):
+        """Tests _finish_snapshot_based_resize_at_dest_spawn where spawn fails.
+        """
+        nwinfo = network_model.NetworkInfo([
+            network_model.VIF(id=uuids.port_id)])
+        self.instance.system_metadata['old_vm_state'] = vm_states.STOPPED
+        # Mock out BDMs.
+        if volume_backed:
+            # Single remote volume BDM.
+            bdms = objects.BlockDeviceMappingList(objects=[
+                objects.BlockDeviceMapping(
+                    source_type='volume', destination_type='volume',
+                    volume_id=uuids.volume_id, boot_index=0)])
+        else:
+            # Single local image BDM.
+            bdms = objects.BlockDeviceMappingList(objects=[
+                objects.BlockDeviceMapping(
+                    source_type='image', destination_type='local',
+                    image_id=uuids.image_id, boot_index=0)])
+        self.migration.migration_type = 'migration'
+        self.migration.dest_compute = uuids.dest
+        self.migration.source_compute = uuids.source
+        image_meta = self.instance.image_meta
+
+        # Stub out migrate_instance_start so we can assert how it is called.
+        def fake_migrate_instance_start(context, instance, migration):
+            # Make sure the migration.dest_compute was temporarily changed
+            # to the source_compute value.
+            self.assertEqual(uuids.source, migration.dest_compute)
+
+        with test.nested(
+            mock.patch.object(self.compute, 'network_api'),
+            mock.patch.object(self.compute.driver, 'spawn',
+                              side_effect=test.TestingException('spawn fail')),
+        ) as (
+            network_api, spawn,
+        ):
+            network_api.get_instance_nw_info.return_value = nwinfo
+            network_api.migrate_instance_start.side_effect = \
+                fake_migrate_instance_start
+            # Run that big beautiful code!
+            self.assertRaises(
+                test.TestingException,
+                self.compute._finish_snapshot_based_resize_at_dest_spawn,
+                self.context, self.instance, self.migration, image_meta, bdms)
+
+        # Assert the mock calls.
+        # Volumes and networking were setup prior to calling driver spawn.
+        _prep_block_device.assert_called_once_with(
+            self.context, self.instance, bdms)
+        get_allocs.assert_called_once_with(self.context, self.instance.uuid)
+        network_api.migrate_instance_finish.assert_called_once_with(
+            self.context, self.instance, self.migration,
+            provider_mappings=None)
+        spawn.assert_called_once_with(
+            self.context, self.instance, image_meta,
+            injected_files=[], admin_password=None,
+            allocations=get_allocs.return_value, network_info=nwinfo,
+            block_device_info=_prep_block_device.return_value, power_on=False)
+        # Port bindings were rolled back to the source host.
+        network_api.migrate_instance_start.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        if volume_backed:
+            # Volume connections were deleted.
+            remove_volume_connection.assert_called_once_with(
+                self.context, bdms[0], self.instance, delete_attachment=True)
+        else:
+            remove_volume_connection.assert_not_called()
+
+    def test_finish_snapshot_based_resize_at_dest_spawn_fails_image_back(self):
+        """Tests _finish_snapshot_based_resize_at_dest_spawn failing with an
+        image-backed server.
+        """
+        self._test_finish_snapshot_based_resize_at_dest_spawn_fails(
+            volume_backed=False)
+
+    def test_finish_snapshot_based_resize_at_dest_spawn_fails_vol_backed(self):
+        """Tests _finish_snapshot_based_resize_at_dest_spawn failing with a
+        volume-backed server.
+        """
+        self._test_finish_snapshot_based_resize_at_dest_spawn_fails(
+            volume_backed=True)
+
+    @mock.patch('nova.compute.manager.ComputeManager._prep_block_device')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_remove_volume_connection')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer')
+    def test_finish_snapshot_based_resize_at_dest_spawn_fail_graceful_rollback(
+            self, get_allocs, remove_volume_connection, _prep_block_device):
+        """Tests that the cleanup except block is graceful in that one
+         failure does not prevent trying to cleanup the other resources.
+         """
+        nwinfo = network_model.NetworkInfo([
+            network_model.VIF(id=uuids.port_id)])
+        self.instance.system_metadata['old_vm_state'] = vm_states.STOPPED
+        # Three BDMs: two volume (one of which will fail rollback) and a local.
+        bdms = objects.BlockDeviceMappingList(objects=[
+            # First volume BDM which fails rollback.
+            objects.BlockDeviceMapping(
+                destination_type='volume', volume_id=uuids.bad_volume),
+            # Second volume BDM is rolled back.
+            objects.BlockDeviceMapping(
+                destination_type='volume', volume_id=uuids.good_volume),
+            # Third BDM is a local image BDM so we do not try to roll it back.
+            objects.BlockDeviceMapping(
+                destination_type='local', image_id=uuids.image_id)
+        ])
+        self.migration.migration_type = 'migration'
+        self.migration.dest_compute = uuids.dest
+        self.migration.source_compute = uuids.source
+        image_meta = self.instance.image_meta
+
+        with test.nested(
+            mock.patch.object(self.compute, 'network_api'),
+            mock.patch.object(self.compute.driver, 'spawn',
+                              side_effect=test.TestingException(
+                                  'spawn fail')),
+        ) as (
+            network_api, spawn,
+        ):
+            network_api.get_instance_nw_info.return_value = nwinfo
+            # Mock migrate_instance_start to fail on rollback.
+            network_api.migrate_instance_start.side_effect = \
+                exception.PortNotFound(port_id=uuids.port_id)
+            # Mock remove_volume_connection to fail on the first call.
+            remove_volume_connection.side_effect = [
+                exception.CinderConnectionFailed(reason='gremlins'), None]
+            # Run that big beautiful code!
+            self.assertRaises(
+                test.TestingException,
+                self.compute._finish_snapshot_based_resize_at_dest_spawn,
+                self.context, self.instance, self.migration, image_meta, bdms)
+
+        # Assert the mock calls.
+        # Volumes and networking were setup prior to calling driver spawn.
+        _prep_block_device.assert_called_once_with(
+            self.context, self.instance, bdms)
+        get_allocs.assert_called_once_with(self.context, self.instance.uuid)
+        network_api.migrate_instance_finish.assert_called_once_with(
+            self.context, self.instance, self.migration,
+            provider_mappings=None)
+        spawn.assert_called_once_with(
+            self.context, self.instance, image_meta,
+            injected_files=[], admin_password=None,
+            allocations=get_allocs.return_value, network_info=nwinfo,
+            block_device_info=_prep_block_device.return_value, power_on=False)
+        # Port bindings were rolled back to the source host.
+        network_api.migrate_instance_start.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        # Volume connections were deleted.
+        remove_volume_connection.assert_has_calls([
+            mock.call(self.context, bdms[0], self.instance,
+                      delete_attachment=True),
+            mock.call(self.context, bdms[1], self.instance,
+                      delete_attachment=True)])
+        # Assert the expected errors to get logged.
+        self.assertIn('Failed to activate port bindings on the source',
+                      self.stdlog.logger.output)
+        self.assertIn('Failed to remove volume connection',
+                      self.stdlog.logger.output)
+
+    @mock.patch('nova.compute.manager.ComputeManager._prep_block_device')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer')
+    def test_finish_snapshot_based_resize_at_dest_spawn(
+            self, get_allocs, _prep_block_device):
+        """Happy path test for test_finish_snapshot_based_resize_at_dest_spawn.
+        """
+        nwinfo = network_model.NetworkInfo([
+            network_model.VIF(id=uuids.port_id)])
+        self.instance.system_metadata['old_vm_state'] = vm_states.ACTIVE
+        self.migration.migration_type = 'migration'
+        self.migration.dest_compute = uuids.dest
+        self.migration.source_compute = uuids.source
+        image_meta = self.instance.image_meta
+        bdms = objects.BlockDeviceMappingList()
+
+        with test.nested(
+            mock.patch.object(self.compute, 'network_api'),
+            mock.patch.object(self.compute.driver, 'spawn')
+        ) as (
+            network_api, spawn,
+        ):
+            network_api.get_instance_nw_info.return_value = nwinfo
+            # Run that big beautiful code!
+            self.compute._finish_snapshot_based_resize_at_dest_spawn(
+                self.context, self.instance, self.migration, image_meta, bdms)
+
+        # Assert the mock calls.
+        _prep_block_device.assert_called_once_with(
+            self.context, self.instance, bdms)
+        get_allocs.assert_called_once_with(self.context, self.instance.uuid)
+        network_api.migrate_instance_finish.assert_called_once_with(
+            self.context, self.instance, self.migration,
+            provider_mappings=None)
+        spawn.assert_called_once_with(
+            self.context, self.instance, image_meta,
+            injected_files=[], admin_password=None,
+            allocations=get_allocs.return_value, network_info=nwinfo,
+            block_device_info=_prep_block_device.return_value, power_on=True)
+
 
 class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
     def setUp(self):
