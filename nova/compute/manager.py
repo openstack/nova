@@ -4473,34 +4473,36 @@ class ComputeManager(manager.Manager):
 
     def _finish_resize(self, context, instance, migration, disk_info,
                        image_meta, bdms):
-        resize_instance = False
+        resize_instance = False  # indicates disks have been resized
         old_instance_type_id = migration['old_instance_type_id']
         new_instance_type_id = migration['new_instance_type_id']
-        old_instance_type = instance.get_flavor()
+        old_flavor = instance.flavor  # the current flavor is now old
         # NOTE(mriedem): Get the old_vm_state so we know if we should
         # power on the instance. If old_vm_state is not set we need to default
         # to ACTIVE for backwards compatibility
         old_vm_state = instance.system_metadata.get('old_vm_state',
                                                     vm_states.ACTIVE)
-        instance.old_flavor = old_instance_type
+        instance.old_flavor = old_flavor
 
         if old_instance_type_id != new_instance_type_id:
-            instance_type = instance.get_flavor('new')
-            self._set_instance_info(instance, instance_type)
+            new_flavor = instance.new_flavor  # this is set in _prep_resize
+            # Set the flavor-related fields on the instance object including
+            # making instance.flavor = new_flavor.
+            self._set_instance_info(instance, new_flavor)
             for key in ('root_gb', 'swap', 'ephemeral_gb'):
-                if old_instance_type[key] != instance_type[key]:
+                if old_flavor[key] != new_flavor[key]:
                     resize_instance = True
                     break
         instance.apply_migration_context()
 
         # NOTE(tr3buchet): setup networks on destination host
         self.network_api.setup_networks_on_host(context, instance,
-                                                migration['dest_compute'])
-
-        migration_p = obj_base.obj_to_primitive(migration)
+                                                migration.dest_compute)
+        # For neutron, migrate_instance_finish updates port bindings for this
+        # host including any PCI devices claimed for SR-IOV ports.
         self.network_api.migrate_instance_finish(context,
                                                  instance,
-                                                 migration_p)
+                                                 migration)
 
         network_info = self.network_api.get_instance_nw_info(context, instance)
 
@@ -4537,17 +4539,23 @@ class ComputeManager(manager.Manager):
                                          image_meta, resize_instance,
                                          block_device_info, power_on)
         except Exception:
+            # Note that we do not rollback port bindings to the source host
+            # because resize_instance (on the source host) updated the
+            # instance.host to point to *this* host (the destination host)
+            # so the port bindings pointing at this host are correct even
+            # though we failed to create the guest.
             with excutils.save_and_reraise_exception():
+                # If we failed to create the guest on this host, reset the
+                # instance flavor-related fields to the old flavor. An
+                # error handler like reverts_task_state will save the changes.
                 if old_instance_type_id != new_instance_type_id:
-                    self._set_instance_info(instance,
-                                            old_instance_type)
+                    self._set_instance_info(instance, old_flavor)
 
         # Now complete any volume attachments that were previously updated.
         self._complete_volume_attachments(context, bdms)
 
         migration.status = 'finished'
-        with migration.obj_as_admin():
-            migration.save()
+        migration.save()
 
         instance.vm_state = vm_states.RESIZED
         instance.task_state = None
