@@ -6157,7 +6157,6 @@ class ComputeTestCase(BaseTestCase,
 
         with mock.patch.object(self.compute.network_api,
                                'setup_networks_on_host') as mock_setup:
-            self.flags(live_migration_wait_for_vif_plug=True, group='compute')
             ret = self.compute.pre_live_migration(c, instance=instance,
                                                   block_migration=False,
                                                   disk=None,

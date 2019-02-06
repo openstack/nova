@@ -43,6 +43,9 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         self.useFixture(fixtures.AllServicesCurrent())
 
     def test_multiple_compute_actions(self):
+        # There are not going to be real network-vif-plugged events coming
+        # so don't wait for them.
+        self.flags(live_migration_wait_for_vif_plug=False, group='compute')
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
         self._wait_for_notification('instance.create.end')
