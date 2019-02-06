@@ -13,6 +13,7 @@
 from oslo_utils import versionutils
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import false
+from sqlalchemy.sql import or_
 
 from nova import context as nova_context
 from nova.db.sqlalchemy import api as db_api
@@ -260,10 +261,18 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     @db_api.api_context_manager.reader
     def _get_not_deleted_by_cell_and_project_from_db(context, cell_uuid,
                                                      project_id, limit):
-        query = (
-            context.session.query(api_models.InstanceMapping)
-            .filter_by(project_id=project_id)
-            .filter_by(queued_for_delete=false())
+        query = context.session.query(api_models.InstanceMapping)
+        if project_id is not None:
+            # Note that the project_id can be None in case
+            # instances are being listed for the all-tenants case.
+            query = query.filter_by(project_id=project_id)
+        # Both the values NULL (for cases when the online data migration for
+        # queued_for_delete was not run) and False (cases when the online
+        # data migration for queued_for_delete was run) are assumed to mean
+        # that the instance is not queued for deletion.
+        query = (query.filter(or_(
+            api_models.InstanceMapping.queued_for_delete == false(),
+            api_models.InstanceMapping.queued_for_delete.is_(None)))
             .join('cell_mapping')
             .options(joinedload('cell_mapping'))
             .filter(api_models.CellMapping.uuid == cell_uuid))

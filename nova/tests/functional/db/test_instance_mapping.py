@@ -349,3 +349,29 @@ class InstanceMappingListTestCase(test.NoDBTestCase):
                                                    pid,
                                                    limit=1))
         self.assertEqual(1, len(ims))
+
+    def test_get_not_deleted_by_cell_and_project_None(self):
+        cm = cell_mapping.CellMapping(context=self.context,
+                                      uuid=uuidsentinel.cell,
+                                      database_connection='fake:///',
+                                      transport_url='fake://')
+        cm.create()
+        im1 = instance_mapping.InstanceMapping(context=self.context,
+                                               project_id='fake-project-1',
+                                               cell_mapping=cm,
+                                               instance_uuid=uuidsentinel.uid1,
+                                               queued_for_delete=False)
+        im1.create()
+        im2 = instance_mapping.InstanceMapping(context=self.context,
+                                               project_id='fake-project-2',
+                                               cell_mapping=cm,
+                                               instance_uuid=uuidsentinel.uid2,
+                                               queued_for_delete=None)
+        im2.create()
+        # testing if it accepts None project_id in the query and
+        # catches None queued for delete records.
+        ims = (instance_mapping.InstanceMappingList.
+               get_not_deleted_by_cell_and_project(self.context,
+                                                   cm.uuid,
+                                                   None))
+        self.assertEqual(2, len(ims))
