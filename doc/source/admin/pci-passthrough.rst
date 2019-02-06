@@ -22,83 +22,98 @@ assigned to only one guest and cannot be shared.
 
    **Limitations**
 
-   * Attaching SR-IOV ports to existing servers is not currently supported, see
-     `bug 1708433 <https://bugs.launchpad.net/nova/+bug/1708433>`_ for details.
+   * Attaching SR-IOV ports to existing servers is not currently supported.
+     This is now rejected by the API but previously it fail later in the
+     process. See `bug 1708433 <https://bugs.launchpad.net/nova/+bug/1708433>`_
+     for details.
    * Cold migration (resize) of servers with SR-IOV devices attached was not
      supported until the 14.0.0 Newton release, see
      `bug 1512800 <https://bugs.launchpad.net/nova/+bug/1512880>`_ for details.
 
-To enable PCI passthrough, follow the steps below:
-
-#. Configure nova-scheduler (Controller)
-
-#. Configure nova-api (Controller)**
-
-#. Configure a flavor (Controller)
-
-#. Enable PCI passthrough (Compute)
-
-#. Configure PCI devices in nova-compute (Compute)
+To enable PCI passthrough, follow the steps below.
 
 .. note::
 
-   The PCI device with address ``0000:41:00.0`` is used as an example. This
-   will differ between environments.
+   The PCI device with address ``0000:41:00.0``, the vendor ID of ``8086`` and
+   the product ID of ``154d`` is used as an example. This will differ between
+   environments.
 
-Configure nova-scheduler (Controller)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#. Configure ``nova-scheduler`` as specified in :neutron-doc:`Configure
-   nova-scheduler
-   <admin/config-sriov.html#configure-nova-scheduler-controller>`.
+Configure ``nova-scheduler`` (Controller)
+-----------------------------------------
 
-#. Restart the ``nova-scheduler`` service.
+The :program:`nova-scheduler` service must be configured to enable the
+``PciPassthroughFilter``. To do this, add this filter to the list of filters
+specified in :oslo.config:option:`filter_scheduler.enabled_filters` and set
+:oslo.config:option:`filter_scheduler.available_filters` to the default of
+``nova.scheduler.filters.all_filters``. For example:
 
-Configure nova-api (Controller)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: ini
 
-#. Specify the PCI alias for the device.
+   [filter_scheduler]
+   enabled_filters = ...,PciPassthroughFilter
+   available_filters = nova.scheduler.filters.all_filters
 
-   Configure a PCI alias ``a1`` to request a PCI device with a ``vendor_id`` of
-   ``0x8086`` and a ``product_id`` of ``0x154d``. The ``vendor_id`` and
-   ``product_id`` correspond the PCI device with address ``0000:41:00.0``.
+Once done, restart the :program:`nova-scheduler` service.
 
-   Edit ``/etc/nova/nova.conf``:
 
-   .. code-block:: ini
+.. _pci-passthrough-alias:
 
-      [pci]
-      alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
+Configure ``nova-api`` (Controller)
+-----------------------------------
 
-   Refer to :oslo.config:option:`pci.alias` for syntax information.
+PCI devices are requested through flavor extra specs, specifically via the
+``pci_passthrough:alias`` flavor extra spec. However, the aliases themselves
+must be configured. This done via the :oslo.config:option:`pci.alias`
+configuration option. For example, to configure a PCI alias ``a1`` to request
+a PCI device with a vendor ID of ``0x8086`` and a product ID of ``0x154d``:
 
-#. Restart the ``nova-api`` service.
+.. code-block:: ini
 
-Configure a flavor (Controller)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   [pci]
+   alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
 
-Configure a flavor to request two PCI devices, each with ``vendor_id`` of
-``0x8086`` and ``product_id`` of ``0x154d``:
+Refer to :oslo.config:option:`pci.alias` for syntax information.
+
+Once configured, restart the :program:`nova-api` service.
+
+.. important::
+
+   This option must also be configured on compute nodes. This is discussed later
+   in this document.
+
+
+Configure a flavor (API)
+------------------------
+
+Once the alias has been configured, it can be used for an flavor extra spec.
+For example, to request two of the PCI devices referenced by alias ``a1``, run:
 
 .. code-block:: console
 
-   # openstack flavor set m1.large --property "pci_passthrough:alias"="a1:2"
+   $ openstack flavor set m1.large --property "pci_passthrough:alias"="a1:2"
 
 For more information about the syntax for ``pci_passthrough:alias``, refer to
 :ref:`Flavors <extra-spec-pci-passthrough>`.
 
-Enable PCI passthrough (Compute)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Enable VT-d and IOMMU. For more information, refer to steps one and two in
-:neutron-doc:`Create Virtual Functions
-<admin/config-sriov.html#create-virtual-functions-compute>`.
+Configure host (Compute)
+------------------------
 
-For Hyper-V compute nodes, the requirements are as follows:
+To enable PCI passthrough on an x86, Linux-based compute node, the following
+are required:
 
-* Windows 10 or Windows / Hyper-V Server 2016 or newer.
-* VT-d and SR-IOV enabled on the host.
-* Assignable PCI devices.
+* VT-d enabled in the BIOS
+* IOMMU enabled on the host OS, by adding the ``intel_iommu=on`` or
+  ``amd_iommu=on`` parameter to the kernel parameters
+* Assignable PCIe devices
+
+To enable PCI passthrough on a Hyper-V compute node, the following are
+required:
+
+* Windows 10 or Windows / Hyper-V Server 2016 or newer
+* VT-d enabled on the host
+* Assignable PCI devices
 
 In order to check the requirements above and if there are any assignable PCI
 devices, run the following Powershell commands:
@@ -115,56 +130,54 @@ passthrough`__.
 
 .. __: https://devblogs.microsoft.com/scripting/passing-through-devices-to-hyper-v-vms-by-using-discrete-device-assignment/
 
-Configure PCI devices (Compute)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#. Configure ``nova-compute`` to allow the PCI device to pass through to
-   VMs. Edit ``/etc/nova/nova.conf``:
+Configure ``nova-compute`` (Compute)
+------------------------------------
 
-   .. code-block:: ini
+Once PCI passthrough has been configured for the host, :program:`nova-compute`
+must be configured to allow the PCI device to pass through to VMs. This is done
+using the :oslo.config:option:`pci.passthrough_whitelist` option. For example,
+to enable passthrough of a specific device using its address:
 
-      [pci]
-      passthrough_whitelist = { "address": "0000:41:00.0" }
+.. code-block:: ini
 
-   Alternatively specify multiple PCI devices using whitelisting:
+   [pci]
+   passthrough_whitelist = { "address": "0000:41:00.0" }
 
-   .. code-block:: ini
+Refer to :oslo.config:option:`pci.passthrough_whitelist` for syntax information.
 
-      [pci]
-      passthrough_whitelist = { "vendor_id": "8086", "product_id": "10fb" }
+Alternatively, to enable passthrough of all devices with the same product and
+vendor ID:
 
-   All PCI devices matching the ``vendor_id`` and ``product_id`` are added to
-   the pool of PCI devices available for passthrough to VMs.
+.. code-block:: ini
 
-   Refer to :oslo.config:option:`pci.passthrough_whitelist` for syntax
-   information.
+   [pci]
+   passthrough_whitelist = { "vendor_id": "8086", "product_id": "154d" }
 
-#. Specify the PCI alias for the device.
+If using vendor and product IDs, all PCI devices matching the ``vendor_id`` and
+``product_id`` are added to the pool of PCI devices available for passthrough
+to VMs.
 
-   From the Newton release, to resize guest with PCI device, configure the PCI
-   alias on the compute node as well.
+In addition, it is necessary to configure the :oslo.config:option:`pci.alias`
+option on the compute node too. This is required to allow resizes of guests
+with PCI devices. This should be identical to the alias configured
+:ref:`previously <pci-passthrough-alias>`. For example:
 
-   Configure a PCI alias ``a1`` to request a PCI device with a ``vendor_id`` of
-   ``0x8086`` and a ``product_id`` of ``0x154d``. The ``vendor_id`` and
-   ``product_id`` correspond the PCI device with address ``0000:41:00.0``.
+.. code-block:: ini
 
-   Edit ``/etc/nova/nova.conf``:
+   [pci]
+   alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
 
-   .. code-block:: ini
+Refer to :oslo.config:option:`pci.alias` for syntax information.
 
-      [pci]
-      alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
+Once configured, restart the :program:`nova-compute` service.
 
-   Refer to :oslo.config:option:`pci.alias` for syntax information.
-
-#. Restart the ``nova-compute`` service.
 
 Create instances with PCI passthrough devices
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------------------
 
-The ``nova-scheduler`` selects a destination host that has PCI devices
-available with the specified ``vendor_id`` and ``product_id`` that matches the
-``alias`` from the flavor.
+The :program:`nova-scheduler` service selects a destination host that has PCI
+devices available that match the ``alias`` specified in the flavor.
 
 .. code-block:: console
 
