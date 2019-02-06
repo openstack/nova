@@ -111,12 +111,29 @@ and a new description as follows:
 
 .. code-block:: console
 
-   $ nova flavor-update FLAVOR DESCRIPTION
+   $ openstack flavor set --description <DESCRIPTION> <FLAVOR>
 
 .. note::
 
-   There are no commands to update a description of a flavor
-   in the :command:`openstack` command currently (version 3.15.0).
+   The only field that can be updated is the description field.
+   Nova has historically intentionally not included an API to update
+   a flavor because that would be confusing for instances already
+   created with that flavor. Needing to change any other aspect of
+   a flavor requires deleting and/or creating a new flavor.
+
+   Nova stores a serialized version of the flavor associated with an
+   instance record in the ``instance_extra`` table. While nova supports
+   `updating flavor extra_specs`_ it does not update the embedded flavor
+   in existing instances. Nova does not update the embedded flavor
+   as the extra_specs change may invalidate the current placement
+   of the instance or alter the compute context that has been
+   created for the instance by the virt driver. For this reason
+   admins should avoid updating extra_specs for flavors used by
+   existing instances. A resize can be used to update existing
+   instances if required but as a resize performs a cold migration
+   it is not transparent to a tenant.
+
+.. _updating flavor extra_specs: https://developer.openstack.org/api-ref/compute/?expanded=#update-an-extra-spec-for-a-flavor
 
 Delete a flavor
 ---------------
