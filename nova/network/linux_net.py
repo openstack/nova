@@ -21,6 +21,7 @@ import calendar
 import inspect
 import os
 import re
+import signal
 import time
 
 import netaddr
@@ -939,7 +940,7 @@ def kill_dhcp(dev):
         # Check that the process exists and looks like a dnsmasq process
         conffile = _dhcp_file(dev, 'conf')
         if is_pid_cmdline_correct(pid, conffile.split('/')[-1]):
-            _execute('kill', '-9', pid, run_as_root=True)
+            nova.privsep.utils.kill(pid, signal.SIGKILL)
         else:
             LOG.debug('Pid %d is stale, skip killing dnsmasq', pid)
     _remove_dnsmasq_accept_rules(dev)
@@ -974,7 +975,7 @@ def restart_dhcp(context, dev, network_ref, fixedips):
     if pid:
         if is_pid_cmdline_correct(pid, conffile.split('/')[-1]):
             try:
-                _execute('kill', '-HUP', pid, run_as_root=True)
+                nova.privsep.utils.kill(pid, signal.SIGHUP)
                 _add_dnsmasq_accept_rules(dev)
                 return
             except Exception as exc:
@@ -1054,7 +1055,7 @@ interface %s
     if pid:
         if is_pid_cmdline_correct(pid, conffile):
             try:
-                _execute('kill', pid, run_as_root=True)
+                nova.privsep.utils.kill(pid, signal.SIGTERM)
             except Exception as exc:
                 LOG.error('killing radvd threw %s', exc)
         else:

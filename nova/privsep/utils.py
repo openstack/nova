@@ -29,6 +29,8 @@ import sys
 from oslo_log import log as logging
 from oslo_utils import excutils
 
+import nova.privsep
+
 # NOTE(mriedem): Avoid importing nova.utils since that can cause a circular
 # import with the privsep code. In fact, avoid importing anything outside
 # of nova/privsep/ if possible.
@@ -88,3 +90,8 @@ def supports_direct_io(dirpath):
             pass
 
     return hasDirectIO
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def kill(pid, signal):
+    os.kill(pid, signal)
