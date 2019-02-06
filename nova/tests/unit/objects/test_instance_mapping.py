@@ -81,6 +81,7 @@ class _TestInstanceMappingObject(object):
         mapping_obj.create()
         create_in_db.assert_called_once_with(self.context,
                 {'instance_uuid': uuid,
+                 'queued_for_delete': False,
                  'cell_id': db_mapping['cell_mapping']['id'],
                  'project_id': db_mapping['project_id']})
         self.compare_obj(mapping_obj, db_mapping,
@@ -101,10 +102,27 @@ class _TestInstanceMappingObject(object):
         mapping_obj.create()
         create_in_db.assert_called_once_with(self.context,
                 {'instance_uuid': uuid,
+                 'queued_for_delete': False,
                  'project_id': db_mapping['project_id']})
         self.compare_obj(mapping_obj, db_mapping,
                          subs={'cell_mapping': 'cell_id'})
         self.assertIsNone(mapping_obj.cell_mapping)
+
+    @mock.patch.object(instance_mapping.InstanceMapping, '_create_in_db')
+    def test_create_cell_mapping_with_qfd_true(self, create_in_db):
+        db_mapping = get_db_mapping(cell_mapping=None, cell_id=None)
+        create_in_db.return_value = db_mapping
+        mapping_obj = objects.InstanceMapping(self.context)
+        mapping_obj.instance_uuid = db_mapping['instance_uuid']
+        mapping_obj.cell_mapping = None
+        mapping_obj.project_id = db_mapping['project_id']
+        mapping_obj.queued_for_delete = True
+
+        mapping_obj.create()
+        create_in_db.assert_called_once_with(self.context,
+                {'instance_uuid': db_mapping['instance_uuid'],
+                 'queued_for_delete': True,
+                 'project_id': db_mapping['project_id']})
 
     @mock.patch.object(instance_mapping.InstanceMapping, '_save_in_db')
     def test_save(self, save_in_db):
