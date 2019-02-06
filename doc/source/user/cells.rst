@@ -806,3 +806,17 @@ FAQs
    solved by adding a generic by-aggregate filter, which would allow
    listing instances on hosts contained within any aggregate,
    including one that matches the cell boundaries if so desired.
+
+#. Why are the API responses for ``GET /servers``, ``GET /servers/detail``,
+   ``GET /servers/{server_id}`` and ``GET /os-services`` missing some
+   information for certain cells at certain times? Why do I see the status as
+   "UNKNOWN" for the servers in those cells at those times when I run
+   ``openstack server list`` or ``openstack server show``?
+
+   Starting from microversion 2.69 the API responses of ``GET /servers``,
+   ``GET /servers/detail``, ``GET /servers/{server_id}`` and
+   ``GET /os-services`` may contain missing keys during down cell situations.
+   See the `Handling Down Cells
+   <https://developer.openstack.org/api-guide/compute/down_cells.html>`__
+   section of the Compute API guide for more information on the partial
+   constructs.

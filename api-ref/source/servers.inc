@@ -175,6 +175,14 @@ whitelist will be silently ignored.
 - For admin user, whitelist includes all filter keys mentioned in
   :ref:`list-server-request` Section.
 
+.. note:: Starting with microversion 2.69 if server details cannot be loaded
+   due to a transient condition in the deployment like infrastructure failure,
+   the response body for those unavailable servers will be missing keys. See
+   `handling down cells
+   <https://developer.openstack.org/api-guide/compute/down_cells.html>`__
+   section of the Compute API guide for more information on the keys that
+   would be returned in the partial constructs.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401),
@@ -506,6 +514,14 @@ OS-SRV-USG:terminated_at attributes.
 
 HostId is unique per account and is not globally unique.
 
+.. note:: Starting with microversion 2.69 if server details cannot be loaded
+   due to a transient condition in the deployment like infrastructure failure,
+   the response body for those unavailable servers will be missing keys. See
+   `handling down cells
+   <https://developer.openstack.org/api-guide/compute/down_cells.html>`__
+   section of the Compute API guide for more information on the keys that
+   would be returned in the partial constructs.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401),
@@ -664,6 +680,14 @@ HostId is unique per account and is not globally unique.
 **Preconditions**
 
 The server must exist.
+
+.. note:: Starting with microversion 2.69 if the server detail cannot be loaded
+   due to a transient condition in the deployment like infrastructure failure,
+   the response body for the unavailable server will be missing keys. See
+   `handling down cells
+   <http://developer.openstack.org/api-guide/compute/down_cells.html>`__
+   section of the Compute API guide for more information on the keys that
+   would be returned in the partial constructs.
 
 Normal response codes: 200
 

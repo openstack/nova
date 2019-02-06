@@ -865,3 +865,17 @@ be used to specify cinder ``volume_type`` when creating a server.
 ----
 
 Remove support for forced live migration and evacuate server actions.
+
+2.69
+----
+
+Add support for returning minimal constructs for ``GET /servers``,
+``GET /servers/detail``, ``GET /servers/{server_id}`` and ``GET /os-services``
+when there is a transient unavailability condition in the deployment like an
+infrastructure failure. Starting from this microversion, the responses from the
+down part of the infrastructure for the above four requests will have missing
+key values to make it more resilient. The response body will only have a
+minimal set of information obtained from the available information in the API
+database for the down cells. See `handling down cells
+<https://developer.openstack.org/api-guide/compute/down_cells.html>`__ for
+more information.

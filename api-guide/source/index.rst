@@ -85,6 +85,7 @@ Contents
     paginated_collections
     polling_changes
     request_and_response_formats
+    down_cells
 
 .. toctree::
     :hidden:
