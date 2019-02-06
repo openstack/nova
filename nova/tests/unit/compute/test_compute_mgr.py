@@ -1928,14 +1928,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_delete.assert_has_calls([mock.call(mock.ANY),
                                       mock.call(mock.ANY)])
 
-    @mock.patch.object(objects.Migration, 'obj_as_admin')
     @mock.patch.object(objects.Migration, 'save')
     @mock.patch.object(objects.MigrationList, 'get_by_filters')
     @mock.patch.object(objects.InstanceList, 'get_by_filters')
     def _test_cleanup_incomplete_migrations(self, inst_host,
                                             mock_inst_get_by_filters,
                                             mock_migration_get_by_filters,
-                                            mock_save, mock_obj_as_admin):
+                                            mock_save):
         def fake_inst(context, uuid, host):
             inst = objects.Instance(context)
             inst.uuid = uuid
@@ -6581,8 +6580,7 @@ class ComputeManagerErrorsOutMigrationTestCase(test.NoDBTestCase):
         self.migration.id = 0
 
     @mock.patch.object(objects.Migration, 'save')
-    @mock.patch.object(objects.Migration, 'obj_as_admin')
-    def test_decorator(self, mock_save, mock_obj_as_admin):
+    def test_decorator(self, mock_save):
         # Tests that errors_out_migration decorator in compute manager sets
         # migration status to 'error' when an exception is raised from
         # decorated method
@@ -6591,17 +6589,13 @@ class ComputeManagerErrorsOutMigrationTestCase(test.NoDBTestCase):
         def fake_function(self, context, instance, migration):
             raise test.TestingException()
 
-        mock_obj_as_admin.return_value = mock.MagicMock()
-
         self.assertRaises(test.TestingException, fake_function,
                           self, self.context, self.instance, self.migration)
         self.assertEqual('error', self.migration.status)
         mock_save.assert_called_once_with()
-        mock_obj_as_admin.assert_called_once_with()
 
     @mock.patch.object(objects.Migration, 'save')
-    @mock.patch.object(objects.Migration, 'obj_as_admin')
-    def test_contextmanager(self, mock_save, mock_obj_as_admin):
+    def test_contextmanager(self, mock_save):
         # Tests that errors_out_migration_ctxt context manager in compute
         # manager sets migration status to 'error' when an exception is raised
         # from decorated method
@@ -6610,12 +6604,9 @@ class ComputeManagerErrorsOutMigrationTestCase(test.NoDBTestCase):
             with manager.errors_out_migration_ctxt(self.migration):
                 raise test.TestingException()
 
-        mock_obj_as_admin.return_value = mock.MagicMock()
-
         self.assertRaises(test.TestingException, test_function)
         self.assertEqual('error', self.migration.status)
         mock_save.assert_called_once_with()
-        mock_obj_as_admin.assert_called_once_with()
 
 
 @ddt.ddt
