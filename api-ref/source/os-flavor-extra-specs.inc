@@ -7,6 +7,10 @@
 Lists, creates, deletes, and updates the extra-specs or keys for a
 flavor.
 
+Refer to `Compute Flavors
+<https://docs.openstack.org/nova/latest/user/flavors.html#extra-specs>`__
+for available built-in extra specs.
+
 List Extra Specs For A Flavor
 =============================
 
@@ -47,11 +51,6 @@ Create Extra Specs For A Flavor
 .. rest_method:: POST /flavors/{flavor_id}/os-extra_specs
 
 Creates extra specs for a flavor, by ID.
-
-.. note:: Please reference:
-  `Compute Flavors
-  <http://docs.openstack.org/admin-guide/compute-flavors.html#extra-specs>`__
-  for available built-in extra specs under ``Extra Specs`` section.
 
 Normal response codes: 200
 
