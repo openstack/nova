@@ -236,7 +236,17 @@ class CrossCellLister(object):
         output of this function. Meaning, we will still query $limit from each
         database, but only return $limit total results.
 
+        :param cell_down_support: True if the API (and caller) support
+                                  returning a minimal instance
+                                  construct if the relevant cell is
+                                  down. If its True, then the value of
+                                  CONF.api.list_records_by_skipping_down_cells
+                                  is ignored and if its False, results are
+                                  either skipped or erred based on the value of
+                                  CONF.api.list_records_by_skipping_down_cells.
         """
+
+        cell_down_support = kwargs.pop('cell_down_support', False)
 
         if marker:
             # A marker identifier was provided from the API. Call this
@@ -402,10 +412,20 @@ class CrossCellLister(object):
                 return
 
             if context.is_cell_failure_sentinel(item._db_record):
-                if not CONF.api.list_records_by_skipping_down_cells:
-                    raise exception.NovaException(
-                        _('Cell %s is not responding but configuration '
-                          'indicates that we should fail.') % item.cell_uuid)
+                if (not CONF.api.list_records_by_skipping_down_cells and
+                    not cell_down_support):
+                    # Value the config
+                    # ``CONF.api.list_records_by_skipping_down_cells`` only if
+                    # cell_down_support is False and generate the exception
+                    # if CONF.api.list_records_by_skipping_down_cells is False.
+                    # In all other cases the results from the down cell should
+                    # be skipped now to either construct minimal constructs
+                    # later if cell_down_support is True or to simply return
+                    # the skipped results if cell_down_support is False.
+                        raise exception.NovaException(
+                            _('Cell %s is not responding but configuration '
+                              'indicates that we should fail.')
+                              % item.cell_uuid)
                 LOG.warning('Cell %s is not responding and hence is '
                             'being omitted from the results',
                             item.cell_uuid)

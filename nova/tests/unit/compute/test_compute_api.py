@@ -5679,7 +5679,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 cell_down_support=False)
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(self.context, {}, None, None,
-                fields, None, None)
+                fields, None, None, cell_down_support=False)
             for i, instance in enumerate(cell_instances):
                 self.assertEqual(instance, insts[i])
             mock_get_ims.assert_not_called()
@@ -5708,8 +5708,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 cell_down_support=True)
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(self.context, {},
-                                                  3, None, fields, None,
-                                                  None)
+                                                  3, None, fields, None, None,
+                                                  cell_down_support=True)
             for i, instance in enumerate(partial_instances + full_instances):
                 self.assertTrue(obj_base.obj_equal_prims(instance, insts[i]))
             # With an original limit of 3, and 0 build requests but 2 instances
@@ -6019,7 +6019,7 @@ class _ComputeAPIUnitTestMixIn(object):
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, None, None,
-                fields, ['baz'], ['desc'])
+                fields, ['baz'], ['desc'], cell_down_support=False)
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
 
@@ -6054,7 +6054,7 @@ class _ComputeAPIUnitTestMixIn(object):
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, None, None,
-                fields, ['baz'], ['desc'])
+                fields, ['baz'], ['desc'], cell_down_support=False)
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
 
@@ -6089,7 +6089,7 @@ class _ComputeAPIUnitTestMixIn(object):
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, 8, None,
-                fields, ['baz'], ['desc'])
+                fields, ['baz'], ['desc'], cell_down_support=False)
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
 
@@ -6127,7 +6127,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_inst_get.assert_called_once_with(
                 mock.ANY, {'foo': 'bar'},
                 8, None,
-                fields, ['baz'], ['desc'])
+                fields, ['baz'], ['desc'], cell_down_support=False)
             for i, instance in enumerate(build_req_instances +
                                          cell_instances):
                 self.assertEqual(instance, instances[i])
@@ -6625,7 +6625,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'ip': 'fake', 'uuid': ['fake_device_id']},
-                None, None, fields, ['baz'], ['desc'])
+                None, None, fields, ['baz'], ['desc'], cell_down_support=False)
 
     @mock.patch.object(neutron_api.API, 'has_substr_port_filtering_extension')
     @mock.patch.object(neutron_api.API, 'list_ports')
@@ -6653,7 +6653,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'ip6': 'fake', 'uuid': ['fake_device_id']},
-                None, None, fields, ['baz'], ['desc'])
+                None, None, fields, ['baz'], ['desc'], cell_down_support=False)
 
     @mock.patch.object(neutron_api.API, 'has_substr_port_filtering_extension')
     @mock.patch.object(neutron_api.API, 'list_ports')
@@ -6688,7 +6688,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             mock_inst_get.assert_called_once_with(
                 self.context, {'ip': 'fake1', 'ip6': 'fake2',
                                'uuid': ['fake_device_id', 'fake_device_id']},
-                None, None, fields, ['baz'], ['desc'])
+                None, None, fields, ['baz'], ['desc'], cell_down_support=False)
 
     @mock.patch.object(neutron_api.API, 'has_substr_port_filtering_extension')
     @mock.patch.object(neutron_api.API, 'list_ports')

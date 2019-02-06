@@ -91,12 +91,13 @@ class InstanceLister(multi_cell_list.CrossCellLister):
 # replicate these for every data type we implement.
 def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
                          sort_keys, sort_dirs, cell_mappings=None,
-                         batch_size=None):
+                         batch_size=None, cell_down_support=False):
     instance_lister = InstanceLister(sort_keys, sort_dirs,
                                      cells=cell_mappings,
                                      batch_size=batch_size)
     instance_generator = instance_lister.get_records_sorted(
-        ctx, filters, limit, marker, columns_to_join=columns_to_join)
+        ctx, filters, limit, marker, columns_to_join=columns_to_join,
+        cell_down_support=cell_down_support)
     return instance_lister, instance_generator
 
 
@@ -132,7 +133,7 @@ def get_instance_list_cells_batch_size(limit, cells):
 
 
 def get_instance_objects_sorted(ctx, filters, limit, marker, expected_attrs,
-                                sort_keys, sort_dirs):
+                                sort_keys, sort_dirs, cell_down_support=False):
     """Return a list of instances and information about down cells.
 
     This returns a tuple of (objects.InstanceList, list(of down cell
@@ -161,7 +162,8 @@ def get_instance_objects_sorted(ctx, filters, limit, marker, expected_attrs,
     columns_to_join = instance_obj._expected_cols(expected_attrs)
     instance_lister, instance_generator = get_instances_sorted(ctx, filters,
         limit, marker, columns_to_join, sort_keys, sort_dirs,
-        cell_mappings=cell_mappings, batch_size=batch_size)
+        cell_mappings=cell_mappings, batch_size=batch_size,
+        cell_down_support=cell_down_support)
 
     if 'fault' in expected_attrs:
         # We join fault above, so we need to make sure we don't ask

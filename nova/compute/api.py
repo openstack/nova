@@ -2663,7 +2663,8 @@ class API(base.Base):
                 sort_dirs)
         else:
             insts, down_cell_uuids = instance_list.get_instance_objects_sorted(
-                context, filters, limit, marker, fields, sort_keys, sort_dirs)
+                context, filters, limit, marker, fields, sort_keys, sort_dirs,
+                cell_down_support=cell_down_support)
 
         def _get_unique_filter_method():
             seen_uuids = set()
