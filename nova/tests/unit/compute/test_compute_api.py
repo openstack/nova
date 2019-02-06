@@ -5719,6 +5719,33 @@ class _ComputeAPIUnitTestMixIn(object):
                                                  self.context.project_id,
                                                  limit=1)
 
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
+    @mock.patch.object(objects.InstanceMappingList,
+                       'get_not_deleted_by_cell_and_project')
+    def test_get_all_with_cell_down_support_all_tenants(self, mock_get_ims,
+                                                        mock_buildreq_get):
+        mock_buildreq_get.return_value = objects.BuildRequestList()
+        im = objects.InstanceMapping(context=self.context,
+            instance_uuid=uuids.inst1, cell_id=1,
+            project_id='fake', created_at=None, queued_for_delete=False)
+        mock_get_ims.return_value = [im]
+        inst = objects.Instance(context=self.context, uuid=im.instance_uuid,
+            project_id=im.project_id, created_at=im.created_at)
+        partial_instances = objects.InstanceList(self.context, objects=[inst])
+        with mock.patch('nova.compute.instance_list.'
+                        'get_instance_objects_sorted') as mock_inst_get:
+            mock_inst_get.return_value = objects.InstanceList(
+                partial_instances), [uuids.cell1]
+            insts = self.compute_api.get_all(self.context, limit=3,
+                cell_down_support=True, all_tenants=True)
+            for i, instance in enumerate(partial_instances):
+                self.assertTrue(obj_base.obj_equal_prims(instance, insts[i]))
+            # get_not_deleted_by_cell_and_project is called with None
+            # project_id because of the all_tenants case.
+            mock_get_ims.assert_called_once_with(self.context, uuids.cell1,
+                                                 None,
+                                                 limit=3)
+
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_get_instance_from_cell_success(self, mock_get_inst):
         cell_mapping = objects.CellMapping(uuid=uuids.cell1,
@@ -7016,6 +7043,9 @@ class Cellsv1DeprecatedTestMixIn(object):
         self.skipTest("Cell down handling is not supported for cells_v1.")
 
     def test_get_all_without_cell_down_support(self):
+        self.skipTest("Cell down handling is not supported for cells_v1.")
+
+    def test_get_all_with_cell_down_support_all_tenants(self):
         self.skipTest("Cell down handling is not supported for cells_v1.")
 
 

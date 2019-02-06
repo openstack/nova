@@ -113,6 +113,9 @@ class ServersController(wsgi.Controller):
         search_opts = {}
         search_opts.update(req.GET)
 
+        # NOTE(tssurya): Will be enabled after bumping the microversion.
+        cell_down_support = False
+
         context = req.environ['nova.context']
         remove_invalid_options(context, search_opts,
                 self._get_server_search_options(req))
@@ -207,7 +210,11 @@ class ServersController(wsgi.Controller):
 
         all_tenants = common.is_all_tenants(search_opts)
         # use the boolean from here on out so remove the entry from search_opts
-        # if it's present
+        # if it's present.
+        # NOTE(tssurya): In case we support handling down cells
+        # we need to know further down the stack whether the 'all_tenants'
+        # filter was passed with the true value or not, so we pass the flag
+        # further down the stack.
         search_opts.pop('all_tenants', None)
 
         elevated = None
@@ -250,7 +257,8 @@ class ServersController(wsgi.Controller):
             instance_list = self.compute_api.get_all(elevated or context,
                     search_opts=search_opts, limit=limit, marker=marker,
                     expected_attrs=expected_attrs, sort_keys=sort_keys,
-                    sort_dirs=sort_dirs, cell_down_support=False)
+                    sort_dirs=sort_dirs, cell_down_support=cell_down_support,
+                    all_tenants=all_tenants)
         except exception.MarkerNotFound:
             msg = _('marker [%s] not found') % marker
             raise exc.HTTPBadRequest(explanation=msg)
