@@ -152,7 +152,10 @@ class LiveMigrationTask(base.TaskBase):
         # HyperV's vNUMA feature doesn't allow specific pinning
         hypervisor_type = objects.ComputeNode.get_by_host_and_nodename(
             self.context, self.source, self.instance.node).hypervisor_type
-        if hypervisor_type != obj_fields.HVType.KVM:
+
+        # KVM is not a hypervisor, so when using a virt_type of "kvm" the
+        # hypervisor_type will still be "QEMU".
+        if hypervisor_type.lower() != obj_fields.HVType.QEMU:
             return
 
         msg = ('Instance has an associated NUMA topology. '
