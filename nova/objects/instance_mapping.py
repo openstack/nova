@@ -101,6 +101,11 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
     def create(self):
         changes = self.obj_get_changes()
         changes = self._update_with_cell_id(changes)
+        if 'queued_for_delete' not in changes:
+            # NOTE(danms): If we are creating a mapping, it should be
+            # not queued_for_delete (unless we are being asked to
+            # create one in deleted state for some reason).
+            changes['queued_for_delete'] = False
         db_mapping = self._create_in_db(self._context, changes)
         self._from_db_object(self._context, self, db_mapping)
 
