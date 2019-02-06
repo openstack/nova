@@ -115,3 +115,20 @@ class LinuxNetTestCase(test.NoDBTestCase):
         self.assertRaises(processutils.ProcessExecutionError,
                           nova.privsep.linux_net.create_tap_dev,
                           'tap42', multiqueue=True)
+
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=False)
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_enable_ipv4_forwarding_required(self, mock_execute, mock_check):
+        nova.privsep.linux_net.enable_ipv4_forwarding()
+        mock_check.assert_called_once()
+        mock_execute.assert_called_once_with(
+            'sysctl', '-w', 'net.ipv4.ip_forward=1')
+
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=True)
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_enable_ipv4_forwarding_redundant(self, mock_execute, mock_check):
+        nova.privsep.linux_net.enable_ipv4_forwarding()
+        mock_check.assert_called_once()
+        mock_execute.assert_not_called()

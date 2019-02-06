@@ -875,31 +875,23 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         ]
         self.assertEqual(expected, executes)
 
-    @mock.patch.object(utils, 'execute')
     @mock.patch('nova.privsep.linux_net.routes_show')
     @mock.patch('nova.privsep.linux_net.route_delete')
     @mock.patch('nova.privsep.linux_net.route_add_deprecated')
     @mock.patch('nova.privsep.linux_net.lookup_ip')
     @mock.patch('nova.privsep.linux_net.change_ip')
     @mock.patch('nova.privsep.linux_net.address_command_deprecated')
-    def _test_initialize_gateway(self, existing, expected,
+    def _test_initialize_gateway(self, existing,
                                  mock_address_command, mock_change_ip,
                                  mock_lookup_ip, mock_route_add,
                                  mock_route_delete, mock_routes,
-                                 mock_execute, routes='',
+                                 routes='',
                                  routes_show_called=True, deleted_routes=None,
                                  added_routes=None, changed_interfaces=None,
                                  address_commands=None):
         self.flags(fake_network=False)
         mock_lookup_ip.return_value = (existing, '')
-        executes = []
 
-        def fake_execute(*args, **kwargs):
-            executes.append(args)
-            if args[0] == 'sysctl':
-                return '1\n', ''
-
-        mock_execute.side_effect = fake_execute
         mock_routes.return_value = (routes, '')
         mock_lookup_ip.return_value = (existing, '')
 
@@ -908,8 +900,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                    'broadcast': '192.168.1.255',
                    'cidr_v6': '2001:db8::/64'}
         self.driver.initialize_gateway_device('eth0', network)
-        self.assertEqual(expected, executes)
-        self.assertTrue(mock_execute.called)
         self.assertTrue(mock_lookup_ip.called)
 
         if routes_show_called:
@@ -923,18 +913,17 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         if address_commands:
             mock_address_command.assert_has_calls(address_commands)
 
-    def test_initialize_gateway_moves_wrong_ip(self):
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=True)
+    def test_initialize_gateway_moves_wrong_ip(self, mock_forwarding_check):
         existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
             "    mtu 1500 qdisc pfifo_fast state UNKNOWN qlen 1000\n"
             "    link/ether de:ad:be:ef:be:ef brd ff:ff:ff:ff:ff:ff\n"
             "    inet 192.168.0.1/24 brd 192.168.0.255 scope global eth0\n"
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
-        expected = [
-            ('sysctl', '-n', 'net.ipv4.ip_forward'),
-        ]
         self._test_initialize_gateway(
-            existing, expected,
+            existing,
             changed_interfaces=[mock.call('eth0', '2001:db8::/64')],
             address_commands=[
                 mock.call('eth0', 'del', ['192.168.0.1/24', 'brd',
@@ -947,7 +936,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                                           'scope', 'global'])]
         )
 
-    def test_initialize_gateway_ip_with_dynamic_flag(self):
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=True)
+    def test_initialize_gateway_ip_with_dynamic_flag(self,
+                                                     mock_forwarding_check):
         existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
             "    mtu 1500 qdisc pfifo_fast state UNKNOWN qlen 1000\n"
             "    link/ether de:ad:be:ef:be:ef brd ff:ff:ff:ff:ff:ff\n"
@@ -955,11 +947,8 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             "dynamic eth0\n"
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
-        expected = [
-            ('sysctl', '-n', 'net.ipv4.ip_forward'),
-        ]
         self._test_initialize_gateway(
-            existing, expected,
+            existing,
             changed_interfaces=[mock.call('eth0', '2001:db8::/64')],
             address_commands=[
                 mock.call('eth0', 'del',
@@ -972,7 +961,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                            'scope', 'global'])]
         )
 
-    def test_initialize_gateway_resets_route(self):
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=True)
+    def test_initialize_gateway_resets_route(self, mock_forwarding_check):
         routes = ("default via 192.168.0.1 dev eth0\n"
                   "192.168.100.0/24 via 192.168.0.254 dev eth0 proto static\n")
         existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
@@ -981,11 +972,8 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             "    inet 192.168.0.1/24 brd 192.168.0.255 scope global eth0\n"
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
-        expected = [
-            ('sysctl', '-n', 'net.ipv4.ip_forward'),
-        ]
         self._test_initialize_gateway(
-            existing, expected, routes=routes,
+            existing, routes=routes,
             deleted_routes=[mock.call('eth0', 'default'),
                             mock.call('eth0', '192.168.100.0/24')],
             added_routes=[mock.call(['default', 'via', '192.168.0.1',
@@ -1005,7 +993,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                            'scope', 'global'])]
         )
 
-    def test_initialize_gateway_no_move_right_ip(self):
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=True)
+    def test_initialize_gateway_no_move_right_ip(self, mock_forwarding_check):
         existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
             "    mtu 1500 qdisc pfifo_fast state UNKNOWN qlen 1000\n"
             "    link/ether de:ad:be:ef:be:ef brd ff:ff:ff:ff:ff:ff\n"
@@ -1013,25 +1003,21 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             "    inet 192.168.0.1/24 brd 192.168.0.255 scope global eth0\n"
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
-        expected = [
-            ('sysctl', '-n', 'net.ipv4.ip_forward'),
-        ]
         self._test_initialize_gateway(
-            existing, expected,
-            routes_show_called=False,
+            existing, routes_show_called=False,
             changed_interfaces=[mock.call('eth0', '2001:db8::/64')])
+        mock_forwarding_check.assert_called()
 
-    def test_initialize_gateway_add_if_blank(self):
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=True)
+    def test_initialize_gateway_add_if_blank(self, mock_forwarding_check):
         existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
             "    mtu 1500 qdisc pfifo_fast state UNKNOWN qlen 1000\n"
             "    link/ether de:ad:be:ef:be:ef brd ff:ff:ff:ff:ff:ff\n"
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
-        expected = [
-            ('sysctl', '-n', 'net.ipv4.ip_forward'),
-        ]
         self._test_initialize_gateway(
-            existing, expected,
+            existing,
             changed_interfaces=[mock.call('eth0', '2001:db8::/64')],
             address_commands=[
                 mock.call('eth0', 'add',

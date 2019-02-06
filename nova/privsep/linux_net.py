@@ -232,3 +232,18 @@ def clean_conntrack(fixed_ip):
                              check_exit_code=[0, 1])
     except processutils.ProcessExecutionError:
         LOG.exception('Error deleting conntrack entries for %s', fixed_ip)
+
+
+def enable_ipv4_forwarding():
+    if not ipv4_forwarding_check():
+        _enable_ipv4_forwarding_inner()
+
+
+def ipv4_forwarding_check():
+    with open('/proc/sys/net/ipv4/ip_forward', 'r') as f:
+        return f.readline().strip() == '1'
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def _enable_ipv4_forwarding_inner():
+    processutils.execute('sysctl', '-w', 'net.ipv4.ip_forward=1')
