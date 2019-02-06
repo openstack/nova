@@ -5,8 +5,12 @@
 ================================
 
 Creates and manages host aggregates. An aggregate assigns metadata to
-groups of compute nodes. Aggregates are only visible to the cloud
-provider.
+groups of compute nodes.
+
+Policy defaults enable only users with the administrative role to perform
+operations with aggregates. Cloud providers can change these permissions
+through `policy file configuration
+<https://docs.openstack.org/nova/latest/configuration/policy.html>`__.
 
 List Aggregates
 ===============
