@@ -913,6 +913,9 @@ class ResourceTracker(object):
             return True
         return False
 
+    @retrying.retry(stop_max_attempt_number=4,
+                    retry_on_exception=lambda e: isinstance(
+                        e, exception.ResourceProviderUpdateConflict))
     def _update_to_placement(self, context, compute_node, startup):
         """Send resource and inventory changes to placement."""
         # NOTE(jianghuaw): Some resources(e.g. VGPU) are not saved in the
@@ -969,9 +972,6 @@ class ResourceTracker(object):
         self.reportclient.update_from_provider_tree(context, prov_tree,
                                                     allocations=allocs)
 
-    @retrying.retry(stop_max_attempt_number=4,
-                    retry_on_exception=lambda e: isinstance(
-                        e, exception.ResourceProviderUpdateConflict))
     def _update(self, context, compute_node, startup=False):
         """Update partial stats locally and populate them to Scheduler."""
         if self._resource_change(compute_node):
