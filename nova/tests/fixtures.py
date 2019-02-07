@@ -849,6 +849,13 @@ class WarningsFixture(fixtures.Fixture):
             'ignore', message=".* 'VIFPortProfileOVSRepresentor' .* "
             "is deprecated", category=PendingDeprecationWarning)
 
+        # TODO(mriedem): Change (or remove) this DeprecationWarning once
+        # https://bugs.launchpad.net/sqlalchemy-migrate/+bug/1814288 is fixed.
+        warnings.filterwarnings(
+            'ignore', message='inspect\.getargspec\(\) is deprecated',
+            category=DeprecationWarning,
+            module='migrate.versioning.script.py')
+
         self.addCleanup(warnings.resetwarnings)
 
 
