@@ -4216,6 +4216,37 @@ class ComputeManager(manager.Manager):
                     context, instance, claim.migration, image,
                     instance_type, clean_shutdown)
 
+    def _send_prep_resize_notifications(
+            self, context, instance, phase, flavor):
+        """Send "resize.prep.*" notifications.
+
+        :param context: nova auth request context
+        :param instance: The instance being resized
+        :param phase: The phase of the action (NotificationPhase enum)
+        :param flavor: The (new) flavor for the resize (same as existing
+            instance.flavor for a cold migration)
+        """
+        # Only send notify_usage_exists if it's the "start" phase.
+        if phase == fields.NotificationPhase.START:
+            compute_utils.notify_usage_exists(
+                self.notifier, context, instance, self.host,
+                current_period=True)
+
+        # Send extra usage info about the flavor if it's the "end" phase for
+        # the legacy unversioned notification.
+        extra_usage_info = None
+        if phase == fields.NotificationPhase.END:
+            extra_usage_info = dict(
+                new_instance_type=flavor.name,
+                new_instance_type_id=flavor.id)
+        self._notify_about_instance_usage(
+            context, instance, "resize.prep.%s" % phase,
+            extra_usage_info=extra_usage_info)
+
+        # Send the versioned notification.
+        compute_utils.notify_about_resize_prep_instance(
+            context, instance, self.host, phase, flavor)
+
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
@@ -4239,13 +4270,9 @@ class ComputeManager(manager.Manager):
 
         with self._error_out_instance_on_exception(context, instance), \
                  errors_out_migration_ctxt(migration):
-            compute_utils.notify_usage_exists(self.notifier, context, instance,
-                                              self.host, current_period=True)
-            self._notify_about_instance_usage(
-                    context, instance, "resize.prep.start")
-            compute_utils.notify_about_resize_prep_instance(
-                context, instance, self.host,
-                fields.NotificationPhase.START, instance_type)
+            self._send_prep_resize_notifications(
+                context, instance, fields.NotificationPhase.START,
+                instance_type)
             try:
                 self._prep_resize(context, image, instance,
                                   instance_type, filter_properties,
@@ -4261,16 +4288,9 @@ class ComputeManager(manager.Manager):
                         exc_info, instance_type, request_spec,
                         filter_properties, host_list)
             finally:
-                extra_usage_info = dict(
-                        new_instance_type=instance_type.name,
-                        new_instance_type_id=instance_type.id)
-
-                self._notify_about_instance_usage(
-                    context, instance, "resize.prep.end",
-                    extra_usage_info=extra_usage_info)
-                compute_utils.notify_about_resize_prep_instance(
-                    context, instance, self.host,
-                    fields.NotificationPhase.END, instance_type)
+                self._send_prep_resize_notifications(
+                    context, instance, fields.NotificationPhase.END,
+                    instance_type)
 
     def _reschedule_resize_or_reraise(self, context, instance, exc_info,
             instance_type, request_spec, filter_properties, host_list):
