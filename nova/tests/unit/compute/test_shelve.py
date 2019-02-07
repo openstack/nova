@@ -696,7 +696,7 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
         with test.nested(
             mock.patch.object(compute_utils, 'is_volume_backed_instance',
                               return_value=boot_from_volume),
-            mock.patch.object(self.compute_api, '_create_image',
+            mock.patch.object(compute_utils, 'create_image',
                               return_value=dict(id='fake-image-id')),
             mock.patch.object(instance, 'save'),
             mock.patch.object(self.compute_api, '_record_action_start'),
