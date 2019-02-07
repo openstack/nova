@@ -311,7 +311,7 @@ class ComputeTaskAPI(object):
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
                   flavor, block_migration, disk_over_commit,
                   reservations=None, clean_shutdown=True, request_spec=None,
-                  host_list=None):
+                  host_list=None, do_cast=False):
         kw = {'instance': instance, 'scheduler_hint': scheduler_hint,
               'live': live, 'rebuild': rebuild, 'flavor': flavor,
               'block_migration': block_migration,
@@ -342,6 +342,8 @@ class ComputeTaskAPI(object):
             version=version,
             call_monitor_timeout=CONF.rpc_response_timeout,
             timeout=CONF.long_rpc_timeout)
+        if do_cast:
+            return cctxt.cast(context, 'migrate_server', **kw)
         return cctxt.call(context, 'migrate_server', **kw)
 
     def build_instances(self, context, instances, image, filter_properties,

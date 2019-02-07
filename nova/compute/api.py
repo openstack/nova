@@ -3639,6 +3639,74 @@ class API(base.Base):
                                            migration,
                                            migration.source_compute)
 
+    @staticmethod
+    def _allow_cross_cell_resize(context, instance):
+        """Determine if the request can perform a cross-cell resize on this
+        instance.
+
+        :param context: nova auth request context for the resize operation
+        :param instance: Instance object being resized
+        :returns: True if cross-cell resize is allowed, False otherwise
+        """
+        # TODO(mriedem): Uncomment this when confirm/revert are done. For now
+        # this method can just be used to internally enable the feature for
+        # functional testing.
+
+        # TODO(mriedem): If true, we should probably check if all of the
+        # computes are running a high enough service version and if not, do
+        # what? Raise an exception or just log something and return False?
+
+        # return context.can(
+        #     server_policies.CROSS_CELL_RESIZE,
+        #     target={'user_id': instance.user_id,
+        #             'project_id': instance.project_id},
+        #     fatal=False)
+        return False
+
+    @staticmethod
+    def _validate_host_for_cold_migrate(
+            context, instance, host_name, allow_cross_cell_resize):
+        """Validates a host specified for cold migration.
+
+        :param context: nova auth request context for the cold migration
+        :param instance: Instance object being cold migrated
+        :param host_name: User-specified compute service hostname for the
+            desired destination of the instance during the cold migration
+        :param allow_cross_cell_resize: If True, cross-cell resize is allowed
+            for this operation and the host could be in a different cell from
+            the one that the instance is currently in. If False, the speciifed
+            host must be in the same cell as the instance.
+        :returns: ComputeNode object of the requested host
+        :raises: CannotMigrateToSameHost if the host is the same as the
+            current instance.host
+        :raises: ComputeHostNotFound if the specified host cannot be found
+        """
+        # Cannot migrate to the host where the instance exists
+        # because it is useless.
+        if host_name == instance.host:
+            raise exception.CannotMigrateToSameHost()
+
+        # Check whether host exists or not. If a cross-cell resize is
+        # allowed, the host could be in another cell from the one the
+        # instance is currently in, so we need to lookup the HostMapping
+        # to get the cell and lookup the ComputeNode in that cell.
+        if allow_cross_cell_resize:
+            try:
+                hm = objects.HostMapping.get_by_host(context, host_name)
+            except exception.HostMappingNotFound:
+                LOG.info('HostMapping not found for host: %s', host_name)
+                raise exception.ComputeHostNotFound(host=host_name)
+
+            with nova_context.target_cell(context, hm.cell_mapping) as cctxt:
+                node = objects.ComputeNode.\
+                    get_first_node_by_host_for_old_compat(
+                        cctxt, host_name, use_slave=True)
+        else:
+            node = objects.ComputeNode.get_first_node_by_host_for_old_compat(
+                context, host_name, use_slave=True)
+
+        return node
+
     # TODO(mriedem): It looks like for resize (not cold migrate) the only
     # possible kwarg here is auto_disk_config. Drop this dumb **kwargs and make
     # it explicitly an auto_disk_config param
@@ -3654,15 +3722,12 @@ class API(base.Base):
         host_name is always None in the resize case.
         host_name can be set in the cold migration case only.
         """
-        if host_name is not None:
-            # Cannot migrate to the host where the instance exists
-            # because it is useless.
-            if host_name == instance.host:
-                raise exception.CannotMigrateToSameHost()
+        allow_cross_cell_resize = self._allow_cross_cell_resize(
+            context, instance)
 
-            # Check whether host exists or not.
-            node = objects.ComputeNode.get_first_node_by_host_for_old_compat(
-                context, host_name, use_slave=True)
+        if host_name is not None:
+            node = self._validate_host_for_cold_migrate(
+                context, instance, host_name, allow_cross_cell_resize)
 
         self._check_auto_disk_config(instance, **extra_instance_updates)
 
@@ -3762,19 +3827,29 @@ class API(base.Base):
 
         if host_name is None:
             # If 'host_name' is not specified,
-            # clear the 'requested_destination' field of the RequestSpec.
-            request_spec.requested_destination = None
+            # clear the 'requested_destination' field of the RequestSpec
+            # except set the allow_cross_cell_move flag since conductor uses
+            # it prior to scheduling.
+            request_spec.requested_destination = objects.Destination(
+                allow_cross_cell_move=allow_cross_cell_resize)
         else:
             # Set the host and the node so that the scheduler will
             # validate them.
             request_spec.requested_destination = objects.Destination(
-                host=node.host, node=node.hypervisor_hostname)
+                host=node.host, node=node.hypervisor_hostname,
+                allow_cross_cell_move=allow_cross_cell_resize)
 
+        # This is by default a synchronous RPC call to conductor which does not
+        # return until the MigrationTask in conductor RPC casts to the
+        # prep_resize method on the selected destination nova-compute service.
+        # However, if we are allowed to do a cross-cell resize, then we
+        # asynchronously RPC cast since the CrossCellMigrationTask is blocking.
         self.compute_task_api.resize_instance(context, instance,
             scheduler_hint=scheduler_hint,
             flavor=new_instance_type,
             clean_shutdown=clean_shutdown,
-            request_spec=request_spec)
+            request_spec=request_spec,
+            do_cast=allow_cross_cell_resize)
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,

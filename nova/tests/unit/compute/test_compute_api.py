@@ -1775,7 +1775,8 @@ class _ComputeAPIUnitTestMixIn(object):
                      clean_shutdown=True,
                      host_name=None,
                      request_spec=True,
-                     requested_destination=False):
+                     requested_destination=False,
+                     allow_cross_cell_resize=False):
 
         self.flags(allow_resize_to_same_host=allow_same_host)
 
@@ -1841,6 +1842,11 @@ class _ComputeAPIUnitTestMixIn(object):
 
             scheduler_hint = {'filter_properties': filter_properties}
 
+        mock_allow_cross_cell_resize = self.useFixture(
+            fixtures.MockPatchObject(
+                self.compute_api, '_allow_cross_cell_resize')).mock
+        mock_allow_cross_cell_resize.return_value = allow_cross_cell_resize
+
         if flavor_id_passed:
             self.compute_api.resize(self.context, fake_inst,
                                     flavor_id='new-flavor-id',
@@ -1865,7 +1871,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.assertEqual([fake_inst['host']], fake_spec.ignore_hosts)
 
             if host_name is None:
-                self.assertIsNone(fake_spec.requested_destination)
+                self.assertIsNotNone(fake_spec.requested_destination)
             else:
                 self.assertIn('host', fake_spec.requested_destination)
                 self.assertEqual(host_name,
@@ -1873,6 +1879,9 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.assertIn('node', fake_spec.requested_destination)
                 self.assertEqual('hypervisor_host',
                                  fake_spec.requested_destination.node)
+            self.assertEqual(
+                allow_cross_cell_resize,
+                fake_spec.requested_destination.allow_cross_cell_move)
 
         if host_name:
             mock_get_all_by_host.assert_called_once_with(
@@ -1932,7 +1941,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     scheduler_hint=scheduler_hint,
                     flavor=test.MatchType(objects.Flavor),
                     clean_shutdown=clean_shutdown,
-                    request_spec=fake_spec)
+                    request_spec=fake_spec, do_cast=allow_cross_cell_resize)
             else:
                 mock_resize.assert_not_called()
 
@@ -1953,6 +1962,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_resize_forced_shutdown(self):
         self._test_resize(clean_shutdown=False)
+
+    def test_resize_allow_cross_cell_resize_true(self):
+        self._test_resize(allow_cross_cell_resize=True)
 
     @mock.patch('nova.compute.flavors.get_flavor_by_flavor_id')
     @mock.patch('nova.objects.Quotas.count_as_dict')
@@ -2007,6 +2019,10 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_migrate_with_host_name(self):
         self._test_migrate(host_name='target_host')
 
+    def test_migrate_with_host_name_allow_cross_cell_resize_true(self):
+        self._test_migrate(host_name='target_host',
+                           allow_cross_cell_resize=True)
+
     @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host',
                        side_effect=exception.ComputeHostNotFound(
                            host='nonexistent_host'))
@@ -2015,12 +2031,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.ComputeHostNotFound,
                           self.compute_api.resize, self.context,
                           fake_inst, host_name='nonexistent_host')
-
-    def test_migrate_to_same_host(self):
-        fake_inst = self._create_instance_obj()
-        self.assertRaises(exception.CannotMigrateToSameHost,
-                          self.compute_api.resize, self.context,
-                          fake_inst, host_name='fake_host')
 
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(compute_api.API, '_record_action_start')
@@ -6601,6 +6611,67 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         for x in range(2):
             self.compute_api.placementclient
         mock_report_client.assert_called_once_with()
+
+    def test_validate_host_for_cold_migrate_same_host_fails(self):
+        """Asserts CannotMigrateToSameHost is raised when trying to cold
+        migrate to the same host.
+        """
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.assertRaises(exception.CannotMigrateToSameHost,
+                          self.compute_api._validate_host_for_cold_migrate,
+                          self.context, instance, instance.host,
+                          allow_cross_cell_resize=False)
+
+    @mock.patch('nova.objects.ComputeNode.'
+                'get_first_node_by_host_for_old_compat')
+    def test_validate_host_for_cold_migrate_diff_host_no_cross_cell(
+            self, mock_cn_get):
+        """Tests the scenario where allow_cross_cell_resize=False and the
+        host is found in the same cell as the instance.
+        """
+        instance = fake_instance.fake_instance_obj(self.context)
+        node = self.compute_api._validate_host_for_cold_migrate(
+            self.context, instance, uuids.host, allow_cross_cell_resize=False)
+        self.assertIs(node, mock_cn_get.return_value)
+        mock_cn_get.assert_called_once_with(
+            self.context, uuids.host, use_slave=True)
+
+    @mock.patch('nova.objects.HostMapping.get_by_host',
+                side_effect=exception.HostMappingNotFound(name=uuids.host))
+    def test_validate_host_for_cold_migrate_cross_cell_host_mapping_not_found(
+            self, mock_hm_get):
+        """Tests the scenario where allow_cross_cell_resize=True but the
+        HostMapping for the given host could not be found.
+        """
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.assertRaises(exception.ComputeHostNotFound,
+                          self.compute_api._validate_host_for_cold_migrate,
+                          self.context, instance, uuids.host,
+                          allow_cross_cell_resize=True)
+        mock_hm_get.assert_called_once_with(self.context, uuids.host)
+
+    @mock.patch('nova.objects.HostMapping.get_by_host',
+                return_value=objects.HostMapping(
+                    cell_mapping=objects.CellMapping(uuid=uuids.cell2)))
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.ComputeNode.'
+                'get_first_node_by_host_for_old_compat')
+    def test_validate_host_for_cold_migrate_cross_cell(
+            self, mock_cn_get, mock_target_cell, mock_hm_get):
+        """Tests the scenario where allow_cross_cell_resize=True and the
+        ComputeNode is pulled from the target cell defined by the HostMapping.
+        """
+        instance = fake_instance.fake_instance_obj(self.context)
+        node = self.compute_api._validate_host_for_cold_migrate(
+            self.context, instance, uuids.host,
+            allow_cross_cell_resize=True)
+        self.assertIs(node, mock_cn_get.return_value)
+        mock_hm_get.assert_called_once_with(self.context, uuids.host)
+        # get_first_node_by_host_for_old_compat is called with a temporarily
+        # cell-targeted context
+        mock_cn_get.assert_called_once_with(
+            mock_target_cell.return_value.__enter__.return_value,
+            uuids.host, use_slave=True)
 
 
 class DiffDictTestCase(test.NoDBTestCase):
