@@ -152,3 +152,10 @@ class LinuxNetTestCase(test.NoDBTestCase):
 
         cmd = ['ebtables', '--concurrent', '-t', table] + ['-D'] + rule
         mock_execute.assert_called_once_with(*cmd, check_exit_code=[0])
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_add_vlan(self, mock_execute):
+        nova.privsep.linux_net.add_vlan('eth0', 'vlan_name', 1)
+        cmd = ['ip', 'link', 'add', 'link', 'eth0', 'name', 'vlan_name',
+               'type', 'vlan', 'id', 1]
+        mock_execute.assert_called_once_with(*cmd, check_exit_code=[0, 2, 254])
