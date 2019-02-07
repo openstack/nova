@@ -132,3 +132,23 @@ class LinuxNetTestCase(test.NoDBTestCase):
         nova.privsep.linux_net.enable_ipv4_forwarding()
         mock_check.assert_called_once()
         mock_execute.assert_not_called()
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_modify_ebtables_insert_rule(self, mock_execute):
+        table = 'filter'
+        rule = 'INPUT -p ARP -i %s --arp-ip-dst %s -j DROP'.split()
+
+        nova.privsep.linux_net.modify_ebtables(table, rule, insert_rule=True)
+
+        cmd = ['ebtables', '--concurrent', '-t', table] + ['-I'] + rule
+        mock_execute.assert_called_once_with(*cmd, check_exit_code=[0])
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_modify_ebtables_remove_rule(self, mock_execute):
+        table = 'filter'
+        rule = 'INPUT -p ARP -i %s --arp-ip-dst %s -j DROP'.split()
+
+        nova.privsep.linux_net.modify_ebtables(table, rule, insert_rule=False)
+
+        cmd = ['ebtables', '--concurrent', '-t', table] + ['-D'] + rule
+        mock_execute.assert_called_once_with(*cmd, check_exit_code=[0])

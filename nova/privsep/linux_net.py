@@ -247,3 +247,15 @@ def ipv4_forwarding_check():
 @nova.privsep.sys_admin_pctxt.entrypoint
 def _enable_ipv4_forwarding_inner():
     processutils.execute('sysctl', '-w', 'net.ipv4.ip_forward=1')
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def modify_ebtables(table, rule, insert_rule=True):
+    cmd = ['ebtables', '--concurrent', '-t', table]
+    if insert_rule:
+        cmd.append('-I')
+    else:
+        cmd.append('-D')
+    cmd.extend(rule)
+
+    processutils.execute(*cmd, check_exit_code=[0])
