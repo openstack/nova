@@ -338,10 +338,10 @@ class MoveClaimTestCase(ClaimTestCase):
         @mock.patch('nova.db.api.instance_extra_get_by_instance_uuid',
                     return_value=self.db_numa_topology)
         def get_claim(mock_extra_get, mock_numa_get):
-            return claims.MoveClaim(self.context, self.instance, _NODENAME,
-                                    instance_type, image_meta, self.tracker,
-                                    self.resources, requests,
-                                    limits=limits)
+            return claims.MoveClaim(
+                self.context, self.instance, _NODENAME, instance_type,
+                image_meta, self.tracker, self.resources, requests,
+                objects.Migration(migration_type='migration'), limits=limits)
         return get_claim()
 
     @mock.patch('nova.objects.Instance.drop_migration_context')
@@ -358,3 +358,69 @@ class MoveClaimTestCase(ClaimTestCase):
         image_meta = objects.ImageMeta()
         claim = self._claim(image_meta=image_meta)
         self.assertIsInstance(claim.image_meta, objects.ImageMeta)
+
+
+class LiveMigrationClaimTestCase(ClaimTestCase):
+
+    def test_live_migration_claim_bad_pci_request(self):
+        instance_type = self._fake_instance_type()
+        instance = self._fake_instance()
+        instance.numa_topology = None
+        self.assertRaisesRegex(
+            exception.ComputeResourcesUnavailable,
+            'PCI requests are not supported',
+            claims.MoveClaim, self.context, instance, _NODENAME, instance_type,
+            {}, self.tracker, self.resources,
+            objects.InstancePCIRequests(requests=[
+                objects.InstancePCIRequest(alias_name='fake-alias')]),
+            objects.Migration(migration_type='live-migration'), None)
+
+    def test_live_migration_page_size(self):
+        instance_type = self._fake_instance_type()
+        instance = self._fake_instance()
+        instance.numa_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=1, cpuset=set([1, 2]),
+                                            memory=512, pagesize=2)])
+        claimed_numa_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=1, cpuset=set([1, 2]),
+                                            memory=512, pagesize=1)])
+        with mock.patch('nova.virt.hardware.numa_fit_instance_to_host',
+                        return_value=claimed_numa_topology):
+            self.assertRaisesRegex(
+                exception.ComputeResourcesUnavailable,
+                'Requested page size is different',
+                claims.MoveClaim, self.context, instance, _NODENAME,
+                instance_type, {}, self.tracker, self.resources,
+                self.empty_requests,
+                objects.Migration(migration_type='live-migration'), None)
+
+    def test_claim_fails_page_size_not_called(self):
+        instance_type = self._fake_instance_type()
+        instance = self._fake_instance()
+        # This topology cannot fit in self.resources (see _fake_resources())
+        numa_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=1, cpuset=set([1, 2, 3]),
+                                            memory=1024)])
+        with test.nested(
+            mock.patch('nova.virt.hardware.numa_get_constraints',
+                        return_value=numa_topology),
+            mock.patch(
+                'nova.compute.claims.MoveClaim._test_live_migration_page_size'
+        )) as (mock_test_numa, mock_test_page_size):
+            self.assertRaisesRegex(
+                exception.ComputeResourcesUnavailable,
+                'Requested instance NUMA topology',
+                claims.MoveClaim, self.context, instance, _NODENAME,
+                instance_type, {}, self.tracker, self.resources,
+                self.empty_requests,
+                objects.Migration(migration_type='live-migration'), None)
+            mock_test_page_size.assert_not_called()
+
+    def test_live_migration_no_instance_numa_topology(self):
+        instance_type = self._fake_instance_type()
+        instance = self._fake_instance()
+        instance.numa_topology = None
+        claims.MoveClaim(
+            self.context, instance, _NODENAME, instance_type, {}, self.tracker,
+            self.resources, self.empty_requests,
+            objects.Migration(migration_type='live-migration'), None)

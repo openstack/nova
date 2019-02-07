@@ -38,6 +38,7 @@ from nova.objects import pci_device
 from nova.pci import manager as pci_manager
 from nova.scheduler.client import report
 from nova import test
+from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
 from nova.virt import driver
@@ -2822,6 +2823,42 @@ class TestRebuild(BaseTestCase):
         self.assertEqual(1, len(self.rt.tracked_migrations))
         mig_save_mock.assert_called_once_with()
         inst_save_mock.assert_called_once_with()
+
+
+class TestLiveMigration(BaseTestCase):
+
+    def test_live_migration_claim(self):
+        self._setup_rt()
+        self.rt.compute_nodes[_NODENAME] = _COMPUTE_NODE_FIXTURES[0]
+        ctxt = context.get_admin_context()
+        instance = fake_instance.fake_instance_obj(ctxt)
+        instance.pci_requests = None
+        instance.pci_devices = None
+        instance.numa_topology = None
+        migration = objects.Migration(id=42, migration_type='live-migration',
+                                      status='accepted')
+        image_meta = objects.ImageMeta(properties=objects.ImageMetaProps())
+        self.rt.pci_tracker = pci_manager.PciDevTracker(mock.sentinel.ctx)
+        with test.nested(
+            mock.patch.object(objects.ImageMeta, 'from_instance',
+                              return_value=image_meta),
+            mock.patch.object(objects.Migration, 'save'),
+            mock.patch.object(objects.Instance, 'save'),
+            mock.patch.object(self.rt, '_update'),
+            mock.patch.object(self.rt.pci_tracker, 'claim_instance'),
+        ) as (mock_from_instance, mock_migration_save, mock_instance_save,
+              mock_update, mock_pci_claim_instance):
+            claim = self.rt.live_migration_claim(ctxt, instance, _NODENAME,
+                                                 migration, limits=None)
+            self.assertEqual(42, claim.migration.id)
+            # Check that we didn't set the status to 'pre-migrating', like we
+            # do for cold migrations, but which doesn't exist for live
+            # migrations.
+            self.assertEqual('accepted', claim.migration.status)
+            self.assertIn('migration_context', instance)
+            mock_update.assert_called_with(
+                mock.ANY, _COMPUTE_NODE_FIXTURES[0])
+            mock_pci_claim_instance.assert_not_called()
 
 
 class TestUpdateUsageFromMigration(test.NoDBTestCase):
