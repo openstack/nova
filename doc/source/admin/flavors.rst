@@ -111,7 +111,7 @@ and a new description as follows:
 
 .. code-block:: console
 
-   $ openstack flavor set --description <DESCRIPTION> <FLAVOR>
+   $ openstack --os-compute-api-version 2.55 flavor set --description <DESCRIPTION> <FLAVOR>
 
 .. note::
 
