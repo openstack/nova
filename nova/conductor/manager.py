@@ -1064,7 +1064,8 @@ class ComputeTaskManager(base.Base):
 
     def _bury_in_cell0(self, context, request_spec, exc,
                        build_requests=None, instances=None,
-                       block_device_mapping=None):
+                       block_device_mapping=None,
+                       tags=None):
         """Ensure all provided build_requests and instances end up in cell0.
 
         Cell0 is the fake cell we schedule dead instances to when we can't
@@ -1108,6 +1109,8 @@ class ComputeTaskManager(base.Base):
                        cell0, instance.flavor, instance.uuid,
                        block_device_mapping)
 
+                self._create_tags(cctxt, instance.uuid, tags)
+
                 # Use the context targeted to cell0 here since the instance is
                 # now in cell0.
                 self._set_vm_state_and_notify(
@@ -1145,11 +1148,10 @@ class ComputeTaskManager(base.Base):
                     instance_uuids, return_alternates=True)
         except Exception as exc:
             LOG.exception('Failed to schedule instances')
-            # FIXME(mriedem): If the tags are not persisted with the instance
-            # in cell0 then the API will not show them.
             self._bury_in_cell0(context, request_specs[0], exc,
                                 build_requests=build_requests,
-                                block_device_mapping=block_device_mapping)
+                                block_device_mapping=block_device_mapping,
+                                tags=tags)
             return
 
         host_mapping_cache = {}
@@ -1172,12 +1174,11 @@ class ComputeTaskManager(base.Base):
                     LOG.error('No host-to-cell mapping found for selected '
                               'host %(host)s. Setup is incomplete.',
                               {'host': host.service_host})
-                    # FIXME(mriedem): If the tags are not persisted with the
-                    # instance in cell0 then the API will not show them.
                     self._bury_in_cell0(
                         context, request_spec, exc,
                         build_requests=[build_request], instances=[instance],
-                        block_device_mapping=block_device_mapping)
+                        block_device_mapping=block_device_mapping,
+                        tags=tags)
                     # This is a placeholder in case the quota recheck fails.
                     instances.append(None)
                     continue
