@@ -1186,19 +1186,6 @@ def _ovs_vsctl(args):
         raise exception.OvsConfigurationFailure(inner_exception=e)
 
 
-def create_fp_dev(dev, sockpath, sockmode):
-    if not nova.privsep.linux_net.device_exists(dev):
-        utils.execute('fp-vdev', 'add', dev, '--sockpath', sockpath,
-                      '--sockmode', sockmode, run_as_root=True)
-        nova.privsep.linux_net.set_device_mtu(dev)
-        nova.privsep.linux_net.set_device_enabled(dev)
-
-
-def delete_fp_dev(dev):
-    if nova.privsep.linux_net.device_exists(dev):
-        utils.execute('fp-vdev', 'del', dev, run_as_root=True)
-
-
 def delete_bridge_dev(dev):
     """Delete a network bridge."""
     if nova.privsep.linux_net.device_exists(dev):
