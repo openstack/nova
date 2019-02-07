@@ -19,6 +19,7 @@ import time
 import mock
 from os_xenapi.client import host_agent
 from os_xenapi.client import XenAPI
+from oslo_concurrency import processutils
 from oslo_utils import uuidutils
 
 from nova import exception
@@ -310,6 +311,19 @@ class SetAdminPasswordTestCase(AgentTestCaseBase):
         agent_inst.set_admin_password("new_pass")
 
         mock_add_fault.assert_called_once_with(error, mock.ANY)
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_run_ssl_successful(self, mock_execute):
+        mock_execute.return_value = ('0',
+            '*** WARNING : deprecated key derivation used.'
+            'Using -iter or -pbkdf2 would be better.')
+        agent.SimpleDH()._run_ssl('foo')
+
+    @mock.patch('oslo_concurrency.processutils.execute',
+                side_effect=processutils.ProcessExecutionError(
+                    exit_code=1, stderr=('ERROR: Something bad happened')))
+    def test_run_ssl_failure(self, mock_execute):
+        self.assertRaises(RuntimeError, agent.SimpleDH()._run_ssl, 'foo')
 
 
 class UpgradeRequiredTestCase(test.NoDBTestCase):
