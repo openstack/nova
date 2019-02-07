@@ -1215,7 +1215,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
         with mock.patch.object(self.driver, '_execute',
                                side_effect=fake_execute):
-            self.driver._exec_ebtables('fake')
+            self.driver._exec_ebtables('fake', ['fake'])
             self.assertEqual(1, len(executes))
 
     def _ebtables_race_stderr(self):
@@ -1244,7 +1244,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 mock.patch.object(self.driver, '_execute',
                                   side_effect=fake_execute):
             self.assertRaises(processutils.ProcessExecutionError,
-                              self.driver._exec_ebtables, 'fake')
+                              self.driver._exec_ebtables, 'fake', ['fake'])
             max_calls = CONF.ebtables_exec_attempts
             self.assertEqual(max_calls, len(executes))
 
@@ -1263,7 +1263,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 mock.patch.object(self.driver, '_execute',
                               side_effect=fake_execute):
             self.assertRaises(processutils.ProcessExecutionError,
-                              self.driver._exec_ebtables, 'fake')
+                              self.driver._exec_ebtables, 'fake', 'fake')
             self.assertEqual(1, len(executes))
 
     def test_exec_ebtables_fail_once(self):
@@ -1283,7 +1283,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         with mock.patch.object(time, 'sleep', side_effect=fake_sleep), \
                 mock.patch.object(self.driver, '_execute',
                                   side_effect=fake_execute):
-            self.driver._exec_ebtables('fake')
+            self.driver._exec_ebtables('fake', 'fake')
             self.assertEqual(2, len(executes))
 
     @mock.patch('os.path.exists', return_value=True)

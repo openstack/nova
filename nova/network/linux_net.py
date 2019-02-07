@@ -1500,9 +1500,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 #            ebtables while its holding a lock. As a result we want to add
 #            a timeout to the ebtables calls but we first need to teach
 #            oslo_concurrency how to do that.
-def _exec_ebtables(*cmd, **kwargs):
-    check_exit_code = kwargs.pop('check_exit_code', True)
-
+def _exec_ebtables(table, rule, insert_rule=True, check_exit_code=True):
     # List of error strings to re-try.
     retry_strings = (
         'Multiple ebtables programs',
@@ -1520,7 +1518,14 @@ def _exec_ebtables(*cmd, **kwargs):
         #            other error (like a rule doesn't exist) so we have to
         #            to parse stderr.
         try:
-            _execute(*cmd, check_exit_code=[0], **kwargs)
+            cmd = ['ebtables', '--concurrent', '-t', table]
+            if insert_rule:
+                cmd.append('-I')
+            else:
+                cmd.append('-D')
+            cmd.extend(rule)
+
+            _execute(*cmd, check_exit_code=[0], run_as_root=True)
         except processutils.ProcessExecutionError as exc:
             # See if we can retry the error.
             if any(error in exc.stderr for error in retry_strings):
@@ -1548,17 +1553,16 @@ def _exec_ebtables(*cmd, **kwargs):
 @utils.synchronized('ebtables', external=True)
 def ensure_ebtables_rules(rules, table='filter'):
     for rule in rules:
-        cmd = ['ebtables', '--concurrent', '-t', table, '-D'] + rule.split()
-        _exec_ebtables(*cmd, check_exit_code=False, run_as_root=True)
-        cmd[4] = '-I'
-        _exec_ebtables(*cmd, run_as_root=True)
+        _exec_ebtables(table, rule.split(), insert_rule=False,
+                       check_exit_code=False)
+        _exec_ebtables(table, rule.split())
 
 
 @utils.synchronized('ebtables', external=True)
 def remove_ebtables_rules(rules, table='filter'):
     for rule in rules:
-        cmd = ['ebtables', '--concurrent', '-t', table, '-D'] + rule.split()
-        _exec_ebtables(*cmd, check_exit_code=False, run_as_root=True)
+        _exec_ebtables(table, rule.split(), insert_rule=False,
+                       check_exit_code=False)
 
 
 def isolate_dhcp_address(interface, address):
