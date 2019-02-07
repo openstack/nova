@@ -674,6 +674,7 @@ class _ServersActionsJsonTestMixin(object):
 
 
 class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
+    SUPPORTS_CELLS = True
 
     def test_server_reboot_hard(self):
         uuid = self._post_server()

@@ -34,6 +34,10 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = FakeContext(self.user_id, self.project_id)
+        # Normally RequestContext.cell_uuid would be set when targeting
+        # the context in nova.conductor.manager.targets_cell but we just
+        # fake it here.
+        self.context.cell_uuid = uuids.cell1
         self.flavor = fake_flavor.fake_flavor_obj(self.context)
         self.flavor.extra_specs = {'extra_specs': 'fake'}
         inst = fake_instance.fake_db_instance(image_ref='image_ref',
@@ -83,9 +87,12 @@ class MigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
-    def _test_execute(self, prep_resize_mock, sel_dest_mock, sig_mock, az_mock,
-                      gmv_mock, cm_mock, sm_mock, cn_mock, rc_mock, gbf_mock,
-                      requested_destination=False):
+    @mock.patch('nova.conductor.tasks.cross_cell_migrate.'
+                'CrossCellMigrationTask.execute')
+    def _test_execute(self, cross_cell_exec_mock, prep_resize_mock,
+                      sel_dest_mock, sig_mock, az_mock, gmv_mock, cm_mock,
+                      sm_mock, cn_mock, rc_mock, gbf_mock,
+                      requested_destination=False, same_cell=True):
         sel_dest_mock.return_value = self.host_lists
         az_mock.return_value = 'myaz'
         gbf_mock.return_value = objects.MigrationList()
@@ -95,7 +102,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
 
         if requested_destination:
             self.request_spec.requested_destination = objects.Destination(
-                host='target_host', node=None)
+                host='target_host', node=None,
+                allow_cross_cell_move=not same_cell)
             self.request_spec.retry = objects.SchedulerRetries.from_dict(
                 self.context, self.filter_properties['retry'])
             self.filter_properties.pop('retry')
@@ -117,11 +125,16 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         cn_mock.side_effect = set_migration_uuid
 
         selection = self.host_lists[0][0]
-        with mock.patch.object(scheduler_utils,
-                               'fill_provider_mapping') as fill_mock:
+        with test.nested(
+                mock.patch.object(scheduler_utils,
+                                  'fill_provider_mapping'),
+                mock.patch.object(task, '_is_selected_host_in_source_cell',
+                                  return_value=same_cell)
+        ) as (fill_mock, _is_source_cell_mock):
             task.execute()
             fill_mock.assert_called_once_with(
                 task.context, task.reportclient, task.request_spec, selection)
+            _is_source_cell_mock.assert_called_once_with(selection)
 
         self.ensure_network_metadata_mock.assert_called_once_with(
             self.instance)
@@ -131,13 +144,22 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         task.query_client.select_destinations.assert_called_once_with(
             self.context, self.request_spec, [self.instance.uuid],
             return_objects=True, return_alternates=True)
-        prep_resize_mock.assert_called_once_with(
-            self.context, self.instance, self.request_spec.image,
-            self.flavor, selection.service_host, task._migration,
-            request_spec=self.request_spec,
-            filter_properties=self.filter_properties, node=selection.nodename,
-            clean_shutdown=self.clean_shutdown, host_list=[])
-        az_mock.assert_called_once_with(self.context, 'host1')
+
+        if same_cell:
+            prep_resize_mock.assert_called_once_with(
+                self.context, self.instance, self.request_spec.image,
+                self.flavor, selection.service_host, task._migration,
+                request_spec=self.request_spec,
+                filter_properties=self.filter_properties,
+                node=selection.nodename,
+                clean_shutdown=self.clean_shutdown, host_list=[])
+            az_mock.assert_called_once_with(self.context, 'host1')
+            cross_cell_exec_mock.assert_not_called()
+        else:
+            cross_cell_exec_mock.assert_called_once_with()
+            az_mock.assert_not_called()
+            prep_resize_mock.assert_not_called()
+
         self.assertIsNotNone(task._migration)
 
         old_flavor = self.instance.flavor
@@ -159,6 +181,9 @@ class MigrationTaskTestCase(test.NoDBTestCase):
             self.assertIsNone(self.request_spec.retry)
             self.assertIn('cell', self.request_spec.requested_destination)
             self.assertIsNotNone(self.request_spec.requested_destination.cell)
+            self.assertEqual(
+                not same_cell,
+                self.request_spec.requested_destination.allow_cross_cell_move)
 
         mock_get_resources.assert_called_once_with(
             self.context, self.instance.uuid)
@@ -174,6 +199,13 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         self.flavor = self.flavor.obj_clone()
         self.flavor.id = 3
         self._test_execute()
+
+    def test_execute_same_cell_false(self):
+        """Tests the execute() scenario that the RequestSpec allows cross
+        cell move and the selected target host is in another cell so
+        CrossCellMigrationTask is executed.
+        """
+        self._test_execute(same_cell=False)
 
     @mock.patch.object(objects.MigrationList, 'get_by_filters')
     @mock.patch('nova.conductor.tasks.migrate.revert_allocation_for_migration')
@@ -825,6 +857,60 @@ class MigrationTaskTestCase(test.NoDBTestCase):
                  'request': self.request_spec.requested_resources},
                 instance=self.instance),
         ])
+
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                return_value=objects.InstanceMapping(
+                    cell_mapping=objects.CellMapping(uuid=uuids.cell1)))
+    @mock.patch('nova.conductor.tasks.migrate.LOG.debug')
+    def test_set_requested_destination_cell_allow_cross_cell_resize_true(
+            self, mock_debug, mock_get_im):
+        """Tests the scenario that the RequestSpec is configured for
+        allow_cross_cell_resize=True.
+        """
+        task = self._generate_task()
+        legacy_props = self.request_spec.to_legacy_filter_properties_dict()
+        self.request_spec.requested_destination = objects.Destination(
+            allow_cross_cell_move=True)
+        task._set_requested_destination_cell(legacy_props)
+        mock_get_im.assert_called_once_with(self.context, self.instance.uuid)
+        mock_debug.assert_called_once()
+        self.assertIn('Allowing migration from cell',
+                      mock_debug.call_args[0][0])
+
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                return_value=objects.InstanceMapping(
+                    cell_mapping=objects.CellMapping(uuid=uuids.cell1)))
+    @mock.patch('nova.conductor.tasks.migrate.LOG.debug')
+    def test_set_requested_destination_cell_allow_cross_cell_resize_false(
+            self, mock_debug, mock_get_im):
+        """Tests the scenario that the RequestSpec is configured for
+        allow_cross_cell_resize=False.
+        """
+        task = self._generate_task()
+        legacy_props = self.request_spec.to_legacy_filter_properties_dict()
+        # We don't have to explicitly set RequestSpec.requested_destination
+        # since _set_requested_destination_cell will do that and the
+        # Destination object will default allow_cross_cell_move to False.
+        task._set_requested_destination_cell(legacy_props)
+        mock_get_im.assert_called_once_with(self.context, self.instance.uuid)
+        mock_debug.assert_called_once()
+        self.assertIn('Restricting to cell', mock_debug.call_args[0][0])
+
+    def test_is_selected_host_in_source_cell_true(self):
+        """Tests the scenario that the host Selection from the scheduler is in
+        the same cell as the instance.
+        """
+        task = self._generate_task()
+        selection = objects.Selection(cell_uuid=self.context.cell_uuid)
+        self.assertTrue(task._is_selected_host_in_source_cell(selection))
+
+    def test_is_selected_host_in_source_cell_false(self):
+        """Tests the scenario that the host Selection from the scheduler is
+        not in the same cell as the instance.
+        """
+        task = self._generate_task()
+        selection = objects.Selection(cell_uuid=uuids.cell2, service_host='x')
+        self.assertFalse(task._is_selected_host_in_source_cell(selection))
 
 
 class MigrationTaskAllocationUtils(test.NoDBTestCase):
