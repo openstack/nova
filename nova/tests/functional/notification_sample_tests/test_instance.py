@@ -76,102 +76,119 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             'os-migrateLive': {
                 'host': 'host2',
                 'block_migration': True,
-                'force': True,
             }
         }
         self.admin_api.post_server_action(server['id'], post)
         self._wait_for_notification(
             'instance.live_migration_rollback_dest.end')
 
-        # 0. instance.live_migration_rollback.start
-        # 1. instance.live_migration_rollback.end
-        # 2. instance.live_migration_rollback_dest.start
-        # 3. instance.live_migration_rollback_dest.end
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        # 0. scheduler.select_destinations.start
+        # 1. scheduler.select_destinations.end
+        # 2. instance.live_migration_rollback.start
+        # 3. instance.live_migration_rollback.end
+        # 4. instance.live_migration_rollback_dest.start
+        # 5. instance.live_migration_rollback_dest.end
+        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         [x['event_type'] for x in
+                          fake_notifier.VERSIONED_NOTIFICATIONS])
         self._verify_notification(
             'instance-live_migration_rollback-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
         self._verify_notification(
             'instance-live_migration_rollback-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
         self._verify_notification(
             'instance-live_migration_rollback_dest-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
         self._verify_notification(
             'instance-live_migration_rollback_dest-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
 
     def _test_live_migration_success(self, server):
         post = {
             'os-migrateLive': {
                 'host': 'host2',
                 'block_migration': True,
-                'force': True,
             }
         }
         self.admin_api.post_server_action(server['id'], post)
         self._wait_for_notification('instance.live_migration_pre.end')
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        # 0. scheduler.select_destinations.start
+        # 1. scheduler.select_destinations.end
+        # 2. instance.live_migration_pre.start
+        # 3. instance.live_migration_pre.end
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         [x['event_type'] for x in
+                          fake_notifier.VERSIONED_NOTIFICATIONS])
         self._verify_notification(
             'instance-live_migration_pre-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
         self._verify_notification(
             'instance-live_migration_pre-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
         migrations = self.admin_api.get_active_migrations(server['id'])
         self.assertEqual(1, len(migrations))
 
         self._wait_for_notification('instance.live_migration_post.end')
-        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        # 0. scheduler.select_destinations.start
+        # 1. scheduler.select_destinations.end
+        # 2. instance.live_migration_pre.start
+        # 3. instance.live_migration_pre.end
+        # 4. instance.live_migration_post.start
+        # 5. instance.live_migration_post_dest.start
+        # 6. instance.live_migration_post_dest.end
+        # 7. instance.live_migration_post.end
+        self.assertEqual(8, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         [x['event_type'] for x in
+                          fake_notifier.VERSIONED_NOTIFICATIONS])
         self._verify_notification(
             'instance-live_migration_post-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
         self._verify_notification(
             'instance-live_migration_post_dest-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
         self._verify_notification(
             'instance-live_migration_post_dest-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[6])
         self._verify_notification(
             'instance-live_migration_post-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[7])
 
     def _test_live_migration_abort(self, server):
         post = {
             "os-migrateLive": {
                 "host": "host2",
                 "block_migration": False,
-                "force": True
             }
         }
 
@@ -188,43 +205,54 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         # wait for the rollback to ensure we can assert both notifications
         # below
         self._wait_for_notification('instance.live_migration_rollback.end')
-        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+
+        # 0. scheduler.select_destinations.start
+        # 1. scheduler.select_destinations.end
+        # 2. instance.live_migration_pre.start
+        # 3. instance.live_migration_pre.end
+        # 4. instance.live_migration_abort.start
+        # 5. instance.live_migration_abort.end
+        # 6. instance.live_migration_rollback.start
+        # 7. instance.live_migration_rollback.end
+        self.assertEqual(8, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         [x['event_type'] for x in
+                          fake_notifier.VERSIONED_NOTIFICATIONS])
         self._verify_notification(
             'instance-live_migration_pre-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
         self._verify_notification(
             'instance-live_migration_pre-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
         self._verify_notification(
             'instance-live_migration_abort-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
         self._verify_notification(
             'instance-live_migration_abort-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
         self._verify_notification(
             'instance-live_migration_rollback-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[6])
         self._verify_notification(
             'instance-live_migration_rollback-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[7])
 
     def _test_evacuate_server(self, server):
         services = self.admin_api.get_services(host='host2',
@@ -234,7 +262,6 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         evacuate = {
             'evacuate': {
                 'host': 'compute',
-                'force': True
             }
         }
 
@@ -259,7 +286,6 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             'os-migrateLive': {
                 'host': 'host2',
                 'block_migration': True,
-                'force': False,
             }
         }
         self.admin_api.post_server_action(server['id'], post)
