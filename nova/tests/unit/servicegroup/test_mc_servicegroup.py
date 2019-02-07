@@ -52,7 +52,8 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
 
         self.servicegroup_api.join('fake-host', 'fake-topic', service)
         fn = self.servicegroup_api._driver._report_state
-        service.tg.add_timer.assert_called_once_with(1, fn, 5, service)
+        service.tg.add_timer_args.assert_called_once_with(
+            1, fn, args=[service], initial_delay=5)
 
     def test_report_state(self):
         service_ref = {
