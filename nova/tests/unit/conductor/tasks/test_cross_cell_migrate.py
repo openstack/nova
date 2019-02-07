@@ -402,11 +402,15 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
             mock.patch.object(self.task, '_setup_target_cell_db'),
             mock.patch.object(self.task, '_prep_resize_at_dest'),
             mock.patch.object(self.task, '_prep_resize_at_source'),
+            mock.patch.object(self.task, '_finish_resize_at_dest'),
         ) as (
             mock_migration_save, mock_perform_external_api_checks,
             mock_setup_target_cell_db, mock_prep_resize_at_dest,
-            mock_prep_resize_at_source,
+            mock_prep_resize_at_source, mock_finish_resize_at_dest,
         ):
+            mock_setup_target_cell_db.return_value = (
+                mock.sentinel.target_cell_migration,
+                mock.sentinel.target_cell_mapping)
             self.task.execute()
         # Assert the calls
         self.assertTrue(self.task.source_migration.cross_cell_move,
@@ -415,8 +419,12 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         mock_perform_external_api_checks.assert_called_once_with()
         mock_setup_target_cell_db.assert_called_once_with()
         mock_prep_resize_at_dest.assert_called_once_with(
-            mock_setup_target_cell_db.return_value)
+            mock.sentinel.target_cell_migration)
         mock_prep_resize_at_source.assert_called_once_with()
+        mock_finish_resize_at_dest.assert_called_once_with(
+            mock_prep_resize_at_dest.return_value,
+            mock.sentinel.target_cell_mapping,
+            mock_prep_resize_at_source.return_value)
         # Now rollback the completed sub-tasks
         self.task.rollback()
 
@@ -487,8 +495,9 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         mock_set_target_cell.assert_called_once_with(
             self.task._target_cell_context, mock_get_cell_mapping.return_value)
         # The resulting migration record from TargetDBSetupTask should have
-        # been returned.
-        self.assertIs(result, mock.sentinel.target_cell_migration)
+        # been returned along with the target cell mapping.
+        self.assertIs(result[0], mock.sentinel.target_cell_migration)
+        self.assertIs(result[1], mock_get_cell_mapping.return_value)
         # The target_cell_instance should be set on the main task.
         self.assertIsNotNone(self.task._target_cell_instance)
         self.assertIs(self.task._target_cell_instance,
@@ -583,6 +592,19 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         self.assertIsInstance(
             self.task._completed_tasks['PrepResizeAtSourceTask'],
             cross_cell_migrate.PrepResizeAtSourceTask)
+
+    @mock.patch.object(cross_cell_migrate.FinishResizeAtDestTask, 'execute')
+    def test_finish_resize_at_dest(self, mock_task_execute):
+        """Tests setting up and executing FinishResizeAtDestTask"""
+        target_cell_migration = objects.Migration()
+        target_cell_mapping = objects.CellMapping()
+        self.task._finish_resize_at_dest(
+            target_cell_migration, target_cell_mapping, uuids.snapshot_id)
+        mock_task_execute.assert_called_once_with()
+        self.assertIn('FinishResizeAtDestTask', self.task._completed_tasks)
+        self.assertIsInstance(
+            self.task._completed_tasks['FinishResizeAtDestTask'],
+            cross_cell_migrate.FinishResizeAtDestTask)
 
 
 class PrepResizeAtDestTaskTestCase(test.NoDBTestCase):
@@ -843,3 +865,229 @@ class PrepResizeAtSourceTaskTestCase(test.NoDBTestCase):
         delete_image.assert_called_once_with(
             self.task.context, self.task.instance, self.task.image_api,
             self.task._image_id)
+
+
+class FinishResizeAtDestTaskTestCase(test.TestCase):
+    """Tests for FinishResizeAtDestTask which rely on a database"""
+
+    def _create_instance(self, ctxt, create_instance_mapping=False, **updates):
+        """Create a fake instance with the given cell-targeted context
+
+        :param ctxt: Cell-targeted RequestContext
+        :param create_instance_mapping: If True, create an InstanceMapping
+            for the instance pointed at the cell in which the ctxt is targeted,
+            otherwise no InstanceMapping is created.
+        :param updates: Additional fields to set on the Instance object.
+        :returns: Instance object that was created.
+        """
+        inst = fake_instance.fake_instance_obj(ctxt, **updates)
+        delattr(inst, 'id')  # make it creatable
+        # Now we have to dirty all of the fields because fake_instance_obj
+        # uses Instance._from_db_object to create the Instance object we have
+        # but _from_db_object calls obj_reset_changes() which resets all of
+        # the fields that were on the object, including the basic stuff like
+        # the 'host' field, which means those fields don't get set in the DB.
+        # TODO(mriedem): This should live in fake_instance_obj
+        for field in inst.obj_fields:
+            if field in inst:
+                setattr(inst, field, getattr(inst, field))
+        # FIXME(mriedem): db.instance_create does not handle tags
+        inst.obj_reset_changes(['tags'])
+        inst.create()
+
+        if create_instance_mapping:
+            # Find the cell mapping from the context.
+            self.assertIsNotNone(ctxt.cell_uuid,
+                                 'ctxt must be targeted to a cell.')
+            for cell in self.cell_mappings.values():
+                if cell.uuid == ctxt.cell_uuid:
+                    break
+            else:
+                raise Exception('Unable to find CellMapping with UUID %s' %
+                                ctxt.cell_uuid)
+
+            mapping = objects.InstanceMapping(
+                ctxt, instance_uuid=inst.uuid,
+                project_id=inst.project_id, cell_mapping=cell)
+            mapping.create()
+
+        return inst
+
+    def setUp(self):
+        super(FinishResizeAtDestTaskTestCase, self).setUp()
+        cells = list(self.cell_mappings.values())
+        source_cell = cells[0]
+        target_cell = cells[1]
+        self.source_context = nova_context.RequestContext(
+            user_id='fake-user', project_id='fake-project', is_admin=True)
+        self.target_context = self.source_context.elevated()  # copy source
+        nova_context.set_target_cell(self.source_context, source_cell)
+        nova_context.set_target_cell(self.target_context, target_cell)
+
+        # Create the source cell instance.
+        source_instance = self._create_instance(
+            self.source_context, create_instance_mapping=True,
+            hidden=False)
+        # Create the target cell instance which would normally be a clone of
+        # the source cell instance but the only thing these tests care about
+        # is that the UUID matches. The target cell instance is also hidden.
+        target_instance = self._create_instance(
+            self.target_context, hidden=True, uuid=source_instance.uuid)
+        target_migration = objects.Migration(dest_compute='target.host.com')
+        self.task = cross_cell_migrate.FinishResizeAtDestTask(
+            self.target_context, target_instance, target_migration,
+            source_instance, compute_rpcapi=mock.Mock(),
+            target_cell_mapping=target_cell, snapshot_id=uuids.snapshot_id,
+            request_spec=objects.RequestSpec())
+
+    def test_execute(self):
+        """Tests the happy path scenario for the task execution."""
+        with mock.patch.object(
+                self.task.compute_rpcapi,
+                'finish_snapshot_based_resize_at_dest') as finish_resize:
+            self.task.execute()
+        # _finish_snapshot_based_resize_at_dest will set the instance
+        # task_state to resize_migrated, save the change, and call the
+        # finish_snapshot_based_resize_at_dest method.
+        target_instance = self.task.instance
+        target_instance.refresh()
+        self.assertEqual(task_states.RESIZE_MIGRATED,
+                         self.task.instance.task_state)
+        finish_resize.assert_called_once_with(
+            self.task.context, target_instance, self.task.migration,
+            self.task.snapshot_id, self.task.request_spec)
+        # _update_instance_mapping will swap the hidden fields and update
+        # the instance mapping to point at the target cell.
+        self.assertFalse(target_instance.hidden,
+                         'Target cell instance should not be hidden')
+        source_instance = self.task.source_cell_instance
+        source_instance.refresh()
+        self.assertTrue(source_instance.hidden,
+                        'Source cell instance should be hidden')
+        mapping = objects.InstanceMapping.get_by_instance_uuid(
+            self.task.context, target_instance.uuid)
+        self.assertEqual(self.target_context.cell_uuid,
+                         mapping.cell_mapping.uuid)
+
+    def test_finish_snapshot_based_resize_at_dest_fails(self):
+        """Tests when the finish_snapshot_based_resize_at_dest compute method
+        raises an error.
+        """
+        with test.nested(
+            mock.patch.object(self.task.compute_rpcapi,
+                              'finish_snapshot_based_resize_at_dest',
+                              side_effect=test.TestingException),
+            mock.patch.object(self.task, '_copy_latest_fault'),
+            mock.patch.object(
+                self.task, '_copy_finish_snapshot_based_resize_at_dest_event'),
+        ) as (
+            finish_resize, copy_fault, copy_event
+        ):
+            self.assertRaises(test.TestingException,
+                              self.task._finish_snapshot_based_resize_at_dest)
+        # The source cell instance should be in error state.
+        source_instance = self.task.source_cell_instance
+        source_instance.refresh()
+        self.assertEqual(vm_states.ERROR, source_instance.vm_state)
+        self.assertIsNone(source_instance.task_state)
+        # And the latest fault and instance action event should have been
+        # copied from the target cell DB to the source cell DB.
+        copy_fault.assert_called_once_with(self.source_context)
+        copy_event.assert_called_once_with(self.source_context)
+
+    def test_copy_latest_fault(self):
+        """Tests _copy_latest_fault working as expected"""
+        # Inject a fault in the target cell database.
+        try:
+            raise test.TestingException('test-fault')
+        except test.TestingException as fault:
+            compute_utils.add_instance_fault_from_exc(
+                self.target_context, self.task.instance, fault)
+        self.task._copy_latest_fault(self.source_context)
+        # Now make sure that fault shows up in the source cell DB (it will
+        # get lazy-loaded here).
+        fault = self.task.source_cell_instance.fault
+        self.assertIsNotNone(fault, 'Fault not copied to source cell DB')
+        # And it's the fault we expect.
+        self.assertEqual('TestingException', fault.message)
+
+    @mock.patch('nova.conductor.tasks.cross_cell_migrate.LOG.exception')
+    def test_copy_latest_fault_error(self, mock_log):
+        """Tests that _copy_latest_fault errors are swallowed"""
+        with mock.patch('nova.objects.InstanceFault.get_latest_for_instance',
+                        side_effect=test.TestingException):
+            self.task._copy_latest_fault(self.source_context)
+        # The source cell should not have a fault.
+        self.assertIsNone(self.task.source_cell_instance.fault)
+        # The error should have been logged.
+        mock_log.assert_called_once()
+        self.assertIn('Failed to copy instance fault from target cell DB',
+                      mock_log.call_args[0][0])
+
+    @mock.patch('nova.conductor.tasks.cross_cell_migrate.LOG.warning')
+    def test_copy_finish_snapshot_based_resize_at_dest_event(self, mock_warn):
+        """Tests _copy_finish_snapshot_based_resize_at_dest_event working
+        without errors (but also warning cases).
+        """
+        # First run it without any action record created and we should get a
+        # warning logged that the action could not be found.
+        self.task._copy_finish_snapshot_based_resize_at_dest_event(
+            self.source_context)
+        mock_warn.assert_called_once()
+        self.assertIn('Failed to find InstanceAction by request_id',
+                      mock_warn.call_args[0][0])
+
+        # The source and target context must have the same request_id for this
+        # to work.
+        self.assertEqual(self.source_context.request_id,
+                         self.target_context.request_id)
+        # Create an action record in the source cell database. This is needed
+        # to find the action for the events when they get copied over.
+        src_action = objects.InstanceAction.action_start(
+            self.source_context, self.task.instance.uuid, 'resize')
+        # Create the same action in the target cell database.
+        objects.InstanceAction.action_start(
+            self.target_context, self.task.instance.uuid, 'resize')
+
+        # Now run it again without creating the underlying event record and
+        # we should log a warning that no event was found.
+        mock_warn.reset_mock()
+        self.task._copy_finish_snapshot_based_resize_at_dest_event(
+            self.source_context)
+        mock_warn.assert_called_once()
+        self.assertIn('Failed to find InstanceActionEvent',
+                      mock_warn.call_args[0][0])
+
+        # Generate the event in the target cell database.
+
+        @compute_utils.wrap_instance_event(prefix='compute')
+        def finish_snapshot_based_resize_at_dest(_self, context, instance):
+            raise test.TestingException('oops')
+        self.assertRaises(test.TestingException,
+                          finish_snapshot_based_resize_at_dest,
+                          mock.Mock(host='dest-host'),
+                          self.target_context, self.task.instance)
+
+        self.task._copy_finish_snapshot_based_resize_at_dest_event(
+            self.source_context)
+        # There should now be one InstanceActionEvent in the source cell DB.
+        src_events = objects.InstanceActionEventList.get_by_action(
+            self.source_context, src_action.id)
+        self.assertEqual(1, len(src_events))
+        self.assertEqual('compute_finish_snapshot_based_resize_at_dest',
+                         src_events[0].event)
+        self.assertEqual('Error', src_events[0].result)
+
+    @mock.patch('nova.conductor.tasks.cross_cell_migrate.LOG.exception')
+    @mock.patch('nova.objects.InstanceAction.get_by_request_id',
+                side_effect=test.TestingException)
+    def test_copy_finish_snapshot_based_resize_at_dest_event_error(
+            self, get_by_request_id, mock_log):
+        """Tests that _copy_finish_snapshot_based_resize_at_dest_event errors
+        are swallowed.
+        """
+        self.task._copy_finish_snapshot_based_resize_at_dest_event(
+            self.source_context)
+        mock_log.assert_called_once()
+        self.assertIn('Failed to copy %s instance action event from target',
+                      mock_log.call_args[0][0])
