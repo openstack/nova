@@ -120,13 +120,8 @@ class _BaseTestCase(object):
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
-        def fake_deserialize_context(serializer, ctxt_dict):
-            self.assertEqual(self.context.user_id, ctxt_dict['user_id'])
-            self.assertEqual(self.context.project_id, ctxt_dict['project_id'])
-            return self.context
-
         self.stub_out('nova.rpc.RequestContextSerializer.deserialize_context',
-                      fake_deserialize_context)
+                      lambda *args, **kwargs: self.context)
 
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
@@ -338,13 +333,8 @@ class _BaseTaskTestCase(object):
         fake_server_actions.stub_out_action_events(self)
         self.request_spec = objects.RequestSpec()
 
-        def fake_deserialize_context(serializer, ctxt_dict):
-            self.assertEqual(self.context.user_id, ctxt_dict['user_id'])
-            self.assertEqual(self.context.project_id, ctxt_dict['project_id'])
-            return self.context
-
         self.stub_out('nova.rpc.RequestContextSerializer.deserialize_context',
-                      fake_deserialize_context)
+                      lambda *args, **kwargs: self.context)
 
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         _p = mock.patch('nova.compute.utils.heal_reqspec_is_bfv')
