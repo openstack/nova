@@ -12,10 +12,12 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from __future__ import absolute_import
 
 import collections
 import copy
 import datetime
+import fixtures
 import time
 import zlib
 
@@ -36,6 +38,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import block_device as block_device_obj
+from nova import rc_fields
 from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -5380,11 +5383,17 @@ class PortResourceRequestBasedSchedulingTestBase(
 
     compute_driver = 'fake.SmallFakeDriver'
 
+    CUSTOM_VNIC_TYPE_NORMAL = 'CUSTOM_VNIC_TYPE_NORMAL'
+    CUSTOM_PHYSNET_2 = 'CUSTOM_PHYSNET_2'
+
     def setUp(self):
         super(PortResourceRequestBasedSchedulingTestBase, self).setUp()
         self.compute1 = self._start_compute('host1')
         self.compute1_rp_uuid = self._get_provider_uuid_by_host('host1')
+        self.ovs_bridge_rp_per_host = {}
         self.flavor = self.api.get_flavors()[0]
+
+        self._create_networking_rp_tree(self.compute1_rp_uuid)
 
     def _create_server(self, flavor, networks):
         server_req = self._build_minimal_create_server_request(
@@ -5392,6 +5401,62 @@ class PortResourceRequestBasedSchedulingTestBase(
             image_uuid='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
             flavor_id=flavor['id'], networks=networks)
         return self.api.post_server({'server': server_req})
+
+    def _set_provider_inventories(self, rp_uuid, inventories):
+        rp = self.placement_api.get(
+            '/resource_providers/%s' % rp_uuid).body
+        inventories['resource_provider_generation'] = rp['generation']
+        return self._update_inventory(rp_uuid, inventories)
+
+    def _create_networking_rp_tree(self, compute_rp_uuid):
+        # let's simulate what the neutron ovs agent would do
+
+        # we need uuid sentinel for the test to make pep8 happy but we need a
+        # unique one per compute so here is some ugliness
+        ovs_agent_rp_uuid = getattr(uuids, compute_rp_uuid + 'ovs agent')
+        agent_rp_req = {
+            "name": ovs_agent_rp_uuid,
+            "uuid": ovs_agent_rp_uuid,
+            "parent_provider_uuid": compute_rp_uuid
+        }
+        self.placement_api.post('/resource_providers',
+                                body=agent_rp_req,
+                                version='1.20')
+        ovs_bridge_rp_uuid = getattr(uuids, ovs_agent_rp_uuid + 'ovs br')
+        ovs_bridge_req = {
+            "name": ovs_bridge_rp_uuid,
+            "uuid": ovs_bridge_rp_uuid,
+            "parent_provider_uuid": ovs_agent_rp_uuid
+        }
+        self.placement_api.post('/resource_providers',
+                                body=ovs_bridge_req,
+                                version='1.20')
+        self.ovs_bridge_rp_per_host[compute_rp_uuid] = ovs_bridge_rp_uuid
+
+        self._set_provider_inventories(
+            ovs_bridge_rp_uuid,
+            {"inventories": {
+                rc_fields.ResourceClass.NET_BW_IGR_KILOBIT_PER_SEC:
+                    {"total": 10000},
+                rc_fields.ResourceClass.NET_BW_EGR_KILOBIT_PER_SEC:
+                    {"total": 10000},
+            }})
+
+        self._create_trait(self.CUSTOM_VNIC_TYPE_NORMAL)
+        self._create_trait(self.CUSTOM_PHYSNET_2)
+
+        self._set_provider_traits(
+            ovs_bridge_rp_uuid,
+            [self.CUSTOM_VNIC_TYPE_NORMAL, self.CUSTOM_PHYSNET_2])
+
+    def assertPortMatchesAllocation(self, port, allocations):
+        port_request = port['resource_request']['resources']
+        for rc, amount in allocations.items():
+            self.assertEqual(port_request[rc], amount,
+                             'port %s requested %d %s '
+                             'resources but got allocation %d' %
+                             (port['id'], port_request[rc], rc,
+                              amount))
 
 
 class PortResourceRequestBasedSchedulingTest(
@@ -5648,3 +5713,127 @@ class PortResourceRequestBasedSchedulingTest(
 
         self.api.post_server_action(server['id'], {'unshelve': {}})
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+
+class PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck(
+    PortResourceRequestBasedSchedulingTestBase):
+
+    def setUp(self):
+        super(
+            PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck,
+            self).setUp()
+
+        # NOTE(gibi): This mock turns off the api microversion that prevents
+        # handling of instances operations if the request involves port's with
+        # resource request with old microversion. The new microversion does not
+        # exists yet as the whole feature is not read for end user consumption.
+        # This functional tests however would like to prove that some use cases
+        # already work.
+        self.useFixture(
+            fixtures.MockPatch(
+                'nova.api.openstack.common.'
+                'supports_port_resource_request',
+                return_value=True))
+
+    def test_boot_server_with_two_ports_one_having_resource_request(self):
+        non_qos_port = self.neutron.port_1
+        qos_port = self.neutron.port_with_resource_request
+
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': non_qos_port['id']},
+                      {'port': qos_port['id']}])
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect one set of allocations for the compute resources on the
+        # compute rp and one set for the networking resources on the ovs bridge
+        # rp due to the qos_port resource request
+        self.assertEqual(2, len(allocations))
+        compute_allocations = allocations[self.compute1_rp_uuid]['resources']
+        network_allocations = allocations[
+            self.ovs_bridge_rp_per_host[self.compute1_rp_uuid]]['resources']
+
+        self.assertEqual(self._resources_from_flavor(self.flavor),
+                         compute_allocations)
+        self.assertPortMatchesAllocation(qos_port, network_allocations)
+
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(0, len(allocations))
+
+
+class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(
+        PortResourceRequestBasedSchedulingTestBase):
+
+    compute_driver = 'fake.FakeRescheduleDriver'
+
+    def setUp(self):
+        super(
+            PortResourceRequestReSchedulingTestIgnoreMicroversionCheck,
+            self).setUp()
+        self.compute2 = self._start_compute('host2')
+        self.compute2_rp_uuid = self._get_provider_uuid_by_host('host2')
+        self._create_networking_rp_tree(self.compute2_rp_uuid)
+
+        # NOTE(gibi): This mock turns off the api microversion that prevents
+        # handling of instances operations if the request involves port's with
+        # resource request with old microversion. The new microversion does not
+        # exists yet as the whole feature is not read for end user consumption.
+        # This functional tests however would like to prove that some use cases
+        # already work.
+        self.useFixture(
+            fixtures.MockPatch(
+                'nova.api.openstack.common.'
+                'supports_port_resource_request',
+                return_value=True))
+
+    def test_boot_reschedule_success(self):
+        port = self.neutron.port_with_resource_request
+
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': port['id']}])
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        dest_hostname = server['OS-EXT-SRV-ATTR:host']
+        dest_compute_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        failed_compute_rp = (self.compute1_rp_uuid
+                             if dest_compute_rp_uuid == self.compute2_rp_uuid
+                             else self.compute2_rp_uuid)
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect one set of allocations for the compute resources on the
+        # compute rp and one set for the networking resources on the ovs bridge
+        # rp
+        self.assertEqual(2, len(allocations))
+        compute_allocations = allocations[dest_compute_rp_uuid]['resources']
+        network_allocations = allocations[
+            self.ovs_bridge_rp_per_host[dest_compute_rp_uuid]]['resources']
+
+        self.assertEqual(self._resources_from_flavor(self.flavor),
+                         compute_allocations)
+        self.assertPortMatchesAllocation(port, network_allocations)
+
+        # assert that the allocations against the host where the spawn
+        # failed are cleaned up properly
+        self.assertEqual(
+            {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0},
+            self._get_provider_usages(failed_compute_rp))
+        self.assertEqual(
+            {'NET_BW_EGR_KILOBIT_PER_SEC': 0, 'NET_BW_IGR_KILOBIT_PER_SEC': 0},
+            self._get_provider_usages(
+                self.ovs_bridge_rp_per_host[failed_compute_rp]))
+
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(0, len(allocations))
