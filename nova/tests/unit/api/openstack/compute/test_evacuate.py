@@ -95,9 +95,8 @@ class EvacuateTestV21(test.NoDBTestCase):
                                 controller=None):
         controller = controller or self.controller
         body = {'evacuate': body}
-        self.assertRaises(exception,
-                          controller._evacuate,
-                          self.admin_req, uuid or self.UUID, body=body)
+        return self.assertRaises(exception, controller._evacuate,
+                                 self.admin_req, uuid or self.UUID, body=body)
 
     def test_evacuate_with_valid_instance(self):
         admin_pass = 'MyNewPass'
@@ -367,9 +366,8 @@ class EvacuateTestV214(EvacuateTestV21):
         controller = controller or self.controller
         body.pop('onSharedStorage', None)
         body = {'evacuate': body}
-        self.assertRaises(exception,
-                          controller._evacuate,
-                          self.admin_req, uuid or self.UUID, body=body)
+        return self.assertRaises(exception, controller._evacuate,
+                                 self.admin_req, uuid or self.UUID, body=body)
 
     @mock.patch.object(compute_api.API, 'evacuate')
     def test_evacuate_instance(self, mock_evacuate):
@@ -479,3 +477,29 @@ class EvacuateTestV229(EvacuateTestV214):
     def test_forced_evacuate_with_no_host_provided(self):
         self._check_evacuate_failure(webob.exc.HTTPBadRequest,
                                      {'force': 'true'})
+
+
+class EvacuateTestV268(EvacuateTestV229):
+    def setUp(self):
+        super(EvacuateTestV268, self).setUp()
+        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                                 version='2.68')
+        self.req = fakes.HTTPRequest.blank('', version='2.68')
+
+    def test_evacuate_with_valid_instance(self):
+        admin_pass = 'MyNewPass'
+        res = self._get_evacuate_response({'host': 'my-host',
+                                           'adminPass': admin_pass})
+
+        self.assertIsNone(res)
+
+    @mock.patch.object(compute_api.API, 'evacuate')
+    def test_evacuate_instance_with_forced_host(self, mock_evacuate):
+        ex = self._check_evacuate_failure(self.validation_error,
+                                          {'host': 'my-host',
+                                           'force': 'true'})
+        self.assertIn('force', six.text_type(ex))
+
+    def test_forced_evacuate_with_no_host_provided(self):
+        # not applicable for v2.68, which removed the 'force' parameter
+        pass

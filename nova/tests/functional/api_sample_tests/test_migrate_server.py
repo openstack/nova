@@ -21,6 +21,21 @@ from nova import objects
 from nova.tests.functional.api_sample_tests import test_servers
 
 
+def fake_get_compute(context, host):
+    # TODO(stephenfin): It's gross that we even need this in a functional test
+    # where we can control the running compute services. Stop doing it.
+    service = dict(host=host,
+                   binary='nova-compute',
+                   topic='compute',
+                   report_count=1,
+                   updated_at='foo',
+                   hypervisor_type='bar',
+                   hypervisor_version=(
+                        versionutils.convert_version_to_int('1.0')),
+                   disabled=False)
+    return {'compute_node': [service]}
+
+
 class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
     sample_dir = "os-migrate-server"
     USE_NEUTRON = True
@@ -47,27 +62,16 @@ class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
 
         def fake_live_migrate(_self, context, instance, scheduler_hint,
                               block_migration, disk_over_commit, request_spec):
-            self.assertEqual(self.uuid, instance["uuid"])
+            self.assertEqual(self.uuid, instance.uuid)
             host = scheduler_hint["host"]
             self.assertEqual(self.host_attended, host)
 
         self.stub_out(
             'nova.conductor.manager.ComputeTaskManager._live_migrate',
             fake_live_migrate)
-
-        def fake_get_compute(context, host):
-            service = dict(host=host,
-                           binary='nova-compute',
-                           topic='compute',
-                           report_count=1,
-                           updated_at='foo',
-                           hypervisor_type='bar',
-                           hypervisor_version=(
-                                versionutils.convert_version_to_int('1.0')),
-                           disabled=False)
-            return {'compute_node': [service]}
-        self.stub_out("nova.db.api.service_get_by_compute_host",
-                      fake_get_compute)
+        self.stub_out(
+            'nova.db.api.service_get_by_compute_host',
+            fake_get_compute)
 
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'live-migrate-server',
@@ -182,4 +186,39 @@ class MigrateServerSamplesJsonTestV256(test_servers.ServersSampleBase):
         # Check backward compatibility.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'migrate-server-null', {})
+        self.assertEqual(202, response.status_code)
+
+
+class MigrateServerSamplesJsonTestV268(test_servers.ServersSampleBase):
+    sample_dir = "os-migrate-server"
+    microversion = '2.68'
+    scenarios = [('v2_68', {'api_major_version': 'v2.1'})]
+    USE_NEUTRON = True
+
+    def setUp(self):
+        """setUp Method for MigrateServer api samples extension
+
+        This method creates the server that will be used in each tests
+        """
+        super(MigrateServerSamplesJsonTestV268, self).setUp()
+        self.uuid = self._post_server()
+
+    def test_post_live_migrate_server(self):
+        # Get api samples to server live migrate request.
+        req_subs = {'hostname': self.compute.host}
+
+        def fake_live_migrate(_self, context, instance, scheduler_hint,
+                              block_migration, disk_over_commit, request_spec):
+            self.assertEqual(self.uuid, instance.uuid)
+
+        self.stub_out(
+            'nova.conductor.manager.ComputeTaskManager._live_migrate',
+            fake_live_migrate)
+        self.stub_out(
+            'nova.db.api.service_get_by_compute_host',
+            fake_get_compute)
+
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'live-migrate-server',
+                                 req_subs)
         self.assertEqual(202, response.status_code)

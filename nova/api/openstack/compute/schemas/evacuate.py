@@ -42,3 +42,7 @@ del evacuate_v214['properties']['evacuate']['required']
 evacuate_v2_29 = copy.deepcopy(evacuate_v214)
 evacuate_v2_29['properties']['evacuate']['properties'][
     'force'] = parameter_types.boolean
+
+# v2.68 removes the 'force' parameter added in v2.29, meaning it is identical
+# to v2.14
+evacuate_v2_68 = copy.deepcopy(evacuate_v214)
