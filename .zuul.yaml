@@ -152,17 +152,6 @@
     voting: false
 
 - job:
-    name: nova-multiattach
-    parent: nova-dsvm-base
-    description: |
-      Run tempest integration tests with volume multiattach support enabled.
-      This job will only work starting with Queens.
-      It uses the default Cinder volume type in devstack (lvm) and the
-      default compute driver in devstack (libvirt).
-    run: playbooks/legacy/nova-multiattach/run.yaml
-    post-run: playbooks/legacy/nova-multiattach/post.yaml
-
-- job:
     name: nova-next
     parent: nova-dsvm-base
     description: |
@@ -241,7 +230,6 @@
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
         - nova-live-migration
         - nova-lvm
-        - nova-multiattach
         - nova-next
         - nova-tox-functional
         - nova-tox-functional-py35
@@ -261,7 +249,6 @@
         - neutron-grenade:
             irrelevant-files: *dsvm-irrelevant-files
         - nova-live-migration
-        - nova-multiattach
         - nova-tox-functional
         - nova-tox-functional-py35
         - nova-next

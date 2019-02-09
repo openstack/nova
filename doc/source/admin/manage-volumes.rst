@@ -65,15 +65,9 @@ Testing
 ~~~~~~~
 
 Continuous integration testing of the volume multiattach feature is done
-via the ``nova-multiattach`` job, defined in the `nova repository`_.
-
-The tests are defined in the `tempest repository`_.
-
-The CI job is setup to run with the **libvirt** compute driver and the **lvm**
-volume back end. It purposefully does not use the Pike Ubuntu Cloud Archive
-package mirror so that it gets qemu<2.10.
+via the ``tempest-full`` and ``tempest-slow`` jobs, which, along with the
+tests themselves, are defined in the `tempest repository`_.
 
 .. _added support for multiattach volumes: https://specs.openstack.org/openstack/nova-specs/specs/queens/implemented/multi-attach-volume.html
 .. _recorded overview and demo: https://www.youtube.com/watch?v=hZg6wqxdEHk
-.. _nova repository: http://git.openstack.org/cgit/openstack/nova/tree/playbooks/legacy/nova-multiattach/run.yaml
 .. _tempest repository: http://codesearch.openstack.org/?q=CONF.compute_feature_enabled.volume_multiattach&i=nope&files=&repos=tempest
