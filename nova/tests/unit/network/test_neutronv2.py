@@ -5325,9 +5325,11 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         mock_request_spec.assert_has_calls([
             mock.call(
                 context=None,
+                port_uuid=uuids.portid_2,
                 port_resource_request=mock.sentinel.resource_request1),
             mock.call(
                 context=None,
+                port_uuid=uuids.trusted_port,
                 port_resource_request=mock.sentinel.resource_request2),
         ])
 

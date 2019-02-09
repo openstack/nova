@@ -854,6 +854,8 @@ class TestRequestGroupObject(test.TestCase):
         self.assertEqual(set(), rg.required_traits)
         self.assertEqual(set(), rg.forbidden_traits)
         self.assertEqual([], rg.aggregates)
+        self.assertIsNone(None, rg.requester_id)
+        self.assertEqual([], rg.provider_uuids)
 
     def test_from_port_request(self):
         port_resource_request = {
@@ -864,7 +866,7 @@ class TestRequestGroupObject(test.TestCase):
                          "CUSTOM_VNIC_TYPE_NORMAL"]
         }
         rg = request_spec.RequestGroup.from_port_request(
-            self.context, port_resource_request)
+            self.context, uuids.port_id, port_resource_request)
 
         self.assertTrue(rg.use_same_provider)
         self.assertEqual(
@@ -873,9 +875,11 @@ class TestRequestGroupObject(test.TestCase):
             rg.resources)
         self.assertEqual({"CUSTOM_PHYSNET_2", "CUSTOM_VNIC_TYPE_NORMAL"},
                          rg.required_traits)
+        self.assertEqual(uuids.port_id, rg.requester_id)
         # and the rest is defaulted
         self.assertEqual(set(), rg.forbidden_traits)
         self.assertEqual([], rg.aggregates)
+        self.assertEqual([], rg.provider_uuids)
 
     def test_from_port_request_without_traits(self):
         port_resource_request = {
@@ -883,14 +887,28 @@ class TestRequestGroupObject(test.TestCase):
                 "NET_BW_IGR_KILOBIT_PER_SEC": 1000,
                 "NET_BW_EGR_KILOBIT_PER_SEC": 1000}}
         rg = request_spec.RequestGroup.from_port_request(
-            self.context, port_resource_request)
+            self.context, uuids.port_id, port_resource_request)
 
         self.assertTrue(rg.use_same_provider)
         self.assertEqual(
             {"NET_BW_IGR_KILOBIT_PER_SEC": 1000,
              "NET_BW_EGR_KILOBIT_PER_SEC": 1000},
             rg.resources)
+        self.assertEqual(uuids.port_id, rg.requester_id)
         # and the rest is defaulted
         self.assertEqual(set(), rg.required_traits)
         self.assertEqual(set(), rg.forbidden_traits)
         self.assertEqual([], rg.aggregates)
+        self.assertEqual([], rg.provider_uuids)
+
+    def test_compat_requester_and_provider(self):
+        req_obj = objects.RequestGroup(
+            requester_id=uuids.requester, provider_uuids=[uuids.rp1],
+            required_traits=set(['CUSTOM_PHYSNET_2']))
+        versions = ovo_base.obj_tree_get_versions('RequestGroup')
+        primitive = req_obj.obj_to_primitive(
+            target_version='1.0',
+            version_manifest=versions)['nova_object.data']
+        self.assertNotIn('requester_id', primitive)
+        self.assertNotIn('provider_uuids', primitive)
+        self.assertIn('required_traits', primitive)

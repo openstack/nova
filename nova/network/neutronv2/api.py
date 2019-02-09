@@ -1983,6 +1983,7 @@ class API(base_api.NetworkAPI):
                     resource_requests.append(
                         objects.RequestGroup.from_port_request(
                             context=None,
+                            port_uuid=request_net.port_id,
                             port_resource_request=resource_request))
 
             elif request_net.network_id and not request_net.auto_allocate:

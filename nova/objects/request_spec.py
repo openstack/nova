@@ -797,7 +797,9 @@ class RequestGroup(base.NovaObject):
     """Versioned object based on the unversioned
     nova.api.openstack.placement.lib.RequestGroup object.
     """
-    VERSION = '1.0'
+    # Version 1.0: Initial version
+    # Version 1.1: add requester_id and provider_uuids fields
+    VERSION = '1.1'
 
     fields = {
         'use_same_provider': fields.BooleanField(default=True),
@@ -811,6 +813,13 @@ class RequestGroup(base.NovaObject):
         # member of the aggregate aggregate_UUID1 and member of the aggregate
         # aggregate_UUID2 or aggregate_UUID3 .
         'aggregates': fields.ListOfListsOfStringsField(default=[]),
+        # The entity the request is coming from (e.g. the Neutron port uuid)
+        # which may not always be a UUID.
+        'requester_id': fields.StringField(nullable=True, default=None),
+        # The resource provider UUIDs that together fulfill the request
+        # NOTE(gibi): this can be more than one if this is the unnumbered
+        # request group (i.e. use_same_provider=False)
+        'provider_uuids': fields.ListOfUUIDField(default=[]),
     }
 
     def __init__(self, context=None, **kwargs):
@@ -818,10 +827,11 @@ class RequestGroup(base.NovaObject):
         self.obj_set_defaults()
 
     @classmethod
-    def from_port_request(cls, context, port_resource_request):
+    def from_port_request(cls, context, port_uuid, port_resource_request):
         """Init the group from the resource request of a neutron port
 
         :param context: the request context
+        :param port_uuid: the port requesting the resources
         :param port_resource_request: the resource_request attribute of the
                                       neutron port
         For example:
@@ -845,6 +855,17 @@ class RequestGroup(base.NovaObject):
                   use_same_provider=True,
                   resources=port_resource_request['resources'],
                   required_traits=set(port_resource_request.get(
-                      'required', [])))
+                      'required', [])),
+                  requester_id=port_uuid)
         obj.obj_set_defaults()
         return obj
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(RequestGroup, self).obj_make_compatible(
+            primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1):
+            if 'requester_id' in primitive:
+                del primitive['requester_id']
+            if 'provider_uuids' in primitive:
+                del primitive['provider_uuids']
