@@ -88,6 +88,11 @@ Extra Specs
   options.  For more information on the standardized extra specs available,
   :ref:`see below <flavors-extra-specs>`
 
+Description
+  A free form description of the flavor. Limited to 65535 characters in length.
+  Only printable characters are allowed. Available starting in
+  microversion 2.55.
+
 .. _flavors-extra-specs:
 
 Extra Specs
