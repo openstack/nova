@@ -1195,19 +1195,16 @@ class ServerTestV220(ServersTestBase):
             self.assertIsNone(attach_response['device'])
 
         # Test detach volume
-        with test.nested(mock.patch.object(volume.cinder.API,
-                                           'begin_detaching'),
-                         mock.patch.object(objects.BlockDeviceMappingList,
+        with test.nested(mock.patch.object(objects.BlockDeviceMappingList,
                                            'get_by_instance_uuid'),
                          mock.patch.object(compute_api.API,
                                            '_local_cleanup_bdm_volumes')
-                         ) as (mock_check, mock_get_bdms, mock_clean_vols):
+                         ) as (mock_get_bdms, mock_clean_vols):
 
             mock_get_bdms.return_value = fake_bdms
             attachment_id = mock_get_bdms.return_value[0]['volume_id']
             self.api.api_delete('/servers/%s/os-volume_attachments/%s' %
                             (server_id, attachment_id))
-            self.assertTrue(mock_check.called)
             self.assertTrue(mock_clean_vols.called)
 
         self._delete_server(server_id)
