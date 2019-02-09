@@ -1230,9 +1230,9 @@ Related options:
 ]
 
 instance_cleaning_opts = [
-    # TODO(macsz): add min=1 flag in P development cycle
     cfg.IntOpt('maximum_instance_delete_attempts',
         default=5,
+        min=1,
         help="""
 The number of times to attempt to reap an instance's files.
 
@@ -1242,8 +1242,6 @@ that can be made.
 Possible values:
 
 * Any positive integer defines how many attempts are made.
-* Any value <=0 means no delete attempts occur, but you should use
-  ``instance_delete_interval`` to disable the delete attempts.
 
 Related options:
 
