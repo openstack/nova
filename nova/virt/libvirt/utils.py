@@ -22,6 +22,7 @@ import errno
 import os
 import re
 
+import os_traits
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import fileutils
@@ -46,38 +47,38 @@ RESIZE_SNAPSHOT_NAME = 'nova-resize'
 # Mapping used to convert libvirt cpu features to traits, for more details, see
 # https://github.com/libvirt/libvirt/blob/master/src/cpu/cpu_map.xml.
 CPU_TRAITS_MAPPING = {
-    '3dnow': 'HW_CPU_X86_3DNOW',
-    'abm': 'HW_CPU_X86_ABM',
-    'aes': 'HW_CPU_X86_AESNI',
-    'avx': 'HW_CPU_X86_AVX',
-    'avx2': 'HW_CPU_X86_AVX2',
-    'avx512bw': 'HW_CPU_X86_AVX512BW',
-    'avx512cd': 'HW_CPU_X86_AVX512CD',
-    'avx512dq': 'HW_CPU_X86_AVX512DQ',
-    'avx512er': 'HW_CPU_X86_AVX512ER',
-    'avx512f': 'HW_CPU_X86_AVX512F',
-    'avx512pf': 'HW_CPU_X86_AVX512PF',
-    'avx512vl': 'HW_CPU_X86_AVX512VL',
-    'bmi1': 'HW_CPU_X86_BMI',
-    'bmi2': 'HW_CPU_X86_BMI2',
-    'pclmuldq': 'HW_CPU_X86_CLMUL',
-    'f16c': 'HW_CPU_X86_F16C',
-    'fma': 'HW_CPU_X86_FMA3',
-    'fma4': 'HW_CPU_X86_FMA4',
-    'mmx': 'HW_CPU_X86_MMX',
-    'mpx': 'HW_CPU_X86_MPX',
-    'sha-ni': 'HW_CPU_X86_SHA',
-    'sse': 'HW_CPU_X86_SSE',
-    'sse2': 'HW_CPU_X86_SSE2',
-    'sse3': 'HW_CPU_X86_SSE3',
-    'sse4.1': 'HW_CPU_X86_SSE41',
-    'sse4.2': 'HW_CPU_X86_SSE42',
-    'sse4a': 'HW_CPU_X86_SSE4A',
-    'ssse3': 'HW_CPU_X86_SSSE3',
-    'svm': 'HW_CPU_X86_SVM',
-    'tbm': 'HW_CPU_X86_TBM',
-    'vmx': 'HW_CPU_X86_VMX',
-    'xop': 'HW_CPU_X86_XOP'
+    '3dnow': os_traits.HW_CPU_X86_3DNOW,
+    'abm': os_traits.HW_CPU_X86_ABM,
+    'aes': os_traits.HW_CPU_X86_AESNI,
+    'avx': os_traits.HW_CPU_X86_AVX,
+    'avx2': os_traits.HW_CPU_X86_AVX2,
+    'avx512bw': os_traits.HW_CPU_X86_AVX512BW,
+    'avx512cd': os_traits.HW_CPU_X86_AVX512CD,
+    'avx512dq': os_traits.HW_CPU_X86_AVX512DQ,
+    'avx512er': os_traits.HW_CPU_X86_AVX512ER,
+    'avx512f': os_traits.HW_CPU_X86_AVX512F,
+    'avx512pf': os_traits.HW_CPU_X86_AVX512PF,
+    'avx512vl': os_traits.HW_CPU_X86_AVX512VL,
+    'bmi1': os_traits.HW_CPU_X86_BMI,
+    'bmi2': os_traits.HW_CPU_X86_BMI2,
+    'pclmuldq': os_traits.HW_CPU_X86_CLMUL,
+    'f16c': os_traits.HW_CPU_X86_F16C,
+    'fma': os_traits.HW_CPU_X86_FMA3,
+    'fma4': os_traits.HW_CPU_X86_FMA4,
+    'mmx': os_traits.HW_CPU_X86_MMX,
+    'mpx': os_traits.HW_CPU_X86_MPX,
+    'sha-ni': os_traits.HW_CPU_X86_SHA,
+    'sse': os_traits.HW_CPU_X86_SSE,
+    'sse2': os_traits.HW_CPU_X86_SSE2,
+    'sse3': os_traits.HW_CPU_X86_SSE3,
+    'sse4.1': os_traits.HW_CPU_X86_SSE41,
+    'sse4.2': os_traits.HW_CPU_X86_SSE42,
+    'sse4a': os_traits.HW_CPU_X86_SSE4A,
+    'ssse3': os_traits.HW_CPU_X86_SSSE3,
+    'svm': os_traits.HW_CPU_X86_SVM,
+    'tbm': os_traits.HW_CPU_X86_TBM,
+    'vmx': os_traits.HW_CPU_X86_VMX,
+    'xop': os_traits.HW_CPU_X86_XOP
 }
 
 
