@@ -947,12 +947,15 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
                 return_value=False)
     @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
-    def test_vpn_allocate_fixed_ip(self, mock_forwarding_enable,
-                                   mock_forwarding_check,
-                                   mock_address_command,
-                                   mock_change_ip, mock_lookup_ip,
-                                   mock_routes_show, mock_enabled,
-                                   mock_add_bridge):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_vpn_allocate_fixed_ip(
+            self, mock_iptables_set_rules, mock_iptables_get_rules,
+            mock_forwarding_enable, mock_forwarding_check,
+            mock_address_command, mock_change_ip, mock_lookup_ip,
+            mock_routes_show, mock_enabled, mock_add_bridge):
         self.mox.StubOutWithMock(db, 'fixed_ip_associate')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
         self.mox.StubOutWithMock(db,
@@ -994,11 +997,15 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
                 return_value=False)
     @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
-    def test_allocate_fixed_ip(self, mock_forwarding_enable,
-                               mock_forwarding_check, mock_address_command,
-                               mock_change_ip, mock_lookup_ip,
-                               mock_routes_show, mock_enabled,
-                               mock_add_bridge):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_allocate_fixed_ip(
+            self, mock_iptables_set_rules, mock_iptables_get_rules,
+            mock_forwarding_enable, mock_forwarding_check,
+            mock_address_command, mock_change_ip, mock_lookup_ip,
+            mock_routes_show, mock_enabled, mock_add_bridge):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
                 lambda *a, **kw: None)
@@ -1725,8 +1732,13 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
                 return_value=False)
     @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
     def test_add_fixed_ip_instance_without_vpn_requested_networks(
-            self, mock_forwarding_enable, mock_forwarding_check,
+            self, mock_iptables_set_rules, mock_iptables_get_rules,
+            mock_forwarding_enable, mock_forwarding_check,
             mock_address_command, mock_change_ip, mock_lookup_ip,
             mock_routes_show, mock_enabled, mock_add_bridge):
         self.stubs.Set(self.network,
@@ -1773,8 +1785,13 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.unbind_ip')
     @mock.patch('nova.privsep.linux_net.clean_conntrack')
     @mock.patch('nova.privsep.linux_net.modify_ebtables')
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
     def test_ip_association_and_allocation_of_other_project(
-            self, modify_ebtables, clean_conntrack, unbind_ip, bind_ip,
+            self, mock_iptables_set_rules, mock_iptables_get_rules,
+            modify_ebtables, clean_conntrack, unbind_ip, bind_ip,
             net_get, fixed_get):
         """Makes sure that we cannot deallocaate or disassociate
         a public IP of other project.
@@ -2895,16 +2912,17 @@ class AllocateTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
     @mock.patch('nova.privsep.linux_net.modify_ebtables')
     @mock.patch('nova.privsep.linux_net.add_vlan')
-    def test_allocate_for_instance(self, mock_add_vlan,
-                                   mock_modify_ebtables,
-                                   mock_forwarding_enable,
-                                   mock_forwarding_check,
-                                   mock_clean_conntrack,
-                                   mock_address_command,
-                                   mock_change_ip, mock_lookup_ip,
-                                   mock_routes_show, mock_unbind, mock_bind,
-                                   mock_set_macaddr, mock_set_enabled,
-                                   mock_set_mtu, mock_add_bridge):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_allocate_for_instance(
+            self, mock_iptables_set_rules, mock_iptables_get_rules,
+            mock_add_vlan, mock_modify_ebtables, mock_forwarding_enable,
+            mock_forwarding_check, mock_clean_conntrack, mock_address_command,
+            mock_change_ip, mock_lookup_ip, mock_routes_show, mock_unbind,
+            mock_bind, mock_set_macaddr, mock_set_enabled, mock_set_mtu,
+            mock_add_bridge):
         address = "10.10.10.10"
         self.flags(auto_assign_floating_ip=True)
 
@@ -2980,15 +2998,16 @@ class AllocateTestCase(test.TestCase):
                 return_value=False)
     @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
     @mock.patch('nova.privsep.linux_net.add_vlan')
-    def test_allocate_for_instance_with_mac(self, mock_add_vlan,
-                                            mock_forwarding_enable,
-                                            mock_forwarding_check,
-                                            mock_address_command,
-                                            mock_change_ip,
-                                            mock_lookup_ip,
-                                            mock_routes_show,
-                                            mock_set_addr, mock_enabled,
-                                            mock_set_mtu, mock_add_bridge):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_allocate_for_instance_with_mac(
+            self, mock_iptables_set_rules, mock_iptables_get_rules,
+            mock_add_vlan, mock_forwarding_enable,
+            mock_forwarding_check, mock_address_command,
+            mock_change_ip, mock_lookup_ip, mock_routes_show,
+            mock_set_addr, mock_enabled, mock_set_mtu, mock_add_bridge):
         available_macs = set(['ca:fe:de:ad:be:ef'])
         inst = db.instance_create(self.context, {'host': HOST,
                                                  'display_name': HOST,
@@ -3146,10 +3165,13 @@ class FloatingIPTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.unbind_ip')
     @mock.patch('nova.privsep.linux_net.clean_conntrack')
     @mock.patch('nova.privsep.linux_net.modify_ebtables')
-    def test_deallocation_deleted_instance(self,
-                                           mock_modify_ebtables,
-                                           mock_clean_conntrack,
-                                           mock_unbind_ip):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_deallocation_deleted_instance(
+            self, mock_iptables_set_rules, mock_iptables_get_rules,
+            mock_modify_ebtables, mock_clean_conntrack, mock_unbind_ip):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
         instance = objects.Instance(context=self.context)
@@ -3172,10 +3194,13 @@ class FloatingIPTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.unbind_ip')
     @mock.patch('nova.privsep.linux_net.clean_conntrack')
     @mock.patch('nova.privsep.linux_net.modify_ebtables')
-    def test_deallocation_duplicate_floating_ip(self,
-                                                mock_modify_ebtables,
-                                                mock_clean_conntrack,
-                                                mock_unbind_ip):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_deallocation_duplicate_floating_ip(
+            self, mock_iptables_set_rules, mock_iptables_get_rules,
+            mock_modify_ebtables, mock_clean_conntrack, mock_unbind_ip):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
         instance = objects.Instance(context=self.context)

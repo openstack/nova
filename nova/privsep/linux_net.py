@@ -19,6 +19,7 @@ Linux network specific helpers.
 
 
 import os
+import six
 
 from oslo_concurrency import processutils
 from oslo_log import log as logging
@@ -266,3 +267,25 @@ def add_vlan(bridge_interface, interface, vlan_num):
     processutils.execute('ip', 'link', 'add', 'link', bridge_interface,
                          'name', interface, 'type', 'vlan',
                          'id', vlan_num, check_exit_code=[0, 2, 254])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def iptables_get_rules(ipv4=True):
+    if ipv4:
+        cmd = 'iptables'
+    else:
+        cmd = 'ip6tables'
+
+    return processutils.execute('%s-save' % cmd, '-c', attempts=5)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def iptables_set_rules(rules, ipv4=True):
+    if ipv4:
+        cmd = 'iptables'
+    else:
+        cmd = 'ip6tables'
+
+    processutils.execute('%s-restore' % cmd, '-c',
+                         process_input=six.b('\n'.join(rules)),
+                         attempts=5)

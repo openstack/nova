@@ -44,7 +44,8 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
         super(Dom0IptablesFirewallDriver, self).__init__(**kwargs)
         self._session = xenapi_session
         # Create IpTablesManager with executor through plugin
-        self.iptables = linux_net.IptablesManager(self._plugin_execute)
+        self.iptables = linux_net.IptablesManager(
+            redirect_privsep_calls_to=self._plugin_execute)
         self.iptables.ipv4['filter'].add_chain('sg-fallback')
         self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')
         self.iptables.ipv6['filter'].add_chain('sg-fallback')

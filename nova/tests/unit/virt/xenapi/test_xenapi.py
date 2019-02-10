@@ -1145,7 +1145,13 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                 return_value=False)
     @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
     @mock.patch('nova.privsep.linux_net.add_vlan')
-    def test_spawn_vlanmanager(self, mock_add_vlan, mock_forwarding_enable,
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_spawn_vlanmanager(self, mock_iptables_set_rules,
+                               mock_iptables_get_rules,
+                               mock_add_vlan, mock_forwarding_enable,
                                mock_forwarding_check,
                                mock_address_command_horrid,
                                mock_change_ip, mock_set_macaddr,

@@ -149,10 +149,15 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         inst.info_cache.deleted = False
         return inst
 
-    @mock.patch.object(linux_net.iptables_manager, "execute")
     @mock.patch.object(objects.InstanceList, "get_by_security_group_id")
     @mock.patch.object(objects.SecurityGroupRuleList, "get_by_instance")
-    def test_static_filters(self, mock_secrule, mock_instlist, fake_execute):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_static_filters(self, mock_iptables_set_rules,
+                            mock_iptables_get_rules, mock_secrule,
+                            mock_instlist):
         UUID = "2674993b-6adb-4733-abd9-a7c10cc1f146"
         SRC_UUID = "0e0a76b2-7c52-4bc0-9a60-d83017e42c1a"
         instance_ref = self._create_instance_ref(UUID)
@@ -215,7 +220,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         mock_secrule.return_value = objects.SecurityGroupRuleList(
             objects=[r1, r2, r3, r4, r5])
 
-        def _fake_instlist(ctxt, id):
+        def fake_instlist(ctxt, id):
             if id == src_secgroup.id:
                 insts = objects.InstanceList()
                 insts.objects.append(src_instance_ref)
@@ -224,31 +229,25 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
                 insts = objects.InstanceList()
                 insts.objects.append(instance_ref)
                 return insts
+        mock_instlist.side_effect = fake_instlist
 
-        mock_instlist.side_effect = _fake_instlist
-
-        def fake_iptables_execute(*cmd, **kwargs):
-            process_input = kwargs.get('process_input')
-            if process_input is not None and isinstance(process_input, bytes):
-                process_input = process_input.decode('utf-8')
-            if cmd == ('ip6tables-save', '-c'):
-                return '\n'.join(self.in6_filter_rules), None
-            if cmd == ('iptables-save', '-c'):
+        def fake_iptables_get(ipv4=True):
+            if ipv4:
                 return '\n'.join(self.in_rules), None
-            if cmd == ('iptables-restore', '-c'):
-                lines = process_input.split('\n')
-                if '*filter' in lines:
-                    self.out_rules = lines
-                return '', ''
-            if cmd == ('ip6tables-restore', '-c',):
-                lines = process_input.split('\n')
-                if '*filter' in lines:
-                    self.out6_rules = lines
-                return '', ''
+            else:
+                return '\n'.join(self.in6_filter_rules), None
+        mock_iptables_get_rules.side_effect = fake_iptables_get
+
+        def fake_iptables_set(rules, ipv4=True):
+            if '*filter' in rules:
+                if ipv4:
+                    self.out_rules = rules
+                else:
+                    self.out6_rules = rules
+            return '', ''
+        mock_iptables_set_rules.side_effect = fake_iptables_set
 
         network_model = _fake_network_info(self, 1)
-
-        fake_execute.side_effect = fake_iptables_execute
 
         self.stub_out('nova.objects.Instance.get_network_info',
                       lambda instance: network_model)
@@ -322,7 +321,12 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.assertEqual(len(rulesv6), 1)
 
     @mock.patch.object(objects.SecurityGroupRuleList, "get_by_instance")
-    def test_multinic_iptables(self, mock_secrule):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_multinic_iptables(self, mock_iptables_set_rules,
+                               mock_iptables_get_rules, mock_secrule):
         mock_secrule.return_value = objects.SecurityGroupRuleList()
 
         ipv4_rules_per_addr = 1
@@ -356,8 +360,14 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
     @mock.patch.object(firewall.IptablesFirewallDriver,
                        'add_filters_for_instance')
     @mock.patch.object(linux_net.IptablesTable, 'has_chain')
-    def test_do_refresh_security_group_rules(self, mock_has_chain,
-             mock_add_filters, mock_instance_rules):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_do_refresh_security_group_rules(
+            self, mock_iptables_set_rules,
+            mock_iptables_get_rules, mock_has_chain,
+            mock_add_filters, mock_instance_rules):
         instance_ref = self._create_instance_ref()
 
         mock_instance_rules.return_value = (None, None)
@@ -402,11 +412,13 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.virConnect, "nwfilterDefineXML")
     @mock.patch.object(objects.InstanceList, "get_by_security_group_id")
     @mock.patch.object(objects.SecurityGroupRuleList, "get_by_instance")
-    def test_unfilter_instance_undefines_nwfilter(self,
-                                                  mock_secrule,
-                                                  mock_instlist,
-                                                  mock_define,
-                                                  mock_lookup):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_unfilter_instance_undefines_nwfilter(
+            self, mock_iptables_set_rules, mock_iptables_get_rules,
+            mock_secrule, mock_instlist, mock_define, mock_lookup):
         fakefilter = NWFilterFakes()
         mock_lookup.side_effect = fakefilter.nwfilterLookupByName
         mock_define.side_effect = fakefilter.filterDefineXMLMock

@@ -153,7 +153,12 @@ class QuotaIntegrationTestCase(test.TestCase):
             self._create_instance(flavor_name='m1.xlarge')
 
     @mock.patch('nova.privsep.linux_net.bind_ip')
-    def test_too_many_addresses(self, mock_bind_ip):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_too_many_addresses(self, mock_iptables_set_rules,
+                                mock_iptables_get_rules, mock_bind_ip):
         # This test is specifically relying on nova-network.
         self.flags(use_neutron=False,
                    network_manager='nova.network.manager.FlatDHCPManager')
@@ -173,7 +178,12 @@ class QuotaIntegrationTestCase(test.TestCase):
         db.floating_ip_destroy(context.get_admin_context(), address)
 
     @mock.patch('nova.privsep.linux_net.bind_ip')
-    def test_auto_assigned(self, mock_bind_ip):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_auto_assigned(self, mock_iptables_set_rules,
+                                mock_iptables_get_rules, mock_bind_ip):
         # This test is specifically relying on nova-network.
         self.flags(use_neutron=False,
                    network_manager='nova.network.manager.FlatDHCPManager')

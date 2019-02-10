@@ -261,11 +261,14 @@ class IptablesManager(object):
 
     """
 
-    def __init__(self, execute=None):
-        if not execute:
-            self.execute = _execute
-        else:
-            self.execute = execute
+    def __init__(self, redirect_privsep_calls_to=None):
+        # NOTE(mikal): This is only used by the xenapi hypervisor driver,
+        # which wants to intercept our calls to iptables and redirect them
+        # to an agent running in dom0.
+        # TODO(mikal): We really should make the dom0 agent feel more like
+        # privsep. They really are the same thing, just one is from a simpler
+        # time in our past.
+        self.redirect_privsep = redirect_privsep_calls_to
 
         self.ipv4 = {'filter': IptablesTable(),
                      'nat': IptablesTable(),
@@ -358,23 +361,42 @@ class IptablesManager(object):
         rules. This happens atomically, thanks to iptables-restore.
 
         """
-        s = [('iptables', self.ipv4)]
+        s = [(True, self.ipv4)]
         if CONF.use_ipv6:
-            s += [('ip6tables', self.ipv6)]
+            s += [(False, self.ipv6)]
 
-        for cmd, tables in s:
-            all_tables, _err = self.execute('%s-save' % (cmd,), '-c',
-                                                run_as_root=True,
-                                                attempts=5)
+        for is_ipv4, tables in s:
+            if not self.redirect_privsep:
+                all_tables, _err = nova.privsep.linux_net.iptables_get_rules(
+                                       ipv4=is_ipv4)
+            else:
+                if is_ipv4:
+                    cmd = 'iptables-save'
+                else:
+                    cmd = 'ip6tables-save'
+                all_tables, _err = self.redirect_privsep(
+                    cmd, '-c', run_as_root=True, attempts=5)
+
             all_lines = all_tables.split('\n')
             for table_name, table in tables.items():
                 start, end = self._find_table(all_lines, table_name)
                 all_lines[start:end] = self._modify_rules(
                         all_lines[start:end], table, table_name)
                 table.dirty = False
-            self.execute('%s-restore' % (cmd,), '-c', run_as_root=True,
-                         process_input=six.b('\n'.join(all_lines)),
-                         attempts=5)
+
+            if not self.redirect_privsep:
+                nova.privsep.linux_net.iptables_set_rules(all_lines,
+                                                          ipv4=is_ipv4)
+            else:
+                if is_ipv4:
+                    cmd = 'iptables-restore'
+                else:
+                    cmd = 'ip6tables-restore'
+                self.redirect_privsep(
+                    cmd, '-c', run_as_root=True,
+                    process_input=six.b('\n'.join(all_lines)),
+                    attempts=5)
+
         LOG.debug("IPTablesManager.apply completed with success")
 
     def _find_table(self, lines, table_name):
