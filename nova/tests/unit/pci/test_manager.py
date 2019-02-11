@@ -312,6 +312,53 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertEqual(vfs, pf.child_devices)
         self.assertEqual(vfs[0].parent_device, pf)
 
+    def test_set_hvdev_remove_tree_maintained_with_allocations(self):
+        # Make sure the device tree is properly maintained when there are
+        # devices removed from the system that are allocated to vms.
+
+        all_devs = fake_db_devs_tree[:]
+        self._create_tracker(all_devs)
+        # we start with 3 devices
+        self.assertEqual(
+            3,
+            len([dev for dev in self.tracker.pci_devs
+                 if dev.status != fields.PciDeviceStatus.REMOVED]))
+        # we then allocate one device
+        pci_requests_obj = self._create_pci_requests_object(
+            [{'count': 1, 'spec': [{'vendor_id': 'v2'}]}])
+        # NOTE(sean-k-mooney): context, pci request, numa topology
+        claimed_dev = self.tracker.claim_instance(
+            mock.sentinel.context, pci_requests_obj, None)[0]
+
+        self.tracker._set_hvdevs(all_devs)
+        # and assert that no devices were removed
+        self.assertEqual(
+            0,
+            len([dev for dev in self.tracker.pci_devs
+                 if dev.status == fields.PciDeviceStatus.REMOVED]))
+        # we then try to remove the allocated device from the set reported
+        # by the driver.
+        fake_pci_devs = [dev for dev in all_devs
+                         if dev['address'] != claimed_dev.address]
+        with mock.patch("nova.pci.manager.LOG.warning") as log:
+            self.tracker._set_hvdevs(fake_pci_devs)
+            log.assert_called_once()
+            args = log.call_args_list[0][0]  # args of first call
+            self.assertIn('Unable to remove device with', args[0])
+        # and assert no devices are removed from the tracker
+        self.assertEqual(
+            0,
+            len([dev for dev in self.tracker.pci_devs
+                 if dev.status == fields.PciDeviceStatus.REMOVED]))
+        # free the device that was allocated and update tracker again
+        self.tracker._free_device(claimed_dev)
+        self.tracker._set_hvdevs(fake_pci_devs)
+        # and assert that one device is removed from the tracker
+        self.assertEqual(
+            1,
+            len([dev for dev in self.tracker.pci_devs
+                 if dev.status == fields.PciDeviceStatus.REMOVED]))
+
     def test_set_hvdev_changed_stal(self):
         pci_requests_obj = self._create_pci_requests_object(
             [{'count': 1, 'spec': [{'vendor_id': 'v1'}]}])
