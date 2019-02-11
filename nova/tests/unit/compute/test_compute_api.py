@@ -6673,6 +6673,69 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             mock_target_cell.return_value.__enter__.return_value,
             uuids.host, use_slave=True)
 
+    def _test_get_migrations_sorted_filter_duplicates(self, migrations,
+                                                      expected):
+        """Tests the cross-cell scenario where there are multiple migrations
+        with the same UUID from different cells and only one should be
+        returned.
+        """
+        sort_keys = ['created_at', 'id']
+        sort_dirs = ['desc', 'desc']
+        filters = {'migration_type': 'resize'}
+        limit = 1000
+        marker = None
+        with mock.patch(
+                'nova.compute.migration_list.get_migration_objects_sorted',
+                return_value=objects.MigrationList(
+                    objects=migrations)) as getter:
+            sorted_migrations = self.compute_api.get_migrations_sorted(
+                self.context, filters, sort_dirs=sort_dirs,
+                sort_keys=sort_keys, limit=limit, marker=marker)
+        self.assertEqual(1, len(sorted_migrations))
+        getter.assert_called_once_with(
+            self.context, filters, limit, marker, sort_keys, sort_dirs)
+        self.assertIs(expected, sorted_migrations[0])
+
+    def test_get_migrations_sorted_filter_duplicates(self):
+        """Tests filtering duplicated Migration records where both have
+        created_at and updated_at set.
+        """
+        t1 = timeutils.utcnow()
+        source_cell_migration = objects.Migration(
+            uuid=uuids.migration, created_at=t1, updated_at=t1)
+        t2 = t1 + datetime.timedelta(seconds=1)
+        target_cell_migration = objects.Migration(
+            uuid=uuids.migration, created_at=t2, updated_at=t2)
+        self._test_get_migrations_sorted_filter_duplicates(
+            [source_cell_migration, target_cell_migration],
+            target_cell_migration)
+        # Run it again in reverse.
+        self._test_get_migrations_sorted_filter_duplicates(
+            [target_cell_migration, source_cell_migration],
+            target_cell_migration)
+
+    def test_get_migrations_sorted_filter_duplicates_using_created_at(self):
+        """Tests the cross-cell scenario where there are multiple migrations
+        with the same UUID from different cells and only one should be
+        returned. In this test the first Migration object to be processed has
+        not been updated yet but is created after the second record to process.
+        """
+        t1 = timeutils.utcnow()
+        older = objects.Migration(
+            uuid=uuids.migration, created_at=t1, updated_at=t1)
+        t2 = t1 + datetime.timedelta(seconds=1)
+        newer = objects.Migration(
+            uuid=uuids.migration, created_at=t2, updated_at=None)
+        self._test_get_migrations_sorted_filter_duplicates(
+            [newer, older], newer)
+        # Test with just created_at.
+        older.updated_at = None
+        self._test_get_migrations_sorted_filter_duplicates(
+            [newer, older], newer)
+        # Run it again in reverse.
+        self._test_get_migrations_sorted_filter_duplicates(
+            [older, newer], newer)
+
 
 class DiffDictTestCase(test.NoDBTestCase):
     """Unit tests for _diff_dict()."""

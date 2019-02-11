@@ -4921,7 +4921,54 @@ class API(base.Base):
         """Get all migrations for the given parameters."""
         mig_objs = migration_list.get_migration_objects_sorted(
             context, filters, limit, marker, sort_keys, sort_dirs)
-        return mig_objs
+        # Due to cross-cell resize, we could have duplicate migration records
+        # while the instance is in VERIFY_RESIZE state in the destination cell
+        # but the original migration record still exists in the source cell.
+        # Filter out duplicate migration records here based on which record
+        # is newer (last updated).
+
+        def _get_newer_obj(obj1, obj2):
+            # created_at will always be set.
+            created_at1 = obj1.created_at
+            created_at2 = obj2.created_at
+            # updated_at might be None
+            updated_at1 = obj1.updated_at
+            updated_at2 = obj2.updated_at
+            # If both have updated_at, compare using that field.
+            if updated_at1 and updated_at2:
+                if updated_at1 > updated_at2:
+                    return obj1
+                return obj2
+            # Compare created_at versus updated_at.
+            if updated_at1:
+                if updated_at1 > created_at2:
+                    return obj1
+                return obj2
+            if updated_at2:
+                if updated_at2 > created_at1:
+                    return obj2
+                return obj1
+            # Compare created_at only.
+            if created_at1 > created_at2:
+                return obj1
+            return obj2
+
+        # TODO(mriedem): This could be easier if we leveraged the "hidden"
+        # field on the Migration record and then just did like
+        # _get_unique_filter_method in the get_all() method for instances.
+        migrations_by_uuid = collections.OrderedDict()  # maintain sort order
+        for migration in mig_objs:
+            if migration.uuid not in migrations_by_uuid:
+                migrations_by_uuid[migration.uuid] = migration
+            else:
+                # We have a collision, keep the newer record.
+                # Note that using updated_at could be wrong if changes-since or
+                # changes-before filters are being used but we have the same
+                # issue in _get_unique_filter_method for instances.
+                doppelganger = migrations_by_uuid[migration.uuid]
+                newer = _get_newer_obj(doppelganger, migration)
+                migrations_by_uuid[migration.uuid] = newer
+        return objects.MigrationList(objects=list(migrations_by_uuid.values()))
 
     def get_migrations_in_progress_by_instance(self, context, instance_uuid,
                                                migration_type=None):
