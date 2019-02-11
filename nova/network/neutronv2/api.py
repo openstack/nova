@@ -522,6 +522,10 @@ class API(base_api.NetworkAPI):
             # need resource allocation manipulation in placement but might also
             # need a new scheduling if resource on this host is not available.
             if port.get('resource_request', None):
+                msg = _(
+                    "The auto-created port %(port_id)s is being deleted due "
+                    "to its network having QoS policy.")
+                LOG.info(msg, {'port_id': port_id})
                 self._cleanup_created_port(port_client, port_id, instance)
                 # NOTE(gibi): This limitation regarding server create can be
                 # removed when the port creation is moved to the conductor. But
@@ -1932,8 +1936,8 @@ class API(base_api.NetworkAPI):
 
         # NOTE(gibi): Get the port resource_request which may or may not be
         # set depending on neutron configuration, e.g. if QoS rules are
-        # applied to the port/network and the resource_request API extension is
-        # enabled.
+        # applied to the port/network and the port-resource-request API
+        # extension is enabled.
         resource_request = port.get('resource_request', None)
         return vnic_type, trusted, network_id, resource_request
 
@@ -1978,8 +1982,8 @@ class API(base_api.NetworkAPI):
                     context, neutron, network_id)
 
                 if resource_request:
-                    # NOTE(gibi): explicitly orphan the RequestGroup as we
-                    # never intended to save it to the DB.
+                    # NOTE(gibi): explicitly orphan the RequestGroup by setting
+                    # context=None as we never intended to save it to the DB.
                     resource_requests.append(
                         objects.RequestGroup.from_port_request(
                             context=None,

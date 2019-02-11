@@ -814,8 +814,11 @@ class API(base.Base):
             context, requested_networks, pci_request_info)
         network_metadata, port_resource_requests = result
 
+        # Creating servers with ports that have resource requests, like QoS
+        # minimum bandwidth rules, is only supported in a requested minimum
+        # microversion.
         if port_resource_requests and not supports_port_resource_request:
-            raise exception.ServerCreateWithQoSPortNotSupported()
+            raise exception.CreateWithPortResourceRequestOldVersion()
 
         base_options = {
             'reservation_id': reservation_id,

@@ -5616,20 +5616,16 @@ class PortResourceRequestBasedSchedulingTest(
                       server['fault']['message'])
 
     def test_create_server_with_port_resource_request_old_microversion(self):
-        server_req = self._build_minimal_create_server_request(
-            self.api, 'bandwidth-aware-server',
-            image_uuid='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-            flavor_id=self.flavor['id'],
-            networks=[{'port': self.neutron.port_with_resource_request['id']}])
-
         ex = self.assertRaises(
-            client.OpenStackApiException,
-            self.api.post_server, {'server': server_req})
+            client.OpenStackApiException, self._create_server,
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_with_resource_request['id']}])
 
         self.assertEqual(400, ex.response.status_code)
         self.assertIn(
-            'Creating server with port having QoS policy is not supported.',
-            six.text_type(ex))
+            "Creating servers with ports having resource requests, like a "
+            "port with a QoS minimum bandwidth policy, is not supported with "
+            "this microversion", six.text_type(ex))
 
     def test_resize_server_with_port_resource_request_old_microversion(self):
         server = self._create_server(

@@ -2159,9 +2159,12 @@ class NetworksWithQoSPolicyNotSupported(Invalid):
                 "instance %(instance_uuid)s. (Network ID is %(network_id)s)")
 
 
-class ServerCreateWithQoSPortNotSupported(Invalid):
-    msg_fmt = _("Creating server with port having QoS policy is not "
-                "supported.")
+class CreateWithPortResourceRequestOldVersion(Invalid):
+    # TODO(gibi): Mention the specific microversion needed for the support
+    # after such microversion is merged
+    msg_fmt = _("Creating servers with ports having resource requests, like a "
+                "port with a QoS minimum bandwidth policy, is not supported "
+                "with this microversion")
 
 
 class InvalidReservedMemoryPagesOption(Invalid):
