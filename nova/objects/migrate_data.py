@@ -120,36 +120,6 @@ class LiveMigrateData(obj_base.NovaObject):
         'vifs': fields.ListOfObjectsField('VIFMigrateData'),
     }
 
-    def to_legacy_dict(self, pre_migration_result=False):
-        legacy = {}
-        if self.obj_attr_is_set('is_volume_backed'):
-            legacy['is_volume_backed'] = self.is_volume_backed
-        if self.obj_attr_is_set('migration'):
-            legacy['migration'] = self.migration
-        if pre_migration_result:
-            legacy['pre_live_migration_result'] = {}
-
-        return legacy
-
-    def from_legacy_dict(self, legacy):
-        if 'is_volume_backed' in legacy:
-            self.is_volume_backed = legacy['is_volume_backed']
-        if 'migration' in legacy:
-            self.migration = legacy['migration']
-
-    @classmethod
-    def detect_implementation(cls, legacy_dict):
-        if 'instance_relative_path' in legacy_dict:
-            obj = LibvirtLiveMigrateData()
-        elif 'image_type' in legacy_dict:
-            obj = LibvirtLiveMigrateData()
-        elif 'migrate_data' in legacy_dict:
-            obj = XenapiLiveMigrateData()
-        else:
-            obj = LiveMigrateData()
-        obj.from_legacy_dict(legacy_dict)
-        return obj
-
 
 @obj_base.NovaObjectRegistry.register
 class LibvirtLiveMigrateBDMInfo(obj_base.NovaObject):
@@ -296,52 +266,6 @@ class LibvirtLiveMigrateData(LiveMigrateData):
                 bdmi.boot_index = int(vol['disk_info']['boot_index'])
             self.bdms.append(bdmi)
 
-    def to_legacy_dict(self, pre_migration_result=False):
-        LOG.debug('Converting to legacy: %s', self)
-        legacy = super(LibvirtLiveMigrateData, self).to_legacy_dict()
-        keys = (set(self.fields.keys()) -
-                set(LiveMigrateData.fields.keys()) - {'bdms'})
-        legacy.update({k: getattr(self, k) for k in keys
-                       if self.obj_attr_is_set(k)})
-
-        graphics_vnc = legacy.pop('graphics_listen_addr_vnc', None)
-        graphics_spice = legacy.pop('graphics_listen_addr_spice', None)
-        transport_target = legacy.pop('target_connect_addr', None)
-        live_result = {
-            'graphics_listen_addrs': {
-                'vnc': graphics_vnc and str(graphics_vnc),
-                'spice': graphics_spice and str(graphics_spice),
-                },
-            'serial_listen_addr': legacy.pop('serial_listen_addr', None),
-            'target_connect_addr': transport_target,
-        }
-
-        if pre_migration_result:
-            legacy['pre_live_migration_result'] = live_result
-            self._bdms_to_legacy(live_result)
-
-        LOG.debug('Legacy result: %s', legacy)
-        return legacy
-
-    def from_legacy_dict(self, legacy):
-        LOG.debug('Converting legacy dict to obj: %s', legacy)
-        super(LibvirtLiveMigrateData, self).from_legacy_dict(legacy)
-        keys = set(self.fields.keys()) - set(LiveMigrateData.fields.keys())
-        for k in keys - {'bdms'}:
-            if k in legacy:
-                setattr(self, k, legacy[k])
-        if 'pre_live_migration_result' in legacy:
-            pre_result = legacy['pre_live_migration_result']
-            self.graphics_listen_addr_vnc = \
-                pre_result['graphics_listen_addrs'].get('vnc')
-            self.graphics_listen_addr_spice = \
-                pre_result['graphics_listen_addrs'].get('spice')
-            self.target_connect_addr = pre_result.get('target_connect_addr')
-            if 'serial_listen_addr' in pre_result:
-                self.serial_listen_addr = pre_result['serial_listen_addr']
-            self._bdms_from_legacy(pre_result)
-        LOG.debug('Converted object: %s', self)
-
     def is_on_shared_storage(self):
         return self.is_shared_block_storage or self.is_shared_instance_path
 
@@ -364,42 +288,6 @@ class XenapiLiveMigrateData(LiveMigrateData):
         'ramdisk_file': fields.StringField(),
         'vif_uuid_map': fields.DictOfStringsField(),
     }
-
-    def to_legacy_dict(self, pre_migration_result=False):
-        legacy = super(XenapiLiveMigrateData, self).to_legacy_dict()
-        if self.obj_attr_is_set('block_migration'):
-            legacy['block_migration'] = self.block_migration
-        if self.obj_attr_is_set('migrate_send_data'):
-            legacy['migrate_data'] = {
-                'migrate_send_data': self.migrate_send_data,
-                'destination_sr_ref': self.destination_sr_ref,
-            }
-        live_result = {
-            'sr_uuid_map': ('sr_uuid_map' in self and self.sr_uuid_map
-                            or {}),
-            'vif_uuid_map': ('vif_uuid_map' in self and self.vif_uuid_map
-                             or {}),
-        }
-        if pre_migration_result:
-            legacy['pre_live_migration_result'] = live_result
-        return legacy
-
-    def from_legacy_dict(self, legacy):
-        super(XenapiLiveMigrateData, self).from_legacy_dict(legacy)
-        if 'block_migration' in legacy:
-            self.block_migration = legacy['block_migration']
-        else:
-            self.block_migration = False
-        if 'migrate_data' in legacy:
-            self.migrate_send_data = \
-                legacy['migrate_data']['migrate_send_data']
-            self.destination_sr_ref = \
-                legacy['migrate_data']['destination_sr_ref']
-        if 'pre_live_migration_result' in legacy:
-            self.sr_uuid_map = \
-                legacy['pre_live_migration_result']['sr_uuid_map']
-            self.vif_uuid_map = \
-                legacy['pre_live_migration_result'].get('vif_uuid_map', {})
 
     def obj_make_compatible(self, primitive, target_version):
         super(XenapiLiveMigrateData, self).obj_make_compatible(
@@ -443,18 +331,6 @@ class HyperVLiveMigrateData(LiveMigrateData):
             if 'is_shared_instance_path' in primitive:
                 del primitive['is_shared_instance_path']
 
-    def to_legacy_dict(self, pre_migration_result=False):
-        legacy = super(HyperVLiveMigrateData, self).to_legacy_dict()
-        if self.obj_attr_is_set('is_shared_instance_path'):
-            legacy['is_shared_instance_path'] = self.is_shared_instance_path
-
-        return legacy
-
-    def from_legacy_dict(self, legacy):
-        super(HyperVLiveMigrateData, self).from_legacy_dict(legacy)
-        if 'is_shared_instance_path' in legacy:
-            self.is_shared_instance_path = legacy['is_shared_instance_path']
-
 
 @obj_base.NovaObjectRegistry.register
 class PowerVMLiveMigrateData(LiveMigrateData):
@@ -490,19 +366,6 @@ class PowerVMLiveMigrateData(LiveMigrateData):
         if target_version < (1, 1):
             if 'vea_vlan_mappings' in primitive:
                 del primitive['vea_vlan_mappings']
-
-    def to_legacy_dict(self, pre_migration_result=False):
-        legacy = super(PowerVMLiveMigrateData, self).to_legacy_dict()
-        for field in self.fields:
-            if self.obj_attr_is_set(field):
-                legacy[field] = getattr(self, field)
-        return legacy
-
-    def from_legacy_dict(self, legacy):
-        super(PowerVMLiveMigrateData, self).from_legacy_dict(legacy)
-        for field in self.fields:
-            if field in legacy:
-                setattr(self, field, legacy[field])
 
 
 @obj_base.NovaObjectRegistry.register

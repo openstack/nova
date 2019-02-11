@@ -8759,15 +8759,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         return_value = drvr.check_can_live_migrate_destination(self.context,
                 instance_ref, None, compute_info, True)
         return_value.is_volume_backed = False
-        self.assertThat({"filename": "file",
-                         'image_type': 'default',
-                         'disk_available_mb': 409600,
-                         "disk_over_commit": False,
-                         "block_migration": True,
-                         "is_volume_backed": False,
-                         "dst_wants_file_backed_memory": False,
-                         "file_backed_memory_discard": False},
-                        matchers.DictMatches(return_value.to_legacy_dict()))
+        self.assertEqual({'filename': 'file',
+                          'image_type': 'default',
+                          'disk_available_mb': 409600,
+                          'disk_over_commit': False,
+                          'block_migration': True,
+                          'is_volume_backed': False,
+                          'dst_wants_file_backed_memory': False,
+                          'file_backed_memory_discard': False,
+                          'graphics_listen_addr_spice': '127.0.0.1',
+                          'graphics_listen_addr_vnc': '127.0.0.1',
+                          'serial_listen_addr': None},
+                         return_value.obj_to_primitive()['nova_object.data'])
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -8794,15 +8797,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         return_value = drvr.check_can_live_migrate_destination(self.context,
                 instance_ref, None, compute_info, True, True)
         return_value.is_volume_backed = False
-        self.assertThat({"filename": "file",
-                         'image_type': 'default',
-                         'disk_available_mb': 51200,
-                         "disk_over_commit": True,
-                         "block_migration": True,
-                         "is_volume_backed": False,
-                         "dst_wants_file_backed_memory": False,
-                         "file_backed_memory_discard": False},
-                        matchers.DictMatches(return_value.to_legacy_dict()))
+        self.assertEqual({'filename': 'file',
+                          'image_type': 'default',
+                          'disk_available_mb': 51200,
+                          'disk_over_commit': True,
+                          'block_migration': True,
+                          'is_volume_backed': False,
+                          'dst_wants_file_backed_memory': False,
+                          'file_backed_memory_discard': False,
+                          'graphics_listen_addr_spice': '127.0.0.1',
+                          'graphics_listen_addr_vnc': '127.0.0.1',
+                          'serial_listen_addr': None},
+                         return_value.obj_to_primitive()['nova_object.data'])
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -8826,15 +8832,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         return_value = drvr.check_can_live_migrate_destination(self.context,
                 instance_ref, None, compute_info, False)
         return_value.is_volume_backed = False
-        self.assertThat({"filename": "file",
-                         "image_type": 'default',
-                         "block_migration": False,
-                         "disk_over_commit": False,
-                         "disk_available_mb": 409600,
-                         "is_volume_backed": False,
-                         "dst_wants_file_backed_memory": False,
-                         "file_backed_memory_discard": False},
-                        matchers.DictMatches(return_value.to_legacy_dict()))
+        self.assertEqual({'filename': 'file',
+                          'image_type': 'default',
+                          'block_migration': False,
+                          'disk_over_commit': False,
+                          'disk_available_mb': 409600,
+                          'is_volume_backed': False,
+                          'dst_wants_file_backed_memory': False,
+                          'file_backed_memory_discard': False,
+                          'graphics_listen_addr_spice': '127.0.0.1',
+                          'graphics_listen_addr_vnc': '127.0.0.1',
+                          'serial_listen_addr': None},
+                         return_value.obj_to_primitive()['nova_object.data'])
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -8900,15 +8909,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.context, instance_ref, compute_info, compute_info)
         result.is_volume_backed = False
         mock_cpu.assert_called_once_with(None, 'asdf', instance_ref)
-        expected_result = {"filename": 'fake',
-                           "image_type": CONF.libvirt.images_type,
-                           "block_migration": False,
-                           "disk_over_commit": False,
-                           "disk_available_mb": 1024,
-                           "is_volume_backed": False,
-                           "dst_wants_file_backed_memory": False,
-                           "file_backed_memory_discard": False}
-        self.assertEqual(expected_result, result.to_legacy_dict())
+        self.assertEqual({'filename': 'fake',
+                          'image_type': CONF.libvirt.images_type,
+                          'block_migration': False,
+                          'disk_over_commit': False,
+                          'disk_available_mb': 1024,
+                          'is_volume_backed': False,
+                          'dst_wants_file_backed_memory': False,
+                          'file_backed_memory_discard': False,
+                          'graphics_listen_addr_spice': '127.0.0.1',
+                          'graphics_listen_addr_vnc': '127.0.0.1',
+                          'serial_listen_addr': None},
+                         result.obj_to_primitive()['nova_object.data'])
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -8936,15 +8948,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 instance_ref, compute_info, compute_info, False)
         # NOTE(danms): Compute manager would have set this, so set it here
         return_value.is_volume_backed = False
-        self.assertThat({"filename": "file",
-                         "image_type": 'default',
-                         "block_migration": False,
-                         "disk_over_commit": False,
-                         "disk_available_mb": 1024,
-                         "is_volume_backed": False,
-                         "dst_wants_file_backed_memory": False,
-                         "file_backed_memory_discard": False},
-                        matchers.DictMatches(return_value.to_legacy_dict()))
+        self.assertEqual({'filename': 'file',
+                          'image_type': 'default',
+                          'block_migration': False,
+                          'disk_over_commit': False,
+                          'disk_available_mb': 1024,
+                          'is_volume_backed': False,
+                          'dst_wants_file_backed_memory': False,
+                          'file_backed_memory_discard': False,
+                          'graphics_listen_addr_spice': '127.0.0.1',
+                          'graphics_listen_addr_vnc': '127.0.0.1',
+                          'serial_listen_addr': None},
+                         return_value.obj_to_primitive()['nova_object.data'])
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -11653,25 +11668,42 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                         '/fake/instance/dir', None)
         self.assertFalse(mock_fetch.called)
 
+    def _migrate_data_to_dict(self, migrate_data):
+        primitive = migrate_data.obj_to_primitive()['nova_object.data']
+        primitive['bdms'] = [bdm['nova_object.data'] for bdm in
+                             primitive['bdms']]
+        return primitive
+
     def _generate_target_ret(self, target_connect_addr=None):
-        target_ret = {
-        'graphics_listen_addrs': {'spice': '127.0.0.1', 'vnc': '127.0.0.1'},
-        'target_connect_addr': target_connect_addr,
-        'serial_listen_addr': '127.0.0.1',
-        'volume': {
-         '12345': {'connection_info': {u'data': {'device_path':
-              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.abc.12345.opst-lun-X'},
-                   'serial': '12345'},
-                   'disk_info': {'bus': 'scsi',
-                                 'dev': 'sda',
-                                 'type': 'disk'}},
-         '67890': {'connection_info': {u'data': {'device_path':
-              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z'},
-                   'serial': '67890'},
-                   'disk_info': {'bus': 'scsi',
-                                 'dev': 'sdb',
-                                 'type': 'disk'}}}}
-        return target_ret
+        return self._migrate_data_to_dict(objects.LibvirtLiveMigrateData(
+            block_migration=False,
+            instance_relative_path='foo',
+            is_shared_block_storage=False,
+            is_shared_instance_path=False,
+            serial_listen_ports=[],
+            src_supports_native_luks=True,
+            supported_perf_events=[],
+            graphics_listen_addr_spice='127.0.0.1',
+            graphics_listen_addr_vnc='127.0.0.1',
+            serial_listen_addr='127.0.0.1',
+            target_connect_addr=target_connect_addr,
+            bdms=[
+                objects.LibvirtLiveMigrateBDMInfo(
+                    serial='12345', bus='scsi', dev='sda', type='disk',
+                    boot_index=None, format=None,
+                    connection_info_json=jsonutils.dumps({
+                        'serial': '12345',
+                        'data': {
+                            'device_path': '/dev/disk/by-path/ip-1.2.3.4:3260'
+                                           '-iqn.abc.12345.opst-lun-X'}})),
+                objects.LibvirtLiveMigrateBDMInfo(
+                    serial='67890', bus='scsi', dev='sdb', type='disk',
+                    boot_index=None, format=None,
+                    connection_info_json=jsonutils.dumps({
+                        'serial': '67890',
+                        'data': {
+                            'device_path': '/dev/disk/by-path/ip-1.2.3.4:3260'
+                                           '-iqn.cde.67890.opst-lun-Z'}}))]))
 
     def test_pre_live_migration_works_correctly_mocked(self):
         self._test_pre_live_migration_works_correctly_mocked()
@@ -11772,18 +11804,23 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             serial_listen_addr='127.0.0.1',
         )
 
+        if not target_ret:
+            target_ret = self._generate_target_ret()
         if src_supports_native_luks:
             migrate_data.src_supports_native_luks = True
-
+        else:
+            target_ret.pop('src_supports_native_luks')
         result = drvr.pre_live_migration(
             c, instance, block_device_info, nw_info, None,
             migrate_data=migrate_data)
-        if not target_ret:
-            target_ret = self._generate_target_ret()
-        self.assertEqual(
-            target_ret,
-            result.to_legacy_dict(
-                pre_migration_result=True)['pre_live_migration_result'])
+        result_dict = self._migrate_data_to_dict(result)
+        # connection_info_json is a string, needs special handling
+        for bdms in zip(target_ret.pop('bdms'), result_dict.pop('bdms')):
+            conninfo0 = jsonutils.loads(bdms[0].pop('connection_info_json'))
+            conninfo1 = jsonutils.loads(bdms[1].pop('connection_info_json'))
+            self.assertEqual(conninfo0, conninfo1)
+            self.assertThat(bdms[0], matchers.DictMatches(bdms[1]))
+        self.assertThat(target_ret, matchers.DictMatches(result_dict))
         mock_connect.assert_has_calls(expected_connect_calls)
         self.assertEqual(len(expected_connect_calls), mock_connect.call_count)
         mock_plug.assert_called_once_with(test.MatchType(objects.Instance),
@@ -11854,18 +11891,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         )
         res_data = drvr.pre_live_migration(
             self.context, instance, vol, [], None, migrate_data)
-        res_data = res_data.to_legacy_dict(pre_migration_result=True)
         block_device_info_get_mapping.assert_called_once_with(
             {'block_device_mapping': [
                 {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
                 {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}
             ]}
         )
-        self.assertEqual({'graphics_listen_addrs': {'spice': None,
-                                                    'vnc': None},
+        self.assertEqual({'block_migration': False,
+                          'instance_relative_path': 'foo',
+                          'is_shared_block_storage': False,
+                          'is_shared_instance_path': False,
+                          'serial_listen_ports': [],
+                          'supported_perf_events': [],
                           'target_connect_addr': None,
-                          'serial_listen_addr': None,
-                          'volume': {}}, res_data['pre_live_migration_result'])
+                          'bdms': []},
+                         res_data.obj_to_primitive()['nova_object.data'])
 
     def _test_pre_live_migration_volume_backed(self, encrypted_volumes=False):
         inst_ref = objects.Instance(root_device_name='/dev/vda',

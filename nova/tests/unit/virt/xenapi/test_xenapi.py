@@ -3587,18 +3587,17 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
             fake_get_network_ref.return_value = 'fake_network_ref'
             expected = {'block_migration': True,
                         'is_volume_backed': False,
-                        'migrate_data': {
-                            'migrate_send_data': {'value':
-                                                  'fake_migrate_data'},
-                            'destination_sr_ref': 'asdf'}
-                        }
+                        'migrate_send_data': {'value': 'fake_migrate_data'},
+                        'destination_sr_ref': 'asdf',
+                        'vif_uuid_map': {'': 'fake_network_ref'}}
             result = self.conn.check_can_live_migrate_destination(
                 self.context,
                 fake_instance,
                 {}, {},
                 True, False)
             result.is_volume_backed = False
-            self.assertEqual(expected, result.to_legacy_dict())
+            self.assertEqual(expected,
+                             result.obj_to_primitive()['nova_object.data'])
 
     def test_check_live_migrate_destination_verifies_ip(self):
         stubs.stubout_session(self, stubs.FakeSessionForVMTests)
@@ -3690,8 +3689,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         result = self.conn.check_can_live_migrate_source(self.context,
                                                          {'host': 'host'},
                                                          dest_check_data)
-        self.assertEqual(dest_check_data.to_legacy_dict(),
-                         result.to_legacy_dict())
+        self.assertEqual(dest_check_data, result)
 
     @mock.patch.object(session.XenAPISession, 'is_xsm_sr_check_relaxed',
                        return_value=False)
