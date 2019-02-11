@@ -2248,10 +2248,7 @@ class InvalidInventory(Invalid):
 # An exception with this name is used on both sides of the placement/
 # nova interaction.
 class InventoryInUse(InvalidInventory):
-    # NOTE(mriedem): This message cannot change without impacting the
-    # nova.scheduler.client.report._RE_INV_IN_USE regex.
-    msg_fmt = _("Inventory for '%(resource_classes)s' on "
-                "resource provider '%(resource_provider)s' in use.")
+    pass
 
 
 class UnsupportedPointerModelRequested(Invalid):
