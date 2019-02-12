@@ -132,10 +132,16 @@ class Claim(NopClaim):
         resources required to execute the claim.
 
         :param resources: available local compute node resources
-        :returns: Return true if resources are available to claim.
+        :param limits: Optional limits to test, either dict or
+            objects.SchedulerLimits
+        :raises: exception.ComputeResourcesUnavailable if any resource claim
+            fails
         """
         if not limits:
             limits = {}
+
+        if isinstance(limits, objects.SchedulerLimits):
+            limits = limits.to_dict()
 
         # If an individual limit is None, the resource will be considered
         # unlimited:
