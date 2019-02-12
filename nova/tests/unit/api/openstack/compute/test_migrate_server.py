@@ -106,26 +106,6 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
             args_map=args_map, method_translations=method_translations,
             exception_args=exception_arg)
 
-    def test_migrate_with_port_resource_request_old_microversion(self):
-        self.mock_list_port.return_value = {'ports': [
-            {'resource_request': {
-                "resources": {'CUSTOM_FOO': 1}}}]
-        }
-        method_translations = {'_migrate': 'resize',
-                               '_migrate_live': 'live_migrate'}
-        body_map = {'_migrate_live': self._get_migration_body(host='hostname')}
-        args_map = {'_migrate_live': ((False, self.disk_over_commit,
-                                       'hostname', self.force, self.async_),
-                                      {}),
-                    '_migrate': ((), {'host_name': self.host_name})}
-        ex = self.assertRaises(
-            webob.exc.HTTPBadRequest, self._test_actions,
-            ['_migrate', '_migrate_live'], body_map=body_map,
-            method_translations=method_translations, args_map=args_map)
-        self.assertIn(
-            'The migrate server operation with port having QoS policy is not '
-            'supported.', six.text_type(ex))
-
     def test_actions_with_locked_instance(self):
         method_translations = {'_migrate': 'resize',
                                '_migrate_live': 'live_migrate'}
@@ -553,20 +533,6 @@ class MigrateServerTestsV256(MigrateServerTestsV234):
             args_map=self.args_map,
             method_translations=self.method_translations,
             exception_args=exception_arg)
-
-    def test_migrate_with_port_resource_request_old_microversion(self):
-        self.mock_list_port.return_value = {'ports': [
-            {'resource_request': {
-                "resources": {'CUSTOM_FOO': 1}}}]
-        }
-        ex = self.assertRaises(
-            webob.exc.HTTPBadRequest, self._test_actions,
-            ['_migrate'], body_map=self.body_map,
-            method_translations=self.method_translations,
-            args_map=self.args_map)
-        self.assertIn(
-            'The migrate server operation with port having QoS policy is not '
-            'supported.', six.text_type(ex))
 
     def test_actions_with_locked_instance(self):
         self._test_actions_with_locked_instance(

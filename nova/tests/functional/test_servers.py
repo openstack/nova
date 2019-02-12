@@ -5549,6 +5549,15 @@ class PortResourceRequestBasedSchedulingTest(
         PortResourceRequestBasedSchedulingTestBase):
     """Tests for handling servers with ports having resource requests """
 
+    def _add_resource_request_to_a_bound_port(self, port_id):
+        # NOTE(gibi): self.neutron._ports contains a copy of each neutron port
+        # defined on class level in the fixture. So modifying what is in the
+        # _ports list is safe as it is re-created for each Neutron fixture
+        # instance therefore for each individual test using that fixture.
+        bound_port = self.neutron._ports[port_id]
+        bound_port['resource_request'] = (
+            self.neutron.port_with_resource_request['resource_request'])
+
     def test_interface_attach_with_port_resource_request(self):
         # create a server
         server = self._create_server(
@@ -5634,12 +5643,9 @@ class PortResourceRequestBasedSchedulingTest(
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
         # We need to simulate that the above server has a port that has
-        # resource request, we cannot boot with such a port but legacy servers
-        # can exists with such a port.
-        bound_port = self.neutron._ports[self.neutron.port_1['id']]
-        fake_resource_request = self.neutron.port_with_resource_request[
-            'resource_request']
-        bound_port['resource_request'] = fake_resource_request
+        # resource request; we cannot boot with such a port but legacy servers
+        # can exist with such a port.
+        self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
 
         resize_req = {
             'resize': {
@@ -5652,8 +5658,8 @@ class PortResourceRequestBasedSchedulingTest(
 
         self.assertEqual(400, ex.response.status_code)
         self.assertIn(
-            'The resize server operation with port having QoS policy is not '
-            'supported.', six.text_type(ex))
+            'The resize action on a server with ports having resource '
+            'requests', six.text_type(ex))
 
     def test_migrate_server_with_port_resource_request_old_microversion(self):
         server = self._create_server(
@@ -5662,12 +5668,9 @@ class PortResourceRequestBasedSchedulingTest(
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
         # We need to simulate that the above server has a port that has
-        # resource request, we cannot boot with such a port but legacy servers
-        # can exists with such a port.
-        bound_port = self.neutron._ports[self.neutron.port_1['id']]
-        fake_resource_request = self.neutron.port_with_resource_request[
-            'resource_request']
-        bound_port['resource_request'] = fake_resource_request
+        # resource request; we cannot boot with such a port but legacy servers
+        # can exist with such a port.
+        self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
 
         ex = self.assertRaises(
             client.OpenStackApiException,
@@ -5675,8 +5678,8 @@ class PortResourceRequestBasedSchedulingTest(
 
         self.assertEqual(400, ex.response.status_code)
         self.assertIn(
-            'The migrate server operation with port having QoS policy is not '
-            'supported.', six.text_type(ex))
+            'The migrate action on a server with ports having resource '
+            'requests', six.text_type(ex))
 
     def test_live_migrate_server_with_port_resource_request_old_microversion(
             self):
@@ -5686,12 +5689,9 @@ class PortResourceRequestBasedSchedulingTest(
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
         # We need to simulate that the above server has a port that has
-        # resource request, we cannot boot with such a port but legacy servers
-        # can exists with such a port.
-        bound_port = self.neutron._ports[self.neutron.port_1['id']]
-        fake_resource_request = self.neutron.port_with_resource_request[
-            'resource_request']
-        bound_port['resource_request'] = fake_resource_request
+        # resource request; we cannot boot with such a port but legacy servers
+        # can exist with such a port.
+        self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
 
         post = {
             'os-migrateLive': {
@@ -5705,8 +5705,8 @@ class PortResourceRequestBasedSchedulingTest(
 
         self.assertEqual(400, ex.response.status_code)
         self.assertIn(
-            'The live migrate server operation with port having QoS policy is '
-            'not supported.', six.text_type(ex))
+            'The os-migrateLive action on a server with ports having resource '
+            'requests', six.text_type(ex))
 
     def test_evacuate_server_with_port_resource_request_old_microversion(
             self):
@@ -5716,12 +5716,9 @@ class PortResourceRequestBasedSchedulingTest(
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
         # We need to simulate that the above server has a port that has
-        # resource request, we cannot boot with such a port but legacy servers
-        # can exists with such a port.
-        bound_port = self.neutron._ports[self.neutron.port_1['id']]
-        fake_resource_request = self.neutron.port_with_resource_request[
-            'resource_request']
-        bound_port['resource_request'] = fake_resource_request
+        # resource request; we cannot boot with such a port but legacy servers
+        # can exist with such a port.
+        self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
 
         ex = self.assertRaises(
             client.OpenStackApiException,
@@ -5729,8 +5726,8 @@ class PortResourceRequestBasedSchedulingTest(
 
         self.assertEqual(400, ex.response.status_code)
         self.assertIn(
-            'The evacuate server operation with port having QoS policy is '
-            'not supported.', six.text_type(ex))
+            'The evacuate action on a server with ports having resource '
+            'requests', six.text_type(ex))
 
     def test_unshelve_offloaded_server_with_port_resource_request_old_version(
             self):
@@ -5748,12 +5745,9 @@ class PortResourceRequestBasedSchedulingTest(
             self.api, server, {'status': 'SHELVED_OFFLOADED'})
 
         # We need to simulate that the above server has a port that has
-        # resource request, we cannot boot with such a port but legacy servers
-        # can exists with such a port.
-        bound_port = self.neutron._ports[self.neutron.port_1['id']]
-        fake_resource_request = self.neutron.port_with_resource_request[
-            'resource_request']
-        bound_port['resource_request'] = fake_resource_request
+        # resource request; we cannot boot with such a port but legacy servers
+        # can exist with such a port.
+        self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
 
         ex = self.assertRaises(
             client.OpenStackApiException,
@@ -5761,8 +5755,8 @@ class PortResourceRequestBasedSchedulingTest(
 
         self.assertEqual(400, ex.response.status_code)
         self.assertIn(
-            'The unshelve server operation on a shelve offloaded server with '
-            'port having QoS policy is not supported.', six.text_type(ex))
+            'The unshelve action on a server with ports having resource '
+            'requests', six.text_type(ex))
 
     def test_unshelve_not_offloaded_server_with_port_resource_request(
             self):
@@ -5786,19 +5780,22 @@ class PortResourceRequestBasedSchedulingTest(
             self.api, server, {'status': 'SHELVED'})
 
         # We need to simulate that the above server has a port that has
-        # resource request, we cannot boot with such a port but legacy servers
-        # can exists with such a port.
-        bound_port = self.neutron._ports[self.neutron.port_1['id']]
-        fake_resource_request = self.neutron.port_with_resource_request[
-            'resource_request']
-        bound_port['resource_request'] = fake_resource_request
+        # resource request; we cannot boot with such a port but legacy servers
+        # can exist with such a port.
+        self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
 
         self.api.post_server_action(server['id'], {'unshelve': {}})
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
 
 class PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck(
-    PortResourceRequestBasedSchedulingTestBase):
+        PortResourceRequestBasedSchedulingTestBase):
+    """Tests creating a server with a pre-existing port that has a resource
+    request for a QoS minimum bandwidth policy. Stubs out the
+    supports_port_resource_request control method in the API in order to
+    test the functionality between the API and scheduler before the
+    microversion is added.
+    """
 
     def setUp(self):
         super(
@@ -5806,7 +5803,7 @@ class PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck(
             self).setUp()
 
         # NOTE(gibi): This mock turns off the api microversion that prevents
-        # handling of instances operations if the request involves port's with
+        # handling of instances operations if the request involves ports with
         # resource request with old microversion. The new microversion does not
         # exists yet as the whole feature is not read for end user consumption.
         # This functional tests however would like to prove that some use cases
@@ -5842,15 +5839,17 @@ class PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck(
                          compute_allocations)
         self.assertPortMatchesAllocation(qos_port, network_allocations)
 
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
-        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(0, len(allocations))
+        self._delete_and_check_allocations(server)
 
 
 class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(
         PortResourceRequestBasedSchedulingTestBase):
+    """Similar to PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck
+    except this test uses FakeRescheduleDriver which will test reschedules
+    during server create work as expected, i.e. that the resource request
+    allocations are moved from the initially selected compute to the
+    alternative compute.
+    """
 
     compute_driver = 'fake.FakeRescheduleDriver'
 
@@ -5863,7 +5862,7 @@ class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(
         self._create_networking_rp_tree(self.compute2_rp_uuid)
 
         # NOTE(gibi): This mock turns off the api microversion that prevents
-        # handling of instances operations if the request involves port's with
+        # handling of instances operations if the request involves ports with
         # resource request with old microversion. The new microversion does not
         # exists yet as the whole feature is not read for end user consumption.
         # This functional tests however would like to prove that some use cases
@@ -5914,8 +5913,4 @@ class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(
             self._get_provider_usages(
                 self.ovs_bridge_rp_per_host[failed_compute_rp]))
 
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
-        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(0, len(allocations))
+        self._delete_and_check_allocations(server)

@@ -117,11 +117,16 @@ class EvacuateController(wsgi.Controller):
             msg = _("The target host can't be the same one.")
             raise exc.HTTPBadRequest(explanation=msg)
 
+        # We could potentially move this check to conductor and avoid the
+        # extra API call to neutron when we support move operations with ports
+        # having resource requests.
         if (common.instance_has_port_with_resource_request(
                     context, instance.uuid, self.network_api) and not
                 common.supports_port_resource_request_during_move(req)):
-            msg = _("The evacuate server operation with port having QoS "
-                    "policy is not supported.")
+            msg = _("The evacuate action on a server with ports having "
+                    "resource requests, like a port with a QoS minimum "
+                    "bandwidth policy, is not supported with this "
+                    "microversion")
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:

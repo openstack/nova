@@ -816,11 +816,16 @@ class ServersController(wsgi.Controller):
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})
 
+        # We could potentially move this check to conductor and avoid the
+        # extra API call to neutron when we support move operations with ports
+        # having resource requests.
         if (common.instance_has_port_with_resource_request(
                     context, instance_id, self.network_api) and not
                 common.supports_port_resource_request_during_move(req)):
-            msg = _("The resize server operation with port having QoS policy "
-                    "is not supported.")
+            msg = _("The resize action on a server with ports having "
+                    "resource requests, like a port with a QoS minimum "
+                    "bandwidth policy, is not supported with this "
+                    "microversion")
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:

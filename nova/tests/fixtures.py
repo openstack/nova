@@ -1408,6 +1408,9 @@ class NeutronFixture(fixtures.Fixture):
         return {'networks': copy.deepcopy(networks)}
 
     def list_ports(self, retrieve_all=True, **_params):
+        # If 'fields' is passed we need to strip that out since it will mess
+        # up the filtering as 'fields' is not a filter parameter.
+        _params.pop('fields', None)
         ports = [p for p in self._ports.values()
                  if all(p.get(opt) == _params[opt] for opt in _params)]
         return {'ports': copy.deepcopy(ports)}
