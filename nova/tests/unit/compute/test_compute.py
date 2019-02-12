@@ -7170,6 +7170,7 @@ class ComputeTestCase(BaseTestCase,
         instance = self._create_fake_instance_obj({'host': 'someotherhost'})
         self.compute._instance_update(self.context, instance, vcpus=4)
 
+    @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instances_on_driver')
     @mock.patch.object(compute_manager.ComputeManager,
@@ -7181,8 +7182,10 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.objects.Migration.save')
     def test_destroy_evacuated_instance_on_shared_storage(self, mock_save,
             mock_get_filter, mock_destroy, mock_is_inst, mock_get_blk,
-            mock_get_inst):
+            mock_get_inst, mock_elevated):
         fake_context = context.get_admin_context()
+        read_deleted_context = fake_context.elevated(read_only='yes')
+        mock_elevated.return_value = read_deleted_context
 
         # instances in central db
         instances = [
@@ -7219,7 +7222,7 @@ class ComputeTestCase(BaseTestCase,
                                               'pre-migrating',
                                               'done'],
                                           'migration_type': 'evacuation'})
-        mock_get_inst.assert_called_once_with(fake_context)
+        mock_get_inst.assert_called_once_with(read_deleted_context)
         mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
         mock_get_blk.assert_called_once_with(fake_context, evacuated_instance)
         mock_is_inst.assert_called_once_with(fake_context, evacuated_instance)
@@ -7227,6 +7230,7 @@ class ComputeTestCase(BaseTestCase,
                                              'fake_network_info',
                                              'fake_bdi', False)
 
+    @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instances_on_driver')
     @mock.patch.object(compute_manager.ComputeManager,
@@ -7242,8 +7246,10 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.objects.Migration.save')
     def test_destroy_evacuated_instance_with_disks(self, mock_save,
             mock_get_filter, mock_destroy, mock_check_clean, mock_check,
-            mock_check_local, mock_get_blk, mock_get_drv):
+            mock_check_local, mock_get_blk, mock_get_drv, mock_elevated):
         fake_context = context.get_admin_context()
+        read_deleted_context = fake_context.elevated(read_deleted='yes')
+        mock_elevated.return_value = read_deleted_context
 
         # instances in central db
         instances = [
@@ -7274,7 +7280,7 @@ class ComputeTestCase(BaseTestCase,
                 return_value='fake_network_info') as mock_get_nw:
             self.compute._destroy_evacuated_instances(fake_context)
 
-        mock_get_drv.assert_called_once_with(fake_context)
+        mock_get_drv.assert_called_once_with(read_deleted_context)
         mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
         mock_get_blk.assert_called_once_with(fake_context, evacuated_instance)
         mock_check_local.assert_called_once_with(fake_context,
@@ -7288,6 +7294,7 @@ class ComputeTestCase(BaseTestCase,
                                              'fake_network_info', 'fake-bdi',
                                              True)
 
+    @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instances_on_driver')
     @mock.patch.object(compute_manager.ComputeManager,
@@ -7302,8 +7309,10 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.objects.Migration.save')
     def test_destroy_evacuated_instance_not_implemented(self, mock_save,
             mock_get_filter, mock_destroy, mock_check_clean, mock_check,
-            mock_check_local, mock_get_blk, mock_get_inst):
+            mock_check_local, mock_get_blk, mock_get_inst, mock_elevated):
         fake_context = context.get_admin_context()
+        read_deleted_context = fake_context.elevated(read_deleted='yes')
+        mock_elevated.return_value = read_deleted_context
 
         # instances in central db
         instances = [
@@ -7333,7 +7342,7 @@ class ComputeTestCase(BaseTestCase,
                 return_value='fake_network_info') as mock_get_nw:
             self.compute._destroy_evacuated_instances(fake_context)
 
-        mock_get_inst.assert_called_once_with(fake_context)
+        mock_get_inst.assert_called_once_with(read_deleted_context)
         mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
         mock_get_blk.assert_called_once_with(fake_context, evacuated_instance)
         mock_check_local.assert_called_once_with(fake_context,
