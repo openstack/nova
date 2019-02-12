@@ -1732,12 +1732,17 @@ class SchedulerReportClient(object):
         piece of allocation from source to target then this function might not
         be what you want as it always moves what source has in Placement.
 
+        If the target consumer has allocations but the source consumer does
+        not, this method assumes the allocations were already moved and
+        returns True.
+
         :param context: The security context
         :param source_consumer_uuid: the UUID of the consumer from which
                                      allocations are moving
         :param target_consumer_uuid: the UUID of the target consumer for the
                                      allocations
-        :returns: True if the move was successful False otherwise.
+        :returns: True if the move was successful (or already done),
+                  False otherwise.
         :raises AllocationMoveFailed: If the source or the target consumer has
                                       been modified while this call tries to
                                       move allocations.
@@ -1748,6 +1753,13 @@ class SchedulerReportClient(object):
             context, target_consumer_uuid)
 
         if target_alloc and target_alloc['allocations']:
+            # Check to see if the source allocations still exist because if
+            # they don't they might have already been moved to the target.
+            if not (source_alloc and source_alloc['allocations']):
+                LOG.info('Allocations not found for consumer %s; assuming '
+                         'they were already moved to consumer %s',
+                         source_consumer_uuid, target_consumer_uuid)
+                return True
             LOG.warning('Overwriting current allocation %(allocation)s on '
                         'consumer %(consumer)s',
                         {'allocation': target_alloc,
