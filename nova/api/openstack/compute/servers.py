@@ -270,12 +270,15 @@ class ServersController(wsgi.Controller):
         if is_detail:
             instance_list._context = context
             instance_list.fill_faults()
-            response = self._view_builder.detail(req, instance_list)
+            response = self._view_builder.detail(
+                req, instance_list, cell_down_support=cell_down_support)
         else:
-            response = self._view_builder.index(req, instance_list)
+            response = self._view_builder.index(
+                req, instance_list, cell_down_support=cell_down_support)
         return response
 
-    def _get_server(self, context, req, instance_uuid, is_detail=False):
+    def _get_server(self, context, req, instance_uuid, is_detail=False,
+                    cell_down_support=False):
         """Utility function for looking up an instance by uuid.
 
         :param context: request context for auth
@@ -283,6 +286,10 @@ class ServersController(wsgi.Controller):
         :param instance_uuid: UUID of the server instance to get
         :param is_detail: True if you plan on showing the details of the
             instance in the response, False otherwise.
+        :param cell_down_support: True if the API (and caller) support
+                                  returning a minimal instance
+                                  construct if the relevant cell is
+                                  down.
         """
         expected_attrs = ['flavor', 'numa_topology']
         if is_detail:
@@ -295,7 +302,7 @@ class ServersController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context,
                                        instance_uuid,
                                        expected_attrs=expected_attrs,
-                                       cell_down_support=False)
+                                       cell_down_support=cell_down_support)
         return instance
 
     @staticmethod
@@ -389,8 +396,12 @@ class ServersController(wsgi.Controller):
         """Returns server details by server id."""
         context = req.environ['nova.context']
         context.can(server_policies.SERVERS % 'show')
-        instance = self._get_server(context, req, id, is_detail=True)
-        return self._view_builder.show(req, instance)
+        # TODO(tssurya): enable cell_down_support after bumping the
+        # microversion.
+        instance = self._get_server(
+            context, req, id, is_detail=True, cell_down_support=False)
+        return self._view_builder.show(
+            req, instance, cell_down_support=False)
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 409))

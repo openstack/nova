@@ -7339,6 +7339,307 @@ class ServersViewBuilderTest(test.TestCase):
         self.assertThat(output, matchers.DictMatches(expected_server))
 
 
+class ServersViewBuilderTestV269(ServersViewBuilderTest):
+    """Server ViewBuilder test for microversion 2.69
+
+    The intent here is simply to verify that when showing server details
+    after microversion 2.69 the response could have missing keys for those
+    servers from the down cells.
+    """
+    wsgi_api_version = '2.69'
+
+    def setUp(self):
+        super(ServersViewBuilderTestV269, self).setUp()
+        self.view_builder = views.servers.ViewBuilder()
+        self.ctxt = context.RequestContext('fake', 'fake')
+
+        def fake_is_supported(req, min_version="2.1", max_version="2.69"):
+            return (fakes.api_version.APIVersionRequest(max_version) >=
+                    req.api_version_request >=
+                    fakes.api_version.APIVersionRequest(min_version))
+        self.stub_out('nova.api.openstack.api_version_request.is_supported',
+                      fake_is_supported)
+
+    def req(self, url, use_admin_context=False):
+        return fakes.HTTPRequest.blank(url,
+                                       use_admin_context=use_admin_context,
+                                       version=self.wsgi_api_version)
+
+    def test_get_server_list_detail_with_down_cells(self):
+        # Fake out 1 partially constructued instance and one full instance.
+        self.instances = [
+                self.instance,
+                objects.Instance(
+                    context=self.ctxt,
+                    uuid=uuids.fake1,
+                    project_id='fake',
+                    created_at=datetime.datetime(1955, 11, 5)
+                )
+            ]
+
+        req = self.req('/fake/servers/detail')
+        output = self.view_builder.detail(req, self.instances, True)
+
+        self.assertEqual(2, len(output['servers']))
+        image_bookmark = "http://localhost/fake/images/5"
+        expected = {
+            "servers": [{
+                "id": self.uuid,
+                "user_id": "fake_user",
+                "tenant_id": "fake_project",
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 0,
+                "name": "test_server",
+                "status": "ACTIVE",
+                "hostId": '',
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    'disk': 1,
+                    'ephemeral': 1,
+                    'vcpus': 1,
+                    'ram': 256,
+                    'original_name': 'flavor1',
+                    'extra_specs': {},
+                    'swap': 0
+                },
+                "addresses": {
+                    'test1': [
+                        {'version': 4, 'addr': '192.168.1.100',
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1',
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 4, 'addr': '192.168.2.100',
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'}
+                    ],
+                    'test2': [
+                        {'version': 4, 'addr': '192.168.3.100',
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'cc:cc:cc:cc:cc:cc'},
+                    ]
+                },
+                "metadata": {},
+                "tags": [],
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": self.self_link,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": self.bookmark_link,
+                    },
+                ],
+                "OS-DCF:diskConfig": "MANUAL",
+                "OS-EXT-SRV-ATTR:root_device_name": None,
+                "accessIPv4": '',
+                "accessIPv6": '',
+                "host_status": '',
+                "OS-EXT-SRV-ATTR:user_data": None,
+                "trusted_image_certificates": None,
+                "OS-EXT-AZ:availability_zone": "nova",
+                "OS-EXT-SRV-ATTR:kernel_id": '',
+                "OS-EXT-SRV-ATTR:reservation_id": '',
+                "config_drive": None,
+                "OS-EXT-SRV-ATTR:host": None,
+                "OS-EXT-SRV-ATTR:hypervisor_hostname": None,
+                "OS-EXT-SRV-ATTR:hostname": 'test_server',
+                "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
+                "key_name": '',
+                "locked": False,
+                "description": None,
+                "OS-SRV-USG:launched_at": None,
+                "OS-SRV-USG:terminated_at": None,
+                "security_groups": [{'name': 'fake-0-0'},
+                                    {'name': 'fake-0-1'}],
+                "OS-EXT-STS:task_state": None,
+                "OS-EXT-STS:vm_state": vm_states.ACTIVE,
+                "OS-EXT-STS:power_state": 1,
+                "OS-EXT-SRV-ATTR:launch_index": 0,
+                "OS-EXT-SRV-ATTR:ramdisk_id": '',
+                "os-extended-volumes:volumes_attached": [
+                    {'id': 'some_volume_1', 'delete_on_termination': True},
+                    {'id': 'some_volume_2', 'delete_on_termination': False},
+                ]
+            },
+            {
+                'created': '1955-11-05T00:00:00Z',
+                'id': uuids.fake1,
+                'tenant_id': 'fake',
+                "status": "UNKNOWN",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v2/fake/servers/%s" %
+                                uuids.fake1,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/servers/%s" %
+                                uuids.fake1,
+                    },
+                ],
+            }]
+        }
+        self.assertThat(output, matchers.DictMatches(expected))
+
+    def test_get_server_list_with_down_cells(self):
+        # Fake out 1 partially constructued instance and one full instance.
+        self.instances = [
+                self.instance,
+                objects.Instance(
+                    context=self.ctxt,
+                    uuid=uuids.fake1,
+                    project_id='fake',
+                    created_at=datetime.datetime(1955, 11, 5)
+                )
+            ]
+
+        req = self.req('/fake/servers')
+        output = self.view_builder.index(req, self.instances, True)
+
+        self.assertEqual(2, len(output['servers']))
+
+        expected = {
+            "servers": [{
+                "id": self.uuid,
+                "name": "test_server",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": self.self_link,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": self.bookmark_link,
+                    },
+                ]
+            },
+            {
+                'id': uuids.fake1,
+                "status": "UNKNOWN",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v2/fake/servers/%s" %
+                                uuids.fake1,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/servers/%s" %
+                                uuids.fake1,
+                    },
+                ],
+            }]
+        }
+
+        self.assertThat(output, matchers.DictMatches(expected))
+
+    def test_get_server_with_down_cells(self):
+        # Fake out 1 partially constructued instance.
+        self.instance = objects.Instance(
+            context=self.ctxt,
+            uuid=self.uuid,
+            project_id=self.instance.project_id,
+            created_at=datetime.datetime(1955, 11, 5),
+            user_id=self.instance.user_id,
+            image_ref=self.instance.image_ref,
+            power_state=0,
+            flavor=self.instance.flavor,
+            availability_zone=self.instance.availability_zone
+        )
+
+        req = self.req('/fake/servers/%s' % FAKE_UUID)
+        output = self.view_builder.show(req, self.instance,
+                                        cell_down_support=True)
+        # nine fields from request_spec and instance_mapping
+        self.assertEqual(9, len(output['server']))
+        image_bookmark = "http://localhost/fake/images/5"
+        expected = {
+            "server": {
+                "id": self.uuid,
+                "user_id": "fake_user",
+                "tenant_id": "fake_project",
+                "created": '1955-11-05T00:00:00Z',
+                "status": "UNKNOWN",
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    'disk': 1,
+                    'ephemeral': 1,
+                    'vcpus': 1,
+                    'ram': 256,
+                    'original_name': 'flavor1',
+                    'extra_specs': {},
+                    'swap': 0
+                },
+                "OS-EXT-AZ:availability_zone": "nova",
+                "OS-EXT-STS:power_state": 0
+            }
+        }
+        self.assertThat(output, matchers.DictMatches(expected))
+
+    def test_get_server_without_image_avz_user_id_set_from_down_cells(self):
+        # Fake out 1 partially constructued instance.
+        self.instance = objects.Instance(
+            context=self.ctxt,
+            uuid=self.uuid,
+            project_id=self.instance.project_id,
+            created_at=datetime.datetime(1955, 11, 5),
+            user_id=None,
+            image_ref=None,
+            power_state=0,
+            flavor=self.instance.flavor,
+            availability_zone=None
+        )
+
+        req = self.req('/fake/servers/%s' % FAKE_UUID)
+        output = self.view_builder.show(req, self.instance,
+                                        cell_down_support=True)
+        # nine fields from request_spec and instance_mapping
+        self.assertEqual(9, len(output['server']))
+        expected = {
+            "server": {
+                "id": self.uuid,
+                "user_id": "UNKNOWN",
+                "tenant_id": "fake_project",
+                "created": '1955-11-05T00:00:00Z',
+                "status": "UNKNOWN",
+                "image": "",
+                "flavor": {
+                    'disk': 1,
+                    'ephemeral': 1,
+                    'vcpus': 1,
+                    'ram': 256,
+                    'original_name': 'flavor1',
+                    'extra_specs': {},
+                    'swap': 0
+                },
+                "OS-EXT-AZ:availability_zone": "UNKNOWN",
+                "OS-EXT-STS:power_state": 0
+            }
+        }
+        self.assertThat(output, matchers.DictMatches(expected))
+
+
 class ServersAllExtensionsTestCase(test.TestCase):
     """Servers tests using default API router with all extensions enabled.
 
