@@ -2234,19 +2234,19 @@ class LibvirtConfigGuestMemoryTune(LibvirtConfigObject):
         if self.hard_limit is not None:
             root.append(self._text_node("hard_limit",
                                         str(self.hard_limit),
-                                        units="K"))
+                                        unit="KiB"))
         if self.soft_limit is not None:
             root.append(self._text_node("soft_limit",
                                         str(self.soft_limit),
-                                        units="K"))
+                                        unit="KiB"))
         if self.swap_hard_limit is not None:
             root.append(self._text_node("swap_hard_limit",
                                         str(self.swap_hard_limit),
-                                        units="K"))
+                                        unit="KiB"))
         if self.min_guarantee is not None:
             root.append(self._text_node("min_guarantee",
                                         str(self.min_guarantee),
-                                        units="K"))
+                                        unit="KiB"))
 
         return root
 
