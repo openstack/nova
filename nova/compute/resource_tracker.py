@@ -247,7 +247,11 @@ class ResourceTracker(object):
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def resize_claim(self, context, instance, instance_type, nodename,
                      migration, image_meta=None, limits=None):
-        """Create a claim for a resize or cold-migration move."""
+        """Create a claim for a resize or cold-migration move.
+
+        Note that this code assumes ``instance.new_flavor`` is set when
+        resizing with a new flavor.
+        """
         return self._move_claim(context, instance, instance_type, nodename,
                                 migration, image_meta=image_meta,
                                 limits=limits)
@@ -1033,7 +1037,8 @@ class ResourceTracker(object):
             return
 
         uuid = migration.instance_uuid
-        LOG.info("Updating resource usage from migration", instance_uuid=uuid)
+        LOG.info("Updating resource usage from migration %s", migration.uuid,
+                 instance_uuid=uuid)
 
         incoming = (migration.dest_compute == self.host and
                     migration.dest_node == nodename)
@@ -1080,6 +1085,8 @@ class ResourceTracker(object):
                 'numa_topology', instance)
             # Allocate pci device(s) for the instance.
             sign = 1
+            LOG.debug('Starting to track incoming migration %s with flavor %s',
+                      migration.uuid, itype.flavorid, instance=instance)
 
         elif outbound and not tracked:
             # instance migrated, but record usage for a possible revert:
@@ -1087,6 +1094,8 @@ class ResourceTracker(object):
                     migration)
             numa_topology = self._get_migration_context_resource(
                 'numa_topology', instance, prefix='old_')
+            LOG.debug('Starting to track outgoing migration %s with flavor %s',
+                      migration.uuid, itype.flavorid, instance=instance)
 
         if itype:
             cn = self.compute_nodes[nodename]
