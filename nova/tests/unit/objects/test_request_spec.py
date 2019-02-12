@@ -587,7 +587,8 @@ class _TestRequestSpecObject(object):
         self.assertIsInstance(req_obj.pci_requests,
                 objects.InstancePCIRequests)
         self.assertIsInstance(req_obj.flavor, objects.Flavor)
-        self.assertIsInstance(req_obj.retry, objects.SchedulerRetries)
+        # The 'retry' field is not persistent.
+        self.assertIsNone(req_obj.retry)
         self.assertIsInstance(req_obj.limits, objects.SchedulerLimits)
         self.assertIsInstance(req_obj.instance_group, objects.InstanceGroup)
         self.assertEqual('fresh', req_obj.instance_group.name)
@@ -635,10 +636,24 @@ class _TestRequestSpecObject(object):
 
         self.assertRaises(exception.ObjectActionError, req_obj.create)
 
-    def test_create_does_not_persist_requested_resources(self):
+    def test_create_does_not_persist_requested_fields(self):
         req_obj = fake_request_spec.fake_spec_obj(remove_id=True)
+
+        expected_network_metadata = objects.NetworkMetadata(
+            physnets=set(['foo', 'bar']), tunneled=True)
+        req_obj.network_metadata = expected_network_metadata
+        expected_destination = request_spec.Destination(host='sample-host')
+        req_obj.requested_destination = expected_destination
         rg = request_spec.RequestGroup(resources={'fake-rc': 13})
         req_obj.requested_resources = [rg]
+        expected_retry = objects.SchedulerRetries(
+            num_attempts=2,
+            hosts=objects.ComputeNodeList(objects=[
+                objects.ComputeNode(host='host1', hypervisor_hostname='node1'),
+                objects.ComputeNode(host='host2', hypervisor_hostname='node2'),
+            ]))
+        req_obj.retry = expected_retry
+
         orig_create_in_db = request_spec.RequestSpec._create_in_db
         with mock.patch.object(request_spec.RequestSpec, '_create_in_db') \
                 as mock_create_in_db:
@@ -646,22 +661,54 @@ class _TestRequestSpecObject(object):
             req_obj.create()
             mock_create_in_db.assert_called_once()
             updates = mock_create_in_db.mock_calls[0][1][1]
-            # assert that the requested_resources field is not stored in the db
+            # assert that the following fields are not stored in the db
+            # 1. network_metadata
+            # 2. requested_destination
+            # 3. requested_resources
+            # 4. retry
             data = jsonutils.loads(updates['spec'])['nova_object.data']
+            self.assertNotIn('network_metadata', data)
+            self.assertIsNone(data['requested_destination'])
             self.assertIsNone(data['requested_resources'])
+            self.assertIsNone(data['retry'])
             self.assertIsNotNone(data['instance_uuid'])
 
-        # also we expect that requested_resources field does not reset after
-        # create
+        # also we expect that the following fields are not reset after create
+        # 1. network_metadata
+        # 2. requested_destination
+        # 3. requested_resources
+        # 4. retry
+        self.assertIsNotNone(req_obj.network_metadata)
+        self.assertJsonEqual(expected_network_metadata.obj_to_primitive(),
+                             req_obj.network_metadata.obj_to_primitive())
+        self.assertIsNotNone(req_obj.requested_destination)
+        self.assertJsonEqual(expected_destination.obj_to_primitive(),
+                             req_obj.requested_destination.obj_to_primitive())
+        self.assertIsNotNone(req_obj.requested_resources)
         self.assertEqual(
             13, req_obj.requested_resources[0].resources['fake-rc'])
+        self.assertIsNotNone(req_obj.retry)
+        self.assertJsonEqual(expected_retry.obj_to_primitive(),
+                             req_obj.retry.obj_to_primitive())
 
-    def test_save_does_not_persist_requested_resources(self):
+    def test_save_does_not_persist_requested_fields(self):
         req_obj = fake_request_spec.fake_spec_obj(remove_id=True)
-        rg = request_spec.RequestGroup(resources={'fake-rc': 13})
-        req_obj.requested_resources = [rg]
         req_obj.create()
         # change something to make sure _save_in_db is called
+        expected_network_metadata = objects.NetworkMetadata(
+            physnets=set(['foo', 'bar']), tunneled=True)
+        req_obj.network_metadata = expected_network_metadata
+        expected_destination = request_spec.Destination(host='sample-host')
+        req_obj.requested_destination = expected_destination
+        rg = request_spec.RequestGroup(resources={'fake-rc': 13})
+        req_obj.requested_resources = [rg]
+        expected_retry = objects.SchedulerRetries(
+            num_attempts=2,
+            hosts=objects.ComputeNodeList(objects=[
+                objects.ComputeNode(host='host1', hypervisor_hostname='node1'),
+                objects.ComputeNode(host='host2', hypervisor_hostname='node2'),
+            ]))
+        req_obj.retry = expected_retry
         req_obj.num_instances = 2
 
         orig_save_in_db = request_spec.RequestSpec._save_in_db
@@ -671,15 +718,35 @@ class _TestRequestSpecObject(object):
             req_obj.save()
             mock_save_in_db.assert_called_once()
             updates = mock_save_in_db.mock_calls[0][1][2]
-            # assert that the requested_resources field is not stored in the db
+            # assert that the following fields are not stored in the db
+            # 1. network_metadata
+            # 2. requested_destination
+            # 3. requested_resources
+            # 4. retry
             data = jsonutils.loads(updates['spec'])['nova_object.data']
+            self.assertNotIn('network_metadata', data)
+            self.assertIsNone(data['requested_destination'])
             self.assertIsNone(data['requested_resources'])
+            self.assertIsNone(data['retry'])
             self.assertIsNotNone(data['instance_uuid'])
 
-        # also we expect that requested_resources field does not reset after
-        # save
+        # also we expect that the following fields are not reset after save
+        # 1. network_metadata
+        # 2. requested_destination
+        # 3. requested_resources
+        # 4. retry
+        self.assertIsNotNone(req_obj.network_metadata)
+        self.assertJsonEqual(expected_network_metadata.obj_to_primitive(),
+                             req_obj.network_metadata.obj_to_primitive())
+        self.assertIsNotNone(req_obj.requested_destination)
+        self.assertJsonEqual(expected_destination.obj_to_primitive(),
+                             req_obj.requested_destination.obj_to_primitive())
+        self.assertIsNotNone(req_obj.requested_resources)
         self.assertEqual(13, req_obj.requested_resources[0].resources
                              ['fake-rc'])
+        self.assertIsNotNone(req_obj.retry)
+        self.assertJsonEqual(expected_retry.obj_to_primitive(),
+                             req_obj.retry.obj_to_primitive())
 
     def test_save(self):
         req_obj = fake_request_spec.fake_spec_obj()
