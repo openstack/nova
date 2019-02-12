@@ -57,6 +57,8 @@ PCI_REQUESTS.obj_reset_changes(recursive=True)
 
 def fake_db_spec():
     req_obj = fake_spec_obj()
+    # NOTE(takashin): There is not 'retry' information in the DB table.
+    del req_obj.retry
     db_request_spec = {
             'id': 1,
             'instance_uuid': req_obj.instance_uuid,
