@@ -541,15 +541,11 @@ def supports_port_resource_request(req):
     """Check to see if the requested API version is high enough for resource
     request
 
-    NOTE: At the moment there is no such microversion that supports port
-    resource request. This function is added as a preparation for that
-    microversion.
-
     :param req: The incoming API request
     :returns: True if the requested API microversion is high enough for
         port resource request support, False otherwise.
     """
-    return False
+    return api_version_request.is_supported(req, '2.72')
 
 
 def supports_port_resource_request_during_move(req):
@@ -571,8 +567,11 @@ def supports_port_resource_request_during_move(req):
 def instance_has_port_with_resource_request(
         context, instance_uuid, network_api):
 
-    # If we ever store any information about resource requests in the
-    # instance info cache then we can replace this neutron API call.
+    # TODO(gibi): Use instance.info_cache to see if there is VIFs with
+    # allocation key in the profile. If there is no such VIF for an instance
+    # and the instance is not shelve offloaded then we can be sure that the
+    # instance has no port with resource request. If the instance is shelve
+    # offloaded then we still have to hit neutron.
     search_opts = {'device_id': instance_uuid,
                    'fields': ['resource_request']}
     ports = network_api.list_ports(context, **search_opts).get('ports', [])

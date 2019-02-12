@@ -17,7 +17,6 @@ from __future__ import absolute_import
 import collections
 import copy
 import datetime
-import fixtures
 import time
 import zlib
 
@@ -6089,7 +6088,7 @@ class PortResourceRequestBasedSchedulingTestBase(
                               amount))
 
 
-class PortResourceRequestBasedSchedulingTest(
+class UnsupportedPortResourceRequestBasedSchedulingTest(
         PortResourceRequestBasedSchedulingTestBase):
     """Tests for handling servers with ports having resource requests """
 
@@ -6169,6 +6168,10 @@ class PortResourceRequestBasedSchedulingTest(
                       server['fault']['message'])
 
     def test_create_server_with_port_resource_request_old_microversion(self):
+
+        # NOTE(gibi): 2.71 is the last microversion where nova does not support
+        # this kind of create server
+        self.api.microversion = '2.71'
         ex = self.assertRaises(
             client.OpenStackApiException, self._create_server,
             flavor=self.flavor,
@@ -6177,8 +6180,9 @@ class PortResourceRequestBasedSchedulingTest(
         self.assertEqual(400, ex.response.status_code)
         self.assertIn(
             "Creating servers with ports having resource requests, like a "
-            "port with a QoS minimum bandwidth policy, is not supported with "
-            "this microversion", six.text_type(ex))
+            "port with a QoS minimum bandwidth policy, is not supported "
+            "until microversion 2.72.",
+            six.text_type(ex))
 
     def test_resize_server_with_port_resource_request_old_microversion(self):
         server = self._create_server(
@@ -6332,31 +6336,11 @@ class PortResourceRequestBasedSchedulingTest(
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
 
-class PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck(
+class PortResourceRequestBasedSchedulingTest(
         PortResourceRequestBasedSchedulingTestBase):
     """Tests creating a server with a pre-existing port that has a resource
-    request for a QoS minimum bandwidth policy. Stubs out the
-    supports_port_resource_request control method in the API in order to
-    test the functionality between the API and scheduler before the
-    microversion is added.
+    request for a QoS minimum bandwidth policy.
     """
-
-    def setUp(self):
-        super(
-            PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck,
-            self).setUp()
-
-        # NOTE(gibi): This mock turns off the api microversion that prevents
-        # handling of instances operations if the request involves ports with
-        # resource request with old microversion. The new microversion does not
-        # exists yet as the whole feature is not read for end user consumption.
-        # This functional tests however would like to prove that some use cases
-        # already work.
-        self.useFixture(
-            fixtures.MockPatch(
-                'nova.api.openstack.common.'
-                'supports_port_resource_request',
-                return_value=True))
 
     def test_boot_server_with_two_ports_one_having_resource_request(self):
         non_qos_port = self.neutron.port_1
@@ -6613,9 +6597,9 @@ class PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck(
             server['fault']['message'])
 
 
-class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(
+class PortResourceRequestReSchedulingTest(
         PortResourceRequestBasedSchedulingTestBase):
-    """Similar to PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck
+    """Similar to PortResourceRequestBasedSchedulingTest
     except this test uses FakeRescheduleDriver which will test reschedules
     during server create work as expected, i.e. that the resource request
     allocations are moved from the initially selected compute to the
@@ -6625,24 +6609,10 @@ class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(
     compute_driver = 'fake.FakeRescheduleDriver'
 
     def setUp(self):
-        super(
-            PortResourceRequestReSchedulingTestIgnoreMicroversionCheck,
-            self).setUp()
+        super(PortResourceRequestReSchedulingTest, self).setUp()
         self.compute2 = self._start_compute('host2')
         self.compute2_rp_uuid = self._get_provider_uuid_by_host('host2')
         self._create_networking_rp_tree(self.compute2_rp_uuid)
-
-        # NOTE(gibi): This mock turns off the api microversion that prevents
-        # handling of instances operations if the request involves ports with
-        # resource request with old microversion. The new microversion does not
-        # exists yet as the whole feature is not read for end user consumption.
-        # This functional tests however would like to prove that some use cases
-        # already work.
-        self.useFixture(
-            fixtures.MockPatch(
-                'nova.api.openstack.common.'
-                'supports_port_resource_request',
-                return_value=True))
 
     def _create_networking_rp_tree(self, compute_rp_uuid):
         # let's simulate what the neutron would do

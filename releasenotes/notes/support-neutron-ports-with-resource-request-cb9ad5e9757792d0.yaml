@@ -1,0 +1,22 @@
+---
+features:
+  - |
+    API microversion 2.72 adds support for creating servers with neutron ports
+    that has resource request, e.g. neutron ports with
+    `QoS minimum bandwidth rule`_. Deleting servers with such ports have
+    already been handled properly as well as detaching these type of ports.
+
+    API limitations:
+
+    * Creating servers with Neutron networks having QoS minimum bandwidth rule
+      is not supported.
+
+    * Attaching Neutron ports and networks having QoS minimum bandwidth rule
+      is not supported.
+
+    * Moving (resizing, migrating, live-migrating, evacuating,
+      unshelving after shelve offload) servers with ports having resource
+      request is not yet supported.
+
+    .. _QoS minimum bandwidth rule: https://docs.openstack.org/neutron/latest/admin/config-qos.html
+

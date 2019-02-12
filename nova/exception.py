@@ -2160,11 +2160,9 @@ class NetworksWithQoSPolicyNotSupported(Invalid):
 
 
 class CreateWithPortResourceRequestOldVersion(Invalid):
-    # TODO(gibi): Mention the specific microversion needed for the support
-    # after such microversion is merged
     msg_fmt = _("Creating servers with ports having resource requests, like a "
                 "port with a QoS minimum bandwidth policy, is not supported "
-                "with this microversion")
+                "until microversion 2.72.")
 
 
 class InvalidReservedMemoryPagesOption(Invalid):
