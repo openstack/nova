@@ -194,12 +194,20 @@ class LibvirtConfigDomainCapsFeatureSev(LibvirtConfigObject):
         super(LibvirtConfigDomainCapsFeatureSev, self).__init__(
             root_name='sev', **kwargs)
         self.supported = False
+        self.cbitpos = None
+        self.reduced_phys_bits = None
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigDomainCapsFeatureSev, self).parse_dom(xmldoc)
 
         if xmldoc.get('supported') == 'yes':
             self.supported = True
+
+        for c in xmldoc.getchildren():
+            if c.tag == 'reducedPhysBits':
+                self.reduced_phys_bits = int(c.text)
+            elif c.tag == 'cbitpos':
+                self.cbitpos = int(c.text)
 
 
 class LibvirtConfigCapsNUMATopology(LibvirtConfigObject):

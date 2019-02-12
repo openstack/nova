@@ -821,6 +821,9 @@ class HostTestCase(test.NoDBTestCase):
         sev = features[0]
         self.assertEqual(vconfig.LibvirtConfigDomainCapsFeatureSev, type(sev))
         self.assertEqual(supported, sev.supported)
+        if supported:
+            self.assertEqual(47, sev.cbitpos)
+            self.assertEqual(1, sev.reduced_phys_bits)
 
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_features', new=
