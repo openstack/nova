@@ -20603,11 +20603,42 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertIsNone(drvr._allocate_mdevs(allocations=allocations))
 
+    def _get_fake_provider_tree_with_vgpu(self):
+        """Returns a fake ProviderTree with VGPU inventory on two children RPs
+        with one with a correct name and the other one wrong.
+
+        The child provider is named rp1 and its UUID is uuids.rp1.
+        """
+        cn_rp = dict(
+            uuid=uuids.cn,
+            name='cn',
+        )
+        vgpu_rp_inv = {
+            orc.VGPU: {
+                'total': 1,
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+            }
+        }
+        pt = provider_tree.ProviderTree()
+        pt.new_root(cn_rp['name'], cn_rp['uuid'], generation=0)
+        # Create a first child with a correct naming attribute
+        pt.new_child(cn_rp['name'] + '_' + 'pci_0000_06_00_0', cn_rp['uuid'],
+                     uuid=uuids.rp1, generation=0)
+        pt.update_inventory(uuids.rp1, vgpu_rp_inv)
+        # Create a second child with a bad naming convention
+        pt.new_child('oops_I_did_it_again', cn_rp['uuid'],
+                     uuid=uuids.rp2, generation=0)
+        pt.update_inventory(uuids.rp2, vgpu_rp_inv)
+        return pt
+
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_get_existing_mdevs_not_assigned')
     def test_allocate_mdevs_with_available_mdevs(self, get_unassigned_mdevs):
+        self.flags(enabled_vgpu_types=['nvidia-11'], group='devices')
         allocations = {
-            'rp1': {
+            uuids.rp1: {
                 'resources': {
                     orc.VGPU: 1,
                 }
@@ -20615,8 +20646,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         }
         get_unassigned_mdevs.return_value = set([uuids.mdev1])
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        # Mock the fact update_provider_tree() should have run
+        drvr.provider_tree = self._get_fake_provider_tree_with_vgpu()
         self.assertEqual([uuids.mdev1],
                          drvr._allocate_mdevs(allocations=allocations))
+        get_unassigned_mdevs.assert_called_once_with(['nvidia-11'],
+                                                     'pci_0000_06_00_0')
 
     @mock.patch.object(nova.privsep.libvirt, 'create_mdev')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -20629,7 +20664,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                                        privsep_create_mdev):
         self.flags(enabled_vgpu_types=['nvidia-11'], group='devices')
         allocations = {
-            'rp1': {
+            uuids.rp1: {
                 'resources': {
                     orc.VGPU: 1,
                 }
@@ -20646,6 +20681,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
              }]
         privsep_create_mdev.return_value = uuids.mdev1
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        # Mock the fact update_provider_tree() should have run
+        drvr.provider_tree = self._get_fake_provider_tree_with_vgpu()
         self.assertEqual([uuids.mdev1],
                          drvr._allocate_mdevs(allocations=allocations))
         privsep_create_mdev.assert_called_once_with("0000:06:00.0",
@@ -20663,7 +20700,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                                  privsep_create_mdev):
         self.flags(enabled_vgpu_types=['nvidia-11'], group='devices')
         allocations = {
-            'rp1': {
+            uuids.rp1: {
                 'resources': {
                     orc.VGPU: 1,
                 }
@@ -20681,6 +20718,36 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                        }
              }]
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        # Mock the fact update_provider_tree() should have run
+        drvr.provider_tree = self._get_fake_provider_tree_with_vgpu()
+        self.assertRaises(exception.ComputeResourcesUnavailable,
+                          drvr._allocate_mdevs, allocations=allocations)
+
+    def test_allocate_mdevs_with_no_idea_of_the_provider(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        # Mock the fact update_provider_tree() should have run
+        drvr.provider_tree = self._get_fake_provider_tree_with_vgpu()
+
+        # Test that the allocated RP doesn't exist in the tree
+        allocations = {
+            uuids.wrong_rp: {
+                'resources': {
+                    orc.VGPU: 1,
+                }
+            }
+        }
+        self.assertRaises(exception.ComputeResourcesUnavailable,
+                          drvr._allocate_mdevs, allocations=allocations)
+
+        # Test that we were unable to guess the RP name
+        allocations = {
+            uuids.rp2: {
+                'resources': {
+                    orc.VGPU: 1,
+                }
+            }
+        }
+        # Remember, rp2 has a wrong naming convention
         self.assertRaises(exception.ComputeResourcesUnavailable,
                           drvr._allocate_mdevs, allocations=allocations)
 

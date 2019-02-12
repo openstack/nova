@@ -29,6 +29,7 @@ import binascii
 import collections
 from collections import deque
 import contextlib
+import copy
 import errno
 import functools
 import glob
@@ -381,6 +382,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # avoid any re-calculation when computing resources.
         self._reserved_hugepages = hardware.numa_get_reserved_huge_pages()
 
+        # Copy of the compute service ProviderTree object that is updated
+        # every time update_provider_tree() is called.
+        # NOTE(sbauza): We only want a read-only cache, this attribute is not
+        # intended to be updatable directly
+        self.provider_tree = None
+
     def _get_volume_drivers(self):
         driver_registry = dict()
 
@@ -573,6 +580,10 @@ class LibvirtDriver(driver.ComputeDriver):
         """Recreate assigned mdevs that could have disappeared if we reboot
         the host.
         """
+        # FIXME(sbauza): We blindly recreate mediated devices without checking
+        # which ResourceProvider was allocated for the instance so it would use
+        # another pGPU.
+        # TODO(sbauza): Pass all instances' allocations here.
         mdevs = self._get_all_assigned_mediated_devices()
         requested_types = self._get_supported_vgpu_types()
         for (mdev_uuid, instance_uuid) in six.iteritems(mdevs):
@@ -6139,26 +6150,34 @@ class LibvirtDriver(driver.ComputeDriver):
                 vgpu_allocations[rp] = {'resources': {RC_VGPU: res[RC_VGPU]}}
         return vgpu_allocations
 
-    def _get_existing_mdevs_not_assigned(self, requested_types=None):
+    def _get_existing_mdevs_not_assigned(self, requested_types=None,
+                                         parent=None):
         """Returns the already created mediated devices that are not assigned
         to a guest yet.
 
         :param requested_types: Filter out the result for only mediated devices
                                 having those types.
+        :param parent: Filter out result for only mdevs from the parent device.
         """
         allocated_mdevs = self._get_all_assigned_mediated_devices()
         mdevs = self._get_mediated_devices(requested_types)
-        available_mdevs = set([mdev["uuid"]
-                               for mdev in mdevs]) - set(allocated_mdevs)
+        available_mdevs = set()
+        for mdev in mdevs:
+            if parent is None or mdev['parent'] == parent:
+                available_mdevs.add(mdev["uuid"])
+
+        available_mdevs -= set(allocated_mdevs)
         return available_mdevs
 
-    def _create_new_mediated_device(self, requested_types, uuid=None):
+    def _create_new_mediated_device(self, requested_types, uuid=None,
+                                    parent=None):
         """Find a physical device that can support a new mediated device and
         create it.
 
         :param requested_types: Filter only capable devices supporting those
                                 types.
         :param uuid: The possible mdev UUID we want to create again
+        :param parent: Only create a mdev for this device
 
         :returns: the newly created mdev UUID or None if not possible
         """
@@ -6173,6 +6192,11 @@ class LibvirtDriver(driver.ComputeDriver):
             if device['types'][asked_type]['availableInstances'] > 0:
                 # That physical GPU has enough room for a new mdev
                 dev_name = device['dev_id']
+                # the parent attribute can be None
+                if parent is not None and dev_name != parent:
+                    # The device is not the one that was called, not creating
+                    # the mdev
+                    continue
                 # We need the PCI address, not the libvirt name
                 # The libvirt name is like 'pci_0000_84_00_0'
                 pci_addr = "{}:{}:{}.{}".format(*dev_name[4:].split('_'))
@@ -6209,13 +6233,49 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.warning('More than one allocation was passed over to libvirt '
                         'while at the moment libvirt only supports one. Only '
                         'the first allocation will be looked up.')
-        alloc = six.next(six.itervalues(vgpu_allocations))
+        rp_uuid, alloc = six.next(six.iteritems(vgpu_allocations))
         vgpus_asked = alloc['resources'][orc.VGPU]
+
+        # Find if we allocated against a specific pGPU (and then the allocation
+        # is made against a child RP) or any pGPU (in case the VGPU inventory
+        # is still on the root RP)
+        try:
+            allocated_rp = self.provider_tree.data(rp_uuid)
+        except ValueError:
+            # The provider doesn't exist, return a better understandable
+            # exception
+            raise exception.ComputeResourcesUnavailable(
+                reason='vGPU resource is not available')
+        # TODO(sbauza): Remove this conditional in Train once all VGPU
+        # inventories are related to a child RP
+        if allocated_rp.parent_uuid is None:
+            # We are on a root RP
+            parent_device = None
+        else:
+            rp_name = allocated_rp.name
+            # There can be multiple roots, we need to find the root name
+            # to guess the physical device name
+            roots = self.provider_tree.roots
+            for root in roots:
+                if rp_name.startswith(root.name + '_'):
+                    # The RP name convention is :
+                    #    root_name + '_' + parent_device
+                    parent_device = rp_name[len(root.name) + 1:]
+                    break
+            else:
+                LOG.warning("pGPU device name %(name)s can't be guessed from "
+                            "the ProviderTree "
+                            "roots %(roots)s", {'name': rp_name,
+                                                 'roots': roots})
+                # We f... have no idea what was the parent device
+                # If we can't find devices having available VGPUs, just raise
+                raise exception.ComputeResourcesUnavailable(
+                    reason='vGPU resource is not available')
 
         requested_types = self._get_supported_vgpu_types()
         # Which mediated devices are created but not assigned to a guest ?
         mdevs_available = self._get_existing_mdevs_not_assigned(
-            requested_types)
+            requested_types, parent_device)
 
         chosen_mdevs = []
         for c in six.moves.range(vgpus_asked):
@@ -6224,7 +6284,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Take the first available mdev
                 chosen_mdev = mdevs_available.pop()
             else:
-                chosen_mdev = self._create_new_mediated_device(requested_types)
+                chosen_mdev = self._create_new_mediated_device(
+                    requested_types, parent=parent_device)
             if not chosen_mdev:
                 # If we can't find devices having available VGPUs, just raise
                 raise exception.ComputeResourcesUnavailable(
@@ -6559,6 +6620,10 @@ class LibvirtDriver(driver.ComputeDriver):
             traits_to_remove = set(traits) - set(traits_to_add)
             provider_tree.add_traits(nodename, *traits_to_add)
             provider_tree.remove_traits(nodename, *traits_to_remove)
+
+        # Now that we updated the ProviderTree, we want to store it locally
+        # so that spawn() or other methods can access it thru a getter
+        self.provider_tree = copy.deepcopy(provider_tree)
 
     def get_available_resource(self, nodename):
         """Retrieve resource information.
