@@ -2353,7 +2353,7 @@ class API(base.Base):
 
         :param context: RequestContext
         :param down_cell_uuids: A list of cell UUIDs that did not respond
-        :param project: A project ID to filter mappings
+        :param project: A project ID to filter mappings, or None
         :param limit: A numeric limit on the number of results, or None
         :returns: An InstanceList() of partial Instance() objects
         """
@@ -2516,7 +2516,7 @@ class API(base.Base):
 
     def get_all(self, context, search_opts=None, limit=None, marker=None,
                 expected_attrs=None, sort_keys=None, sort_dirs=None,
-                cell_down_support=False):
+                cell_down_support=False, all_tenants=False):
         """Get all instances filtered by one of the given parameters.
 
         If there is no filter and the context is an admin, it will retrieve
@@ -2536,6 +2536,7 @@ class API(base.Base):
                                   construct if the relevant cell is
                                   down. If False, instances from
                                   unreachable cells will be omitted.
+        :param all_tenants: True if the "all_tenants" filter was passed.
 
         """
         if search_opts is None:
@@ -2698,6 +2699,11 @@ class API(base.Base):
             # that didn't return, so generate and prefix those to the actual
             # results.
             project = search_opts.get('project_id', context.project_id)
+            if all_tenants:
+                # NOTE(tssurya): The only scenario where project has to be None
+                # is when using "all_tenants" in which case we do not want
+                # the query to be restricted based on the project_id.
+                project = None
             limit = (orig_limit - len(instances)) if limit else limit
             return (self._generate_minimal_construct_for_down_cells(context,
                 down_cell_uuids, project, limit) + instances)
