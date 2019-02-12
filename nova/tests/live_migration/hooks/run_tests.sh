@@ -48,16 +48,6 @@ prepare_ceph
 GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
 configure_and_start_glance
 
-# Deal with grenade craziness...
-if [ "$GRENADE_OLD_BRANCH" ]; then
-    # NOTE(mriedem): Grenade runs in singleconductor mode, so it won't use
-    # /etc/nova/nova-cpu.conf so we have to overwrite NOVA_CPU_CONF which is
-    # read in configure_and_start_nova.
-    if ! is_service_enabled n-super-cond; then
-        NOVA_CPU_CONF=$NOVA_CONF
-    fi
-fi
-
 configure_and_start_nova
 run_tempest "Ceph nova&glance test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
 
