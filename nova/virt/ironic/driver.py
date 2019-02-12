@@ -2118,15 +2118,9 @@ class IronicDriver(virt_driver.ComputeDriver):
                           reason=node.last_error)
 
         try:
-            self._can_send_version(min_version='1.38')
             self.ironicclient.call("node.set_provision_state",
                                    node_uuid, ironic_states.RESCUE,
                                    rescue_password=rescue_password)
-        except exception.IronicAPIVersionNotAvailable as e:
-            LOG.error('Required Ironic API version %(version)s is not '
-                      'available for rescuing.',
-                      version='1.38', instance=instance)
-            raise exception.InstanceRescueFailure(reason=six.text_type(e))
         except Exception as e:
             raise exception.InstanceRescueFailure(reason=six.text_type(e))
 
@@ -2162,14 +2156,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                           reason=node.last_error)
 
         try:
-            self._can_send_version(min_version='1.38')
             self.ironicclient.call("node.set_provision_state",
                                    node_uuid, ironic_states.UNRESCUE)
-        except exception.IronicAPIVersionNotAvailable as e:
-            LOG.error('Required Ironic API version %(version)s is not '
-                       'available for unrescuing.',
-                       version='1.38', instance=instance)
-            raise exception.InstanceUnRescueFailure(reason=six.text_type(e))
         except Exception as e:
             raise exception.InstanceUnRescueFailure(reason=six.text_type(e))
 
