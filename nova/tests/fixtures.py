@@ -1947,6 +1947,14 @@ class CinderFixture(fixtures.Fixture):
                     yield volume_id
                     break
 
+    def attachment_ids_for_instance(self, instance_uuid):
+        attachment_ids = []
+        for volume_id, attachments in self.volume_to_attachment.items():
+            for attachment in attachments.values():
+                if attachment['instance_uuid'] == instance_uuid:
+                    attachment_ids.append(attachment['id'])
+        return attachment_ids
+
     def setUp(self):
         super(CinderFixture, self).setUp()
 

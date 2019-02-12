@@ -426,6 +426,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
     expected_fake_driver_capability_traits = set([
         six.u(trait) for trait in [
             os_traits.COMPUTE_IMAGE_TYPE_RAW,
+            os_traits.COMPUTE_DEVICE_TAGGING,
             os_traits.COMPUTE_NET_ATTACH_INTERFACE,
             os_traits.COMPUTE_NET_ATTACH_INTERFACE_WITH_TAG,
             os_traits.COMPUTE_VOLUME_ATTACH_WITH_TAG,

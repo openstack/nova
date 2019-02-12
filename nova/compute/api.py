@@ -2310,6 +2310,9 @@ class API(base.Base):
 
         src_host = migration.source_compute
 
+        # FIXME(mriedem): If migration.cross_cell_move, we need to also
+        # cleanup the instance data from the source cell database.
+
         self._record_action_start(context, instance,
                                   instance_actions.CONFIRM_RESIZE)
 
