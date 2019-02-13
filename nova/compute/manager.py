@@ -5657,10 +5657,14 @@ class ComputeManager(manager.Manager):
                               and volume.
 
         """
-        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
-                context, volume_id, instance.uuid)
-        self._detach_volume(context, bdm, instance,
-                            attachment_id=attachment_id)
+        @utils.synchronized(instance.uuid)
+        def do_detach_volume(context, volume_id, instance, attachment_id):
+            bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+                    context, volume_id, instance.uuid)
+            self._detach_volume(context, bdm, instance,
+                                attachment_id=attachment_id)
+
+        do_detach_volume(context, volume_id, instance, attachment_id)
 
     def _init_volume_connection(self, context, new_volume,
                                 old_volume_id, connector, bdm,
