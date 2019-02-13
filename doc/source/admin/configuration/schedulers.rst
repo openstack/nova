@@ -791,35 +791,6 @@ With the API, use the ``os:scheduler_hints`` key:
        }
    }
 
-Cell filters
-~~~~~~~~~~~~
-
-The following sections describe the available cell filters.
-
-.. note::
-
-   These filters are only available for cellsv1 which is deprecated.
-
-DifferentCellFilter
--------------------
-
-Schedules the instance on a different cell from a set of instances.  To take
-advantage of this filter, the requester must pass a scheduler hint, using
-``different_cell`` as the key and a list of instance UUIDs as the value.
-
-ImagePropertiesFilter
----------------------
-
-Filters cells based on properties defined on the instance's image.  This
-filter works specifying the hypervisor required in the image metadata and the
-supported hypervisor version in cell capabilities.
-
-TargetCellFilter
-----------------
-
-Filters target cells. This filter works by specifying a scheduler hint of
-``target_cell``. The value should be the full cell path.
-
 .. _weights:
 
 Weights
@@ -838,10 +809,7 @@ weight is given the highest priority.
 
 .. figure:: /figures/nova-weighting-hosts.png
 
-If cells are used, cells are weighted by the scheduler in the same manner as
-hosts.
-
-Hosts and cells are weighted based on the following options in the
+Hosts are weighted based on the following options in the
 ``/etc/nova/nova.conf`` file:
 
 .. list-table:: Host weighting options
@@ -956,43 +924,6 @@ For example:
    weight_setting = name1=1.0, name2=-1.0
    required = false
    weight_of_unavailable = -10000.0
-
-.. list-table:: Cell weighting options
-   :header-rows: 1
-   :widths: 10, 25, 60
-
-   * - Section
-     - Option
-     - Description
-   * - [cells]
-     - ``mute_weight_multiplier``
-     - Multiplier to weight mute children (hosts which have not sent
-       capacity or capacity updates for some time).
-       Use a negative, floating-point value.
-   * - [cells]
-     - ``offset_weight_multiplier``
-     - Multiplier to weight cells, so you can specify a preferred cell.
-       Use a floating point value.
-   * - [cells]
-     - ``ram_weight_multiplier``
-     - By default, the scheduler spreads instances across all cells evenly.
-       Set the ``ram_weight_multiplier`` option to a negative number if you
-       prefer stacking instead of spreading. Use a floating-point value.
-   * - [cells]
-     - ``scheduler_weight_classes``
-     - Defaults to ``nova.cells.weights.all_weighers``, which maps to all
-       cell weighers included with Compute. Cells are then weighted and
-       sorted with the largest weight winning.
-
-For example:
-
-.. code-block:: ini
-
-   [cells]
-   scheduler_weight_classes = nova.cells.weights.all_weighers
-   mute_weight_multiplier = -10.0
-   ram_weight_multiplier = 1.0
-   offset_weight_multiplier = 1.0
 
 Utilization aware scheduling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
