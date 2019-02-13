@@ -888,15 +888,30 @@ class IronicDriver(virt_driver.ComputeDriver):
                 return node
         return _sync_node_from_cache()
 
-    def get_info(self, instance):
+    def get_info(self, instance, use_cache=True):
         """Get the current state and resource usage for this instance.
 
         If the instance is not found this method returns (a dictionary
         with) NOSTATE and all resources == 0.
 
         :param instance: the instance object.
+        :param use_cache: boolean to indicate if the driver should be allowed
+                          to use cached data to return instance status.
+                          If false, pull fresh data from ironic.
         :returns: an InstanceInfo object
         """
+        def _fetch_from_ironic(self, instance):
+            try:
+                node = self._validate_instance_and_node(instance)
+                return hardware.InstanceInfo(
+                    state=map_power_state(node.power_state))
+            except exception.InstanceNotFound:
+                return hardware.InstanceInfo(
+                    state=map_power_state(ironic_states.NOSTATE))
+
+        if not use_cache:
+            return _fetch_from_ironic(self, instance)
+
         # we should already have a cache for our nodes, refreshed on every
         # RT loop. but if we don't have a cache, generate it.
         if not self.node_cache:
@@ -907,11 +922,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 break
         else:
             # if we can't find the instance, fall back to ironic
-            try:
-                node = self._validate_instance_and_node(instance)
-            except exception.InstanceNotFound:
-                return hardware.InstanceInfo(
-                    state=map_power_state(ironic_states.NOSTATE))
+            return _fetch_from_ironic(self, instance)
 
         return hardware.InstanceInfo(state=map_power_state(node.power_state))
 

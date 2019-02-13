@@ -176,7 +176,7 @@ class HyperVDriver(driver.ComputeDriver):
         """Cleanup after instance being destroyed by Hypervisor."""
         self.unplug_vifs(instance, network_info)
 
-    def get_info(self, instance):
+    def get_info(self, instance, use_cache=True):
         return self._vmops.get_info(instance)
 
     def attach_volume(self, context, connection_info, instance, mountpoint,

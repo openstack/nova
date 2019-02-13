@@ -5443,7 +5443,7 @@ class LibvirtDriver(driver.ComputeDriver):
                   {'xml': xml}, instance=instance)
         return xml
 
-    def get_info(self, instance):
+    def get_info(self, instance, use_cache=True):
         """Retrieve information from libvirt for a specific instance.
 
         If a libvirt error is encountered during lookup, we might raise a
@@ -5451,6 +5451,7 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt error is.
 
         :param instance: nova.objects.instance.Instance object
+        :param use_cache: unused in this driver
         :returns: An InstanceInfo object
         """
         guest = self._host.get_guest(instance)
