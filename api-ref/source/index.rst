@@ -41,7 +41,6 @@ the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-aggregates.inc
 .. include:: os-assisted-volume-snapshots.inc
 .. include:: os-availability-zone.inc
-.. include:: os-cells.inc
 .. include:: os-consoles.inc
 .. include:: os-hypervisors.inc
 .. include:: os-instance-usage-audit-log.inc
@@ -54,6 +53,14 @@ the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-services.inc
 .. include:: os-simple-tenant-usage.inc
 .. include:: os-server-external-events.inc
+
+===============
+Deprecated APIs
+===============
+
+This section contains references for APIs which are deprecated and usually
+limited to some maximum microversion.
+
 .. include:: extensions.inc
 .. include:: os-networks.inc
 .. include:: os-volumes.inc
@@ -66,6 +73,7 @@ the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-security-group-default-rules.inc
 .. include:: os-security-group-rules.inc
 .. include:: os-hosts.inc
+.. include:: os-cells.inc
 
 =============
 Obsolete APIs
