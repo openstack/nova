@@ -6426,6 +6426,7 @@ class ComputeTestCase(BaseTestCase,
             is_shared_block_storage=False,
             migration=migration_obj,
             block_migration=False)
+        bdms = objects.BlockDeviceMappingList(objects=[])
 
         with test.nested(
             mock.patch.object(
@@ -6437,7 +6438,8 @@ class ComputeTestCase(BaseTestCase,
             mock_migrate, mock_setup, mock_mig_save
         ):
             self.compute._post_live_migration(c, instance, dest,
-                                              migrate_data=migrate_data)
+                                              migrate_data=migrate_data,
+                                              source_bdms=bdms)
 
         self.assertIn('cleanup', result)
         self.assertTrue(result['cleanup'])
@@ -6469,6 +6471,7 @@ class ComputeTestCase(BaseTestCase,
                                           status='completed')
         migrate_data = migrate_data_obj.LiveMigrateData(
             migration=migration_obj)
+        bdms = objects.BlockDeviceMappingList(objects=[])
 
         # creating mocks
         with test.nested(
@@ -6493,7 +6496,8 @@ class ComputeTestCase(BaseTestCase,
             clear_events, update_available_resource, mig_save
         ):
             self.compute._post_live_migration(c, instance, dest,
-                                              migrate_data=migrate_data)
+                                              migrate_data=migrate_data,
+                                              source_bdms=bdms)
             mock_notify.assert_has_calls([
                 mock.call(c, instance, 'fake-mini',
                           action='live_migration_post', phase='start'),
@@ -6549,6 +6553,7 @@ class ComputeTestCase(BaseTestCase,
                                           status='completed')
         migrate_data = migrate_data_obj.LiveMigrateData(
             migration=migration_obj)
+        bdms = objects.BlockDeviceMappingList(objects=[])
 
         # creating mocks
         with test.nested(
@@ -6574,7 +6579,8 @@ class ComputeTestCase(BaseTestCase,
             clear_events, update_available_resource, mig_save
         ):
             self.compute._post_live_migration(c, instance, dest,
-                                              migrate_data=migrate_data)
+                                              migrate_data=migrate_data,
+                                              source_bdms=bdms)
             update_available_resource.assert_has_calls([mock.call(c)])
             self.assertEqual('completed', migration_obj.status)
             # assert we did not log a success message
@@ -6613,8 +6619,6 @@ class ComputeTestCase(BaseTestCase,
                               'clear_events_for_instance'),
             mock.patch.object(self.compute,
                               '_get_instance_block_device_info'),
-            mock.patch.object(objects.BlockDeviceMappingList,
-                              'get_by_instance_uuid'),
             mock.patch.object(self.compute.driver, 'get_volume_connector'),
             mock.patch.object(cinder.API, 'terminate_connection'),
             mock.patch('nova.compute.resource_tracker.ResourceTracker.'
@@ -6622,14 +6626,14 @@ class ComputeTestCase(BaseTestCase,
         ) as (
             migrate_instance_start, post_live_migration_at_destination,
             setup_networks_on_host, clear_events_for_instance,
-            get_instance_volume_block_device_info, get_by_instance_uuid,
-            get_volume_connector, terminate_connection, delete_alloc,
+            get_instance_volume_block_device_info, get_volume_connector,
+            terminate_connection, delete_alloc,
         ):
-            get_by_instance_uuid.return_value = bdms
             get_volume_connector.return_value = 'fake-connector'
 
             self.compute._post_live_migration(c, instance, 'dest_host',
-                                              migrate_data=mock.MagicMock())
+                                              migrate_data=mock.MagicMock(),
+                                              source_bdms=bdms)
 
             terminate_connection.assert_called_once_with(
                     c, uuids.volume_id, 'fake-connector')
