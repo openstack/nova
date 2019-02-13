@@ -883,7 +883,8 @@ class FlatDHCPNetworkTestCase(test.TestCase):
     @mock.patch('nova.objects.fixed_ip.FixedIP.get_by_id')
     @mock.patch('nova.objects.floating_ip.FloatingIPList.get_by_host')
     @mock.patch('nova.network.linux_net.iptables_manager._apply')
-    def test_init_host_iptables_defer_apply(self, iptable_apply,
+    @mock.patch('nova.privsep.linux_net.bind_ip')
+    def test_init_host_iptables_defer_apply(self, bind_ip, iptable_apply,
                                             floating_get_by_host,
                                             fixed_get_by_id):
         def get_by_id(context, fixed_ip_id, **kwargs):
@@ -1733,8 +1734,9 @@ class VlanNetworkTestCase(test.TestCase):
 
     @mock.patch('nova.db.api.fixed_ip_get_by_address')
     @mock.patch('nova.db.api.network_get')
-    def test_ip_association_and_allocation_of_other_project(self, net_get,
-                                                            fixed_get):
+    @mock.patch('nova.privsep.linux_net.bind_ip')
+    def test_ip_association_and_allocation_of_other_project(
+            self, bind_ip, net_get, fixed_get):
         """Makes sure that we cannot deallocaate or disassociate
         a public IP of other project.
         """
@@ -2054,7 +2056,8 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.objects.fixed_ip.FixedIP.get_by_id')
     @mock.patch('nova.objects.floating_ip.FloatingIPList.get_by_host')
     @mock.patch('nova.network.linux_net.iptables_manager._apply')
-    def test_init_host_iptables_defer_apply(self, iptable_apply,
+    @mock.patch('nova.privsep.linux_net.bind_ip')
+    def test_init_host_iptables_defer_apply(self, bind_ip, iptable_apply,
                                             floating_get_by_host,
                                             fixed_get_by_id):
         def get_by_id(context, fixed_ip_id, **kwargs):
@@ -2748,7 +2751,8 @@ class CommonNetworkTestCase(test.TestCase):
         for line in expected_lines:
             self.assertIn(line, new_lines)
 
-    def test_flatdhcpmanager_dynamic_fixed_range(self):
+    @mock.patch('nova.privsep.linux_net.bind_ip')
+    def test_flatdhcpmanager_dynamic_fixed_range(self, mock_bind_ip):
         """Test FlatDHCPManager NAT rules for fixed_range."""
         # Set the network manager
         self.network = network_manager.FlatDHCPManager(host=HOST)
@@ -2759,7 +2763,8 @@ class CommonNetworkTestCase(test.TestCase):
         #     Determine networks to NAT based on lookup
         self._test_init_host_dynamic_fixed_range(self.network)
 
-    def test_vlanmanager_dynamic_fixed_range(self):
+    @mock.patch('nova.privsep.linux_net.bind_ip')
+    def test_vlanmanager_dynamic_fixed_range(self, mock_bind_ip):
         """Test VlanManager NAT rules for fixed_range."""
         # Set the network manager
         self.network = network_manager.VlanManager(host=HOST)
@@ -2840,8 +2845,10 @@ class AllocateTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.set_device_mtu')
     @mock.patch('nova.privsep.linux_net.set_device_enabled')
     @mock.patch('nova.privsep.linux_net.set_device_macaddr')
-    def test_allocate_for_instance(self, mock_set_macaddr, mock_set_enabled,
-                                   mock_set_mtu, mock_add_bridge):
+    @mock.patch('nova.privsep.linux_net.bind_ip')
+    def test_allocate_for_instance(self, mock_bind, mock_set_macaddr,
+                                   mock_set_enabled, mock_set_mtu,
+                                   mock_add_bridge):
         address = "10.10.10.10"
         self.flags(auto_assign_floating_ip=True)
 

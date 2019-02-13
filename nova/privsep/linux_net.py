@@ -107,6 +107,17 @@ def set_device_macaddr(dev, mac_addr, port_state=None):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def bind_ip(device, ip, scope_is_link=False):
+    if not scope_is_link:
+        processutils.execute('ip', 'addr', 'add', str(ip) + '/32',
+                             'dev', device, check_exit_code=[0, 2, 254])
+    else:
+        processutils.execute('ip', 'addr', 'add', str(ip) + '/32',
+                             'scope', 'link', 'dev', device,
+                             check_exit_code=[0, 2, 254])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def create_veth_pair(dev1_name, dev2_name, mtu=None):
     """Create a pair of veth devices with the specified names,
     deleting any previous devices with those names.
