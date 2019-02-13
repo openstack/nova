@@ -369,7 +369,7 @@ class XenAPIDriver(driver.ComputeDriver):
         """Unplug VIFs from networks."""
         self._vmops.unplug_vifs(instance, network_info)
 
-    def get_info(self, instance):
+    def get_info(self, instance, use_cache=True):
         """Return data about VM instance."""
         return self._vmops.get_info(instance)
 

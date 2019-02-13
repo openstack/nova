@@ -583,7 +583,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         """Poll for rebooting instances."""
         self._vmops.poll_rebooting_instances(timeout, instances)
 
-    def get_info(self, instance):
+    def get_info(self, instance, use_cache=True):
         """Return info about the VM instance."""
         return self._vmops.get_info(instance)
 

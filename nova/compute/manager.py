@@ -7541,6 +7541,53 @@ class ComputeManager(manager.Manager):
             # silently ignore.
             pass
 
+    def _stop_unexpected_shutdown_instance(self, context, vm_state,
+                                           db_instance, orig_db_power_state,
+                                           vm_power_state):
+        # this is an exceptional case; make sure our data is up
+        # to date before slamming through a power off
+        # TODO(jroll) remove the check for TypeError here;
+        # it's only here to be able to backport this without
+        # breaking out-of-tree drivers.
+        try:
+            vm_instance = self.driver.get_info(db_instance,
+                                               use_cache=False)
+            vm_power_state = vm_instance.state
+        except TypeError:
+            LOG.warning("Your virt driver appears to not support the "
+                        "'use_cache' parameter to the 'get_info' method; "
+                        "please update your virt driver.")
+
+        # if it still looks off, go ahead and call stop()
+        if vm_power_state in (power_state.SHUTDOWN,
+                              power_state.CRASHED):
+
+            LOG.warning("Instance shutdown by itself. Calling the "
+                        "stop API. Current vm_state: %(vm_state)s, "
+                        "current task_state: %(task_state)s, "
+                        "original DB power_state: %(db_power_state)s, "
+                        "current VM power_state: %(vm_power_state)s",
+                        {'vm_state': vm_state,
+                         'task_state': db_instance.task_state,
+                         'db_power_state': orig_db_power_state,
+                         'vm_power_state': vm_power_state},
+                        instance=db_instance)
+            try:
+                # Note(maoy): here we call the API instead of
+                # brutally updating the vm_state in the database
+                # to allow all the hooks and checks to be performed.
+                if db_instance.shutdown_terminate:
+                    self.compute_api.delete(context, db_instance)
+                else:
+                    self.compute_api.stop(context, db_instance)
+            except Exception:
+                # Note(maoy): there is no need to propagate the error
+                # because the same power_state will be retrieved next
+                # time and retried.
+                # For example, there might be another task scheduled.
+                LOG.exception("error during stop() in sync_power_state.",
+                              instance=db_instance)
+
     def _sync_instance_power_state(self, context, db_instance, vm_power_state,
                                    use_slave=False):
         """Align instance power state between the database and hypervisor.
@@ -7610,31 +7657,9 @@ class ComputeManager(manager.Manager):
             # The only rational power state should be RUNNING
             if vm_power_state in (power_state.SHUTDOWN,
                                   power_state.CRASHED):
-                LOG.warning("Instance shutdown by itself. Calling the "
-                            "stop API. Current vm_state: %(vm_state)s, "
-                            "current task_state: %(task_state)s, "
-                            "original DB power_state: %(db_power_state)s, "
-                            "current VM power_state: %(vm_power_state)s",
-                            {'vm_state': vm_state,
-                             'task_state': db_instance.task_state,
-                             'db_power_state': orig_db_power_state,
-                             'vm_power_state': vm_power_state},
-                            instance=db_instance)
-                try:
-                    # Note(maoy): here we call the API instead of
-                    # brutally updating the vm_state in the database
-                    # to allow all the hooks and checks to be performed.
-                    if db_instance.shutdown_terminate:
-                        self.compute_api.delete(context, db_instance)
-                    else:
-                        self.compute_api.stop(context, db_instance)
-                except Exception:
-                    # Note(maoy): there is no need to propagate the error
-                    # because the same power_state will be retrieved next
-                    # time and retried.
-                    # For example, there might be another task scheduled.
-                    LOG.exception("error during stop() in sync_power_state.",
-                                  instance=db_instance)
+                self._stop_unexpected_shutdown_instance(
+                    context, vm_state, db_instance, orig_db_power_state,
+                    vm_power_state)
             elif vm_power_state == power_state.SUSPENDED:
                 LOG.warning("Instance is suspended unexpectedly. Calling "
                             "the stop API.", instance=db_instance)

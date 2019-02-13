@@ -157,10 +157,15 @@ class ComputeDriver(object):
         """
         pass
 
-    def get_info(self, instance):
+    def get_info(self, instance, use_cache=True):
         """Get the current status of an instance.
 
         :param instance: nova.objects.instance.Instance object
+        :param use_cache: boolean to indicate if the driver should be allowed
+                          to use cached data to return instance status.
+                          This only applies to drivers which cache instance
+                          state information. For drivers that do not use a
+                          cache, this parameter can be ignored.
         :returns: An InstanceInfo object
         """
         # TODO(Vek): Need to pass context in for access to auth_token
