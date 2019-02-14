@@ -15,6 +15,7 @@
 import collections
 import fractions
 import itertools
+import math
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -743,8 +744,12 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
         threads) and 2 (number of 'orphan' CPUs) and get 2 as the number of
         threads.
         """
-        return fractions.gcd(threads_per_core, _orphans(instance_cell,
-                                                        threads_per_core))
+        # fractions.gcd is deprecated in favor of math.gcd starting in py35
+        if six.PY2:
+            gcd = fractions.gcd
+        else:
+            gcd = math.gcd
+        return gcd(threads_per_core, _orphans(instance_cell, threads_per_core))
 
     def _get_pinning(threads_no, sibling_set, instance_cores):
         """Determines pCPUs/vCPUs mapping
