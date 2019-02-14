@@ -487,6 +487,60 @@ class ComputeVolumeTestCase(BaseTestCase):
                           tb=mock.ANY),
             ])
 
+    @mock.patch.object(compute_manager.LOG, 'debug')
+    @mock.patch.object(compute_utils, 'EventReporter')
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
+    def test_attach_volume_ignore_VolumeAttachmentNotFound(
+            self, mock_notify, mock_elevate, mock_event, mock_debug_log):
+        """Tests the scenario that the DriverVolumeBlockDevice.attach flow
+        already deleted the volume attachment before the
+        ComputeManager.attach_volume flow tries to rollback the attachment
+        record and delete it, which raises VolumeAttachmentNotFound and is
+        ignored.
+        """
+        mock_elevate.return_value = self.context
+
+        attachment_id = uuids.attachment_id
+        fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
+        fake_bdm.attachment_id = attachment_id
+        instance = self._create_fake_instance_obj()
+        expected_exception = test.TestingException()
+
+        def fake_attach(*args, **kwargs):
+            raise expected_exception
+
+        with test.nested(
+            mock.patch.object(driver_block_device.DriverVolumeBlockDevice,
+                              'attach'),
+            mock.patch.object(cinder.API, 'attachment_delete'),
+            mock.patch.object(objects.BlockDeviceMapping,
+                              'destroy')
+        ) as (mock_attach, mock_attach_delete, mock_destroy):
+            mock_attach.side_effect = fake_attach
+            mock_attach_delete.side_effect = \
+                exception.VolumeAttachmentNotFound(
+                    attachment_id=attachment_id)
+            self.assertRaises(
+                    test.TestingException, self.compute.attach_volume,
+                    self.context, instance, fake_bdm)
+            mock_destroy.assert_called_once_with()
+            mock_notify.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='volume_attach', phase='start',
+                          volume_id=uuids.volume_id),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='volume_attach', phase='error',
+                          volume_id=uuids.volume_id,
+                          exception=expected_exception,
+                          tb=mock.ANY),
+            ])
+            mock_event.assert_called_once_with(
+                self.context, 'compute_attach_volume', CONF.host,
+                instance.uuid)
+            self.assertIsInstance(mock_debug_log.call_args[0][1],
+                                  exception.VolumeAttachmentNotFound)
+
     @mock.patch.object(compute_utils, 'EventReporter')
     def test_detach_volume_api_raises(self, mock_event):
         fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
