@@ -576,6 +576,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self.assertEqual(pci_slot, pci_slot_want)
 
     def _assertXmlEqual(self, expectedXmlstr, actualXmlstr):
+        if not isinstance(actualXmlstr, six.string_types):
+            actualXmlstr = etree.tostring(actualXmlstr, pretty_print=True)
         self.assertThat(actualXmlstr, matchers.XMLMatches(expectedXmlstr))
 
     def _get_conf(self):
@@ -610,6 +612,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             nic = driver.get_config(self.instance, vif, image_meta,
                                     flavor, CONF.libvirt.virt_type,
                                     hostimpl)
+        # TODO(stephenfin): There doesn't appear to be any reason we should do
+        # this: just return 'nic.to_xml()' and remove '_get_node'
         conf.add_device(nic)
         return conf.to_xml()
 
@@ -1629,6 +1633,25 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                     <source bridge="br100"/>
                     <target dev="nicdc065497-3c"/>
                 </interface>""", cfg.to_xml())
+
+    @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
+    @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
+    def test_config_os_vif_vhostuser(self, mock_convert_vif,
+                                     mock_convert_inst):
+        mock_convert_vif.return_value = self.os_vif_vhostuser
+        mock_convert_inst.return_value = self.os_vif_inst_info
+
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_vhostuser)
+        node = self._get_node(xml)
+
+        self._assertXmlEqual("""
+            <interface type="vhostuser">
+             <mac address="22:52:25:62:e2:aa"/>
+             <model type="virtio"/>
+             <source mode="client"
+              path="/var/run/openvswitch/vhudc065497-3c" type="unix"/>
+            </interface>""", node)
 
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")

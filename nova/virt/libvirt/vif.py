@@ -573,7 +573,11 @@ class LibvirtGenericVIFDriver(object):
                 {'obj': vif.obj_name(), 'func': viffunc})
         func(instance, vif, conf, host)
 
-        designer.set_vif_bandwidth_config(conf, inst_type)
+        # not all VIF types support bandwidth configuration
+        # https://github.com/libvirt/libvirt/blob/568a41722/src/conf/netdev_bandwidth_conf.h#L38
+        if vif.obj_name() not in ('VIFVHostUser', 'VIFHostDevice'):
+            designer.set_vif_bandwidth_config(conf, inst_type)
+
         if ('network' in vif and 'mtu' in vif.network and
                 self._has_min_version_for_mtu(host)):
             designer.set_vif_mtu_config(conf, vif.network.mtu)
