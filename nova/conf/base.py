@@ -26,7 +26,7 @@ base_options = [
     cfg.StrOpt(
         'instance_usage_audit_period',
         default='month',
-        regex='(hour|month|day|year)(@([0-9]+))?',
+        regex='^(hour|month|day|year)(@([0-9]+))?$',
         help='''
 Time period to generate instance usages for. It is possible to define optional
 offset to given period by appending @ character followed by a number defining

@@ -35,7 +35,7 @@ This service is typically executed on the controller node.
 """),
     cfg.StrOpt('port_range',
         default=DEFAULT_PORT_RANGE,
-        regex="\d+:\d+",
+        regex="^\d+:\d+$",
         help="""
 A range of TCP ports a guest can use for its backend.
 
@@ -45,7 +45,7 @@ instance won't get launched.
 
 Possible values:
 
-* Each string which passes the regex ``\d+:\d+`` For example ``10000:20000``.
+* Each string which passes the regex ``^\d+:\d+$`` For example ``10000:20000``.
   Be sure that the first port number is lower than the second port number
   and that both are in range from 0 to 65535.
 """),
