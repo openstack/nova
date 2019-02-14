@@ -233,7 +233,8 @@ image, and any ephemeral storage. Inside the virtual machine, this is normally
 presented as two virtual hard disks (for example, ``/dev/vda`` and ``/dev/vdb``
 respectively). However, inside OpenStack, this can be derived from one of these
 methods: ``lvm``, ``qcow``, ``rbd`` or ``flat``, chosen using the
-``images_type`` option in ``nova.conf`` on the compute node.
+:oslo.config:option:`libvirt.images_type` option in ``nova.conf`` on the
+compute node.
 
 .. note::
 
@@ -241,7 +242,8 @@ methods: ``lvm``, ``qcow``, ``rbd`` or ``flat``, chosen using the
    Flat back end uses either raw or QCOW2 storage. It never uses a backing
    store, so when using QCOW2 it copies an image rather than creating an
    overlay. By default, it creates raw files but will use QCOW2 when creating a
-   disk from a QCOW2 if ``force_raw_images`` is not set in configuration.
+   disk from a QCOW2 if :oslo.config:option:`force_raw_images` is not set in
+   configuration.
 
 QCOW is the default backing store. It uses a copy-on-write philosophy to delay
 allocation of storage until it is actually needed. This means that the space
@@ -255,8 +257,8 @@ reserved on the physical disk.
 
 Local `LVM volumes
 <https://en.wikipedia.org/wiki/Logical_Volume_Manager_(Linux)>`__ can also be
-used. Set ``images_volume_group = nova_local`` where ``nova_local`` is the name
-of the LVM group you have created.
+used. Set the :oslo.config:option:`libvirt.images_volume_group` configuration
+option to the name of the LVM group you have created.
 
 Specify the CPU model of KVM guests
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -277,12 +279,13 @@ of standard CPU model names.  These models are defined in the
 ``/usr/share/libvirt/cpu_map.xml`` file.  Check this file to determine which
 models are supported by your local installation.
 
-Two Compute configuration options in the ``[libvirt]`` group of ``nova.conf``
-define which type of CPU model is exposed to the hypervisor when using KVM:
-``cpu_mode`` and ``cpu_model``.
+Two Compute configuration options in the :oslo.config:group:`libvirt` group
+of ``nova.conf`` define which type of CPU model is exposed to the hypervisor
+when using KVM: :oslo.config:option:`libvirt.cpu_mode` and
+:oslo.config:option:`libvirt.cpu_model`.
 
-The ``cpu_mode`` option can take one of the following values: ``none``,
-``host-passthrough``, ``host-model``, and ``custom``.
+The :oslo.config:option:`libvirt.cpu_mode` option can take one of the following
+values: ``none``, ``host-passthrough``, ``host-model``, and ``custom``.
 
 See `Effective Virtual CPU configuration in Nova`_ for a recorded presentation
 about this topic.
@@ -323,7 +326,7 @@ may even include the running kernel. Use this mode only if
 * your compute nodes have a very large degree of homogeneity
   (i.e. substantially all of your compute nodes use the exact same CPU
   generation and model), and you make sure to only live-migrate
-  between hosts with exactly matching kernel versions, `or`
+  between hosts with exactly matching kernel versions, *or*
 
 * you decide, for some reason and against established best practices,
   that your compute infrastructure should not support any live
@@ -343,10 +346,11 @@ option. For example, to configure the KVM guests to expose Nehalem CPUs, your
    cpu_mode = custom
    cpu_model = Nehalem
 
-In selecting the ``custom`` mode, along with a ``cpu_model`` that
-matches the oldest of your compute node CPUs, you can ensure that live
-migration between compute nodes will always be possible. However, you
-should ensure that the ``cpu_model`` you select passes the correct CPU
+In selecting the ``custom`` mode, along with a
+:oslo.config:option:`libvirt.cpu_model` that matches the oldest of your compute
+node CPUs, you can ensure that live migration between compute nodes will always
+be possible. However, you should ensure that the
+:oslo.config:option:`libvirt.cpu_model` you select passes the correct CPU
 feature flags to the guest.
 
 If you need to further tweak your CPU feature flags in the ``custom``
@@ -362,7 +366,7 @@ a CPU model. Instead, the hypervisor chooses the default model.
 Set CPU feature flags
 ~~~~~~~~~~~~~~~~~~~~~
 
-Regardless of whether your selected ``cpu_mode`` is
+Regardless of whether your selected :oslo.config:option:`libvirt.cpu_mode` is
 ``host-passthrough``, ``host-model``, or ``custom``, it is also
 possible to selectively enable additional feature flags. Suppose your
 selected ``custom`` CPU model is ``IvyBridge``, which normally does
@@ -403,8 +407,9 @@ A reboot may be required for the change to become effective.
 Nested guest support in ``nova.conf``
 -------------------------------------
 
-To support nested guests, you must set your ``cpu_mode`` configuration
-to one of the following options:
+To support nested guests, you must set your
+:oslo.config:option:`libvirt.cpu_mode` configuration to one of the following
+options:
 
 Host pass through
   In this mode, nested virtualization is automatically enabled once
@@ -424,7 +429,7 @@ Host model
   matching CPU model exposes the ``vmx`` feature flag to guests by
   default (you can verify this with ``virsh capabilities`` on your
   compute node). If your CPU model does not pass in the ``vmx`` flag,
-  you can force it with ``cpu_model_extra_flags``:
+  you can force it with :oslo.config:option:`libvirt.cpu_model_extra_flags`:
 
   .. code-block:: ini
 
