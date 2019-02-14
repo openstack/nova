@@ -539,7 +539,7 @@ Save off the certificate UUIDs (found in the secret href):
   $ cert_ca_uuid=8fbcce5d-d646-4295-ba8a-269fc9451eeb
   $ cert_intermediate_a_uuid=0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8
   $ cert_intermediate_b_uuid=674736e3-f25c-405c-8362-bbf991e0ce0a
-  $ cert_client_uuid=fab1d219-5df8-4c20-8401-7985008c3dbc
+  $ cert_client_uuid=125e6199-2de4-46e3-b091-8e2401ef0d63
 
 
 Create a signed image
@@ -582,50 +582,55 @@ Save off the base64 encoded signature:
 
 Upload the signed image to Glance:
 
-.. TODO: Change this example to use "openstack image create".
-
 .. code-block:: console
 
-  $ glance image-create \
-      --property name=cirros_client_signedImage \
-      --property is-public=true \
+  $ openstack image create \
+      --public \
       --container-format bare \
       --disk-format qcow2 \
       --property img_signature="$base64_signature" \
       --property img_signature_certificate_uuid="$cert_client_uuid" \
       --property img_signature_hash_method='SHA-256' \
       --property img_signature_key_type='RSA-PSS' \
-      --file cirros.tar.gz
+      --file cirros.tar.gz \
+      cirros_client_signedImage
 
-  +--------------------------------+----------------------------------------------------------------------------------+
-  | Property                       | Value                                                                            |
-  +--------------------------------+----------------------------------------------------------------------------------+
-  | checksum                       | bc7f8676e345b3ff6411235343f8bad1                                                 |
-  | container_format               | bare                                                                             |
-  | created_at                     | 2018-02-19T16:39:06Z                                                             |
-  | disk_format                    | qcow2                                                                            |
-  | id                             | d5bdf259-8ef7-4d32-8baf-eb3d73848627                                             |
-  | img_signature                  | TUqhAq1lXopY7U1kgXJVL5W37lIp49yeikpGyX2Ga6mni3uYBoPi428ILRizXT25u26PMVynjmuxgJyM |
-  |                                | zMsb//1Bs0Th+58vlzo4O3Q+axYgRXnHT6d+Lq/AXUAA3U+7NDNmrJXRT1bRwkeiv6j952ExaDpamiAg |
-  |                                | 0xvYTQDJB6j/O24hwUdx7ddx6/zrTHqq3aaff2dkKFJs8TMKit/uLutwngaL4dIz0ZJMrPjcQ1K4nZRj |
-  |                                | Fm3UYfSomSypr4BWb2s2OZsaOhEh5OSZNDIMl5ca8fJXAx357qg6Ox7q/pYZCrVh4W/a6QbqHCg3R/6n |
-  |                                | +0kvKTqsOYj0JOnKO7JVlA==                                                         |
-  | img_signature_certificate_uuid | fab1d219-5df8-4c20-8401-7985008c3dbc                                             |
-  | img_signature_hash_method      | SHA-256                                                                          |
-  | img_signature_key_type         | RSA-PSS                                                                          |
-  | is-public                      | true                                                                             |
-  | min_disk                       | 0                                                                                |
-  | min_ram                        | 0                                                                                |
-  | name                           | cirros_client_signedImage                                                        |
-  | owner                          | 40ead7a81dc64f9fb6779984745ac1c2                                                 |
-  | protected                      | False                                                                            |
-  | size                           | 434333                                                                           |
-  | status                         | active                                                                           |
-  | tags                           | []                                                                               |
-  | updated_at                     | 2018-02-19T16:39:06Z                                                             |
-  | virtual_size                   | None                                                                             |
-  | visibility                     | shared                                                                           |
-  +--------------------------------+----------------------------------------------------------------------------------+
+  +------------------+------------------------------------------------------------------------+
+  | Field            | Value                                                                  |
+  +------------------+------------------------------------------------------------------------+
+  | checksum         | d41d8cd98f00b204e9800998ecf8427e                                       |
+  | container_format | bare                                                                   |
+  | created_at       | 2019-02-06T06:29:56Z                                                   |
+  | disk_format      | qcow2                                                                  |
+  | file             | /v2/images/17f48a6c-e592-446e-9c91-00fbc436d47e/file                   |
+  | id               | 17f48a6c-e592-446e-9c91-00fbc436d47e                                   |
+  | min_disk         | 0                                                                      |
+  | min_ram          | 0                                                                      |
+  | name             | cirros_client_signedImage                                              |
+  | owner            | 45e13e63606f40d6b23275c3cd91aec2                                       |
+  | properties       | img_signature='swA/hZi3WaNh35VMGlnfGnBWuXMlUbdO8h306uG7W3nwOyZP6dGRJ3  |
+  |                  | Xoi/07Bo2dMUB9saFowqVhdlW5EywQAK6vgDsi9O5aItHM4u7zUPw+2e8eeaIoHlGhTks  |
+  |                  | kmW9isLy0mYA9nAfs3coChOIPXW4V8VgVXEfb6VYGHWm0nShiAP1e0do9WwitsE/TVKoS  |
+  |                  | QnWjhggIYij5hmUZ628KAygPnXklxVhqPpY/dFzL+tTzNRD0nWAtsc5wrl6/8HcNzZsaP  |
+  |                  | oexAysXJtcFzDrf6UQu66D3UvFBVucRYL8S3W56It3Xqu0+InLGaXJJpNagVQBb476zB2  |
+  |                  | ZzZ5RJ/4Zyxw==',                                                       |
+  |                  | img_signature_certificate_uuid='125e6199-2de4-46e3-b091-8e2401ef0d63', |
+  |                  | img_signature_hash_method='SHA-256',                                   |
+  |                  | img_signature_key_type='RSA-PSS',                                      |
+  |                  | os_hash_algo='sha512',                                                 |
+  |                  | os_hash_value='cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a92 |
+  |                  | 1d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927d |
+  |                  | a3e',                                                                  |
+  |                  | os_hidden='False'                                                      |
+  | protected        | False                                                                  |
+  | schema           | /v2/schemas/image                                                      |
+  | size             | 0                                                                      |
+  | status           | active                                                                 |
+  | tags             |                                                                        |
+  | updated_at       | 2019-02-06T06:29:56Z                                                   |
+  | virtual_size     | None                                                                   |
+  | visibility       | public                                                                 |
+  +------------------+------------------------------------------------------------------------+
 
 .. note:: Creating the image can fail if validation does not succeed. This will
           cause the image to be deleted and the Glance log to report that
