@@ -110,10 +110,8 @@ class SchedulerOnlyChecksTargetTest(test.TestCase,
         self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host1')
         fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host2')
         fake.set_nodes(['host3'])
-        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host3')
         self.useFixture(cast_as_call.CastAsCall(self))
 

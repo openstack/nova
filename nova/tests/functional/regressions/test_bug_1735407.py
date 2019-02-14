@@ -65,7 +65,6 @@ class TestParallelEvacuationWithServerGroup(
         self.addCleanup(fake.restore_nodes)
         self.compute1 = self.start_service('compute', host='host1')
         fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.compute2 = self.start_service('compute', host='host2')
 
         self.image_id = self.api.get_images()[0]['id']
@@ -126,7 +125,6 @@ class TestParallelEvacuationWithServerGroup(
 
         # start a third compute to have place for one of the instances
         fake.set_nodes(['host3'])
-        self.addCleanup(fake.restore_nodes)
         self.compute3 = self.start_service('compute', host='host3')
 
         # evacuate both instances

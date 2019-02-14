@@ -71,7 +71,6 @@ class TestLiveMigrateOneOfConcurrentlyCreatedInstances(
         self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host1')
         fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host2')
 
         fake_network.set_stub_network_methods(self)

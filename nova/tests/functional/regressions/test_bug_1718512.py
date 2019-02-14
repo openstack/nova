@@ -86,9 +86,9 @@ class TestRequestSpecRetryReschedule(test.TestCase,
         self.start_service('scheduler')
 
         # Let's now start three compute nodes as we said above.
+        self.addCleanup(fake.restore_nodes)
         for host in ['host1', 'host2', 'host3']:
             fake.set_nodes([host])
-            self.addCleanup(fake.restore_nodes)
             self.start_service('compute', host=host)
 
     def _stub_resize_failure(self, failed_host):

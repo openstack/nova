@@ -145,13 +145,13 @@ class ServerGroupTestV21(ServerGroupTestBase):
         self.stub_out('nova.virt.driver.load_compute_driver',
                       _fake_load_compute_driver)
         fake.set_nodes(['compute'])
+        self.addCleanup(fake.restore_nodes)
         self.compute = self.start_service('compute', host='compute')
 
         # NOTE(gibi): start a second compute host to be able to test affinity
         # NOTE(sbauza): Make sure the FakeDriver returns a different nodename
         # for the second compute node.
         fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.compute2 = self.start_service('compute', host='host2')
 
     def test_get_no_groups(self):
@@ -911,7 +911,6 @@ class ServerGroupTestMultiCell(ServerGroupTestBase):
         self.compute1 = self.start_service('compute', host='host1',
                                            cell='cell1')
         fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.compute2 = self.start_service('compute', host='host2',
                                            cell='cell2')
         # This is needed to find a server that is still booting with multiple
@@ -995,9 +994,9 @@ class TestAntiAffinityLiveMigration(test.TestCase,
         # Start conductor, scheduler and two computes.
         self.start_service('conductor')
         self.start_service('scheduler')
+        self.addCleanup(fake.restore_nodes)
         for host in ('host1', 'host2'):
             fake.set_nodes([host])
-            self.addCleanup(fake.restore_nodes)
             self.start_service('compute', host=host)
 
     def test_serial_no_valid_host_then_pass_with_third_host(self):
@@ -1060,7 +1059,6 @@ class TestAntiAffinityLiveMigration(test.TestCase,
         # Now start up a 3rd compute service and retry the live migration which
         # should work this time.
         fake.set_nodes(['host3'])
-        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host3')
         self.admin_api.post_server_action(server['id'], body)
         server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')

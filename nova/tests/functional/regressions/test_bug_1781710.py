@@ -81,7 +81,6 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
         self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host1')
         fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host2')
 
     def test_anti_affinity_multi_create(self):

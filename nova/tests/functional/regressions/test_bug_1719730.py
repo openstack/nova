@@ -69,7 +69,6 @@ class TestRescheduleWithServerGroup(test.TestCase,
         self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host1')
         fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host2')
 
         self.image_id = self.api.get_images()[0]['id']

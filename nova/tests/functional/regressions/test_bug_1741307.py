@@ -63,9 +63,9 @@ class TestResizeWithNoAllocationScheduler(
         self.start_service('conductor')
 
         # Create two compute nodes/services.
+        self.addCleanup(fake.restore_nodes)
         for host in ('host1', 'host2'):
             fake.set_nodes([host])
-            self.addCleanup(fake.restore_nodes)
             self.start_service('compute', host=host)
 
         scheduler_service = self.start_service('scheduler')

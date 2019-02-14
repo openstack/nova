@@ -60,7 +60,6 @@ class TestRescheduleWithVolumesAttached(
         self.host1 = self.start_service('compute', host='host1')
 
         fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.host2 = self.start_service('compute', host='host2')
 
         self.image_id = self.api.get_images()[0]['id']
