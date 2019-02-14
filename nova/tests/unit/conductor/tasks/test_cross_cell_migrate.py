@@ -17,6 +17,8 @@ from oslo_messaging import exceptions as messaging_exceptions
 from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
+from nova.compute import instance_actions
+from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
@@ -26,6 +28,7 @@ from nova import exception
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import fields
 from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.db import test_db_api
@@ -1094,3 +1097,175 @@ class FinishResizeAtDestTaskTestCase(test.TestCase):
         mock_log.assert_called_once()
         self.assertIn('Failed to copy %s instance action event from target',
                       mock_log.call_args[0][0])
+
+
+class UtilityTestCase(test.NoDBTestCase):
+    """Tests utility methods in the cross_cell_migrate module."""
+
+    @mock.patch('nova.objects.HostMapping.get_by_host',
+                return_value=objects.HostMapping(
+                    cell_mapping=objects.CellMapping(uuid=uuids.cell)))
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def test_get_instance_from_source_cell(self, mock_get_inst,
+                                           mock_get_by_host):
+        target_cell_context = nova_context.get_admin_context()
+        # Stub out Instance.get_by_uuid to make sure a copy of the context is
+        # targeted at the source cell mapping.
+
+        def stub_get_by_uuid(ctxt, *args, **kwargs):
+            self.assertIsNot(ctxt, target_cell_context)
+            self.assertEqual(uuids.cell, ctxt.cell_uuid)
+            return mock.sentinel.instance
+        mock_get_inst.side_effect = stub_get_by_uuid
+        inst = cross_cell_migrate.get_instance_from_source_cell(
+            target_cell_context, 'source-host', uuids.instance)
+        self.assertIs(inst, mock.sentinel.instance)
+        mock_get_by_host.assert_called_once_with(
+            target_cell_context, 'source-host')
+        mock_get_inst.assert_called_once_with(
+            test.MatchType(nova_context.RequestContext), uuids.instance,
+            expected_attrs=['flavor', 'info_cache', 'system_metadata'])
+
+
+class ConfirmResizeTaskTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ConfirmResizeTaskTestCase, self).setUp()
+        context = nova_context.get_admin_context()
+        compute_rpcapi = mock.Mock()
+        self.task = cross_cell_migrate.ConfirmResizeTask(
+            context,
+            objects.Instance(context, uuid=uuids.instance,
+                             host='target-host', vm_state=vm_states.RESIZED,
+                             system_metadata={
+                                 'old_vm_state': vm_states.ACTIVE}),
+            objects.Migration(context, uuid=uuids.migration,
+                              dest_compute='target-host',
+                              source_compute='source-host',
+                              status='confirming'),
+            mock.sentinel.legacy_notifier,
+            compute_rpcapi)
+
+    @mock.patch('nova.conductor.tasks.cross_cell_migrate.'
+                'get_instance_from_source_cell',
+                return_value=objects.Instance(
+                    mock.MagicMock(), uuid=uuids.instance))
+    def test_execute(self, mock_get_instance):
+        mock_get_instance.return_value.destroy = mock.Mock()
+        with test.nested(
+            mock.patch.object(self.task, '_send_resize_confirm_notification'),
+            mock.patch.object(self.task, '_cleanup_source_host'),
+            mock.patch.object(self.task, '_finish_confirm_in_target_cell')
+        ) as (
+            _send_resize_confirm_notification, _cleanup_source_host,
+            _finish_confirm_in_target_cell
+        ):
+            self.task.execute()
+        mock_get_instance.assert_called_once_with(
+            self.task.context, self.task.migration.source_compute,
+            self.task.instance.uuid)
+        self.assertEqual(2, _send_resize_confirm_notification.call_count)
+        _send_resize_confirm_notification.assert_has_calls([
+            mock.call(mock_get_instance.return_value,
+                      fields.NotificationPhase.START),
+            mock.call(self.task.instance, fields.NotificationPhase.END)])
+        _cleanup_source_host.assert_called_once_with(
+            mock_get_instance.return_value)
+        mock_get_instance.return_value.destroy.assert_called_once_with(
+            hard_delete=True)
+        _finish_confirm_in_target_cell.assert_called_once_with()
+
+    @mock.patch('nova.conductor.tasks.cross_cell_migrate.'
+                'get_instance_from_source_cell',
+                side_effect=exception.InstanceNotFound(
+                    instance_id=uuids.instance))
+    @mock.patch('nova.objects.Migration.save')
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
+    @mock.patch('nova.scheduler.utils.set_vm_state_and_notify')
+    def test_rollback(self, mock_set_state_notify, mock_get_reqspec,
+                      mock_mig_save, mock_get_instance):
+        self.assertRaises(exception.InstanceNotFound, self.task.execute)
+        mock_get_instance.assert_called_once_with(
+            self.task.context, self.task.migration.source_compute,
+            self.task.instance.uuid)
+        self.assertEqual('error', self.task.migration.status)
+        mock_mig_save.assert_called_once_with()
+        mock_get_reqspec.assert_called_once_with(
+            self.task.context, self.task.instance.uuid)
+        mock_set_state_notify.assert_called_once_with(
+            self.task.context, self.task.instance.uuid, 'compute_task',
+            'migrate_server',
+            {'vm_state': vm_states.ERROR, 'task_state': None},
+            mock_get_instance.side_effect,
+            mock_get_reqspec.return_value)
+
+    @mock.patch('nova.compute.utils.notify_about_instance_usage')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_send_resize_confirm_notification(self, mock_versioned_notify,
+                                              mock_legacy_notify):
+        instance = self.task.instance
+        self.task._send_resize_confirm_notification(instance, 'fake-phase')
+        mock_legacy_notify.assert_called_once_with(
+            self.task.legacy_notifier, instance._context, instance,
+            'resize.confirm.fake-phase')
+        mock_versioned_notify.assert_called_once_with(
+            instance._context, instance, instance.host,
+            action=fields.NotificationAction.RESIZE_CONFIRM,
+            phase='fake-phase')
+
+    @mock.patch('nova.objects.InstanceAction.action_start')
+    @mock.patch('nova.objects.Migration.get_by_uuid')
+    @mock.patch('nova.objects.InstanceActionEvent')  # stub EventReporter calls
+    def test_cleanup_source_host(
+            self, mock_action_event, mock_get_mig, mock_action_start):
+        instance = objects.Instance(nova_context.get_admin_context(),
+                                    uuid=uuids.instance,
+                                    flavor=objects.Flavor())
+        self.task._cleanup_source_host(instance)
+        self.assertIs(instance.old_flavor, instance.flavor)
+        mock_action_start.assert_called_once_with(
+            instance._context, instance.uuid, instance_actions.CONFIRM_RESIZE,
+            want_result=False)
+        mock_get_mig.assert_called_once_with(
+            instance._context, self.task.migration.uuid)
+        self.task.compute_rpcapi.confirm_snapshot_based_resize_at_source.\
+            assert_called_once_with(instance._context, instance,
+                                    mock_get_mig.return_value)
+        mock_action_event.event_start.assert_called_once_with(
+            self.task.context, uuids.instance,
+            'compute_confirm_snapshot_based_resize_at_source',
+            want_result=False, host=mock_get_mig.return_value.source_compute)
+        mock_action_event.event_finish_with_failure.assert_called_once_with(
+            self.task.context, uuids.instance,
+            'compute_confirm_snapshot_based_resize_at_source',
+            exc_val=None, exc_tb=None, want_result=False)
+
+    @mock.patch('nova.objects.Migration.save')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.objects.Instance.drop_migration_context')
+    def test_finish_confirm_in_target_cell(self, mock_drop_ctx, mock_inst_save,
+                                           mock_mig_save):
+        with mock.patch.object(
+                self.task, '_set_vm_and_task_state') as mock_set_state:
+            self.task._finish_confirm_in_target_cell()
+        self.assertEqual('confirmed', self.task.migration.status)
+        mock_mig_save.assert_called_once_with()
+        self.assertNotIn('old_vm_state', self.task.instance.system_metadata)
+        self.assertIsNone(self.task.instance.old_flavor)
+        self.assertIsNone(self.task.instance.new_flavor)
+        mock_set_state.assert_called_once_with()
+        mock_drop_ctx.assert_called_once_with()
+        mock_inst_save.assert_called_once_with(expected_task_state=[
+            None, task_states.DELETING, task_states.SOFT_DELETING])
+
+    def test_set_vm_and_task_state_shutdown(self):
+        self.task.instance.power_state = power_state.SHUTDOWN
+        self.task._set_vm_and_task_state()
+        self.assertEqual(vm_states.STOPPED, self.task.instance.vm_state)
+        self.assertIsNone(self.task.instance.task_state)
+
+    def test_set_vm_and_task_state_active(self):
+        self.task.instance.power_state = power_state.RUNNING
+        self.task._set_vm_and_task_state()
+        self.assertEqual(vm_states.ACTIVE, self.task.instance.vm_state)
+        self.assertIsNone(self.task.instance.task_state)
