@@ -475,9 +475,8 @@ Multiplier used for weighing hosts for group soft-affinity.
 
 Possible values:
 
-* An integer or float value, where the value corresponds to weight multiplier
-  for hosts with group soft affinity. Only a positive value are meaningful, as
-  negative values would make this behave as a soft anti-affinity weigher.
+* A non-negative integer or float value, where the value corresponds to
+  weight multiplier for hosts with group soft affinity.
 """),
     cfg.FloatOpt(
         "soft_anti_affinity_weight_multiplier",
@@ -488,10 +487,8 @@ Multiplier used for weighing hosts for group soft-anti-affinity.
 
 Possible values:
 
-* An integer or float value, where the value corresponds to weight multiplier
-  for hosts with group soft anti-affinity. Only a positive value are
-  meaningful, as negative values would make this behave as a soft affinity
-  weigher.
+* A non-negative integer or float value, where the value corresponds to
+  weight multiplier for hosts with group soft anti-affinity.
 """),
     cfg.FloatOpt(
         "build_failure_weight_multiplier",
