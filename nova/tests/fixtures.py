@@ -837,10 +837,8 @@ class WarningsFixture(fixtures.Fixture):
                     "._Default object at ",
             category=UserWarning)
 
-        # TODO(mriedem): Change (or remove) this SAWarning to an error once
-        # https://bugs.launchpad.net/oslo.db/+bug/1814199 is fixed.
         warnings.filterwarnings(
-            'ignore', message='Evaluating non-mapped column expression',
+            'error', message='Evaluating non-mapped column expression',
             category=sqla_exc.SAWarning)
 
         # TODO(jangutter): Change (or remove) this to an error during the Train
