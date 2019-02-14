@@ -20,6 +20,7 @@ import traceback
 import fixtures
 import mock
 import netaddr
+import os_resource_classes as orc
 import os_vif
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -33,7 +34,6 @@ from nova.console import type as ctype
 from nova import context
 from nova import exception
 from nova import objects
-from nova import rc_fields
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_block_device
@@ -818,9 +818,9 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.flags(ram_allocation_ratio=1.6)
         self.flags(disk_allocation_ratio=1.1)
         expeced_ratios = {
-            rc_fields.ResourceClass.VCPU: CONF.cpu_allocation_ratio,
-            rc_fields.ResourceClass.MEMORY_MB: CONF.ram_allocation_ratio,
-            rc_fields.ResourceClass.DISK_GB: CONF.disk_allocation_ratio
+            orc.VCPU: CONF.cpu_allocation_ratio,
+            orc.MEMORY_MB: CONF.ram_allocation_ratio,
+            orc.DISK_GB: CONF.disk_allocation_ratio
         }
         # If conf is set, return conf
         self.assertEqual(expeced_ratios,
@@ -833,27 +833,21 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.flags(initial_ram_allocation_ratio=1.4)
         self.flags(initial_disk_allocation_ratio=0.9)
         expeced_ratios = {
-            rc_fields.ResourceClass.VCPU:
-                CONF.initial_cpu_allocation_ratio,
-            rc_fields.ResourceClass.MEMORY_MB:
-                CONF.initial_ram_allocation_ratio,
-            rc_fields.ResourceClass.DISK_GB:
-                CONF.initial_disk_allocation_ratio
+            orc.VCPU: CONF.initial_cpu_allocation_ratio,
+            orc.MEMORY_MB: CONF.initial_ram_allocation_ratio,
+            orc.DISK_GB: CONF.initial_disk_allocation_ratio
         }
         # if conf is unset and inv doesn't exists, return init conf
         self.assertEqual(expeced_ratios,
                          self.connection._get_allocation_ratios(inv))
 
-        inv = {rc_fields.ResourceClass.VCPU: {'allocation_ratio': 3.0},
-               rc_fields.ResourceClass.MEMORY_MB: {'allocation_ratio': 3.1},
-               rc_fields.ResourceClass.DISK_GB: {'allocation_ratio': 3.2}}
+        inv = {orc.VCPU: {'allocation_ratio': 3.0},
+               orc.MEMORY_MB: {'allocation_ratio': 3.1},
+               orc.DISK_GB: {'allocation_ratio': 3.2}}
         expeced_ratios = {
-            rc_fields.ResourceClass.VCPU:
-                inv[rc_fields.ResourceClass.VCPU]['allocation_ratio'],
-            rc_fields.ResourceClass.MEMORY_MB:
-                inv[rc_fields.ResourceClass.MEMORY_MB]['allocation_ratio'],
-            rc_fields.ResourceClass.DISK_GB:
-                inv[rc_fields.ResourceClass.DISK_GB]['allocation_ratio']
+            orc.VCPU: inv[orc.VCPU]['allocation_ratio'],
+            orc.MEMORY_MB: inv[orc.MEMORY_MB]['allocation_ratio'],
+            orc.DISK_GB: inv[orc.DISK_GB]['allocation_ratio']
         }
         # if conf is unset and inv exists, return inv
         self.assertEqual(expeced_ratios,

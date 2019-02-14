@@ -16,12 +16,12 @@
 import math
 
 import mock
+import os_resource_classes as orc
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 
 from nova import exception
 from nova.objects import fields as obj_fields
-from nova import rc_fields
 from nova.tests.unit.virt.xenapi import stubs
 from nova.virt import driver
 from nova.virt import fake
@@ -252,25 +252,25 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
     @mock.patch.object(host.HostState, 'get_host_stats')
     def test_get_inventory(self, mock_get_stats):
         expected_inv = {
-            rc_fields.ResourceClass.VCPU: {
+            orc.VCPU: {
                 'total': 50,
                 'min_unit': 1,
                 'max_unit': 50,
                 'step_size': 1,
             },
-            rc_fields.ResourceClass.MEMORY_MB: {
+            orc.MEMORY_MB: {
                 'total': 3,
                 'min_unit': 1,
                 'max_unit': 3,
                 'step_size': 1,
             },
-            rc_fields.ResourceClass.DISK_GB: {
+            orc.DISK_GB: {
                 'total': 5,
                 'min_unit': 1,
                 'max_unit': 5,
                 'step_size': 1,
             },
-            rc_fields.ResourceClass.VGPU: {
+            orc.VGPU: {
                 'total': 7,
                 'min_unit': 1,
                 'max_unit': 1,
@@ -296,7 +296,7 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
         inv = drv.get_inventory(mock.sentinel.nodename)
 
         # check if the inventory data does NOT contain VGPU.
-        self.assertNotIn(rc_fields.ResourceClass.VGPU, inv)
+        self.assertNotIn(orc.VGPU, inv)
 
     def test_get_vgpu_total_single_grp(self):
         # Test when only one group included in the host_stats.

@@ -12,11 +12,10 @@
 #    under the License.
 """Standard Resource Class Fields."""
 
-# NOTE(cdent): This is kept as its own independent file as it is used by
-# both the placement and nova sides of the placement interaction. On the
-# placement side we don't want to import all the nova fields, nor all the
-# nova objects (which are automatically loaded and registered if the
-# nova.objects package is imported).
+# NOTE(cdent): This file is only used by the placement code within
+# nova. Other uses of resource classes in nova make use of the
+# os-resource-classes library. The placement code within nova
+# continues to use this so that that code can remain unchanged.
 
 import re
 

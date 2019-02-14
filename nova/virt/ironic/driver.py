@@ -46,7 +46,6 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import fields as obj_fields
-from nova import rc_fields
 from nova import servicegroup
 from nova import utils
 from nova.virt import configdrive
@@ -512,7 +511,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
     @staticmethod
     def _pike_flavor_migration_for_node(ctx, node_rc, instance_uuid):
-        normalized_rc = rc_fields.ResourceClass.normalize_name(node_rc)
+        normalized_rc = utils.normalize_rc_name(node_rc)
         instance = objects.Instance.get_by_uuid(ctx, instance_uuid,
                                                 expected_attrs=["flavor"])
         specs = instance.flavor.extra_specs
@@ -817,7 +816,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         if rc_name is None:
             raise exception.NoResourceClass(node=nodename)
 
-        norm_name = rc_fields.ResourceClass.normalize_name(rc_name)
+        norm_name = utils.normalize_rc_name(rc_name)
         if norm_name is not None:
             result[norm_name] = {
                 'total': 1,

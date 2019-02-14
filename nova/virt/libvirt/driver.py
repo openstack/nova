@@ -52,6 +52,7 @@ from os_brick import encryptors
 from os_brick.encryptors import luks as luks_encryptor
 from os_brick import exception as brick_exception
 from os_brick.initiator import connector
+import os_resource_classes as orc
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import base64
@@ -93,7 +94,6 @@ from nova.pci import utils as pci_utils
 import nova.privsep.libvirt
 import nova.privsep.path
 import nova.privsep.utils
-from nova import rc_fields
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
@@ -6183,7 +6183,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if not allocations:
             # If no allocations, there is no vGPU request.
             return {}
-        RC_VGPU = rc_fields.ResourceClass.VGPU
+        RC_VGPU = orc.VGPU
         vgpu_allocations = {}
         for rp in allocations:
             res = allocations[rp]['resources']
@@ -6262,7 +6262,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         'while at the moment libvirt only supports one. Only '
                         'the first allocation will be looked up.')
         alloc = six.next(six.itervalues(vgpu_allocations))
-        vgpus_asked = alloc['resources'][rc_fields.ResourceClass.VGPU]
+        vgpus_asked = alloc['resources'][orc.VGPU]
 
         requested_types = self._get_supported_vgpu_types()
         # Which mediated devices are created but not assigned to a guest ?
@@ -6557,20 +6557,20 @@ class LibvirtDriver(driver.ComputeDriver):
         inv = provider_tree.data(nodename).inventory
         ratios = self._get_allocation_ratios(inv)
         result = {
-            rc_fields.ResourceClass.VCPU: {
+            orc.VCPU: {
                 'total': vcpus,
                 'min_unit': 1,
                 'max_unit': vcpus,
                 'step_size': 1,
-                'allocation_ratio': ratios[rc_fields.ResourceClass.VCPU],
+                'allocation_ratio': ratios[orc.VCPU],
                 'reserved': CONF.reserved_host_cpus,
             },
-            rc_fields.ResourceClass.MEMORY_MB: {
+            orc.MEMORY_MB: {
                 'total': memory_mb,
                 'min_unit': 1,
                 'max_unit': memory_mb,
                 'step_size': 1,
-                'allocation_ratio': ratios[rc_fields.ResourceClass.MEMORY_MB],
+                'allocation_ratio': ratios[orc.MEMORY_MB],
                 'reserved': CONF.reserved_host_memory_mb,
             },
         }
@@ -6580,20 +6580,20 @@ class LibvirtDriver(driver.ComputeDriver):
         # the compute node provider.
         # TODO(efried): Reinstate non-reporting of shared resource by the
         # compute RP once the issues from bug #1784020 have been resolved.
-        if provider_tree.has_sharing_provider(rc_fields.ResourceClass.DISK_GB):
+        if provider_tree.has_sharing_provider(orc.DISK_GB):
             LOG.debug('Ignoring sharing provider - see bug #1784020')
-        result[rc_fields.ResourceClass.DISK_GB] = {
+        result[orc.DISK_GB] = {
             'total': disk_gb,
             'min_unit': 1,
             'max_unit': disk_gb,
             'step_size': 1,
-            'allocation_ratio': ratios[rc_fields.ResourceClass.DISK_GB],
+            'allocation_ratio': ratios[orc.DISK_GB],
             'reserved': self._get_reserved_host_disk_gb_from_config(),
         }
 
         if vgpus > 0:
             # Only provide VGPU resource classes if the driver supports it.
-            result[rc_fields.ResourceClass.VGPU] = {
+            result[orc.VGPU] = {
                 'total': vgpus,
                 'min_unit': 1,
                 'max_unit': vgpus,

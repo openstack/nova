@@ -22,6 +22,7 @@ import re
 import time
 
 from keystoneauth1 import exceptions as ks_exc
+import os_resource_classes as orc
 import os_traits
 from oslo_log import log as logging
 from oslo_middleware import request_id
@@ -34,7 +35,6 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova import rc_fields as fields
 from nova.scheduler import utils as scheduler_utils
 from nova import utils
 
@@ -1200,7 +1200,7 @@ class SchedulerReportClient(object):
         # resource class.
         version = '1.7'
         to_ensure = set(n for n in names
-                        if n.startswith(fields.ResourceClass.CUSTOM_NAMESPACE))
+                        if n.startswith(orc.CUSTOM_NAMESPACE))
 
         for name in to_ensure:
             # no payload on the put request

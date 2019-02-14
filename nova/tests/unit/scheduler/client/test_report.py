@@ -15,6 +15,7 @@ import time
 import fixtures
 from keystoneauth1 import exceptions as ks_exc
 import mock
+import os_resource_classes as orc
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from six.moves.urllib import parse
@@ -23,7 +24,6 @@ import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
-from nova import rc_fields as fields
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import test
@@ -3042,7 +3042,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         mock_vbi.return_value = False
         specs = {
             'resources:CUSTOM_DAN': '123',
-            'resources:%s' % fields.ResourceClass.VCPU: '4',
+            'resources:%s' % orc.VCPU: '4',
             'resources:NOTATHING': '456',
             'resources:NOTEVENANUMBER': 'catfood',
             'resources:': '7',

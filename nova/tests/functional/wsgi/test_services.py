@@ -10,12 +10,12 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import os_resource_classes as orc
 import six
 
 from nova import context as nova_context
 from nova import exception
 from nova import objects
-from nova import rc_fields
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import integrated_helpers
 
@@ -60,9 +60,7 @@ class TestServicesAPI(integrated_helpers.ProviderUsageBaseTestCase):
         # Make sure the resource provider has inventory.
         inventories = self._get_provider_inventory(rp_uuid)
         # Expect a minimal set of inventory for the fake virt driver.
-        for resource_class in [rc_fields.ResourceClass.VCPU,
-                               rc_fields.ResourceClass.MEMORY_MB,
-                               rc_fields.ResourceClass.DISK_GB]:
+        for resource_class in [orc.VCPU, orc.MEMORY_MB, orc.DISK_GB]:
             self.assertIn(resource_class, inventories)
 
         # Now create a server so that the resource provider has some allocation

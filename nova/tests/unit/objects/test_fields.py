@@ -24,7 +24,6 @@ import six
 from nova import exception
 from nova.network import model as network_model
 from nova.objects import fields
-from nova import rc_fields
 from nova import test
 from nova.tests.unit import fake_instance
 from nova import utils
@@ -331,38 +330,6 @@ class TestVMMode(TestField):
         self.assertRaises(exception.InvalidVirtualMachineMode,
                           fields.VMMode.canonicalize,
                           'invalid')
-
-
-class TestResourceClass(TestString):
-    def setUp(self):
-        super(TestResourceClass, self).setUp()
-        self.field = rc_fields.ResourceClassField()
-        # NOTE(gibi): We assume that the input value of a STANDARD RC is always
-        # the same as the coerced value
-        self.coerce_good_values = [(v, v) for v in
-                                   rc_fields.ResourceClass.STANDARD]
-        self.coerce_bad_values = [object(), dict()]
-        self.to_primitive_values = self.coerce_good_values[0:1]
-        self.from_primitive_values = self.coerce_good_values[0:1]
-
-    def test_normalize_name(self):
-        values = [
-            ("foo", "CUSTOM_FOO"),
-            ("VCPU", "CUSTOM_VCPU"),
-            ("CUSTOM_BOB", "CUSTOM_CUSTOM_BOB"),
-            ("CUSTM_BOB", "CUSTOM_CUSTM_BOB"),
-        ]
-        for test_value, expected in values:
-            result = rc_fields.ResourceClass.normalize_name(test_value)
-            self.assertEqual(expected, result)
-
-    def test_normalize_name_bug_1762789(self):
-        """The .upper() builtin treats sharp S (\xdf) differently in py2 vs.
-        py3.  Make sure normalize_name handles it properly.
-        """
-        name = u'Fu\xdfball'
-        self.assertEqual(u'CUSTOM_FU_BALL',
-                         rc_fields.ResourceClass.normalize_name(name))
 
 
 class TestInteger(TestField):
