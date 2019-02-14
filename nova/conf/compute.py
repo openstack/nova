@@ -745,8 +745,7 @@ For example::
     cpu_shared_set = "4-12,^8,15"
 """),
     cfg.BoolOpt('live_migration_wait_for_vif_plug',
-        # TODO(mriedem): Change to default=True starting in Stein.
-        default=False,
+        default=True,
         help="""
 Determine if the source compute host should wait for a ``network-vif-plugged``
 event from the (neutron) networking service before starting the actual transfer
@@ -764,12 +763,9 @@ event may be triggered and then received on the source compute host and the
 source compute can wait for that event to ensure networking is set up on the
 destination host before starting the guest transfer in the hypervisor.
 
-By default, this is False for two reasons:
+.. note::
 
-1. Backward compatibility: deployments should test this out and ensure it works
-   for them before enabling it.
-
-2. The compute service cannot reliably determine which types of virtual
+   The compute service cannot reliably determine which types of virtual
    interfaces (``port.binding:vif_type``) will send ``network-vif-plugged``
    events without an accompanying port ``binding:host_id`` change.
    Open vSwitch and linuxbridge should be OK, but OpenDaylight is at least
@@ -780,8 +776,7 @@ Possible values:
 
 * True: wait for ``network-vif-plugged`` events before starting guest transfer
 * False: do not wait for ``network-vif-plugged`` events before starting guest
-  transfer (this is how things have always worked before this option
-  was introduced)
+  transfer (this is the legacy behavior)
 
 Related options:
 

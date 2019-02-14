@@ -6344,12 +6344,22 @@ class ComputeManager(manager.Manager):
                 self._cleanup_pre_live_migration(
                     context, dest, instance, migration, migrate_data)
         except eventlet.timeout.Timeout:
-            msg = 'Timed out waiting for events: %s'
-            LOG.warning(msg, events, instance=instance)
+            # We only get here if wait_for_vif_plugged is True which means
+            # live_migration_wait_for_vif_plug=True on the destination host.
+            msg = (
+                'Timed out waiting for events: %(events)s. If these timeouts '
+                'are a persistent issue it could mean the networking backend '
+                'on host %(dest)s does not support sending these events '
+                'unless there are port binding host changes which does not '
+                'happen at this point in the live migration process. You may '
+                'need to disable the live_migration_wait_for_vif_plug option '
+                'on host %(dest)s.')
+            subs = {'events': events, 'dest': dest}
+            LOG.warning(msg, subs, instance=instance)
             if CONF.vif_plugging_is_fatal:
                 self._cleanup_pre_live_migration(
                     context, dest, instance, migration, migrate_data)
-                raise exception.MigrationError(reason=msg % events)
+                raise exception.MigrationError(reason=msg % subs)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception('Pre live migration failed at %s',

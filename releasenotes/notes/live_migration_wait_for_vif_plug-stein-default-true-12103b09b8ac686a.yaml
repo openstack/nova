@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    The default value for the ``[compute]/live_migration_wait_for_vif_plug``
+    configuration option has been changed to True. As noted in the help text
+    for the option, some networking backends will not work with this set to
+    True, although OVS and linuxbridge will.
