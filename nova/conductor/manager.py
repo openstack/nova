@@ -38,6 +38,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute.utils import wrap_instance_event
 from nova.compute import vm_states
+from nova.conductor.tasks import cross_cell_migrate
 from nova.conductor.tasks import live_migrate
 from nova.conductor.tasks import migrate
 from nova import context as nova_context
@@ -232,7 +233,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.21')
+    target = messaging.Target(namespace='compute_task', version='1.22')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -1859,3 +1860,18 @@ class ComputeTaskManager(base.Base):
             context, aggregate,
             fields.NotificationAction.IMAGE_CACHE,
             fields.NotificationPhase.END)
+
+    @targets_cell
+    @wrap_instance_event(prefix='conductor')
+    def confirm_snapshot_based_resize(self, context, instance, migration):
+        """Executes the ConfirmResizeTask
+
+        :param context: nova auth request context targeted at the target cell
+        :param instance: Instance object in "resized" status from the target
+            cell
+        :param migration: Migration object from the target cell for the resize
+            operation expected to have status "confirming"
+        """
+        task = cross_cell_migrate.ConfirmResizeTask(
+            context, instance, migration, self.notifier, self.compute_rpcapi)
+        task.execute()

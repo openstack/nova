@@ -175,3 +175,8 @@ class ComputeTaskAPI(object):
             self.image_api.get(context, image_id)
         self.conductor_compute_rpcapi.cache_images(context, aggregate,
                                                    image_ids)
+
+    def confirm_snapshot_based_resize(
+            self, ctxt, instance, migration, do_cast=True):
+        self.conductor_compute_rpcapi.confirm_snapshot_based_resize(
+            ctxt, instance, migration, do_cast=do_cast)
