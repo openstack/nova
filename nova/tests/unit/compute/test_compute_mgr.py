@@ -10908,6 +10908,212 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             allocations=get_allocs.return_value, network_info=nwinfo,
             block_device_info=_prep_block_device.return_value, power_on=True)
 
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_delete_allocation_after_move')
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    def test_confirm_snapshot_based_resize_at_source_error_handling(
+            self, mock_add_fault, mock_delete_allocs, mock_inst_save):
+        """Tests the error handling in confirm_snapshot_based_resize_at_source
+        when a failure occurs.
+        """
+        error = test.TestingException('oops')
+        with mock.patch.object(
+                self.compute, '_confirm_snapshot_based_resize_at_source',
+                side_effect=error) as confirm_mock:
+            self.assertRaises(
+                test.TestingException,
+                self.compute.confirm_snapshot_based_resize_at_source,
+                self.context, self.instance, self.migration)
+        confirm_mock.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        self.assertIn('Confirm resize failed on source host',
+                      self.stdlog.logger.output)
+        # _error_out_instance_on_exception should set the instance to ERROR
+        self.assertEqual(vm_states.ERROR, self.instance.vm_state)
+        mock_inst_save.assert_called()
+        mock_delete_allocs.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        # wrap_instance_fault should record a fault
+        mock_add_fault.assert_called_once_with(
+            self.context, self.instance, error, test.MatchType(tuple))
+        # errors_out_migration should set the migration status to 'error'
+        self.assertEqual('error', self.migration.status)
+        self.migration.save.assert_called_once_with()
+        # Assert wrap_exception is called.
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(
+            'compute.%s' % fields.NotificationAction.EXCEPTION,
+            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_confirm_snapshot_based_resize_at_source')
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    def test_confirm_snapshot_based_resize_at_source_delete_alloc_fails(
+            self, mock_add_fault, mock_confirm, mock_inst_save):
+        """Tests the error handling in confirm_snapshot_based_resize_at_source
+        when _delete_allocation_after_move fails.
+        """
+        error = exception.AllocationDeleteFailed(
+            consumer_uuid=self.migration.uuid,
+            error='placement down')
+        with mock.patch.object(
+                self.compute, '_delete_allocation_after_move',
+                side_effect=error) as mock_delete_allocs:
+            self.assertRaises(
+                exception.AllocationDeleteFailed,
+                self.compute.confirm_snapshot_based_resize_at_source,
+                self.context, self.instance, self.migration)
+        mock_confirm.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        # _error_out_instance_on_exception should set the instance to ERROR
+        self.assertEqual(vm_states.ERROR, self.instance.vm_state)
+        mock_inst_save.assert_called()
+        mock_delete_allocs.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        # wrap_instance_fault should record a fault
+        mock_add_fault.assert_called_once_with(
+            self.context, self.instance, error, test.MatchType(tuple))
+        # errors_out_migration should set the migration status to 'error'
+        self.assertEqual('error', self.migration.status)
+        self.migration.save.assert_called_once_with()
+        # Assert wrap_exception is called.
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(
+            'compute.%s' % fields.NotificationAction.EXCEPTION,
+            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+
+    @mock.patch('nova.objects.Instance.get_bdms')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_delete_allocation_after_move')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_confirm_snapshot_based_resize_delete_port_bindings')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_delete_volume_attachments')
+    @mock.patch('nova.objects.Instance.drop_migration_context')
+    def test_confirm_snapshot_based_resize_at_source(
+            self, mock_drop_mig_ctx, mock_delete_vols, mock_delete_bindings,
+            mock_delete_allocs, mock_get_bdms):
+        """Happy path test for confirm_snapshot_based_resize_at_source."""
+        self.instance.old_flavor = objects.Flavor()
+        with test.nested(
+                mock.patch.object(self.compute, 'network_api'),
+                mock.patch.object(self.compute.driver, 'cleanup'),
+                mock.patch.object(self.compute.rt, 'drop_move_claim')
+        ) as (
+                mock_network_api, mock_cleanup, mock_drop_claim
+        ):
+            # Run the code.
+            self.compute.confirm_snapshot_based_resize_at_source(
+                self.context, self.instance, self.migration)
+        # Assert the mocks.
+        mock_network_api.get_instance_nw_info.assert_called_once_with(
+            self.context, self.instance)
+        # The guest was cleaned up.
+        mock_cleanup.assert_called_once_with(
+            self.context, self.instance,
+            mock_network_api.get_instance_nw_info.return_value,
+            block_device_info=None, destroy_disks=True, destroy_vifs=False)
+        # Ports and volumes were cleaned up.
+        mock_delete_bindings.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        mock_delete_vols.assert_called_once_with(
+            self.context, mock_get_bdms.return_value)
+        # Move claim and migration context were dropped.
+        mock_drop_claim.assert_called_once_with(
+            self.context, self.instance, self.migration.source_node,
+            self.instance.old_flavor, prefix='old_')
+        mock_drop_mig_ctx.assert_called_once_with()
+        # The migration was updated.
+        self.assertEqual('confirmed', self.migration.status)
+        self.migration.save.assert_called_once_with()
+        mock_delete_allocs.assert_called_once_with(
+            self.context, self.instance, self.migration)
+
+    def test_confirm_snapshot_based_resize_delete_port_bindings(self):
+        """Happy path test for
+        _confirm_snapshot_based_resize_delete_port_bindings.
+        """
+
+        def stub_setup_networks_on_host(ctxt, instance, *args, **kwargs):
+            # Make sure the instance.host was mutated to point at the dest host
+            self.assertEqual(self.migration.dest_compute, instance.host)
+
+        with mock.patch.object(
+                self.compute.network_api, 'setup_networks_on_host',
+                side_effect=stub_setup_networks_on_host) as setup_networks:
+            self.compute._confirm_snapshot_based_resize_delete_port_bindings(
+                self.context, self.instance, self.migration)
+        setup_networks.assert_called_once_with(
+            self.context, self.instance, host=self.compute.host,
+            teardown=True)
+
+    def test_confirm_snapshot_based_resize_delete_port_bindings_errors(self):
+        """Tests error handling for
+        _confirm_snapshot_based_resize_delete_port_bindings.
+        """
+        # PortBindingDeletionFailed will be caught and logged.
+        with mock.patch.object(
+                self.compute.network_api, 'setup_networks_on_host',
+                side_effect=exception.PortBindingDeletionFailed(
+                    port_id=uuids.port_id, host=self.compute.host)
+        ) as setup_networks:
+            self.compute._confirm_snapshot_based_resize_delete_port_bindings(
+                self.context, self.instance, self.migration)
+            setup_networks.assert_called_once_with(
+                self.context, self.instance, host=self.compute.host,
+                teardown=True)
+        self.assertIn('Failed to delete port bindings from source host',
+                      self.stdlog.logger.output)
+
+        # Anything else is re-raised.
+        func = self.compute._confirm_snapshot_based_resize_delete_port_bindings
+        with mock.patch.object(
+                self.compute.network_api, 'setup_networks_on_host',
+                side_effect=test.TestingException('neutron down')
+        ) as setup_networks:
+            self.assertRaises(test.TestingException, func,
+                              self.context, self.instance, self.migration)
+            setup_networks.assert_called_once_with(
+                self.context, self.instance, host=self.compute.host,
+                teardown=True)
+
+    def test_delete_volume_attachments(self):
+        """Happy path test for _delete_volume_attachments."""
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(attachment_id=uuids.attachment1),
+            objects.BlockDeviceMapping(attachment_id=None),  # skipped
+            objects.BlockDeviceMapping(attachment_id=uuids.attachment2)
+        ])
+        with mock.patch.object(self.compute.volume_api,
+                               'attachment_delete') as attachment_delete:
+            self.compute._delete_volume_attachments(self.context, bdms)
+        self.assertEqual(2, attachment_delete.call_count)
+        attachment_delete.assert_has_calls([
+            mock.call(self.context, uuids.attachment1),
+            mock.call(self.context, uuids.attachment2)])
+
+    def test_delete_volume_attachments_errors(self):
+        """Tests error handling for _delete_volume_attachments."""
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(attachment_id=uuids.attachment1,
+                                       instance_uuid=self.instance.uuid),
+            objects.BlockDeviceMapping(attachment_id=uuids.attachment2)
+        ])
+        # First attachment_delete call fails and is logged, second is OK.
+        errors = [test.TestingException('cinder down'), None]
+        with mock.patch.object(self.compute.volume_api,
+                               'attachment_delete',
+                               side_effect=errors) as attachment_delete:
+            self.compute._delete_volume_attachments(self.context, bdms)
+        self.assertEqual(2, attachment_delete.call_count)
+        attachment_delete.assert_has_calls([
+            mock.call(self.context, uuids.attachment1),
+            mock.call(self.context, uuids.attachment2)])
+        self.assertIn('Failed to delete volume attachment with ID %s' %
+                      uuids.attachment1, self.stdlog.logger.output)
+
 
 class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
     def setUp(self):

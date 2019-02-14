@@ -520,7 +520,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.7')
+    target = messaging.Target(version='5.8')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4376,6 +4376,159 @@ class ComputeManager(manager.Manager):
                       {'instance_uuid': instance.uuid,
                        'migration_uuid': migration.uuid})
             raise
+
+    @wrap_exception()
+    @wrap_instance_event(prefix='compute')
+    @errors_out_migration
+    @wrap_instance_fault
+    def confirm_snapshot_based_resize_at_source(
+            self, ctxt, instance, migration):
+        """Confirms a snapshot-based resize on the source host.
+
+        Cleans the guest from the source hypervisor including disks and drops
+        the MoveClaim which will free up "old_flavor" usage from the
+        ResourceTracker.
+
+        Deletes the allocations held by the migration consumer against the
+        source compute node resource provider.
+
+        :param ctxt: nova auth request context targeted at the source cell
+        :param instance: Instance object being resized which should have the
+            "old_flavor" attribute set
+        :param migration: Migration object for the resize operation
+        """
+
+        @utils.synchronized(instance.uuid)
+        def do_confirm():
+            LOG.info('Confirming resize on source host.', instance=instance)
+            with self._error_out_instance_on_exception(ctxt, instance):
+                # TODO(mriedem): Could probably make this try/except/finally
+                # a context manager to share with confirm_resize().
+                try:
+                    self._confirm_snapshot_based_resize_at_source(
+                        ctxt, instance, migration)
+                except Exception:
+                    # Something failed when cleaning up the source host so
+                    # log a traceback and leave a hint about hard rebooting
+                    # the server to correct its state in the DB.
+                    with excutils.save_and_reraise_exception(logger=LOG):
+                        LOG.exception(
+                            'Confirm resize failed on source host %s. '
+                            'Resource allocations in the placement service '
+                            'will be removed regardless because the instance '
+                            'is now on the destination host %s. You can try '
+                            'hard rebooting the instance to correct its '
+                            'state.', self.host, migration.dest_compute,
+                            instance=instance)
+                finally:
+                    # Whether an error occurred or not, at this point the
+                    # instance is on the dest host so to avoid leaking
+                    # allocations in placement, delete them here.
+                    # TODO(mriedem): Should we catch and just log
+                    # AllocationDeleteFailed? What is the user's recourse if
+                    # we got this far but this fails? At this point the
+                    # instance is on the target host and the allocations
+                    # could just be manually cleaned up by the operator.
+                    self._delete_allocation_after_move(ctxt, instance,
+                                                       migration)
+        do_confirm()
+
+    def _confirm_snapshot_based_resize_at_source(
+            self, ctxt, instance, migration):
+        """Private version of confirm_snapshot_based_resize_at_source
+
+        This allows the main method to be decorated with error handlers.
+
+        :param ctxt: nova auth request context targeted at the source cell
+        :param instance: Instance object being resized which should have the
+            "old_flavor" attribute set
+        :param migration: Migration object for the resize operation
+        """
+        # Cleanup the guest from the hypervisor including local disks.
+        network_info = self.network_api.get_instance_nw_info(ctxt, instance)
+        LOG.debug('Cleaning up guest from source hypervisor including disks.',
+                  instance=instance)
+
+        # FIXME(mriedem): Per bug 1809095, _confirm_resize calls
+        # _get_updated_nw_info_with_pci_mapping here prior to unplugging
+        # VIFs on the source, but in our case we have already unplugged
+        # VIFs during prep_snapshot_based_resize_at_source, so what do we
+        # need to do about those kinds of ports? Do we need to wait to unplug
+        # VIFs until confirm like normal resize?
+
+        # Note that prep_snapshot_based_resize_at_source already destroyed the
+        # guest which disconnected volumes and unplugged VIFs but did not
+        # destroy disks in case something failed during the resize and the
+        # instance needed to be rebooted or rebuilt on the source host. Now
+        # that we are confirming the resize we want to cleanup the disks left
+        # on the source host. We call cleanup() instead of destroy() to avoid
+        # any InstanceNotFound confusion from the driver since the guest was
+        # already destroyed on this host. block_device_info=None and
+        # destroy_vifs=False means cleanup() will not try to disconnect volumes
+        # or unplug VIFs.
+        self.driver.cleanup(
+            ctxt, instance, network_info, block_device_info=None,
+            destroy_disks=True, destroy_vifs=False)
+
+        # Delete port bindings for the source host.
+        self._confirm_snapshot_based_resize_delete_port_bindings(
+            ctxt, instance, migration)
+
+        # Delete volume attachments for the source host.
+        self._delete_volume_attachments(ctxt, instance.get_bdms())
+
+        # Free up the old_flavor usage from the resource tracker for this host.
+        self.rt.drop_move_claim(
+            ctxt, instance, migration.source_node, instance.old_flavor,
+            prefix='old_')
+        instance.drop_migration_context()
+
+        migration.status = 'confirmed'
+        migration.save()
+
+    def _confirm_snapshot_based_resize_delete_port_bindings(
+            self, ctxt, instance, migration):
+        """Delete port bindings for the source host when confirming
+        snapshot-based resize on the source host."
+
+        :param ctxt: nova auth RequestContext
+        :param instance: Instance object that was resized/cold migrated
+        :param migration: Migration object for the resize/cold migrate
+        """
+        # setup_networks_on_host relies on the instance.host not being the same
+        # as the host we pass in, so we have to mutate the instance to
+        # effectively trick this code.
+        with utils.temporary_mutation(instance, host=migration.dest_compute):
+            LOG.debug('Deleting port bindings for source host.',
+                      instance=instance)
+            try:
+                self.network_api.setup_networks_on_host(
+                    ctxt, instance, host=self.host, teardown=True)
+            except exception.PortBindingDeletionFailed as e:
+                # Do not let this stop us from cleaning up since the guest
+                # is already gone.
+                LOG.error('Failed to delete port bindings from source host. '
+                          'Error: %s', six.text_type(e), instance=instance)
+
+    def _delete_volume_attachments(self, ctxt, bdms):
+        """Deletes volume attachment records for the given bdms.
+
+        This method will log but not re-raise any exceptions if the volume
+        attachment delete fails.
+
+        :param ctxt: nova auth request context used to make
+            DELETE /attachments/{attachment_id} requests to cinder.
+        :param bdms: objects.BlockDeviceMappingList representing volume
+            attachments to delete based on BlockDeviceMapping.attachment_id.
+        """
+        for bdm in bdms:
+            if bdm.attachment_id:
+                try:
+                    self.volume_api.attachment_delete(ctxt, bdm.attachment_id)
+                except Exception as e:
+                    LOG.error('Failed to delete volume attachment with ID %s. '
+                              'Error: %s', bdm.attachment_id, six.text_type(e),
+                              instance_uuid=bdm.instance_uuid)
 
     @wrap_exception()
     @reverts_task_state
