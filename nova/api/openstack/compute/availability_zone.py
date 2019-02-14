@@ -45,7 +45,8 @@ class AvailabilityZoneController(wsgi.Controller):
     def _describe_availability_zones(self, context, **kwargs):
         ctxt = context.elevated()
         available_zones, not_available_zones = \
-            availability_zones.get_availability_zones(ctxt)
+            availability_zones.get_availability_zones(
+                ctxt, hostapi=self.host_api)
 
         filtered_available_zones = \
             self._get_filtered_availability_zones(available_zones, True)
@@ -56,12 +57,15 @@ class AvailabilityZoneController(wsgi.Controller):
 
     def _describe_availability_zones_verbose(self, context, **kwargs):
         ctxt = context.elevated()
-        available_zones, not_available_zones = \
-            availability_zones.get_availability_zones(ctxt)
 
         # Available services
         enabled_services = self.host_api.service_get_all(
             context, {'disabled': False}, set_zones=True, all_cells=True)
+
+        available_zones, not_available_zones = (
+            availability_zones.get_availability_zones(
+                ctxt, enabled_services=enabled_services,
+                hostapi=self.host_api))
 
         zone_hosts = {}
         host_services = {}
@@ -71,10 +75,8 @@ class AvailabilityZoneController(wsgi.Controller):
                 # Skip API services in the listing since they are not
                 # maintained in the same way as other services
                 continue
-            zone_hosts.setdefault(service['availability_zone'], [])
-            if service['host'] not in zone_hosts[service['availability_zone']]:
-                zone_hosts[service['availability_zone']].append(
-                    service['host'])
+            zone_hosts.setdefault(service['availability_zone'], set())
+            zone_hosts[service['availability_zone']].add(service['host'])
 
             host_services.setdefault(service['availability_zone'] +
                     service['host'], [])
