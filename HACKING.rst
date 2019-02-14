@@ -114,6 +114,10 @@ command directly. Running ``stestr run`` will run the entire test suite.
 tests in parallel). More information about stestr can be found at:
 http://stestr.readthedocs.io/
 
+By default tests log at ``INFO`` level. It is possible to make them
+log at ``DEBUG`` level by exporting the ``OS_DEBUG`` environment
+variable to ``True``.
+
 .. _Development Quickstart: https://docs.openstack.org/nova/latest/contributor/development-environment.html
 
 Building Docs
