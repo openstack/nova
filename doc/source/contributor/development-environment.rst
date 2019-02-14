@@ -105,7 +105,7 @@ On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
   tox -e bindep
   sudo yum install <indicated missing package names>
 
-On openSUSE-based distributions (SLES 12, openSUSE Leap 42.1 or Tumbleweed)::
+On openSUSE-based distributions (SLES, openSUSE Leap / Tumbleweed)::
 
   sudo zypper in python-pip
   sudo pip install tox
