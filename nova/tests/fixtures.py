@@ -1951,10 +1951,10 @@ class NoopQuotaDriverFixture(fixtures.Fixture):
 class DownCellFixture(fixtures.Fixture):
     """A fixture to simulate when a cell is down either due to error or timeout
 
-    This fixture will stub out the scatter_gather_cells routine used in various
-    cells-related API operations like listing/showing server details to return
-    a ``oslo_db.exception.DBError`` per cell in the results. Therefore
-    it is best used with a test scenario like this:
+    This fixture will stub out the scatter_gather_cells routine and target_cell
+    used in various cells-related API operations like listing/showing server
+    details to return a ``oslo_db.exception.DBError`` per cell in the results.
+    Therefore it is best used with a test scenario like this:
 
     1. Create a server successfully.
     2. Using the fixture, list/show servers. Depending on the microversion
@@ -2026,11 +2026,37 @@ class DownCellFixture(fixtures.Fixture):
                 }
             ret2 = {}
             for cell in up_cell_mappings:
-                with context.target_cell(ctxt, cell) as cctxt:
-                    ctxt.cell_uuid = cell.uuid
-                    result = fn(cctxt, *args, **kwargs)
+                ctxt.cell_uuid = cell.uuid
+                cctxt = context.RequestContext.from_dict(ctxt.to_dict())
+                context.set_target_cell(cctxt, cell)
+                result = fn(cctxt, *args, **kwargs)
                 ret2[cell.uuid] = result
             return dict(list(ret1.items()) + list(ret2.items()))
 
+        @contextmanager
+        def stub_target_cell(ctxt, cell_mapping):
+            # This is to give the freedom to simulate down cells for each
+            # individual cell targeted function calls.
+            if not self.down_cell_mappings:
+                # User has not passed any down cells explicitly, so all cells
+                # are considered as down cells.
+                self.down_cell_mappings = [cell_mapping]
+                raise db_exc.DBError()
+            else:
+                # if down_cell_mappings are passed, then check if this cell
+                # is down or up.
+                down_cell_uuids = [cell.uuid
+                    for cell in self.down_cell_mappings]
+                if cell_mapping.uuid in down_cell_uuids:
+                    # its a down cell raise the exception straight away
+                    raise db_exc.DBError()
+                else:
+                    # its an up cell, so yield its context
+                    cctxt = context.RequestContext.from_dict(ctxt.to_dict())
+                    context.set_target_cell(cctxt, cell_mapping)
+                    yield cctxt
+
         self.useFixture(fixtures.MonkeyPatch(
             'nova.context.scatter_gather_cells', stub_scatter_gather_cells))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.context.target_cell', stub_target_cell))
