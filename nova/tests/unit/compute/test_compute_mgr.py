@@ -2192,11 +2192,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             connection_info='{"data": {}}', volume_size=1)
         old_volume = {
             'id': uuids.old_volume_id, 'size': 1, 'status': 'retyping',
-            'multiattach': False
+            'migration_status': 'migrating', 'multiattach': False
         }
         new_volume = {
             'id': uuids.new_volume_id, 'size': 1, 'status': 'reserved',
-            'multiattach': False
+            'migration_status': 'migrating', 'multiattach': False
         }
         attachment_update.return_value = {"connection_info": {"data": {}}}
         get_bdm.return_value = bdm
@@ -2338,12 +2338,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             attachment_id=uuids.old_attachment_id,
             connection_info='{"data": {}}')
         old_volume = {
-            'id': uuids.old_volume_id, 'size': 1, 'status': 'migrating',
-            'multiattach': False
+            'id': uuids.old_volume_id, 'size': 1, 'status': 'in-use',
+            'migration_status': 'migrating', 'multiattach': False
         }
         new_volume = {
             'id': uuids.new_volume_id, 'size': 1, 'status': 'reserved',
-            'multiattach': False
+            'migration_status': 'migrating', 'multiattach': False
         }
         get_bdm.return_value = bdm
         get_volume.side_effect = (old_volume, new_volume)

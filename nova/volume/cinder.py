@@ -321,6 +321,9 @@ def _untranslate_volume_summary_view(context, vol):
         d['shared_targets'] = vol.shared_targets
         d['service_uuid'] = vol.service_uuid
 
+    if hasattr(vol, 'migration_status'):
+        d['migration_status'] = vol.migration_status
+
     return d
 
 
