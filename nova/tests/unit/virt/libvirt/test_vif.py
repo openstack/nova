@@ -979,6 +979,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         mock_get_ifname.side_effect = ['eth1', 'eth13']
         exit_code = [0, 2, 254]
         port_state = 'up' if vlan > 0 else 'down'
+        mac = ('00:00:00:00:00:00' if op.__name__ == 'unplug'
+               else self.vif_hw_veb_macvtap['address'])
         calls = {
             'get_ifname':
                 [mock.call(self.vif_hw_veb_macvtap['profile']['pci_slot'],
@@ -986,15 +988,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                  mock.call(self.vif_hw_veb_macvtap['profile']['pci_slot'])],
             'get_vf_num':
                 [mock.call(self.vif_hw_veb_macvtap['profile']['pci_slot'])],
-            'execute': [mock.call('ip', 'link', 'set', 'eth1',
-                                  'vf', 1, 'mac',
-                                  self.vif_hw_veb_macvtap['address'],
-                                  'vlan', vlan,
-                                  run_as_root=True,
+            'execute': [mock.call('ip', 'link', 'set', 'eth1', 'vf', 1,
+                                  'mac', mac, 'vlan', vlan, run_as_root=True,
                                   check_exit_code=exit_code)],
-            'set_macaddr': [mock.call('eth13',
-                                      self.vif_hw_veb_macvtap['address'],
-                                      port_state=port_state)]
+            'set_macaddr': [mock.call('eth13', mac, port_state=port_state)]
         }
         op(self.instance, self.vif_hw_veb_macvtap)
         mock_get_ifname.assert_has_calls(calls['get_ifname'])
