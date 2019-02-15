@@ -25,6 +25,7 @@ import os_traits
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
 from oslo_utils import uuidutils
+import six
 
 from nova.i18n import _
 
@@ -226,7 +227,12 @@ class ProviderTree(object):
     def __init__(self):
         """Create an empty provider tree."""
         self.lock = lockutils.internal_lock(_LOCK_NAME)
-        self.roots = []
+        self.roots_by_uuid = {}
+        self.roots_by_name = {}
+
+    @property
+    def roots(self):
+        return six.itervalues(self.roots_by_uuid)
 
     def get_provider_uuids(self, name_or_uuid=None):
         """Return a list, in top-down traversable order, of the UUIDs of all
@@ -325,7 +331,8 @@ class ProviderTree(object):
 
                 provider = _Provider.from_dict(pd)
                 if parent_uuid is None:
-                    self.roots.append(provider)
+                    self.roots_by_uuid[provider.uuid] = provider
+                    self.roots_by_name[provider.name] = provider
                 else:
                     parent = self._find_with_lock(parent_uuid)
                     parent.add_child(provider)
@@ -339,7 +346,8 @@ class ProviderTree(object):
             parent = self._find_with_lock(found.parent_uuid)
             parent.remove_child(found)
         else:
-            self.roots.remove(found)
+            del self.roots_by_uuid[found.uuid]
+            del self.roots_by_name[found.name]
 
     def remove(self, name_or_uuid):
         """Safely removes the provider identified by the supplied name_or_uuid
@@ -375,10 +383,21 @@ class ProviderTree(object):
                 raise ValueError(err % uuid)
 
             p = _Provider(name, uuid=uuid, generation=generation)
-            self.roots.append(p)
+            self.roots_by_uuid[uuid] = p
+            self.roots_by_name[name] = p
             return p.uuid
 
     def _find_with_lock(self, name_or_uuid):
+        # Optimization for large number of roots (e.g. ironic): if name_or_uuid
+        # represents a root, this is O(1).
+        found = self.roots_by_uuid.get(name_or_uuid)
+        if found:
+            return found
+        found = self.roots_by_name.get(name_or_uuid)
+        if found:
+            return found
+
+        # Okay, it's a child; do it the hard way.
         for root in self.roots:
             found = root.find(name_or_uuid)
             if found:
