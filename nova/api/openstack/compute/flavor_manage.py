@@ -20,10 +20,8 @@ from nova.api import validation
 from nova.compute import flavors
 from nova import exception
 from nova import objects
-from nova.policies import base
 from nova.policies import flavor_extra_specs as fes_policies
 from nova.policies import flavor_manage as fm_policies
-from nova import policy
 
 
 ALIAS = "os-flavor-manage"
@@ -44,15 +42,7 @@ class FlavorManageController(wsgi.Controller):
     @wsgi.action("delete")
     def _delete(self, req, id):
         context = req.environ['nova.context']
-        # TODO(rb560u): remove this check in future release
-        using_old_action = \
-            policy.verify_deprecated_policy(fm_policies.BASE_POLICY_NAME,
-                fm_policies.POLICY_ROOT % 'delete',
-                base.RULE_ADMIN_API,
-                context)
-
-        if not using_old_action:
-            context.can(fm_policies.POLICY_ROOT % 'delete')
+        context.can(fm_policies.POLICY_ROOT % 'delete')
 
         flavor = objects.Flavor(context=context, flavorid=id)
         try:
@@ -70,15 +60,7 @@ class FlavorManageController(wsgi.Controller):
                        flavors_view.FLAVOR_DESCRIPTION_MICROVERSION)
     def _create(self, req, body):
         context = req.environ['nova.context']
-        # TODO(rb560u): remove this check in future release
-        using_old_action = \
-            policy.verify_deprecated_policy(fm_policies.BASE_POLICY_NAME,
-                fm_policies.POLICY_ROOT % 'create',
-                base.RULE_ADMIN_API,
-                context)
-
-        if not using_old_action:
-            context.can(fm_policies.POLICY_ROOT % 'create')
+        context.can(fm_policies.POLICY_ROOT % 'create')
 
         vals = body['flavor']
 
