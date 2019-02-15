@@ -5006,23 +5006,19 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _create_pty_device(self, guest_cfg, char_dev_cls, target_type=None,
                            log_path=None):
-        def _create_base_dev():
-            consolepty = char_dev_cls()
-            consolepty.target_type = target_type
-            consolepty.type = "pty"
-            return consolepty
-
-        def _create_logd_dev():
-            consolepty = _create_base_dev()
-            log = vconfig.LibvirtConfigGuestCharDeviceLog()
-            log.file = log_path
-            consolepty.log = log
-            return consolepty
 
         if CONF.serial_console.enabled:
             return
-        else:
-            guest_cfg.add_device(_create_logd_dev())
+
+        consolepty = char_dev_cls()
+        consolepty.target_type = target_type
+        consolepty.type = "pty"
+
+        log = vconfig.LibvirtConfigGuestCharDeviceLog()
+        log.file = log_path
+        consolepty.log = log
+
+        guest_cfg.add_device(consolepty)
 
     def _serial_ports_already_defined(self, instance):
         try:
