@@ -166,6 +166,10 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              ``block_device_mapping_v2`` parameter when creating a server.
     * 2.68 - Remove support for forced live migration and evacuate server
              actions.
+    * 2.69 - Add support for returning minimal constructs for ``GET /servers``,
+             ``GET /servers/detail``, ``GET /servers/{server_id}`` and
+             ``GET /os-services`` when there is a transient unavailability
+             condition in the deployment like an infrastructure failure.
 """
 
 # The minimum and maximum versions of the API supported
@@ -174,7 +178,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.68"
+_MAX_API_VERSION = "2.69"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

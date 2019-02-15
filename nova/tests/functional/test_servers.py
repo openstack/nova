@@ -49,6 +49,7 @@ from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_requests
 import nova.tests.unit.image.fake
+from nova.tests.unit.objects import test_instance_info_cache
 from nova.virt import fake
 from nova import volume
 
@@ -1237,6 +1238,228 @@ class ServerTestV220(ServersTestBase):
             self.assertTrue(mock_clean_vols.called)
 
         self._delete_server(server_id)
+
+
+class ServerTestV269(ServersTestBase):
+    api_major_version = 'v2.1'
+    NUMBER_OF_CELLS = 3
+
+    def setUp(self):
+        super(ServerTestV269, self).setUp()
+        self.api.microversion = '2.69'
+
+        self.ctxt = context.get_admin_context()
+        self.project_id = self.api.project_id
+        self.cells = objects.CellMappingList.get_all(self.ctxt)
+        self.down_cell_insts = []
+        self.up_cell_insts = []
+        self.down_cell_mappings = objects.CellMappingList()
+        flavor = objects.Flavor(id=1, name='flavor1',
+                                memory_mb=256, vcpus=1,
+                                root_gb=1, ephemeral_gb=1,
+                                flavorid='1',
+                                swap=0, rxtx_factor=1.0,
+                                vcpu_weight=1,
+                                disabled=False,
+                                is_public=True,
+                                extra_specs={},
+                                projects=[])
+        _info_cache = objects.InstanceInfoCache(context)
+        objects.InstanceInfoCache._from_db_object(context, _info_cache,
+            test_instance_info_cache.fake_info_cache)
+        # cell1 and cell2 will be the down cells while
+        # cell0 and cell3 will be the up cells.
+        down_cell_names = ['cell1', 'cell2']
+        for cell in self.cells:
+            # create 2 instances and their mappings in all the 4 cells
+            for i in range(2):
+                with context.target_cell(self.ctxt, cell) as cctxt:
+                    inst = objects.Instance(
+                        context=cctxt,
+                        project_id=self.project_id,
+                        user_id=self.project_id,
+                        instance_type_id=flavor.id,
+                        hostname='%s-inst%i' % (cell.name, i),
+                        flavor=flavor,
+                        info_cache=_info_cache,
+                        display_name='server-test')
+                    inst.create()
+                im = objects.InstanceMapping(context=self.ctxt,
+                                             instance_uuid=inst.uuid,
+                                             cell_mapping=cell,
+                                             project_id=self.project_id,
+                                             queued_for_delete=False)
+                im.create()
+                if cell.name in down_cell_names:
+                    self.down_cell_insts.append(inst.uuid)
+                else:
+                    self.up_cell_insts.append(inst.uuid)
+            # In cell1 and cell3 add a third instance in a different project
+            # to show the --all-tenants case.
+            if cell.name == 'cell1' or cell.name == 'cell3':
+                with context.target_cell(self.ctxt, cell) as cctxt:
+                    inst = objects.Instance(
+                        context=cctxt,
+                        project_id='faker',
+                        user_id='faker',
+                        instance_type_id=flavor.id,
+                        hostname='%s-inst%i' % (cell.name, 3),
+                        flavor=flavor,
+                        info_cache=_info_cache,
+                        display_name='server-test')
+                    inst.create()
+                im = objects.InstanceMapping(context=self.ctxt,
+                                             instance_uuid=inst.uuid,
+                                             cell_mapping=cell,
+                                             project_id='faker',
+                                             queued_for_delete=False)
+                im.create()
+            if cell.name in down_cell_names:
+                self.down_cell_mappings.objects.append(cell)
+        self.useFixture(nova_fixtures.DownCellFixture(self.down_cell_mappings))
+
+    def test_get_servers_with_down_cells(self):
+        servers = self.api.get_servers(detail=False)
+        # 4 servers from the up cells and 4 servers from the down cells
+        self.assertEqual(8, len(servers))
+        for server in servers:
+            if 'name' not in server:
+                # server is in the down cell.
+                self.assertEqual('UNKNOWN', server['status'])
+                self.assertIn(server['id'], self.down_cell_insts)
+                self.assertIn('links', server)
+                # the partial construct will have only the above 3 keys
+                self.assertEqual(3, len(server))
+            else:
+                # server in up cell
+                self.assertIn(server['id'], self.up_cell_insts)
+                # has all the keys
+                self.assertEqual(server['name'], 'server-test')
+                self.assertIn('links', server)
+
+    def test_get_servers_detail_with_down_cells(self):
+        servers = self.api.get_servers()
+        # 4 servers from the up cells and 4 servers from the down cells
+        self.assertEqual(8, len(servers))
+        for server in servers:
+            if 'user_id' not in server:
+                # server is in the down cell.
+                self.assertEqual('UNKNOWN', server['status'])
+                self.assertIn(server['id'], self.down_cell_insts)
+                # the partial construct will have only 5 keys:
+                # created, tenant_id, status, id and links.
+                self.assertEqual(5, len(server))
+            else:
+                # server in up cell
+                self.assertIn(server['id'], self.up_cell_insts)
+                # has all the keys
+                self.assertEqual(server['user_id'], self.project_id)
+                self.assertIn('image', server)
+
+    def test_get_servers_detail_limits_with_down_cells(self):
+        servers = self.api.get_servers(search_opts={'limit': 5})
+        # 4 servers from the up cells since we skip down cell
+        # results by default for paging.
+        self.assertEqual(4, len(servers), servers)
+        for server in servers:
+            # server in up cell
+            self.assertIn(server['id'], self.up_cell_insts)
+            # has all the keys
+            self.assertEqual(server['user_id'], self.project_id)
+            self.assertIn('image', server)
+
+    def test_get_servers_detail_limits_with_down_cells_the_500_gift(self):
+        self.flags(list_records_by_skipping_down_cells=False, group='api')
+        # We get an API error with a 500 response code since the
+        # list_records_by_skipping_down_cells config option is False.
+        exp = self.assertRaises(client.OpenStackApiException,
+                                self.api.get_servers,
+                                search_opts={'limit': 5})
+        self.assertEqual(500, exp.response.status_code)
+        self.assertIn('NovaException', six.text_type(exp))
+
+    def test_get_servers_detail_marker_in_down_cells(self):
+        marker = self.down_cell_insts[2]
+        # It will fail with a 500 if the marker is in the down cell.
+        exp = self.assertRaises(client.OpenStackApiException,
+                                self.api.get_servers,
+                                search_opts={'marker': marker})
+        self.assertEqual(500, exp.response.status_code)
+        self.assertIn('oslo_db.exception.DBError', six.text_type(exp))
+
+    def test_get_servers_detail_marker_sorting(self):
+        marker = self.up_cell_insts[1]
+        # It will give the results from the up cell if
+        # list_records_by_skipping_down_cells config option is True.
+        servers = self.api.get_servers(search_opts={'marker': marker,
+                                                    'sort_key': "created_at",
+                                                    'sort_dir': "asc"})
+        # since there are 4 servers from the up cells, when giving the
+        # second instance as marker, sorted by creation time in ascending
+        # third and fourth instances will be returned.
+        self.assertEqual(2, len(servers))
+        for server in servers:
+            self.assertIn(
+                server['id'], [self.up_cell_insts[2], self.up_cell_insts[3]])
+
+    def test_get_servers_detail_non_admin_with_deleted_flag(self):
+        # if list_records_by_skipping_down_cells config option is True
+        # this deleted option should be ignored and the rest of the instances
+        # from the up cells and the partial results from the down cells should
+        # be returned.
+        # Set the policy so we don't have permission to allow
+        # all filters but are able to get server details.
+        servers_rule = 'os_compute_api:servers:detail'
+        extraspec_rule = 'os_compute_api:servers:allow_all_filters'
+        self.policy.set_rules({
+            extraspec_rule: 'rule:admin_api',
+            servers_rule: '@'})
+        servers = self.api.get_servers(search_opts={'deleted': True})
+        # gets 4 results from up cells and 4 from down cells.
+        self.assertEqual(8, len(servers))
+        for server in servers:
+            if "image" not in server:
+                self.assertIn(server['id'], self.down_cell_insts)
+            else:
+                self.assertIn(server['id'], self.up_cell_insts)
+
+    def test_get_servers_detail_filters(self):
+        # We get the results only from the up cells, this ignoring the down
+        # cells if list_records_by_skipping_down_cells config option is True.
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1'))
+        self.admin_api = api_fixture.admin_api
+        self.admin_api.microversion = '2.69'
+        servers = self.admin_api.get_servers(
+            search_opts={'hostname': "cell3-inst0"})
+        self.assertEqual(1, len(servers))
+        self.assertEqual(self.up_cell_insts[2], servers[0]['id'])
+
+    def test_get_servers_detail_all_tenants_with_down_cells(self):
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1'))
+        self.admin_api = api_fixture.admin_api
+        self.admin_api.microversion = '2.69'
+        servers = self.admin_api.get_servers(search_opts={'all_tenants': True})
+        # 4 servers from the up cells and 4 servers from the down cells
+        # plus the 2 instances from cell1 and cell3 which are in a different
+        # project.
+        self.assertEqual(10, len(servers))
+        for server in servers:
+            if 'user_id' not in server:
+                # server is in the down cell.
+                self.assertEqual('UNKNOWN', server['status'])
+                if server['tenant_id'] != 'faker':
+                    self.assertIn(server['id'], self.down_cell_insts)
+                # the partial construct will have only 5 keys:
+                # created, tenant_id, status, id and links
+                self.assertEqual(5, len(server))
+            else:
+                # server in up cell
+                if server['tenant_id'] != 'faker':
+                    self.assertIn(server['id'], self.up_cell_insts)
+                    self.assertEqual(server['user_id'], self.project_id)
+                self.assertIn('image', server)
 
 
 class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,

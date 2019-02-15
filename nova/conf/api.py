@@ -336,6 +336,11 @@ When set to False, this will cause the API to return a 500 error if there is an
 infrastructure failure like non-responsive cells. If you want the API to skip
 the down cells and return the results from the up cells set this option to
 True.
+
+Note that from API microversion 2.69 there could be transient conditions in the
+deployment where certain records are not available and the results could be
+partial for certain requests containing those records. In those cases this
+option will be ignored.
 """),
 ]
 

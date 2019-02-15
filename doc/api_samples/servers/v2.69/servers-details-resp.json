@@ -1,0 +1,20 @@
+{
+    "servers": [
+        {
+            "created": "2018-12-03T21:06:18Z",
+            "id": "b6b0410f-b65f-4473-855e-5d82a71759e0",
+            "status": "UNKNOWN",
+            "tenant_id": "6f70656e737461636b20342065766572",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/b6b0410f-b65f-4473-855e-5d82a71759e0",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/b6b0410f-b65f-4473-855e-5d82a71759e0",
+                    "rel": "bookmark"
+                }
+            ]
+        }
+    ]
+}

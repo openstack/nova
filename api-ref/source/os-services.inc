@@ -55,6 +55,15 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-services/v2.11/services-list-get-resp.json
    :language: javascript
 
+**Example List Compute Services (2.69)**
+
+This is a sample response for the services from the non-responsive part of the
+deployment. The responses for the available service records will be normal
+without any missing keys.
+
+.. literalinclude:: ../../doc/api_samples/os-services/v2.69/services-list-get-resp.json
+   :language: javascript
+
 Disable Scheduling For A Compute Service
 ========================================
 

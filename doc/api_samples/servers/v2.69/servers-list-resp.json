@@ -1,0 +1,18 @@
+{
+    "servers": [
+        {
+            "id": "2e136db7-b4a4-4815-8a00-25d9bfe59617",
+            "status": "UNKNOWN",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/2e136db7-b4a4-4815-8a00-25d9bfe59617",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/2e136db7-b4a4-4815-8a00-25d9bfe59617",
+                    "rel": "bookmark"
+                }
+            ]
+        }
+    ]
+}
