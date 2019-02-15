@@ -526,9 +526,10 @@ class FlavorManagerPolicyEnforcementV21(test.TestCase):
             exc.format_message())
 
     def test_flavor_update_non_admin_fails(self):
-        """Tests that trying to update a flavor as a non-admin fails due
-        to the default policy.
+        """Tests that trying to update a flavor as a non-admin fails.
         """
+        rule_name = "os_compute_api:os-flavor-manage:update"
+        self.policy.set_rules({rule_name: "is_admin:True"})
         self.req.api_version_request = api_version_request.APIVersionRequest(
             '2.55')
         exc = self.assertRaises(
