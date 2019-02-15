@@ -788,6 +788,11 @@ class RPCFixture(fixtures.Fixture):
             mock_gtu.return_value = None
             rpc.init(CONF)
 
+        def cleanup_in_flight_rpc_messages():
+            messaging._drivers.impl_fake.FakeExchangeManager._exchanges = {}
+
+        self.addCleanup(cleanup_in_flight_rpc_messages)
+
 
 class WarningsFixture(fixtures.Fixture):
     """Filters out warnings during test runs."""
