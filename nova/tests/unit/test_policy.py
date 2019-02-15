@@ -337,6 +337,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-quota-class-sets:update",
 "os_compute_api:os-server-external-events:create",
 "os_compute_api:os-volumes-attachments:update",
+"os_compute_api:servers:create:zero_disk_flavor",
 "os_compute_api:servers:migrations:index",
 "os_compute_api:servers:migrations:show",
 )
@@ -374,7 +375,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:servers:create:attach_network",
 "os_compute_api:servers:create:attach_volume",
 "os_compute_api:servers:create:trusted_certs",
-"os_compute_api:servers:create:zero_disk_flavor",
 "os_compute_api:servers:create_image",
 "os_compute_api:servers:delete",
 "os_compute_api:servers:detail",

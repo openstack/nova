@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    The defalut value for policy rule
+    ``os_compute_api:servers:create:zero_disk_flavor`` has changed from
+    ``rule:admin_or_owner`` to ``rule:admin_api`` which means that by default,
+    users without the admin role will not be allowed to create servers using
+    a flavor with ``disk=0`` *unless* they are creating a volume-backed server.
+    If you have these kinds of flavors, you may need to take action or
+    temporarily override the policy rule. Refer to
+    `bug 1739646 <https://launchpad.net/bugs/1739646>`_ for more details.

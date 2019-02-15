@@ -154,8 +154,7 @@ rules = [
         ]),
     policy.DocumentedRuleDefault(
         ZERO_DISK_FLAVOR,
-        # TODO(mriedem): Default to RULE_ADMIN_API in Stein.
-        RULE_AOO,
+        base.RULE_ADMIN_API,
         """
 This rule controls the compute API validation behavior of creating a server
 with a flavor that has 0 disk, indicating the server should be volume-backed.
@@ -170,9 +169,6 @@ if users can upload their own images since repeated attempts to
 create a disk=0 flavor instance with a large image can exhaust
 the local disk of the compute (or shared storage cluster). See bug
 https://bugs.launchpad.net/nova/+bug/1739646 for details.
-
-This rule defaults to ``rule:admin_or_owner`` for backward compatibility but
-will be changed to default to ``rule:admin_api`` in a subsequent release.
 """,
         [
             {
