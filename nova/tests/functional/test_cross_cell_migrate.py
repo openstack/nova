@@ -12,6 +12,9 @@
 
 import mock
 
+from oslo_utils.fixture import uuidsentinel as uuids
+
+from nova.compute import instance_actions
 from nova import context as nova_context
 from nova import exception
 from nova import objects
@@ -378,13 +381,172 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
 
         return server, source_rp_uuid, target_rp_uuid, old_flavor, new_flavor
 
+    def _attach_volume_to_server(self, server_id, volume_id):
+        """Attaches the volume to the server and waits for the
+        "instance.volume_attach.end" versioned notification.
+        """
+        body = {'volumeAttachment': {'volumeId': volume_id}}
+        self.api.api_post(
+            '/servers/%s/os-volume_attachments' % server_id, body)
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.volume_attach.end')
+
+    def assert_volume_is_attached(self, server_id, volume_id):
+        """Asserts the volume is attached to the server."""
+        server = self.api.get_server(server_id)
+        attachments = server['os-extended-volumes:volumes_attached']
+        attached_vol_ids = [attachment['id'] for attachment in attachments]
+        self.assertIn(volume_id, attached_vol_ids,
+                      'Attached volumes: %s' % attachments)
+
+    def assert_resize_confirm_notifications(self):
+        # We should have gotten only two notifications:
+        # 1. instance.resize_confirm.start
+        # 2. instance.resize_confirm.end
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         'Unexpected number of versioned notifications for '
+                         'cross-cell resize confirm: %s' %
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
+        start = fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type']
+        self.assertEqual('instance.resize_confirm.start', start)
+        end = fake_notifier.VERSIONED_NOTIFICATIONS[1]['event_type']
+        self.assertEqual('instance.resize_confirm.end', end)
+
+    def delete_server_and_assert_cleanup(self, server):
+        """Deletes the server and makes various cleanup checks.
+
+        - makes sure allocations from placement are gone
+        - makes sure the instance record is gone from both cells
+        - makes sure there are no leaked volume attachments
+
+        :param server: dict of the server resource to delete
+        """
+        # Determine which cell the instance was in when the server was deleted
+        # in the API so we can check hard vs soft delete in the DB.
+        current_cell = self.host_to_cell_mappings[
+            server['OS-EXT-SRV-ATTR:host']]
+        # Delete the server and check that the allocations are gone from
+        # the placement service.
+        self._delete_and_check_allocations(server)
+        # Make sure the instance record is gone from both cell databases.
+        ctxt = nova_context.get_admin_context()
+        for cell_name in self.host_to_cell_mappings.values():
+            cell = self.cell_mappings[cell_name]
+            with nova_context.target_cell(ctxt, cell) as cctxt:
+                # If this is the current cell the instance was in when it was
+                # deleted it should be soft-deleted (instance.deleted!=0),
+                # otherwise it should be hard-deleted and getting it with a
+                # read_deleted='yes' context should still raise.
+                read_deleted = 'no' if current_cell == cell_name else 'yes'
+                with utils.temporary_mutation(
+                        cctxt, read_deleted=read_deleted):
+                    self.assertRaises(exception.InstanceNotFound,
+                                      objects.Instance.get_by_uuid,
+                                      cctxt, server['id'])
+        # Make sure there are no leaked volume attachments.
+        attachment_count = self._count_volume_attachments(server['id'])
+        self.assertEqual(0, attachment_count, 'Leaked volume attachments: %s' %
+                         self.cinder.volume_to_attachment)
+
+    def assert_resize_confirm_actions(self, server):
+        actions = self.api.api_get(
+            '/servers/%s/os-instance-actions' % server['id']
+        ).body['instanceActions']
+        actions_by_action = {action['action']: action for action in actions}
+        self.assertIn(instance_actions.CONFIRM_RESIZE, actions_by_action)
+        confirm_action = actions_by_action[instance_actions.CONFIRM_RESIZE]
+        detail = self.api.api_get(
+            '/servers/%s/os-instance-actions/%s' % (
+                server['id'], confirm_action['request_id'])
+        ).body['instanceAction']
+        events_by_name = {event['event']: event for event in detail['events']}
+        self.assertEqual(2, len(detail['events']), detail)
+        for event_name in ('conductor_confirm_snapshot_based_resize',
+                           'compute_confirm_snapshot_based_resize_at_source'):
+            self.assertIn(event_name, events_by_name)
+            self.assertEqual('Success', events_by_name[event_name]['result'])
+        self.assertEqual('Success', detail['events'][0]['result'])
+
     def test_resize_confirm_image_backed(self):
         """Creates an image-backed server in one cell and resizes it to the
         host in the other cell. The resize is confirmed.
         """
-        self._resize_and_validate()
+        server, source_rp_uuid, target_rp_uuid, _, new_flavor = (
+            self._resize_and_validate())
 
-        # TODO(mriedem): Confirm the resize and make assertions.
+        # Attach a fake volume to the server to make sure it survives confirm.
+        self._attach_volume_to_server(server['id'], uuids.fake_volume_id)
+
+        # Reset the fake notifier so we only check confirmation notifications.
+        fake_notifier.reset()
+
+        # Confirm the resize and check all the things. The instance and its
+        # related records should be gone from the source cell database; the
+        # migration should be confirmed; the allocations, held by the migration
+        # record on the source compute node resource provider, should now be
+        # gone; there should be a confirmResize instance action record with
+        # a successful event.
+        target_host = server['OS-EXT-SRV-ATTR:host']
+        source_host = 'host1' if target_host == 'host2' else 'host2'
+        self.api.post_server_action(server['id'], {'confirmResize': None})
+        self._wait_for_state_change(server, 'ACTIVE')
+
+        # The migration should be confirmed.
+        migrations = self.api.api_get(
+            '/os-migrations?instance_uuid=%s' % server['id']
+        ).body['migrations']
+        self.assertEqual(1, len(migrations), migrations)
+        migration = migrations[0]
+        self.assertEqual('confirmed', migration['status'], migration)
+
+        # The resource allocations held against the source node by the
+        # migration record should be gone and the target node provider should
+        # have allocations held by the instance.
+        source_allocations = self._get_allocations_by_provider_uuid(
+            source_rp_uuid)
+        self.assertEqual({}, source_allocations)
+        target_allocations = self._get_allocations_by_provider_uuid(
+            target_rp_uuid)
+        self.assertIn(server['id'], target_allocations)
+        self.assertFlavorMatchesAllocation(
+            new_flavor, target_allocations[server['id']]['resources'])
+
+        self.assert_resize_confirm_actions(server)
+
+        # Make sure the guest is on the target node hypervisor and not on the
+        # source node hypervisor.
+        source_guest_uuids = (
+            self.computes[source_host].manager.driver.list_instance_uuids())
+        self.assertNotIn(server['id'], source_guest_uuids,
+                         'Guest is still running on the source hypervisor.')
+        target_guest_uuids = (
+            self.computes[target_host].manager.driver.list_instance_uuids())
+        self.assertIn(server['id'], target_guest_uuids,
+                      'Guest is not running on the target hypervisor.')
+
+        # Assert the source host hypervisor usage is back to 0 and the target
+        # is using the new flavor.
+        self.assert_hypervisor_usage(
+            target_rp_uuid, new_flavor, volume_backed=False)
+        no_usage = {'vcpus': 0, 'disk': 0, 'ram': 0}
+        self.assert_hypervisor_usage(
+            source_rp_uuid, no_usage, volume_backed=False)
+
+        # Run periodics and make sure the usage is still as expected.
+        self._run_periodics()
+        self.assert_hypervisor_usage(
+            target_rp_uuid, new_flavor, volume_backed=False)
+        self.assert_hypervisor_usage(
+            source_rp_uuid, no_usage, volume_backed=False)
+
+        # Make sure the fake volume is still attached.
+        self.assert_volume_is_attached(server['id'], uuids.fake_volume_id)
+
+        # Make sure we got the expected notifications for the confirm action.
+        self.assert_resize_confirm_notifications()
+
+        # Explicitly delete the server and make sure it's gone from all cells.
+        self.delete_server_and_assert_cleanup(server)
 
     def test_resize_revert_volume_backed(self):
         """Tests a volume-backed resize to another cell where the resize
@@ -457,11 +619,25 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
     # onto the source host in the source cell.
 
     def test_resize_confirm_from_stopped(self):
-        """Tests resizing and confirming a server that was initially stopped
-        so it should remain stopped through the resize.
+        """Tests resizing and confirming a volume-backed server that was
+        initially stopped so it should remain stopped through the resize.
         """
-        self._resize_and_validate(volume_backed=True, stopped=True)
-        # TODO(mriedem): Confirm the resize and assert the guest remains off
+        server = self._resize_and_validate(volume_backed=True, stopped=True)[0]
+        # Confirm the resize and assert the guest remains off.
+        self.api.post_server_action(server['id'], {'confirmResize': None})
+        server = self._wait_for_state_change(server, 'SHUTOFF')
+        self.assertEqual(4, server['OS-EXT-STS:power_state'],
+                         "Unexpected power state after confirmResize.")
+        self._wait_for_migration_status(server, ['confirmed'])
+
+        # Now try cold-migrating back to cell1 to make sure there is no
+        # duplicate entry error in the DB.
+        self.api.post_server_action(server['id'], {'migrate': None})
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
+        # Should be back on host1 in cell1.
+        self.assertEqual('host1', server['OS-EXT-SRV-ATTR:host'])
+
+    # TODO(mriedem): test_resize_revert_from_stopped with image-backed.
 
     def test_finish_snapshot_based_resize_at_dest_spawn_fails(self):
         """Negative test where the driver spawn fails on the dest host during

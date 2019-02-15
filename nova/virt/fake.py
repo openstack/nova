@@ -314,7 +314,10 @@ class FakeDriver(driver.ComputeDriver):
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None, destroy_vifs=True):
-        pass
+        # cleanup() should not be called when the guest has not been destroyed.
+        if instance.uuid in self.instances:
+            raise exception.InstanceExists(
+                "Instance %s has not been destroyed." % instance.uuid)
 
     def attach_volume(self, context, connection_info, instance, mountpoint,
                       disk_bus=None, device_type=None, encryption=None):

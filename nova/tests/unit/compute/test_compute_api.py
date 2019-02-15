@@ -6859,6 +6859,34 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         self._test_get_migrations_sorted_filter_duplicates(
             [older, newer], newer)
 
+    @mock.patch('nova.objects.Migration.get_by_instance_and_status')
+    def test_confirm_resize_cross_cell_move_true(self, mock_migration_get):
+        """Tests confirm_resize where Migration.cross_cell_move is True"""
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.RESIZED, task_state=None,
+            launched_at=timeutils.utcnow())
+        migration = objects.Migration(cross_cell_move=True)
+        mock_migration_get.return_value = migration
+        with test.nested(
+            mock.patch.object(self.context, 'elevated',
+                              return_value=self.context),
+            mock.patch.object(migration, 'save'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(self.compute_api.compute_task_api,
+                              'confirm_snapshot_based_resize'),
+        ) as (
+            mock_elevated, mock_migration_save, mock_record_action,
+            mock_conductor_confirm
+        ):
+            self.compute_api.confirm_resize(self.context, instance)
+        mock_elevated.assert_called_once_with()
+        mock_migration_save.assert_called_once_with()
+        self.assertEqual('confirming', migration.status)
+        mock_record_action.assert_called_once_with(
+            self.context, instance, instance_actions.CONFIRM_RESIZE)
+        mock_conductor_confirm.assert_called_once_with(
+            self.context, instance, migration)
+
 
 class DiffDictTestCase(test.NoDBTestCase):
     """Unit tests for _diff_dict()."""
