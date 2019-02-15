@@ -40,6 +40,7 @@
           NOVA_USE_SERVICE_TOKEN=True
           NOVA_CONSOLE_PROXY_COMPUTE_TLS=True
           USE_PYTHON3=True
+          ENABLE_VOLUME_MULTIATTACH=True
 
           [[post-config|$NOVA_CONF]]
           [compute]
@@ -59,9 +60,9 @@
           export PYTHONUNBUFFERED=true
           # Yes we want to run Tempest.
           export DEVSTACK_GATE_TEMPEST=1
-          # Run non-slow tempest API tests (concurrently) and scenario
-          # tests (serially).
-          export DEVSTACK_GATE_TEMPEST_FULL=1
+          # Run all compute API tests and all scenario tests at the default
+          # concurrency (nproc/2 which is normally 4 in the gate).
+          export DEVSTACK_GATE_TEMPEST_REGEX="^tempest\.((scenario)|(api\.compute))"
           # The post_test_hook runs some post-test CLIs for things that
           # Tempest does not test, like archiving deleted records.
           function post_test_hook {
