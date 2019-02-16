@@ -576,3 +576,39 @@ class TestDownCellFixture(test.TestCase):
                     self.assertIsInstance(result, objects.InstanceList)
                     self.assertEqual(1, len(result))
                     self.assertEqual(inst2.uuid, result[0].uuid)
+
+    def test_fixture_for_an_individual_down_cell_targeted_call(self):
+        # We have cell0 and cell1 by default in the setup. We try targeting
+        # both the cells. We should get a db error for the down cell and
+        # the correct result for the up cell.
+        ctxt = context.get_admin_context()
+        cell0 = self.cell_mappings['cell0']
+        cell1 = self.cell_mappings['cell1']
+        with context.target_cell(ctxt, cell0) as cctxt:
+            inst1 = fake_instance.fake_instance_obj(cctxt)
+            if 'id' in inst1:
+                delattr(inst1, 'id')
+            inst1.create()
+        with context.target_cell(ctxt, cell1) as cctxt:
+            inst2 = fake_instance.fake_instance_obj(cctxt)
+            if 'id' in inst2:
+                delattr(inst2, 'id')
+            inst2.create()
+
+        def dummy_tester(ctxt, cell_mapping, uuid):
+            with context.target_cell(ctxt, cell_mapping) as cctxt:
+                return objects.Instance.get_by_uuid(cctxt, uuid)
+
+        # Scenario A: We do not pass any down cells, fixture automatically
+        # assumes the targeted cell is down whether its cell0 or cell1.
+        with fixtures.DownCellFixture():
+            self.assertRaises(
+                db_exc.DBError, dummy_tester, ctxt, cell1, inst2.uuid)
+        # Scenario B: We pass cell0 as the down cell.
+        with fixtures.DownCellFixture([cell0]):
+            self.assertRaises(
+                db_exc.DBError, dummy_tester, ctxt, cell0, inst1.uuid)
+            # Scenario C: We get the correct result from the up cell
+            # when targeted.
+            result = dummy_tester(ctxt, cell1, inst2.uuid)
+            self.assertEqual(inst2.uuid, result.uuid)
