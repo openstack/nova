@@ -93,8 +93,23 @@ class ViewBuilder(common.ViewBuilder):
 
     def basic(self, request, instance, show_extra_specs=False,
               show_extended_attr=None, show_host_status=None,
-              show_sec_grp=None, bdms=None):
+              show_sec_grp=None, bdms=None, cell_down_support=False):
         """Generic, non-detailed view of an instance."""
+        if cell_down_support and 'display_name' not in instance:
+            # NOTE(tssurya): If the microversion is >= 2.69, this boolean will
+            # be true in which case we check if there are instances from down
+            # cells (by checking if their objects have missing keys like
+            # `display_name`) and return partial constructs based on the
+            # information available from the nova_api database.
+            return {
+                "server": {
+                    "id": instance.uuid,
+                    "status": "UNKNOWN",
+                    "links": self._get_links(request,
+                                             instance.uuid,
+                                             self._collection_name),
+                },
+            }
         return {
             "server": {
                 "id": instance["uuid"],
@@ -125,16 +140,51 @@ class ViewBuilder(common.ViewBuilder):
         # results.
         return sorted(list(set(self._show_expected_attrs + expected_attrs)))
 
+    def _show_from_down_cell(self, request, instance, show_extra_specs):
+        """Function that constructs the partial response for the instance."""
+        ret = {
+            "server": {
+                "id": instance.uuid,
+                "status": "UNKNOWN",
+                "tenant_id": instance.project_id,
+                "created": utils.isotime(instance.created_at),
+            },
+        }
+        if 'flavor' in instance:
+            # If the key 'flavor' is present for an instance from a down cell
+            # it means that the request is ``GET /servers/{server_id}`` and
+            # thus we include the information from the request_spec of the
+            # instance like its flavor, image, avz, and user_id in addition to
+            # the basic information from its instance_mapping.
+            # If 'flavor' key is not present for an instance from a down cell
+            # down cell it means the request is ``GET /servers/detail`` and we
+            # do not expose the flavor in the response when listing servers
+            # with details for performance reasons of fetching it from the
+            # request specs table for the whole list of instances.
+            ret["server"]["image"] = self._get_image(request, instance)
+            ret["server"]["flavor"] = self._get_flavor(request, instance,
+                                                       show_extra_specs)
+            # in case availability zone was not requested by the user during
+            # boot time, return UNKNOWN.
+            avz = instance.availability_zone or "UNKNOWN"
+            ret["server"]["OS-EXT-AZ:availability_zone"] = avz
+            ret["server"]["OS-EXT-STS:power_state"] = instance.power_state
+            # in case its an old request spec which doesn't have the user_id
+            # data migrated, return UNKNOWN.
+            ret["server"]["user_id"] = instance.user_id or "UNKNOWN"
+        else:
+            # GET /servers/detail includes links for GET /servers/{server_id}.
+            ret['server']["links"] = self._get_links(
+                request, instance.uuid, self._collection_name)
+        return ret
+
     def show(self, request, instance, extend_address=True,
              show_extra_specs=None, show_AZ=True, show_config_drive=True,
              show_extended_attr=None, show_host_status=None,
              show_keypair=True, show_srv_usg=True, show_sec_grp=True,
              show_extended_status=True, show_extended_volumes=True,
-             bdms=None):
+             bdms=None, cell_down_support=False):
         """Detailed view of a single instance."""
-        ip_v4 = instance.get('access_ip_v4')
-        ip_v6 = instance.get('access_ip_v6')
-
         if show_extra_specs is None:
             # detail will pre-calculate this for us. If we're doing show,
             # then figure it out here.
@@ -143,6 +193,17 @@ class ViewBuilder(common.ViewBuilder):
                 context = request.environ['nova.context']
                 show_extra_specs = context.can(
                     fes_policies.POLICY_ROOT % 'index', fatal=False)
+
+        if cell_down_support and 'display_name' not in instance:
+            # NOTE(tssurya): If the microversion is >= 2.69, this boolean will
+            # be true in which case we check if there are instances from down
+            # cells (by checking if their objects have missing keys like
+            # `display_name`) and return partial constructs based on the
+            # information available from the nova_api database.
+            return self._show_from_down_cell(
+                request, instance, show_extra_specs)
+        ip_v4 = instance.get('access_ip_v4')
+        ip_v6 = instance.get('access_ip_v6')
 
         server = {
             "server": {
@@ -280,13 +341,13 @@ class ViewBuilder(common.ViewBuilder):
 
         return server
 
-    def index(self, request, instances):
+    def index(self, request, instances, cell_down_support=False):
         """Show a list of servers without many details."""
         coll_name = self._collection_name
         return self._list_view(self.basic, request, instances, coll_name,
-                               False)
+                               False, cell_down_support=cell_down_support)
 
-    def detail(self, request, instances):
+    def detail(self, request, instances, cell_down_support=False):
         """Detailed view of a list of instance."""
         coll_name = self._collection_name + '/detail'
         context = request.environ['nova.context']
@@ -318,7 +379,8 @@ class ViewBuilder(common.ViewBuilder):
                                        show_extended_attr=show_extended_attr,
                                        show_host_status=show_host_status,
                                        show_sec_grp=False,
-                                       bdms=bdms)
+                                       bdms=bdms,
+                                       cell_down_support=cell_down_support)
 
         self._add_security_grps(request, list(servers_dict["servers"]),
                                 instances)
@@ -326,7 +388,7 @@ class ViewBuilder(common.ViewBuilder):
 
     def _list_view(self, func, request, servers, coll_name, show_extra_specs,
                    show_extended_attr=None, show_host_status=None,
-                   show_sec_grp=False, bdms=None):
+                   show_sec_grp=False, bdms=None, cell_down_support=False):
         """Provide a view for a list of servers.
 
         :param func: Function used to format the server data
@@ -341,13 +403,18 @@ class ViewBuilder(common.ViewBuilder):
         :param show_sec_grp: If the security group should be included in
                         the response dict.
         :param bdms: Instances bdms info from multiple cells.
+        :param cell_down_support: True if the API (and caller) support
+                                  returning a minimal instance
+                                  construct if the relevant cell is
+                                  down.
         :returns: Server data in dictionary format
         """
         server_list = [func(request, server,
                             show_extra_specs=show_extra_specs,
                             show_extended_attr=show_extended_attr,
                             show_host_status=show_host_status,
-                            show_sec_grp=show_sec_grp, bdms=bdms)["server"]
+                            show_sec_grp=show_sec_grp, bdms=bdms,
+                            cell_down_support=cell_down_support)["server"]
                        for server in servers]
         servers_links = self._get_collection_links(request,
                                                    servers,
