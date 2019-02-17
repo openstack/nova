@@ -31,6 +31,7 @@ from nova import servicegroup
 from nova import utils
 
 UUID_FOR_ID_MIN_VERSION = '2.53'
+PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION = '2.69'
 
 
 class ServiceController(wsgi.Controller):
@@ -59,10 +60,13 @@ class ServiceController(wsgi.Controller):
         context = req.environ['nova.context']
         context.can(services_policies.BASE_POLICY_NAME)
 
+        cell_down_support = api_version_request.is_supported(
+            req, min_version=PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION)
+
         _services = [
             s
             for s in self.host_api.service_get_all(context, set_zones=True,
-                all_cells=True, cell_down_support=False)
+                all_cells=True, cell_down_support=cell_down_support)
             if s['binary'] not in api_services
         ]
 
@@ -79,7 +83,16 @@ class ServiceController(wsgi.Controller):
 
         return _services
 
-    def _get_service_detail(self, svc, additional_fields, req):
+    def _get_service_detail(self, svc, additional_fields, req,
+                            cell_down_support=False):
+        # NOTE(tssurya): The below logic returns a minimal service construct
+        # consisting of only the host, binary and status fields for the compute
+        # services in the down cell.
+        if (cell_down_support and 'uuid' not in svc):
+            return {'binary': svc.binary,
+                    'host': svc.host,
+                    'status': "UNKNOWN"}
+
         alive = self.servicegroup_api.service_is_up(svc)
         state = (alive and "up") or "down"
         active = 'enabled'
@@ -116,8 +129,10 @@ class ServiceController(wsgi.Controller):
 
     def _get_services_list(self, req, additional_fields=()):
         _services = self._get_services(req)
-        return [self._get_service_detail(svc, additional_fields, req)
-                for svc in _services]
+        cell_down_support = api_version_request.is_supported(req,
+            min_version=PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION)
+        return [self._get_service_detail(svc, additional_fields, req,
+                cell_down_support=cell_down_support) for svc in _services]
 
     def _enable(self, body, context):
         """Enable scheduling for a service."""

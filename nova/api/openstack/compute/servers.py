@@ -49,6 +49,8 @@ from nova import utils
 
 TAG_SEARCH_FILTERS = ('tags', 'tags-any', 'not-tags', 'not-tags-any')
 DEVICE_TAGGING_MIN_COMPUTE_VERSION = 14
+PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION = '2.69'
+PAGING_SORTING_PARAMS = ('sort_key', 'sort_dir', 'limit', 'marker')
 
 CONF = nova.conf.CONF
 
@@ -107,18 +109,43 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=err.format_message())
         return servers
 
+    @staticmethod
+    def _is_cell_down_supported(req, search_opts):
+        cell_down_support = api_version_request.is_supported(
+            req, min_version=PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION)
+
+        if cell_down_support:
+            # NOTE(tssurya): Minimal constructs would be returned from the down
+            # cells if cell_down_support is True, however if filtering, sorting
+            # or paging is requested by the user, then cell_down_support should
+            # be made False and the down cells should be skipped (depending on
+            # CONF.api.list_records_by_skipping_down_cells) as there is no
+            # way to return correct results for the down cells in those
+            # situations due to missing keys/information.
+            # NOTE(tssurya): Since there is a chance that
+            # remove_invalid_options function could have removed the paging and
+            # sorting parameters, we add the additional check for that from the
+            # request.
+            pag_sort = any(
+                ps in req.GET.keys() for ps in PAGING_SORTING_PARAMS)
+            # NOTE(tssurya): ``nova list --all_tenants`` is the only
+            # allowed filter exception when handling down cells.
+            filters = list(search_opts.keys()) not in ([u'all_tenants'], [])
+            if pag_sort or filters:
+                cell_down_support = False
+        return cell_down_support
+
     def _get_servers(self, req, is_detail):
         """Returns a list of servers, based on any search options specified."""
 
         search_opts = {}
         search_opts.update(req.GET)
 
-        # NOTE(tssurya): Will be enabled after bumping the microversion.
-        cell_down_support = False
-
         context = req.environ['nova.context']
         remove_invalid_options(context, search_opts,
                 self._get_server_search_options(req))
+
+        cell_down_support = self._is_cell_down_supported(req, search_opts)
 
         for search_opt in search_opts:
             if (search_opt in
@@ -396,12 +423,13 @@ class ServersController(wsgi.Controller):
         """Returns server details by server id."""
         context = req.environ['nova.context']
         context.can(server_policies.SERVERS % 'show')
-        # TODO(tssurya): enable cell_down_support after bumping the
-        # microversion.
+        cell_down_support = api_version_request.is_supported(
+            req, min_version=PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION)
         instance = self._get_server(
-            context, req, id, is_detail=True, cell_down_support=False)
+            context, req, id, is_detail=True,
+            cell_down_support=cell_down_support)
         return self._view_builder.show(
-            req, instance, cell_down_support=False)
+            req, instance, cell_down_support=cell_down_support)
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 409))
@@ -1217,7 +1245,7 @@ def remove_invalid_options(context, search_options, allowed_search_options):
     if context.can(server_policies.SERVERS % 'allow_all_filters',
                    fatal=False):
         # Only remove parameters for sorting and pagination
-        for key in ('sort_key', 'sort_dir', 'limit', 'marker'):
+        for key in PAGING_SORTING_PARAMS:
             search_options.pop(key, None)
         return
     # Otherwise, strip out all unknown options

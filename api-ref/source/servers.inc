@@ -249,6 +249,15 @@ Response
 .. literalinclude:: ../../doc/api_samples/servers/servers-list-resp.json
    :language: javascript
 
+**Example List Servers (2.69)**
+
+This is a sample response for the servers from the non-responsive part of the
+deployment. The responses for the available server records will be normal
+without any missing keys.
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.69/servers-list-resp.json
+   :language: javascript
+
 
 Create Server
 =============
@@ -627,6 +636,15 @@ Response
 .. literalinclude:: /../../doc/api_samples/servers/v2.63/servers-details-resp.json
    :language: javascript
 
+**Example List Servers Detailed (2.69)**
+
+This is a sample response for the servers from the non-responsive part of the
+deployment. The responses for the available server records will be normal
+without any missing keys.
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.69/servers-details-resp.json
+   :language: javascript
+
 
 Show Server Details
 ===================
@@ -730,6 +748,15 @@ Response
 **Example Show Server Details (2.63)**
 
 .. literalinclude:: ../../doc/api_samples/servers/v2.63/server-get-resp.json
+   :language: javascript
+
+**Example Show Server Details (2.69)**
+
+This is a sample response for a server from the non-responsive part of the
+deployment. The responses for available server records will be normal
+without any missing keys.
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.69/server-get-resp.json
    :language: javascript
 
 Update Server

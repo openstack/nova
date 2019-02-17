@@ -16,6 +16,7 @@
 import base64
 import time
 
+from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 import six
 
@@ -364,6 +365,53 @@ class ServersSampleJson267Test(ServersSampleBase):
 
     def test_servers_post(self):
         return self._post_server(use_common_server_api_samples=False)
+
+
+class ServersSampleJson269Test(ServersSampleBase):
+    microversion = '2.69'
+    scenarios = [('v2_69', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(ServersSampleJson269Test, self).setUp()
+
+        def _fake_instancemapping_get_by_cell_and_project(*args, **kwargs):
+            # global cell based on which rest of the functions are stubbed out
+            cell_fixture = nova_fixtures.SingleCellSimple()
+            return [{
+                'id': 1,
+                'updated_at': None,
+                'created_at': None,
+                'instance_uuid': utils_fixture.uuidsentinel.inst,
+                'cell_id': 1,
+                'project_id': "6f70656e737461636b20342065766572",
+                'cell_mapping': cell_fixture._fake_cell_list()[0],
+                'queued_for_delete': False
+            }]
+
+        self.stub_out('nova.objects.InstanceMappingList.'
+            '_get_not_deleted_by_cell_and_project_from_db',
+            _fake_instancemapping_get_by_cell_and_project)
+
+    def test_servers_list_from_down_cells(self):
+        uuid = self._post_server(use_common_server_api_samples=False)
+        with nova_fixtures.DownCellFixture():
+            response = self._do_get('servers')
+        subs = {'id': uuid}
+        self._verify_response('servers-list-resp', subs, response, 200)
+
+    def test_servers_details_from_down_cells(self):
+        uuid = self._post_server(use_common_server_api_samples=False)
+        with nova_fixtures.DownCellFixture():
+            response = self._do_get('servers/detail')
+        subs = {'id': uuid}
+        self._verify_response('servers-details-resp', subs, response, 200)
+
+    def test_server_get_from_down_cells(self):
+        uuid = self._post_server(use_common_server_api_samples=False)
+        with nova_fixtures.DownCellFixture():
+            response = self._do_get('servers/%s' % uuid)
+        subs = {'id': uuid}
+        self._verify_response('server-get-resp', subs, response, 200)
 
 
 class ServersUpdateSampleJsonTest(ServersSampleBase):

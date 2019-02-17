@@ -16,6 +16,7 @@
 from oslo_utils import fixture as utils_fixture
 
 from nova import exception
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack.compute import test_services
 from nova.tests.unit.objects import test_compute_node
@@ -184,3 +185,46 @@ class ServicesV253JsonTest(ServicesV211JsonTest):
             'service-force-down-put-req', subs)
         self._verify_response('service-force-down-put-resp', subs,
                               response, 200)
+
+
+class ServicesV269JsonTest(api_sample_base.ApiSampleTestBaseV21):
+    ADMIN_API = True
+    sample_dir = "os-services"
+    microversion = '2.69'
+    scenarios = [('v2_69', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(ServicesV269JsonTest, self).setUp()
+
+        def _fake_cell_list(*args, **kwargs):
+            return [{'id': 1,
+                     'updated_at': None,
+                     'created_at': None,
+                     'uuid': utils_fixture.uuidsentinel.cell1,
+                     'name': 'onlycell',
+                     'transport_url': 'fake://nowhere/',
+                     'database_connection': 'sqlite:///',
+                     'disabled': False}]
+
+        def fake_hostmappinglist_get(*args, **kwargs):
+            cm = _fake_cell_list()[0]
+            return [{'id': 1,
+                     'updated_at': None,
+                     'created_at': None,
+                     'host': 'host1',
+                     'cell_mapping': cm},
+                    {'id': 2,
+                     'updated_at': None,
+                     'created_at': None,
+                     'host': 'host2',
+                     'cell_mapping': cm}]
+
+        self.stub_out('nova.objects.HostMappingList._get_from_db',
+            fake_hostmappinglist_get)
+
+    def test_get_services_from_down_cells(self):
+        subs = {}
+        with nova_fixtures.DownCellFixture():
+            response = self._do_get('os-services')
+            self._verify_response('services-list-get-resp', subs,
+                response, 200)
