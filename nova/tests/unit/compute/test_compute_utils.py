@@ -1213,6 +1213,39 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
         self.assertTrue(reqspec.is_bfv)
         mock_save.assert_called_once_with()
 
+    def test_delete_image(self):
+        """Happy path test for the delete_image utility method"""
+        image_api = mock.Mock()
+        compute_utils.delete_image(
+            self.context, mock.sentinel.instance, image_api, uuids.image_id)
+        image_api.delete.assert_called_once_with(self.context, uuids.image_id)
+
+    @mock.patch('nova.compute.utils.LOG.exception')
+    def test_delete_image_not_found(self, mock_log_exception):
+        """Tests the delete_image method when ImageNotFound is raised."""
+        image_api = mock.Mock()
+        image_api.delete.side_effect = exception.ImageNotFound(
+            image_id=uuids.image_id)
+        compute_utils.delete_image(
+            self.context, mock.sentinel.instance, image_api, uuids.image_id)
+        image_api.delete.assert_called_once_with(self.context, uuids.image_id)
+        # The image was not found but that's OK so no errors should be logged.
+        mock_log_exception.assert_not_called()
+
+    @mock.patch('nova.compute.utils.LOG.exception')
+    def test_delete_image_unknown_error(self, mock_log_exception):
+        """Tests the delete_image method when some unexpected error is raised.
+        """
+        image_api = mock.Mock()
+        image_api.delete.side_effect = test.TestingException
+        compute_utils.delete_image(
+            self.context, mock.sentinel.instance, image_api, uuids.image_id)
+        image_api.delete.assert_called_once_with(self.context, uuids.image_id)
+        # An unexpected error should not be re-raised but just log it.
+        mock_log_exception.assert_called_once()
+        self.assertIn('Error while trying to clean up image',
+                      mock_log_exception.call_args[0][0])
+
 
 class ServerGroupTestCase(test.TestCase):
     def setUp(self):

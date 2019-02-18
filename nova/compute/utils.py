@@ -1246,6 +1246,32 @@ def initialize_instance_snapshot_metadata(context, instance, name,
     return image_meta
 
 
+def delete_image(context, instance, image_api, image_id, log_exc_info=False):
+    """Deletes the image if it still exists.
+
+    Ignores ImageNotFound if the image is already gone.
+
+    :param context: the nova auth request context where the context.project_id
+        matches the owner of the image
+    :param instance: the instance for which the snapshot image was created
+    :param image_api: the image API used to delete the image
+    :param image_id: the ID of the image to delete
+    :param log_exc_info: True if this is being called from an exception handler
+        block and traceback should be logged at DEBUG level, False otherwise.
+    """
+    LOG.debug("Cleaning up image %s", image_id, instance=instance,
+              log_exc_info=log_exc_info)
+    try:
+        image_api.delete(context, image_id)
+    except exception.ImageNotFound:
+        # Since we're trying to cleanup an image, we don't care if
+        # if it's already gone.
+        pass
+    except Exception:
+        LOG.exception("Error while trying to clean up image %s",
+                      image_id, instance=instance)
+
+
 def may_have_ports_or_volumes(instance):
     """Checks to see if an instance may have ports or volumes based on vm_state
 

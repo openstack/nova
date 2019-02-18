@@ -233,17 +233,9 @@ def delete_image_on_error(function):
                             *args, **kwargs)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.debug("Cleaning up image %s", image_id,
-                          exc_info=True, instance=instance)
-                try:
-                    self.image_api.delete(context, image_id)
-                except exception.ImageNotFound:
-                    # Since we're trying to cleanup an image, we don't care if
-                    # if it's already gone.
-                    pass
-                except Exception:
-                    LOG.exception("Error while trying to clean up image %s",
-                                  image_id, instance=instance)
+                compute_utils.delete_image(
+                    context, instance, self.image_api, image_id,
+                    log_exc_info=True)
 
     return decorated_function
 
