@@ -11114,6 +11114,153 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertIn('Failed to delete volume attachment with ID %s' %
                       uuids.attachment1, self.stdlog.logger.output)
 
+    @mock.patch('nova.compute.utils.notify_usage_exists')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    @mock.patch('nova.compute.manager.InstanceEvents.'
+                'clear_events_for_instance')
+    def test_revert_snapshot_based_resize_at_dest_error_handling(
+            self, mock_clear_events, mock_add_fault, mock_inst_save,
+            mock_notify_usage):
+        """Tests error handling in revert_snapshot_based_resize_at_dest when
+        a failure occurs.
+        """
+        self.instance.task_state = task_states.RESIZE_REVERTING
+        error = test.TestingException('oops')
+        with mock.patch.object(
+                self.compute, '_revert_snapshot_based_resize_at_dest',
+                side_effect=error) as mock_revert:
+            self.assertRaises(
+                test.TestingException,
+                self.compute.revert_snapshot_based_resize_at_dest,
+                self.context, self.instance, self.migration)
+        mock_notify_usage.assert_called_once_with(
+            self.compute.notifier, self.context, self.instance,
+            self.compute.host, current_period=True)
+        mock_revert.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        mock_inst_save.assert_called()
+        # _error_out_instance_on_exception sets the instance to ERROR.
+        self.assertEqual(vm_states.ERROR, self.instance.vm_state)
+        # reverts_task_state will reset the task_state to None.
+        self.assertIsNone(self.instance.task_state)
+        # Ensure wrap_instance_fault was called.
+        mock_add_fault.assert_called_once_with(
+            self.context, self.instance, error, test.MatchType(tuple))
+        # errors_out_migration should mark the migration as 'error' status
+        self.assertEqual('error', self.migration.status)
+        self.migration.save.assert_called_once_with()
+        # Assert wrap_exception is called.
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(
+            'compute.%s' % fields.NotificationAction.EXCEPTION,
+            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+        # clear_events_for_instance should not have been called.
+        mock_clear_events.assert_not_called()
+
+    @mock.patch('nova.compute.utils.notify_usage_exists', new=mock.Mock())
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_revert_snapshot_based_resize_at_dest')
+    def test_revert_snapshot_based_resize_at_dest_post_error_log(self, revert):
+        """Tests when _revert_snapshot_based_resize_at_dest is OK but
+        post-processing cleanup fails and is just logged.
+        """
+        # First test _delete_scheduler_instance_info failing.
+        with mock.patch.object(
+                self.compute, '_delete_scheduler_instance_info',
+                side_effect=(
+                        test.TestingException('scheduler'), None)) as mock_del:
+            self.compute.revert_snapshot_based_resize_at_dest(
+                self.context, self.instance, self.migration)
+            revert.assert_called_once()
+            mock_del.assert_called_once_with(self.context, self.instance.uuid)
+            self.assertIn('revert_snapshot_based_resize_at_dest failed during '
+                          'post-processing. Error: scheduler',
+                          self.stdlog.logger.output)
+            revert.reset_mock()
+            mock_del.reset_mock()
+
+            # Now test clear_events_for_instance failing.
+            with mock.patch.object(
+                    self.compute.instance_events, 'clear_events_for_instance',
+                    side_effect=test.TestingException(
+                        'events')) as mock_events:
+                self.compute.revert_snapshot_based_resize_at_dest(
+                    self.context, self.instance, self.migration)
+            revert.assert_called_once()
+            mock_del.assert_called_once_with(self.context, self.instance.uuid)
+            mock_events.assert_called_once_with(self.instance)
+            self.assertIn('revert_snapshot_based_resize_at_dest failed during '
+                          'post-processing. Error: events',
+                          self.stdlog.logger.output)
+        # Assert _error_out_instance_on_exception wasn't tripped somehow.
+        self.assertNotEqual(vm_states.ERROR, self.instance.vm_state)
+
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.objects.Instance.revert_migration_context')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+    def test_revert_snapshot_based_resize_at_dest(
+            self, mock_get_bdms, mock_revert_mig_ctxt, mock_inst_save):
+        """Happy path test for _revert_snapshot_based_resize_at_dest"""
+        # Setup more mocks.
+        def stub_migrate_instance_start(ctxt, instance, migration):
+            # The migration.dest_compute should have been mutated to point
+            # at the source compute.
+            self.assertEqual(migration.source_compute, migration.dest_compute)
+
+        def stub_setup_networks_on_host(ctxt, instance, *args, **kwargs):
+            # The instance.host should have been mutated to point at the
+            # source compute.
+            self.assertEqual(self.migration.source_compute, instance.host)
+            # Raise PortBindingDeletionFailed to make sure it's caught and
+            # logged but not fatal.
+            raise exception.PortBindingDeletionFailed(port_id=uuids.port_id,
+                                                      host=self.compute.host)
+
+        with test.nested(
+            mock.patch.object(self.compute, 'network_api'),
+            mock.patch.object(self.compute, '_get_instance_block_device_info'),
+            mock.patch.object(self.compute.driver, 'destroy'),
+            mock.patch.object(self.compute, '_delete_volume_attachments'),
+            mock.patch.object(self.compute.rt, 'drop_move_claim')
+        ) as (
+            mock_network_api, mock_get_bdi, mock_destroy,
+            mock_delete_attachments, mock_drop_claim
+        ):
+            mock_network_api.migrate_instance_start.side_effect = \
+                stub_migrate_instance_start
+            mock_network_api.setup_networks_on_host.side_effect = \
+                stub_setup_networks_on_host
+            # Run the code.
+            self.compute._revert_snapshot_based_resize_at_dest(
+                self.context, self.instance, self.migration)
+        # Assert the calls.
+        mock_network_api.get_instance_nw_info.assert_called_once_with(
+            self.context, self.instance)
+        mock_get_bdi.assert_called_once_with(
+            self.context, self.instance, bdms=mock_get_bdms.return_value)
+        mock_destroy.assert_called_once_with(
+            self.context, self.instance,
+            mock_network_api.get_instance_nw_info.return_value,
+            block_device_info=mock_get_bdi.return_value)
+        mock_network_api.migrate_instance_start.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        mock_network_api.setup_networks_on_host.assert_called_once_with(
+            self.context, self.instance, host=self.compute.host,
+            teardown=True)
+        # Assert that even though setup_networks_on_host raised
+        # PortBindingDeletionFailed it was handled and logged.
+        self.assertIn('Failed to delete port bindings from target host.',
+                      self.stdlog.logger.output)
+        mock_delete_attachments.assert_called_once_with(
+            self.context, mock_get_bdms.return_value)
+        mock_revert_mig_ctxt.assert_called_once_with()
+        mock_inst_save.assert_called_once_with(
+            expected_task_state=task_states.RESIZE_REVERTING)
+        mock_drop_claim.assert_called_once_with(
+            self.context, self.instance, self.instance.node,
+            instance_type=self.instance.new_flavor)
+
 
 class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
     def setUp(self):
