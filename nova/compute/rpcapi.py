@@ -375,6 +375,7 @@ class ComputeAPI(object):
         * 5.7 - Add finish_snapshot_based_resize_at_dest()
         * 5.8 - Add confirm_snapshot_based_resize_at_source()
         * 5.9 - Add revert_snapshot_based_resize_at_dest()
+        * 5.10 - Add finish_revert_snapshot_based_resize_at_source()
     '''
 
     VERSION_ALIASES = {
@@ -731,6 +732,41 @@ class ComputeAPI(object):
             ctxt, 'finish_snapshot_based_resize_at_dest',
             instance=instance, migration=migration, snapshot_id=snapshot_id,
             request_spec=request_spec)
+
+    def finish_revert_snapshot_based_resize_at_source(
+            self, ctxt, instance, migration):
+        """Reverts a snapshot-based resize at the source host.
+
+        Spawn the guest and re-connect volumes/VIFs on the source host and
+        revert the instance to use the old_flavor for resource usage reporting.
+
+        Updates allocations in the placement service to move the source node
+        allocations, held by the migration record, to the instance and drop
+        the allocations held by the instance on the destination node.
+
+        This is a synchronous RPC call using the ``long_rpc_timeout``
+        configuration option.
+
+        :param ctxt: nova auth request context targeted at the source cell
+        :param instance: Instance object whose vm_state is "resized" and
+            task_state is "resize_reverting".
+        :param migration: Migration object whose status is "reverting".
+        :raises: nova.exception.MigrationError if the source compute is too
+            old to perform the operation
+        :raises: oslo_messaging.exceptions.MessagingTimeout if the RPC call
+            times out
+        """
+        version = '5.10'
+        client = self.router.client(ctxt)
+        if not client.can_send_version(version):
+            raise exception.MigrationError(reason=_('Compute too old'))
+        cctxt = client.prepare(server=migration.source_compute,
+                               version=version,
+                               call_monitor_timeout=CONF.rpc_response_timeout,
+                               timeout=CONF.long_rpc_timeout)
+        return cctxt.call(
+            ctxt, 'finish_revert_snapshot_based_resize_at_source',
+            instance=instance, migration=migration)
 
     def get_console_output(self, ctxt, instance, tail_length):
         version = '5.0'

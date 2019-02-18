@@ -7773,7 +7773,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             instance_uuid=self.instance.uuid,
             new_instance_type_id=7,
             dest_compute='dest_compute',
-            dest_node=None,
+            dest_node='dest_node',
             dest_host=None,
             source_compute='source_compute',
             source_node='source_node',
@@ -11260,6 +11260,223 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         mock_drop_claim.assert_called_once_with(
             self.context, self.instance, self.instance.node,
             instance_type=self.instance.new_flavor)
+
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_finish_revert_snapshot_based_resize_at_source')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_scheduler_instance_info')
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    def test_finish_revert_snapshot_based_resize_at_source_error_handling(
+            self, mock_add_fault, mock_update_sched, mock_inst_save,
+            mock_finish_revert):
+        """Tests error handling (context managers, decorators, post-processing)
+        in finish_revert_snapshot_based_resize_at_source.
+        """
+        self.instance.task_state = task_states.RESIZE_REVERTING
+        # First make _finish_revert_snapshot_based_resize_at_source fail.
+        error = test.TestingException('oops')
+        mock_finish_revert.side_effect = error
+        self.assertRaises(
+            test.TestingException,
+            self.compute.finish_revert_snapshot_based_resize_at_source,
+            self.context, self.instance, self.migration)
+        mock_finish_revert.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        # _error_out_instance_on_exception should have set the instance status
+        # to ERROR.
+        mock_inst_save.assert_called()
+        self.assertEqual(vm_states.ERROR, self.instance.vm_state)
+        # We should not have updated the scheduler since we failed.
+        mock_update_sched.assert_not_called()
+        # reverts_task_state should have set the task_state to None.
+        self.assertIsNone(self.instance.task_state)
+        # errors_out_migration should have set the migration status to error.
+        self.migration.save.assert_called_once_with()
+        self.assertEqual('error', self.migration.status)
+        # wrap_instance_fault should have recorded a fault.
+        mock_add_fault.assert_called_once_with(
+            self.context, self.instance, error, test.MatchType(tuple))
+        # wrap_exception should have sent an error notification.
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(
+            'compute.%s' % fields.NotificationAction.EXCEPTION,
+            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+
+        # Now run it again but _finish_revert_snapshot_based_resize_at_source
+        # will pass and _update_scheduler_instance_info will fail but not be
+        # fatal (just logged).
+        mock_finish_revert.reset_mock(side_effect=True)  # reset side_effect
+        mock_update_sched.side_effect = test.TestingException('scheduler oops')
+        self.compute.finish_revert_snapshot_based_resize_at_source(
+            self.context, self.instance, self.migration)
+        mock_finish_revert.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        mock_update_sched.assert_called_once_with(self.context, self.instance)
+        self.assertIn('finish_revert_snapshot_based_resize_at_source failed '
+                      'during post-processing. Error: scheduler oops',
+                      self.stdlog.logger.output)
+
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.manager.ComputeManager._revert_allocation',
+                side_effect=exception.AllocationMoveFailed('placement down'))
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_volume_attachments')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_finish_revert_resize_network_migrate_finish')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_instance_block_device_info')
+    @mock.patch('nova.objects.Instance.drop_migration_context')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_instance_after_spawn')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_complete_volume_attachments')
+    def test_finish_revert_snapshot_based_resize_at_source(
+            self, mock_complete_attachments, mock_update_after_spawn,
+            mock_drop_mig_context, mock_get_bdi, mock_net_migrate_finish,
+            mock_update_attachments, mock_get_bdms, mock_revert_allocs,
+            mock_inst_save):
+        """Happy path test for finish_revert_snapshot_based_resize_at_source.
+        Also makes sure some cleanups that are handled gracefully do not raise.
+        """
+        # Make _update_scheduler_instance_info a no-op.
+        self.flags(track_instance_changes=False, group='filter_scheduler')
+        # Configure the instance with old_vm_state = STOPPED so the guest is
+        # created but not powered on.
+        self.instance.system_metadata['old_vm_state'] = vm_states.STOPPED
+        # Configure the instance with an old_flavor for the revert.
+        old_flavor = fake_flavor.fake_flavor_obj(self.context)
+        self.instance.old_flavor = old_flavor
+        with test.nested(
+            mock.patch.object(self.compute.network_api,
+                              'get_instance_nw_info'),
+            mock.patch.object(self.compute.driver, 'finish_revert_migration')
+        ) as (
+            mock_get_nw_info, mock_driver_finish
+        ):
+            # Run the code.
+            self.compute.finish_revert_snapshot_based_resize_at_source(
+                self.context, self.instance, self.migration)
+        # Assert the migration status was updated.
+        self.migration.save.assert_called_once_with()
+        self.assertEqual('reverted', self.migration.status)
+        # Assert the instance host/node and flavor info was updated.
+        self.assertEqual(self.migration.source_compute, self.instance.host)
+        self.assertEqual(self.migration.source_node, self.instance.node)
+        self.assertIs(self.instance.flavor, old_flavor)
+        self.assertEqual(old_flavor.id, self.instance.instance_type_id)
+        # Assert _revert_allocation was called, raised and logged the error.
+        mock_revert_allocs.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        self.assertIn('Reverting allocation in placement for migration %s '
+                      'failed.' % self.migration.uuid,
+                      self.stdlog.logger.output)
+        # Assert that volume attachments were updated.
+        mock_update_attachments.assert_called_once_with(
+            self.context, self.instance, mock_get_bdms.return_value)
+        # Assert that port bindings were updated to point at the source host.
+        mock_net_migrate_finish.assert_called_once_with(
+            self.context, self.instance, self.migration,
+            provider_mappings=None)
+        # Assert the driver finished reverting the migration.
+        mock_get_bdi.assert_called_once_with(
+            self.context, self.instance, bdms=mock_get_bdms.return_value)
+        mock_driver_finish.assert_called_once_with(
+            self.context, self.instance, mock_get_nw_info.return_value,
+            self.migration, block_device_info=mock_get_bdi.return_value,
+            power_on=False)
+        # Assert final DB cleanup for the instance.
+        mock_drop_mig_context.assert_called_once_with()
+        mock_update_after_spawn.assert_called_once_with(
+            self.context, self.instance, vm_state=vm_states.STOPPED)
+        mock_inst_save.assert_has_calls([
+            mock.call(expected_task_state=[task_states.RESIZE_REVERTING])] * 2)
+        # And finally that the volume attachments were completed.
+        mock_complete_attachments.assert_called_once_with(
+            self.context, mock_get_bdms.return_value)
+
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.manager.ComputeManager._revert_allocation')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_volume_attachments')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_finish_revert_resize_network_migrate_finish')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_instance_block_device_info')
+    @mock.patch('nova.objects.Instance.drop_migration_context')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_instance_after_spawn')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_complete_volume_attachments',
+                side_effect=test.TestingException('vol complete failed'))
+    def test_finish_revert_snapshot_based_resize_at_source_driver_fails(
+            self, mock_complete_attachments, mock_update_after_spawn,
+            mock_drop_mig_context, mock_get_bdi, mock_net_migrate_finish,
+            mock_update_attachments, mock_get_bdms, mock_revert_allocs,
+            mock_inst_save):
+        """Test for _finish_revert_snapshot_based_resize_at_source where the
+        driver call to finish_revert_migration fails.
+        """
+        self.instance.system_metadata['old_vm_state'] = vm_states.ACTIVE
+        # Configure the instance with an old_flavor for the revert.
+        old_flavor = fake_flavor.fake_flavor_obj(self.context)
+        self.instance.old_flavor = old_flavor
+        with test.nested(
+            mock.patch.object(self.compute.network_api,
+                              'get_instance_nw_info'),
+            mock.patch.object(self.compute.driver, 'finish_revert_migration',
+                              side_effect=test.TestingException('driver fail'))
+        ) as (
+            mock_get_nw_info, mock_driver_finish,
+        ):
+            # Run the code.
+            ex = self.assertRaises(
+                test.TestingException,
+                self.compute._finish_revert_snapshot_based_resize_at_source,
+                self.context, self.instance, self.migration)
+        # Assert the driver call (note power_on=True b/c old_vm_state=active)
+        mock_get_bdi.assert_called_once_with(
+            self.context, self.instance, bdms=mock_get_bdms.return_value)
+        mock_driver_finish.assert_called_once_with(
+            self.context, self.instance, mock_get_nw_info.return_value,
+            self.migration, block_device_info=mock_get_bdi.return_value,
+            power_on=True)
+        # _complete_volume_attachments is called even though the driver call
+        # failed.
+        mock_complete_attachments.assert_called_once_with(
+            self.context, mock_get_bdms.return_value)
+        # finish_revert_migration failed but _complete_volume_attachments
+        # is still called and in this case also fails so the resulting
+        # exception should be the one from _complete_volume_attachments
+        # but the finish_revert_migration error should have been logged.
+        self.assertIn('vol complete failed', six.text_type(ex))
+        self.assertIn('driver fail', self.stdlog.logger.output)
+        # Assert the migration status was not updated.
+        self.migration.save.assert_not_called()
+        # Assert the instance host/node and flavor info was updated.
+        self.assertEqual(self.migration.source_compute, self.instance.host)
+        self.assertEqual(self.migration.source_node, self.instance.node)
+        self.assertIs(self.instance.flavor, old_flavor)
+        self.assertEqual(old_flavor.id, self.instance.instance_type_id)
+        # Assert allocations were reverted.
+        mock_revert_allocs.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        # Assert that volume attachments were updated.
+        mock_update_attachments.assert_called_once_with(
+            self.context, self.instance, mock_get_bdms.return_value)
+        # Assert that port bindings were updated to point at the source host.
+        mock_net_migrate_finish.assert_called_once_with(
+            self.context, self.instance, self.migration,
+            provider_mappings=None)
+        # Assert final DB cleanup for the instance did not happen.
+        mock_drop_mig_context.assert_not_called()
+        mock_update_after_spawn.assert_not_called()
+        # _finish_revert_resize_update_instance_flavor_host_node updated the
+        # instance.
+        mock_inst_save.assert_called_once_with(
+            expected_task_state=[task_states.RESIZE_REVERTING])
 
 
 class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
