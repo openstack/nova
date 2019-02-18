@@ -22,24 +22,6 @@ from nova import test
 class LinuxNetTestCase(test.NoDBTestCase):
     """Test networking helpers."""
 
-    def _create_veth_pair(self, calls):
-        with mock.patch('oslo_concurrency.processutils.execute',
-                        return_value=('', '')) as ex:
-            nova.privsep.linux_net._create_veth_pair_inner(
-                'fake-dev1', 'fake-dev2')
-            ex.assert_has_calls(calls)
-
-    def test_create_veth_pair(self):
-        calls = [
-            mock.call('ip', 'link', 'add', 'fake-dev1', 'type', 'veth',
-                      'peer', 'name', 'fake-dev2'),
-            mock.call('ip', 'link', 'set', 'fake-dev1', 'up'),
-            mock.call('ip', 'link', 'set', 'fake-dev1', 'promisc', 'on'),
-            mock.call('ip', 'link', 'set', 'fake-dev2', 'up'),
-            mock.call('ip', 'link', 'set', 'fake-dev2', 'promisc', 'on')
-        ]
-        self._create_veth_pair(calls)
-
     @mock.patch('oslo_concurrency.processutils.execute',
                 return_value=('', ''))
     def test_set_device_mtu_default(self, mock_exec):

@@ -115,23 +115,3 @@ def bind_ip(device, ip, scope_is_link=False):
         processutils.execute('ip', 'addr', 'add', str(ip) + '/32',
                              'scope', 'link', 'dev', device,
                              check_exit_code=[0, 2, 254])
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def create_veth_pair(dev1_name, dev2_name, mtu=None):
-    """Create a pair of veth devices with the specified names,
-    deleting any previous devices with those names.
-    """
-    _create_veth_pair_inner(dev1_name, dev2_name, mtu=mtu)
-
-
-def _create_veth_pair_inner(dev1_name, dev2_name, mtu=None):
-    for dev in [dev1_name, dev2_name]:
-        delete_net_dev(dev)
-
-    processutils.execute('ip', 'link', 'add', dev1_name, 'type', 'veth',
-                         'peer', 'name', dev2_name)
-    for dev in [dev1_name, dev2_name]:
-        processutils.execute('ip', 'link', 'set', dev, 'up')
-        processutils.execute('ip', 'link', 'set', dev, 'promisc', 'on')
-        _set_device_mtu_inner(dev, mtu)
