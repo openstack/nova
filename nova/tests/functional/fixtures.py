@@ -144,7 +144,9 @@ class PlacementFixture(placement_fixtures.PlacementFixture):
         # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
         # in case a token is not provided. We should change that by creating
         # a fake token so we could remove adding the header below.
+        headers = {'x-auth-token': self.token}
+        self._update_headers_with_version(headers, **kwargs)
         return self._client.delete(
             url,
             endpoint_override=self.endpoint,
-            headers={'x-auth-token': self.token})
+            headers=headers)
