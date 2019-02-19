@@ -904,7 +904,10 @@ def get_instance_from_source_cell(
         target cell database
     :param source_compute: name of the source compute service host
     :param instance_uuid: UUID of the instance
-    :returns: Instance object from the source cell database.
+    :returns: 2-item tuple of:
+
+        - Instance object from the source cell database.
+        - CellMapping object of the source cell mapping
     """
     # We can get the source cell via the host mapping based on the
     # source_compute in the migration object.
@@ -918,9 +921,10 @@ def get_instance_from_source_cell(
     # Now get the instance from the source cell DB using the source
     # cell context which will make the source cell instance permanently
     # targeted to the source cell database.
-    return objects.Instance.get_by_uuid(
+    instance = objects.Instance.get_by_uuid(
         source_cell_context, instance_uuid,
         expected_attrs=['flavor', 'info_cache', 'system_metadata'])
+    return instance, source_cell_mapping
 
 
 class ConfirmResizeTask(base.TaskBase):
@@ -1059,7 +1063,7 @@ class ConfirmResizeTask(base.TaskBase):
     def _execute(self):
         # First get the instance from the source cell so we can cleanup.
         source_cell_instance = get_instance_from_source_cell(
-            self.context, self.migration.source_compute, self.instance.uuid)
+            self.context, self.migration.source_compute, self.instance.uuid)[0]
         # Send the resize.confirm.start notification(s) using the source
         # cell instance since we start there.
         self._send_resize_confirm_notification(
@@ -1103,3 +1107,357 @@ class ConfirmResizeTask(base.TaskBase):
             scheduler_utils.set_vm_state_and_notify(
                 self.context, self.instance.uuid, 'compute_task',
                 'migrate_server', updates, ex, request_spec)
+
+
+class RevertResizeTask(base.TaskBase):
+    """Task to orchestrate a cross-cell resize revert operation.
+
+    This task is responsible for coordinating the cleanup of the resources
+    in the target cell and restoring the server and its related resources
+    (e.g. networking and volumes) in the source cell.
+
+    Upon successful completion the instance mapping should point back at the
+    source cell, the source cell instance should no longer be hidden and the
+    instance in the target cell should be destroyed.
+    """
+
+    def __init__(self, context, instance, migration, legacy_notifier,
+                 compute_rpcapi):
+        """Initialize this RevertResizeTask instance
+
+        :param context: nova auth request context targeted at the target cell
+        :param instance: Instance object in "resized" status from the target
+            cell with task_state "resize_reverting"
+        :param migration: Migration object from the target cell for the resize
+            operation expected to have status "reverting"
+        :param legacy_notifier: LegacyValidatingNotifier for sending legacy
+            unversioned notifications
+        :param compute_rpcapi: instance of nova.compute.rpcapi.ComputeAPI
+        """
+        super(RevertResizeTask, self).__init__(context, instance)
+        self.migration = migration
+        self.legacy_notifier = legacy_notifier
+        self.compute_rpcapi = compute_rpcapi
+
+        self._source_cell_migration = None
+
+        self.volume_api = cinder.API()
+
+    def _send_resize_revert_notification(self, instance, phase):
+        """Sends an unversioned and versioned resize.revert.(phase)
+        notification.
+
+        :param instance: The instance whose resize is being reverted.
+        :param phase: The phase for the resize.revert operation (either
+            "start" or "end").
+        """
+        ctxt = instance._context
+        # Send the legacy unversioned notification.
+        compute_utils.notify_about_instance_usage(
+            self.legacy_notifier, ctxt, instance, 'resize.revert.%s' % phase)
+        # Send the versioned notification.
+        compute_utils.notify_about_instance_action(
+            ctxt, instance, instance.host,  # TODO(mriedem): Use CONF.host?
+            action=fields.NotificationAction.RESIZE_REVERT,
+            phase=phase)
+
+    @staticmethod
+    def _update_source_obj_from_target_cell(source_obj, target_obj):
+        """Updates the object from the source cell using the target cell object
+
+        All fields on the source object are updated from the target object
+        except for the ``id`` and ``created_at`` fields since those value must
+        not change during an update. The ``updated_at`` field is also skipped
+        because saving changes to ``source_obj`` will automatically update the
+        ``updated_at`` field.
+
+        It is expected that the two objects represent the same thing but from
+        different cell databases, so for example, a uuid field (if one exists)
+        should not change.
+
+        Note that the changes to ``source_obj`` are not persisted in this
+        method.
+
+        :param source_obj: Versioned object from the source cell database
+        :param target_obj: Versioned object from the target cell database
+        """
+        ignore_fields = ['created_at', 'id', 'updated_at']
+        for field in source_obj.obj_fields:
+            if field in target_obj and field not in ignore_fields:
+                setattr(source_obj, field, getattr(target_obj, field))
+
+    def _update_bdms_in_source_cell(self, source_cell_context):
+        """Update BlockDeviceMapppings in the source cell database.
+
+        It is possible to attach/detach volumes to/from a resized instance,
+        which would create/delete BDM records in the target cell, so we have
+        to recreate newly attached BDMs in the source cell database and
+        delete any old BDMs that were detached while resized in the target
+        cell.
+
+        :param source_cell_context: nova auth request context targeted at the
+            source cell database
+        """
+        # TODO(mriedem): Need functional test wrinkle for this. Attach volume2
+        # while resized, detach volume1 while resized, and make sure those are
+        # the same when the revert is done.
+        bdms_from_source_cell = (
+            objects.BlockDeviceMappingList.get_by_instance_uuid(
+                source_cell_context, self.instance.uuid))
+        source_cell_bdms_by_uuid = {
+            bdm.uuid: bdm for bdm in bdms_from_source_cell}
+        bdms_from_target_cell = (
+            objects.BlockDeviceMappingList.get_by_instance_uuid(
+                self.context, self.instance.uuid))
+        # Copy new/updated BDMs from the target cell DB to the source cell DB.
+        for bdm in bdms_from_target_cell:
+            if bdm.uuid in source_cell_bdms_by_uuid:
+                # Remove this BDM from the list since we want to preserve it
+                # along with its attachment_id.
+                source_cell_bdms_by_uuid.pop(bdm.uuid)
+            else:
+                # Newly attached BDM while in the target cell, so create it
+                # in the source cell.
+                source_bdm = clone_creatable_object(source_cell_context, bdm)
+                # revert_snapshot_based_resize_at_dest is going to delete the
+                # attachment for this BDM so we need to create a new empty
+                # attachment to reserve this volume so that
+                # finish_revert_snapshot_based_resize_at_source can use it.
+                attach_ref = self.volume_api.attachment_create(
+                    source_cell_context, bdm.volume_id, self.instance.uuid)
+                source_bdm.attachment_id = attach_ref['id']
+                LOG.debug('Creating BlockDeviceMapping with volume ID %s '
+                          'and attachment %s in the source cell database '
+                          'since the volume was attached while the server was '
+                          'resized.', bdm.volume_id, attach_ref['id'],
+                          instance=self.instance)
+                source_bdm.create()
+        # If there are any source bdms left that were not processed from the
+        # target cell bdms, it means those source bdms were detached while
+        # resized in the target cell, and we need to delete them from the
+        # source cell so they don't re-appear once the revert is complete.
+        self._delete_orphan_source_cell_bdms(source_cell_bdms_by_uuid.values())
+
+    def _delete_orphan_source_cell_bdms(self, source_cell_bdms):
+        """Deletes orphaned BDMs and volume attachments from the source cell.
+
+        If any volumes were detached while the server was resized into the
+        target cell they are destroyed here so they do not show up again once
+        the instance is mapped back to the source cell.
+
+        :param source_cell_bdms: Iterator of BlockDeviceMapping objects.
+        """
+        for bdm in source_cell_bdms:
+            LOG.debug('Destroying BlockDeviceMapping with volume ID %s and '
+                      'attachment ID %s from source cell database during '
+                      'cross-cell resize revert since the volume was detached '
+                      'while the server was resized.', bdm.volume_id,
+                      bdm.attachment_id, instance=self.instance)
+            # First delete the (empty) attachment, created by
+            # prep_snapshot_based_resize_at_source, so it is not leaked.
+            try:
+                self.volume_api.attachment_delete(
+                    bdm._context, bdm.attachment_id)
+            except Exception as e:
+                LOG.error('Failed to delete attachment %s for volume %s. The '
+                          'attachment may be leaked and needs to be manually '
+                          'cleaned up. Error: %s', bdm.attachment_id,
+                          bdm.volume_id, e, instance=self.instance)
+            bdm.destroy()
+
+    def _update_instance_actions_in_source_cell(self, source_cell_context):
+        """Update instance action records in the source cell database
+
+        We need to copy the REVERT_RESIZE instance action and related events
+        from the target cell to the source cell. Otherwise the revert operation
+        in the source compute service will not be able to lookup the correct
+        instance action to track events.
+
+        :param source_cell_context: nova auth request context targeted at the
+            source cell database
+        """
+        # FIXME(mriedem): This is a hack to just get revert working on
+        # the source; we need to re-create any actions created in the target
+        # cell DB after the instance was moved while it was in
+        # VERIFY_RESIZE status, like if volumes were attached/detached.
+        # Can we use a changes-since filter for that, i.e. find the last
+        # instance action for the instance in the source cell database and then
+        # get all instance actions from the target cell database that were
+        # created after that time.
+        action = objects.InstanceAction.get_by_request_id(
+            self.context, self.instance.uuid, self.context.request_id)
+        new_action = clone_creatable_object(source_cell_context, action)
+        new_action.create()
+        # Also create the events under this action.
+        events = objects.InstanceActionEventList.get_by_action(
+            self.context, action.id)
+        for event in events:
+            new_event = clone_creatable_object(source_cell_context, event)
+            new_event.create(action.instance_uuid, action.request_id)
+
+    def _update_migration_in_source_cell(self, source_cell_context):
+        """Update the migration record in the source cell database.
+
+        Updates the migration record in the source cell database based on the
+        current information about the migration in the target cell database.
+
+        :param source_cell_context: nova auth request context targeted at the
+            source cell database
+        :return: Migration object of the updated source cell database migration
+            record
+        """
+        source_cell_migration = objects.Migration.get_by_uuid(
+            source_cell_context, self.migration.uuid)
+        # The only change we really expect here is the status changing to
+        # "reverting".
+        self._update_source_obj_from_target_cell(
+            source_cell_migration, self.migration)
+        source_cell_migration.save()
+        return source_cell_migration
+
+    def _update_instance_in_source_cell(self, instance):
+        """Updates the instance and related records in the source cell DB.
+
+        Before reverting in the source cell we need to copy the
+        latest state information from the target cell database where the
+        instance lived before the revert. This is because data about the
+        instance could have changed while it was in VERIFY_RESIZE status, like
+        attached volumes.
+
+        :param instance: Instance object from the source cell database
+        :return: Migration object of the updated source cell database migration
+            record
+        """
+        LOG.debug('Updating instance-related records in the source cell '
+                  'database based on target cell database information.',
+                  instance=instance)
+        # Copy information from the target cell instance that we need in the
+        # source cell instance for doing the revert on the source compute host.
+        instance.system_metadata['old_vm_state'] = (
+            self.instance.system_metadata.get('old_vm_state'))
+        instance.old_flavor = instance.flavor
+        instance.task_state = task_states.RESIZE_REVERTING
+        instance.save()
+
+        source_cell_context = instance._context
+        self._update_bdms_in_source_cell(source_cell_context)
+        self._update_instance_actions_in_source_cell(source_cell_context)
+        source_cell_migration = self._update_migration_in_source_cell(
+            source_cell_context)
+
+        # NOTE(mriedem): We do not have to worry about ports changing while
+        # resized since the API does not allow attach/detach interface while
+        # resized. Same for tags.
+        return source_cell_migration
+
+    def _update_instance_mapping(
+            self, source_cell_instance, source_cell_mapping):
+        """Swaps the hidden field value on the source and target cell instance
+        and updates the instance mapping to point at the source cell.
+
+        :param source_cell_instance: Instance object from the source cell DB
+        :param source_cell_mapping: CellMapping object for the source cell
+        """
+        LOG.debug('Marking instance in target cell as hidden and updating '
+                  'instance mapping to point at source cell %s.',
+                  source_cell_mapping.identity, instance=source_cell_instance)
+        # Get the instance mapping first to make the window of time where both
+        # instances are hidden=False as small as possible.
+        instance_mapping = objects.InstanceMapping.get_by_instance_uuid(
+            self.context, self.instance.uuid)
+        # Mark the source cell instance record as hidden=False so it will show
+        # up when listing servers. Note that because of how the API filters
+        # duplicate instance records, even if the user is listing servers at
+        # this exact moment only one copy of the instance will be returned.
+        source_cell_instance.hidden = False
+        source_cell_instance.save()
+        # Update the instance mapping to point at the source cell. We do this
+        # before cleaning up the target host/cell because that is really best
+        # effort and if something fails on the target we want the user to
+        # now interact with the instance in the source cell with the original
+        # flavor because they are ultimately trying to revert and get back
+        # there, so if they hard reboot/rebuild after an error (for example)
+        # that should happen in the source cell.
+        instance_mapping.cell_mapping = source_cell_mapping
+        instance_mapping.save()
+        # Mark the target cell instance record as hidden=True to hide it from
+        # the user when listing servers.
+        self.instance.hidden = True
+        self.instance.save()
+
+    def _execute(self):
+        # Send the resize.revert.start notification(s) using the target
+        # cell instance since we start there.
+        self._send_resize_revert_notification(
+            self.instance, fields.NotificationPhase.START)
+
+        source_cell_instance, source_cell_mapping = (
+            get_instance_from_source_cell(
+                self.context, self.migration.source_compute,
+                self.instance.uuid))
+
+        # Update the source cell database information based on the target cell
+        # database, i.e. the instance/migration/BDMs/action records. Do all of
+        # this before updating the instance mapping in case it fails.
+        source_cell_migration = self._update_instance_in_source_cell(
+            source_cell_instance)
+
+        # Swap the instance.hidden values and update the instance mapping to
+        # point at the source cell. From here on out the user will see and
+        # operate on the instance in the source cell.
+        self._update_instance_mapping(
+            source_cell_instance, source_cell_mapping)
+        # Save off the source cell migration record for rollbacks.
+        self._source_cell_migration = source_cell_migration
+
+        # Clean the instance from the target host.
+        LOG.debug('Calling destination host %s to revert cross-cell resize.',
+                  self.migration.dest_compute, instance=self.instance)
+        # Use the EventReport context manager to create the same event that
+        # the dest compute will create but in the source cell DB so we do not
+        # have to explicitly copy it over from target to source DB.
+        event_name = 'compute_revert_snapshot_based_resize_at_dest'
+        with compute_utils.EventReporter(
+                source_cell_instance._context, event_name,
+                self.migration.dest_compute, self.instance.uuid):
+            self.compute_rpcapi.revert_snapshot_based_resize_at_dest(
+                self.context, self.instance, self.migration)
+            # NOTE(mriedem): revert_snapshot_based_resize_at_dest updates the
+            # target cell instance so if we need to do something with it here
+            # in the future before destroying it, it should be refreshed.
+
+        # Destroy the instance and its related records from the target cell DB.
+        LOG.info('Deleting instance record from target cell %s',
+                 self.context.cell_uuid, instance=source_cell_instance)
+        # This needs to be a hard delete because if we retry the resize to the
+        # target cell we could hit a duplicate entry unique constraint error.
+        self.instance.destroy(hard_delete=True)
+
+        # Launch the guest at the source host with the old flavor.
+        LOG.debug('Calling source host %s to finish reverting cross-cell '
+                  'resize.', self.migration.source_compute,
+                  instance=self.instance)
+        self.compute_rpcapi.finish_revert_snapshot_based_resize_at_source(
+            source_cell_instance._context, source_cell_instance,
+            source_cell_migration)
+        # finish_revert_snapshot_based_resize_at_source updates the source cell
+        # instance so refresh it here so we have the latest copy.
+        source_cell_instance.refresh()
+
+        # Send the resize.revert.end notification using the instance from
+        # the source cell since we end there.
+        self._send_resize_revert_notification(
+            source_cell_instance, fields.NotificationPhase.END)
+
+    def rollback(self, ex):
+        # If we have updated the instance mapping to point at the source
+        # cell we update the migration from the source cell, otherwise we
+        # update the migration in the target cell.
+        migration = self._source_cell_migration \
+            if self._source_cell_migration else self.migration
+        migration.status = 'error'
+        migration.save()
+
+        # TODO(mriedem): Will have to think about setting the instance to
+        # ERROR status and/or recording a fault and sending an
+        # error notification (create new resize_revert.error notification?).
