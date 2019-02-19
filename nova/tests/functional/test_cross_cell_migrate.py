@@ -548,13 +548,157 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # Explicitly delete the server and make sure it's gone from all cells.
         self.delete_server_and_assert_cleanup(server)
 
+    def assert_resize_revert_notifications(self):
+        # We should have gotten three notifications:
+        # 1. instance.resize_revert.start (from target compute host)
+        # 2. instance.exists (from target compute host)
+        # 3. instance.resize_revert.end (from source compute host)
+        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         'Unexpected number of versioned notifications for '
+                         'cross-cell resize revert: %s' %
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
+        start = fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type']
+        self.assertEqual('instance.resize_revert.start', start)
+        exists = fake_notifier.VERSIONED_NOTIFICATIONS[1]['event_type']
+        self.assertEqual('instance.exists', exists)
+        end = fake_notifier.VERSIONED_NOTIFICATIONS[2]['event_type']
+        self.assertEqual('instance.resize_revert.end', end)
+
+    def assert_resize_revert_actions(self, server, source_host, dest_host):
+        actions = self.api.api_get(
+            '/servers/%s/os-instance-actions' % server['id']
+        ).body['instanceActions']
+        # The revert instance action should have been copied from the target
+        # cell to the source cell and "completed" there, i.e. an event
+        # should show up under that revert action.
+        actions_by_action = {action['action']: action for action in actions}
+        self.assertIn(instance_actions.REVERT_RESIZE, actions_by_action)
+        confirm_action = actions_by_action[instance_actions.REVERT_RESIZE]
+        detail = self.api.api_get(
+            '/servers/%s/os-instance-actions/%s' % (
+                server['id'], confirm_action['request_id'])
+        ).body['instanceAction']
+        events_by_name = {event['event']: event for event in detail['events']}
+        # There are two events:
+        # - conductor_revert_snapshot_based_resize which is copied from the
+        #   target cell database record in conductor
+        # - compute_revert_snapshot_based_resize_at_dest
+        # - compute_finish_revert_snapshot_based_resize_at_source which is from
+        #   the source compute service method
+        self.assertEqual(3, len(events_by_name), detail)
+
+        self.assertIn('conductor_revert_snapshot_based_resize', events_by_name)
+        conductor_event = events_by_name[
+            'conductor_revert_snapshot_based_resize']
+        # The result is None because the actual update for this to set the
+        # result=Success is made on the action event in the target cell
+        # database and not reflected back in the source cell. Do we care?
+        self.assertIsNone(conductor_event['result'])
+
+        self.assertIn('compute_revert_snapshot_based_resize_at_dest',
+                      events_by_name)
+        finish_revert_at_dest_event = events_by_name[
+            'compute_revert_snapshot_based_resize_at_dest']
+        self.assertEqual(dest_host, finish_revert_at_dest_event['host'])
+        self.assertEqual('Success', finish_revert_at_dest_event['result'])
+
+        self.assertIn('compute_finish_revert_snapshot_based_resize_at_source',
+                      events_by_name)
+        finish_revert_at_source_event = events_by_name[
+            'compute_finish_revert_snapshot_based_resize_at_source']
+        self.assertEqual(source_host, finish_revert_at_source_event['host'])
+        self.assertEqual('Success', finish_revert_at_source_event['result'])
+
     def test_resize_revert_volume_backed(self):
         """Tests a volume-backed resize to another cell where the resize
         is reverted back to the original source cell.
         """
-        self._resize_and_validate(volume_backed=True)
+        server, source_rp_uuid, target_rp_uuid, old_flavor, new_flavor = (
+            self._resize_and_validate(volume_backed=True))
+        target_host = server['OS-EXT-SRV-ATTR:host']
 
-        # TODO(mriedem): Revert the resize and make assertions.
+        # Attach a fake volume to the server to make sure it survives revert.
+        self._attach_volume_to_server(server['id'], uuids.fake_volume_id)
+
+        # TODO(mriedem): Need a test wrinkle for revert where a volume is
+        # attached to the server before resize, then it is detached while
+        # resized, and then we revert and make sure it is still detached.
+
+        # Reset the fake notifier so we only check revert notifications.
+        fake_notifier.reset()
+
+        # Revert the resize. The server should be re-spawned in the source
+        # cell and removed from the target cell. The allocations
+        # should be gone from the target compute node resource provider, the
+        # migration record should be reverted and there should be a revert
+        # action.
+        self.api.post_server_action(server['id'], {'revertResize': None})
+        server = self._wait_for_state_change(server, 'ACTIVE')
+        source_host = server['OS-EXT-SRV-ATTR:host']
+
+        # The migration should be reverted. Wait for the
+        # instance.resize_revert.end notification because the migration.status
+        # is changed to "reverted" *after* the instance status is changed to
+        # ACTIVE.
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.resize_revert.end')
+        migrations = self.api.api_get(
+            '/os-migrations?instance_uuid=%s' % server['id']
+        ).body['migrations']
+        self.assertEqual(1, len(migrations), migrations)
+        migration = migrations[0]
+        self.assertEqual('reverted', migration['status'], migration)
+
+        # The target allocations should be gone.
+        target_allocations = self._get_allocations_by_provider_uuid(
+            target_rp_uuid)
+        self.assertEqual({}, target_allocations)
+        # The source allocations should just be on the server and for the old
+        # flavor.
+        source_allocations = self._get_allocations_by_provider_uuid(
+            source_rp_uuid)
+        self.assertNotIn(migration['uuid'], source_allocations)
+        self.assertIn(server['id'], source_allocations)
+        source_allocations = source_allocations[server['id']]['resources']
+        self.assertFlavorMatchesAllocation(
+            old_flavor, source_allocations, volume_backed=True)
+
+        self.assert_resize_revert_actions(server, source_host, target_host)
+
+        # Make sure the guest is on the source node hypervisor and not on the
+        # target node hypervisor.
+        source_guest_uuids = (
+            self.computes[source_host].manager.driver.list_instance_uuids())
+        self.assertIn(server['id'], source_guest_uuids,
+                      'Guest is not running on the source hypervisor.')
+        target_guest_uuids = (
+            self.computes[target_host].manager.driver.list_instance_uuids())
+        self.assertNotIn(server['id'], target_guest_uuids,
+                         'Guest is still running on the target hypervisor.')
+
+        # Assert the target host hypervisor usage is back to 0 and the source
+        # is back to using the old flavor.
+        self.assert_hypervisor_usage(
+            source_rp_uuid, old_flavor, volume_backed=True)
+        no_usage = {'vcpus': 0, 'disk': 0, 'ram': 0}
+        self.assert_hypervisor_usage(
+            target_rp_uuid, no_usage, volume_backed=True)
+
+        # Run periodics and make sure the usage is still as expected.
+        self._run_periodics()
+        self.assert_hypervisor_usage(
+            source_rp_uuid, old_flavor, volume_backed=True)
+        self.assert_hypervisor_usage(
+            target_rp_uuid, no_usage, volume_backed=True)
+
+        # Make sure the fake volume is still attached.
+        self.assert_volume_is_attached(server['id'], uuids.fake_volume_id)
+
+        # Make sure we got the expected notifications for the revert action.
+        self.assert_resize_revert_notifications()
+
+        # Explicitly delete the server and make sure it's gone from all cells.
+        self.delete_server_and_assert_cleanup(server)
 
     def test_delete_while_in_verify_resize_status(self):
         """Tests that when deleting a server in VERIFY_RESIZE status, the
@@ -637,7 +781,24 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # Should be back on host1 in cell1.
         self.assertEqual('host1', server['OS-EXT-SRV-ATTR:host'])
 
-    # TODO(mriedem): test_resize_revert_from_stopped with image-backed.
+    def test_resize_revert_from_stopped(self):
+        """Tests resizing and reverting an image-backed server that was
+        initially stopped so it should remain stopped through the revert.
+        """
+        server = self._resize_and_validate(stopped=True)[0]
+        # Revert the resize and assert the guest remains off.
+        self.api.post_server_action(server['id'], {'revertResize': None})
+        server = self._wait_for_state_change(server, 'SHUTOFF')
+        self.assertEqual(4, server['OS-EXT-STS:power_state'],
+                         "Unexpected power state after revertResize.")
+        self._wait_for_migration_status(server, ['reverted'])
+
+        # Now try cold-migrating to cell2 to make sure there is no
+        # duplicate entry error in the DB.
+        self.api.post_server_action(server['id'], {'migrate': None})
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
+        # Should be on host2 in cell2.
+        self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
 
     def test_finish_snapshot_based_resize_at_dest_spawn_fails(self):
         """Negative test where the driver spawn fails on the dest host during

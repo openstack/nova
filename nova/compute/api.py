@@ -3658,14 +3658,20 @@ class API(base.Base):
         self._record_action_start(context, instance,
                                   instance_actions.REVERT_RESIZE)
 
-        # TODO(melwitt): We're not rechecking for strict quota here to guard
-        # against going over quota during a race at this time because the
-        # resource consumption for this operation is written to the database
-        # by compute.
-        self.compute_rpcapi.revert_resize(context, instance,
-                                          migration,
-                                          migration.dest_compute,
-                                          reqspec)
+        if migration.cross_cell_move:
+            # RPC cast to conductor to orchestrate the revert of the cross-cell
+            # resize.
+            self.compute_task_api.revert_snapshot_based_resize(
+                context, instance, migration)
+        else:
+            # TODO(melwitt): We're not rechecking for strict quota here to
+            # guard against going over quota during a race at this time because
+            # the resource consumption for this operation is written to the
+            # database by compute.
+            self.compute_rpcapi.revert_resize(context, instance,
+                                              migration,
+                                              migration.dest_compute,
+                                              reqspec)
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.RESIZED])
