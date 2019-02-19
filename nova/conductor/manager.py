@@ -233,7 +233,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.22')
+    target = messaging.Target(namespace='compute_task', version='1.23')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -1873,5 +1873,24 @@ class ComputeTaskManager(base.Base):
             operation expected to have status "confirming"
         """
         task = cross_cell_migrate.ConfirmResizeTask(
+            context, instance, migration, self.notifier, self.compute_rpcapi)
+        task.execute()
+
+    @targets_cell
+    # FIXME(mriedem): Upon successful completion of RevertResizeTask the
+    # instance is hard-deleted, along with its instance action record(s), from
+    # the target cell database so wrap_instance_event hits
+    # InstanceActionNotFound on __exit__.
+    @wrap_instance_event(prefix='conductor')
+    def revert_snapshot_based_resize(self, context, instance, migration):
+        """Executes the RevertResizeTask
+
+        :param context: nova auth request context targeted at the target cell
+        :param instance: Instance object in "resized" status from the target
+            cell
+        :param migration: Migration object from the target cell for the resize
+            operation expected to have status "reverting"
+        """
+        task = cross_cell_migrate.RevertResizeTask(
             context, instance, migration, self.notifier, self.compute_rpcapi)
         task.execute()

@@ -1783,6 +1783,18 @@ class _BaseTaskTestCase(object):
             self.context, instance=instance, migration=migration)
         mock_execute.assert_called_once_with()
 
+    @mock.patch(
+        'nova.conductor.tasks.cross_cell_migrate.RevertResizeTask.execute')
+    def test_revert_snapshot_based_resize(self, mock_execute):
+        instance = self._create_fake_instance_obj(ctxt=self.context)
+        migration = objects.Migration(
+            context=self.context, source_compute=instance.host,
+            source_node=instance.node, instance_uuid=instance.uuid,
+            status='reverting', migration_type='migration')
+        self.conductor_manager.revert_snapshot_based_resize(
+            self.context, instance=instance, migration=migration)
+        mock_execute.assert_called_once_with()
+
 
 class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     """ComputeTaskManager Tests."""
@@ -3842,6 +3854,17 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
                               self.conductor.confirm_snapshot_based_resize,
                               self.context, mock.sentinel.instance,
                               mock.sentinel.migration)
+
+    def test_revert_snapshot_based_resize_old_service(self):
+        """Tests revert_snapshot_based_resize when the service is too old."""
+        with mock.patch.object(
+                self.conductor.client, 'can_send_version',
+                return_value=False) as can_send_version:
+            self.assertRaises(exc.ServiceTooOld,
+                              self.conductor.revert_snapshot_based_resize,
+                              self.context, mock.sentinel.instance,
+                              mock.sentinel.migration)
+        can_send_version.assert_called_once_with('1.23')
 
 
 class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
