@@ -1604,12 +1604,26 @@ aggregate_az:
   in: body
   required: true
   type: string
-aggregate_az_optional:
+aggregate_az_optional_create:
   description: |
     The availability zone of the host aggregate. You should use a custom
     availability zone rather than the default returned by the
     os-availability-zone API. The availability zone must not include ':'
     in its name.
+  in: body
+  required: false
+  type: string
+aggregate_az_optional_update:
+  description: |
+    The availability zone of the host aggregate. You should use a custom
+    availability zone rather than the default returned by the
+    os-availability-zone API. The availability zone must not include ':'
+    in its name.
+
+    .. warning:: You should not change or unset the availability zone of an
+      aggregate when that aggregate has hosts which contain servers in it
+      since that may impact the ability for those servers to move to another
+      host.
   in: body
   required: false
   type: string
@@ -1625,9 +1639,21 @@ aggregate_id_body:
   in: body
   required: true
   type: integer
-aggregate_metadata:
+aggregate_metadata_request:
   description: |
-    Metadata key and value pairs associate with the aggregate.
+    Metadata key and value pairs associated with the aggregate.
+    The maximum size for each metadata key and value pair is 255 bytes.
+
+    .. warning:: You should not change or unset the availability zone of an
+      aggregate when that aggregate has hosts which contain servers in it
+      since that may impact the ability for those servers to move to another
+      host.
+  in: body
+  required: true
+  type: object
+aggregate_metadata_response:
+  description: |
+    Metadata key and value pairs associated with the aggregate.
   in: body
   required: true
   type: object
