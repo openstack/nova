@@ -293,8 +293,6 @@ def last_completed_audit_period(unit=None, before=None):
         rightnow = before
     else:
         rightnow = timeutils.utcnow()
-    if unit not in ('month', 'day', 'year', 'hour'):
-        raise ValueError(_('Time period must be hour, day, month or year'))
     if unit == 'month':
         if offset == 0:
             offset = 1
@@ -344,7 +342,7 @@ def last_completed_audit_period(unit=None, before=None):
             end = end - datetime.timedelta(days=1)
         begin = end - datetime.timedelta(days=1)
 
-    elif unit == 'hour':
+    else:  # unit == 'hour'
         end = rightnow.replace(minute=offset, second=0, microsecond=0)
         if end >= rightnow:
             end = end - datetime.timedelta(hours=1)

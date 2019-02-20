@@ -35,7 +35,7 @@ This service is typically executed on the controller node.
 """),
     cfg.StrOpt('port_range',
         default=DEFAULT_PORT_RANGE,
-        regex="^\d+:\d+$",
+        regex=r'^\d+:\d+$',
         help="""
 A range of TCP ports a guest can use for its backend.
 
