@@ -57,6 +57,7 @@ from nova.network import manager as network_manager
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as objects_base
+from nova import quota
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
@@ -304,6 +305,9 @@ class TestCase(testtools.TestCase):
         # any that depend on default/previous ordering
         self.flags(build_failure_weight_multiplier=0.0,
                    group='filter_scheduler')
+
+        # NOTE(melwitt): Reset the cached set of projects
+        quota.UID_QFD_POPULATED_CACHE_BY_PROJECT = set()
 
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.

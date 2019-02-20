@@ -2358,6 +2358,8 @@ class SchedulerReportClient(object):
         """
         total_counts = {'project': {}}
         # First query counts across all users of a project
+        LOG.debug('Getting usages for project_id %s from placement',
+                  project_id)
         resp = self._get_usages(context, project_id)
         if resp:
             data = resp.json()
@@ -2370,6 +2372,8 @@ class SchedulerReportClient(object):
             self._handle_usages_error_from_placement(resp, project_id)
         # If specified, second query counts across one user in the project
         if user_id:
+            LOG.debug('Getting usages for project_id %s and user_id %s from '
+                      'placement', project_id, user_id)
             resp = self._get_usages(context, project_id, user_id=user_id)
             if resp:
                 data = resp.json()

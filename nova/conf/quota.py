@@ -294,6 +294,45 @@ however, be possible for a REST API user to be rejected with a 403 response in
 the event of a collision close to reaching their quota limit, even if the user
 has enough quota available when they made the request.
 """),
+    cfg.BoolOpt(
+        'count_usage_from_placement',
+        default=False,
+        help="""
+Enable the counting of quota usage from the placement service.
+
+Starting in Train, it is possible to count quota usage for cores and ram from
+the placement service and instances from the API database instead of counting
+from cell databases.
+
+This works well if there is only one Nova deployment running per placement
+deployment. However, if an operator is running more than one Nova deployment
+sharing a placement deployment, they should not set this option to True because
+currently the placement service has no way to partition resource providers per
+Nova deployment. When this option is left as the default or set to False, Nova
+will use the legacy counting method to count quota usage for instances, cores,
+and ram from its cell databases.
+
+Note that quota usage behavior related to resizes will be affected if this
+option is set to True. Placement resource allocations are claimed on the
+destination while holding allocations on the source during a resize, until the
+resize is confirmed or reverted. During this time, when the server is in
+VERIFY_RESIZE state, quota usage will reflect resource consumption on both the
+source and the destination. This can be beneficial as it reserves space for a
+revert of a downsize, but it also means quota usage will be inflated until a
+resize is confirmed or reverted.
+
+Behavior will also be different for unscheduled servers in ERROR state. A
+server in ERROR state that has never been scheduled to a compute host will
+not have placement allocations, so it will not consume quota usage for cores
+and ram.
+
+Behavior will be different for servers in SHELVED_OFFLOADED state. A server in
+SHELVED_OFFLOADED state will not have placement allocations, so it will not
+consume quota usage for cores and ram. Note that because of this, it will be
+possible for a request to unshelve a server to be rejected if the user does not
+have enough quota available to support the cores and ram needed by the server
+to be unshelved.
+"""),
 ]
 
 

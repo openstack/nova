@@ -20,18 +20,29 @@ import copy
 
 from oslo_log import log as logging
 from oslo_utils import importutils
+from sqlalchemy.sql import and_
+from sqlalchemy.sql import false
+from sqlalchemy.sql import null
+from sqlalchemy.sql import or_
 
 import nova.conf
 from nova import context as nova_context
 from nova.db import api as db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
+from nova.scheduler.client import report
 from nova import utils
 
 LOG = logging.getLogger(__name__)
-
-
 CONF = nova.conf.CONF
+# Lazy-loaded on first access.
+# Avoid constructing the KSA adapter and provider tree on every access.
+PLACEMENT_CLIENT = None
+# If user_id and queued_for_delete are populated for a project, cache the
+# result to avoid doing unnecessary EXISTS database queries.
+UID_QFD_POPULATED_CACHE_BY_PROJECT = set()
 
 
 class DbQuotaDriver(object):
@@ -1050,6 +1061,49 @@ class QuotaEngine(object):
         return 0
 
 
+@db_api.api_context_manager.reader
+def _user_id_queued_for_delete_populated(context, project_id=None):
+    """Determine whether user_id and queued_for_delete are set.
+
+    This will be used to determine whether we need to fall back on
+    the legacy quota counting method (if we cannot rely on counting
+    instance mappings for the instance count). If any records with user_id=None
+    and queued_for_delete=False are found, we need to fall back to the legacy
+    counting method. If any records with queued_for_delete=None are found, we
+    need to fall back to the legacy counting method.
+
+    Note that this check specifies queued_for_deleted=False, which excludes
+    deleted and SOFT_DELETED instances. The 'populate_user_id' data migration
+    migrates SOFT_DELETED instances because they could be restored at any time
+    in the future. However, for this quota-check-time method, it is acceptable
+    to ignore SOFT_DELETED instances, since we just want to know if it is safe
+    to use instance mappings to count instances at this point in time (and
+    SOFT_DELETED instances do not count against quota limits).
+
+    We also want to fall back to the legacy counting method if we detect any
+    records that have not yet populated the queued_for_delete field. We do this
+    instead of counting queued_for_delete=None records since that might not
+    accurately reflect the project or project user's quota usage.
+
+    :param project_id: The project to check
+    :returns: True if user_id is set for all non-deleted instances and
+              queued_for_delete is set for all instances, else False
+    """
+    user_id_not_populated = and_(
+        api_models.InstanceMapping.user_id == null(),
+        api_models.InstanceMapping.queued_for_delete == false())
+    # If either queued_for_delete or user_id are unmigrated, we will return
+    # False.
+    unmigrated_filter = or_(
+        api_models.InstanceMapping.queued_for_delete == null(),
+        user_id_not_populated)
+    query = context.session.query(api_models.InstanceMapping).filter(
+        unmigrated_filter)
+    if project_id:
+        query = query.filter_by(project_id=project_id)
+    return not context.session.query(query.exists()).scalar()
+
+
 def _keypair_get_count_by_user(context, user_id):
     count = objects.KeyPairList.get_count_by_user(context, user_id)
     return {'user': {'key_pairs': count}}
@@ -1121,8 +1175,8 @@ def _floating_ip_count(context, project_id):
     return {'project': {'floating_ips': count}}
 
 
-def _instances_cores_ram_count(context, project_id, user_id=None):
-    """Get the counts of instances, cores, and ram in the database.
+def _instances_cores_ram_count_legacy(context, project_id, user_id=None):
+    """Get the counts of instances, cores, and ram in cell databases.
 
     :param context: The request context for database access
     :param project_id: The project_id to count across
@@ -1137,10 +1191,8 @@ def _instances_cores_ram_count(context, project_id, user_id=None):
                           'cores': <count across user>,
                           'ram': <count across user>}}
     """
-    # TODO(melwitt): Counting across cells for instances means we will miss
-    # counting resources if a cell is down. In the future, we should query
-    # placement for cores/ram and InstanceMappings for instances (once we are
-    # deleting InstanceMappings when we delete instances).
+    # NOTE(melwitt): Counting across cells for instances, cores, and ram means
+    # we will miss counting resources if a cell is down.
     # NOTE(tssurya): We only go into those cells in which the tenant has
     # instances. We could optimize this to avoid the CellMappingList query
     # for single-cell deployments by checking the cell cache and only doing
@@ -1163,6 +1215,70 @@ def _instances_cores_ram_count(context, project_id, user_id=None):
                 for resource, count in result['user'].items():
                     total_counts['user'][resource] += count
     return total_counts
+
+
+def _cores_ram_count_placement(context, project_id, user_id=None):
+    global PLACEMENT_CLIENT
+    if not PLACEMENT_CLIENT:
+        PLACEMENT_CLIENT = report.SchedulerReportClient()
+    return PLACEMENT_CLIENT.get_usages_counts_for_quota(context, project_id,
+                                                        user_id=user_id)
+
+
+def _instances_cores_ram_count_api_db_placement(context, project_id,
+                                                user_id=None):
+    # Will return a dict with format: {'project': {'instances': M},
+    #                                  'user': {'instances': N}}
+    # where the 'user' key is optional.
+    total_counts = objects.InstanceMappingList.get_counts(context,
+                                                          project_id,
+                                                          user_id=user_id)
+    cores_ram_counts = _cores_ram_count_placement(context, project_id,
+                                                  user_id=user_id)
+    total_counts['project'].update(cores_ram_counts['project'])
+    if 'user' in total_counts:
+        total_counts['user'].update(cores_ram_counts['user'])
+    return total_counts
+
+
+def _instances_cores_ram_count(context, project_id, user_id=None):
+    """Get the counts of instances, cores, and ram.
+
+    :param context: The request context for database access
+    :param project_id: The project_id to count across
+    :param user_id: The user_id to count across
+    :returns: A dict containing the project-scoped counts and user-scoped
+              counts if user_id is specified. For example:
+
+                {'project': {'instances': <count across project>,
+                             'cores': <count across project>,
+                             'ram': <count across project>},
+                 'user': {'instances': <count across user>,
+                          'cores': <count across user>,
+                          'ram': <count across user>}}
+    """
+    global UID_QFD_POPULATED_CACHE_BY_PROJECT
+    if CONF.quota.count_usage_from_placement:
+        # If a project has all user_id and queued_for_delete data populated,
+        # cache the result to avoid needless database checking in the future.
+        if project_id not in UID_QFD_POPULATED_CACHE_BY_PROJECT:
+            LOG.debug('Checking whether user_id and queued_for_delete are '
+                      'populated for project_id %s', project_id)
+            uid_qfd_populated = _user_id_queued_for_delete_populated(
+                context, project_id)
+            if uid_qfd_populated:
+                UID_QFD_POPULATED_CACHE_BY_PROJECT.add(project_id)
+        else:
+            uid_qfd_populated = True
+        if not uid_qfd_populated:
+            LOG.warning('Falling back to legacy quota counting method for '
+                        'instances, cores, and ram')
+
+    if CONF.quota.count_usage_from_placement and uid_qfd_populated:
+        return _instances_cores_ram_count_api_db_placement(context, project_id,
+                                                           user_id=user_id)
+    return _instances_cores_ram_count_legacy(context, project_id,
+                                             user_id=user_id)
 
 
 def _server_group_count(context, project_id, user_id=None):
