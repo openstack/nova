@@ -2307,16 +2307,17 @@ class API(base.Base):
                      instance=instance)
             return
 
-        src_host = migration.source_compute
-
-        # FIXME(mriedem): If migration.cross_cell_move, we need to also
-        # cleanup the instance data from the source cell database.
-
         self._record_action_start(context, instance,
                                   instance_actions.CONFIRM_RESIZE)
 
-        self.compute_rpcapi.confirm_resize(context,
-                instance, migration, src_host, cast=False)
+        # If migration.cross_cell_move, we need to also cleanup the instance
+        # data from the source cell database.
+        if migration.cross_cell_move:
+            self.compute_task_api.confirm_snapshot_based_resize(
+                context, instance, migration, do_cast=False)
+        else:
+            self.compute_rpcapi.confirm_resize(context,
+                    instance, migration, migration.source_compute, cast=False)
 
     def _local_cleanup_bdm_volumes(self, bdms, instance, context):
         """The method deletes the bdm records and, if a bdm is a volume, call
