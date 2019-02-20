@@ -21,6 +21,7 @@ A list of config options based on different topics can be found below:
 
    /admin/configuration/api
    /admin/configuration/resize
+   /admin/configuration/cross-cell-resize
    /admin/configuration/fibre-channel
    /admin/configuration/iscsi-offload
    /admin/configuration/hypervisors

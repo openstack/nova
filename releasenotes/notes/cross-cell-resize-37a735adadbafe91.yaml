@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Cross-cell resize is now supported but is disabled by default for all
+    users. Refer to the `administrator documentation`__ for details.
+
+    .. __: https://docs.openstack.org/nova/latest/admin/configuration/cross-cell-resize.html
