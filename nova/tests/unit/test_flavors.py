@@ -172,49 +172,6 @@ class CreateInstanceTypeTest(test.TestCase):
         self.assertRaises(exception.InvalidInput, flavors.create,
                           *create_args, **create_kwargs)
 
-    def test_create_with_valid_name(self):
-        # Names can contain alphanumeric and [_.- ]
-        flavors.create('azAZ09. -_', 64, 1, 120)
-        # And they are not limited to ascii characters
-        # E.g.: m1.huge in simplified Chinese
-        flavors.create(u'm1.\u5DE8\u5927', 6400, 100, 12000)
-
-    def test_name_with_special_characters(self):
-        # Names can contain all printable characters
-        flavors.create('_foo.bar-123', 64, 1, 120)
-
-        # Ensure instance types raises InvalidInput for invalid characters.
-        self.assertInvalidInput('foobar\x00', 64, 1, 120)
-
-    def test_name_with_non_printable_characters(self):
-        # Names cannot contain non printable characters
-        self.assertInvalidInput(u'm1.\u0C77 #', 64, 1, 120)
-
-    def test_name_length_checks(self):
-        MAX_LEN = 255
-
-        # Flavor name with 255 characters or less is valid.
-        flavors.create('a' * MAX_LEN, 64, 1, 120)
-
-        # Flavor name which is more than 255 characters will cause error.
-        self.assertInvalidInput('a' * (MAX_LEN + 1), 64, 1, 120)
-
-        # Flavor name which is empty should cause an error
-        self.assertInvalidInput('', 64, 1, 120)
-
-    def test_all_whitespace_flavor_names_rejected(self):
-        self.assertInvalidInput(' ', 64, 1, 120)
-
-    def test_flavorid_with_invalid_characters(self):
-        # Ensure Flavor ID can only contain [a-zA-Z0-9_.- ]
-        self.assertInvalidInput('a', 64, 1, 120, flavorid=u'\u2605')
-        self.assertInvalidInput('a', 64, 1, 120, flavorid='%%$%$@#$#@$@#$^%')
-
-    def test_flavorid_length_checks(self):
-        MAX_LEN = 255
-        # Flavor ID which is more than 255 characters will cause error.
-        self.assertInvalidInput('a', 64, 1, 120, flavorid='a' * (MAX_LEN + 1))
-
     def test_memory_must_be_positive_db_integer(self):
         self.assertInvalidInput('flavor1', 'foo', 1, 120)
         self.assertInvalidInput('flavor1', -1, 1, 120)
