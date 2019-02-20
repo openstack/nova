@@ -577,3 +577,31 @@ class InstanceMappingListTestCase(test.NoDBTestCase):
                                                    cm.uuid,
                                                    None))
         self.assertEqual(2, len(ims))
+
+    def test_get_counts(self):
+        create_mapping(project_id='fake-project', user_id='fake-user',
+                       queued_for_delete=False)
+        # mapping with another user
+        create_mapping(project_id='fake-project', user_id='other-user',
+                       queued_for_delete=False)
+        # mapping in another project
+        create_mapping(project_id='other-project', user_id='fake-user',
+                       queued_for_delete=False)
+        # queued_for_delete=True, should not be counted
+        create_mapping(project_id='fake-project', user_id='fake-user',
+                       queued_for_delete=True)
+        # queued_for_delete=None (not yet migrated), should not be counted
+        create_mapping(project_id='fake-project', user_id='fake-user',
+                       queued_for_delete=None)
+
+        # Count only across a project
+        counts = instance_mapping.InstanceMappingList.get_counts(
+            self.context, 'fake-project')
+        self.assertEqual(2, counts['project']['instances'])
+        self.assertNotIn('user', counts)
+
+        # Count across a project and a user
+        counts = instance_mapping.InstanceMappingList.get_counts(
+            self.context, 'fake-project', user_id='fake-user')
+        self.assertEqual(2, counts['project']['instances'])
+        self.assertEqual(1, counts['user']['instances'])
