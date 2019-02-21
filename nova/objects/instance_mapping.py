@@ -432,3 +432,28 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
                      'user': {'instances': <count across user>}}
         """
         return cls._get_counts_in_db(context, project_id, user_id=user_id)
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_count_by_uuids_and_user_in_db(context, uuids, user_id):
+        query = (context.session.query(
+            func.count(api_models.InstanceMapping.id))
+            .filter(api_models.InstanceMapping.instance_uuid.in_(uuids))
+            .filter_by(queued_for_delete=False)
+            .filter_by(user_id=user_id))
+        return query.scalar()
+
+    @classmethod
+    def get_count_by_uuids_and_user(cls, context, uuids, user_id):
+        """Get the count of InstanceMapping objects by UUIDs and user_id.
+
+        The count is used to represent the count of server group members
+        belonging to a particular user, for the purpose of counting quota
+        usage. Instances that are queued_for_deleted=True are not included in
+        the count (deleted and SOFT_DELETED instances).
+
+        :param uuids: List of instance UUIDs on which to filter
+        :param user_id: The user_id on which to filter
+        :returns: An integer for the count
+        """
+        return cls._get_count_by_uuids_and_user_in_db(context, uuids, user_id)

@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ddt
+import mock
 from oslo_utils import uuidutils
 
 from nova import context
@@ -20,6 +22,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.db import test_instance_mapping
 
 
+@ddt.ddt
 class QuotaTestCase(test.NoDBTestCase):
     USES_DB_SELF = True
 
@@ -32,7 +35,13 @@ class QuotaTestCase(test.NoDBTestCase):
         fix.add_cell_database('cell2')
         self.useFixture(fix)
 
-    def test_server_group_members_count_by_user(self):
+    @ddt.data(True, False)
+    @mock.patch('nova.quota.LOG.warning')
+    @mock.patch('nova.quota._user_id_queued_for_delete_populated')
+    def test_server_group_members_count_by_user(self, uid_qfd_populated,
+                                                mock_uid_qfd_populated,
+                                                mock_warn_log):
+        mock_uid_qfd_populated.return_value = uid_qfd_populated
         ctxt = context.RequestContext('fake-user', 'fake-project')
         mapping1 = objects.CellMapping(context=ctxt,
                                        uuid=uuidutils.generate_uuid(),
@@ -59,6 +68,12 @@ class QuotaTestCase(test.NoDBTestCase):
                                         user_id='fake-user')
             instance.create()
             instance_uuids.append(instance.uuid)
+        im = objects.InstanceMapping(context=ctxt,
+                                     instance_uuid=instance.uuid,
+                                     project_id='fake-project',
+                                     user_id='fake-user',
+                                     cell_id=mapping1.id)
+        im.create()
 
         # Create an instance in cell2
         with context.target_cell(ctxt, mapping2) as cctxt:
@@ -67,17 +82,49 @@ class QuotaTestCase(test.NoDBTestCase):
                                         user_id='fake-user')
             instance.create()
             instance_uuids.append(instance.uuid)
+        im = objects.InstanceMapping(context=ctxt,
+                                     instance_uuid=instance.uuid,
+                                     project_id='fake-project',
+                                     user_id='fake-user',
+                                     cell_id=mapping2.id)
+        im.create()
+
+        # Create an instance that is queued for delete in cell2. It should not
+        # be counted
+        with context.target_cell(ctxt, mapping2) as cctxt:
+            instance = objects.Instance(context=cctxt,
+                                        project_id='fake-project',
+                                        user_id='fake-user')
+            instance.create()
+            instance.destroy()
+            instance_uuids.append(instance.uuid)
+        im = objects.InstanceMapping(context=ctxt,
+                                     instance_uuid=instance.uuid,
+                                     project_id='fake-project',
+                                     user_id='fake-user',
+                                     cell_id=mapping2.id,
+                                     queued_for_delete=True)
+        im.create()
 
         # Add the uuids to the group
         objects.InstanceGroup.add_members(ctxt, group.uuid, instance_uuids)
         # add_members() doesn't add the members to the object field
         group.members.extend(instance_uuids)
 
-        # Count server group members across cells
+        # Count server group members from instance mappings or cell databases,
+        # depending on whether the user_id/queued_for_delete data migration has
+        # been completed.
         count = quota._server_group_count_members_by_user(ctxt, group,
                                                           'fake-user')
 
         self.assertEqual(2, count['user']['server_group_members'])
+
+        if uid_qfd_populated:
+            # Did not log a warning about falling back to legacy count.
+            mock_warn_log.assert_not_called()
+        else:
+            # Logged a warning about falling back to legacy count.
+            mock_warn_log.assert_called_once()
 
     def test_instances_cores_ram_count(self):
         ctxt = context.RequestContext('fake-user', 'fake-project')

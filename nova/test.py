@@ -308,6 +308,7 @@ class TestCase(testtools.TestCase):
 
         # NOTE(melwitt): Reset the cached set of projects
         quota.UID_QFD_POPULATED_CACHE_BY_PROJECT = set()
+        quota.UID_QFD_POPULATED_CACHE_ALL = False
 
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.
