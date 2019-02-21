@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    From microversion 2.69 the responses of ``GET /servers``,
+    ``GET /servers/detail``, ``GET /servers/{server_id}`` and
+    ``GET /os-services`` will contain missing keys during down cell situations
+    because of adding support for returning minimal constructs based on the
+    available information from the API database for those records in the
+    down cells. See `Handling Down Cells`_ for more information on the missing
+    keys.
+
+    .. _Handling Down Cells: https://developer.openstack.org/api-guide/compute/down_cells.html

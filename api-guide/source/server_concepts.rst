@@ -77,8 +77,9 @@ server status is one of the following values:
    Suspending a server is similar to placing a device in hibernation;
    memory and vCPUs become available to create other servers.
 
--  ``UNKNOWN``: The state of the server is unknown. Contact your cloud
-   provider.
+-  ``UNKNOWN``: The state of the server is unknown. It could be because a part
+   of the infrastructure is temporarily down (see :doc:`down_cells`
+   for more information). Contact your cloud provider.
 
 -  ``VERIFY_RESIZE``: System is awaiting confirmation that the server is
    operational after a move or resize.

@@ -21,6 +21,14 @@ Lists all running Compute services.
 
 Provides details why any services were disabled.
 
+.. note:: Starting with microversion 2.69 if service details cannot be loaded
+   due to a transient condition in the deployment like infrastructure failure,
+   the response body for those unavailable compute services in the down cells
+   will be missing keys. See `handling down cells
+   <https://developer.openstack.org/api-guide/compute/down_cells.html>`__
+   section of the Compute API guide for more information on the keys that
+   would be returned in the partial constructs.
+
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
