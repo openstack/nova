@@ -10,7 +10,7 @@ upgrade:
 
     - initial_cpu_allocation_ratio with default value 16.0
     - initial_ram_allocation_ratio with default value 1.5
-    - initial_ram_allocation_ratio with default value 1.0
+    - initial_disk_allocation_ratio with default value 1.0
 
     These options help operators specify initial virtual CPU/ram/disk to
     physical CPU/ram/disk allocation ratios. These options are only used when
