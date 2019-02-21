@@ -36,6 +36,9 @@ It requires the following additional OpenStack services for basic function:
   compute instances launch from glance images.
 * :neutron-doc:`Neutron <>`: This is responsible for provisioning the virtual
   or physical networks that compute instances connect to on boot.
+* :placement-doc:`Placement <>`: This is responsible for tracking inventory of
+  resources available in a cloud and assisting in choosing which provider of
+  those resources will be used when creating a virtual machine.
 
 It can also integrate with other services to include: persistent block
 storage, encrypted disks, and baremetal compute instances.
@@ -78,15 +81,6 @@ resources will help you get started with consuming the API directly.
   <https://developer.openstack.org/api-guide/compute/microversions.html>`_. This
   provides the history of all those changes. Consider it a "what's new" in the
   compute API.
-* `Placement API Reference <https://developer.openstack.org/api-ref/placement/>`_:
-  The complete reference for the placement API, including all methods and
-  request / response parameters and their meaning.
-* :placement-doc:`Placement API Microversion History
-  <placement-api-microversion-history>`:
-  The placement API evolves over time through `Microversions
-  <https://developer.openstack.org/api-guide/compute/microversions.html>`_. This
-  provides the history of all those changes. Consider it a "what's new" in the
-  placement API.
 * :doc:`Block Device Mapping </user/block-device-mapping>`: One of the trickier
   parts to understand is the Block Device Mapping parameters used to connect
   specific block devices to computes. This deserves its own deep dive.
@@ -114,8 +108,9 @@ Installation
 
 The detailed install guide for nova. A functioning nova will also require
 having installed :keystone-doc:`keystone <install/>`, :glance-doc:`glance
-<install/>`, and :neutron-doc:`neutron <install/>`. Ensure that you follow
-their install guides first.
+<install/>`, :neutron-doc:`neutron <install/>`, and
+:placement-doc:`placement <install/>`. Ensure that you follow their install
+guides first.
 
 .. toctree::
    :maxdepth: 2
@@ -143,8 +138,6 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
 * :doc:`Cells v2 Planning </user/cellsv2-layout>`: For large deployments, Cells v2
   allows sharding of your compute environment. Upfront planning is key to a
   successful Cells v2 layout.
-* :placement-doc:`Placement service <>`: Overview of the placement service,
-  including how it fits in with the rest of nova.
 * :doc:`Running nova-api on wsgi <user/wsgi>`: Considerations for using a real
   WSGI container instead of the baked-in eventlet web server.
 
