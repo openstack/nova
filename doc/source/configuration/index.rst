@@ -7,9 +7,6 @@ The static configuration for nova lives in two main files: ``nova.conf`` and
 configuring nova to solve specific problems, refer to the :doc:`Nova Admin
 Guide </admin/index>`.
 
-For Placement configuration,
-see :placement-doc:`Placement Configuration Guide <configuration>`.
-
 Configuration
 -------------
 
