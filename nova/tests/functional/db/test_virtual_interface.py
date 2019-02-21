@@ -323,6 +323,16 @@ class VirtualInterfaceListMigrationTestCase(
         self.assertEqual(4, match)
         self.assertEqual(3, done)
 
+        # Verify that the marker instance has project_id/user_id set properly.
+        with context.target_cell(self.context, self.cells[1]) as cctxt:
+            # The marker record is destroyed right after it's created, since
+            # only the presence of the row is needed to satisfy the fkey
+            # constraint.
+            cctxt = cctxt.elevated(read_deleted='yes')
+            marker_instance = objects.Instance.get_by_uuid(cctxt, FAKE_UUID)
+        self.assertEqual(FAKE_UUID, marker_instance.project_id)
+        self.assertEqual(FAKE_UUID, marker_instance.user_id)
+
         # Try again - should fill 3 left instances from cell1
         match, done = virtual_interface.fill_virtual_interface_list(
             self.context, 4)

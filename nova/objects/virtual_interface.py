@@ -301,6 +301,7 @@ def _set_or_delete_marker_for_migrate_instances(context, marker=None):
         instance = objects.Instance(context)
         instance.uuid = FAKE_UUID
         instance.project_id = FAKE_UUID
+        instance.user_id = FAKE_UUID
         instance.create()
         # Thats fake instance, lets destroy it.
         # We need only its row to solve constraint issue.

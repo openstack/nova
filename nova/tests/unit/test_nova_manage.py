@@ -1198,7 +1198,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             uuid = uuidutils.generate_uuid()
             instance_uuids.append(uuid)
             objects.Instance(ctxt, project_id=ctxt.project_id,
-                             uuid=uuid).create()
+                             user_id=ctxt.user_id, uuid=uuid).create()
 
         self.commands.map_instances(cell_uuid)
 
@@ -1206,6 +1206,8 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             inst_mapping = objects.InstanceMapping.get_by_instance_uuid(ctxt,
                     uuid)
             self.assertEqual(ctxt.project_id, inst_mapping.project_id)
+            # Verify that map_instances populates user_id.
+            self.assertEqual(ctxt.user_id, inst_mapping.user_id)
             self.assertEqual(cell_mapping.uuid, inst_mapping.cell_mapping.uuid)
         mock_target_cell.assert_called_once_with(
             test.MatchType(context.RequestContext),
@@ -1225,10 +1227,10 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             uuid = uuidutils.generate_uuid()
             instance_uuids.append(uuid)
             objects.Instance(ctxt, project_id=ctxt.project_id,
-                             uuid=uuid).create()
+                             user_id=ctxt.user_id, uuid=uuid).create()
 
         objects.InstanceMapping(ctxt, project_id=ctxt.project_id,
-                instance_uuid=instance_uuids[0],
+                user_id=ctxt.user_id, instance_uuid=instance_uuids[0],
                 cell_mapping=cell_mapping).create()
 
         self.commands.map_instances(cell_uuid)
@@ -1260,7 +1262,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             uuid = uuidutils.generate_uuid()
             instance_uuids.append(uuid)
             objects.Instance(ctxt, project_id=ctxt.project_id,
-                             uuid=uuid).create()
+                             user_id=ctxt.user_id, uuid=uuid).create()
 
         ret = self.commands.map_instances(cell_uuid)
         self.assertEqual(0, ret)
@@ -1292,7 +1294,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             uuid = uuidutils.generate_uuid()
             instance_uuids.append(uuid)
             objects.Instance(ctxt, project_id=ctxt.project_id,
-                             uuid=uuid).create()
+                             user_id=ctxt.user_id, uuid=uuid).create()
 
         ret = self.commands.map_instances(cell_uuid, max_count=3)
         self.assertEqual(1, ret)
@@ -1329,7 +1331,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             uuid = uuidutils.generate_uuid()
             instance_uuids.append(uuid)
             objects.Instance(ctxt, project_id=ctxt.project_id,
-                             uuid=uuid).create()
+                             user_id=ctxt.user_id, uuid=uuid).create()
 
         ret = self.commands.map_instances(cell_uuid, max_count=3)
         self.assertEqual(1, ret)
@@ -1371,7 +1373,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             uuid = uuidutils.generate_uuid()
             instance_uuids.append(uuid)
             objects.Instance(ctxt, project_id=ctxt.project_id,
-                             uuid=uuid).create()
+                             user_id=ctxt.user_id, uuid=uuid).create()
 
         # Maps first three instances.
         ret = self.commands.map_instances(cell_uuid, max_count=3)
