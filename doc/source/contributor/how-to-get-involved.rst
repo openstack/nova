@@ -100,7 +100,6 @@ Here are some top tips around engaging with the Nova community:
 -  IRC
 
    -  we talk a lot in #openstack-nova
-   -  we also have #openstack-placement for :placement-doc:`placement <>`
    -  do ask us questions in there, and we will try to help you
    -  not sure about asking questions? feel free to listen in around
       other people's questions
