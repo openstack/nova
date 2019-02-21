@@ -676,6 +676,13 @@ class RequestSpec(base.NovaObject):
         # original request for the forced hosts
         self.obj_reset_changes(['force_hosts', 'force_nodes'])
 
+    @property
+    def maps_requested_resources(self):
+        """Returns True if this RequestSpec needs to map requested_resources
+        to resource providers, False otherwise.
+        """
+        return 'requested_resources' in self and self.requested_resources
+
     def _is_valid_group_rp_mapping(
             self, group_rp_mapping, placement_allocations, provider_traits):
         """Decides if the mapping is valid from resources and traits
@@ -778,7 +785,7 @@ class RequestSpec(base.NovaObject):
                                 This dict contains info only about RPs
                                 appearing in the placement_allocations param.
         """
-        if 'requested_resources' not in self or not self.requested_resources:
+        if not self.maps_requested_resources:
             # Nothing to do, so let's return early
             return
 

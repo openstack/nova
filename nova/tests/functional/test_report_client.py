@@ -885,7 +885,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 self.client.update_from_provider_tree, self.context, new_tree)
             # Placement didn't get updated
             self.assertEqual(set(['HW_CPU_X86_AVX', 'HW_CPU_X86_AVX2']),
-                             self.client._get_provider_traits(
+                             self.client.get_provider_traits(
                                  self.context, uuids.root).traits)
             # ...and the root was removed from the cache
             self.assertFalse(self.client._provider_tree.exists(uuids.root))

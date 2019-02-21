@@ -2056,9 +2056,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertTrue(mock_build.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_traits')
+                'get_provider_traits')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_allocations_for_consumer')
+                'get_allocs_for_consumer')
     @mock.patch('nova.objects.request_spec.RequestSpec.'
                 'map_requested_resources_to_providers')
     def test_schedule_and_build_instances_fill_request_spec(
@@ -2067,7 +2067,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.params['request_specs'][0].requested_resources = [
             objects.RequestGroup()]
 
-        mock_get_allocs.return_value = {uuids.rp1: mock.sentinel.rp1_allocs}
+        mock_get_allocs.return_value = {
+            'allocations': {uuids.rp1: mock.sentinel.rp1_allocs}}
         mock_traits.return_value.traits = ['TRAIT1']
 
         instance_uuid = self._do_schedule_and_build_instances_test(
@@ -2080,28 +2081,49 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     @mock.patch('nova.conductor.manager.ComputeTaskManager.'
                 '_cleanup_build_artifacts')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_traits')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_allocations_for_consumer')
-    @mock.patch('nova.objects.request_spec.RequestSpec.'
-                'map_requested_resources_to_providers')
+    @mock.patch('nova.conductor.manager.ComputeTaskManager.'
+                '_fill_provider_mapping', side_effect=test.TestingException)
     def test_schedule_and_build_instances_fill_request_spec_error(
-            self, mock_map, mock_get_allocs, mock_traits, mock_cleanup):
-        # makes sure there is some request group in the spec to be mapped
-        self.params['request_specs'][0].requested_resources = [
-            objects.RequestGroup()]
-
-        mock_get_allocs.side_effect = exc.ConsumerAllocationRetrievalFailed(
-            consumer_uuid=uuids.inst, error='some error')
-
+            self, mock_fill, mock_cleanup):
         self.assertRaises(
-            exc.ConsumerAllocationRetrievalFailed,
+            test.TestingException,
             self._do_schedule_and_build_instances_test, self.params)
 
-        self.assertFalse(mock_map.called)
-        self.assertFalse(mock_traits.called)
-        self.assertTrue(mock_cleanup.called)
+        mock_fill.assert_called_once()
+        mock_cleanup.assert_called_once()
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_provider_traits', new_callable=mock.NonCallableMock)
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocs_for_consumer',
+                new_callable=mock.NonCallableMock)
+    @mock.patch('nova.objects.request_spec.RequestSpec.'
+                'map_requested_resources_to_providers',
+                new_callable=mock.NonCallableMock)
+    def test_schedule_and_build_instances_fill_request_spec_noop(
+            self, mock_map, mock_get_allocs, mock_traits):
+        """Tests to make sure _fill_provider_mapping exits early if there are
+        no requested_resources on the RequestSpec.
+        """
+        self.params['request_specs'][0].requested_resources = []
+        self._do_schedule_and_build_instances_test(self.params)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_provider_traits', new_callable=mock.NonCallableMock)
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocs_for_consumer', return_value={'allocations': {}})
+    @mock.patch('nova.objects.request_spec.RequestSpec.'
+                'map_requested_resources_to_providers',
+                new_callable=mock.NonCallableMock)
+    def test_schedule_and_build_instances_fill_request_spec_no_allocs(
+            self, mock_map, mock_get_allocs, mock_traits):
+        """Tests to make sure _fill_provider_mapping handles a scheduler
+        driver which does not use placement (so there are no allocations).
+        """
+        self.params['request_specs'][0].requested_resources = [
+            objects.RequestGroup()]
+        self._do_schedule_and_build_instances_test(self.params)
+        mock_get_allocs.assert_called_once()
 
     @mock.patch('nova.objects.CellMapping.get_by_uuid')
     def test_bury_in_cell0_no_cell0(self, mock_cm_get):

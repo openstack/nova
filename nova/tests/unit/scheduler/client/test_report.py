@@ -1701,7 +1701,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_traits')
+                'get_provider_traits')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_sharing_providers')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -2644,7 +2644,7 @@ class TestTraits(SchedulerReportClientTestCase):
                                        'resource_provider_generation': 42}
         self.ks_adap_mock.get.return_value = resp_mock
 
-        result, gen = self.client._get_provider_traits(self.context, uuid)
+        result, gen = self.client.get_provider_traits(self.context, uuid)
 
         expected_url = '/resource_providers/' + uuid + '/traits'
         self.ks_adap_mock.get.assert_called_once_with(
@@ -2668,7 +2668,7 @@ class TestTraits(SchedulerReportClientTestCase):
             resp_mock.status_code = status_code
             self.assertRaises(
                 exception.ResourceProviderTraitRetrievalFailed,
-                self.client._get_provider_traits, self.context, uuid)
+                self.client.get_provider_traits, self.context, uuid)
 
             expected_url = '/resource_providers/' + uuid + '/traits'
             self.ks_adap_mock.get.assert_called_once_with(
@@ -2686,7 +2686,7 @@ class TestTraits(SchedulerReportClientTestCase):
         uuid = uuids.compute_node
         self.ks_adap_mock.get.side_effect = ks_exc.EndpointNotFound()
         self.assertRaises(ks_exc.ClientException,
-                          self.client._get_provider_traits, self.context, uuid)
+                          self.client.get_provider_traits, self.context, uuid)
         expected_url = '/resource_providers/' + uuid + '/traits'
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url,
@@ -2865,7 +2865,7 @@ class TestAssociations(SchedulerReportClientTestCase):
 
         self.mock_get_traits = self.useFixture(fixtures.MockPatch(
             'nova.scheduler.client.report.SchedulerReportClient.'
-            '_get_provider_traits')).mock
+            'get_provider_traits')).mock
         self.mock_get_traits.return_value = report.TraitInfo(
             traits=set(['CUSTOM_GOLD']), generation=43)
 
