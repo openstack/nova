@@ -466,21 +466,15 @@ Server actions
    flavor, in essence, scaling the server up or down. The original
    server is saved for a period of time to allow rollback if there is a
    problem. All resizes should be tested and explicitly confirmed, at
-   which time the original server is removed. All resizes are
-   automatically confirmed after 24 hours if you do not confirm or
-   revert them.
+   which time the original server is removed. The resized server may be
+   automatically confirmed based on the administrator's configuration of
+   the deployment.
 
    Confirm resize action will delete the old server in the virt layer.
    The spawned server in the virt layer will be used from then on.
    On the contrary, Revert resize action will delete the new server
    spawned in the virt layer and revert all changes. The original server
    will be used from then on.
-
-   Also, there is a periodic task configured by configuration option
-   resize_confirm_window(in seconds), if this value is not 0, nova compute
-   will check whether the server is in resized state longer than
-   value of resize_confirm_window, it will automatically confirm the resize
-   of the server.
 
 -  **Pause**, **Unpause**
 
