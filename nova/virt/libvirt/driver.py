@@ -220,8 +220,8 @@ patch_tpool_proxy()
 # versions. Over time, this will become a common min version
 # for all architectures/hypervisors, as this value rises to
 # meet them.
-MIN_LIBVIRT_VERSION = (1, 3, 1)
-MIN_QEMU_VERSION = (2, 5, 0)
+MIN_LIBVIRT_VERSION = (3, 0, 0)
+MIN_QEMU_VERSION = (2, 8, 0)
 # TODO(berrange): Re-evaluate this at start of each release cycle
 # to decide if we want to plan a future min version bump.
 # MIN_LIBVIRT_VERSION can be updated to match this after
@@ -236,11 +236,6 @@ MIN_VIRTUOZZO_VERSION = (7, 0, 0)
 
 # Ability to set the user guest password with parallels
 MIN_LIBVIRT_PARALLELS_SET_ADMIN_PASSWD = (2, 0, 0)
-
-# Use the "logd" backend for handling stdout/stderr from QEMU processes.
-MIN_LIBVIRT_VIRTLOGD = (1, 3, 3)
-MIN_QEMU_VIRTLOGD = (2, 7, 0)
-
 
 # aarch64 architecture with KVM
 # 'chardev' support got sorted out in 3.6.0
@@ -689,10 +684,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _is_post_copy_available(self):
         return self._host.has_min_version(lv_ver=MIN_LIBVIRT_POSTCOPY_VERSION)
-
-    def _is_virtlogd_available(self):
-        return self._host.has_min_version(MIN_LIBVIRT_VIRTLOGD,
-                                          MIN_QEMU_VIRTLOGD)
 
     def _is_native_luks_available(self):
         return self._host.has_min_version(MIN_LIBVIRT_LUKS_VERSION,
@@ -4957,18 +4948,15 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(markus_z): Beware! Below are so many conditionals that it is
         # easy to lose track. Use this chart to figure out your case:
         #
-        # case | is serial | has       | is qemu | resulting
-        #      | enabled?  | virtlogd? | or kvm? | devices
-        # --------------------------------------------------
-        #    1 |        no |        no |     no  | pty*
-        #    2 |        no |        no |     yes | file + pty
-        #    3 |        no |       yes |      no | see case 1
-        #    4 |        no |       yes |     yes | pty with logd
-        #    5 |       yes |        no |      no | see case 1
-        #    6 |       yes |        no |     yes | tcp + pty
-        #    7 |       yes |       yes |      no | see case 1
-        #    8 |       yes |       yes |     yes | tcp with logd
-        #    * exception: virt_type "parallels" doesn't create a device
+        # case | is serial | is qemu | resulting
+        #      | enabled?  | or kvm? | devices
+        # -------------------------------------------
+        #    1 |        no |     no  | pty*
+        #    2 |        no |     yes | pty with logd
+        #    3 |       yes |      no | see case 1
+        #    4 |       yes |     yes | tcp with logd
+        #
+        #    * exception: `virt_type=parallels` doesn't create a device
         if virt_type == 'parallels':
             pass
         elif virt_type not in ("qemu", "kvm"):
@@ -5000,8 +4988,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._create_serial_consoles(guest_cfg, num_ports,
                                              char_dev_cls, log_path)
         else:
-            self._create_file_device(guest_cfg, instance, char_dev_cls)
-        self._create_pty_device(guest_cfg, char_dev_cls, log_path=log_path)
+            self._create_pty_device(guest_cfg, char_dev_cls,
+                                    log_path=log_path)
 
     def _create_consoles_s390x(self, guest_cfg, instance, flavor, image_meta):
         char_dev_cls = vconfig.LibvirtConfigGuestConsole
@@ -5013,9 +5001,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._create_serial_consoles(guest_cfg, num_ports,
                                              char_dev_cls, log_path)
         else:
-            self._create_file_device(guest_cfg, instance, char_dev_cls,
-                                     "sclplm")
-        self._create_pty_device(guest_cfg, char_dev_cls, "sclp", log_path)
+            self._create_pty_device(guest_cfg, char_dev_cls,
+                                    "sclp", log_path)
 
     def _create_pty_device(self, guest_cfg, char_dev_cls, target_type=None,
                            log_path=None):
@@ -5033,36 +5020,9 @@ class LibvirtDriver(driver.ComputeDriver):
             return consolepty
 
         if CONF.serial_console.enabled:
-            if self._is_virtlogd_available():
-                return
-            else:
-                # NOTE(markus_z): You may wonder why this is necessary and
-                # so do I. I'm certain that this is *not* needed in any
-                # real use case. It is, however, useful if you want to
-                # pypass the Nova API and use "virsh console <guest>" on
-                # an hypervisor, as this CLI command doesn't work with TCP
-                # devices (like the serial console is).
-                #     https://bugzilla.redhat.com/show_bug.cgi?id=781467
-                # Pypassing the Nova API however is a thing we don't want.
-                # Future changes should remove this and fix the unit tests
-                # which ask for the existence.
-                guest_cfg.add_device(_create_base_dev())
-        else:
-            if self._is_virtlogd_available():
-                guest_cfg.add_device(_create_logd_dev())
-            else:
-                guest_cfg.add_device(_create_base_dev())
-
-    def _create_file_device(self, guest_cfg, instance, char_dev_cls,
-                            target_type=None):
-        if self._is_virtlogd_available():
             return
-
-        consolelog = char_dev_cls()
-        consolelog.target_type = target_type
-        consolelog.type = "file"
-        consolelog.source_path = self._get_console_log_path(instance)
-        guest_cfg.add_device(consolelog)
+        else:
+            guest_cfg.add_device(_create_logd_dev())
 
     def _serial_ports_already_defined(self, instance):
         try:
@@ -5089,7 +5049,7 @@ class LibvirtDriver(driver.ComputeDriver):
             console.listen_port = listen_port
             # NOTE: only the first serial console gets the boot messages,
             # that's why we attach the logd subdevice only to that.
-            if port == 0 and self._is_virtlogd_available():
+            if port == 0:
                 log = vconfig.LibvirtConfigGuestCharDeviceLog()
                 log.file = log_path
                 console.log = log
