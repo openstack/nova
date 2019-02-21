@@ -76,7 +76,7 @@ Possible values:
         item_type=cfg.types.String(choices=[
             ('StaticJSON', 'Load a JSON file from the path configured by '
              '``vendordata_jsonfile_path`` and use this as the source for '
-             '``vendora_data.json`` and ``vendor_data2.json``.'),
+             '``vendor_data.json`` and ``vendor_data2.json``.'),
             ('DynamicJSON', 'Build a JSON file using values defined in '
              '``vendordata_dynamic_targets`` and use this as the source '
              'for ``vendor_data2.json``.'),
