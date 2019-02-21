@@ -11,6 +11,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import collections
 
 import mock
 from oslo_serialization import jsonutils
@@ -912,3 +913,540 @@ class TestRequestGroupObject(test.TestCase):
         self.assertNotIn('requester_id', primitive)
         self.assertNotIn('provider_uuids', primitive)
         self.assertIn('required_traits', primitive)
+
+
+class TestMappingRequestGroupsToProviders(test.NoDBTestCase):
+    def setUp(self):
+        super(TestMappingRequestGroupsToProviders, self).setUp()
+        self.spec = request_spec.RequestSpec()
+
+    def test_no_groups(self):
+        allocations = None
+        provider_traits = {}
+
+        self.spec.map_requested_resources_to_providers(
+            allocations, provider_traits)
+
+        # we cannot assert much, at least we see that the above call doesn't
+        # blow
+        self.assertIsNone(self.spec.requested_resources)
+
+    def test_unnumbered_group_not_supported(self):
+        allocations = {}
+        provider_traits = {}
+        group1 = request_spec.RequestGroup(
+            use_same_provider=False)
+        self.spec.requested_resources = [group1]
+
+        self.assertRaises(
+            NotImplementedError,
+            self.spec.map_requested_resources_to_providers, allocations,
+            provider_traits)
+
+    def test_forbidden_traits_not_supported(self):
+        allocations = {}
+        provider_traits = {}
+        group1 = request_spec.RequestGroup(
+            forbidden_traits={'STORAGE_DISK_HDD'})
+        self.spec.requested_resources = [group1]
+
+        self.assertRaises(
+            NotImplementedError,
+            self.spec.map_requested_resources_to_providers, allocations,
+            provider_traits)
+
+    def test_aggregates_not_supported(self):
+        allocations = {}
+        provider_traits = {}
+        group1 = request_spec.RequestGroup(
+            aggregates=[[uuids.agg1]])
+        self.spec.requested_resources = [group1]
+
+        self.assertRaises(
+            NotImplementedError,
+            self.spec.map_requested_resources_to_providers, allocations,
+            provider_traits)
+
+    def test_one_group(self):
+        allocations = {
+            uuids.compute1_rp: {
+                "resources": {
+                    'VCPU': 1
+                }
+            },
+            uuids.net_dev1_rp: {
+                "resources": {
+                    'NET_BW_IGR_KILOBIT_PER_SEC': 1,
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 1,
+                }
+            }
+        }
+        provider_traits = {
+            uuids.compute1_rp: [],
+            uuids.net_dev1_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0',
+                'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+        }
+        group1 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        self.spec.requested_resources = [group1]
+
+        self.spec.map_requested_resources_to_providers(
+            allocations, provider_traits)
+
+        self.assertEqual([uuids.net_dev1_rp], group1.provider_uuids)
+
+    def test_one_group_no_matching_allocation(self):
+        # NOTE(gibi): This negative test scenario should not happen in real
+        # end to end test as we assume that placement only returns candidates
+        # that are valid. But still we want to cover the error case in our
+        # implementation
+
+        allocations = {
+            uuids.compute1_rp: {
+                "resources": {
+                    'VCPU': 1
+                }
+            },
+            uuids.net_dev1_rp: {
+                "resources": {
+                    'NET_BW_IGR_KILOBIT_PER_SEC': 1,
+                }
+            }
+        }
+        provider_traits = {
+            uuids.compute1_rp: [],
+            uuids.net_dev1_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0', 'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+        }
+        group1 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        self.spec.requested_resources = [group1]
+
+        self.assertRaises(
+            ValueError, self.spec.map_requested_resources_to_providers,
+            allocations, provider_traits)
+
+    def test_one_group_no_matching_trait(self):
+        # NOTE(gibi): This negative test scenario should not happen in real
+        # end to end test as we assume that placement only returns candidates
+        # that are valid. But still we want to cover the error case in our
+        # implementation
+
+        allocations = {
+            uuids.compute1_rp: {
+                "resources": {
+                    'VCPU': 1
+                }
+            },
+            uuids.net_dev1_rp: {
+                "resources": {
+                    'NET_BW_IGR_KILOBIT_PER_SEC': 1,
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 1,
+                }
+            }
+        }
+        provider_traits = {
+            uuids.compute1_rp: [],
+            uuids.net_dev1_rp: [
+                'CUSTOM_PHYSNET_PHYSNET1',
+                'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+        }
+        group1 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        self.spec.requested_resources = [group1]
+
+        self.assertRaises(
+            ValueError, self.spec.map_requested_resources_to_providers,
+            allocations, provider_traits)
+
+    def test_two_groups_same_provider(self):
+        allocations = {
+            uuids.compute1_rp: {
+                "resources": {
+                    'VCPU': 1
+                }
+            },
+            uuids.net_dev1_rp: {
+                "resources": {
+                    'NET_BW_IGR_KILOBIT_PER_SEC': 3,
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 3,
+                }
+            }
+        }
+        provider_traits = {
+            uuids.compute1_rp: [],
+            uuids.net_dev1_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0',
+                'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+        }
+
+        group1 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        group2 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 2,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 2,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        self.spec.requested_resources = [group1, group2]
+
+        self.spec.map_requested_resources_to_providers(
+            allocations, provider_traits)
+
+        self.assertEqual([uuids.net_dev1_rp], group1.provider_uuids)
+        self.assertEqual([uuids.net_dev1_rp], group2.provider_uuids)
+
+    def test_two_groups_different_providers(self):
+        # NOTE(gibi): we use OrderedDict here to make the test deterministic
+        allocations = collections.OrderedDict()
+        allocations[uuids.compute1_rp] = {
+            "resources": {
+                    'VCPU': 1
+                }
+        }
+        allocations[uuids.net_dev1_rp] = {
+            "resources": {
+                'NET_BW_IGR_KILOBIT_PER_SEC': 2,
+                'NET_BW_EGR_KILOBIT_PER_SEC': 2,
+            }
+        }
+        allocations[uuids.net_dev2_rp] = {
+            "resources": {
+                'NET_BW_IGR_KILOBIT_PER_SEC': 1,
+                'NET_BW_EGR_KILOBIT_PER_SEC': 1,
+            }
+        }
+        provider_traits = {
+            uuids.compute1_rp: [],
+            uuids.net_dev1_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0',
+                'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+            uuids.net_dev2_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0',
+                'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+        }
+        group1 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        group2 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 2,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 2,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        self.spec.requested_resources = [group1, group2]
+
+        self.spec.map_requested_resources_to_providers(
+            allocations, provider_traits)
+
+        self.assertEqual([uuids.net_dev2_rp], group1.provider_uuids)
+        self.assertEqual([uuids.net_dev1_rp], group2.provider_uuids)
+
+    def test_two_groups_different_providers_reverse(self):
+        """Similar as test_two_groups_different_providers but reorder the
+        groups to exercises another code path
+        """
+        # NOTE(gibi): we use OrderedDict here to make the test deterministic
+        allocations = collections.OrderedDict()
+        allocations[uuids.compute1_rp] = {
+            "resources": {
+                    'VCPU': 1
+                }
+        }
+        allocations[uuids.net_dev1_rp] = {
+            "resources": {
+                'NET_BW_IGR_KILOBIT_PER_SEC': 2,
+                'NET_BW_EGR_KILOBIT_PER_SEC': 2,
+            }
+        }
+        allocations[uuids.net_dev2_rp] = {
+            "resources": {
+                'NET_BW_IGR_KILOBIT_PER_SEC': 1,
+                'NET_BW_EGR_KILOBIT_PER_SEC': 1,
+            }
+        }
+        provider_traits = {
+            uuids.compute1_rp: [],
+            uuids.net_dev1_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0', 'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+            uuids.net_dev2_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0', 'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+        }
+        group1 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 2,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 2,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        group2 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        self.spec.requested_resources = [group1, group2]
+
+        self.spec.map_requested_resources_to_providers(
+            allocations, provider_traits)
+
+        self.assertEqual([uuids.net_dev1_rp], group1.provider_uuids)
+        self.assertEqual([uuids.net_dev2_rp], group2.provider_uuids)
+
+    def test_two_groups_different_providers_different_traits(self):
+
+        allocations = collections.OrderedDict()
+        allocations[uuids.compute1_rp] = {
+            "resources": {
+                'VCPU': 1
+            }
+        }
+        allocations[uuids.net_dev1_physnet1_rp] = {
+            "resources": {
+                'NET_BW_IGR_KILOBIT_PER_SEC': 1,
+                'NET_BW_EGR_KILOBIT_PER_SEC': 1,
+            }
+        }
+        allocations[uuids.net_dev2_physnet0_rp] = {
+            "resources": {
+                'NET_BW_IGR_KILOBIT_PER_SEC': 1,
+                'NET_BW_EGR_KILOBIT_PER_SEC': 1,
+            }
+        }
+        provider_traits = {
+            uuids.compute1_rp: [],
+            uuids.net_dev1_physnet1_rp: [
+                'CUSTOM_PHYSNET_PHYSNET1', 'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+            uuids.net_dev2_physnet0_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0', 'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+        }
+        group1 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        group2 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET1",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        self.spec.requested_resources = [group1, group2]
+
+        self.spec.map_requested_resources_to_providers(
+            allocations, provider_traits)
+
+        self.assertEqual([uuids.net_dev2_physnet0_rp], group1.provider_uuids)
+        self.assertEqual([uuids.net_dev1_physnet1_rp], group2.provider_uuids)
+
+    def test_three_groups(self):
+        """A complex example where a lot of mappings are tried before the
+        solution is found.
+        """
+        allocations = collections.OrderedDict()
+        allocations[uuids.compute1_rp] = {
+            "resources": {
+                'VCPU': 1
+            }
+        }
+        allocations[uuids.net_dev1_rp] = {
+            "resources": {
+                'NET_BW_IGR_KILOBIT_PER_SEC': 3,
+                'NET_BW_EGR_KILOBIT_PER_SEC': 3,
+            }
+        }
+        allocations[uuids.net_dev2_rp] = {
+            "resources": {
+                'NET_BW_IGR_KILOBIT_PER_SEC': 2,
+                'NET_BW_EGR_KILOBIT_PER_SEC': 2,
+            }
+        }
+        allocations[uuids.net_dev3_rp] = {
+            "resources": {
+                'NET_BW_IGR_KILOBIT_PER_SEC': 1,
+                'NET_BW_EGR_KILOBIT_PER_SEC': 3,
+            }
+        }
+        provider_traits = {
+            uuids.compute1_rp: [],
+            uuids.net_dev1_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0', 'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+            uuids.net_dev2_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0', 'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+            uuids.net_dev3_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0', 'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+        }
+        # this fits to 3 RPs
+        group1 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 3,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        # this fits to 2 RPs
+        group2 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 2,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 2,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        # this fits to only one RPs
+        group3 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 3,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 3,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        self.spec.requested_resources = [group1, group2, group3]
+
+        orig_validator = self.spec._is_valid_group_rp_mapping
+        with mock.patch.object(
+                self.spec, '_is_valid_group_rp_mapping',
+                side_effect=orig_validator
+        ) as mock_validator:
+            self.spec.map_requested_resources_to_providers(
+                allocations, provider_traits)
+
+        self.assertEqual([uuids.net_dev3_rp], group1.provider_uuids)
+        self.assertEqual([uuids.net_dev2_rp], group2.provider_uuids)
+        self.assertEqual([uuids.net_dev1_rp], group3.provider_uuids)
+
+        # the algorithm tried out many possible mappings before found the
+        # the solution
+        self.assertEqual(58, mock_validator.call_count)
+
+    @mock.patch.object(request_spec.LOG, 'debug')
+    def test_two_groups_matches_but_allocation_leftover(self, mock_debug):
+        # NOTE(gibi): This negative test scenario should not happen in real
+        # end to end test as we assume that placement only returns candidates
+        # that are valid and this candidate is not valid as it provides more
+        # resources that the ports are requesting. Still we want to cover the
+        # error case in our implementation
+
+        allocations = collections.OrderedDict()
+        allocations[uuids.compute1_rp] = {
+            "resources": {
+                'VCPU': 1
+            }
+        }
+        allocations[uuids.net_dev1_physnet0_rp] = {
+            "resources": {
+                'NET_BW_IGR_KILOBIT_PER_SEC': 2,
+                'NET_BW_EGR_KILOBIT_PER_SEC': 2,
+            }
+        }
+        allocations[uuids.net_dev2_physnet0_rp] = {
+            "resources": {
+                'NET_BW_IGR_KILOBIT_PER_SEC': 1,
+                'NET_BW_EGR_KILOBIT_PER_SEC': 1,
+            }
+        }
+        provider_traits = {
+            uuids.compute1_rp: [],
+            uuids.net_dev1_physnet0_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0', 'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+            uuids.net_dev2_physnet0_rp: [
+                'CUSTOM_PHYSNET_PHYSNET0', 'CUSTOM_VNIC_TYPE_NORMAL'
+            ],
+        }
+        group1 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        group2 = request_spec.RequestGroup(
+            resources={
+                "NET_BW_IGR_KILOBIT_PER_SEC": 1,
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1,
+            },
+            required_traits={
+                "CUSTOM_PHYSNET_PHYSNET0",
+                "CUSTOM_VNIC_TYPE_NORMAL",
+            })
+        self.spec.requested_resources = [group1, group2]
+
+        self.assertRaises(
+            ValueError, self.spec.map_requested_resources_to_providers,
+            allocations, provider_traits)
+
+        self.assertIn('allocation leftover', mock_debug.mock_calls[3][1][0])
