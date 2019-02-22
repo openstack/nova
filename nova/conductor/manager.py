@@ -1249,7 +1249,7 @@ class ComputeTaskManager(base.Base):
         """Fills out the request group - resource provider mapping in the
         request spec.
 
-        This is a workaround as placement does not return which PR
+        This is a workaround as placement does not return which RP
         fulfills which granular request group in the allocation candidate
         request. There is a spec proposing a solution in placement:
         https://review.openstack.org/#/c/597601/
@@ -1258,10 +1258,35 @@ class ComputeTaskManager(base.Base):
         mapping out from the Selection object returned by the scheduler's
         select_destinations call.
         """
-        allocs = self.report_client.get_allocations_for_consumer(
-            context, instance_uuid)
+        # Exit early if this request spec does not require mappings.
+        if not request_spec.maps_requested_resources:
+            return
+        # TODO(mriedem): Could we use the Selection.allocation_request here
+        # to get the resource providers rather than making an API call to
+        # placement per instance being scheduled? Granted that is a
+        # PUT /allocations/{consumer_id} *request* payload rather than a
+        # *response* but at least currently they are in the same format and
+        # could make this faster.
+        allocs = self.report_client.get_allocs_for_consumer(
+            context, instance_uuid)['allocations']
+        if not allocs:
+            # Technically out-of-tree scheduler drivers can still not create
+            # allocations in placement so move on if there are no allocations
+            # for the instance.
+            LOG.debug('No allocations found for instance after scheduling. '
+                      'Assuming the scheduler driver is not using Placement.',
+                      instance_uuid=instance_uuid)
+            return
+        # TODO(mriedem): Short-term we can optimize this by passing a cache by
+        # reference of the RP->traits mapping because if we are processing
+        # a multi-create request we could have the same RPs being used for
+        # multiple instances and avoid duplicate calls. Long-term we could
+        # stash the RP->traits mapping on the Selection object since we can
+        # pull the traits for each provider from the GET /allocation_candidates
+        # response in the scheduler (or leverage the change from the spec
+        # mentioned in the docstring above).
         provider_traits = {
-            rp_uuid: self.report_client._get_provider_traits(
+            rp_uuid: self.report_client.get_provider_traits(
                 context, rp_uuid).traits
             for rp_uuid in allocs}
         request_spec.map_requested_resources_to_providers(
@@ -1382,17 +1407,18 @@ class ComputeTaskManager(base.Base):
             scheduler_utils.populate_filter_properties(filter_props,
                                                        host)
 
+            # Now that we have a selected host (which has claimed resource
+            # allocations in the scheduler) for this instance, we may need to
+            # map allocations to resource providers in the request spec.
             try:
                 self._fill_provider_mapping(
                     context, instance.uuid, request_spec)
             except Exception as exc:
+                # If anything failed here we need to cleanup and bail out.
                 with excutils.save_and_reraise_exception():
-                    self._cleanup_build_artifacts(context, exc, instances,
-                                                  build_requests,
-                                                  request_specs,
-                                                  block_device_mapping,
-                                                  tags,
-                                                  cell_mapping_cache)
+                    self._cleanup_build_artifacts(
+                        context, exc, instances, build_requests, request_specs,
+                        block_device_mapping, tags, cell_mapping_cache)
 
             # TODO(melwitt): Maybe we should set_target_cell on the contexts
             # once we map to a cell, and remove these separate with statements.

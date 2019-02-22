@@ -399,7 +399,7 @@ class SchedulerReportClient(object):
         LOG.error(msg, args)
         raise exception.ResourceProviderAggregateRetrievalFailed(uuid=rp_uuid)
 
-    def _get_provider_traits(self, context, rp_uuid):
+    def get_provider_traits(self, context, rp_uuid):
         """Queries the placement API for a resource provider's traits.
 
         :param context: The security context
@@ -800,7 +800,7 @@ class SchedulerReportClient(object):
                 rp_uuid, aggs, generation=generation)
 
             # Refresh traits
-            trait_info = self._get_provider_traits(context, rp_uuid)
+            trait_info = self.get_provider_traits(context, rp_uuid)
             traits, generation = trait_info.traits, trait_info.generation
             msg = ("Refreshing trait associations for resource provider %s, "
                    "traits: %s")
