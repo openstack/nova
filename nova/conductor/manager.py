@@ -1245,6 +1245,28 @@ class ComputeTaskManager(base.Base):
                 with obj_target_cell(inst, cell0):
                     inst.destroy()
 
+    def _fill_provider_mapping(self, context, instance_uuid, request_spec):
+        """Fills out the request group - resource provider mapping in the
+        request spec.
+
+        This is a workaround as placement does not return which PR
+        fulfills which granular request group in the allocation candidate
+        request. There is a spec proposing a solution in placement:
+        https://review.openstack.org/#/c/597601/
+        When that spec is implemented then this function can be
+        replaced with a simpler code that copies the group - RP
+        mapping out from the Selection object returned by the scheduler's
+        select_destinations call.
+        """
+        allocs = self.report_client.get_allocations_for_consumer(
+            context, instance_uuid)
+        provider_traits = {
+            rp_uuid: self.report_client._get_provider_traits(
+                context, rp_uuid).traits
+            for rp_uuid in allocs}
+        request_spec.map_requested_resources_to_providers(
+            allocs, provider_traits)
+
     def schedule_and_build_instances(self, context, build_requests,
                                      request_specs, image,
                                      admin_password, injected_files,
@@ -1359,6 +1381,19 @@ class ComputeTaskManager(base.Base):
             scheduler_utils.populate_retry(filter_props, instance.uuid)
             scheduler_utils.populate_filter_properties(filter_props,
                                                        host)
+
+            try:
+                self._fill_provider_mapping(
+                    context, instance.uuid, request_spec)
+            except Exception as exc:
+                with excutils.save_and_reraise_exception():
+                    self._cleanup_build_artifacts(context, exc, instances,
+                                                  build_requests,
+                                                  request_specs,
+                                                  block_device_mapping,
+                                                  tags,
+                                                  cell_mapping_cache)
+
             # TODO(melwitt): Maybe we should set_target_cell on the contexts
             # once we map to a cell, and remove these separate with statements.
             with obj_target_cell(instance, cell) as cctxt:
