@@ -171,6 +171,14 @@ class DriverBlockDevice(dict):
         """Transform bdm to the format that is passed to drivers."""
         raise NotImplementedError()
 
+    def get(self, name, default=None):
+        if name in self._proxy_as_attr:
+            return getattr(self._bdm_obj, name)
+        elif name in self._fields:
+            return self[name]
+        else:
+            return super(DriverBlockDevice, self).get(name, default)
+
     def legacy(self):
         """Basic legacy transformation.
 
