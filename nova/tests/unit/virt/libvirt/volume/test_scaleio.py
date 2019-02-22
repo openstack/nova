@@ -15,20 +15,12 @@
 
 import mock
 
-from os_brick.initiator import connector
-
 from nova.tests.unit.virt.libvirt.volume import test_volume
 from nova.virt.libvirt.volume import scaleio
 
 
 class LibvirtScaleIOVolumeDriverTestCase(
         test_volume.LibvirtVolumeBaseTestCase):
-
-    def test_libvirt_scaleio_driver(self):
-        libvirt_driver = scaleio.LibvirtScaleIOVolumeDriver(
-            self.fake_host)
-        self.assertIsInstance(libvirt_driver.connector,
-                              connector.ScaleIOConnector)
 
     def test_libvirt_scaleio_driver_connect(self):
         def brick_conn_vol(data):
