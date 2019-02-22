@@ -718,10 +718,13 @@ def populate_retry(filter_properties, instance_uuid):
     # In the case of multiple force hosts/nodes, scheduler should not
     # disable retry filter but traverse all force hosts/nodes one by
     # one till scheduler gets a valid target host.
-    if (max_attempts == 1 or len(force_hosts) == 1
-                           or len(force_nodes) == 1):
-        # re-scheduling is disabled.
-        LOG.debug('Re-scheduling is disabled.')
+    if (max_attempts == 1 or len(force_hosts) == 1 or len(force_nodes) == 1):
+        # re-scheduling is disabled, log why
+        if max_attempts == 1:
+            LOG.debug('Re-scheduling is disabled due to "max_attempts" config')
+        else:
+            LOG.debug("Re-scheduling is disabled due to forcing a host (%s) "
+                      "and/or node (%s)", force_hosts, force_nodes)
         return
 
     # retry is enabled, update attempt count:
