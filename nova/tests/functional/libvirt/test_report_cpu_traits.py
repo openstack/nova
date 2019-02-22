@@ -13,30 +13,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
-
 from nova import conf
-from nova.tests.functional import integrated_helpers
-from nova.tests.unit.virt.libvirt import fakelibvirt
+from nova.tests.functional.libvirt import integrated_helpers
 
 CONF = conf.CONF
 
 
-class LibvirtReportTraitsTests(integrated_helpers.ProviderUsageBaseTestCase):
-    compute_driver = 'libvirt.LibvirtDriver'
-
-    def setUp(self):
-        super(LibvirtReportTraitsTests, self).setUp()
-        self.useFixture(fakelibvirt.FakeLibvirtFixture(stub_os_vif=False))
-        self.useFixture(
-            fixtures.MockPatch(
-                'nova.virt.libvirt.driver.LibvirtDriver.init_host'))
-        self.assertEqual([], self._get_all_providers())
-        self.compute = self._start_compute(CONF.host)
-        nodename = self.compute.manager._get_nodename(None)
-        self.host_uuid = self._get_provider_uuid_by_host(nodename)
-
+class LibvirtReportTraitsTests(
+        integrated_helpers.LibvirtProviderUsageBaseTestCase):
     def test_report_cpu_traits(self):
+        self.assertEqual([], self._get_all_providers())
+        self.start_compute()
+
         # Test CPU traits reported on initial node startup, these specific
         # trait values are coming from fakelibvirt's baselineCPU result.
         traits = self._get_provider_traits(self.host_uuid)
