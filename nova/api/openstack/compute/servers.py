@@ -543,13 +543,11 @@ class ServersController(wsgi.Controller):
         # 'max_count' to be 'min_count'.
         min_count = int(server_dict.get('min_count', 1))
         max_count = int(server_dict.get('max_count', min_count))
-        return_id = server_dict.get('return_reservation_id', False)
         if min_count > max_count:
             msg = _('min_count must be <= max_count')
             raise exc.HTTPBadRequest(explanation=msg)
         create_kwargs['min_count'] = min_count
         create_kwargs['max_count'] = max_count
-        create_kwargs['return_reservation_id'] = return_id
 
         availability_zone = server_dict.pop("availability_zone", None)
 
@@ -597,16 +595,6 @@ class ServersController(wsgi.Controller):
             supports_device_tagging)
 
         image_uuid = self._image_from_req_data(server_dict, create_kwargs)
-
-        # NOTE(cyeoh): Although upper layer can set the value of
-        # return_reservation_id in order to request that a reservation
-        # id be returned to the client instead of the newly created
-        # instance information we do not want to pass this parameter
-        # to the compute create call which always returns both. We use
-        # this flag after the instance create call to determine what
-        # to return to the client
-        return_reservation_id = create_kwargs.pop('return_reservation_id',
-                                                  False)
 
         requested_networks = server_dict.get('networks', None)
 
@@ -730,7 +718,7 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=error.format_message())
 
         # If the caller wanted a reservation_id, return it
-        if return_reservation_id:
+        if server_dict.get('return_reservation_id', False):
             return wsgi.ResponseObject({'reservation_id': resv_id})
 
         server = self._view_builder.create(req, instances[0])
