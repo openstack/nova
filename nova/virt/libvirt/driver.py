@@ -88,7 +88,6 @@ from nova.network import model as network_model
 from nova import objects
 from nova.objects import diagnostics as diagnostics_obj
 from nova.objects import fields
-from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 import nova.privsep.libvirt
@@ -6760,11 +6759,6 @@ class LibvirtDriver(driver.ComputeDriver):
         :param block_device_info: result of _get_instance_block_device_info
         :returns: a LibvirtLiveMigrateData object
         """
-        if not isinstance(dest_check_data, migrate_data_obj.LiveMigrateData):
-            md_obj = objects.LibvirtLiveMigrateData()
-            md_obj.from_legacy_dict(dest_check_data)
-            dest_check_data = md_obj
-
         # Checking shared storage connectivity
         # if block migration, instances_path should not be on shared storage.
         source = CONF.host
