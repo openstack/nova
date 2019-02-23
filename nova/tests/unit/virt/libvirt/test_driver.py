@@ -1461,10 +1461,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          instance.system_metadata['password_0'])
         mock_save.assert_called_once_with()
 
-    @mock.patch.object(host.Host,
-                       'has_min_version', return_value=True)
     @mock.patch('nova.virt.libvirt.host.Host.get_guest')
-    def test_set_admin_password_parallels(self, mock_get_guest, ver):
+    def test_set_admin_password_parallels(self, mock_get_guest):
         self.flags(virt_type='parallels', group='libvirt')
         instance = objects.Instance(**self.test_instance)
         mock_guest = mock.Mock(spec=libvirt_guest.Guest)
