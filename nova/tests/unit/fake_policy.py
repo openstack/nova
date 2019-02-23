@@ -80,7 +80,6 @@ policy_data = """
     "os_compute_api:os-server-tags:update_all": "",
     "os_compute_api:os-server-tags:delete": "",
     "os_compute_api:os-server-tags:delete_all": "",
-    "os_compute_api:os-server-groups": "",
     "os_compute_api:os-server-groups:show": "",
     "os_compute_api:os-server-groups:index": "",
     "os_compute_api:os-server-groups:create": "",
