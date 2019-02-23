@@ -35,7 +35,6 @@ from nova.policies import extensions
 from nova.policies import flavor_access
 from nova.policies import flavor_extra_specs
 from nova.policies import flavor_manage
-from nova.policies import flavors
 from nova.policies import floating_ip_pools
 from nova.policies import floating_ips
 from nova.policies import hosts
@@ -100,7 +99,6 @@ def list_rules():
         flavor_access.list_rules(),
         flavor_extra_specs.list_rules(),
         flavor_manage.list_rules(),
-        flavors.list_rules(),
         floating_ip_pools.list_rules(),
         floating_ips.list_rules(),
         hosts.list_rules(),

@@ -399,7 +399,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-remote-consoles",
 "os_compute_api:os-deferred-delete",
 "os_compute_api:os-flavor-access",
-"os_compute_api:flavors",
 "os_compute_api:os-flavor-extra-specs:index",
 "os_compute_api:os-flavor-extra-specs:show",
 "os_compute_api:os-floating-ip-pools",
