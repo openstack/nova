@@ -4542,12 +4542,9 @@ class ComputeManager(manager.Manager):
         instance.task_state = task_states.RESIZE_FINISH
         instance.save(expected_task_state=task_states.RESIZE_MIGRATED)
 
-        self._notify_about_instance_usage(
-            context, instance, "finish_resize.start",
-            network_info=network_info)
-        compute_utils.notify_about_instance_action(context, instance,
-               self.host, action=fields.NotificationAction.RESIZE_FINISH,
-               phase=fields.NotificationPhase.START, bdms=bdms)
+        self._send_finish_resize_notifications(
+            context, instance, bdms, network_info,
+            fields.NotificationPhase.START)
 
         # We need to update any volume attachments using the destination
         # host connector so that we can update the BDM.connection_info
@@ -4630,12 +4627,31 @@ class ComputeManager(manager.Manager):
         # instance is on a new host and will need to establish a new console
         # connection.
         self._update_scheduler_instance_info(context, instance)
+        self._send_finish_resize_notifications(
+            context, instance, bdms, network_info,
+            fields.NotificationPhase.END)
+
+    def _send_finish_resize_notifications(
+            self, context, instance, bdms, network_info, phase):
+        """Send notifications for the finish_resize flow.
+
+        :param context: nova auth request context
+        :param instance: The instance being resized
+        :param bdms: BlockDeviceMappingList for the BDMs associated with the
+            instance
+        :param network_info: NetworkInfo for the instance info cache of ports
+        :param phase: The phase of the action (NotificationPhase enum, either
+            ``start`` or ``end``)
+        """
+        # Send the legacy unversioned notification.
         self._notify_about_instance_usage(
-            context, instance, "finish_resize.end",
+            context, instance, "finish_resize.%s" % phase,
             network_info=network_info)
-        compute_utils.notify_about_instance_action(context, instance,
-               self.host, action=fields.NotificationAction.RESIZE_FINISH,
-               phase=fields.NotificationPhase.END, bdms=bdms)
+        # Send the versioned notification.
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.RESIZE_FINISH, phase=phase,
+            bdms=bdms)
 
     @wrap_exception()
     @wrap_instance_fault
