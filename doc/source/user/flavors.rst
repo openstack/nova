@@ -305,10 +305,14 @@ Hardware video RAM
   image. Used in conjunction with the ``hw_video_ram`` image property.
   ``hw_video_ram`` must be less than or equal to ``hw_video:ram_max_mb``.
 
-  This is currently only supported by the libvirt driver.
+  This is currently supported by the libvirt and the vmware drivers.
 
   See https://libvirt.org/formatdomain.html#elementsVideo for more information
   on how this is used to set the ``vram`` attribute with the libvirt driver.
+
+  See https://pubs.vmware.com/vi-sdk/visdk250/ReferenceGuide/vim.vm.device.VirtualVideoCard.html
+  for more information on how this is used to set the ``videoRamSizeInKB`` attribute with
+  the vmware driver.
 
 Watchdog behavior
   For the libvirt driver, you can enable and set the behavior of a virtual
