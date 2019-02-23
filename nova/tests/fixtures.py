@@ -1505,7 +1505,6 @@ class CinderFixture(fixtures.Fixture):
     def __init__(self, test):
         super(CinderFixture, self).__init__()
         self.test = test
-        self.swap_error = False
         self.swap_volume_instance_uuid = None
         self.swap_volume_instance_error_uuid = None
         self.reserved_volumes = list()
@@ -1614,11 +1613,6 @@ class CinderFixture(fixtures.Fixture):
             if volume_id in self.reserved_volumes:
                 self.reserved_volumes.remove(volume_id)
 
-            # Signaling that swap_volume has encountered the error
-            # from initialize_connection and is working on rolling back
-            # the reservation on SWAP_ERR_NEW_VOL.
-            self.swap_error = True
-
         def fake_attach(_self, context, volume_id, instance_uuid,
                         mountpoint, mode='rw'):
             # Check to see if the volume is already attached to any server.
@@ -1701,7 +1695,6 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
     def __init__(self, test):
         super(CinderFixtureNewAttachFlow, self).__init__()
         self.test = test
-        self.swap_error = False
         self.swap_volume_instance_uuid = None
         self.swap_volume_instance_error_uuid = None
         self.attachment_error_id = None
@@ -1845,9 +1838,6 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
             _, attachment, attachments = _find_attachment(attachment_id)
             attachments.remove(attachment)
 
-            if attachment_id == CinderFixtureNewAttachFlow.SWAP_ERR_ATTACH_ID:
-                self.swap_error = True
-
         def fake_attachment_update(_self, context, attachment_id, connector,
                                    mountpoint=None):
             # Ensure the attachment exists
@@ -1858,6 +1848,8 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                                                   {'foo': 'bar',
                                                    'target_lun': '1'}}}
             if attachment_id == CinderFixtureNewAttachFlow.SWAP_ERR_ATTACH_ID:
+                # This intentionally triggers a TypeError for the
+                # instance.volume_swap.error versioned notification tests.
                 attachment_ref = {'connection_info': ()}
             return attachment_ref
 
