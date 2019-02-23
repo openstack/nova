@@ -480,7 +480,8 @@ class RequestSpec(base.NovaObject):
 
         # TODO(gibi): do the creation of the unnumbered group and any
         # numbered group from the flavor by moving the logic from
-        # nova.scheduler.utils.resources_from_request_spec() here.
+        # nova.scheduler.utils.resources_from_request_spec() here. See also
+        # the comment in the definition of requested_resources field.
         spec_obj.requested_resources = []
         if port_resource_requests:
             spec_obj.requested_resources.extend(port_resource_requests)
@@ -701,15 +702,13 @@ class RequestSpec(base.NovaObject):
                                 This dict contains info only about RPs
                                 appearing in the placement_allocations param.
         :return: True if each group's resource and trait request can be
-                 fulfilled from RP it is mapped to. False otherwise.
+                 fulfilled from the RP it is mapped to. False otherwise.
         """
 
         # Check that traits are matching for each group - rp pair in
         # this mapping
         for group, rp_uuid in group_rp_mapping:
-            if (set(provider_traits[rp_uuid])
-                    & set(group.required_traits)
-                    != set(group.required_traits)):
+            if not group.required_traits.issubset(provider_traits[rp_uuid]):
                 return False
 
         # TODO(gibi): add support for groups with forbidden_traits and
@@ -733,10 +732,10 @@ class RequestSpec(base.NovaObject):
                     return False
 
         # Check that all the allocations are consumed from the resource
-        # classes that are appeared in the request groups. It should never
-        # happen that we have a match but also have some leftover if placement
-        # returns valid allocation candidates. Except if the leftover in the
-        # allocation are due to the RC requested in the unnumbered group.
+        # classes that appear in the request groups. It should never happen
+        # that we have a match but also have some leftover if placement returns
+        # valid allocation candidates. Except if the leftover in the allocation
+        # are due to the RC requested in the unnumbered group.
         for rp_uuid in allocs:
             rp_allocs = allocs[rp_uuid]['resources']
             for rc, amount in group.resources.items():
@@ -744,8 +743,8 @@ class RequestSpec(base.NovaObject):
                     if rp_allocs[rc] != 0:
                         LOG.debug(
                             'Found valid group - RP mapping %s but there are '
-                            'allocation leftover in %s',
-                            group_rp_mapping, allocs)
+                            'allocations leftover in %s from resource class '
+                            '%s', group_rp_mapping, allocs, rc)
                         return False
 
         # If both the traits and the allocations are OK then mapping is valid
@@ -767,6 +766,7 @@ class RequestSpec(base.NovaObject):
           required traits, aggregate membership and forbidden traits are not
           supported.
         * requesting the same resource class in numbered and un-numbered group
+          is not supported
 
         We can live with these limitations today as Neutron does not use
         forbidden traits and aggregates in the request and each Neutron port is

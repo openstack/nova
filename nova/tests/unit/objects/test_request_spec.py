@@ -1342,7 +1342,7 @@ class TestMappingRequestGroupsToProviders(test.NoDBTestCase):
                 'CUSTOM_PHYSNET_PHYSNET0', 'CUSTOM_VNIC_TYPE_NORMAL'
             ],
         }
-        # this fits to 3 RPs
+        # this fits to 2 RPs
         group1 = request_spec.RequestGroup(
             resources={
                 "NET_BW_IGR_KILOBIT_PER_SEC": 1,
@@ -1395,7 +1395,7 @@ class TestMappingRequestGroupsToProviders(test.NoDBTestCase):
         # NOTE(gibi): This negative test scenario should not happen in real
         # end to end test as we assume that placement only returns candidates
         # that are valid and this candidate is not valid as it provides more
-        # resources that the ports are requesting. Still we want to cover the
+        # resources than the ports are requesting. Still we want to cover the
         # error case in our implementation
 
         allocations = collections.OrderedDict()
@@ -1449,4 +1449,4 @@ class TestMappingRequestGroupsToProviders(test.NoDBTestCase):
             ValueError, self.spec.map_requested_resources_to_providers,
             allocations, provider_traits)
 
-        self.assertIn('allocation leftover', mock_debug.mock_calls[3][1][0])
+        self.assertIn('allocations leftover', mock_debug.mock_calls[3][1][0])
