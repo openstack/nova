@@ -431,6 +431,65 @@ class ServersController(wsgi.Controller):
         return self._view_builder.show(
             req, instance, cell_down_support=cell_down_support)
 
+    @staticmethod
+    def _process_bdms_for_create(
+            context, target, server_dict, create_kwargs,
+            supports_device_tagging):
+        """Processes block_device_mapping(_v2) req parameters for server create
+
+        :param context: The nova auth request context
+        :param target: The target dict for ``context.can`` policy checks
+        :param server_dict: The POST /servers request body "server" entry
+        :param create_kwargs: dict that gets populated by this method and
+            passed to nova.comptue.api.API.create()
+        :param supports_device_tagging: True if a suitable microversion was
+            provided for bdm tags during server create, False otherwise
+        :raises: webob.exc.HTTPBadRequest if the request parameters are invalid
+        :raises: nova.exception.Forbidden if a policy check fails
+        """
+        block_device_mapping_legacy = server_dict.get('block_device_mapping',
+                                                      [])
+        block_device_mapping_v2 = server_dict.get('block_device_mapping_v2',
+                                                  [])
+
+        if block_device_mapping_legacy and block_device_mapping_v2:
+            expl = _('Using different block_device_mapping syntaxes '
+                     'is not allowed in the same request.')
+            raise exc.HTTPBadRequest(explanation=expl)
+
+        if block_device_mapping_legacy:
+            for bdm in block_device_mapping_legacy:
+                if 'delete_on_termination' in bdm:
+                    bdm['delete_on_termination'] = strutils.bool_from_string(
+                        bdm['delete_on_termination'])
+            create_kwargs[
+                'block_device_mapping'] = block_device_mapping_legacy
+            # Sets the legacy_bdm flag if we got a legacy block device mapping.
+            create_kwargs['legacy_bdm'] = True
+        elif block_device_mapping_v2:
+            # Have to check whether --image is given, see bug 1433609
+            image_href = server_dict.get('imageRef')
+            image_uuid_specified = image_href is not None
+            try:
+                block_device_mapping = [
+                    block_device.BlockDeviceDict.from_api(bdm_dict,
+                        image_uuid_specified)
+                    for bdm_dict in block_device_mapping_v2]
+            except exception.InvalidBDMFormat as e:
+                raise exc.HTTPBadRequest(explanation=e.format_message())
+            create_kwargs['block_device_mapping'] = block_device_mapping
+            # Unset the legacy_bdm flag if we got a block device mapping.
+            create_kwargs['legacy_bdm'] = False
+
+        block_device_mapping = create_kwargs.get("block_device_mapping")
+        if block_device_mapping:
+            context.can(server_policies.SERVERS % 'create:attach_volume',
+                        target)
+            for bdm in block_device_mapping:
+                if bdm.get('tag', None) and not supports_device_tagging:
+                    msg = _('Block device tags are not yet supported.')
+                    raise exc.HTTPBadRequest(explanation=msg)
+
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 409))
     @validation.schema(schema_servers.base_create_v20, '2.0', '2.0')
@@ -533,48 +592,9 @@ class ServersController(wsgi.Controller):
         supports_device_tagging = (min_compute_version >=
                                    DEVICE_TAGGING_MIN_COMPUTE_VERSION)
 
-        block_device_mapping_legacy = server_dict.get('block_device_mapping',
-                                                      [])
-        block_device_mapping_v2 = server_dict.get('block_device_mapping_v2',
-                                                  [])
-
-        if block_device_mapping_legacy and block_device_mapping_v2:
-            expl = _('Using different block_device_mapping syntaxes '
-                     'is not allowed in the same request.')
-            raise exc.HTTPBadRequest(explanation=expl)
-
-        if block_device_mapping_legacy:
-            for bdm in block_device_mapping_legacy:
-                if 'delete_on_termination' in bdm:
-                    bdm['delete_on_termination'] = strutils.bool_from_string(
-                        bdm['delete_on_termination'])
-            create_kwargs[
-                'block_device_mapping'] = block_device_mapping_legacy
-            # Sets the legacy_bdm flag if we got a legacy block device mapping.
-            create_kwargs['legacy_bdm'] = True
-        elif block_device_mapping_v2:
-            # Have to check whether --image is given, see bug 1433609
-            image_href = server_dict.get('imageRef')
-            image_uuid_specified = image_href is not None
-            try:
-                block_device_mapping = [
-                    block_device.BlockDeviceDict.from_api(bdm_dict,
-                        image_uuid_specified)
-                    for bdm_dict in block_device_mapping_v2]
-            except exception.InvalidBDMFormat as e:
-                raise exc.HTTPBadRequest(explanation=e.format_message())
-            create_kwargs['block_device_mapping'] = block_device_mapping
-            # Unset the legacy_bdm flag if we got a block device mapping.
-            create_kwargs['legacy_bdm'] = False
-
-        block_device_mapping = create_kwargs.get("block_device_mapping")
-        if block_device_mapping:
-            context.can(server_policies.SERVERS % 'create:attach_volume',
-                        target)
-            for bdm in block_device_mapping:
-                if bdm.get('tag', None) and not supports_device_tagging:
-                    msg = _('Block device tags are not yet supported.')
-                    raise exc.HTTPBadRequest(explanation=msg)
+        self._process_bdms_for_create(
+            context, target, server_dict, create_kwargs,
+            supports_device_tagging)
 
         image_uuid = self._image_from_req_data(server_dict, create_kwargs)
 
