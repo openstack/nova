@@ -392,23 +392,6 @@ def resources_from_flavor(instance, flavor):
     return resources
 
 
-def merge_resources(original_resources, new_resources, sign=1):
-    """Merge a list of new resources with existing resources.
-
-    Either add the resources (if sign is 1) or subtract (if sign is -1).
-    If the resulting value is 0 do not include the resource in the results.
-    """
-
-    all_keys = set(original_resources.keys()) | set(new_resources.keys())
-    for key in all_keys:
-        value = (original_resources.get(key, 0) +
-                 (sign * new_resources.get(key, 0)))
-        if value:
-            original_resources[key] = value
-        else:
-            original_resources.pop(key, None)
-
-
 def resources_from_request_spec(spec_obj):
     """Given a RequestSpec object, returns a ResourceRequest of the resources,
     traits, and aggregates it represents.

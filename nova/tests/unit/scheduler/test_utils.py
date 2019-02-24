@@ -727,55 +727,6 @@ class TestUtils(test.NoDBTestCase):
         self.assertIs(rg2, req.get_request_group(2))
         self.assertIs(unnumbered_rg, req.get_request_group(None))
 
-    def test_merge_resources(self):
-        resources = {
-            'VCPU': 1, 'MEMORY_MB': 1024,
-        }
-        new_resources = {
-            'VCPU': 2, 'MEMORY_MB': 2048, 'CUSTOM_FOO': 1,
-        }
-        doubled = {
-            'VCPU': 3, 'MEMORY_MB': 3072, 'CUSTOM_FOO': 1,
-        }
-        saved_orig = dict(resources)
-        utils.merge_resources(resources, new_resources)
-        # Check to see that we've doubled our resources
-        self.assertEqual(doubled, resources)
-        # and then removed those doubled resources
-        utils.merge_resources(resources, saved_orig, -1)
-        self.assertEqual(new_resources, resources)
-
-    def test_merge_resources_zero(self):
-        """Test 0 value resources are ignored."""
-        resources = {
-            'VCPU': 1, 'MEMORY_MB': 1024,
-        }
-        new_resources = {
-            'VCPU': 2, 'MEMORY_MB': 2048, 'DISK_GB': 0,
-        }
-        # The result should not include the zero valued resource.
-        doubled = {
-            'VCPU': 3, 'MEMORY_MB': 3072,
-        }
-        utils.merge_resources(resources, new_resources)
-        self.assertEqual(doubled, resources)
-
-    def test_merge_resources_original_zeroes(self):
-        """Confirm that merging that result in a zero in the original
-        excludes the zeroed resource class.
-        """
-        resources = {
-            'VCPU': 3, 'MEMORY_MB': 1023, 'DISK_GB': 1,
-        }
-        new_resources = {
-            'VCPU': 1, 'MEMORY_MB': 512, 'DISK_GB': 1,
-        }
-        merged = {
-            'VCPU': 2, 'MEMORY_MB': 511,
-        }
-        utils.merge_resources(resources, new_resources, -1)
-        self.assertEqual(merged, resources)
-
     def test_claim_resources_on_destination_no_source_allocations(self):
         """Tests the negative scenario where the instance does not have
         allocations in Placement on the source compute node so no claim is

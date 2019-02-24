@@ -143,9 +143,7 @@ def _move_operation_alloc_request(source_allocs, dest_alloc_req):
     contains resources claimed against both source and destination, accounting
     for shared providers.
 
-    Also accounts for a resize to the same host where the source and dest
-    compute node resource providers are going to be the same. In that case
-    we sum the resource allocations for the single provider.
+    This is expected to only be used during an evacuate operation.
 
     :param source_allocs: Dict, keyed by resource provider UUID, of resources
                           allocated on the source host
@@ -169,19 +167,6 @@ def _move_operation_alloc_request(source_allocs, dest_alloc_req):
         if rp_uuid in new_rp_uuids:
             new_alloc_req['allocations'][rp_uuid] = dest_alloc_req[
                 'allocations'][rp_uuid]
-        elif not new_rp_uuids:
-            # If there are no new_rp_uuids that means we're resizing to
-            # the same host so we need to sum the allocations for
-            # the compute node (and possibly shared providers) using both
-            # the current and new allocations.
-            # Note that we sum the allocations rather than take the max per
-            # resource class between the current and new allocations because
-            # the compute node/resource tracker is going to adjust for
-            # decrementing any old allocations as necessary, the scheduler
-            # shouldn't make assumptions about that.
-            scheduler_utils.merge_resources(
-                new_alloc_req['allocations'][rp_uuid]['resources'],
-                dest_alloc_req['allocations'][rp_uuid]['resources'])
 
     LOG.debug("New allocation_request containing both source and "
               "destination hosts in move operation: %s", new_alloc_req)
