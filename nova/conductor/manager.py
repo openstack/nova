@@ -706,6 +706,10 @@ class ComputeTaskManager(base.Base):
             local_reqspec = objects.RequestSpec.from_primitives(
                 context, request_spec, local_filter_props)
 
+            # TODO(gibi): make sure that the request group - provider mapping
+            # is updated in the request spec during reschedule
+            local_reqspec.requested_resources = []
+
             # The block_device_mapping passed from the api doesn't contain
             # instance specific information
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
