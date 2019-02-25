@@ -513,6 +513,48 @@ class InterfaceAttachTestsV249(test.NoDBTestCase):
             self.attachments.create(self.req, FAKE_UUID1, body=body)
 
 
+class InterfaceAttachTestsV270(test.NoDBTestCase):
+    """os-interface API tests for microversion 2.70"""
+    def setUp(self):
+        super(InterfaceAttachTestsV270, self).setUp()
+        self.attachments = (
+            attach_interfaces_v21.InterfaceAttachmentController())
+        self.req = fakes.HTTPRequest.blank('', version='2.70')
+        self.stub_out('nova.compute.api.API.get', fake_get_instance)
+
+    @mock.patch('nova.objects.VirtualInterface.get_by_uuid', return_value=None)
+    def test_show_interface_no_vif(self, mock_get_by_uuid):
+        """Tests GET /servers/{server_id}/os-interface/{id} where there is no
+        corresponding VirtualInterface database record for the attached port.
+        """
+        with mock.patch.object(self.attachments.network_api, 'show_port',
+                               fake_show_port):
+            attachment = self.attachments.show(
+                self.req, FAKE_UUID1, FAKE_PORT_ID1)['interfaceAttachment']
+        self.assertIn('tag', attachment)
+        self.assertIsNone(attachment['tag'])
+        ctxt = self.req.environ['nova.context']
+        mock_get_by_uuid.assert_called_once_with(ctxt, FAKE_PORT_ID1)
+
+    @mock.patch('nova.objects.VirtualInterfaceList.get_by_instance_uuid',
+                return_value=objects.VirtualInterfaceList())
+    def test_list_interfaces_no_vifs(self, mock_get_by_instance_uuid):
+        """Tests GET /servers/{server_id}/os-interface where there is no
+        corresponding VirtualInterface database record for the attached ports.
+        """
+        with mock.patch.object(self.attachments.network_api, 'list_ports',
+                               return_value={'ports': ports}) as list_ports:
+            attachments = self.attachments.index(
+                self.req, FAKE_UUID1)['interfaceAttachments']
+        for attachment in attachments:
+            self.assertIn('tag', attachment)
+            self.assertIsNone(attachment['tag'])
+        ctxt = self.req.environ['nova.context']
+        list_ports.assert_called_once_with(ctxt, device_id=FAKE_UUID1)
+        mock_get_by_instance_uuid.assert_called_once_with(
+            self.req.environ['nova.context'], FAKE_UUID1)
+
+
 class AttachInterfacesPolicyEnforcementv21(test.NoDBTestCase):
 
     def setUp(self):
