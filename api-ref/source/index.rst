@@ -53,6 +53,7 @@ the `API guide <https://docs.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-services.inc
 .. include:: os-simple-tenant-usage.inc
 .. include:: os-server-external-events.inc
+.. include:: server-topology.inc
 
 ===============
 Deprecated APIs

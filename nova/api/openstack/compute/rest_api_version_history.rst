@@ -998,3 +998,15 @@ through ``GET /servers/{server_id}/os-instance-actions`` and
 ----
 API microversion 2.77 adds support for specifying availability zone when
 unshelving a shelved offloaded server.
+
+2.78
+----
+
+Add server sub-resource ``topology`` to show server NUMA information.
+
+* ``GET /servers/{server_id}/topology``
+
+The default behavior is configurable using two new policies:
+
+* ``compute:server:topology:index``
+* ``compute:server:topology:host:index``

@@ -6354,6 +6354,77 @@ server_tags_create:
   required: false
   type: array
   min_version: 2.52
+server_topology_nodes:
+  description: |
+    NUMA nodes information of a server.
+  in: body
+  required: true
+  type: array
+server_topology_nodes_cpu_pinning:
+  description: |
+    The mapping of server cores to host physical CPU. for example::
+
+     cpu_pinning: { 0: 0, 1: 5}
+
+    This means vcpu 0 is mapped to physical CPU 0, and vcpu 1 is mapped
+    physical CPU 5.
+
+    By default the ``cpu_pinning`` field is only visible to users with the
+    administrative role. You can change the default behavior via the policy
+    rule::
+
+     compute:server:topology:host:index
+  in: body
+  required: false
+  type: dict
+server_topology_nodes_cpu_siblings:
+  description: |
+    A mapping of host cpus thread sibling. For example::
+
+      siblings: [[0,1],[2,3]]
+
+    This means vcpu 0 and vcpu 1 belong to same CPU core, vcpu 2, vcpu 3
+    belong to another CPU core.
+
+    By default the ``siblings`` field is only visible to users with the
+    administrative role. You can change the default behavior via the policy
+    rule::
+
+      compute:server:topology:host:index
+  in: body
+  required: false
+  type: list
+server_topology_nodes_host_numa_node:
+  description: |
+    The host NUMA node the virtual NUMA node is map to.
+
+    By default the ``host_numa_node`` field is only visible to users with the
+    administrator role. You can change the default behavior via the policy
+    rule::
+
+     compute:server:topology:host:index
+  in: body
+  required: false
+  type: integer
+server_topology_nodes_memory_mb:
+  description: |
+    The amount of memory assigned to this NUMA node in MB.
+  in: body
+  required: false
+  type: integer
+server_topology_nodes_vcpu_set:
+  description: |
+    A list of IDs of the virtual CPU assigned to this NUMA node.
+  in: body
+  required: false
+  type: list
+server_topology_pagesize_kb:
+  description: |
+    The page size in KB of a server. This field is ``null`` if the
+    page size information is not available.
+  in: body
+  required: true
+  type: integer
 server_trusted_image_certificates_create_req:
   description: |
     A list of trusted certificate IDs, which are used during image
