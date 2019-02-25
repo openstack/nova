@@ -289,3 +289,54 @@ def iptables_set_rules(rules, ipv4=True):
     processutils.execute('%s-restore' % cmd, '-c',
                          process_input=six.b('\n'.join(rules)),
                          attempts=5)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def restart_dnsmasq(flag_file, network_ref, config_file, pid_path, opts_path,
+                    dhcp_lease_time, lease_max, conf_path, dhcp_bridge,
+                    dhcp_domain, dns_servers, hosts_path):
+    _restart_dnsmasq_inner(flag_file, network_ref, config_file, pid_path,
+                           opts_path, dhcp_lease_time, lease_max, conf_path,
+                           dhcp_bridge, dhcp_domain, dns_servers, hosts_path)
+
+
+# NOTE(mikal): this is done like this to enable unit testing
+def _restart_dnsmasq_inner(flag_file, network_ref, config_file, pid_path,
+                           opts_path, dhcp_lease_time, lease_max, conf_path,
+                           dhcp_bridge, dhcp_domain, dns_servers, hosts_path):
+    cmd = ['env',
+           'CONFIG_FILE=%s' % flag_file,
+           'NETWORK_ID=%s' % str(network_ref['id']),
+           'dnsmasq',
+           '--strict-order',
+           '--bind-interfaces',
+           '--conf-file=%s' % config_file,
+           '--pid-file=%s' % pid_path,
+           '--dhcp-optsfile=%s' % opts_path,
+           '--listen-address=%s' % network_ref['dhcp_server'],
+           '--except-interface=lo',
+           '--dhcp-range=set:%s,%s,static,%s,%ss' %
+                         (network_ref['label'],
+                          network_ref['dhcp_start'],
+                          network_ref['netmask'],
+                          dhcp_lease_time),
+           '--dhcp-lease-max=%s' % lease_max,
+           '--dhcp-hostsfile=%s' % conf_path,
+           '--dhcp-script=%s' % dhcp_bridge,
+           '--no-hosts',
+           '--leasefile-ro']
+
+    # dnsmasq currently gives an error for an empty domain,
+    # rather than ignoring.  So only specify it if defined.
+    if dhcp_domain:
+        cmd.append('--domain=%s' % dhcp_domain)
+
+    if dns_servers:
+        cmd.append('--no-resolv')
+    for dns_server in dns_servers:
+        cmd.append('--server=%s' % dns_server)
+
+    if network_ref['multi_host']:
+        cmd.append('--addn-hosts=%s' % hosts_path)
+
+    processutils.execute(*cmd)

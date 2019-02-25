@@ -425,7 +425,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.iptables_set_rules',
                 return_value=('', ''))
-    def test_update_dhcp_for_nw00(self, mock_iptables_set_rules,
+    @mock.patch('nova.privsep.linux_net.restart_dnsmasq')
+    def test_update_dhcp_for_nw00(self, mock_restart_dnsmasq,
+                                  mock_iptables_set_rules,
                                   mock_iptables_get_rules, mock_chmod,
                                   mock_ensure_tree):
         with mock.patch.object(self.driver, 'write_to_file') \
@@ -437,6 +439,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             self.assertEqual(mock_write_to_file.call_count, 2)
             self.assertEqual(mock_ensure_tree.call_count, 7)
             self.assertEqual(mock_chmod.call_count, 2)
+            self.assertEqual(mock_restart_dnsmasq.call_count, 1)
 
     @mock.patch.object(fileutils, 'ensure_tree')
     @mock.patch.object(os, 'chmod')
@@ -444,7 +447,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.iptables_set_rules',
                 return_value=('', ''))
-    def test_update_dhcp_for_nw01(self, mock_iptables_set_rules,
+    @mock.patch('nova.privsep.linux_net.restart_dnsmasq')
+    def test_update_dhcp_for_nw01(self, mock_restart_dnsmasq,
+                                  mock_iptables_set_rules,
                                   mock_iptables_get_rules, mock_chmod,
                                   mock_ensure_tree):
         with mock.patch.object(self.driver, 'write_to_file') \
@@ -456,6 +461,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             self.assertEqual(mock_write_to_file.call_count, 2)
             self.assertEqual(mock_ensure_tree.call_count, 7)
             self.assertEqual(mock_chmod.call_count, 2)
+            self.assertEqual(mock_restart_dnsmasq.call_count, 1)
 
     def _get_fixedips(self, network, host=None):
         return objects.FixedIPList.get_by_network(self.context,
@@ -739,12 +745,15 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     @mock.patch.object(linux_net, 'write_to_file')
     @mock.patch('os.chmod')
     @mock.patch.object(linux_net, '_add_dhcp_mangle_rule')
-    @mock.patch.object(linux_net, '_execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('nova.privsep.linux_net.iptables_get_rules',
                 return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.iptables_set_rules',
                 return_value=('', ''))
-    def _test_dnsmasq_execute(self, mock_iptables_set_rules,
+    @mock.patch('nova.privsep.linux_net.restart_dnsmasq',
+                side_effect=nova.privsep.linux_net._restart_dnsmasq_inner)
+    def _test_dnsmasq_execute(self, mock_restart_dnsmasq,
+                              mock_iptables_set_rules,
                               mock_iptables_get_rules, mock_execute,
                               mock_add_dhcp_mangle_rule,
                               mock_chmod, mock_write_to_file,

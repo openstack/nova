@@ -999,47 +999,30 @@ def restart_dhcp(context, dev, network_ref, fixedips):
         else:
             LOG.debug('Pid %d is stale, relaunching dnsmasq', pid)
 
-    cmd = ['env',
-           'CONFIG_FILE=%s' % jsonutils.dumps(CONF.dhcpbridge_flagfile),
-           'NETWORK_ID=%s' % str(network_ref['id']),
-           'dnsmasq',
-           '--strict-order',
-           '--bind-interfaces',
-           '--conf-file=%s' % CONF.dnsmasq_config_file,
-           '--pid-file=%s' % _dhcp_file(dev, 'pid'),
-           '--dhcp-optsfile=%s' % _dhcp_file(dev, 'opts'),
-           '--listen-address=%s' % network_ref['dhcp_server'],
-           '--except-interface=lo',
-           '--dhcp-range=set:%s,%s,static,%s,%ss' %
-                         (network_ref['label'],
-                          network_ref['dhcp_start'],
-                          network_ref['netmask'],
-                          CONF.dhcp_lease_time),
-           '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(network_ref['cidr'])),
-           '--dhcp-hostsfile=%s' % _dhcp_file(dev, 'conf'),
-           '--dhcp-script=%s' % CONF.dhcpbridge,
-           '--no-hosts',
-           '--leasefile-ro']
-
-    # dnsmasq currently gives an error for an empty domain,
-    # rather than ignoring.  So only specify it if defined.
-    if CONF.api.dhcp_domain:
-        cmd.append('--domain=%s' % CONF.api.dhcp_domain)
-
     dns_servers = CONF.dns_server
     if CONF.use_network_dns_servers:
         if network_ref.get('dns1'):
             dns_servers.append(network_ref.get('dns1'))
         if network_ref.get('dns2'):
             dns_servers.append(network_ref.get('dns2'))
-    if network_ref['multi_host']:
-        cmd.append('--addn-hosts=%s' % _dhcp_file(dev, 'hosts'))
-    if dns_servers:
-        cmd.append('--no-resolv')
-    for dns_server in dns_servers:
-        cmd.append('--server=%s' % dns_server)
 
-    _execute(*cmd, run_as_root=True)
+    hosts_path = None
+    if network_ref['multi_host']:
+        hosts_path = _dhcp_file(dev, 'hosts')
+
+    nova.privsep.linux_net.restart_dnsmasq(
+        jsonutils.dumps(CONF.dhcpbridge_flagfile),
+        network_ref,
+        CONF.dnsmasq_config_file,
+        _dhcp_file(dev, 'pid'),
+        _dhcp_file(dev, 'opts'),
+        CONF.dhcp_lease_time,
+        len(netaddr.IPNetwork(network_ref['cidr'])),
+        _dhcp_file(dev, 'conf'),
+        CONF.dhcpbridge,
+        CONF.api.dhcp_domain,
+        dns_servers,
+        hosts_path)
 
     _add_dnsmasq_accept_rules(dev)
 
