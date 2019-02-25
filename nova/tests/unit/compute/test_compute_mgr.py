@@ -7522,14 +7522,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
     @mock.patch('nova.compute.manager.ComputeManager._post_live_migration')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     def test_live_migration_wait_vif_plugged(
-            self, mock_post_live_mig, mock_pre_live_mig):
+            self, mock_get_bdms, mock_post_live_mig, mock_pre_live_mig):
         """Tests the happy path of waiting for network-vif-plugged events from
         neutron when pre_live_migration returns a migrate_data object with
         wait_for_vif_plugged=True.
         """
         migrate_data = objects.LibvirtLiveMigrateData(
             wait_for_vif_plugged=True)
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList(objects=[])
         mock_pre_live_mig.return_value = migrate_data
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
@@ -7553,14 +7555,17 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
     @mock.patch('nova.compute.manager.ComputeManager._post_live_migration')
     @mock.patch('nova.compute.manager.LOG.debug')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     def test_live_migration_wait_vif_plugged_old_dest_host(
-            self, mock_log_debug, mock_post_live_mig, mock_pre_live_mig):
+            self, mock_get_bdms, mock_log_debug, mock_post_live_mig,
+            mock_pre_live_mig):
         """Tests the scenario that the destination compute returns a
         migrate_data with no wait_for_vif_plugged set because the dest compute
         doesn't have that code yet. In this case, we default to legacy behavior
         of not waiting.
         """
         migrate_data = objects.LibvirtLiveMigrateData()
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList(objects=[])
         mock_pre_live_mig.return_value = migrate_data
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
@@ -7581,13 +7586,15 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
     @mock.patch('nova.compute.manager.ComputeManager._rollback_live_migration')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     def test_live_migration_wait_vif_plugged_vif_plug_error(
-            self, mock_rollback_live_mig, mock_pre_live_mig):
+            self, mock_get_bdms, mock_rollback_live_mig, mock_pre_live_mig):
         """Tests the scenario where wait_for_instance_event fails with
         VirtualInterfacePlugException.
         """
         migrate_data = objects.LibvirtLiveMigrateData(
             wait_for_vif_plugged=True)
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList(objects=[])
         mock_pre_live_mig.return_value = migrate_data
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
@@ -7610,14 +7617,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
     @mock.patch('nova.compute.manager.ComputeManager._rollback_live_migration')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     def test_live_migration_wait_vif_plugged_timeout_error(
-            self, mock_rollback_live_mig, mock_pre_live_mig):
+            self, mock_get_bdms, mock_rollback_live_mig, mock_pre_live_mig):
         """Tests the scenario where wait_for_instance_event raises an
         eventlet Timeout exception and we're configured such that vif plugging
         failures are fatal (which is the default).
         """
         migrate_data = objects.LibvirtLiveMigrateData(
             wait_for_vif_plugged=True)
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList(objects=[])
         mock_pre_live_mig.return_value = migrate_data
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
@@ -7642,14 +7651,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
     @mock.patch('nova.compute.manager.ComputeManager._rollback_live_migration')
     @mock.patch('nova.compute.manager.ComputeManager._post_live_migration')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     def test_live_migration_wait_vif_plugged_timeout_non_fatal(
-            self, mock_post_live_mig, mock_rollback_live_mig,
+            self, mock_get_bdms, mock_post_live_mig, mock_rollback_live_mig,
             mock_pre_live_mig):
         """Tests the scenario where wait_for_instance_event raises an
         eventlet Timeout exception and we're configured such that vif plugging
         failures are NOT fatal.
         """
         self.flags(vif_plugging_is_fatal=False)
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList(objects=[])
         migrate_data = objects.LibvirtLiveMigrateData(
             wait_for_vif_plugged=True)
         mock_pre_live_mig.return_value = migrate_data
@@ -7683,6 +7694,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                               'fake', self.instance, True, migration, {})
             self.assertEqual('error', migration.status)
 
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     @mock.patch(
         'nova.compute.manager.ComputeManager._notify_about_instance_usage')
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
@@ -7691,7 +7703,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def test_live_migration_aborted_before_running(self, mock_rpc,
                                                    mock_rollback,
                                                    mock_action_notify,
-                                                   mock_usage_notify):
+                                                   mock_usage_notify,
+                                                   mock_get_bdms):
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList(objects=[])
         migrate_data = objects.LibvirtLiveMigrateData(
             wait_for_vif_plugged=True)
         mock_rpc.return_value = migrate_data
@@ -7943,12 +7957,13 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute, 'compute_rpcapi')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch.object(self.compute, 'network_api')
-        @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
-        def _do_call(bdm, nwapi, notify, rpc, update):
+        def _do_call(nwapi, notify, rpc, update):
+            bdms = objects.BlockDeviceMappingList(objects=[])
             return self.compute._post_live_migration(self.context,
                                                      self.instance,
                                                      'foo',
-                                                     *args, **kwargs)
+                                                     *args, source_bdms=bdms,
+                                                     **kwargs)
         result = _do_call()
         mock_clean.assert_called_once_with(self.context, self.instance.uuid)
         return result
@@ -8053,13 +8068,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             {'source_type': 'image', 'destination_type': 'local',
              'volume_id': volume_id, 'device_name': '/dev/vdb',
              'instance_uuid': instance.uuid})
-        vol_bdm.attachment_id = uuids.attachment1
-        orig_attachment_id = uuids.attachment2
+        vol_bdm.attachment_id = uuids.attachment
         migrate_data = migrate_data_obj.LiveMigrateData()
         migrate_data.migration = objects.Migration(uuid=uuids.migration,
                                                    dest_node=instance.node,
                                                    source_node='src')
-        migrate_data.old_vol_attachment_ids = {volume_id: orig_attachment_id}
         image_bdm.attachment_id = uuids.attachment3
 
         @mock.patch('nova.compute.utils.notify_about_instance_action')
@@ -8078,20 +8091,19 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(compute, 'driver')
         @mock.patch.object(compute, '_notify_about_instance_usage')
         @mock.patch.object(compute, 'network_api')
-        @mock.patch.object(objects.BlockDeviceMappingList,
-                           'get_by_instance_uuid')
-        def _test(mock_get_bdms, mock_net_api, mock_notify, mock_driver,
+        def _test(mock_net_api, mock_notify, mock_driver,
                   mock_rpc, mock_get_bdm_info, mock_attach_delete,
                   mock_update_resource, mock_bdm_save, mock_rt, mock_ga,
                   mock_clean, mock_notify_action):
             mock_rt.return_value = mock.Mock()
-            mock_get_bdms.return_value = [vol_bdm, image_bdm]
+            bdms = objects.BlockDeviceMappingList(objects=[vol_bdm, image_bdm])
 
             compute._post_live_migration(self.context, instance, dest_host,
-                                         migrate_data=migrate_data)
+                                         migrate_data=migrate_data,
+                                         source_bdms=bdms)
 
             mock_attach_delete.assert_called_once_with(
-                self.context, orig_attachment_id)
+                self.context, uuids.attachment)
             mock_clean.assert_called_once_with(self.context, instance.uuid)
             mock_notify_action.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini',
@@ -8115,6 +8127,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         migrate_data = objects.LibvirtLiveMigrateData()
         source_vif = network_model.VIF(uuids.port_id, type='ovs')
         migrate_data.vifs = [objects.VIFMigrateData(source_vif=source_vif)]
+        bdms = objects.BlockDeviceMappingList(objects=[])
 
         nw_info = network_model.NetworkInfo(
             [network_model.VIF(uuids.port_id, type='ovn')])
@@ -8159,7 +8172,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                   _get_instance_block_device_info):
             self.compute._post_live_migration(
                 self.context, self.instance, 'fake-dest',
-                migrate_data=migrate_data)
+                migrate_data=migrate_data, source_bdms=bdms)
             post_live_migration_at_source.assert_called_once_with(
                 self.context, self.instance,
                 test.MatchType(network_model.NetworkInfo))

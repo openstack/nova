@@ -7878,40 +7878,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # Disconnect from volume server
         block_device_mapping = driver.block_device_info_get_mapping(
                 block_device_info)
-        volume_api = self._volume_api
         for vol in block_device_mapping:
-            volume_id = vol['connection_info']['serial']
-            if vol['attachment_id'] is None:
-                # Cinder v2 api flow: Retrieve connection info from Cinder's
-                # initialize_connection API. The info returned will be
-                # accurate for the source server.
-                connector = self.get_volume_connector(instance)
-                connection_info = volume_api.initialize_connection(
-                    context, volume_id, connector)
-            else:
-                # cinder v3.44 api flow: Retrieve the connection_info for
-                # the old attachment from cinder.
-                old_attachment_id = \
-                    migrate_data.old_vol_attachment_ids[volume_id]
-                old_attachment = volume_api.attachment_get(
-                    context, old_attachment_id)
-                connection_info = old_attachment['connection_info']
-
-            # TODO(leeantho) The following multipath_id logic is temporary
-            # and will be removed in the future once os-brick is updated
-            # to handle multipath for drivers in a more efficient way.
-            # For now this logic is needed to ensure the connection info
-            # data is correct.
-
-            # Pull out multipath_id from the bdm information. The
-            # multipath_id can be placed into the connection info
-            # because it is based off of the volume and will be the
-            # same on the source and destination hosts.
-            if 'multipath_id' in vol['connection_info']['data']:
-                multipath_id = vol['connection_info']['data']['multipath_id']
-                connection_info['data']['multipath_id'] = multipath_id
-
-            self._disconnect_volume(context, connection_info, instance)
+            # NOTE(mdbooth): The block_device_info we were passed was
+            # initialized with BDMs from the source host before they were
+            # updated to point to the destination. We can safely use this to
+            # disconnect the source without re-fetching.
+            self._disconnect_volume(context, vol['connection_info'], instance)
 
     def post_live_migration_at_source(self, context, instance, network_info):
         """Unplug VIFs from networks at source.
