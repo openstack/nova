@@ -2281,6 +2281,13 @@ device_tag_bdm_attachment:
   required: false
   type: string
   min_version: 2.49
+device_tag_bdm_attachment_resp:
+  description: |
+    The device tag applied to the volume block device or ``null``.
+  in: body
+  required: true
+  type: string
+  min_version: 2.70
 device_tag_nic:
   description: |
     A device role tag that can be applied to a network interface. The guest OS
@@ -2305,6 +2312,13 @@ device_tag_nic_attachment:
   required: false
   type: string
   min_version: 2.49
+device_tag_nic_attachment_resp:
+  description: |
+    The device tag applied to the virtual network interface or ``null``.
+  in: body
+  required: true
+  type: string
+  min_version: 2.70
 device_type:
   description: |
     The device type. For example, ``disk``, ``cdrom``.

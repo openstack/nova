@@ -18,6 +18,7 @@
 import webob
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import attach_interfaces
 from nova.api.openstack import wsgi
@@ -26,18 +27,32 @@ from nova import compute
 from nova import exception
 from nova.i18n import _
 from nova import network
+from nova import objects
 from nova.policies import attach_interfaces as ai_policies
 
 
-def _translate_interface_attachment_view(port_info):
-    """Maps keys for interface attachment details view."""
-    return {
+def _translate_interface_attachment_view(context, port_info, show_tag=False):
+    """Maps keys for interface attachment details view.
+
+    :param port_info: dict of port details from the networking service
+    :param show_tag: If True, includes the "tag" key in the returned dict,
+        else the "tag" entry is omitted (default: False)
+    :returns: dict of a subset of details about the port and optionally the
+        tag associated with the VirtualInterface record in the nova database
+    """
+    info = {
         'net_id': port_info['network_id'],
         'port_id': port_info['id'],
         'mac_addr': port_info['mac_address'],
         'port_state': port_info['status'],
         'fixed_ips': port_info.get('fixed_ips', None),
         }
+    if show_tag:
+        # Get the VIF for this port (if one exists - VirtualInterface records
+        # did not exist for neutron ports until the Newton release).
+        vif = objects.VirtualInterface.get_by_uuid(context, port_info['id'])
+        info['tag'] = vif.tag if vif else None
+    return info
 
 
 class InterfaceAttachmentController(wsgi.Controller):
@@ -64,9 +79,28 @@ class InterfaceAttachmentController(wsgi.Controller):
         except NotImplementedError:
             common.raise_feature_not_supported()
 
+        # If showing tags, get the VirtualInterfaceList for the server and
+        # map VIFs by port ID. Note that VirtualInterface records did not
+        # exist for neutron ports until the Newton release so it's OK if we
+        # are missing records for old servers.
+        show_tag = api_version_request.is_supported(req, '2.70')
+        tag_per_port_id = {}
+        if show_tag:
+            vifs = objects.VirtualInterfaceList.get_by_instance_uuid(
+                context, server_id)
+            tag_per_port_id = {vif.uuid: vif.tag for vif in vifs}
+
+        results = []
         ports = data.get('ports', [])
-        entity_maker = _translate_interface_attachment_view
-        results = [entity_maker(port) for port in ports]
+        for port in ports:
+            # Note that we do not pass show_tag=show_tag to
+            # _translate_interface_attachment_view because we are handling it
+            # ourselves here since we have the list of VIFs which is better
+            # for performance than doing a DB query per port.
+            info = _translate_interface_attachment_view(context, port)
+            if show_tag:
+                info['tag'] = tag_per_port_id.get(port['id'])
+            results.append(info)
 
         return {'interfaceAttachments': results}
 
@@ -94,8 +128,10 @@ class InterfaceAttachmentController(wsgi.Controller):
                     "%(port)s") % {'instance': server_id, 'port': port_id}
             raise exc.HTTPNotFound(explanation=msg)
 
-        return {'interfaceAttachment': _translate_interface_attachment_view(
-                port_info['port'])}
+        return {'interfaceAttachment':
+                _translate_interface_attachment_view(
+                    context, port_info['port'],
+                    show_tag=api_version_request.is_supported(req, '2.70'))}
 
     @wsgi.expected_errors((400, 404, 409, 500, 501))
     @validation.schema(attach_interfaces.create, '2.0', '2.48')

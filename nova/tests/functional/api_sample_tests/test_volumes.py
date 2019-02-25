@@ -206,6 +206,14 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
     OLD_VOLUME_ID = 'a26887c6-c47b-4654-abb5-dfadf7d3f803'
     NEW_VOLUME_ID = 'a26887c6-c47b-4654-abb5-dfadf7d3f805'
 
+    def _get_tags_per_volume(self):
+        """Allows subclasses to override which volumes have tags
+
+        :returns: dict, keyed by volume ID, to tag value; if a volume ID is
+            not found in the resulting dict it is assumed to not have a tag
+        """
+        return {}
+
     def _stub_db_bdms_get_all_by_instance(self, server_id):
 
         def fake_bdms_get_all_by_instance(context, instance_uuid,
@@ -220,6 +228,9 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
                 'instance_uuid': server_id, 'source_type': 'volume',
                 'destination_type': 'volume', 'device_name': '/dev/sdc'})
             ]
+            tags_per_volume = self._get_tags_per_volume()
+            for bdm_dict in bdms:
+                bdm_dict['tag'] = tags_per_volume.get(bdm_dict['volume_id'])
             return bdms
 
         self.stub_out('nova.db.api.block_device_mapping_get_all_by_instance',
@@ -227,12 +238,14 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
 
     def fake_bdm_get_by_volume_and_instance(
             self, ctxt, volume_id, instance_uuid, expected_attrs=None):
+        tag = self._get_tags_per_volume().get(self.OLD_VOLUME_ID)
         return objects.BlockDeviceMapping._from_db_object(
             ctxt, objects.BlockDeviceMapping(),
             fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 1, 'volume_id': self.OLD_VOLUME_ID,
                  'instance_uuid': instance_uuid, 'source_type': 'volume',
-                 'destination_type': 'volume', 'device_name': '/dev/sdd'})
+                 'destination_type': 'volume', 'device_name': '/dev/sdd',
+                 'tag': tag})
         )
 
     def _stub_compute_api_get(self):
@@ -319,7 +332,8 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
 
         response = self._do_get('servers/%s/os-volume_attachments'
                                 % server_id)
-        self._verify_response('list-volume-attachments-resp', {},
+        subs = self._get_vol_attachment_subs({})
+        self._verify_response('list-volume-attachments-resp', subs,
                               response, 200)
 
     def test_volume_attachment_detail(self):
@@ -330,7 +344,8 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
         self._stub_compute_api_get()
         response = self._do_get('servers/%s/os-volume_attachments/%s'
                                 % (server_id, self.OLD_VOLUME_ID))
-        self._verify_response('volume-attachment-detail-resp', {},
+        subs = self._get_vol_attachment_subs({})
+        self._verify_response('volume-attachment-detail-resp', subs,
                               response, 200)
 
     def test_volume_attachment_delete(self):
@@ -379,3 +394,15 @@ class VolumeAttachmentsSampleV249(VolumeAttachmentsSample):
 
     def _get_vol_attachment_subs(self, subs):
         return dict(subs, tag='foo')
+
+
+class VolumeAttachmentsSampleV270(VolumeAttachmentsSampleV249):
+    """2.70 adds the "tag" parameter to the response body"""
+    microversion = '2.70'
+    scenarios = [('v2_70', {'api_major_version': 'v2.1'})]
+
+    def _get_tags_per_volume(self):
+        return {
+            self.OLD_VOLUME_ID: 'foo',
+            self.NEW_VOLUME_ID: None
+        }

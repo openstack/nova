@@ -38,10 +38,16 @@ Response
   - id: attachment_id_required
   - serverId: server_id
   - volumeId: volumeId_resp
+  - tag: device_tag_bdm_attachment_resp
 
 **Example List volume attachments for an instance: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/list-volume-attachments-resp.json
+   :language: javascript
+
+**Example List tagged volume attachments for an instance (v2.70): JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/v2.70/list-volume-attachments-resp.json
    :language: javascript
 
 Attach a volume to an instance
@@ -94,10 +100,16 @@ Response
   - id: attachment_id_required
   - serverId: server_id
   - volumeId: volumeId_resp
+  - tag: device_tag_bdm_attachment_resp
 
 **Example Attach a volume to an instance: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/attach-volume-to-server-resp.json
+   :language: javascript
+
+**Example Attach a tagged volume to an instance (v2.70): JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/v2.70/attach-volume-to-server-resp.json
    :language: javascript
 
 Show a detail of a volume attachment
@@ -129,10 +141,16 @@ Response
   - id: attachment_id_required
   - serverId: server_id
   - volumeId: volumeId_resp
+  - tag: device_tag_bdm_attachment_resp
 
 **Example Show a detail of a volume attachment: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/volume-attachment-detail-resp.json
+   :language: javascript
+
+**Example Show a detail of a tagged volume attachment (v2.70): JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/v2.70/volume-attachment-detail-resp.json
    :language: javascript
 
 Update a volume attachment
