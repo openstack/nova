@@ -23,6 +23,7 @@ import zlib
 
 from keystoneauth1 import adapter
 import mock
+from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
@@ -53,6 +54,7 @@ from nova.tests.unit.objects import test_instance_info_cache
 from nova.virt import fake
 from nova import volume
 
+CONF = cfg.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -5701,67 +5703,15 @@ class PortResourceRequestBasedSchedulingTestBase(
     def setUp(self):
         # enable PciPassthroughFilter to support SRIOV before the base class
         # starts the scheduler
-        self.flags(enabled_filters=[
-            "RetryFilter",
-            "AvailabilityZoneFilter",
-            "ComputeFilter",
-            "ComputeCapabilitiesFilter",
-            "ImagePropertiesFilter",
-            "ServerGroupAntiAffinityFilter",
-            "ServerGroupAffinityFilter",
-            "PciPassthroughFilter",
-        ],
-            group='filter_scheduler')
+        if 'PciPassthroughFilter' not in CONF.filter_scheduler.enabled_filters:
+            self.flags(
+                enabled_filters=CONF.filter_scheduler.enabled_filters
+                                + ['PciPassthroughFilter'],
+                group='filter_scheduler')
 
-        # Set passthrough_whitelist before the base class starts the compute
-        # node to match with the PCI devices reported by the
-        # FakeDriverWithPciResources.
-
-        # NOTE(gibi): 0000:01:00 is tagged to physnet1 and therefore not a
-        # match based on physnet to our sriov port
-        # 'port_with_sriov_resource_request' as the network of that port points
-        # to physnet2 with the attribute 'provider:physical_network'. Nova pci
-        # handling already enforce this rule.
-        #
-        # 0000:02:00 and 0000:03:00 are both tagged to physnet2 and therefore
-        # a good match for our sriov port based on physnet. Having two PFs on
-        # the same physnet will allows us to test the placement allocation -
-        # physical allocation matching based on the bandwidth allocation
-        # in the future.
-        self.flags(passthrough_whitelist=
-            [
-                jsonutils.dumps(
-                    {
-                        "address": {
-                            "domain": "0000",
-                            "bus": "01",
-                            "slot": "00",
-                            "function": ".*"},
-                        "physical_network": "physnet1",
-                    }
-                ),
-                jsonutils.dumps(
-                    {
-                        "address": {
-                            "domain": "0000",
-                            "bus": "02",
-                            "slot": "00",
-                            "function": ".*"},
-                        "physical_network": "physnet2",
-                    }
-                ),
-                jsonutils.dumps(
-                    {
-                        "address": {
-                            "domain": "0000",
-                            "bus": "03",
-                            "slot": "00",
-                            "function": ".*"},
-                        "physical_network": "physnet2",
-                    }
-                ),
-            ],
-            group='pci')
+        self.useFixture(
+            fake.FakeDriverWithPciResources.
+                FakeDriverWithPciResourcesConfigFixture())
 
         super(PortResourceRequestBasedSchedulingTestBase, self).setUp()
         self.compute1 = self._start_compute('host1')
@@ -5769,6 +5719,11 @@ class PortResourceRequestBasedSchedulingTestBase(
         self.ovs_bridge_rp_per_host = {}
         self.flavor = self.api.get_flavors()[0]
         self.flavor_with_group_policy = self.api.get_flavors()[1]
+
+        # Setting group policy for placement. This is mandatory when more than
+        # one request group is included in the allocation candidate request and
+        # we have tests with two ports both having resource request modelled as
+        # two separate request groups.
         self.admin_api.post_extra_spec(
             self.flavor_with_group_policy['id'],
             {'extra_specs': {'group_policy': 'isolate'}})
@@ -5842,6 +5797,10 @@ class PortResourceRequestBasedSchedulingTestBase(
     def _create_pf_device_rp(
             self, device_rp_uuid, parent_rp_uuid, inventories, traits,
             device_rp_name=None):
+        """Create a RP in placement for a physical function network device with
+        traits and inventories.
+        """
+
         if not device_rp_name:
             device_rp_name = device_rp_uuid
 
@@ -5877,9 +5836,10 @@ class PortResourceRequestBasedSchedulingTestBase(
         # * PF3 represents the PCI device 0000:03:00 and, it will be mapped to
         # physnet2 but it will not have bandwidth inventory.
 
+        compute_name = compute_rp_uuid
         sriov_agent_rp_uuid = getattr(uuids, compute_rp_uuid + 'sriov agent')
         agent_rp_req = {
-            "name": "compute0:NIC Switch agent",
+            "name": "%s:NIC Switch agent" % compute_name,
             "uuid": sriov_agent_rp_uuid,
             "parent_provider_uuid": compute_rp_uuid
         }
@@ -5897,7 +5857,7 @@ class PortResourceRequestBasedSchedulingTestBase(
         traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_PHYSNET1]
         self._create_pf_device_rp(
             self.sriov_pf1_rp_uuid, sriov_agent_rp_uuid, inventories, traits,
-            device_rp_name="compute0:NIC Switch agent:ens1")
+            device_rp_name="%s:NIC Switch agent:ens1" % compute_name)
 
         self.sriov_pf2_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF2')
         inventories = {
@@ -5909,14 +5869,14 @@ class PortResourceRequestBasedSchedulingTestBase(
         traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_PHYSNET2]
         self._create_pf_device_rp(
             self.sriov_pf2_rp_uuid, sriov_agent_rp_uuid, inventories, traits,
-            device_rp_name="compute0:NIC Switch agent:ens2")
+            device_rp_name="%s:NIC Switch agent:ens2" % compute_name)
 
         self.sriov_pf3_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF3')
         inventories = {}
         traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_PHYSNET2]
         self._create_pf_device_rp(
             self.sriov_pf3_rp_uuid, sriov_agent_rp_uuid, inventories, traits,
-            device_rp_name="compute0:NIC Switch agent:ens3")
+            device_rp_name="%s:NIC Switch agent:ens3" % compute_name)
 
     def _create_networking_rp_tree(self, compute_rp_uuid):
         # let's simulate what the neutron would do

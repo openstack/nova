@@ -57,6 +57,7 @@ BINDING_PROFILE = 'binding:profile'
 BINDING_HOST_ID = 'binding:host_id'
 MIGRATING_ATTR = 'migrating_to'
 L3_NETWORK_TYPES = ['vxlan', 'gre', 'geneve']
+ALLOCATION = 'allocation'
 
 
 def reset_state():
@@ -671,13 +672,9 @@ class API(base_api.NetworkAPI):
             # NOTE: We're doing this to remove the binding information
             # for the physical device but don't want to overwrite the other
             # information in the binding profile.
-            for profile_key in ('pci_vendor_info', 'pci_slot'):
+            for profile_key in ('pci_vendor_info', 'pci_slot', ALLOCATION):
                 if profile_key in port_profile:
                     del port_profile[profile_key]
-            # NOTE(gibi): remove information about the resource allocation
-            # of this port
-            if 'allocation' in port_profile:
-                del port_profile['allocation']
             port_req_body['port'][BINDING_PROFILE] = port_profile
 
             # NOTE: For internal DNS integration (network does not have a
@@ -1041,9 +1038,9 @@ class API(base_api.NetworkAPI):
         :param attach: Boolean indicating if a port is being attached to an
             existing running instance. Should be False during server create.
         :param resource_provider_mapping: a dict keyed by ids of the entities
-            (for example Neutron port) requested resources for this instance
+            (for example Neutron port) requesting resources for this instance
             mapped to a list of resource provider UUIDs that are fulfilling
-            such resource request.
+            such a resource request.
         :returns: network info as from get_instance_nw_info()
         """
         LOG.debug('allocate_for_instance()', instance=instance)
@@ -1085,14 +1082,14 @@ class API(base_api.NetworkAPI):
         for port in requested_ports_dict.values():
             # only communicate the allocations if the port has resource
             # requests
-            if port.get('resource_request', None):
+            if port.get('resource_request'):
                 profile = port.get(BINDING_PROFILE, {})
                 # NOTE(gibi): In the resource provider mapping there can be
                 # more than one RP fulfilling a request group. But resource
                 # requests of a Neutron port is always mapped to a
                 # numbered request group that is always fulfilled by one
                 # resource provider. So we only pass that single RP UUID here.
-                profile['allocation'] = resource_provider_mapping[
+                profile[ALLOCATION] = resource_provider_mapping[
                     port['id']][0]
                 port[BINDING_PROFILE] = profile
 
@@ -1104,10 +1101,6 @@ class API(base_api.NetworkAPI):
         # pre-existing port so one wasn't created here. The ports will be
         # updated later in _update_ports_for_instance to be bound to the
         # instance and compute host.
-        # TODO(gibi): if a port created here has resource request then we have
-        # to abort as that resource request was not considered during the
-        # scheduling of the instance and therefore there is no allocation in
-        # placement for that port.
         requests_and_created_ports = self._create_ports_for_instance(
             context, instance, ordered_networks, nets, neutron,
             security_group_ids)
@@ -1364,6 +1357,10 @@ class API(base_api.NetworkAPI):
         if profile:
             binding['profile'] = profile
         data = dict(binding=binding)
+
+        # TODO(gibi): To support ports with resource request during server
+        # live migrate operation we need to take care of 'allocation' key in
+        # the binding profile per binding.
 
         bindings_by_port_id = {}
         for port_id in port_ids:
@@ -3231,6 +3228,10 @@ class API(base_api.NetworkAPI):
             # If the host hasn't changed, like in the case of resizing to the
             # same host, there is nothing to do.
             if p.get(BINDING_HOST_ID) != host:
+                # TODO(gibi): To support ports with resource request during
+                # server move operations we need to take care of 'allocation'
+                # key in the binding profile per binding.
+
                 updates[BINDING_HOST_ID] = host
                 # If the host changed, the AZ could have also changed so we
                 # need to update the device_owner.

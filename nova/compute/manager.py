@@ -2093,6 +2093,28 @@ class ComputeManager(manager.Manager):
             hints = filter_properties.get('scheduler_hints') or {}
         return hints
 
+    @staticmethod
+    def _get_request_group_mapping(request_spec):
+        """Return request group resource - provider mapping. This is currently
+        used for Neutron ports that have resource request due to the port
+        having QoS minimum bandwidth policy rule attached.
+
+        :param request_spec: A RequestSpec object
+        :returns: A dict keyed by RequestGroup requester_id, currently Neutron
+        port_id, to resource provider UUID that provides resource for that
+        RequestGroup.
+        """
+
+        if (request_spec
+                and 'requested_resources' in request_spec
+                and request_spec.requested_resources is not None):
+            return {
+                group.requester_id: group.provider_uuids
+                for group in request_spec.requested_resources
+            }
+        else:
+            return None
+
     def _build_and_run_instance(self, context, instance, image, injected_files,
             admin_password, requested_networks, security_groups,
             block_device_mapping, node, limits, filter_properties,
@@ -2125,15 +2147,8 @@ class ComputeManager(manager.Manager):
                                                      scheduler_hints)
                 image_meta = objects.ImageMeta.from_dict(image)
 
-                if (request_spec
-                        and 'requested_resources' in request_spec
-                        and request_spec.requested_resources is not None):
-                    request_group_resource_providers_mapping = {
-                        group.requester_id: group.provider_uuids
-                        for group in request_spec.requested_resources
-                    }
-                else:
-                    request_group_resource_providers_mapping = None
+                request_group_resource_providers_mapping = \
+                    self._get_request_group_mapping(request_spec)
 
                 with self._build_resources(context, instance,
                         requested_networks, security_groups, image_meta,

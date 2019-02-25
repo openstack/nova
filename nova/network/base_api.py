@@ -203,9 +203,9 @@ class NetworkAPI(base.Base):
         :param attach: Boolean indicating if a port is being attached to an
             existing running instance. Should be False during server create.
         :param resource_provider_mapping: a dict keyed by ids of the entities
-            (for example Neutron port) requested resources for this instance
+            (for example Neutron port) requesting resources for this instance
             mapped to a list of resource provider UUIDs that are fulfilling
-            such resource request.
+            such a resource request.
         :returns: network info as from get_instance_nw_info() below
         """
         raise NotImplementedError()

@@ -1389,10 +1389,14 @@ class NeutronFixture(fixtures.Fixture):
         # The fixture allows port update so we need to deepcopy the class
         # variables to avoid test case interference.
         self._ports = {
+            # NOTE(gibi)The port_with_sriov_resource_request cannot be added
+            # globally in this fixture as it adds a second network that makes
+            # auto allocation based test to fail due to ambiguous networks.
             NeutronFixture.port_1['id']: copy.deepcopy(NeutronFixture.port_1),
             NeutronFixture.port_with_resource_request['id']:
                 copy.deepcopy(NeutronFixture.port_with_resource_request)
         }
+
         # The fixture does not allow network update so we don't have to
         # deepcopy here
         self._networks = {
