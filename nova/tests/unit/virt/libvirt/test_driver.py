@@ -14666,7 +14666,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               instance)
 
     def test_private_destroy_ebusy_timeout(self):
-        # Tests that _destroy will retry 3 times to destroy the guest when an
+        # Tests that _destroy will retry 6 times to destroy the guest when an
         # EBUSY is raised, but eventually times out and raises the libvirtError
         ex = fakelibvirt.make_libvirtError(
                 fakelibvirt.libvirtError,
@@ -14686,7 +14686,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertRaises(fakelibvirt.libvirtError, drvr._destroy,
                               instance)
 
-        self.assertEqual(3, mock_guest.poweroff.call_count)
+        self.assertEqual(6, mock_guest.poweroff.call_count)
 
     def test_private_destroy_ebusy_multiple_attempt_ok(self):
         # Tests that the _destroy attempt loop is broken when EBUSY is no
@@ -14711,6 +14711,37 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 drvr._destroy(instance)
 
         self.assertEqual(2, mock_guest.poweroff.call_count)
+
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_BETTER_SIGKILL_HANDLING))
+    def test_min_libvirt_better_sigkill_handling_warning(self,
+                                                 mock_warning,
+                                                 mock_get_libversion):
+        ex = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                ("Failed to terminate process 26425 with SIGKILL: "
+                                     "Device or resource busy"),
+                error_code=fakelibvirt.VIR_ERR_SYSTEM_ERROR,
+                int1=errno.EBUSY)
+
+        mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
+        mock_guest.poweroff = mock.Mock(side_effect=ex)
+
+        instance = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with mock.patch.object(drvr._host, 'get_guest',
+                               return_value=mock_guest):
+            raised = self.assertRaises(fakelibvirt.libvirtError,
+                                       drvr._destroy,
+                                       instance)
+            self.assertEqual(fakelibvirt.VIR_ERR_SYSTEM_ERROR,
+                             raised.get_error_code())
+
+        mock_warning.assert_called_once()
+        mock_guest.poweroff.assert_called_once()
 
     @mock.patch.object(fakelibvirt.libvirtError, 'get_error_code')
     @mock.patch.object(host.Host, '_get_domain',
