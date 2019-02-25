@@ -11,8 +11,8 @@
 Adds neighbor cells, lists neighbor cells, and shows the capabilities of
 the local cell. By default, only administrators can manage cells.
 
-.. note:: These APIs refer to a Cells v1 deployment which is optional and not
-  recommended for new deployments of Nova. These are not used with Cells v2
+.. warning:: These APIs refer to a Cells v1 deployment which was deprecated
+  in the 16.0.0 Pike release. These are not used with Cells v2
   which is required beginning with the 15.0.0 Ocata release where all Nova
   deployments consist of at least one Cells v2 cell.
 
@@ -37,8 +37,6 @@ Request
   - limit: limit_simple
   - offset: offset_simple
 
-.. TODO(cdent): How do we indicate optionality of a URI parameter?
-
 Response
 --------
 
@@ -59,10 +57,6 @@ Normal response code: 200
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 NotImplemented(501)
 
-.. TODO(cdent): need to figure out body stuff for request and response
-
-.. TODO(cdent): need a sample
-
 Capacities
 ==========
 
@@ -72,8 +66,6 @@ Retrieve capacities.
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 NotImplemented(501)
-
-.. TODO(cdent): Need to do more digging, no idea.
 
 List Cells With Details
 =======================
@@ -95,17 +87,6 @@ Request
   - limit: limit_simple
   - offset: offset_simple
 
-Response
---------
-
-**Example List Cells With Details: JSON response**
-
-.. TODO(cdent): This sample was initially list with an empty list of cells.
-   The newly listed sample does not yet exist.
-
-.. TODO(cdent):  literal-include: ../../doc/api_samples/os-cells/cells-list-details-resp.json
-   :language: javascript
-
 Info For This Cell
 ==================
 
@@ -117,8 +98,6 @@ Normal response code: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 NotImplemented(501)
-
-.. TODO(cdent): this is weird, data is structured entirely differently.
 
 Show Cell Data
 ==============
@@ -160,8 +139,6 @@ Normal response code: 200
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 itemNotFound(404), NotImplemented(501)
 
-.. TODO(cdent): Figure out what's going on here.
-
 Delete a Cell
 =============
 
@@ -180,8 +157,6 @@ Show Cell Capacities
 .. rest_method:: GET /os-cells/{cell_id}/capacities
 
 Shows capacities for a cell.
-
-.. TODO(cdent): What's a capacities.
 
 Normal response codes: 200,501
 
