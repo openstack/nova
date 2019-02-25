@@ -1,0 +1,7 @@
+---
+deprecations:
+  - |
+    The following options, found in ``DEFAULT``, were only used for configuring
+    nova-network and are, like nova-network itself, now deprecated.
+
+    - ``defer_iptables_apply``
