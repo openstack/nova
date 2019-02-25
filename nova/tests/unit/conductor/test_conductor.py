@@ -951,6 +951,81 @@ class _BaseTaskTestCase(object):
 
         do_test()
 
+    @mock.patch.object(objects.Instance, 'save', new=mock.MagicMock())
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_set_vm_state_and_notify', new=mock.MagicMock())
+    def test_build_instances_reschedule_recalculates_provider_mapping(self,
+            mock_select_dests):
+
+        rg1 = objects.RequestGroup(resources={"CUSTOM_FOO": 1})
+        request_spec = objects.RequestSpec(requested_resources=[rg1])
+
+        mock_select_dests.return_value = [[fake_selection1]]
+        instance = fake_instance.fake_instance_obj(self.context)
+        image = {'fake-data': 'should_pass_silently'}
+
+        # build_instances() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self))
+
+        @mock.patch('nova.conductor.manager.ComputeTaskManager.'
+                    '_fill_provider_mapping')
+        @mock.patch('nova.scheduler.utils.claim_resources')
+        @mock.patch('nova.objects.request_spec.RequestSpec.from_primitives',
+                    return_value=request_spec)
+        @mock.patch.object(self.conductor_manager.compute_rpcapi,
+                           'build_and_run_instance')
+        @mock.patch.object(self.conductor_manager,
+                           '_populate_instance_mapping')
+        @mock.patch.object(self.conductor_manager, '_destroy_build_request')
+        def do_test(mock_destroy_build_req, mock_pop_inst_map,
+                    mock_build_and_run, mock_request_spec_from_primitives,
+                    mock_claim, mock_rp_mapping):
+            self.conductor.build_instances(
+                context=self.context,
+                instances=[instance],
+                image=image,
+                filter_properties={'retry': {'num_attempts': 1, 'hosts': []}},
+                admin_password='admin_password',
+                injected_files='injected_files',
+                requested_networks=None,
+                security_groups='security_groups',
+                block_device_mapping='block_device_mapping',
+                legacy_bdm=False,
+                host_lists=fake_host_lists1,
+                request_spec=request_spec)
+
+            expected_build_run_host_list = copy.copy(fake_host_lists1[0])
+            if expected_build_run_host_list:
+                expected_build_run_host_list.pop(0)
+            mock_build_and_run.assert_called_once_with(
+                self.context,
+                instance=mock.ANY,
+                host='host1',
+                image=image,
+                request_spec=request_spec,
+                filter_properties={'retry': {'num_attempts': 2,
+                                             'hosts': [['host1', 'node1']]},
+                                   'limits': {}},
+                admin_password='admin_password',
+                injected_files='injected_files',
+                requested_networks=None,
+                security_groups='security_groups',
+                block_device_mapping=test.MatchType(
+                    objects.BlockDeviceMappingList),
+                node='node1',
+                limits=None,
+                host_list=expected_build_run_host_list)
+
+            mock_rp_mapping.assert_called_once_with(
+                self.context, instance.uuid, mock.ANY)
+            actual_request_spec = mock_rp_mapping.mock_calls[0][1][2]
+            self.assertEqual(
+                rg1.resources,
+                actual_request_spec.requested_resources[0].resources)
+
+        do_test()
+
     @mock.patch.object(cinder.API, 'attachment_get')
     @mock.patch.object(cinder.API, 'attachment_create')
     @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')

@@ -567,7 +567,7 @@ class ComputeTaskManager(base.Base):
         # will the API send the request_spec if using cells v1, so we need
         # to check and build our own if one is not provided.
         if request_spec is None:
-            request_spec = scheduler_utils.build_request_spec(
+            legacy_request_spec = scheduler_utils.build_request_spec(
                 image, instances)
         else:
             # TODO(mriedem): This is annoying but to populate the local
@@ -576,7 +576,10 @@ class ComputeTaskManager(base.Base):
             # and we can remove it once the populate_retry and
             # populate_filter_properties utility methods are converted to
             # work on a RequestSpec object rather than filter_properties.
-            request_spec = request_spec.to_legacy_request_spec_dict()
+            # NOTE(gibi): we have to keep a reference to the original
+            # RequestSpec object passed to this function as we lose information
+            # during the below legacy conversion
+            legacy_request_spec = request_spec.to_legacy_request_spec_dict()
 
         # 'host_lists' will be None in one of two cases: when running cellsv1,
         # or during a reschedule from a pre-Queens compute. In all other cases,
@@ -593,7 +596,7 @@ class ComputeTaskManager(base.Base):
                 filter_properties, instances[0].uuid)
             instance_uuids = [instance.uuid for instance in instances]
             spec_obj = objects.RequestSpec.from_primitives(
-                    context, request_spec, filter_properties)
+                    context, legacy_request_spec, filter_properties)
             LOG.debug("Rescheduling: %s", is_reschedule)
             if is_reschedule:
                 # Make sure that we have a host, as we may have exhausted all
@@ -629,7 +632,7 @@ class ComputeTaskManager(base.Base):
             for instance in instances:
                 self._set_vm_state_and_notify(
                     context, instance.uuid, 'build_instances', updates,
-                    exc, request_spec)
+                    exc, legacy_request_spec)
                 # If num_attempts > 1, we're in a reschedule and probably
                 # either hit NoValidHost or MaxRetriesExceeded. Either way,
                 # the build request should already be gone and we probably
@@ -668,6 +671,12 @@ class ComputeTaskManager(base.Base):
                                 elevated, self.report_client, spec_obj,
                                 instance.uuid, alloc_req,
                                 host.allocation_request_version)
+                        if request_spec:
+                            # NOTE(gibi): redo the request group - resource
+                            # provider mapping as the above claim call moves
+                            # the allocation of the instance to another host
+                            self._fill_provider_mapping(
+                                context, instance.uuid, request_spec)
                     else:
                         # Some deployments use different schedulers that do not
                         # use Placement, so they will not have an
@@ -704,11 +713,16 @@ class ComputeTaskManager(base.Base):
             # could have come from a compute via reschedule and it would
             # already have some things set, like scheduler_hints.
             local_reqspec = objects.RequestSpec.from_primitives(
-                context, request_spec, local_filter_props)
+                context, legacy_request_spec, local_filter_props)
 
-            # TODO(gibi): make sure that the request group - provider mapping
-            # is updated in the request spec during reschedule
-            local_reqspec.requested_resources = []
+            # NOTE(gibi): at this point the request spec already got converted
+            # to a legacy dict and then back to an object so we lost the non
+            # legacy part of the spec. Re-populate the requested_resource
+            # field based on the original request spec object passed to this
+            # function.
+            if request_spec:
+                local_reqspec.requested_resources = (
+                    request_spec.requested_resources)
 
             # The block_device_mapping passed from the api doesn't contain
             # instance specific information
