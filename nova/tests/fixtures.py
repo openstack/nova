@@ -30,6 +30,7 @@ import mock
 from neutronclient.common import exceptions as neutron_client_exc
 from oslo_concurrency import lockutils
 from oslo_config import cfg
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_messaging import conffixture as messaging_conffixture
 from oslo_privsep import daemon as privsep_daemon
@@ -61,6 +62,8 @@ _TRUE_VALUES = ('True', 'true', '1', 'yes')
 CONF = cfg.CONF
 DB_SCHEMA = {'main': "", 'api': ""}
 SESSION_CONFIGURED = False
+
+LOG = logging.getLogger(__name__)
 
 
 class ServiceFixture(fixtures.Fixture):
@@ -1652,13 +1655,20 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
             attachment = {'id': attachment_id, 'connection_info': {'data': {}}}
             self.volume_to_attachment[volume_id].append(
                 (attachment_id, instance_uuid))
+            LOG.info('Created attachment %s for volume %s. Total '
+                     'attachments for volume: %d', attachment_id, volume_id,
+                     len(self.volume_to_attachment[volume_id]))
 
             return attachment
 
         def fake_attachment_delete(_self, context, attachment_id):
             # 'attachment' is a tuple defining a attachment-instance mapping
-            _, attachment, attachments = _find_attachment(attachment_id)
+            volume_id, attachment, attachments = (
+                _find_attachment(attachment_id))
             attachments.remove(attachment)
+            LOG.info('Deleted attachment %s for volume %s. Total attachments '
+                     'for volume: %d', attachment_id, volume_id,
+                     len(attachments))
 
             if attachment_id == CinderFixtureNewAttachFlow.SWAP_ERR_ATTACH_ID:
                 self.swap_error = True
@@ -1667,6 +1677,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                                    mountpoint=None):
             # Ensure the attachment exists
             _find_attachment(attachment_id)
+            LOG.info('Updating volume attachment: %s', attachment_id)
             attachment_ref = {'driver_volume_type': 'fake_type',
                               'id': attachment_id,
                               'connection_info': {'data':
@@ -1686,6 +1697,11 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                                                    'target_lun': '1'}}}
             return attachment_ref
 
+        def fake_attachment_complete(_self, _context, attachment_id):
+            # Ensure the attachment exists
+            _find_attachment(attachment_id)
+            LOG.info('Completing volume attachment: %s', attachment_id)
+
         self.test.stub_out('nova.volume.cinder.API.attachment_create',
                            fake_attachment_create)
         self.test.stub_out('nova.volume.cinder.API.attachment_delete',
@@ -1693,7 +1709,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
         self.test.stub_out('nova.volume.cinder.API.attachment_update',
                            fake_attachment_update)
         self.test.stub_out('nova.volume.cinder.API.attachment_complete',
-                           lambda *args, **kwargs: None)
+                           fake_attachment_complete)
         self.test.stub_out('nova.volume.cinder.API.attachment_get',
                            fake_attachment_get)
         self.test.stub_out('nova.volume.cinder.API.begin_detaching',
@@ -1706,7 +1722,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
         self.test.stub_out('nova.volume.cinder.API.roll_detaching',
                            lambda *args, **kwargs: None)
         self.test.stub_out('nova.volume.cinder.is_microversion_supported',
-                           lambda *args, **kwargs: None)
+                           lambda ctxt, microversion: None)
         self.test.stub_out('nova.volume.cinder.API.check_attached',
                            lambda *args, **kwargs: None)
 
