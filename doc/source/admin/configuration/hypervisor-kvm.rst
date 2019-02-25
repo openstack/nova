@@ -468,6 +468,13 @@ See `the KVM documentation
 information on these limitations.
 
 
+Enabling Secure Encrypted Virtualizaion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`Secure Encrypted Virtualization (SEV) <https://developer.amd.com/sev/>`_
+is a technology from AMD which enables the the memory for a VM to be encrypted with a key unique to
+the VM. 
+
 Guest agent support
 ~~~~~~~~~~~~~~~~~~~
 
