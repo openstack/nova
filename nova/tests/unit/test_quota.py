@@ -393,14 +393,10 @@ class BaseResourceTestCase(test.TestCase):
 class QuotaEngineTestCase(test.TestCase):
     def test_init(self):
         quota_obj = quota.QuotaEngine()
-
-        self.assertEqual(quota_obj._resources, {})
         self.assertIsInstance(quota_obj._driver, quota.DbQuotaDriver)
 
     def test_init_override_obj(self):
         quota_obj = quota.QuotaEngine(quota_driver=FakeDriver)
-
-        self.assertEqual(quota_obj._resources, {})
         self.assertEqual(quota_obj._driver, FakeDriver)
 
     def test_register_resource(self):
@@ -410,37 +406,19 @@ class QuotaEngineTestCase(test.TestCase):
 
         self.assertEqual(quota_obj._resources, dict(test_resource=resource))
 
-    def test_register_resources(self):
-        quota_obj = quota.QuotaEngine()
-        resources = [
-            quota.AbsoluteResource('test_resource1'),
-            quota.AbsoluteResource('test_resource2'),
-            quota.AbsoluteResource('test_resource3'),
-            ]
-        quota_obj.register_resources(resources)
-
-        self.assertEqual(quota_obj._resources, dict(
-                test_resource1=resources[0],
-                test_resource2=resources[1],
-                test_resource3=resources[2],
-                ))
-
-    def _make_quota_obj(self, driver):
-        quota_obj = quota.QuotaEngine(quota_driver=driver)
-        resources = [
+    def _get_quota_engine(self, driver, resources=None):
+        resources = resources or [
             quota.AbsoluteResource('test_resource4'),
             quota.AbsoluteResource('test_resource3'),
             quota.AbsoluteResource('test_resource2'),
             quota.AbsoluteResource('test_resource1'),
-            ]
-        quota_obj.register_resources(resources)
-
-        return quota_obj
+        ]
+        return quota.QuotaEngine(quota_driver=driver, resources=resources)
 
     def test_get_defaults(self):
         context = FakeContext(None, None)
         driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
+        quota_obj = self._get_quota_engine(driver)
         result = quota_obj.get_defaults(context)
 
         self.assertEqual(driver.called, [
@@ -451,7 +429,7 @@ class QuotaEngineTestCase(test.TestCase):
     def test_get_class_quotas(self):
         context = FakeContext(None, None)
         driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
+        quota_obj = self._get_quota_engine(driver)
         result1 = quota_obj.get_class_quotas(context, 'test_class')
 
         self.assertEqual(driver.called, [
@@ -463,7 +441,7 @@ class QuotaEngineTestCase(test.TestCase):
     def test_get_user_quotas(self):
         context = FakeContext(None, None)
         driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
+        quota_obj = self._get_quota_engine(driver)
         result1 = quota_obj.get_user_quotas(context, 'test_project',
                                             'fake_user')
         result2 = quota_obj.get_user_quotas(context, 'test_project',
@@ -484,7 +462,7 @@ class QuotaEngineTestCase(test.TestCase):
     def test_get_project_quotas(self):
         context = FakeContext(None, None)
         driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
+        quota_obj = self._get_quota_engine(driver)
         result1 = quota_obj.get_project_quotas(context, 'test_project')
         result2 = quota_obj.get_project_quotas(context, 'test_project',
                                                quota_class='test_class',
@@ -503,7 +481,7 @@ class QuotaEngineTestCase(test.TestCase):
     def test_count_as_dict_no_resource(self):
         context = FakeContext(None, None)
         driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
+        quota_obj = self._get_quota_engine(driver)
         self.assertRaises(exception.QuotaResourceUnknown,
                           quota_obj.count_as_dict, context, 'test_resource5',
                           True, foo='bar')
@@ -511,7 +489,7 @@ class QuotaEngineTestCase(test.TestCase):
     def test_count_as_dict_wrong_resource(self):
         context = FakeContext(None, None)
         driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
+        quota_obj = self._get_quota_engine(driver)
         self.assertRaises(exception.QuotaResourceUnknown,
                           quota_obj.count_as_dict, context, 'test_resource1',
                           True, foo='bar')
@@ -524,9 +502,10 @@ class QuotaEngineTestCase(test.TestCase):
 
         context = FakeContext(None, None)
         driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
-        quota_obj.register_resource(
-            quota.CountableResource('test_resource5', fake_count_as_dict))
+        resources = [
+            quota.CountableResource('test_resource5', fake_count_as_dict),
+        ]
+        quota_obj = self._get_quota_engine(driver, resources)
         result = quota_obj.count_as_dict(context, 'test_resource5', True,
                                          foo='bar')
 
@@ -535,7 +514,7 @@ class QuotaEngineTestCase(test.TestCase):
     def test_limit_check(self):
         context = FakeContext(None, None)
         driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
+        quota_obj = self._get_quota_engine(driver)
         quota_obj.limit_check(context, test_resource1=4, test_resource2=3,
                               test_resource3=2, test_resource4=1)
 
@@ -551,7 +530,7 @@ class QuotaEngineTestCase(test.TestCase):
     def test_limit_check_project_and_user(self):
         context = FakeContext(None, None)
         driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
+        quota_obj = self._get_quota_engine(driver)
         project_values = dict(test_resource1=4, test_resource2=3)
         user_values = dict(test_resource3=2, test_resource4=1)
         quota_obj.limit_check_project_and_user(context,
@@ -566,7 +545,7 @@ class QuotaEngineTestCase(test.TestCase):
                          driver.called)
 
     def test_resources(self):
-        quota_obj = self._make_quota_obj(None)
+        quota_obj = self._get_quota_engine(None)
 
         self.assertEqual(quota_obj.resources,
                          ['test_resource1', 'test_resource2',
