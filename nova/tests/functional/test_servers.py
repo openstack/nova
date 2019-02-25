@@ -5690,19 +5690,102 @@ class ServerMovingTestsFromFlatToNested(
 class PortResourceRequestBasedSchedulingTestBase(
         integrated_helpers.ProviderUsageBaseTestCase):
 
-    compute_driver = 'fake.SmallFakeDriver'
+    compute_driver = 'fake.FakeDriverWithPciResources'
 
     CUSTOM_VNIC_TYPE_NORMAL = 'CUSTOM_VNIC_TYPE_NORMAL'
-    CUSTOM_PHYSNET_2 = 'CUSTOM_PHYSNET_2'
+    CUSTOM_VNIC_TYPE_DIRECT = 'CUSTOM_VNIC_TYPE_DIRECT'
+    CUSTOM_PHYSNET1 = 'CUSTOM_PHYSNET1'
+    CUSTOM_PHYSNET2 = 'CUSTOM_PHYSNET2'
+    CUSTOM_PHYSNET3 = 'CUSTOM_PHYSNET3'
 
     def setUp(self):
+        # enable PciPassthroughFilter to support SRIOV before the base class
+        # starts the scheduler
+        self.flags(enabled_filters=[
+            "RetryFilter",
+            "AvailabilityZoneFilter",
+            "ComputeFilter",
+            "ComputeCapabilitiesFilter",
+            "ImagePropertiesFilter",
+            "ServerGroupAntiAffinityFilter",
+            "ServerGroupAffinityFilter",
+            "PciPassthroughFilter",
+        ],
+            group='filter_scheduler')
+
+        # Set passthrough_whitelist before the base class starts the compute
+        # node to match with the PCI devices reported by the
+        # FakeDriverWithPciResources.
+
+        # NOTE(gibi): 0000:01:00 is tagged to physnet1 and therefore not a
+        # match based on physnet to our sriov port
+        # 'port_with_sriov_resource_request' as the network of that port points
+        # to physnet2 with the attribute 'provider:physical_network'. Nova pci
+        # handling already enforce this rule.
+        #
+        # 0000:02:00 and 0000:03:00 are both tagged to physnet2 and therefore
+        # a good match for our sriov port based on physnet. Having two PFs on
+        # the same physnet will allows us to test the placement allocation -
+        # physical allocation matching based on the bandwidth allocation
+        # in the future.
+        self.flags(passthrough_whitelist=
+            [
+                jsonutils.dumps(
+                    {
+                        "address": {
+                            "domain": "0000",
+                            "bus": "01",
+                            "slot": "00",
+                            "function": ".*"},
+                        "physical_network": "physnet1",
+                    }
+                ),
+                jsonutils.dumps(
+                    {
+                        "address": {
+                            "domain": "0000",
+                            "bus": "02",
+                            "slot": "00",
+                            "function": ".*"},
+                        "physical_network": "physnet2",
+                    }
+                ),
+                jsonutils.dumps(
+                    {
+                        "address": {
+                            "domain": "0000",
+                            "bus": "03",
+                            "slot": "00",
+                            "function": ".*"},
+                        "physical_network": "physnet2",
+                    }
+                ),
+            ],
+            group='pci')
+
         super(PortResourceRequestBasedSchedulingTestBase, self).setUp()
         self.compute1 = self._start_compute('host1')
         self.compute1_rp_uuid = self._get_provider_uuid_by_host('host1')
         self.ovs_bridge_rp_per_host = {}
         self.flavor = self.api.get_flavors()[0]
+        self.flavor_with_group_policy = self.api.get_flavors()[1]
+        self.admin_api.post_extra_spec(
+            self.flavor_with_group_policy['id'],
+            {'extra_specs': {'group_policy': 'isolate'}})
 
         self._create_networking_rp_tree(self.compute1_rp_uuid)
+
+        # add an extra port and the related network to the neutron fixture
+        # specifically for these tests. It cannot be added globally in the
+        # fixture init as it adds a second network that makes auto allocation
+        # based test to fail due to ambiguous networks.
+        self.neutron._ports[
+            self.neutron.port_with_sriov_resource_request['id']] = \
+            copy.deepcopy(self.neutron.port_with_sriov_resource_request)
+        self.neutron._networks[
+            self.neutron.network_2['id']] = self.neutron.network_2
+        self.neutron._subnets[
+            self.neutron.subnet_2['id']] = self.neutron.subnet_2
 
     def _create_server(self, flavor, networks):
         server_req = self._build_minimal_create_server_request(
@@ -5717,9 +5800,7 @@ class PortResourceRequestBasedSchedulingTestBase(
         inventories['resource_provider_generation'] = rp['generation']
         return self._update_inventory(rp_uuid, inventories)
 
-    def _create_networking_rp_tree(self, compute_rp_uuid):
-        # let's simulate what the neutron ovs agent would do
-
+    def _create_ovs_networking_rp_tree(self, compute_rp_uuid):
         # we need uuid sentinel for the test to make pep8 happy but we need a
         # unique one per compute so here is some ugliness
         ovs_agent_rp_uuid = getattr(uuids, compute_rp_uuid + 'ovs agent')
@@ -5752,11 +5833,95 @@ class PortResourceRequestBasedSchedulingTestBase(
             }})
 
         self._create_trait(self.CUSTOM_VNIC_TYPE_NORMAL)
-        self._create_trait(self.CUSTOM_PHYSNET_2)
+        self._create_trait(self.CUSTOM_PHYSNET2)
 
         self._set_provider_traits(
             ovs_bridge_rp_uuid,
-            [self.CUSTOM_VNIC_TYPE_NORMAL, self.CUSTOM_PHYSNET_2])
+            [self.CUSTOM_VNIC_TYPE_NORMAL, self.CUSTOM_PHYSNET2])
+
+    def _create_pf_device_rp(
+            self, device_rp_uuid, parent_rp_uuid, inventories, traits,
+            device_rp_name=None):
+        if not device_rp_name:
+            device_rp_name = device_rp_uuid
+
+        sriov_pf_req = {
+            "name": device_rp_name,
+            "uuid": device_rp_uuid,
+            "parent_provider_uuid": parent_rp_uuid
+        }
+        self.placement_api.post('/resource_providers',
+                                body=sriov_pf_req,
+                                version='1.20')
+
+        self._set_provider_inventories(
+            device_rp_uuid,
+            {"inventories": inventories})
+
+        for trait in traits:
+            self._create_trait(trait)
+
+        self._set_provider_traits(
+            device_rp_uuid,
+            traits)
+
+    def _create_sriov_networking_rp_tree(self, compute_rp_uuid):
+        # Create a matching RP tree in placement for the PCI devices added to
+        # the passthrough_whitelist config during setUp() and PCI devices
+        # present in the FakeDriverWithPciResources virt driver.
+        #
+        # * PF1 represents the PCI device 0000:01:00, it will be mapped to
+        # physnet1 and it will have bandwidth inventory.
+        # * PF2 represents the PCI device 0000:02:00, it will be mapped to
+        # physnet2 it will have bandwidth inventory.
+        # * PF3 represents the PCI device 0000:03:00 and, it will be mapped to
+        # physnet2 but it will not have bandwidth inventory.
+
+        sriov_agent_rp_uuid = getattr(uuids, compute_rp_uuid + 'sriov agent')
+        agent_rp_req = {
+            "name": "compute0:NIC Switch agent",
+            "uuid": sriov_agent_rp_uuid,
+            "parent_provider_uuid": compute_rp_uuid
+        }
+        self.placement_api.post('/resource_providers',
+                                body=agent_rp_req,
+                                version='1.20')
+
+        self.sriov_pf1_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF1')
+        inventories = {
+            rc_fields.ResourceClass.NET_BW_IGR_KILOBIT_PER_SEC:
+                {"total": 100000},
+            rc_fields.ResourceClass.NET_BW_EGR_KILOBIT_PER_SEC:
+                {"total": 100000},
+        }
+        traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_PHYSNET1]
+        self._create_pf_device_rp(
+            self.sriov_pf1_rp_uuid, sriov_agent_rp_uuid, inventories, traits,
+            device_rp_name="compute0:NIC Switch agent:ens1")
+
+        self.sriov_pf2_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF2')
+        inventories = {
+            rc_fields.ResourceClass.NET_BW_IGR_KILOBIT_PER_SEC:
+                {"total": 100000},
+            rc_fields.ResourceClass.NET_BW_EGR_KILOBIT_PER_SEC:
+                {"total": 100000},
+        }
+        traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_PHYSNET2]
+        self._create_pf_device_rp(
+            self.sriov_pf2_rp_uuid, sriov_agent_rp_uuid, inventories, traits,
+            device_rp_name="compute0:NIC Switch agent:ens2")
+
+        self.sriov_pf3_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF3')
+        inventories = {}
+        traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_PHYSNET2]
+        self._create_pf_device_rp(
+            self.sriov_pf3_rp_uuid, sriov_agent_rp_uuid, inventories, traits,
+            device_rp_name="compute0:NIC Switch agent:ens3")
+
+    def _create_networking_rp_tree(self, compute_rp_uuid):
+        # let's simulate what the neutron would do
+        self._create_ovs_networking_rp_tree(compute_rp_uuid)
+        self._create_sriov_networking_rp_tree(compute_rp_uuid)
 
     def assertPortMatchesAllocation(self, port, allocations):
         port_request = port['resource_request']['resources']
@@ -6084,6 +6249,48 @@ class PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck(
         binding_profile = updated_qos_port['binding:profile']
         self.assertNotIn('allocation', binding_profile)
 
+    def test_one_ovs_one_sriov_port(self):
+        ovs_port = self.neutron.port_with_resource_request
+        sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server(flavor=self.flavor_with_group_policy,
+                                     networks=[{'port': ovs_port['id']},
+                                               {'port': sriov_port['id']}])
+
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        ovs_port = self.neutron.show_port(ovs_port['id'])['port']
+        sriov_port = self.neutron.show_port(sriov_port['id'])['port']
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect one set of allocations for the compute resources on the
+        # compute rp and one set for the networking resources on the ovs bridge
+        # rp and on the sriov PF rp.
+        self.assertEqual(3, len(allocations))
+        compute_allocations = allocations[self.compute1_rp_uuid]['resources']
+        ovs_allocations = allocations[
+            self.ovs_bridge_rp_per_host[self.compute1_rp_uuid]]['resources']
+        sriov_allocations = allocations[self.sriov_pf2_rp_uuid]['resources']
+
+        self.assertEqual(
+            self._resources_from_flavor(self.flavor_with_group_policy),
+            compute_allocations)
+
+        self.assertPortMatchesAllocation(ovs_port, ovs_allocations)
+        self.assertPortMatchesAllocation(sriov_port, sriov_allocations)
+
+        # We expect that only the RP uuid of the networking RP having the port
+        # allocation is sent in the port binding for the port having resource
+        # request
+        ovs_binding = ovs_port['binding:profile']
+        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
+                         ovs_binding['allocation'])
+        sriov_binding = sriov_port['binding:profile']
+        self.assertEqual(self.sriov_pf2_rp_uuid,
+                         sriov_binding['allocation'])
+
 
 class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(
         PortResourceRequestBasedSchedulingTestBase):
@@ -6115,6 +6322,10 @@ class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(
                 'nova.api.openstack.common.'
                 'supports_port_resource_request',
                 return_value=True))
+
+    def _create_networking_rp_tree(self, compute_rp_uuid):
+        # let's simulate what the neutron would do
+        self._create_ovs_networking_rp_tree(compute_rp_uuid)
 
     def test_boot_reschedule_success(self):
         port = self.neutron.port_with_resource_request
