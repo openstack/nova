@@ -702,10 +702,11 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             }
             # Allocation bumped the generation, so refresh to get the latest
             self.client._refresh_and_get_inventory(self.context, uuids.cn)
-            self.assertRaises(
-                exception.InventoryInUse,
-                self.client.set_inventory_for_provider,
-                self.context, uuids.cn, bad_inv)
+            msgre = (".*update conflict: Inventory for 'SRIOV_NET_VF' on "
+                     "resource provider '%s' in use..*" % uuids.cn)
+            with self.assertRaisesRegex(exception.InventoryInUse, msgre):
+                self.client.set_inventory_for_provider(self.context, uuids.cn,
+                                                       bad_inv)
             self.assertEqual(
                 inv,
                 self.client._get_inventory(
@@ -713,10 +714,9 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
 
             # Same result if we try to clear all the inventory
             bad_inv = {}
-            self.assertRaises(
-                exception.InventoryInUse,
-                self.client.set_inventory_for_provider,
-                self.context, uuids.cn, bad_inv)
+            with self.assertRaisesRegex(exception.InventoryInUse, msgre):
+                self.client.set_inventory_for_provider(self.context, uuids.cn,
+                                                       bad_inv)
             self.assertEqual(
                 inv,
                 self.client._get_inventory(

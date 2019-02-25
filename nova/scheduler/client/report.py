@@ -18,7 +18,6 @@ import contextlib
 import copy
 import functools
 import random
-import re
 import time
 
 from keystoneauth1 import exceptions as ks_exc
@@ -41,8 +40,6 @@ from nova import utils
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
-_RE_INV_IN_USE = re.compile("Inventory for (.+) on resource provider "
-                            "(.+) in use")
 WARN_EVERY = 10
 RESHAPER_VERSION = '1.30'
 CONSUMER_GENERATION_VERSION = '1.28'
@@ -171,19 +168,6 @@ def _move_operation_alloc_request(source_allocs, dest_alloc_req):
     LOG.debug("New allocation_request containing both source and "
               "destination hosts in move operation: %s", new_alloc_req)
     return new_alloc_req
-
-
-def _extract_inventory_in_use(body):
-    """Given an HTTP response body, extract the resource classes that were
-    still in use when we tried to delete inventory.
-
-    :returns: String of resource classes or None if there was no InventoryInUse
-              error in the response body.
-    """
-    match = _RE_INV_IN_USE.search(body)
-    if match:
-        return match.group(1)
-    return None
 
 
 def get_placement_request_id(response):
@@ -946,12 +930,12 @@ class SchedulerReportClient(object):
         if resp.status_code == 409:
             # If a conflict attempting to remove inventory in a resource class
             # with active allocations, raise InventoryInUse
-            rc = _extract_inventory_in_use(resp.text)
-            if rc is not None:
-                raise exception.InventoryInUse(
-                    resource_classes=rc,
-                    resource_provider=rp_uuid,
-                )
+            err = resp.json()['errors'][0]
+            # TODO(efried): If there's ever a lib exporting symbols for error
+            # codes, use it.
+            if err['code'] == 'placement.inventory.inuse':
+                # The error detail includes the resource class and provider.
+                raise exception.InventoryInUse(err['detail'])
             # Other conflicts are generation mismatch: raise conflict exception
             raise exception.ResourceProviderUpdateConflict(
                 uuid=rp_uuid, generation=generation, error=resp.text)
