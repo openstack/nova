@@ -22,6 +22,7 @@ operating system, and exposes functionality over a web-based API.
    adv-config.rst
    arch.rst
    availability-zones.rst
+   cells.rst
    configuration/index.rst
    configuring-migrations.rst
    cpu-topologies.rst

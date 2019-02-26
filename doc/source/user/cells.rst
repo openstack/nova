@@ -121,10 +121,11 @@ always be much smaller than the number of instances.
 
 There are availability implications with this change since something like a
 'nova list' which might query multiple cells could end up with a partial result
-if there is a database failure in a cell.  A database failure within a cell
-would cause larger issues than a partial list result so the expectation is that
-it would be addressed quickly and cellsv2 will handle it by indicating in the
-response that the data may not be complete.
+if there is a database failure in a cell. See :doc:`/admin/cells` for knowing
+more about the recommended practices under such situations. A database failure
+within a cell would cause larger issues than a partial list result so the
+expectation is that it would be addressed quickly and cellsv2 will handle it by
+indicating in the response that the data may not be complete.
 
 Since this is very similar to what we have with current cells, in terms of
 organization of resources, we have decided to call this "cellsv2" for
@@ -820,3 +821,6 @@ FAQs
    <https://developer.openstack.org/api-guide/compute/down_cells.html>`__
    section of the Compute API guide for more information on the partial
    constructs.
+
+   For administrative considerations, see
+   :ref:`Handling cell failures <handling-cell-failures>`.
