@@ -17,38 +17,13 @@
 
 """Utility methods for linux networking."""
 
-from oslo_concurrency import processutils
 from oslo_log import log as logging
 
 from nova.pci import utils as pci_utils
 import nova.privsep.linux_net
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)
-
-
-def create_tap_dev(dev, mac_address=None, multiqueue=False):
-    if not nova.privsep.linux_net.device_exists(dev):
-        try:
-            # First, try with 'ip'
-            cmd = ('ip', 'tuntap', 'add', dev, 'mode', 'tap')
-            if multiqueue:
-                cmd = cmd + ('multi_queue', )
-            utils.execute(*cmd, run_as_root=True, check_exit_code=[0, 2, 254])
-        except processutils.ProcessExecutionError:
-            if multiqueue:
-                LOG.warning(
-                    'Failed to create a tap device with ip tuntap. '
-                    'tunctl does not support creation of multi-queue '
-                    'enabled devices, skipping fallback.')
-                raise
-
-            # Second option: tunctl
-            utils.execute('tunctl', '-b', '-t', dev, run_as_root=True)
-        if mac_address:
-            nova.privsep.linux_net.set_device_macaddr(dev, mac_address)
-        nova.privsep.linux_net.set_device_enabled(dev)
 
 
 def set_vf_interface_vlan(pci_addr, mac_addr, vlan=0):
