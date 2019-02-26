@@ -3355,7 +3355,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
         mock_inst_get.return_value = objects.Instance(
-            uuid=uuids.deleted, deleted=True)
+            uuid=uuids.deleted, deleted=True, hidden=False)
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.MagicMock()
         # Call the method.
@@ -3368,6 +3368,35 @@ class TestUpdateUsageFromInstance(BaseTestCase):
             ctx.elevated.return_value,
             uuids.deleted,
             expected_attrs=[])
+        ctx.elevated.assert_called_once_with(read_deleted='yes')
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def test_remove_deleted_instances_allocations_deleted_hidden_instance(self,
+            mock_inst_get):
+        """Tests the scenario where there are allocations against the local
+        compute node held by a deleted instance but it is hidden=True so the
+        ResourceTracker does not delete the allocations because it assumes
+        the cross-cell resize flow will handle the allocations.
+        """
+        rc = self.rt.reportclient
+        allocs = report.ProviderAllocInfo(
+            allocations={uuids.deleted: "fake_deleted_instance"})
+        rc.get_allocations_for_resource_provider = mock.MagicMock(
+            return_value=allocs)
+        rc.delete_allocation_for_instance = mock.MagicMock()
+        cn = self.rt.compute_nodes[_NODENAME]
+        mock_inst_get.return_value = objects.Instance(
+            uuid=uuids.deleted, deleted=True, hidden=True,
+            host=cn.host, node=cn.hypervisor_hostname,
+            task_state=task_states.RESIZE_MIGRATING)
+        ctx = mock.MagicMock()
+        # Call the method.
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [], {})
+        # Only one call should be made to delete allocations, and that should
+        # be for the first instance created above
+        rc.delete_allocation_for_instance.assert_not_called()
+        mock_inst_get.assert_called_once_with(
+            ctx.elevated.return_value, uuids.deleted, expected_attrs=[])
         ctx.elevated.assert_called_once_with(read_deleted='yes')
 
     @mock.patch('nova.objects.Instance.get_by_uuid')
@@ -3401,7 +3430,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
         mock_inst_get.return_value = objects.Instance(
-            uuid=uuids.deleted, deleted=True)
+            uuid=uuids.deleted, deleted=True, hidden=False)
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.MagicMock()
         # Call the method.
