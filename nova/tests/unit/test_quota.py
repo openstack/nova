@@ -301,17 +301,17 @@ class FakeDriver(object):
         return resources
 
     def get_user_quotas(self, context, resources, project_id, user_id,
-                        quota_class=None, defaults=True, usages=True):
+                        quota_class=None, usages=True):
         self.called.append(('get_user_quotas', context, resources,
-                            project_id, user_id, quota_class, defaults,
+                            project_id, user_id, quota_class,
                             usages))
         return resources
 
     def get_project_quotas(self, context, resources, project_id,
-                           quota_class=None, defaults=True, usages=True,
+                           quota_class=None, usages=True,
                            remains=False):
         self.called.append(('get_project_quotas', context, resources,
-                            project_id, quota_class, defaults, usages,
+                            project_id, quota_class, usages,
                             remains))
         return resources
 
@@ -447,14 +447,13 @@ class QuotaEngineTestCase(test.TestCase):
         result2 = quota_obj.get_user_quotas(context, 'test_project',
                                             'fake_user',
                                             quota_class='test_class',
-                                            defaults=False,
                                             usages=False)
 
         self.assertEqual(driver.called, [
                 ('get_user_quotas', context, quota_obj._resources,
-                 'test_project', 'fake_user', None, True, True),
+                 'test_project', 'fake_user', None, True),
                 ('get_user_quotas', context, quota_obj._resources,
-                 'test_project', 'fake_user', 'test_class', False, False),
+                 'test_project', 'fake_user', 'test_class', False),
                 ])
         self.assertEqual(result1, quota_obj._resources)
         self.assertEqual(result2, quota_obj._resources)
@@ -466,14 +465,13 @@ class QuotaEngineTestCase(test.TestCase):
         result1 = quota_obj.get_project_quotas(context, 'test_project')
         result2 = quota_obj.get_project_quotas(context, 'test_project',
                                                quota_class='test_class',
-                                               defaults=False,
                                                usages=False)
 
         self.assertEqual(driver.called, [
                 ('get_project_quotas', context, quota_obj._resources,
-                 'test_project', None, True, True, False),
+                 'test_project', None, True, False),
                 ('get_project_quotas', context, quota_obj._resources,
-                 'test_project', 'test_class', False, False, False),
+                 'test_project', 'test_class', False, False),
                 ])
         self.assertEqual(result1, quota_obj._resources)
         self.assertEqual(result2, quota_obj._resources)
@@ -1334,68 +1332,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                     ),
                 ))
 
-    @mock.patch('nova.quota.DbQuotaDriver._get_usages',
-                side_effect=_get_fake_get_usages())
-    def test_get_user_quotas_no_defaults(self, mock_get_usages):
-        self._stub_get_by_project_and_user()
-        ctxt = FakeContext('test_project', 'test_class')
-        result = self.driver.get_user_quotas(
-            ctxt, quota.QUOTAS._resources, 'test_project', 'fake_user',
-            defaults=False)
-
-        self.assertEqual(self.calls, [
-                'quota_get_all_by_project_and_user',
-                'quota_get_all_by_project',
-                'quota_class_get_all_by_name',
-                ])
-        mock_get_usages.assert_called_once_with(ctxt, quota.QUOTAS._resources,
-                                                'test_project',
-                                                user_id='fake_user')
-        self.assertEqual(result, dict(
-                cores=dict(
-                    limit=10,
-                    in_use=4,
-                    ),
-               injected_files=dict(
-                    limit=2,
-                    in_use=0,
-                    ),
-                injected_file_path_bytes=dict(
-                    limit=127,
-                    in_use=0,
-                    ),
-                ))
-
-    @mock.patch('nova.quota.DbQuotaDriver._get_usages',
-                side_effect=_get_fake_get_usages())
-    def test_get_project_quotas_no_defaults(self, mock_get_usages):
-        self._stub_get_by_project()
-        ctxt = FakeContext('test_project', 'test_class')
-        result = self.driver.get_project_quotas(
-            ctxt, quota.QUOTAS._resources, 'test_project', defaults=False)
-
-        self.assertEqual(self.calls, [
-                'quota_get_all_by_project',
-                'quota_class_get_all_by_name',
-                'quota_class_get_default',
-                ])
-        mock_get_usages.assert_called_once_with(ctxt, quota.QUOTAS._resources,
-                                                'test_project')
-        self.assertEqual(result, dict(
-                cores=dict(
-                    limit=10,
-                    in_use=4,
-                    ),
-               injected_files=dict(
-                    limit=2,
-                    in_use=0,
-                    ),
-                injected_file_path_bytes=dict(
-                    limit=127,
-                    in_use=0,
-                    ),
-                ))
-
     def test_get_user_quotas_no_usages(self):
         self._stub_get_by_project_and_user()
         result = self.driver.get_user_quotas(
@@ -1515,7 +1451,7 @@ class DbQuotaDriverTestCase(test.TestCase):
             return {'floating_ips': 20}
 
         def fake_get_project_quotas(dbdrv, context, resources, project_id,
-                                    quota_class=None, defaults=True,
+                                    quota_class=None,
                                     usages=True, remains=False,
                                     project_quotas=None):
             self.calls.append('get_project_quotas')
@@ -1543,7 +1479,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         def fake_process_quotas_in_get_user_quotas(dbdrv, context, resources,
                                                    project_id, quotas,
                                                    quota_class=None,
-                                                   defaults=True, usages=None,
+                                                   usages=None,
                                                    remains=False):
             self.calls.append('_process_quotas')
             result = {}
@@ -1784,7 +1720,7 @@ class DbQuotaDriverTestCase(test.TestCase):
 
     def _stub_get_project_quotas(self):
         def fake_get_project_quotas(dbdrv, context, resources, project_id,
-                                    quota_class=None, defaults=True,
+                                    quota_class=None,
                                     usages=True, remains=False,
                                     project_quotas=None):
             self.calls.append('get_project_quotas')
@@ -1996,21 +1932,6 @@ class NoopQuotaDriverTestCase(test.TestCase):
                                              quota.QUOTAS._resources,
                                              'test_project',
                                              'fake_user')
-        self.assertEqual(self.expected_with_usages, result)
-
-    def test_get_project_quotas_no_defaults(self):
-        result = self.driver.get_project_quotas(None,
-                                                quota.QUOTAS._resources,
-                                                'test_project',
-                                                defaults=False)
-        self.assertEqual(self.expected_with_usages, result)
-
-    def test_get_user_quotas_no_defaults(self):
-        result = self.driver.get_user_quotas(None,
-                                             quota.QUOTAS._resources,
-                                             'test_project',
-                                             'fake_user',
-                                             defaults=False)
         self.assertEqual(self.expected_with_usages, result)
 
     def test_get_project_quotas_no_usages(self):
