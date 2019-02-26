@@ -32,21 +32,37 @@ LOG = logging.getLogger(__name__)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def add_bridge(interface):
+def add_bridge(bridge):
     """Add a bridge.
 
-    :param interface: the name of the bridge
+    :param bridge: the name of the bridge
     """
-    processutils.execute('brctl', 'addbr', interface)
+    processutils.execute('brctl', 'addbr', bridge)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def delete_bridge(interface):
+def delete_bridge(bridge):
     """Delete a bridge.
 
-    :param interface: the name of the bridge
+    :param bridge: the name of the bridge
     """
-    processutils.execute('brctl', 'delbr', interface)
+    processutils.execute('brctl', 'delbr', bridge)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def bridge_setfd(bridge):
+    processutils.execute('brctl', 'setfd', bridge, 0)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def bridge_disable_stp(bridge):
+    processutils.execute('brctl', 'stp', bridge, 'off')
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def bridge_add_interface(bridge, interface):
+    return processutils.execute('brctl', 'addif', bridge, interface,
+                                check_exit_code=False)
 
 
 def device_exists(device):

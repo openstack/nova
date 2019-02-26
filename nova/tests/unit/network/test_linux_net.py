@@ -621,10 +621,15 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.iptables_set_rules',
                 return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.bridge_setfd')
+    @mock.patch('nova.privsep.linux_net.bridge_disable_stp')
+    @mock.patch('nova.privsep.linux_net.bridge_add_interface',
+                return_value=('', ''))
     def test_linux_bridge_driver_plug(
-            self, mock_iptables_set_rules, mock_iptables_get_rules,
-            mock_lookup_ip, mock_routes_show, mock_enabled, mock_add_bridge,
-            mock_add_rule):
+            self, mock_bridge_add_interface, mock_bridge_disable_stp,
+            mock_bridge_setfd, mock_iptables_set_rules,
+            mock_iptables_get_rules, mock_lookup_ip, mock_routes_show,
+            mock_enabled, mock_add_bridge, mock_add_rule):
         """Makes sure plug doesn't drop FORWARD by default.
 
         Ensures bug 890195 doesn't reappear.
@@ -1225,13 +1230,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         fake_ifaces = {
             netifaces.AF_LINK: [{'addr': fake_mac}]
         }
-        calls = {
-            'device_exists': [mock.call('bridge')],
-            '_execute': [
-                mock.call('brctl', 'addif', 'bridge', 'eth0',
-                          run_as_root=True, check_exit_code=False),
-                ]
-            }
         with test.nested(
             mock.patch('nova.privsep.linux_net.lookup_ip',
                        return_value=('', '')),
@@ -1241,15 +1239,18 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             mock.patch('nova.privsep.linux_net.set_device_macaddr'),
             mock.patch('nova.privsep.linux_net.routes_show',
                        return_value=('fake', '')),
-            mock.patch.object(linux_net, '_execute', return_value=('', '')),
+            mock.patch('nova.privsep.linux_net.bridge_add_interface',
+                       return_value=('', '')),
             mock.patch.object(netifaces, 'ifaddresses')
         ) as (lookup_ip, device_exists, device_enabled, set_device_macaddr,
-              routes_show, _execute, ifaddresses):
+              routes_show, add_interface, ifaddresses):
             ifaddresses.return_value = fake_ifaces
             driver = linux_net.LinuxBridgeInterfaceDriver()
             driver.ensure_bridge('bridge', 'eth0')
-            device_exists.assert_has_calls(calls['device_exists'])
-            _execute.assert_has_calls(calls['_execute'])
+            device_exists.assert_has_calls(
+                [mock.call('bridge')])
+            add_interface.assert_has_calls(
+                [mock.call('bridge', 'eth0')])
             ifaddresses.assert_called_once_with('eth0')
             device_enabled.assert_called_once_with('eth0')
             set_device_macaddr.assert_called_once_with('bridge', fake_mac)
@@ -1265,15 +1266,20 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         with test.nested(
             mock.patch('nova.privsep.linux_net.device_exists',
                        return_value=True),
+            mock.patch('nova.privsep.linux_net.bridge_add_interface',
+                       return_value=('', 'some error happens')),
             mock.patch.object(linux_net, '_execute', fake_execute)
-        ) as (device_exists, _):
+        ) as (device_exists, _, _):
             driver = linux_net.LinuxBridgeInterfaceDriver()
             self.assertRaises(exception.NovaException,
                               driver.ensure_bridge, 'bridge', 'eth0')
             device_exists.assert_called_once_with('bridge')
 
     @mock.patch('nova.privsep.linux_net.set_device_enabled')
-    def test_ensure_bridge_brclt_addbr_neutron_race(self, mock_enabled):
+    @mock.patch('nova.privsep.linux_net.bridge_setfd')
+    @mock.patch('nova.privsep.linux_net.bridge_disable_stp')
+    def test_ensure_bridge_brclt_addbr_neutron_race(
+            self, mock_bridge_disable_stp, mock_bridge_setfd, mock_enabled):
         def fake_execute(*cmd, **kwargs):
             if ('brctl', 'addbr', 'brq1234567-89') == cmd:
                 return ('', "device brq1234567-89 already exists; "
