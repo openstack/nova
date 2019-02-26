@@ -89,6 +89,18 @@ def _set_device_enabled_inner(dev):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def set_device_trust(dev, vf_num, trusted):
+    _set_device_trust_inner(dev, vf_num, trusted)
+
+
+def _set_device_trust_inner(dev, vf_num, trusted):
+    processutils.execute('ip', 'link', 'set', dev,
+                         'vf', vf_num,
+                         'trust', bool(trusted) and 'on' or 'off',
+                         check_exit_code=[0, 2, 254])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def set_device_disabled(dev):
     processutils.execute('ip', 'link', 'set', dev, 'down')
 
@@ -361,6 +373,15 @@ def ovs_plug(timeout, bridge, dev, mac_address):
                          'external-ids:iface-status=active',
                          '--', 'set', 'Interface', dev,
                          'external-ids:attached-mac=%s' % mac_address)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def ovs_drop_nondhcp(bridge, mac_address):
+    processutils.execute(
+        'ovs-ofctl', 'add-flow', bridge, 'priority=1,actions=drop')
+    processutils.execute(
+        'ovs-ofctl', 'add-flow', bridge,
+        'udp,tp_dst=67,dl_dst=%s,priority=2,actions=normal' % mac_address)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint

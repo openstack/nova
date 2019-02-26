@@ -1603,12 +1603,9 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
             if not gateway:
                 # If we weren't instructed to act as a gateway then add the
                 # appropriate flows to block all non-dhcp traffic.
-                _execute('ovs-ofctl',
-                         'add-flow', bridge, 'priority=1,actions=drop',
-                         run_as_root=True)
-                _execute('ovs-ofctl', 'add-flow', bridge,
-                         'udp,tp_dst=67,dl_dst=%s,priority=2,actions=normal' %
-                         mac_address, run_as_root=True)
+                nova.privsep.linux_net.ovs_drop_nondhcp(
+                    bridge, mac_address)
+
                 # .. and make sure iptbles won't forward it as well.
                 iptables_manager.ipv4['filter'].add_rule('FORWARD',
                     '--in-interface %s -j %s' % (bridge,
@@ -1653,8 +1650,5 @@ def set_vf_trusted(pci_addr, trusted):
     pf_ifname = pci_utils.get_ifname_by_pci_address(pci_addr,
                                                     pf_interface=True)
     vf_num = pci_utils.get_vf_num_by_pci_address(pci_addr)
-    utils.execute('ip', 'link', 'set', pf_ifname,
-                  'vf', vf_num,
-                  'trust', bool(trusted) and 'on' or 'off',
-                  run_as_root=True,
-                  check_exit_code=[0, 2, 254])
+    nova.privsep.linux_net.set_device_trust(
+        pf_ifname, vf_num, trusted)
