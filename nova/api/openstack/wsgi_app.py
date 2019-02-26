@@ -78,12 +78,6 @@ def init_application(name):
     config.parse_args([], default_config_files=conf_files)
 
     logging.setup(CONF, "nova")
-    try:
-        _setup_service(CONF.host, name)
-    except exception.ServiceTooOld as exc:
-        return error_application(exc, name)
-
-    service.setup_profiler(name, CONF.host)
 
     # dump conf at debug (log_options option comes from oslo.service)
     # FIXME(mriedem): This is gross but we don't have a public hook into
@@ -94,6 +88,13 @@ def init_application(name):
         CONF.log_opt_values(
             logging.getLogger(__name__),
             logging.DEBUG)
+
+    try:
+        _setup_service(CONF.host, name)
+    except exception.ServiceTooOld as exc:
+        return error_application(exc, name)
+
+    service.setup_profiler(name, CONF.host)
 
     conf = conf_files[0]
 
