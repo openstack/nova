@@ -115,11 +115,19 @@ class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
           </host>
           <guest>
             <os_type>hvm</os_type>
-            <arch name='x86_64'/>
+            <arch name='x86_64'>
+              <emulator>/usr/bin/qemu-system-x86_64</emulator>
+              <domain type="qemu" />
+              <domain type="kvm">
+                <emulator>/usr/bin/qemu-kvm</emulator>
+              </domain>
+            </arch>
           </guest>
           <guest>
             <os_type>hvm</os_type>
-            <arch name='i686'/>
+            <arch name='i686'>
+              <emulator>/usr/bin/qemu-system-i386</emulator>
+            </arch>
           </guest>
         </capabilities>"""
 
@@ -128,6 +136,17 @@ class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
 
         self.assertIsInstance(obj.host, config.LibvirtConfigCapsHost)
         self.assertEqual(obj.host.uuid, "c7a5fdbd-edaf-9455-926a-d65c16db1809")
+        self.assertEqual(2, len(obj.guests))
+        for guest in obj.guests:
+            self.assertIsInstance(guest, config.LibvirtConfigCapsGuest)
+            self.assertEqual('hvm', guest.ostype)
+
+        self.assertEqual('x86_64', obj.guests[0].arch)
+        self.assertEqual('i686', obj.guests[1].arch)
+        self.assertEqual('/usr/bin/qemu-system-x86_64', obj.guests[0].emulator)
+        self.assertNotIn('qemu', obj.guests[0].domemulator)
+        self.assertEqual('/usr/bin/qemu-kvm', obj.guests[0].domemulator['kvm'])
+        self.assertEqual('/usr/bin/qemu-system-i386', obj.guests[1].emulator)
 
         xmlout = obj.to_xml()
 
