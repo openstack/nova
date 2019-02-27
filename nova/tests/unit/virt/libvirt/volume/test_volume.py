@@ -67,13 +67,6 @@ class LibvirtVolumeBaseTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(LibvirtVolumeBaseTestCase, self).setUp()
-        self.executes = []
-
-        def fake_execute(*cmd, **kwargs):
-            self.executes.append(cmd)
-            return None, None
-
-        self.stub_out('nova.utils.execute', fake_execute)
 
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 

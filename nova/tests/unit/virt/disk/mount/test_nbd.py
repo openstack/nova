@@ -224,7 +224,6 @@ class NbdTestCase(test.NoDBTestCase):
         # something we don't have
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(self.file, tempdir)
-        self.useFixture(fixtures.MonkeyPatch('nova.utils.execute', _fake_noop))
         n.unget_dev()
 
     @mock.patch('time.sleep', new=mock.Mock())

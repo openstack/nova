@@ -25,11 +25,9 @@ from keystoneauth1.identity import base as ks_identity
 from keystoneauth1 import session as ks_session
 import mock
 import netaddr
-from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_context import context as common_context
 from oslo_context import fixture as context_fixture
-from oslo_log import log as logging
 from oslo_utils import encodeutils
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import units
@@ -219,23 +217,12 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertIs(six.text_type,
                       type(utils.get_obj_repr_unicode(instance)))
 
-    def test_use_rootwrap(self):
-        self.flags(disable_rootwrap=False, group='workarounds')
-        self.flags(rootwrap_config='foo')
-        cmd = utils.get_root_helper()
-        self.assertEqual('sudo nova-rootwrap foo', cmd)
-
-    def test_use_sudo(self):
-        self.flags(disable_rootwrap=True, group='workarounds')
-        cmd = utils.get_root_helper()
-        self.assertEqual('sudo', cmd)
-
-    def test_ssh_execute(self):
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_ssh_execute(self, mock_execute):
         expected_args = ('ssh', '-o', 'BatchMode=yes',
                          'remotehost', 'ls', '-l')
-        with mock.patch('nova.utils.execute') as mock_method:
-            utils.ssh_execute('remotehost', 'ls', '-l')
-        mock_method.assert_called_once_with(*expected_args)
+        utils.ssh_execute('remotehost', 'ls', '-l')
+        mock_execute.assert_called_once_with(*expected_args)
 
     def test_generate_hostid(self):
         host = 'host'
@@ -289,174 +276,6 @@ class TestCachedFile(test.NoDBTestCase):
         self.assertNotIn(filename, utils._FILE_CACHE)
         utils.delete_cached_file(filename)
         self.assertNotIn(filename, utils._FILE_CACHE)
-
-
-class RootwrapDaemonTestCase(test.NoDBTestCase):
-    @mock.patch('oslo_rootwrap.client.Client')
-    def test_get_client(self, mock_client):
-        mock_conf = mock.MagicMock()
-        utils.RootwrapDaemonHelper(mock_conf)
-        mock_client.assert_called_once_with(
-            ["sudo", "nova-rootwrap-daemon", mock_conf])
-
-    @mock.patch('nova.utils.LOG.info')
-    def test_execute(self, mock_info):
-        mock_conf = mock.MagicMock()
-        daemon = utils.RootwrapDaemonHelper(mock_conf)
-        daemon.client = mock.MagicMock()
-        daemon.client.execute = mock.Mock(return_value=(0, None, None))
-
-        daemon.execute('a', 1, foo='bar', run_as_root=True)
-        daemon.client.execute.assert_called_once_with(['a', '1'], None)
-        mock_info.assert_has_calls([mock.call(
-            u'Executing RootwrapDaemonHelper.execute cmd=[%(cmd)r] '
-            u'kwargs=[%(kwargs)r]',
-            {'cmd': u'a 1', 'kwargs': {'run_as_root': True, 'foo': 'bar'}})])
-
-    def test_execute_with_kwargs(self):
-        mock_conf = mock.MagicMock()
-        daemon = utils.RootwrapDaemonHelper(mock_conf)
-        daemon.client = mock.MagicMock()
-        daemon.client.execute = mock.Mock(return_value=(0, None, None))
-
-        daemon.execute('a', 1, foo='bar', run_as_root=True, process_input=True)
-        daemon.client.execute.assert_called_once_with(['a', '1'], True)
-
-    def test_execute_fail(self):
-        mock_conf = mock.MagicMock()
-        daemon = utils.RootwrapDaemonHelper(mock_conf)
-        daemon.client = mock.MagicMock()
-        daemon.client.execute = mock.Mock(return_value=(-2, None, None))
-
-        self.assertRaises(processutils.ProcessExecutionError,
-                          daemon.execute, 'b', 2)
-
-    def test_execute_pass_with_check_exit_code(self):
-        mock_conf = mock.MagicMock()
-        daemon = utils.RootwrapDaemonHelper(mock_conf)
-        daemon.client = mock.MagicMock()
-        daemon.client.execute = mock.Mock(return_value=(-2, None, None))
-        daemon.execute('b', 2, check_exit_code=[-2])
-
-    @mock.patch('time.sleep', new=mock.Mock())
-    def test_execute_fail_with_retry(self):
-        mock_conf = mock.MagicMock()
-        daemon = utils.RootwrapDaemonHelper(mock_conf)
-        daemon.client = mock.MagicMock()
-        daemon.client.execute = mock.Mock(return_value=(-2, None, None))
-
-        self.assertRaises(processutils.ProcessExecutionError,
-                          daemon.execute, 'b', 2, attempts=2)
-        daemon.client.execute.assert_has_calls(
-            [mock.call(['b', '2'], None),
-             mock.call(['b', '2'], None)])
-
-    @mock.patch('time.sleep', new=mock.Mock())
-    @mock.patch('nova.utils.LOG.log')
-    def test_execute_fail_and_logging(self, mock_log):
-        mock_conf = mock.MagicMock()
-        daemon = utils.RootwrapDaemonHelper(mock_conf)
-        daemon.client = mock.MagicMock()
-        daemon.client.execute = mock.Mock(return_value=(-2, None, None))
-
-        self.assertRaises(processutils.ProcessExecutionError,
-                          daemon.execute, 'b', 2,
-                          attempts=2,
-                          loglevel=logging.CRITICAL,
-                          log_errors=processutils.LOG_ALL_ERRORS)
-        mock_log.assert_has_calls(
-            [
-                mock.call(logging.CRITICAL, u'Running cmd (subprocess): %s',
-                          u'b 2'),
-                mock.call(logging.CRITICAL,
-                          'CMD "%(sanitized_cmd)s" returned: %(return_code)s '
-                          'in %(end_time)0.3fs',
-                          {'sanitized_cmd': u'b 2', 'return_code': -2,
-                           'end_time': mock.ANY}),
-                mock.call(logging.CRITICAL,
-                          u'%(desc)r\ncommand: %(cmd)r\nexit code: %(code)r'
-                          u'\nstdout: %(stdout)r\nstderr: %(stderr)r',
-                          {'code': -2, 'cmd': u'b 2', 'stdout': u'None',
-                           'stderr': u'None', 'desc': None}),
-                mock.call(logging.CRITICAL, u'%r failed. Retrying.', u'b 2'),
-                mock.call(logging.CRITICAL, u'Running cmd (subprocess): %s',
-                          u'b 2'),
-                mock.call(logging.CRITICAL,
-                          'CMD "%(sanitized_cmd)s" returned: %(return_code)s '
-                          'in %(end_time)0.3fs',
-                          {'sanitized_cmd': u'b 2', 'return_code': -2,
-                           'end_time': mock.ANY}),
-                mock.call(logging.CRITICAL,
-                          u'%(desc)r\ncommand: %(cmd)r\nexit code: %(code)r'
-                          u'\nstdout: %(stdout)r\nstderr: %(stderr)r',
-                          {'code': -2, 'cmd': u'b 2', 'stdout': u'None',
-                           'stderr': u'None', 'desc': None}),
-                mock.call(logging.CRITICAL, u'%r failed. Not Retrying.',
-                          u'b 2')]
-        )
-
-    def test_trycmd(self):
-        mock_conf = mock.MagicMock()
-        daemon = utils.RootwrapDaemonHelper(mock_conf)
-        daemon.client = mock.MagicMock()
-        daemon.client.execute = mock.Mock(return_value=(0, None, None))
-
-        daemon.trycmd('a', 1, foo='bar', run_as_root=True)
-        daemon.client.execute.assert_called_once_with(['a', '1'], None)
-
-    def test_trycmd_with_kwargs(self):
-        mock_conf = mock.MagicMock()
-        daemon = utils.RootwrapDaemonHelper(mock_conf)
-        daemon.execute = mock.Mock(return_value=('out', 'err'))
-
-        daemon.trycmd('a', 1, foo='bar', run_as_root=True,
-                      loglevel=logging.WARN,
-                      log_errors=True,
-                      process_input=True,
-                      delay_on_retry=False,
-                      attempts=5,
-                      check_exit_code=[200])
-        daemon.execute.assert_called_once_with('a', 1, attempts=5,
-                                               check_exit_code=[200],
-                                               delay_on_retry=False, foo='bar',
-                                               log_errors=True, loglevel=30,
-                                               process_input=True,
-                                               run_as_root=True)
-
-    def test_trycmd_fail(self):
-        mock_conf = mock.MagicMock()
-        daemon = utils.RootwrapDaemonHelper(mock_conf)
-        daemon.client = mock.MagicMock()
-        daemon.client.execute = mock.Mock(return_value=(-2, None, None))
-
-        expected_err = six.text_type('''\
-Unexpected error while running command.
-Command: a 1
-Exit code: -2''')
-
-        out, err = daemon.trycmd('a', 1, foo='bar', run_as_root=True)
-        daemon.client.execute.assert_called_once_with(['a', '1'], None)
-        self.assertIn(expected_err, err)
-
-    @mock.patch('time.sleep', new=mock.Mock())
-    def test_trycmd_fail_with_retry(self):
-        mock_conf = mock.MagicMock()
-        daemon = utils.RootwrapDaemonHelper(mock_conf)
-        daemon.client = mock.MagicMock()
-        daemon.client.execute = mock.Mock(return_value=(-2, None, None))
-
-        expected_err = six.text_type('''\
-Unexpected error while running command.
-Command: a 1
-Exit code: -2''')
-
-        out, err = daemon.trycmd('a', 1, foo='bar', run_as_root=True,
-                                 attempts=3)
-        self.assertIn(expected_err, err)
-        daemon.client.execute.assert_has_calls(
-            [mock.call(['a', '1'], None),
-             mock.call(['a', '1'], None),
-             mock.call(['a', '1'], None)])
 
 
 class AuditPeriodTest(test.NoDBTestCase):
