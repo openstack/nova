@@ -675,6 +675,7 @@ class ComputeTaskManager(base.Base):
                             # NOTE(gibi): redo the request group - resource
                             # provider mapping as the above claim call moves
                             # the allocation of the instance to another host
+                            # TODO(gibi): handle if the below call raises
                             self._fill_provider_mapping(
                                 context, instance.uuid, request_spec)
                     else:
@@ -717,7 +718,7 @@ class ComputeTaskManager(base.Base):
 
             # NOTE(gibi): at this point the request spec already got converted
             # to a legacy dict and then back to an object so we lost the non
-            # legacy part of the spec. Re-populate the requested_resource
+            # legacy part of the spec. Re-populate the requested_resources
             # field based on the original request spec object passed to this
             # function.
             if request_spec:

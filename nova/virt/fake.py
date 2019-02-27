@@ -28,6 +28,7 @@ import contextlib
 import copy
 import time
 
+import fixtures
 import os_resource_classes as orc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -836,6 +837,63 @@ class FakeLiveMigrateDriverWithNestedCustomResources(
 
 
 class FakeDriverWithPciResources(SmallFakeDriver):
+
+    # NOTE(gibi): Always use this fixture along with the
+    # FakeDriverWithPciResources to make the necessary configuration for the
+    # driver.
+    class FakeDriverWithPciResourcesConfigFixture(fixtures.Fixture):
+        def setUp(self):
+            super(FakeDriverWithPciResources.
+                  FakeDriverWithPciResourcesConfigFixture, self).setUp()
+            # Set passthrough_whitelist before the compute node starts to match
+            # with the PCI devices reported by this fake driver.
+
+            # NOTE(gibi): 0000:01:00 is tagged to physnet1 and therefore not a
+            # match based on physnet to our sriov port
+            # 'port_with_sriov_resource_request' as the network of that port
+            # points to physnet2 with the attribute
+            # 'provider:physical_network'. Nova pci handling already enforces
+            # this rule.
+            #
+            # 0000:02:00 and 0000:03:00 are both tagged to physnet2 and
+            # therefore a good match for our sriov port based on physnet.
+            # Having two PFs on the same physnet will allow us to test the
+            # placement allocation - physical allocation matching based on the
+            # bandwidth allocation in the future.
+            CONF.set_override('passthrough_whitelist', override=[
+                jsonutils.dumps(
+                    {
+                        "address": {
+                            "domain": "0000",
+                            "bus": "01",
+                            "slot": "00",
+                            "function": ".*"},
+                        "physical_network": "physnet1",
+                    }
+                ),
+                jsonutils.dumps(
+                    {
+                        "address": {
+                            "domain": "0000",
+                            "bus": "02",
+                            "slot": "00",
+                            "function": ".*"},
+                        "physical_network": "physnet2",
+                    }
+                ),
+                jsonutils.dumps(
+                    {
+                        "address": {
+                            "domain": "0000",
+                            "bus": "03",
+                            "slot": "00",
+                            "function": ".*"},
+                        "physical_network": "physnet2",
+                    }
+                ),
+            ],
+                             group='pci')
+
     def get_available_resource(self, nodename):
         host_status = super(
             FakeDriverWithPciResources, self).get_available_resource(nodename)

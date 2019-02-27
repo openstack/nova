@@ -6606,17 +6606,17 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     requester_id=uuids.port1,
                     provider_uuids=[uuids.rp1])])
         with test.nested(
-                mock.patch.object(self.compute.driver, 'spawn'),
-                mock.patch.object(self.compute,
-                    '_build_networks_for_instance', return_value=[]),
-                mock.patch.object(self.instance, 'save'),
+            mock.patch.object(self.compute.driver, 'spawn'),
+            mock.patch.object(
+                self.compute, '_build_networks_for_instance', return_value=[]),
+            mock.patch.object(self.instance, 'save'),
         ) as (mock_spawn, mock_networks, mock_save):
-                self.compute._build_and_run_instance(
-                    self.context,
-                    self.instance, self.image, self.injected_files,
-                    self.admin_pass, self.requested_networks,
-                    self.security_groups, self.block_device_mapping, self.node,
-                    self.limits, self.filter_properties, request_spec)
+            self.compute._build_and_run_instance(
+                self.context,
+                self.instance, self.image, self.injected_files,
+                self.admin_pass, self.requested_networks,
+                self.security_groups, self.block_device_mapping, self.node,
+                self.limits, self.filter_properties, request_spec)
 
         mock_networks.assert_called_once_with(
             self.context, self.instance, self.requested_networks,
