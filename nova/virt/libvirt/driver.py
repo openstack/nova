@@ -286,22 +286,25 @@ VGPU_RESOURCE_SEMAPHORE = "vgpu_resources"
 
 
 class LibvirtDriver(driver.ComputeDriver):
-    capabilities = {
-        "has_imagecache": True,
-        "supports_evacuate": True,
-        "supports_migrate_to_same_host": False,
-        "supports_attach_interface": True,
-        "supports_device_tagging": True,
-        "supports_tagged_attach_interface": True,
-        "supports_tagged_attach_volume": True,
-        "supports_extend_volume": True,
-        # Multiattach support is conditional on qemu and libvirt versions
-        # determined in init_host.
-        "supports_multiattach": False,
-        "supports_trusted_certs": True,
-    }
-
     def __init__(self, virtapi, read_only=False):
+        # NOTE(aspiers) Some of these are dynamic, so putting
+        # capabilities on the instance rather than on the class.
+        # This prevents the risk of one test setting a capability
+        # which bleeds over into other tests.
+        self.capabilities = {
+            "has_imagecache": True,
+            "supports_evacuate": True,
+            "supports_migrate_to_same_host": False,
+            "supports_attach_interface": True,
+            "supports_device_tagging": True,
+            "supports_tagged_attach_interface": True,
+            "supports_tagged_attach_volume": True,
+            "supports_extend_volume": True,
+            # Multiattach support is conditional on qemu and libvirt versions
+            # determined in init_host.
+            "supports_multiattach": False,
+            "supports_trusted_certs": True,
+        }
         super(LibvirtDriver, self).__init__(virtapi)
 
         global libvirt
