@@ -1624,6 +1624,133 @@ class SchedulerReportClient(object):
                 raise Retry('claim_resources', reason)
         return r.status_code == 204
 
+    def remove_resources_from_instance_allocation(
+            self, context, consumer_uuid, resources):
+        """Removes certain resources from the current allocation of the
+        consumer.
+
+        :param context: the request context
+        :param consumer_uuid: the uuid of the consumer to update
+        :param resources: a dict of resources. E.g.:
+                              {
+                                  <rp_uuid>: {
+                                      <resource class>: amount
+                                      <other resource class>: amount
+                                  }
+                                  <other_ rp_uuid>: {
+                                      <other resource class>: amount
+                                  }
+                              }
+        :raises AllocationUpdateFailed: if the requested resource cannot be
+                removed from the current allocation (e.g. rp is missing from
+                the allocation) or there was multiple generation conflict and
+                we run out of retires.
+        :raises ConsumerAllocationRetrievalFailed: If the current allocation
+                cannot be read from placement.
+        :raises: keystoneauth1.exceptions.base.ClientException on failure to
+                 communicate with the placement API
+        """
+
+        # NOTE(gibi): It is just a small wrapper to raise instead of return
+        # if we run out of retries.
+        if not self._remove_resources_from_instance_allocation(
+                context, consumer_uuid, resources):
+            error_reason = _("Cannot remove resources %s from the allocation "
+                             "due to multiple successive generation conflicts "
+                             "in placement.")
+            raise exception.AllocationUpdateFailed(
+                consumer_uuid=consumer_uuid,
+                error=error_reason % resources)
+
+    @retries
+    def _remove_resources_from_instance_allocation(
+            self, context, consumer_uuid, resources):
+        if not resources:
+            # Nothing to remove so do not query or update allocation in
+            # placement.
+            # The True value is only here because the retry decorator returns
+            # False when runs out of retries. It would be nicer to raise in
+            # that case too.
+            return True
+
+        current_allocs = self.get_allocs_for_consumer(context, consumer_uuid)
+
+        if not current_allocs['allocations']:
+            error_reason = _("Cannot remove resources %(resources)s from "
+                             "allocation %(allocations)s. The allocation is "
+                             "empty.")
+            raise exception.AllocationUpdateFailed(
+                consumer_uuid=consumer_uuid,
+                error=error_reason %
+                      {'resources': resources, 'allocations': current_allocs})
+
+        try:
+            for rp_uuid, resources_to_remove in resources.items():
+                allocation_on_rp = current_allocs['allocations'][rp_uuid]
+                for rc, value in resources_to_remove.items():
+                    allocation_on_rp['resources'][rc] -= value
+
+                    if allocation_on_rp['resources'][rc] < 0:
+                        error_reason = _(
+                            "Cannot remove resources %(resources)s from "
+                            "allocation %(allocations)s. There are not enough "
+                            "allocated resources left on %(rp_uuid)s resource "
+                            "provider to remove %(amount)d amount of "
+                            "%(resource_class)s resources.")
+                        raise exception.AllocationUpdateFailed(
+                            consumer_uuid=consumer_uuid,
+                            error=error_reason %
+                                  {'resources': resources,
+                                   'allocations': current_allocs,
+                                   'rp_uuid': rp_uuid,
+                                   'amount': value,
+                                   'resource_class': rc})
+
+                    if allocation_on_rp['resources'][rc] == 0:
+                        # if no allocation left for this rc then remove it
+                        # from the allocation
+                        del allocation_on_rp['resources'][rc]
+        except KeyError as e:
+            error_reason = _("Cannot remove resources %(resources)s from "
+                             "allocation %(allocations)s. Key %(missing_key)s "
+                             "is missing from the allocation.")
+            # rp_uuid is missing from the allocation or resource class is
+            # missing from the allocation
+            raise exception.AllocationUpdateFailed(
+                consumer_uuid=consumer_uuid,
+                error=error_reason %
+                      {'resources': resources,
+                       'allocations': current_allocs,
+                       'missing_key': e})
+
+        # we have to remove the rps from the allocation that has no resources
+        # any more
+        current_allocs['allocations'] = {
+            rp_uuid: alloc
+            for rp_uuid, alloc in current_allocs['allocations'].items()
+            if alloc['resources']}
+
+        r = self._put_allocations(
+            context, consumer_uuid, current_allocs)
+
+        if r.status_code != 204:
+            err = r.json()['errors'][0]
+            if err['code'] == 'placement.concurrent_update':
+                reason = ('another process changed the resource providers or '
+                          'the consumer involved in our attempt to update '
+                          'allocations for consumer %s so we cannot remove '
+                          'resources %s from the current allocation %s' %
+                          (consumer_uuid, resources, current_allocs))
+                # NOTE(gibi): automatic retry is meaningful if we can still
+                # remove the resources from the updated allocations. Retry
+                # works here as this function (re)queries the allocations.
+                raise Retry(
+                    'remove_resources_from_instance_allocation', reason)
+
+        # It is only here because the retry decorator returns False when runs
+        # out of retries. It would be nicer to raise in that case too.
+        return True
+
     def remove_provider_tree_from_instance_allocation(self, context,
                                                       consumer_uuid,
                                                       root_rp_uuid):
