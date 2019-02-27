@@ -6251,6 +6251,59 @@ class PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck(
         self.assertEqual(self.sriov_pf2_rp_uuid,
                          sriov_binding['allocation'])
 
+    def test_interface_detach_with_port_with_bandwidth_request(self):
+        port = self.neutron.port_with_resource_request
+
+        # create a server
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': port['id']}])
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+        # We expect one set of allocations for the compute resources on the
+        # compute rp and one set for the networking resources on the ovs bridge
+        # rp due to the port resource request
+        self.assertEqual(2, len(allocations))
+        compute_allocations = allocations[self.compute1_rp_uuid]['resources']
+        network_allocations = allocations[
+            self.ovs_bridge_rp_per_host[self.compute1_rp_uuid]]['resources']
+
+        self.assertEqual(self._resources_from_flavor(self.flavor),
+                         compute_allocations)
+        self.assertPortMatchesAllocation(port, network_allocations)
+
+        # We expect that only the RP uuid of the networking RP having the port
+        # allocation is sent in the port binding for the port having resource
+        # request
+        updated_port = self.neutron.show_port(port['id'])['port']
+        binding_profile = updated_port['binding:profile']
+        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
+                         binding_profile['allocation'])
+
+        self.api.detach_interface(
+            server['id'], self.neutron.port_with_resource_request['id'])
+
+        self._wait_for_port_unbind(
+            self.neutron, self.neutron.port_with_resource_request['id'])
+
+        updated_port = self.neutron.show_port(
+            self.neutron.port_with_resource_request['id'])['port']
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect that the port related resource allocations are removed
+        self.assertEqual(1, len(allocations))
+        compute_allocations = allocations[self.compute1_rp_uuid]['resources']
+        self.assertEqual(self._resources_from_flavor(self.flavor),
+                         compute_allocations)
+
+        # We expect that the allocation is removed from the port too
+        binding_profile = updated_port['binding:profile']
+        self.assertNotIn('allocation', binding_profile)
+
 
 class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(
         PortResourceRequestBasedSchedulingTestBase):

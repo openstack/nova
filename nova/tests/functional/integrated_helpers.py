@@ -353,6 +353,14 @@ class InstanceHelperMixin(object):
         self.fail('Timed out waiting for migration with status "%s" for '
                   'instance: %s' % (expected_statuses, server['id']))
 
+    def _wait_for_port_unbind(self, neutron, port_id, retries=10):
+        for attempt in range(retries):
+            port = neutron.show_port(port_id)['port']
+            if port['binding:host_id'] is None:
+                return port
+            time.sleep(0.5)
+        self.fail('Timed out waiting for port %s to be unbound' % port_id)
+
 
 class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
     """Base test class for functional tests that check provider usage
