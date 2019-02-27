@@ -1257,19 +1257,12 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             lookup_ip.assert_called_once_with('eth0')
 
     def test_ensure_bridge_brclt_addif_exception(self):
-        def fake_execute(*cmd, **kwargs):
-            if ('brctl', 'addif', 'bridge', 'eth0') == cmd:
-                return ('', 'some error happens')
-            else:
-                return ('', '')
-
         with test.nested(
             mock.patch('nova.privsep.linux_net.device_exists',
                        return_value=True),
             mock.patch('nova.privsep.linux_net.bridge_add_interface',
-                       return_value=('', 'some error happens')),
-            mock.patch.object(linux_net, '_execute', fake_execute)
-        ) as (device_exists, _, _):
+                       return_value=('', 'some error happens'))
+        ) as (device_exists, _):
             driver = linux_net.LinuxBridgeInterfaceDriver()
             self.assertRaises(exception.NovaException,
                               driver.ensure_bridge, 'bridge', 'eth0')
@@ -1386,21 +1379,19 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         mock_set_enabled.assert_called_once_with('vlan_name')
         mock_set_macaddr.assert_called_once_with('vlan_name', 'MAC')
 
-    @mock.patch.object(linux_net, '_execute')
     @mock.patch('nova.privsep.linux_net.device_exists', return_value=True)
     @mock.patch('nova.privsep.linux_net.set_device_mtu')
     def test_ensure_vlan_device_exists(self, mock_set_device_mtu,
-                                       mock_device_exists, mock_execute):
+                                       mock_device_exists):
         interface = linux_net.LinuxBridgeInterfaceDriver.ensure_vlan(1, 'eth0')
         self.assertEqual("vlan1", interface)
         mock_device_exists.assert_called_once_with('vlan1')
-        self.assertFalse(mock_execute.called)
         mock_set_device_mtu.assert_called_once_with('vlan1', None)
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.privsep.linux_net.set_device_disabled',
                 side_effect=processutils.ProcessExecutionError())
-    def test_remove_bridge_negative(self, mock_execute, mock_exists):
+    def test_remove_bridge_negative(self, mock_device_disabled, mock_exists):
         self.assertRaises(processutils.ProcessExecutionError,
                           linux_net.LinuxBridgeInterfaceDriver.remove_bridge,
                           'fake-bridge')
