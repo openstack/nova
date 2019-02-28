@@ -99,25 +99,6 @@
               - ^tests-py3.txt$
               - ^tools/.*$
               - ^tox.ini$
-        - legacy-grenade-dsvm-neutron-multinode-live-migration:
-            voting: false
-            irrelevant-files:
-              - ^(placement-)?api-.*$
-              - ^(test-|)requirements.txt$
-              - ^.*\.rst$
-              - ^.git.*$
-              - ^api-.*$
-              - ^doc/.*$
-              - ^nova/hacking/.*$
-              - ^nova/locale/.*$
-              - ^nova/tests/.*\.py$
-              - ^nova/tests/functional/.*$
-              - ^nova/tests/unit/.*$
-              - ^releasenotes/.*$
-              - ^setup.cfg$
-              - ^tests-py3.txt$
-              - ^tools/.*$
-              - ^tox.ini$
         - legacy-tempest-dsvm-full-devstack-plugin-ceph:
             voting: false
             irrelevant-files:
