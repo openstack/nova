@@ -979,9 +979,6 @@ class ComputeDriver(object):
             allocations. Drivers should *only* edit allocation records for
             providers whose inventories are being affected by the reshape
             operation.
-            TODO(efried): Doc reshaper in reference/update-provider-tree.html
-            Meanwhile, please refer to the spec for more details on reshaping:
-            http://specs.openstack.org/openstack/nova-specs/specs/stein/approved/reshape-provider-tree.html  # noqa
         :raises ReshapeNeeded: If allocations is None and any inventory needs
             to be moved from one provider to another and/or to a different
             resource class.

@@ -38,7 +38,7 @@ the compute node and its associated providers.
 
 The Method
 ----------
-``update_provider_tree`` accepts two parameters:
+``update_provider_tree`` accepts the following parameters:
 
 * A ``nova.compute.provider_tree.ProviderTree`` object representing all the
   providers in the tree associated with the compute node, and any sharing
@@ -59,6 +59,38 @@ The Method
   use this to help identify the compute node provider in the ProviderTree.
   Drivers managing more than one node (e.g. ironic) may also use it as a cue to
   indicate which node is being processed by the caller.
+* Dictionary of ``allocations`` data of the form:
+
+  .. code::
+
+    { $CONSUMER_UUID: {
+          # The shape of each "allocations" dict below is identical
+          # to the return from GET /allocations/{consumer_uuid}
+          "allocations": {
+              $RP_UUID: {
+                  "generation": $RP_GEN,
+                  "resources": {
+                      $RESOURCE_CLASS: $AMOUNT,
+                      ...
+                  },
+              },
+              ...
+          },
+          "project_id": $PROJ_ID,
+          "user_id": $USER_ID,
+          "consumer_generation": $CONSUMER_GEN,
+      },
+      ...
+    }
+
+  If ``None``, and the method determines that any inventory needs to be moved
+  (from one provider to another and/or to a different resource class), the
+  ``ReshapeNeeded`` exception must be raised. Otherwise, this dict must be
+  edited in place to indicate the desired final state of allocations. Drivers
+  should *only* edit allocation records for providers whose inventories are
+  being affected by the reshape operation. For more information about the
+  reshape operation, refer to the `spec <http://specs.openstack.org/openstack/
+  nova-specs/specs/stein/approved/reshape-provider-tree.html>`_.
 
 The virt driver is expected to update the ProviderTree object with current
 resource provider and inventory information. When the method returns, the
