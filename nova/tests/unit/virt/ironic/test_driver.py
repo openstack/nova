@@ -3254,9 +3254,11 @@ class HashRingTestCase(test.NoDBTestCase):
     @mock.patch.object(hash_ring, 'HashRing')
     @mock.patch.object(objects.ServiceList, 'get_all_computes_by_hv_type')
     def _test__refresh_hash_ring(self, services, expected_hosts, mock_services,
-                                 mock_hash_ring):
+                                 mock_hash_ring, uncalled=None):
+        uncalled = uncalled or []
         services = [_make_compute_service(host) for host in services]
-        is_up_calls = [mock.call(svc) for svc in services]
+        is_up_calls = [mock.call(svc) for svc in services
+                       if svc.host not in uncalled]
         self.flags(host='host1')
         mock_services.return_value = services
         mock_hash_ring.return_value = SENTINEL
@@ -3299,6 +3301,66 @@ class HashRingTestCase(test.NoDBTestCase):
         self.mock_is_up.side_effect = [True, True, False, True]
         self._test__refresh_hash_ring(services, expected_hosts)
 
+    @mock.patch.object(ironic_driver.IronicDriver, '_can_send_version')
+    def test__refresh_hash_ring_peer_list(self, mock_can_send):
+        services = ['host1', 'host2', 'host3']
+        expected_hosts = {'host1', 'host2'}
+        self.mock_is_up.return_value = True
+        self.flags(partition_key='not-none', group='ironic')
+        self.flags(peer_list=['host1', 'host2'], group='ironic')
+        self._test__refresh_hash_ring(services, expected_hosts,
+                                      uncalled=['host3'])
+        mock_can_send.assert_called_once_with(min_version='1.46')
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_can_send_version')
+    def test__refresh_hash_ring_peer_list_old_api(self, mock_can_send):
+        mock_can_send.side_effect = (
+            exception.IronicAPIVersionNotAvailable(version='1.46'))
+        services = ['host1', 'host2', 'host3']
+        expected_hosts = {'host1', 'host2', 'host3'}
+        self.mock_is_up.return_value = True
+        self.flags(partition_key='not-none', group='ironic')
+        self.flags(peer_list=['host1', 'host2'], group='ironic')
+        self._test__refresh_hash_ring(services, expected_hosts,
+                                      uncalled=['host3'])
+        mock_can_send.assert_called_once_with(min_version='1.46')
+
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test__check_peer_list(self, mock_log):
+        self.flags(host='host1')
+        self.flags(partition_key='not-none', group='ironic')
+        self.flags(peer_list=['host1', 'host2'], group='ironic')
+        ironic_driver._check_peer_list()
+        # happy path, nothing happens
+        self.assertFalse(mock_log.error.called)
+        self.assertFalse(mock_log.warning.called)
+
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test__check_peer_list_empty(self, mock_log):
+        self.flags(host='host1')
+        self.flags(partition_key='not-none', group='ironic')
+        self.flags(peer_list=[], group='ironic')
+        self.assertRaises(exception.InvalidPeerList,
+                          ironic_driver._check_peer_list)
+        self.assertTrue(mock_log.error.called)
+
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test__check_peer_list_missing_self(self, mock_log):
+        self.flags(host='host1')
+        self.flags(partition_key='not-none', group='ironic')
+        self.flags(peer_list=['host2'], group='ironic')
+        self.assertRaises(exception.InvalidPeerList,
+                          ironic_driver._check_peer_list)
+        self.assertTrue(mock_log.error.called)
+
+    @mock.patch.object(ironic_driver, 'LOG', autospec=True)
+    def test__check_peer_list_only_self(self, mock_log):
+        self.flags(host='host1')
+        self.flags(partition_key='not-none', group='ironic')
+        self.flags(peer_list=['host1'], group='ironic')
+        ironic_driver._check_peer_list()
+        self.assertTrue(mock_log.warning.called)
+
 
 class NodeCacheTestCase(test.NoDBTestCase):
 
@@ -3314,24 +3376,34 @@ class NodeCacheTestCase(test.NoDBTestCase):
         self.host = 'host1'
         self.flags(host=self.host)
 
+    @mock.patch.object(ironic_driver.IronicDriver, '_can_send_version')
     @mock.patch.object(ironic_driver.IronicDriver, '_refresh_hash_ring')
     @mock.patch.object(hash_ring.HashRing, 'get_nodes')
     @mock.patch.object(ironic_driver.IronicDriver, '_get_node_list')
     @mock.patch.object(objects.InstanceList, 'get_uuids_by_host')
     def _test__refresh_cache(self, instances, nodes, hosts, mock_instances,
-                             mock_nodes, mock_hosts, mock_hash_ring):
+                             mock_nodes, mock_hosts, mock_hash_ring,
+                             mock_can_send, partition_key=None,
+                             can_send_146=True):
         mock_instances.return_value = instances
         mock_nodes.return_value = nodes
         mock_hosts.side_effect = hosts
+        if not can_send_146:
+            mock_can_send.side_effect = (
+                exception.IronicAPIVersionNotAvailable(version='1.46'))
         self.driver.node_cache = {}
         self.driver.node_cache_time = None
+
+        kwargs = {}
+        if partition_key is not None and can_send_146:
+            kwargs['conductor_group'] = partition_key
 
         self.driver._refresh_cache()
 
         mock_hash_ring.assert_called_once_with(mock.ANY)
         mock_instances.assert_called_once_with(mock.ANY, self.host)
         mock_nodes.assert_called_once_with(fields=ironic_driver._NODE_FIELDS,
-                                           limit=0)
+                                           limit=0, **kwargs)
         self.assertIsNotNone(self.driver.node_cache_time)
 
     def test__refresh_cache(self):
@@ -3348,6 +3420,49 @@ class NodeCacheTestCase(test.NoDBTestCase):
         hosts = [self.host, self.host, self.host]
 
         self._test__refresh_cache(instances, nodes, hosts)
+
+        expected_cache = {n.uuid: n for n in nodes}
+        self.assertEqual(expected_cache, self.driver.node_cache)
+
+    def test__refresh_cache_partition_key(self):
+        # normal operation, one compute service
+        instances = []
+        nodes = [
+            _get_cached_node(
+                uuid=uuidutils.generate_uuid(), instance_uuid=None),
+            _get_cached_node(
+                uuid=uuidutils.generate_uuid(), instance_uuid=None),
+            _get_cached_node(
+                uuid=uuidutils.generate_uuid(), instance_uuid=None),
+        ]
+        hosts = [self.host, self.host, self.host]
+        partition_key = 'some-group'
+        self.flags(partition_key=partition_key, group='ironic')
+
+        self._test__refresh_cache(instances, nodes, hosts,
+                                  partition_key=partition_key)
+
+        expected_cache = {n.uuid: n for n in nodes}
+        self.assertEqual(expected_cache, self.driver.node_cache)
+
+    def test__refresh_cache_partition_key_old_api(self):
+        # normal operation, one compute service
+        instances = []
+        nodes = [
+            _get_cached_node(
+                uuid=uuidutils.generate_uuid(), instance_uuid=None),
+            _get_cached_node(
+                uuid=uuidutils.generate_uuid(), instance_uuid=None),
+            _get_cached_node(
+                uuid=uuidutils.generate_uuid(), instance_uuid=None),
+        ]
+        hosts = [self.host, self.host, self.host]
+        partition_key = 'some-group'
+        self.flags(partition_key=partition_key, group='ironic')
+
+        self._test__refresh_cache(instances, nodes, hosts,
+                                  partition_key=partition_key,
+                                  can_send_146=False)
 
         expected_cache = {n.uuid: n for n in nodes}
         self.assertEqual(expected_cache, self.driver.node_cache)

@@ -2314,6 +2314,11 @@ class VirtDriverNotReady(NovaException):
     msg_fmt = _("Virt driver is not ready.")
 
 
+class InvalidPeerList(NovaException):
+    msg_fmt = _("Configured nova-compute peer list for the ironic virt "
+                "driver is invalid on host %(host)s")
+
+
 class InstanceDiskMappingFailed(NovaException):
     msg_fmt = _("Failed to map boot disk of instance %(instance_name)s to "
                 "the management partition from any Virtual I/O Server.")

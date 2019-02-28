@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    In deployments with Ironic, adds the ability for compute services to manage
+    a subset of Ironic nodes. If the ``[ironic]/partition_key`` configuration
+    option is set, the compute service will only consider nodes with a matching
+    ``conductor_group`` attribute for management. Setting the
+    ``[ironic]/peer_list`` configuration option allows this subset of nodes to
+    be distributed among the compute services specified to further reduce
+    failure domain. This feature is useful to co-locate nova-compute services
+    with ironic-conductor services managing the same nodes, or to better
+    control failure domain of a given compute service.
