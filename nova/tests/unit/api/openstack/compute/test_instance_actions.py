@@ -34,6 +34,7 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
+from nova import utils
 
 
 FAKE_UUID = fake_server_actions.FAKE_UUID
@@ -329,10 +330,68 @@ class InstanceActionsTestV258(InstanceActionsTestV251):
                       six.text_type(ex))
 
 
-class InstanceActionsTestV262(InstanceActionsTestV251):
+class InstanceActionsTestV262(InstanceActionsTestV258):
     wsgi_api_version = "2.62"
     expect_event_hostId = True
     expect_event_host = True
+    instance_project_id = '26cde4489f6749a08834741678df3c4a'
+
+    def fake_get(self, context, instance_uuid, expected_attrs=None,
+                 cell_down_support=False):
+        return objects.Instance(uuid=instance_uuid,
+                                project_id=self.instance_project_id)
+
+    @mock.patch.object(compute_api.InstanceActionAPI, 'action_events_get')
+    @mock.patch.object(compute_api.InstanceActionAPI,
+                       'action_get_by_request_id')
+    def test_get_action_with_events_project_id_none(self, mock_action_get,
+                                                    mock_action_events):
+        fake_request_id = 'req-%s' % uuids.req1
+
+        mock_action_get.return_value = objects.InstanceAction(
+            id=789,
+            action='stop',
+            instance_uuid=uuids.instance,
+            request_id=fake_request_id,
+            user_id=None,
+            project_id=None,
+            start_time=datetime.datetime(2019, 2, 28, 14, 28, 0, 0),
+            finish_time=None,
+            message='',
+            created_at=None,
+            updated_at=None,
+            deleted_at=None,
+            deleted=False)
+
+        mock_action_events.return_value = [
+            objects.InstanceActionEvent(
+                id=5,
+                action_id=789,
+                event='compute_stop_instance',
+                start_time=datetime.datetime(2019, 2, 28, 14, 28, 0, 0),
+                finish_time=datetime.datetime(2019, 2, 28, 14, 30, 0, 0),
+                result='Success',
+                traceback='',
+                created_at=None,
+                updated_at=None,
+                deleted_at=None,
+                deleted=False,
+                host='host2')]
+
+        req = self._get_http_req('os-instance-actions/1',
+                                 use_admin_context=True)
+        res_dict = self.controller.show(req, uuids.instance, fake_request_id)
+
+        # Assert that 'project_id' is null (None) in the response
+        self.assertIsNone(res_dict['instanceAction']['project_id'])
+        self.assertEqual('host2',
+                         res_dict['instanceAction']['events'][0]['host'])
+        # Assert that the 'hostId' is based on 'host' and the project ID
+        # of the server
+        self.assertEqual(utils.generate_hostid(
+            res_dict['instanceAction']['events'][0]['host'],
+            self.instance_project_id),
+            res_dict['instanceAction']['events'][0]['hostId'])
 
 
 class InstanceActionsTestV266(InstanceActionsTestV258):
