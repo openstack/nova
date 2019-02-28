@@ -226,7 +226,6 @@
       - ^tests-py3.txt$
       - ^tools/.*$
       - ^tox.ini$
-    voting: false
 
 - project:
     # Please try to keep the list of job names sorted alphabetically.
@@ -277,6 +276,7 @@
             irrelevant-files: *dsvm-irrelevant-files
     gate:
       jobs:
+        - nova-grenade-live-migration
         - nova-live-migration
         - nova-tox-functional
         - nova-tox-functional-py35
