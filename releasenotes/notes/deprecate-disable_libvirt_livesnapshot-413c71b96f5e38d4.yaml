@@ -1,0 +1,9 @@
+---
+deprecations:
+  - |
+    The ``[workarounds] disable_libvirt_livesnapshot`` config option has been
+    deprecated. This was necessary to work around an issue with libvirt v1.2.2,
+    which we no longer support. For more information refer to `bug
+    #1334398`__.
+
+    __ https://bugs.launchpad.net/nova/+bug/1334398
