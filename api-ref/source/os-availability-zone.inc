@@ -1,5 +1,7 @@
 .. -*- rst -*-
 
+.. _os-availability-zone:
+
 ===========================================
  Availability zones (os-availability-zone)
 ===========================================

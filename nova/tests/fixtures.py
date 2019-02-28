@@ -2117,3 +2117,44 @@ class DownCellFixture(fixtures.Fixture):
             'nova.context.scatter_gather_cells', stub_scatter_gather_cells))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.context.target_cell', stub_target_cell))
+
+
+class AvailabilityZoneFixture(fixtures.Fixture):
+    """Fixture to stub out the nova.availability_zones module
+
+    The list of ``zones`` provided to the fixture are what get returned from
+    ``get_availability_zones``.
+
+    ``get_instance_availability_zone`` will return the availability_zone
+    requested when creating a server otherwise the instance.availabilty_zone
+    or default_availability_zone is returned.
+    """
+    def __init__(self, zones):
+        self.zones = zones
+
+    def setUp(self):
+        super(AvailabilityZoneFixture, self).setUp()
+
+        def fake_get_availability_zones(
+                ctxt, get_only_available=False, with_hosts=False):
+            # A 2-item tuple is returned if get_only_available=False.
+            if not get_only_available:
+                return self.zones, []
+            return self.zones
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.availability_zones.get_availability_zones',
+            fake_get_availability_zones))
+
+        def fake_get_instance_availability_zone(ctxt, instance):
+            # If the server was created with a specific AZ, return it.
+            reqspec = objects.RequestSpec.get_by_instance_uuid(
+                ctxt, instance.uuid)
+            requested_az = reqspec.availability_zone
+            if requested_az:
+                return requested_az
+            # Otherwise return the instance.availability_zone if set else
+            # the default AZ.
+            return instance.availability_zone or CONF.default_availability_zone
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.availability_zones.get_instance_availability_zone',
+            fake_get_instance_availability_zone))

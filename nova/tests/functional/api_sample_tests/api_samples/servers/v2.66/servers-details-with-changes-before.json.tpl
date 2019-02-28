@@ -58,7 +58,7 @@
             "name": "new-server-test",
             "config_drive": "%(cdrive)s",
             "OS-DCF:diskConfig": "AUTO",
-            "OS-EXT-AZ:availability_zone": "nova",
+            "OS-EXT-AZ:availability_zone": "us-west",
             "OS-EXT-SRV-ATTR:host": "%(compute_host)s",
             "OS-EXT-SRV-ATTR:hostname": "%(hostname)s",
             "OS-EXT-SRV-ATTR:hypervisor_hostname": "%(hypervisor_hostname)s",

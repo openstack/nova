@@ -55,7 +55,7 @@
         "key_name": null,
         "config_drive": "%(cdrive)s",
         "OS-DCF:diskConfig": "AUTO",
-        "OS-EXT-AZ:availability_zone": "nova",
+        "OS-EXT-AZ:availability_zone": "us-west",
         "OS-EXT-SRV-ATTR:host": "%(compute_host)s",
         "OS-EXT-SRV-ATTR:hypervisor_hostname": "%(hypervisor_hostname)s",
         "OS-EXT-SRV-ATTR:instance_name": "%(instance_name)s",

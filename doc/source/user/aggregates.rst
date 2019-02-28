@@ -50,7 +50,7 @@ between aggregates and availability zones:
   availability zone
 - by default a host is part of a default availability zone even if it doesn't
   belong to an aggregate (the configuration option is named
-  ``default_availability_zone``)
+  :oslo.config:option:`default_availability_zone`)
 
 .. warning:: That last rule can be very error-prone. Since the user can see the
   list of availability zones, they have no way to know whether the default
