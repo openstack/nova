@@ -3851,9 +3851,24 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
         mock_get_aggs.return_value = report.AggInfo(aggregates=set([]),
                                                     generation=42)
         name = 'cn1'
-        self.client.aggregate_add_host(self.context, agg_uuid, name)
+        self.client.aggregate_add_host(self.context, agg_uuid, host_name=name)
         mock_set_aggs.assert_called_once_with(
             self.context, uuids.cn1, set([agg_uuid]), use_cache=False,
+            generation=42)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'set_aggregates_for_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_by_name', new=mock.NonCallableMock())
+    def test_aggregate_add_host_rp_uuid(self, mock_get_aggs, mock_set_aggs):
+        mock_get_aggs.return_value = report.AggInfo(
+            aggregates=set([]), generation=42)
+        self.client.aggregate_add_host(
+            self.context, uuids.agg1, rp_uuid=uuids.cn1)
+        mock_set_aggs.assert_called_once_with(
+            self.context, uuids.cn1, set([uuids.agg1]), use_cache=False,
             generation=42)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -3874,13 +3889,13 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
         mock_get_aggs.return_value = report.AggInfo(
             aggregates=set([agg1_uuid]), generation=42)
         name = 'cn1'
-        self.client.aggregate_add_host(self.context, agg1_uuid, name)
+        self.client.aggregate_add_host(self.context, agg1_uuid, host_name=name)
         mock_set_aggs.assert_not_called()
         mock_get_aggs.reset_mock()
         mock_set_aggs.reset_mock()
         mock_get_aggs.return_value = report.AggInfo(
             aggregates=set([agg1_uuid, agg3_uuid]), generation=43)
-        self.client.aggregate_add_host(self.context, agg2_uuid, name)
+        self.client.aggregate_add_host(self.context, agg2_uuid, host_name=name)
         mock_set_aggs.assert_called_once_with(
             self.context, uuids.cn1, set([agg1_uuid, agg2_uuid, agg3_uuid]),
             use_cache=False, generation=43)
@@ -3898,7 +3913,8 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
         agg_uuid = uuids.agg1
         self.assertRaises(
             exception.PlacementAPIConnectFailure,
-            self.client.aggregate_add_host, self.context, agg_uuid, name)
+            self.client.aggregate_add_host, self.context, agg_uuid,
+            host_name=name)
         self.mock_get.assert_not_called()
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -3923,7 +3939,8 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
                 uuid='uuid', generation=43, error='error'),
             None,
         )
-        self.client.aggregate_add_host(self.context, uuids.agg1, 'cn1')
+        self.client.aggregate_add_host(self.context, uuids.agg1,
+                                       host_name='cn1')
         mock_set_aggs.assert_has_calls([mock.call(
             self.context, uuids.cn1, set([uuids.agg1]), use_cache=False,
             generation=gen) for gen in gens])
@@ -3948,10 +3965,16 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
                 uuid='uuid', generation=gen, error='error') for gen in gens)
         self.assertRaises(
             exception.ResourceProviderUpdateConflict,
-            self.client.aggregate_add_host, self.context, uuids.agg1, 'cn1')
+            self.client.aggregate_add_host, self.context, uuids.agg1,
+            host_name='cn1')
         mock_set_aggs.assert_has_calls([mock.call(
             self.context, uuids.cn1, set([uuids.agg1]), use_cache=False,
             generation=gen) for gen in gens])
+
+    def test_aggregate_add_host_no_host_name_or_rp_uuid(self):
+        self.assertRaises(
+            ValueError,
+            self.client.aggregate_add_host, self.context, uuids.agg1)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_by_name')

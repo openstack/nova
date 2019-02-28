@@ -5536,7 +5536,7 @@ class AggregateAPI(base.Base):
         self.query_client.update_aggregates(context, [aggregate])
         try:
             self.placement_client.aggregate_add_host(
-                context, aggregate.uuid, host_name)
+                context, aggregate.uuid, host_name=host_name)
         except exception.PlacementAPIConnectFailure:
             # NOTE(jaypipes): Rocky should be able to tolerate the nova-api
             # service not communicating with the Placement API, so just log a

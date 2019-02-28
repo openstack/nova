@@ -2219,7 +2219,8 @@ class SchedulerReportClient(object):
     @retrying.retry(stop_max_attempt_number=4,
                     retry_on_exception=lambda e: isinstance(
                         e, exception.ResourceProviderUpdateConflict))
-    def aggregate_add_host(self, context, agg_uuid, host_name):
+    def aggregate_add_host(self, context, agg_uuid, host_name=None,
+                           rp_uuid=None):
         """Looks up a resource provider by the supplied host name, and adds the
         aggregate with supplied UUID to that resource provider.
 
@@ -2230,7 +2231,10 @@ class SchedulerReportClient(object):
         :param context: The security context
         :param agg_uuid: UUID of the aggregate being modified
         :param host_name: Name of the nova-compute service worker to look up a
-                          resource provider for
+                          resource provider for. Either host_name or rp_uuid is
+                          required.
+        :param rp_uuid: UUID of the resource provider to add to the aggregate.
+                        Either host_name or rp_uuid is required.
         :raises: `exceptions.ResourceProviderNotFound` if no resource provider
                   matching the host name could be found from the placement API
         :raises: `exception.ResourceProviderAggregateRetrievalFailed` when
@@ -2240,14 +2244,17 @@ class SchedulerReportClient(object):
         :raises: `exception.ResourceProviderUpdateConflict` if a concurrent
                  update to the provider was detected.
         """
-        rp = self._get_provider_by_name(context, host_name)
-        # NOTE(jaypipes): Unfortunately, due to @safe_connect,
-        # _get_provider_by_name() can return None. If that happens, raise an
-        # error so we can trap for it in the Nova API code and ignore in Rocky,
-        # blow up in Stein.
-        if rp is None:
-            raise exception.PlacementAPIConnectFailure()
-        rp_uuid = rp['uuid']
+        if host_name is None and rp_uuid is None:
+            raise ValueError(_("Either host_name or rp_uuid is required"))
+        if rp_uuid is None:
+            rp = self._get_provider_by_name(context, host_name)
+            # NOTE(jaypipes): Unfortunately, due to @safe_connect,
+            # _get_provider_by_name() can return None. If that happens, raise
+            # an error so we can trap for it in the Nova API code and ignore in
+            # Rocky, blow up in Stein.
+            if rp is None:
+                raise exception.PlacementAPIConnectFailure()
+            rp_uuid = rp['uuid']
 
         # Now attempt to add the aggregate to the resource provider. We don't
         # want to overwrite any other aggregates the provider may be associated

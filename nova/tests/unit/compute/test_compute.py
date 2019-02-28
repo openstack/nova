@@ -12228,7 +12228,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
             mock.call(context=self.context, aggregate=aggr,
                       action='add_host', phase='end')])
         mock_add_host.assert_called_once_with(
-            self.context, aggr.uuid, fake_host)
+            self.context, aggr.uuid, host_name=fake_host)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
@@ -12568,7 +12568,7 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
                                              host_param='fakehost',
                                              host='fakehost')
         mock_add_host.assert_called_once_with(
-            self.context, agg.uuid, 'fakehost')
+            self.context, agg.uuid, host_name='fakehost')
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_remove_host')
