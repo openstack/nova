@@ -1048,8 +1048,8 @@ class Host(object):
     def delete_secret(self, usage_type, usage_id):
         """Delete a secret.
 
-        usage_type: one of 'iscsi', 'ceph', 'rbd' or 'volume'
-        usage_id: name of resource in secret
+        :param usage_type: one of 'iscsi', 'ceph', 'rbd', 'volume' or 'vtpm'
+        :param usage_id: name of resource in secret
         """
         secret = self.find_secret(usage_type, usage_id)
         if secret is not None:

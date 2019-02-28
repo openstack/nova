@@ -127,10 +127,12 @@ VIR_DOMAIN_START_PAUSED = 1
 #  hardcoding the numerical values)
 VIR_FROM_QEMU = 100
 VIR_FROM_DOMAIN = 200
+VIR_FROM_SECRET = 300
 VIR_FROM_NWFILTER = 330
 VIR_FROM_REMOTE = 340
 VIR_FROM_RPC = 345
 VIR_FROM_NODEDEV = 666
+
 VIR_ERR_INVALID_ARG = 8
 VIR_ERR_NO_SUPPORT = 3
 VIR_ERR_XML_ERROR = 27
@@ -144,6 +146,7 @@ VIR_ERR_SYSTEM_ERROR = 900
 VIR_ERR_INTERNAL_ERROR = 950
 VIR_ERR_CONFIG_UNSUPPORTED = 951
 VIR_ERR_NO_NODE_DEVICE = 667
+VIR_ERR_INVALID_SECRET = 65
 VIR_ERR_NO_SECRET = 66
 VIR_ERR_AGENT_UNRESPONSIVE = 86
 VIR_ERR_ARGUMENT_UNSUPPORTED = 74
@@ -180,7 +183,7 @@ VIR_SECRET_USAGE_TYPE_ISCSI = 3
 
 # Libvirt version to match MIN_LIBVIRT_VERSION in driver.py
 FAKE_LIBVIRT_VERSION = 4000000
-# Libvirt version to match MIN_QEMU_VERSION in driver.py
+# QEMU version to match MIN_QEMU_VERSION in driver.py
 FAKE_QEMU_VERSION = 2011000
 
 PCI_VEND_ID = '8086'
@@ -1350,10 +1353,41 @@ class DomainSnapshot(object):
 
 
 class Secret(object):
-    """A stub Secret class. Not currently returned by any test, but required to
-    exist for introspection.
-    """
-    pass
+    def __init__(self, connection, xml):
+        self._connection = connection
+        self._xml = xml
+        self._parse_xml(xml)
+        self._value = None
+
+    def _parse_xml(self, xml):
+        tree = etree.fromstring(xml)
+        self._uuid = tree.find('./uuid').text
+        self._private = tree.get('private') == 'yes'
+
+    def setValue(self, value, flags=0):
+        self._value = value
+        return 0
+
+    def value(self, flags=0):
+        if self._value is None:
+            raise make_libvirtError(
+                libvirtError,
+                "secret '%s' does not have a value" % self._uuid,
+                error_code=VIR_ERR_NO_SECRET,
+                error_domain=VIR_FROM_SECRET)
+            pass
+
+        if self._private:
+            raise make_libvirtError(
+                libvirtError,
+                'secret is private',
+                error_code=VIR_ERR_INVALID_SECRET,
+                error_domain=VIR_FROM_SECRET)
+
+        return self._value
+
+    def undefine(self):
+        self._connection._remove_secret(self)
 
 
 class Connection(object):
@@ -1389,6 +1423,7 @@ class Connection(object):
         self._id_counter = 1  # libvirt reserves 0 for the hypervisor.
         self._nwfilters = {}
         self._nodedevs = {}
+        self._secrets = {}
         self._event_callbacks = {}
         self.fakeLibVersion = version
         self.fakeVersion = hv_version
@@ -1410,6 +1445,12 @@ class Connection(object):
 
     def _remove_nodedev(self, nodedev):
         del self._nodedevs[nodedev._name]
+
+    def _add_secret(self, secret):
+        self._secrets[secret._uuid] = secret
+
+    def _remove_secret(self, secret):
+        del self._secrets[secret._uuid]
 
     def _mark_running(self, dom):
         self._running_vms[self._id_counter] = dom
@@ -1730,7 +1771,9 @@ class Connection(object):
         pass
 
     def secretDefineXML(self, xml):
-        pass
+        secret = Secret(self, xml)
+        self._add_secret(secret)
+        return secret
 
     def listAllDevices(self, flags):
         # Note this is incomplete as we do not filter
