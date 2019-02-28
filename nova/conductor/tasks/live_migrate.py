@@ -175,7 +175,9 @@ class LiveMigrationTask(base.TaskBase):
                     method='live migrate')
 
     def _check_instance_has_no_numa(self):
-        """Prevent live migrations of instances with NUMA topologies."""
+        """Prevent live migrations of instances with NUMA topologies.
+        TODO(artom) Remove this check in compute RPC 6.0.
+        """
         if not self.instance.numa_topology:
             return
 
@@ -189,17 +191,32 @@ class LiveMigrationTask(base.TaskBase):
         if hypervisor_type.lower() != obj_fields.HVType.QEMU:
             return
 
-        msg = ('Instance has an associated NUMA topology. '
-               'Instance NUMA topologies, including related attributes '
-               'such as CPU pinning, huge page and emulator thread '
-               'pinning information, are not currently recalculated on '
-               'live migration. See bug #1289064 for more information.'
-               )
+        # We're fully upgraded to a version that supports NUMA live
+        # migration, carry on.
+        if objects.Service.get_minimum_version(
+                self.context, 'nova-compute') >= 40:
+            return
 
         if CONF.workarounds.enable_numa_live_migration:
-            LOG.warning(msg, instance=self.instance)
+            LOG.warning(
+                'Instance has an associated NUMA topology, cell contains '
+                'compute nodes older than train, but the '
+                'enable_numa_live_migration workaround is enabled. Live '
+                'migration will not be NUMA-aware. The instance NUMA '
+                'topology, including related attributes such as CPU pinning, '
+                'huge page and emulator thread pinning information, will not '
+                'be recalculated. See bug #1289064 for more information.',
+                instance=self.instance)
         else:
-            raise exception.MigrationPreCheckError(reason=msg)
+            raise exception.MigrationPreCheckError(
+                reason='Instance has an associated NUMA topology, cell '
+                       'contains compute nodes older than train, and the '
+                       'enable_numa_live_migration workaround is disabled. '
+                       'Refusing to perform the live migration, as the '
+                       'instance NUMA topology, including related attributes '
+                       'such as CPU pinning, huge page and emulator thread '
+                       'pinning information, cannot be recalculated. See '
+                       'bug #1289064 for more information.')
 
     def _check_can_migrate_pci(self, src_host, dest_host):
         """Checks that an instance can migrate with PCI requests.
