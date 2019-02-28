@@ -15,13 +15,15 @@
 from oslo_config import cfg
 
 config_drive_opts = [
-    # TODO(stephenfin): We should deprecate this, given that it was originally
-    # added to workaround [1] which was fixed in libvirt v1.2.17 [2]
-    #
-    # [1] https://bugs.launchpad.net/nova/+bug/1246201
-    # [2] https://bugzilla.redhat.com/show_bug.cgi?id=1203032
     cfg.StrOpt('config_drive_format',
         default='iso9660',
+        deprecated_for_removal=True,
+        deprecated_since='19.0.0',
+        deprecated_reason="""
+This option was originally added as a workaround for bug in libvirt, #1246201,
+that was resolved in libvirt v1.2.17. As a result, this option is no longer
+necessary or useful.
+""",
         choices=[
             ('iso9660', 'A file system image standard that is widely '
              'supported across operating systems.'),
