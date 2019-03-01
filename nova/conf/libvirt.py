@@ -856,6 +856,7 @@ Related options:
 * compute.use_cow_images
 * images_volume_group
 * [workarounds]/ensure_libvirt_rbd_instance_dir_cleanup
+* compute.force_raw_images
 """),
     cfg.StrOpt('images_volume_group',
                help="""

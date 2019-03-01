@@ -901,6 +901,21 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # stub out the unplug call to os-vif since we don't care about it.
         self.stub_out('os_vif.unplug', lambda a, kw: None)
 
+    def test_init_host_image_type_rbd_force_raw_images_true(self):
+        CONF.set_override('images_type', 'rbd', group='libvirt')
+        CONF.set_override('force_raw_images', True)
+        self.connection.init_host('myhostname')
+
+    def test_init_host_image_type_non_rbd(self):
+        CONF.set_override('images_type', 'default', group='libvirt')
+        self.connection.init_host('myhostname')
+
+    def test_init_host_raise_invalid_configuration(self):
+        CONF.set_override('images_type', 'rbd', group='libvirt')
+        CONF.set_override('force_raw_images', False)
+        self.assertRaises(exception.InvalidConfiguration,
+                          self.connection.init_host, 'myhostname')
+
     def test_force_hard_reboot(self):
         self.flags(wait_soft_reboot_seconds=0, group='libvirt')
         self.test_reboot()

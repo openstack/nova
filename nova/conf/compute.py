@@ -232,6 +232,9 @@ Possible values:
 Related options:
 
 * ``compute_driver``: Only the libvirt driver uses this option.
+* ``[libvirt]/images_type``: If images_type is rbd, setting this option
+  to False is not allowed. See the bug
+  https://bugs.launchpad.net/nova/+bug/1816686 for more details.
 """),
 # NOTE(yamahata): ListOpt won't work because the command may include a comma.
 # For example:

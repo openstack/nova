@@ -1411,12 +1411,44 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         mock_exists.assert_has_calls([mock.call(), mock.call()])
         fn.assert_called_once_with(target=self.TEMPLATE_PATH)
 
+    @mock.patch.object(images, 'qemu_img_info')
+    @mock.patch.object(os.path, 'exists', return_value=False)
+    def test__remove_non_raw_cache_image_not_exists(
+            self, mock_exists, mock_qemu):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        image._remove_non_raw_cache_image(self.TEMPLATE_PATH)
+        mock_qemu.assert_not_called()
+
+    @mock.patch.object(os, 'remove')
+    @mock.patch.object(images, 'qemu_img_info',
+                       return_value=imageutils.QemuImgInfo())
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    def test__remove_non_raw_cache_image_with_raw_cache(
+            self, mock_exists, mock_qemu, mock_remove):
+        mock_qemu.return_value.file_format = 'raw'
+        image = self.image_class(self.INSTANCE, self.NAME)
+        image._remove_non_raw_cache_image(self.TEMPLATE_PATH)
+        mock_remove.assert_not_called()
+
+    @mock.patch.object(os, 'remove')
+    @mock.patch.object(images, 'qemu_img_info',
+                       return_value=imageutils.QemuImgInfo())
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    def test__remove_non_raw_cache_image_with_qcow2_cache(
+            self, mock_exists, mock_qemu, mock_remove):
+        mock_qemu.return_value.file_format = 'qcow2'
+        image = self.image_class(self.INSTANCE, self.NAME)
+        image._remove_non_raw_cache_image(self.TEMPLATE_PATH)
+        mock_remove.assert_called_once_with(self.TEMPLATE_PATH)
+
+    @mock.patch.object(images, 'qemu_img_info',
+                       return_value=imageutils.QemuImgInfo())
     @mock.patch.object(rbd_utils.RBDDriver, 'resize')
     @mock.patch.object(imagebackend.Rbd, 'verify_base_size')
     @mock.patch.object(imagebackend.Rbd, 'get_disk_size')
     @mock.patch.object(imagebackend.Rbd, 'exists')
     def test_create_image_resize(self, mock_exists, mock_get,
-                                 mock_verify, mock_resize):
+                                 mock_verify, mock_resize, mock_qemu):
         fn = mock.MagicMock()
         full_size = self.SIZE * 2
 
@@ -1427,6 +1459,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         image = self.image_class(self.INSTANCE, self.NAME)
         mock_exists.return_value = False
+        mock_qemu.return_value.file_format = 'raw'
         mock_get.return_value = self.SIZE
         rbd_name = "%s_%s" % (self.INSTANCE['uuid'], self.NAME)
         cmd = ('rbd', 'import', '--pool', self.POOL, self.TEMPLATE_PATH,
@@ -1443,13 +1476,17 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         mock_verify.assert_called_once_with(self.TEMPLATE_PATH, full_size)
         fn.assert_called_once_with(target=self.TEMPLATE_PATH)
 
+    @mock.patch.object(images, 'qemu_img_info',
+                       return_value=imageutils.QemuImgInfo())
     @mock.patch.object(imagebackend.Rbd, 'get_disk_size')
     @mock.patch.object(imagebackend.Rbd, 'exists')
-    def test_create_image_already_exists(self, mock_exists, mock_get):
+    def test_create_image_already_exists(self, mock_exists, mock_get,
+                                         mock_qemu):
         rbd_utils.rbd.RBD_FEATURE_LAYERING = 1
 
         image = self.image_class(self.INSTANCE, self.NAME)
         mock_exists.return_value = True
+        mock_qemu.return_value.file_format = 'raw'
         mock_get.return_value = self.SIZE
         rbd_name = "%s_%s" % (self.INSTANCE['uuid'], self.NAME)
         fn = mock.MagicMock()
@@ -1507,7 +1544,10 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             self.assertEqual(2361393152, image.get_disk_size(image.path))
             size_mock.assert_called_once_with(image.rbd_name)
 
-    def test_create_image_too_small(self):
+    @mock.patch.object(images, 'qemu_img_info',
+                       return_value=imageutils.QemuImgInfo())
+    def test_create_image_too_small(self, mock_qemu):
+        mock_qemu.return_value.file_format = 'raw'
         image = self.image_class(self.INSTANCE, self.NAME)
         with mock.patch.object(image, 'driver') as driver_mock:
             driver_mock.exists.return_value = True

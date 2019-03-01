@@ -1,0 +1,13 @@
+---
+upgrade:
+  - |
+    The libvirt driver's RBD imagebackend no longer supports setting
+    force_raw_images to False. Setting force_raw_images = False and
+    images_type = rbd in nova.conf will cause the nova compute service
+    to refuse to start. To fix this, set force_raw_images = True. This
+    change was required to fix the `bug 1816686`_.
+
+    Note that non-raw cache image files will be removed if you set
+    force_raw_images = True and images_type = rbd now.
+
+    .. _bug 1816686: https://bugs.launchpad.net/nova/+bug/1816686
