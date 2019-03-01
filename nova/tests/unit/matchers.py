@@ -16,6 +16,7 @@
 
 """Matcher classes to be used inside of the testtools assertThat framework."""
 
+import copy
 import pprint
 
 from lxml import etree
@@ -339,7 +340,11 @@ class XMLUnexpectedChild(XMLMismatch):
 
 
 class XMLExpectedChild(XMLMismatch):
-    """Expected child not present in XML."""
+    """Expected child not present in XML.
+
+    idx indicates at which position the child was expected.
+    If idx is None, that indicates that strict ordering was not required.
+    """
 
     def __init__(self, state, tag, idx):
         super(XMLExpectedChild, self).__init__(state)
@@ -347,9 +352,15 @@ class XMLExpectedChild(XMLMismatch):
         self.idx = idx
 
     def describe(self):
-        return ("%(path)s: XML expected child element <%(tag)s> "
-                "not present at index %(idx)d" %
-                {'path': self.path, 'tag': self.tag, 'idx': self.idx})
+        s = ("%(path)s: XML expected child element <%(tag)s> "
+             "not present" %
+             {'path': self.path, 'tag': self.tag})
+        # If we are not requiring strict ordering then the child element
+        # can be expected at any index, so don't claim that it is expected
+        # at a particular one.
+        if self.idx is not None:
+            s += " at index %d" % self.idx
+        return s
 
 
 class XMLMatchState(object):
@@ -364,31 +375,30 @@ class XMLMatchState(object):
         self.expected = expected
         self.actual = actual
 
-    def __enter__(self):
-        pass
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        self.path.pop()
-        return False
-
     def __str__(self):
         return '/' + '/'.join(self.path)
 
     def node(self, tag, idx):
-        """Adds tag and index to the path; they will be popped off when
-        the corresponding 'with' statement exits.
+        """Returns a new state based on the current one, with tag and idx
+        appended to the path.  We avoid appending in place and popping
+        on exit from the context of the comparison at this level in
+        the XML tree, because this would mutate state objects embedded
+        in XMLMismatch objects which are bubbled up through recursive
+        calls to _compare_nodes.  This would result in a misleading
+        error by the time the XMLMismatch object surfaced at the top
+        of the assertThat() part of the stack.
 
         :param tag: The element tag
         :param idx: If not None, the integer index of the element
                     within its parent.  Not included in the path
                     element if None.
         """
-
+        new_state = copy.deepcopy(self)
         if idx is not None:
-            self.path.append("%s[%d]" % (tag, idx))
+            new_state.path.append("%s[%d]" % (tag, idx))
         else:
-            self.path.append(tag)
-        return self
+            new_state.path.append(tag)
+        return new_state
 
 
 class XMLMatches(object):
@@ -463,77 +473,86 @@ class XMLMatches(object):
         if expected.tag != actual.tag:
             return XMLTagMismatch(state, idx, expected.tag, actual.tag)
 
-        with state.node(expected.tag, idx):
-            # Compare the attribute keys
-            expected_attrs = set(expected.attrib.keys())
-            actual_attrs = set(actual.attrib.keys())
-            if expected_attrs != actual_attrs:
-                expected_only = expected_attrs - actual_attrs
-                actual_only = actual_attrs - expected_attrs
-                return XMLAttrKeysMismatch(state, expected_only, actual_only)
+        new_state = state.node(expected.tag, idx)
 
-            # Compare the attribute values
-            for key in expected_attrs:
-                expected_value = expected.attrib[key]
-                actual_value = actual.attrib[key]
+        # Compare the attribute keys
+        expected_attrs = set(expected.attrib.keys())
+        actual_attrs = set(actual.attrib.keys())
+        if expected_attrs != actual_attrs:
+            expected_only = expected_attrs - actual_attrs
+            actual_only = actual_attrs - expected_attrs
+            return XMLAttrKeysMismatch(new_state, expected_only, actual_only)
 
-                if self.skip_values.intersection(
-                        [expected_value, actual_value]):
-                    continue
-                elif expected_value != actual_value:
-                    return XMLAttrValueMismatch(state, key, expected_value,
-                                                actual_value)
+        # Compare the attribute values
+        for key in expected_attrs:
+            expected_value = expected.attrib[key]
+            actual_value = actual.attrib[key]
 
-            # Compare text nodes
-            text_nodes_mismatch = self._compare_text_nodes(
-                expected, actual, state)
-            if text_nodes_mismatch:
-                return text_nodes_mismatch
+            if self.skip_values.intersection(
+                    [expected_value, actual_value]):
+                continue
+            elif expected_value != actual_value:
+                return XMLAttrValueMismatch(new_state, key, expected_value,
+                                            actual_value)
 
-            # Compare the contents of the node
-            matched_actual_child_idxs = set()
-            # first_actual_child_idx - pointer to next actual child
-            # used with allow_mixed_nodes=False ONLY
-            # prevent to visit actual child nodes twice
-            first_actual_child_idx = 0
-            for expected_child in expected:
-                if expected_child.tag in self.SKIP_TAGS:
-                    continue
-                related_actual_child_idx = None
+        # Compare text nodes
+        text_nodes_mismatch = self._compare_text_nodes(
+            expected, actual, new_state)
+        if text_nodes_mismatch:
+            return text_nodes_mismatch
 
-                if self.allow_mixed_nodes:
-                    first_actual_child_idx = 0
-                for actual_child_idx in range(
-                        first_actual_child_idx, len(actual)):
-                    if actual[actual_child_idx].tag in self.SKIP_TAGS:
-                        first_actual_child_idx += 1
-                        continue
-                    if actual_child_idx in matched_actual_child_idxs:
-                        continue
-                    # Compare the nodes
-                    result = self._compare_node(expected_child,
-                                                actual[actual_child_idx],
-                                                state, actual_child_idx)
+        # Compare the contents of the node
+        matched_actual_child_idxs = set()
+        # first_actual_child_idx - pointer to next actual child
+        # used with allow_mixed_nodes=False ONLY
+        # prevent to visit actual child nodes twice
+        first_actual_child_idx = 0
+        result = None
+        for expected_child in expected:
+            if expected_child.tag in self.SKIP_TAGS:
+                continue
+            related_actual_child_idx = None
+
+            if self.allow_mixed_nodes:
+                first_actual_child_idx = 0
+            for actual_child_idx in range(
+                    first_actual_child_idx, len(actual)):
+                if actual[actual_child_idx].tag in self.SKIP_TAGS:
                     first_actual_child_idx += 1
-                    if result is not True:
-                        if self.allow_mixed_nodes:
-                            continue
-                        else:
-                            return result
-                    else:  # nodes match
-                        related_actual_child_idx = actual_child_idx
-                        break
-                if related_actual_child_idx is not None:
-                    matched_actual_child_idxs.add(actual_child_idx)
+                    continue
+                if actual_child_idx in matched_actual_child_idxs:
+                    continue
+                # Compare the nodes
+                result = self._compare_node(expected_child,
+                                            actual[actual_child_idx],
+                                            new_state, actual_child_idx)
+                first_actual_child_idx += 1
+                if result is not True:
+                    if self.allow_mixed_nodes:
+                        continue
+                    else:
+                        return result
+                else:  # nodes match
+                    related_actual_child_idx = actual_child_idx
+                    break
+            if related_actual_child_idx is not None:
+                matched_actual_child_idxs.add(actual_child_idx)
+            else:
+                if isinstance(result, XMLExpectedChild) or \
+                   isinstance(result, XMLUnexpectedChild):
+                    return result
+                if self.allow_mixed_nodes:
+                    expected_child_idx = None
                 else:
-                    return XMLExpectedChild(state, expected_child.tag,
-                                            actual_child_idx + 1)
-            # Make sure we consumed all nodes in actual
-            for actual_child_idx, actual_child in enumerate(actual):
-                if (actual_child.tag not in self.SKIP_TAGS and
-                        actual_child_idx not in matched_actual_child_idxs):
-                    return XMLUnexpectedChild(state, actual_child.tag,
-                                              actual_child_idx)
+                    expected_child_idx = first_actual_child_idx
+                return XMLExpectedChild(new_state, expected_child.tag,
+                                        expected_child_idx)
+        # Make sure we consumed all nodes in actual
+        for actual_child_idx, actual_child in enumerate(actual):
+            if (actual_child.tag not in self.SKIP_TAGS and
+                    actual_child_idx not in matched_actual_child_idxs):
+                return XMLUnexpectedChild(new_state, actual_child.tag,
+                                          actual_child_idx)
         # The nodes match
         return True
 
