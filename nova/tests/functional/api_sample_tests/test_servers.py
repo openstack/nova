@@ -74,6 +74,11 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
                     '-[0-9a-f]{4}-[0-9a-f]{12}',
             'name': 'new-server-test' if name is None else name,
         }
+        # If the template is requesting an explicit availability zone and
+        # the test is setup to have AZs, use the first one in the list which
+        # should default to "us-west".
+        if self.availability_zones:
+            subs['availability_zone'] = self.availability_zones[0]
         if extra_subs:
             subs.update(extra_subs)
 

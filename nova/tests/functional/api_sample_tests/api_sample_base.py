@@ -63,6 +63,9 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
     _additional_fixtures = []
     sample_dir = None
     _use_project_id = True
+    # Availability zones for the API samples tests. Can be overridden by
+    # sub-classes. If set, the AvailabilityZoneFilter is not used.
+    availability_zones = ['us-west']
 
     scenarios = [
         # test v2 with the v2.1 compatibility stack
@@ -128,5 +131,23 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
         self.stub_out('nova.privsep.linux_net.set_device_enabled', fake_noop)
         self.stub_out('nova.privsep.linux_net.set_device_macaddr', fake_noop)
 
+        if self.availability_zones:
+            self.useFixture(
+                fixtures.AvailabilityZoneFixture(self.availability_zones))
+
     def _setup_services(self):
         pass
+
+    def _setup_scheduler_service(self):
+        """Overrides _IntegratedTestBase._setup_scheduler_service to filter
+        out the AvailabilityZoneFilter prior to starting the scheduler.
+        """
+        if self.availability_zones:
+            # The test is using fake zones so disable the
+            # AvailabilityZoneFilter which is otherwise enabled by default.
+            enabled_filters = CONF.filter_scheduler.enabled_filters
+            if 'AvailabilityZoneFilter' in enabled_filters:
+                enabled_filters.remove('AvailabilityZoneFilter')
+                self.flags(enabled_filters=enabled_filters,
+                           group='filter_scheduler')
+        return super(ApiSampleTestBaseV21, self)._setup_scheduler_service()

@@ -4842,18 +4842,21 @@ os-availability-zone:availability_zone:
     want your instance to be built.  Typically, an admin user will use
     availability zones to arrange OpenStack compute hosts into logical
     groups.
+
     An availability zone provides a form of physical isolation and redundancy from
     other availability zones. For instance, if some racks in your data center are
     on a separate power source, you can put servers in those racks in their own availability
     zone. Availability zones can also help separate different classes of hardware.  By
     segregating resources into availability zones, you can ensure that your application
     resources are spread across disparate machines to achieve high availability in
-    the event of hardware or other failure.
+    the event of hardware or other failure. See
+    `Availability Zones (AZs) <https://docs.openstack.org/nova/latest/user/aggregates.html#availability-zones-azs>`_ for more information.
+
     You can list the available availability zones by calling the
-    os-availability-zone API, but you should avoid using the default
-    availability zone when booting the instance.  In general, the
-    default availability zone is named ``nova``. This AZ is only shown
-    when listing the availability zones as an admin.
+    :ref:`os-availability-zone` API, but you should avoid using the `default
+    availability zone <https://docs.openstack.org/nova/latest/configuration/config.html#DEFAULT.default_availability_zone>`_
+    when creating the server.  The default availability zone is named ``nova``.
+    This AZ is only shown when listing the availability zones as an admin.
   in: body
   required: false
   type: string

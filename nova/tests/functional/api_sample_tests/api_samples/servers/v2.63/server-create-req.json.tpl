@@ -5,7 +5,7 @@
         "name" : "%(name)s",
         "imageRef" : "%(image_id)s",
         "flavorRef" : "6",
-        "availability_zone": "nova",
+        "availability_zone": "us-west",
         "OS-DCF:diskConfig": "AUTO",
         "metadata" : {
             "My Server Name" : "Apache1"
