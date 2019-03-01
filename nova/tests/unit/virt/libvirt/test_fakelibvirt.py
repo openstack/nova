@@ -18,6 +18,7 @@ import six
 
 from nova.objects import fields as obj_fields
 from nova import test
+from nova.tests.unit import matchers
 import nova.tests.unit.virt.libvirt.fakelibvirt as libvirt
 from nova.virt.libvirt import config as vconfig
 
@@ -438,10 +439,10 @@ class FakeLibvirtTests(test.NoDBTestCase):
     <product id='0x1528'>Ethernet Controller 10-Gigabit X540-AT2</product>
     <vendor id='0x8086'>Intel Corporation</vendor>
     <capability type='virt_functions'>
-      <address domain='0x0000' bus='0x81' slot='0x10' function='0x0'/>
+      <address domain='0x0000' bus='0x81' slot='0x0' function='0x1'/>
     </capability>
-    <iommuGroup number='48'>
- <address domain='0x0000' bus='0x81' slot='0x0' function='0x0'/>
+    <iommuGroup number='40'>
+      <address domain='0x0000' bus='0x81' slot='0x0' function='0x0'/>
     </iommuGroup>
     <numa node='0'/>
     <pci-express>
@@ -451,8 +452,8 @@ class FakeLibvirtTests(test.NoDBTestCase):
   </capability>
 </device>"""
         vf_xml = """<device>
-  <name>pci_0000_81_10_0</name>
-  <path>/sys/devices/pci0000:80/0000:80:01.0/0000:81:10.0</path>
+  <name>pci_0000_81_00_1</name>
+  <path>/sys/devices/pci0000:80/0000:80:01.0/0000:81:00.1</path>
   <parent>pci_0000_80_01_0</parent>
   <driver>
     <name>ixgbevf</name>
@@ -460,15 +461,15 @@ class FakeLibvirtTests(test.NoDBTestCase):
   <capability type='pci'>
     <domain>0</domain>
     <bus>129</bus>
-    <slot>16</slot>
-    <function>0</function>
+    <slot>0</slot>
+    <function>1</function>
     <product id='0x1515'>X540 Ethernet Controller Virtual Function</product>
     <vendor id='0x8086'>Intel Corporation</vendor>
     <capability type='phys_function'>
-      <address domain='0x0000' bus='0x81' slot='0x00' function='0x0'/>
+      <address domain='0x0000' bus='0x81' slot='0x0' function='0x0'/>
     </capability>
-    <iommuGroup number='48'>
- <address domain='0x0000' bus='0x81' slot='0x10' function='0x0'/>
+    <iommuGroup number='41'>
+      <address domain='0x0000' bus='0x81' slot='0x0' function='0x1'/>
     </iommuGroup>
     <numa node='0'/>
     <pci-express>
@@ -479,16 +480,16 @@ class FakeLibvirtTests(test.NoDBTestCase):
 </device>"""
 
         # create fake pci devices
-        pci_info = libvirt.HostPciSRIOVDevicesInfo(num_pfs=1, num_vfs=1)
+        pci_info = libvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=1)
 
         # generate xml for the created pci devices
         gen_pf = pci_info.get_device_by_name('pci_0000_81_00_0')
-        gen_vf = pci_info.get_device_by_name('pci_0000_81_10_0')
+        gen_vf = pci_info.get_device_by_name('pci_0000_81_00_1')
 
-        self.assertEqual(gen_pf.XMLDesc(0), pf_xml)
-        self.assertEqual(gen_vf.XMLDesc(0), vf_xml)
+        self.assertThat(gen_pf.XMLDesc(0), matchers.XMLMatches(pf_xml))
+        self.assertThat(gen_vf.XMLDesc(0), matchers.XMLMatches(vf_xml))
 
         # parse the generated xml with a libvirt config class and compare
         # device address
         _cmp_pci_dev_addr(pf_xml, '0000:81:00.0')
-        _cmp_pci_dev_addr(vf_xml, '0000:81:10.0')
+        _cmp_pci_dev_addr(vf_xml, '0000:81:00.1')
