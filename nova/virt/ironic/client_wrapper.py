@@ -35,11 +35,11 @@ IRONIC_GROUP = nova.conf.ironic.ironic_group
 IRONIC_API_VERSION = (1, 46)
 # NOTE(TheJulia): This version should ALWAYS be the _last_ release
 # supported version of the API version used by nova. If a feature
-# needs 1.38 to be negotiated to operate properly, then the version
+# needs a higher version to be negotiated to operate properly, then the version
 # above should be updated, and this version should only be changed
 # once a cycle to the API version desired for features merging in
 # that cycle.
-PRIOR_IRONIC_API_VERSION = (1, 37)
+PRIOR_IRONIC_API_VERSION = (1, 38)
 
 
 class IronicClientWrapper(object):
