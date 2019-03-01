@@ -7633,8 +7633,8 @@ class ServersViewBuilderTestV269(ServersViewBuilderTest):
         req = self.req('/fake/servers/%s' % FAKE_UUID)
         output = self.view_builder.show(req, self.instance,
                                         cell_down_support=True)
-        # nine fields from request_spec and instance_mapping
-        self.assertEqual(9, len(output['server']))
+        # ten fields from request_spec and instance_mapping
+        self.assertEqual(10, len(output['server']))
         image_bookmark = "http://localhost/fake/images/5"
         expected = {
             "server": {
@@ -7662,7 +7662,19 @@ class ServersViewBuilderTestV269(ServersViewBuilderTest):
                     'swap': 0
                 },
                 "OS-EXT-AZ:availability_zone": "nova",
-                "OS-EXT-STS:power_state": 0
+                "OS-EXT-STS:power_state": 0,
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v2/fake/servers/%s" %
+                                self.uuid,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/servers/%s" %
+                                self.uuid,
+                    },
+                ]
             }
         }
         self.assertThat(output, matchers.DictMatches(expected))
@@ -7685,7 +7697,7 @@ class ServersViewBuilderTestV269(ServersViewBuilderTest):
         output = self.view_builder.show(req, self.instance,
                                         cell_down_support=True)
         # nine fields from request_spec and instance_mapping
-        self.assertEqual(9, len(output['server']))
+        self.assertEqual(10, len(output['server']))
         expected = {
             "server": {
                 "id": self.uuid,
@@ -7704,7 +7716,19 @@ class ServersViewBuilderTestV269(ServersViewBuilderTest):
                     'swap': 0
                 },
                 "OS-EXT-AZ:availability_zone": "UNKNOWN",
-                "OS-EXT-STS:power_state": 0
+                "OS-EXT-STS:power_state": 0,
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v2/fake/servers/%s" %
+                                self.uuid,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/servers/%s" %
+                                self.uuid,
+                    },
+                ]
             }
         }
         self.assertThat(output, matchers.DictMatches(expected))

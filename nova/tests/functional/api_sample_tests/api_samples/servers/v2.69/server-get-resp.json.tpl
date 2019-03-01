@@ -24,6 +24,16 @@
         },
         "status": "UNKNOWN",
         "tenant_id": "project",
-        "user_id": "fake"
+        "user_id": "fake",
+        "links": [
+            {
+                "href": "%(versioned_compute_endpoint)s/servers/%(uuid)s",
+                "rel": "self"
+            },
+            {
+                "href": "%(compute_endpoint)s/servers/%(uuid)s",
+                "rel": "bookmark"
+            }
+        ]
     }
 }

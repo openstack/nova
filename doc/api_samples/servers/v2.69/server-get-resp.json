@@ -24,6 +24,16 @@
         },
         "status": "UNKNOWN",
         "tenant_id": "project",
-        "user_id": "fake"
+        "user_id": "fake",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/33748c23-38dd-4f70-b774-522fc69e7b67",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/33748c23-38dd-4f70-b774-522fc69e7b67",
+                "rel": "bookmark"
+            }
+        ]
     }
 }
