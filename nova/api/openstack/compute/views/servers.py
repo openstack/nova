@@ -149,6 +149,8 @@ class ViewBuilder(common.ViewBuilder):
                 "status": "UNKNOWN",
                 "tenant_id": instance.project_id,
                 "created": utils.isotime(instance.created_at),
+                "links": self._get_links(
+                    request, instance.uuid, self._collection_name),
             },
         }
         if 'flavor' in instance:
@@ -177,10 +179,6 @@ class ViewBuilder(common.ViewBuilder):
                 context = request.environ['nova.context']
                 ret['server']['server_groups'] = self._get_server_groups(
                                                              context, instance)
-        else:
-            # GET /servers/detail includes links for GET /servers/{server_id}.
-            ret['server']["links"] = self._get_links(
-                request, instance.uuid, self._collection_name)
         return ret
 
     def show(self, request, instance, extend_address=True,

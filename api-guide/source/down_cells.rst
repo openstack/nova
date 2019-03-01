@@ -240,6 +240,7 @@ behavior are described below:
   - availability_zone: The availability_zone of the server if it was specified
     during during boot time and "UNKNOWN" otherwise.
   - power_state: Its value will be 0 (``NOSTATE``).
+  - links: Links to the servers in question.
   - server_groups: The UUIDs of the server groups to which the server belongs.
     Currently this can contain at most one entry. Note that this key will be in
     the response only from the "2.71" microversion.
@@ -275,6 +276,16 @@ behavior are described below:
                  },
                  "OS-EXT-AZ:availability_zone": "geneva",
                  "OS-EXT-STS:power_state": 0,
+                 "links": [
+                       {
+                           "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/bcc6c6dd-3d0a-4633-9586-60878fd68edb",
+                           "rel": "self"
+                       },
+                       {
+                           "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/bcc6c6dd-3d0a-4633-9586-60878fd68edb",
+                           "rel": "bookmark"
+                       }
+                 ],
                  "server_groups": ["0fd77252-4eef-4ec4-ae9b-e05dfc98aeac"]
              }
          ]
