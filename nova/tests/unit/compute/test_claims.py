@@ -213,6 +213,12 @@ class ClaimTestCase(test.NoDBTestCase):
         self._claim(root_gb=10, ephemeral_gb=40,
                     limits=limits)
 
+    def test_disk_oversubscription_scheduler_limits_object(self):
+        """Tests that the Claim code can handle a SchedulerLimits object"""
+        limits = objects.SchedulerLimits.from_dict({'disk_gb': 60})
+        self._claim(root_gb=10, ephemeral_gb=40,
+                    limits=limits)
+
     def test_disk_insufficient(self):
         limits = {'disk_gb': 45}
         self.assertRaisesRegex(
