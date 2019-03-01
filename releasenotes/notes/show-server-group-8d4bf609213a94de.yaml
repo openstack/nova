@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Starting with the 2.71 microversion the ``server_groups`` parameter will be
+    in the response body of the following APIs to list the server groups to
+    which the server belongs:
+
+    * ``GET /servers/{server_id}``
+    * ``PUT /servers/{server_id}``
+    * ``POST /servers/{server_id}/action (rebuild)``

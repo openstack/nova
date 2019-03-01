@@ -898,3 +898,14 @@ APIs:
 * GET /servers/{server_id}/os-interface (list)
 * GET /servers/{server_id}/os-interface/{port_id} (show)
 * POST /servers/{server_id}/os-interface (attach)
+
+2.71
+----
+
+The ``server_groups`` parameter will be in the response body of the following
+APIs to list the server groups to which the server belongs:
+
+* ``GET /servers/{server_id}``
+* ``PUT /servers/{server_id}``
+* ``POST /servers/{server_id}/action (rebuild)``
+

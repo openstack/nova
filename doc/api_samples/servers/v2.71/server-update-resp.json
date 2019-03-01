@@ -1,0 +1,62 @@
+{
+    "server": {
+        "OS-DCF:diskConfig": "AUTO",
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "80fe::",
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "version": 4
+                }
+            ]
+        },
+        "created": "2019-02-28T03:16:19Z",
+        "description": "Sample description",
+        "flavor": {
+            "disk": 1,
+            "ephemeral": 0,
+            "extra_specs": {},
+            "original_name": "m1.tiny",
+            "ram": 512,
+            "swap": 0,
+            "vcpus": 1
+        },
+        "hostId": "2091634baaccdc4c5a1d57069c833e402921df696b7f970791b12ec6",
+        "id": "60e840f8-dd17-476b-bd1d-33785066c496",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/60e840f8-dd17-476b-bd1d-33785066c496",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/60e840f8-dd17-476b-bd1d-33785066c496",
+                "rel": "bookmark"
+            }
+        ],
+        "locked": false,
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "name": "new-server-test",
+        "progress": 0,
+        "server_groups": [
+            "f3d86fe6-4246-4be8-b87c-eb894626c741"
+        ],
+        "status": "ACTIVE",
+        "tags": [],
+        "tenant_id": "6f70656e737461636b20342065766572",
+        "trusted_image_certificates": null,
+        "updated": "2019-02-28T03:16:19Z",
+        "user_id": "fake"
+    }
+}

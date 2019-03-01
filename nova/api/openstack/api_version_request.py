@@ -172,6 +172,9 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              condition in the deployment like an infrastructure failure.
     * 2.70 - Exposes virtual device tags in the response of the
              ``os-volume_attachments`` and ``os-interface`` APIs.
+    * 2.71 - Adds the ``server_groups`` field to ``GET /servers/{id}``,
+            ``PUT /servers/{server_id}`` and
+            ``POST /servers/{server_id}/action`` (rebuild) responses.
 """
 
 # The minimum and maximum versions of the API supported
@@ -180,7 +183,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.70"
+_MAX_API_VERSION = "2.71"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

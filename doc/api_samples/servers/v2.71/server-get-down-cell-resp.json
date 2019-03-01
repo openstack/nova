@@ -1,0 +1,32 @@
+{
+    "server": {
+        "OS-EXT-AZ:availability_zone": "UNKNOWN",
+        "OS-EXT-STS:power_state": 0,
+        "created": "2019-02-28T03:16:19Z",
+        "flavor": {
+            "disk": 1,
+            "ephemeral": 0,
+            "extra_specs": {},
+            "original_name": "m1.tiny",
+            "ram": 512,
+            "swap": 0,
+            "vcpus": 1
+        },
+        "id": "2669556b-b4a3-41f1-a0c1-f9c7ff75e53c",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "server_groups": [
+            "f3d86fe6-4246-4be8-b87c-eb894626c741"
+        ],
+        "status": "UNKNOWN",
+        "tenant_id": "project",
+        "user_id": "fake"
+    }
+}

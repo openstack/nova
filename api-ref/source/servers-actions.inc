@@ -613,6 +613,7 @@ Response
   - key_name: key_name_rebuild_resp
   - user_data: user_data_rebuild_resp
   - trusted_image_certificates: server_trusted_image_certificates_resp
+  - server_groups: server_groups_2_71
 
 **Example Rebuild Server (rebuild Action) (v2.63)**
 

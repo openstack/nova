@@ -425,11 +425,15 @@ class ServersController(wsgi.Controller):
         context.can(server_policies.SERVERS % 'show')
         cell_down_support = api_version_request.is_supported(
             req, min_version=PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION)
+        show_server_groups = api_version_request.is_supported(
+            req, min_version='2.71')
+
         instance = self._get_server(
             context, req, id, is_detail=True,
             cell_down_support=cell_down_support)
         return self._view_builder.show(
-            req, instance, cell_down_support=cell_down_support)
+            req, instance, cell_down_support=cell_down_support,
+            show_server_groups=show_server_groups)
 
     @staticmethod
     def _process_bdms_for_create(
@@ -779,6 +783,8 @@ class ServersController(wsgi.Controller):
         ctxt.can(server_policies.SERVERS % 'update',
                  target={'user_id': instance.user_id,
                          'project_id': instance.project_id})
+        show_server_groups = api_version_request.is_supported(
+                 req, min_version='2.71')
 
         server = body['server']
 
@@ -795,17 +801,19 @@ class ServersController(wsgi.Controller):
         try:
             instance = self.compute_api.update_instance(ctxt, instance,
                                                         update_dict)
-            return self._view_builder.show(req, instance,
-                                           extend_address=False,
-                                           show_AZ=False,
-                                           show_config_drive=False,
-                                           show_extended_attr=False,
-                                           show_host_status=False,
-                                           show_keypair=False,
-                                           show_srv_usg=False,
-                                           show_sec_grp=False,
-                                           show_extended_status=False,
-                                           show_extended_volumes=False)
+            return self._view_builder.show(
+                                      req, instance,
+                                      extend_address=False,
+                                      show_AZ=False,
+                                      show_config_drive=False,
+                                      show_extended_attr=False,
+                                      show_host_status=False,
+                                      show_keypair=False,
+                                      show_srv_usg=False,
+                                      show_sec_grp=False,
+                                      show_extended_status=False,
+                                      show_extended_volumes=False,
+                                      show_server_groups=show_server_groups)
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
@@ -1087,6 +1095,9 @@ class ServersController(wsgi.Controller):
         # from microversion 2.54 onwards.
         show_keypair = api_version_request.is_supported(
                            req, min_version='2.54')
+        show_server_groups = api_version_request.is_supported(
+                           req, min_version='2.71')
+
         view = self._view_builder.show(req, instance, extend_address=False,
                                        show_AZ=False,
                                        show_config_drive=False,
@@ -1096,7 +1107,8 @@ class ServersController(wsgi.Controller):
                                        show_srv_usg=False,
                                        show_sec_grp=False,
                                        show_extended_status=False,
-                                       show_extended_volumes=False)
+                                       show_extended_volumes=False,
+                                       show_server_groups=show_server_groups)
 
         # Add on the admin_password attribute since the view doesn't do it
         # unless instance passwords are disabled

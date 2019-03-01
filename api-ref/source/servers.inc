@@ -768,6 +768,7 @@ Response
   - description: server_description_resp
   - tags: tags
   - trusted_image_certificates: server_trusted_image_certificates_resp
+  - server_groups: server_groups_2_71
 
 **Example Show Server Details (2.63)**
 
@@ -859,6 +860,7 @@ Response
   - description: server_description_resp
   - tags: tags
   - trusted_image_certificates: server_trusted_image_certificates_resp
+  - server_groups: server_groups_2_71
 
 **Example Update Server (2.63)**
 

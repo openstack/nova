@@ -53,7 +53,8 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
                     avr.APIVersionRequest(min), avr.APIVersionRequest(max)):
                 return name
 
-    def _post_server(self, use_common_server_api_samples=True, name=None):
+    def _post_server(self, use_common_server_api_samples=True, name=None,
+                     extra_subs=None):
         # param use_common_server_api_samples: Boolean to set whether tests use
         # common sample files for server post request and response.
         # Default is True which means _get_sample_path method will fetch the
@@ -73,6 +74,8 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
                     '-[0-9a-f]{4}-[0-9a-f]{12}',
             'name': 'new-server-test' if name is None else name,
         }
+        if extra_subs:
+            subs.update(extra_subs)
 
         orig_value = self.__class__._use_common_server_api_samples
         try:
@@ -412,6 +415,99 @@ class ServersSampleJson269Test(ServersSampleBase):
             response = self._do_get('servers/%s' % uuid)
         subs = {'id': uuid}
         self._verify_response('server-get-resp', subs, response, 200)
+
+
+class ServersSampleJson271Test(ServersSampleBase):
+    microversion = '2.71'
+    scenarios = [('v2_71', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(ServersSampleJson271Test, self).setUp()
+        self.common_subs = {
+            'hostid': '[a-f0-9]+',
+            'instance_name': 'instance-\d{8}',
+            'hypervisor_hostname': r'[\w\.\-]+',
+            'hostname': r'[\w\.\-]+',
+            'access_ip_v4': '1.2.3.4',
+            'access_ip_v6': '80fe::',
+            'user_data': (self.user_data if six.PY2
+                          else self.user_data.decode('utf-8')),
+            'cdrive': '.*',
+        }
+
+        # create server group
+        subs = {'name': 'test'}
+        response = self._do_post('os-server-groups',
+                                 'server-groups-post-req', subs)
+        self.sg_uuid = self._verify_response('server-groups-post-resp',
+                                              subs, response, 200)
+
+    def _test_servers_post(self):
+        return self._post_server(
+            use_common_server_api_samples=False,
+            extra_subs={'sg_uuid': self.sg_uuid})
+
+    def test_servers_get_with_server_group(self):
+        uuid = self._test_servers_post()
+        response = self._do_get('servers/%s' % uuid)
+        subs = self.common_subs.copy()
+        subs['id'] = uuid
+        self._verify_response('server-get-resp', subs, response, 200)
+
+    def test_servers_update_with_server_groups(self):
+        uuid = self._test_servers_post()
+        subs = self.common_subs.copy()
+        subs['id'] = uuid
+        response = self._do_put('servers/%s' % uuid,
+                                'server-update-req', subs)
+        self._verify_response('server-update-resp', subs, response, 200)
+
+    def test_servers_rebuild_with_server_groups(self):
+        uuid = self._test_servers_post()
+        fakes.stub_out_key_pair_funcs(self)
+        image = fake.get_valid_image_id()
+        params = {
+            'uuid': image,
+            'name': 'foobar',
+            'key_name': 'new-key',
+            'description': 'description of foobar',
+            'pass': 'seekr3t',
+            'access_ip_v4': '1.2.3.4',
+            'access_ip_v6': '80fe::',
+        }
+        resp = self._do_post('servers/%s/action' % uuid,
+                             'server-action-rebuild', params)
+        subs = self.common_subs.copy()
+        subs.update(params)
+        subs['id'] = uuid
+        del subs['uuid']
+        self._verify_response('server-action-rebuild-resp', subs, resp, 202)
+
+    def test_server_get_from_down_cells(self):
+        def _fake_instancemapping_get_by_cell_and_project(*args, **kwargs):
+            # global cell based on which rest of the functions are stubbed out
+            cell_fixture = nova_fixtures.SingleCellSimple()
+            return [{
+                'id': 1,
+                'updated_at': None,
+                'created_at': None,
+                'instance_uuid': utils_fixture.uuidsentinel.inst,
+                'cell_id': 1,
+                'project_id': "6f70656e737461636b20342065766572",
+                'cell_mapping': cell_fixture._fake_cell_list()[0],
+                'queued_for_delete': False
+            }]
+
+        self.stub_out('nova.objects.InstanceMappingList.'
+            '_get_not_deleted_by_cell_and_project_from_db',
+            _fake_instancemapping_get_by_cell_and_project)
+
+        uuid = self._test_servers_post()
+        with nova_fixtures.DownCellFixture():
+            response = self._do_get('servers/%s' % uuid)
+        subs = {'id': uuid}
+        self._verify_response('server-get-down-cell-resp',
+                              subs, response, 200)
 
 
 class ServersUpdateSampleJsonTest(ServersSampleBase):
