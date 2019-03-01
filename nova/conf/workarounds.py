@@ -67,6 +67,13 @@ Interdependencies to other options:
     cfg.BoolOpt(
         'disable_libvirt_livesnapshot',
         default=False,
+        deprecated_for_removal=True,
+        deprecated_since='19.0.0',
+        deprecated_reason="""
+This option was added to work around issues with libvirt 1.2.2. We no longer
+support this version of libvirt, which means this workaround is no longer
+necessary. It will be removed in a future release.
+""",
         help="""
 Disable live snapshots when using the libvirt driver.
 

@@ -272,30 +272,6 @@ To disable injection in libvirt, set the following in ``nova.conf``:
    injection.
 
 
-Disable live snapshotting
--------------------------
-
-Problem
-~~~~~~~
-
-Administrators using libvirt version ``1.2.2`` may experience problems with
-live snapshot creation. Occasionally, libvirt version ``1.2.2`` fails to create
-live snapshots under the load of creating concurrent snapshot.
-
-Solution
-~~~~~~~~
-
-To effectively disable the libvirt live snapshotting, until the problem is
-resolved, configure the ``disable_libvirt_livesnapshot`` option.  You can turn
-off the live snapshotting mechanism by setting up its value to ``True`` in the
-``[workarounds]`` section of the ``nova.conf`` file:
-
-.. code-block:: ini
-
-   [workarounds]
-   disable_libvirt_livesnapshot = True
-
-
 Cannot find suitable emulator for x86_64
 ----------------------------------------
 

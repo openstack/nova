@@ -22236,7 +22236,6 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
     @mock.patch.object(host.Host, 'get_guest')
     @mock.patch.object(host.Host, 'write_instance_config')
     def test_failing_domain_not_found(self, mock_write_config, mock_get_guest):
-        self.flags(disable_libvirt_livesnapshot=False, group='workarounds')
         mock_dev = mock.Mock(spec=libvirt_guest.BlockDevice)
         mock_guest = mock.Mock(spec=libvirt_guest.Guest)
         mock_guest.get_power_state.return_value = power_state.RUNNING
@@ -22338,7 +22337,6 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
                                                  mock_version,
                                                  mock_resolve,
                                                  mock_snapshot):
-        self.flags(disable_libvirt_livesnapshot=False, group='workarounds')
         self.flags(images_type='rbd', group='libvirt')
         mock_guest = mock.Mock(spec=libvirt_guest.Guest)
         mock_guest._domain = mock.Mock()
@@ -22366,7 +22364,6 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
                                                            mock_resolve,
                                                            mock_find_disk,
                                                            mock_convert):
-        self.flags(disable_libvirt_livesnapshot=False, group='workarounds')
         self.flags(images_type='rbd', group='libvirt')
         rbd = mock_driver.return_value
         rbd.parent_info = mock.Mock(side_effect=exception.ImageUnacceptable(
