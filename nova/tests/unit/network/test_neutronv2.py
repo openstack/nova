@@ -1398,6 +1398,8 @@ class TestNeutronv2(TestNeutronv2Base):
     def _test_deallocate_port_for_instance(self, number):
         port_data = number == 1 and self.port_data1 or self.port_data2
         nets = number == 1 and self.nets1 or self.nets2
+        self.moxed_client.show_port(port_data[0]['id']).AndReturn(
+            {'port': port_data[0]})
         self.moxed_client.delete_port(port_data[0]['id'])
 
         net_info_cache = []
@@ -1443,8 +1445,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.ReplayAll()
 
         instance = self._fake_instance_object_with_info_cache(self.instance)
-        nwinfo = api.deallocate_port_for_instance(self.context, instance,
-                                                  port_data[0]['id'])
+        nwinfo, port_allocation = api.deallocate_port_for_instance(
+            self.context, instance, port_data[0]['id'])
         self.assertEqual(len(port_data[1:]), len(nwinfo))
         if len(port_data) > 1:
             self.assertEqual(uuids.my_netid2, nwinfo[0]['network']['id'])
@@ -3994,15 +3996,14 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
     def test_deallocate_port_for_instance_fails(self, mock_preexisting):
         mock_preexisting.return_value = []
         mock_client = mock.Mock()
+        mock_client.show_port.side_effect = exceptions.Unauthorized()
         api = neutronapi.API()
         with test.nested(
             mock.patch.object(neutronapi, 'get_client',
                               return_value=mock_client),
-            mock.patch.object(api, '_delete_ports',
-                              side_effect=exceptions.Unauthorized),
             mock.patch.object(api, 'get_instance_nw_info')
         ) as (
-            get_client, delete_ports, get_nw_info
+            get_client, get_nw_info
         ):
             self.assertRaises(exceptions.Unauthorized,
                               api.deallocate_port_for_instance,
@@ -4818,18 +4819,98 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
             id='2', preserve_on_delete=True), model.VIF(
             id='3', preserve_on_delete=True)]
         mock_client = mock.Mock()
+        mock_client.show_port.return_value = {'port': {}}
         mock_ntrn.return_value = mock_client
         vif = objects.VirtualInterface()
         vif.tag = 'foo'
         vif.destroy = mock.MagicMock()
         mock_get_vif_by_uuid.return_value = vif
-        self.api.deallocate_port_for_instance(mock.sentinel.ctx,
-                                              mock_inst, '2')
+        _, port_allocation = self.api.deallocate_port_for_instance(
+            mock.sentinel.ctx, mock_inst, '2')
         mock_unbind.assert_called_once_with(mock.sentinel.ctx, ['2'],
                                             mock_client)
         mock_get_vif_by_uuid.assert_called_once_with(mock.sentinel.ctx, '2')
         mock_del_nic_meta.assert_called_once_with(mock_inst, vif)
         vif.destroy.assert_called_once_with()
+        self.assertEqual({}, port_allocation)
+
+    @mock.patch('nova.network.neutronv2.api.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutronv2.api.API._delete_nic_metadata')
+    @mock.patch.object(objects.VirtualInterface, 'get_by_uuid')
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_deallocate_port_for_instance_port_with_allocation(
+            self, mock_get_client, mock_get_vif_by_uuid, mock_del_nic_meta,
+            mock_netinfo):
+        mock_inst = mock.Mock(project_id="proj-1",
+                              availability_zone='zone-1',
+                              uuid='inst-1')
+        mock_inst.get_network_info.return_value = [
+            model.VIF(id=uuids.port_uid, preserve_on_delete=True)
+        ]
+        vif = objects.VirtualInterface()
+        vif.tag = 'foo'
+        vif.destroy = mock.MagicMock()
+        mock_get_vif_by_uuid.return_value = vif
+
+        mock_client = mock.Mock()
+        mock_client.show_port.return_value = {
+            'port': {
+                'resource_request': {
+                    'resources': {
+                        'NET_BW_EGR_KILOBIT_PER_SEC': 1000
+                    }
+                },
+                'binding:profile': {
+                    'allocation': uuids.rp1
+                }
+            }
+        }
+        mock_get_client.return_value = mock_client
+
+        _, port_allocation = self.api.deallocate_port_for_instance(
+            mock.sentinel.ctx, mock_inst, uuids.port_id)
+
+        self.assertEqual(
+            {
+                uuids.rp1: {
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 1000
+                }
+            },
+            port_allocation)
+
+    @mock.patch('nova.network.neutronv2.api.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutronv2.api.API._delete_nic_metadata')
+    @mock.patch.object(objects.VirtualInterface, 'get_by_uuid')
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_deallocate_port_for_instance_port_already_deleted(
+            self, mock_get_client, mock_get_vif_by_uuid, mock_del_nic_meta,
+            mock_netinfo):
+        mock_inst = mock.Mock(project_id="proj-1",
+                              availability_zone='zone-1',
+                              uuid='inst-1')
+        network_info = [
+            model.VIF(
+                id=uuids.port_id, preserve_on_delete=True,
+                profile={'allocation': uuids.rp1})
+        ]
+        mock_inst.get_network_info.return_value = network_info
+        vif = objects.VirtualInterface()
+        vif.tag = 'foo'
+        vif.destroy = mock.MagicMock()
+        mock_get_vif_by_uuid.return_value = vif
+
+        mock_client = mock.Mock()
+        mock_client.show_port.side_effect = exception.PortNotFound(
+            port_id=uuids.port_id)
+        mock_get_client.return_value = mock_client
+
+        _, port_allocation = self.api.deallocate_port_for_instance(
+            mock.sentinel.ctx, mock_inst, uuids.port_id)
+
+        self.assertEqual({}, port_allocation)
+        self.assertIn(
+            'Resource allocation for this port may be leaked',
+            self.stdlog.logger.output)
 
     def test_delete_nic_metadata(self):
         vif = objects.VirtualInterface(address='aa:bb:cc:dd:ee:ff', tag='foo')

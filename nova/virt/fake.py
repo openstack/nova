@@ -193,10 +193,14 @@ class FakeDriver(driver.ComputeDriver):
               admin_password, allocations, network_info=None,
               block_device_info=None):
 
-        # simulate a real driver triggering the async network allocation as it
-        # might cause an error
         if network_info:
-            [ip for vif in network_info for ip in vif.fixed_ips()]
+            for vif in network_info:
+                # simulate a real driver triggering the async network
+                # allocation as it might cause an error
+                vif.fixed_ips()
+                # store the vif as attached so we can allow detaching it later
+                # with a detach_interface() call.
+                self._interfaces[vif['id']] = vif
 
         uuid = instance.uuid
         state = power_state.RUNNING

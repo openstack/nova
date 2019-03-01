@@ -10396,15 +10396,28 @@ class ComputeAPITestCase(BaseTestCase):
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
     def test_detach_interface(self, mock_notify):
         nwinfo, port_id = self.test_attach_interface()
-        self.stub_out('nova.network.api.API.'
-                       'deallocate_port_for_instance',
-                       lambda a, b, c, d: [])
         instance = self._create_fake_instance_obj()
         instance.info_cache = objects.InstanceInfoCache.new(
             self.context, uuids.info_cache_instance)
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
             nwinfo)
-        self.compute.detach_interface(self.context, instance, port_id)
+
+        port_allocation = {uuids.rp1: {'NET_BW_EGR_KILOBIT_PER_SEC': 10000}}
+        with test.nested(
+                mock.patch.object(
+                    self.compute.reportclient,
+                    'remove_resources_from_instance_allocation'),
+                mock.patch.object(self.compute.network_api,
+                    'deallocate_port_for_instance',
+                    return_value=([], port_allocation))) as (
+                mock_remove_alloc, mock_deallocate):
+            self.compute.detach_interface(self.context, instance, port_id)
+
+            mock_deallocate.assert_called_once_with(
+                self.context, instance, port_id)
+            mock_remove_alloc.assert_called_once_with(
+                self.context, instance.uuid, port_allocation)
+
         self.assertEqual(self.compute.driver._interfaces, {})
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, self.compute.host,

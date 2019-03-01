@@ -1670,9 +1670,32 @@ class API(base_api.NetworkAPI):
     def deallocate_port_for_instance(self, context, instance, port_id):
         """Remove a specified port from the instance.
 
-        Return network information for the instance
+        :param context: the request context
+        :param instance: the instance object the port is detached from
+        :param port_id: the UUID of the port being detached
+        :return: A NetworkInfo, port_allocation tuple where the
+                 port_allocation is a dict which contains the resource
+                 allocation of the port per resource provider uuid. E.g.:
+                 {
+                     rp_uuid: {
+                         NET_BW_EGR_KILOBIT_PER_SEC: 10000,
+                         NET_BW_IGR_KILOBIT_PER_SEC: 20000,
+                     }
+                 }
+                 Note that right now this dict only contains a single key as a
+                 neutron port only allocates from a single resource provider.
         """
         neutron = get_client(context)
+        port_allocation = {}
+        try:
+            # NOTE(gibi): we need to read the port resource information from
+            # neutron here as we might delete the port below
+            port = neutron.show_port(port_id)['port']
+        except exception.PortNotFound:
+            LOG.debug('Unable to determine port %s resource allocation '
+                      'information as the port no longer exists.', port_id)
+            port = None
+
         preexisting_ports = self._get_preexisting_port_ids(instance)
         if port_id in preexisting_ports:
             self._unbind_ports(context, [port_id], neutron)
@@ -1690,7 +1713,31 @@ class API(base_api.NetworkAPI):
             LOG.debug('VirtualInterface not found for port: %s',
                       port_id, instance=instance)
 
-        return self.get_instance_nw_info(context, instance)
+        if port:
+            # if there is resource associated to this port then that needs to
+            # be deallocated so lets return info about such allocation
+            resource_request = port.get('resource_request')
+            allocated_rp = port.get(BINDING_PROFILE, {}).get(ALLOCATION)
+            if resource_request and allocated_rp:
+                port_allocation = {
+                    allocated_rp: resource_request.get('resources', {})}
+        else:
+            # Check the info_cache. If the port is still in the info_cache and
+            # in that cache there is allocation in the profile then we suspect
+            # that the port is disappeared without deallocating the resources.
+            for vif in instance.get_network_info():
+                if vif['id'] == port_id:
+                    profile = vif.get('profile') or {}
+                    rp_uuid = profile.get(ALLOCATION)
+                    if rp_uuid:
+                        LOG.warning(
+                            'Port %s disappeared during deallocate but it had '
+                            'resource allocation on resource provider %s. '
+                            'Resource allocation for this port may be '
+                            'leaked.', port_id, rp_uuid, instance=instance)
+                    break
+
+        return self.get_instance_nw_info(context, instance), port_allocation
 
     def _delete_nic_metadata(self, instance, vif):
         for device in instance.device_metadata.devices:

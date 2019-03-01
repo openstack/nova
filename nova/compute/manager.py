@@ -5960,6 +5960,40 @@ class ComputeManager(manager.Manager):
         except exception.NotFound:
             pass
 
+    def _deallocate_port_for_instance(self, context, instance, port_id,
+                                      raise_on_failure=False):
+        try:
+            result = self.network_api.deallocate_port_for_instance(
+                context, instance, port_id)
+            __, port_allocation = result
+        except Exception as ex:
+            with excutils.save_and_reraise_exception(
+                    reraise=raise_on_failure):
+                LOG.warning('Failed to deallocate port %(port_id)s '
+                            'for instance. Error: %(error)s',
+                            {'port_id': port_id, 'error': ex},
+                            instance=instance)
+        else:
+            if port_allocation:
+                # Deallocate the resources in placement that were used by the
+                # detached port.
+                try:
+                    client = self.reportclient
+                    client.remove_resources_from_instance_allocation(
+                        context, instance.uuid, port_allocation)
+                except Exception as ex:
+                    # We always raise here as it is not a race condition where
+                    # somebody has already deleted the port we want to cleanup.
+                    # Here we see that the port exists, the allocation exists,
+                    # but we cannot clean it up so we will actually leak
+                    # allocations.
+                    with excutils.save_and_reraise_exception():
+                        LOG.warning('Failed to remove resource allocation '
+                                    'of port %(port_id)s for instance. Error: '
+                                    '%(error)s',
+                                    {'port_id': port_id, 'error': ex},
+                                    instance=instance)
+
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
@@ -6002,12 +6036,7 @@ class ComputeManager(manager.Manager):
                         "port %(port_id)s, reason: %(msg)s",
                         {'port_id': port_id, 'msg': ex},
                         instance=instance)
-            try:
-                self.network_api.deallocate_port_for_instance(
-                    context, instance, port_id)
-            except Exception:
-                LOG.warning("deallocate port %(port_id)s failed",
-                            {'port_id': port_id}, instance=instance)
+            self._deallocate_port_for_instance(context, instance, port_id)
 
             tb = traceback.format_exc()
             compute_utils.notify_about_instance_action(
@@ -6060,17 +6089,8 @@ class ComputeManager(manager.Manager):
                     instance=instance)
             raise exception.InterfaceDetachFailed(instance_uuid=instance.uuid)
         else:
-            try:
-                self.network_api.deallocate_port_for_instance(
-                    context, instance, port_id)
-            except Exception as ex:
-                with excutils.save_and_reraise_exception():
-                    # Since this is a cast operation, log the failure for
-                    # triage.
-                    LOG.warning('Failed to deallocate port %(port_id)s '
-                                'for instance. Error: %(error)s',
-                                {'port_id': port_id, 'error': ex},
-                                instance=instance)
+            self._deallocate_port_for_instance(
+                context, instance, port_id, raise_on_failure=True)
 
         compute_utils.notify_about_instance_action(
             context, instance, self.host,
@@ -8207,6 +8227,8 @@ class ComputeManager(manager.Manager):
                              instance=instance)
             elif event.name == 'network-vif-deleted':
                 try:
+                    # TODO(gibi): If the vif had resource allocation then
+                    # it needs to be deallocated in placement.
                     self._process_instance_vif_deleted_event(context,
                                                              instance,
                                                              event.tag)
