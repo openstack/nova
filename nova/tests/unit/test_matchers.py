@@ -452,7 +452,7 @@ class TestXMLMatchesUnorderedNodes(testtools.TestCase,
     ]
 
     describe_examples = [
-        ("/root: XML expected child element <text> not present at index 4",
+        ("/root: XML expected child element <text> not present",
          """<?xml version="1.0"?>
 <root>
   <text>some text here</text>
@@ -462,6 +462,134 @@ class TestXMLMatchesUnorderedNodes(testtools.TestCase,
     <child1>child 1</child1>
     <child2>child 2</child2>
     <child3>child 3</child3>
+  </children>
+</root>""", matches_matcher),
+    ]
+
+    str_examples = []
+
+
+class TestXMLMatchesOrderedMissingChildren(testtools.TestCase,
+                                           helpers.TestMatchersInterface):
+
+    matches_matcher = matchers.XMLMatches("""<?xml version="1.0"?>
+<root>
+  <children>
+    <child1 />
+    <child2>
+      <foo>subchild</foo>
+    </child2>
+  </children>
+</root>""", allow_mixed_nodes=False)
+
+    matches_matches = []
+
+    matches_mismatches = []
+
+    describe_examples = [
+        ("/root/children[0]/child2[1]: XML expected child element <foo> not "
+         "present at index 0",
+         """<?xml version="1.0"?>
+<root>
+  <children>
+    <child1 />
+    <child2 />
+  </children>
+</root>""", matches_matcher),
+    ]
+
+    str_examples = []
+
+
+class TestXMLMatchesUnorderedMissingChildren(testtools.TestCase,
+                                         helpers.TestMatchersInterface):
+
+    matches_matcher = matchers.XMLMatches("""<?xml version="1.0"?>
+<root>
+  <children>
+    <child1 />
+    <child2>
+      <foo>subchild</foo>
+    </child2>
+  </children>
+</root>""", allow_mixed_nodes=True)
+
+    matches_matches = []
+
+    matches_mismatches = []
+
+    describe_examples = [
+        ("/root/children[0]/child2[1]: XML expected child element <foo> not "
+         "present",
+         """<?xml version="1.0"?>
+<root>
+  <children>
+    <child1 />
+    <child2 />
+  </children>
+</root>""", matches_matcher),
+    ]
+
+    str_examples = []
+
+
+class TestXMLMatchesOrderedExtraChildren(testtools.TestCase,
+                                         helpers.TestMatchersInterface):
+
+    matches_matcher = matchers.XMLMatches("""<?xml version="1.0"?>
+<root>
+  <children>
+    <child1 />
+    <child2 />
+  </children>
+</root>""", allow_mixed_nodes=False)
+
+    matches_matches = []
+
+    matches_mismatches = []
+
+    describe_examples = [
+        ("/root/children[0]/child2[1]: XML unexpected child element <foo> "
+         "present at index 0",
+         """<?xml version="1.0"?>
+<root>
+  <children>
+    <child1 />
+    <child2>
+      <foo>subchild</foo>
+    </child2>
+  </children>
+</root>""", matches_matcher),
+    ]
+
+    str_examples = []
+
+
+class TestXMLMatchesUnorderedExtraChildren(testtools.TestCase,
+                                         helpers.TestMatchersInterface):
+
+    matches_matcher = matchers.XMLMatches("""<?xml version="1.0"?>
+<root>
+  <children>
+    <child1 />
+    <child2 />
+  </children>
+</root>""", allow_mixed_nodes=True)
+
+    matches_matches = []
+
+    matches_mismatches = []
+
+    describe_examples = [
+        ("/root/children[0]/child2[1]: XML unexpected child element <foo> "
+         "present at index 0",
+         """<?xml version="1.0"?>
+<root>
+  <children>
+    <child1 />
+    <child2>
+      <foo>subchild</foo>
+    </child2>
   </children>
 </root>""", matches_matcher),
     ]
