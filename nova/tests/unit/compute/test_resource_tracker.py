@@ -241,7 +241,8 @@ _MIGRATION_FIXTURES = {
         old_instance_type_id=1,
         new_instance_type_id=2,
         migration_type='resize',
-        status='migrating'
+        status='migrating',
+        uuid=uuids.source_only,
     ),
     # A migration that has only this compute node as the dest host
     'dest-only': objects.Migration(
@@ -254,7 +255,8 @@ _MIGRATION_FIXTURES = {
         old_instance_type_id=1,
         new_instance_type_id=2,
         migration_type='resize',
-        status='migrating'
+        status='migrating',
+        uuid=uuids.dest_only,
     ),
     # A migration that has this compute node as both the source and dest host
     'source-and-dest': objects.Migration(
@@ -267,7 +269,8 @@ _MIGRATION_FIXTURES = {
         old_instance_type_id=1,
         new_instance_type_id=2,
         migration_type='resize',
-        status='migrating'
+        status='migrating',
+        uuid=uuids.source_and_dest,
     ),
     # A migration that has this compute node as destination and is an evac
     'dest-only-evac': objects.Migration(
@@ -280,7 +283,8 @@ _MIGRATION_FIXTURES = {
         old_instance_type_id=2,
         new_instance_type_id=None,
         migration_type='evacuation',
-        status='pre-migrating'
+        status='pre-migrating',
+        uuid=uuids.dest_only_evac,
     ),
 }
 
@@ -2142,7 +2146,8 @@ class TestResize(BaseTestCase):
             old_instance_type_id=1,
             new_instance_type_id=2,
             migration_type='resize',
-            status='migrating'
+            status='migrating',
+            uuid=uuids.migration,
         )
         new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
 
@@ -2266,7 +2271,8 @@ class TestResize(BaseTestCase):
             old_instance_type_id=1,
             new_instance_type_id=2,
             migration_type='resize',
-            status='migrating'
+            status='migrating',
+            uuid=uuids.migration,
         )
         new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
 
@@ -2370,6 +2376,7 @@ class TestResize(BaseTestCase):
             migration_type='resize',
             status='migrating',
             instance=instance,
+            uuid=uuids.migration,
         )
         mig_context_obj = objects.MigrationContext(
             instance_uuid=instance.uuid,
@@ -2501,6 +2508,7 @@ class TestResize(BaseTestCase):
             migration_type='resize',
             status='migrating',
             instance=instance1,
+            uuid=uuids.migration1,
         )
         mig_context_obj1 = objects.MigrationContext(
             instance_uuid=instance1.uuid,
@@ -2532,6 +2540,7 @@ class TestResize(BaseTestCase):
             migration_type='resize',
             status='migrating',
             instance=instance1,
+            uuid=uuids.migration2,
         )
         mig_context_obj2 = objects.MigrationContext(
             instance_uuid=instance2.uuid,
@@ -2630,7 +2639,8 @@ class TestRebuild(BaseTestCase):
             source_compute='fake-other-compute',
             source_node='fake-other-node',
             status='accepted',
-            migration_type='evacuation'
+            migration_type='evacuation',
+            uuid=uuids.migration,
         )
         instance = objects.Instance(
             id=1,
