@@ -2048,6 +2048,7 @@ class API(base_api.NetworkAPI):
             tunneled_ = False
             vnic_type = network_model.VNIC_TYPE_NORMAL
             pci_request_id = None
+            requester_id = None
 
             if request_net.port_id:
                 result = self._get_port_vnic_info(
@@ -2057,6 +2058,9 @@ class API(base_api.NetworkAPI):
                     context, neutron, network_id)
 
                 if resource_request:
+                    # InstancePCIRequest.requester_id is semantically linked
+                    # to a port with a resource_request.
+                    requester_id = request_net.port_id
                     # NOTE(gibi): explicitly orphan the RequestGroup by setting
                     # context=None as we never intended to save it to the DB.
                     resource_requests.append(
@@ -2101,7 +2105,8 @@ class API(base_api.NetworkAPI):
                 request = objects.InstancePCIRequest(
                     count=1,
                     spec=[spec],
-                    request_id=uuidutils.generate_uuid())
+                    request_id=uuidutils.generate_uuid(),
+                    requester_id=requester_id)
                 pci_requests.requests.append(request)
                 pci_request_id = request.request_id
 

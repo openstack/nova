@@ -38,7 +38,8 @@ fake_pci_requests = [
                'device_id': '07B5'}],
      'alias_name': 'alias_2',
      'is_new': True,
-     'request_id': FAKE_REQUEST_UUID},
+     'request_id': FAKE_REQUEST_UUID,
+     'requester_id': uuids.requester_id},
  ]
 
 fake_legacy_pci_requests = [
@@ -117,6 +118,8 @@ class _TestInstancePCIRequests(object):
         self.assertEqual(FAKE_UUID, req.instance_uuid)
         self.assertEqual(2, len(req.requests))
         self.assertEqual('alias_1', req.requests[0].alias_name)
+        self.assertIsNone(None, req.requests[0].requester_id)
+        self.assertEqual(uuids.requester_id, req.requests[1].requester_id)
 
     def test_from_request_spec_instance_props(self):
         requests = objects.InstancePCIRequests(
@@ -158,6 +161,20 @@ class _TestInstancePCIRequests(object):
                                               version_manifest=versions)
 
         self.assertNotIn('request_id', primitive['nova_object.data'])
+
+    def test_obj_make_compatible_pre_1_3(self):
+        topo_obj = objects.InstancePCIRequest(
+            count=1,
+            spec=[{'vendor_id': '8086', 'device_id': '1502'}],
+            request_id=uuids.pci_request_id,
+            requester_id=uuids.requester_id,
+            numa_policy=fields.PCINUMAAffinityPolicy.PREFERRED)
+        versions = ovo_base.obj_tree_get_versions('InstancePCIRequest')
+        primitive = topo_obj.obj_to_primitive(target_version='1.2',
+                                              version_manifest=versions)
+
+        self.assertNotIn('requester_id', primitive['nova_object.data'])
+        self.assertIn('numa_policy', primitive['nova_object.data'])
 
 
 class TestInstancePCIRequests(test_objects._LocalTest,
