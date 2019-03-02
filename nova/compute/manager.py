@@ -7648,21 +7648,12 @@ class ComputeManager(manager.Manager):
             pass
 
     def _stop_unexpected_shutdown_instance(self, context, vm_state,
-                                           db_instance, orig_db_power_state,
-                                           vm_power_state):
+                                           db_instance, orig_db_power_state):
         # this is an exceptional case; make sure our data is up
         # to date before slamming through a power off
-        # TODO(jroll) remove the check for TypeError here;
-        # it's only here to be able to backport this without
-        # breaking out-of-tree drivers.
-        try:
-            vm_instance = self.driver.get_info(db_instance,
-                                               use_cache=False)
-            vm_power_state = vm_instance.state
-        except TypeError:
-            LOG.warning("Your virt driver appears to not support the "
-                        "'use_cache' parameter to the 'get_info' method; "
-                        "please update your virt driver.")
+        vm_instance = self.driver.get_info(db_instance,
+                                           use_cache=False)
+        vm_power_state = vm_instance.state
 
         # if it still looks off, go ahead and call stop()
         if vm_power_state in (power_state.SHUTDOWN,
@@ -7764,8 +7755,7 @@ class ComputeManager(manager.Manager):
             if vm_power_state in (power_state.SHUTDOWN,
                                   power_state.CRASHED):
                 self._stop_unexpected_shutdown_instance(
-                    context, vm_state, db_instance, orig_db_power_state,
-                    vm_power_state)
+                    context, vm_state, db_instance, orig_db_power_state)
             elif vm_power_state == power_state.SUSPENDED:
                 LOG.warning("Instance is suspended unexpectedly. Calling "
                             "the stop API.", instance=db_instance)
