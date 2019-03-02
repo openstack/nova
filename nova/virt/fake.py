@@ -355,7 +355,7 @@ class FakeDriver(driver.ComputeDriver):
             raise exception.InterfaceDetachFailed(
                     instance_uuid=instance.uuid)
 
-    def get_info(self, instance):
+    def get_info(self, instance, use_cache=True):
         if instance.uuid not in self.instances:
             raise exception.InstanceNotFound(instance_id=instance.uuid)
         i = self.instances[instance.uuid]

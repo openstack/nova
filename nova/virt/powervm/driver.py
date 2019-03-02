@@ -116,10 +116,11 @@ class PowerVMDriver(driver.ComputeDriver):
                  {'op': op, 'display_name': instance.display_name,
                   'name': instance.name}, instance=instance)
 
-    def get_info(self, instance):
+    def get_info(self, instance, use_cache=True):
         """Get the current status of an instance.
 
         :param instance: nova.objects.instance.Instance object
+        :param use_cache: unused in this driver
         :returns: An InstanceInfo object.
         """
         return vm.get_vm_info(self.adapter, instance)

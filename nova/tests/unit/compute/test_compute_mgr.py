@@ -1798,10 +1798,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                 power_state.RUNNING)
         mock_refresh.assert_called_once_with(use_slave=False)
 
+    @mock.patch.object(fake_driver.FakeDriver, 'get_info')
     @mock.patch.object(objects.Instance, 'refresh')
     @mock.patch.object(objects.Instance, 'save')
     def test_sync_instance_power_state_running_stopped(self, mock_save,
-                                                       mock_refresh):
+                                                       mock_refresh,
+                                                       mock_get_info):
+        mock_get_info.return_value = hardware.InstanceInfo(
+            state=power_state.SHUTDOWN)
         instance = self._get_sync_instance(power_state.RUNNING,
                                            vm_states.ACTIVE)
         self.compute._sync_instance_power_state(self.context, instance,
@@ -1809,11 +1813,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.assertEqual(instance.power_state, power_state.SHUTDOWN)
         mock_refresh.assert_called_once_with(use_slave=False)
         self.assertTrue(mock_save.called)
+        mock_get_info.assert_called_once_with(instance, use_cache=False)
 
-    def _test_sync_to_stop(self, power_state, vm_state, driver_power_state,
+    def _test_sync_to_stop(self, vm_power_state, vm_state, driver_power_state,
                            stop=True, force=False, shutdown_terminate=False):
         instance = self._get_sync_instance(
-            power_state, vm_state, shutdown_terminate=shutdown_terminate)
+            vm_power_state, vm_state, shutdown_terminate=shutdown_terminate)
 
         with test.nested(
             mock.patch.object(objects.Instance, 'refresh'),
@@ -1821,7 +1826,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(self.compute.compute_api, 'stop'),
             mock.patch.object(self.compute.compute_api, 'delete'),
             mock.patch.object(self.compute.compute_api, 'force_stop'),
-        ) as (mock_refresh, mock_save, mock_stop, mock_delete, mock_force):
+            mock.patch.object(self.compute.driver, 'get_info')
+        ) as (mock_refresh, mock_save, mock_stop, mock_delete, mock_force,
+              mock_get_info):
+            mock_get_info.return_value = hardware.InstanceInfo(
+                state=driver_power_state)
+
             self.compute._sync_instance_power_state(self.context, instance,
                                                     driver_power_state)
             if shutdown_terminate:
@@ -1831,6 +1841,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                     mock_force.assert_called_once_with(self.context, instance)
                 else:
                     mock_stop.assert_called_once_with(self.context, instance)
+                    if (vm_state == vm_states.ACTIVE and
+                            vm_power_state in (power_state.SHUTDOWN,
+                                               power_state.CRASHED)):
+                        mock_get_info.assert_called_once_with(instance,
+                                                              use_cache=False)
             mock_refresh.assert_called_once_with(use_slave=False)
             self.assertTrue(mock_save.called)
 

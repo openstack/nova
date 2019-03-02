@@ -122,7 +122,7 @@ class ZVMDriver(driver.ComputeDriver):
     def get_available_nodes(self, refresh=False):
         return self._hypervisor.get_available_nodes(refresh=refresh)
 
-    def get_info(self, instance):
+    def get_info(self, instance, use_cache=True):
         _guest = guest.Guest(self._hypervisor, instance)
         return _guest.get_info()
 
