@@ -1644,7 +1644,12 @@ aggregate_metadata_request:
     Metadata key and value pairs associated with the aggregate.
     The maximum size for each metadata key and value pair is 255 bytes.
 
-    .. warning:: You should not change or unset the availability zone of an
+    New keys will be added to existing aggregate metadata. For existing
+    keys, if the value is ``null`` the entry is removed, otherwise the
+    value is updated. Note that the special ``availability_zone`` metadata
+    entry cannot be unset to ``null``.
+
+    .. warning:: You should not change the availability zone of an
       aggregate when that aggregate has hosts which contain servers in it
       since that may impact the ability for those servers to move to another
       host.
