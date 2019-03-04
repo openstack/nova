@@ -297,6 +297,7 @@ class _TestNeutronv2Common(test.TestCase):
 
     def setUp(self):
         super(_TestNeutronv2Common, self).setUp()
+        self.api = neutronapi.API()
         self.context = context.RequestContext(
             'userid', uuids.my_tenant,
             auth_token='bff4a5a6b9eb4ea2a6efec6eefb77936')
@@ -486,6 +487,324 @@ class _TestNeutronv2Common(test.TestCase):
                objects.Instance(), fake_instance.fake_db_instance(**instance),
                expected_attrs=expected_attrs)
         return instance
+
+    @mock.patch.object(neutronapi.API, '_populate_neutron_extension_values')
+    @mock.patch.object(neutronapi.API, '_refresh_neutron_extensions_cache')
+    @mock.patch.object(neutronapi.API, 'get_instance_nw_info',
+                       return_value=None)
+    @mock.patch.object(neutronapi, 'get_client')
+    def _test_allocate_for_instance(self, mock_get_client, mock_get_nw,
+                                    mock_refresh, mock_populate, net_idx=1,
+                                    requested_networks=None, macs=None,
+                                    exception=None,
+                                    get_client_admin_call=True,
+                                    context=None,
+                                    **kwargs):
+        ctxt = context or self.context
+        original_macs = copy.copy(macs)
+        self.instance = self._fake_instance_object(self.instance)
+        self.instance2 = self._fake_instance_object(self.instance2)
+
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+
+        bind_host_id = kwargs.get('bind_host_id')
+
+        has_dns_extension = False
+        if kwargs.get('dns_extension'):
+            has_dns_extension = True
+            self.api.extensions[constants.DNS_INTEGRATION] = 1
+
+        # Net idx is 1-based for compatibility with existing unit tests
+        nets = self.nets[net_idx - 1]
+        ports = {}
+        fixed_ips = {}
+
+        if macs:
+            macs = set(macs)
+
+        req_net_ids = []
+        ordered_networks = []
+
+        expected_show_port_calls = self._stub_allocate_for_instance_show_port(
+            nets, ports, fixed_ips, macs, req_net_ids, ordered_networks,
+            requested_networks, mocked_client, **kwargs)
+
+        populate_values = []
+        update_port_values = []
+        try:
+            if kwargs.get('_break') == 'pre_list_networks':
+                raise test.TestingException()
+
+            expected_list_networks_calls = (
+                self._stub_allocate_for_instance_list_networks(
+                    req_net_ids, nets, mocked_client))
+
+            pre_create_port = (
+                kwargs.get('_break') == 'post_list_networks' or
+                ((requested_networks is None or
+                  requested_networks.as_tuples() == [(None, None, None)])
+                 and len(nets) > 1) or
+                kwargs.get('_break') == 'post_list_extensions')
+
+            if pre_create_port:
+                raise test.TestingException()
+
+            expected_create_port_calls = (
+                self._stub_allocate_for_instance_create_port(
+                    ordered_networks, fixed_ips, nets, mocked_client))
+
+            preexisting_port_ids = []
+            ports_in_requested_net_order = []
+            nets_in_requested_net_order = []
+            index = 0
+            expected_populate_calls = []
+            expected_update_port_calls = []
+            for request in ordered_networks:
+                index += 1
+                port_req_body = {
+                    'port': {
+                        'device_id': self.instance.uuid,
+                        'device_owner': 'compute:nova',
+                    },
+                }
+                # Network lookup for available network_id
+                network = None
+                for net in nets:
+                    if net['id'] == request.network_id:
+                        network = net
+                        break
+                # if net_id did not pass validate_networks() and not available
+                # here then skip it safely not continuing with a None Network
+                else:
+                    continue
+
+                populate_values.append(None)
+                expected_populate_calls.append(
+                    mock.call(mock.ANY, self.instance, mock.ANY, mock.ANY,
+                              network=network, neutron=mocked_client,
+                              bind_host_id=bind_host_id))
+
+                if macs:
+                    port_req_body['port']['mac_address'] = macs.pop()
+
+                if not request.port_id:
+                    port_id = uuids.fake
+                    update_port_res = {'port': {
+                        'id': port_id,
+                        'mac_address': 'fakemac%i' % index}}
+                    ports_in_requested_net_order.append(port_id)
+                    if kwargs.get('_break') == 'mac' + request.network_id:
+                        if populate_values:
+                            mock_populate.side_effect = populate_values
+                        if update_port_values:
+                            mocked_client.update_port.side_effect = (
+                                update_port_values)
+                        raise test.TestingException()
+                else:
+                    ports_in_requested_net_order.append(request.port_id)
+                    preexisting_port_ids.append(request.port_id)
+                    port_id = request.port_id
+                    update_port_res = {'port': ports[port_id]}
+
+                new_mac = port_req_body['port'].get('mac_address')
+                if new_mac:
+                    update_port_res['port']['mac_address'] = new_mac
+
+                update_port_values.append(update_port_res)
+                expected_update_port_calls.append(
+                    mock.call(port_id, port_req_body))
+
+                if has_dns_extension:
+                    if net_idx == 11:
+                        port_req_body_dns = {
+                            'port': {
+                                'dns_name': self.instance.hostname
+                            }
+                        }
+                        res_port_dns = {
+                            'port': {
+                                'id': ports_in_requested_net_order[-1]
+                            }
+                        }
+                        update_port_values.append(res_port_dns)
+                        expected_update_port_calls.append(
+                            mock.call(ports_in_requested_net_order[-1],
+                                      port_req_body_dns))
+                nets_in_requested_net_order.append(network)
+            mock_get_nw.return_value = self._returned_nw_info
+        except test.TestingException:
+            pass
+
+        mock_populate.side_effect = populate_values
+        mocked_client.update_port.side_effect = update_port_values
+
+        # Call the allocate_for_instance method
+        nw_info = None
+        if exception:
+            self.assertRaises(exception, self.api.allocate_for_instance,
+                              ctxt, self.instance, False,
+                              requested_networks, macs=original_macs,
+                              bind_host_id=bind_host_id)
+        else:
+            nw_info = self.api.allocate_for_instance(
+                ctxt, self.instance, False, requested_networks,
+                macs=original_macs, bind_host_id=bind_host_id)
+
+        if get_client_admin_call:
+            mock_get_client.assert_has_calls([
+                mock.call(ctxt), mock.call(ctxt, admin=True)],
+                any_order=True)
+        else:
+            mock_get_client.assert_called_once_with(mock.ANY)
+
+        mock_refresh.assert_not_called()
+
+        if requested_networks:
+            mocked_client.show_port.assert_has_calls(expected_show_port_calls)
+            self.assertEqual(len(expected_show_port_calls),
+                             mocked_client.show_port.call_count)
+
+        if kwargs.get('_break') == 'pre_list_networks':
+            return nw_info, mocked_client
+
+        mocked_client.list_networks.assert_has_calls(
+            expected_list_networks_calls)
+        self.assertEqual(len(expected_list_networks_calls),
+                         mocked_client.list_networks.call_count)
+
+        if pre_create_port:
+            return nw_info, mocked_client
+
+        mocked_client.create_port.assert_has_calls(
+            expected_create_port_calls)
+        self.assertEqual(len(expected_create_port_calls),
+                         mocked_client.create_port.call_count)
+
+        mocked_client.update_port.assert_has_calls(
+            expected_update_port_calls)
+        self.assertEqual(len(expected_update_port_calls),
+                         mocked_client.update_port.call_count)
+
+        mock_populate.assert_has_calls(expected_populate_calls)
+        self.assertEqual(len(expected_populate_calls),
+                         mock_populate.call_count)
+
+        if mock_get_nw.return_value is None:
+            mock_get_nw.assert_not_called()
+        else:
+            mock_get_nw.assert_called_once_with(
+                mock.ANY, self.instance, networks=nets_in_requested_net_order,
+                port_ids=ports_in_requested_net_order,
+                admin_client=mocked_client,
+                preexisting_port_ids=preexisting_port_ids, update_cells=True)
+
+        return nw_info, mocked_client
+
+    def _stub_allocate_for_instance_show_port(self, nets, ports, fixed_ips,
+            macs, req_net_ids, ordered_networks, requested_networks,
+            mocked_client, **kwargs):
+        expected_show_port_calls = []
+
+        if requested_networks:
+            show_port_values = []
+            for request in requested_networks:
+                if request.port_id:
+                    if request.port_id == uuids.portid_3:
+                        show_port_values.append(
+                            {'port': {'id': uuids.portid_3,
+                                      'network_id': uuids.my_netid1,
+                                      'tenant_id': self.tenant_id,
+                                      'mac_address': 'my_mac1',
+                                      'device_id': kwargs.get('_device') and
+                                                   self.instance2.uuid or
+                                                   ''}})
+                        ports[uuids.my_netid1] = [self.port_data1[0],
+                                            self.port_data3[0]]
+                        ports[request.port_id] = self.port_data3[0]
+                        request.network_id = uuids.my_netid1
+                        if macs is not None:
+                            macs.discard('my_mac1')
+                    elif request.port_id == uuids.non_existent_uuid:
+                        show_port_values.append(
+                            exceptions.PortNotFoundClient(status_code=404))
+                    else:
+                        show_port_values.append(
+                            {'port': {'id': uuids.portid_1,
+                                      'network_id': uuids.my_netid1,
+                                      'tenant_id': self.tenant_id,
+                                      'mac_address': 'my_mac1',
+                                      'device_id': kwargs.get('_device') and
+                                                   self.instance2.uuid or
+                                                   '',
+                                      'dns_name': kwargs.get('_dns_name') or
+                                                  ''}})
+                        ports[request.port_id] = self.port_data1[0]
+                        request.network_id = uuids.my_netid1
+                        if macs is not None:
+                            macs.discard('my_mac1')
+                    expected_show_port_calls.append(mock.call(request.port_id))
+                else:
+                    fixed_ips[request.network_id] = request.address
+                req_net_ids.append(request.network_id)
+                ordered_networks.append(request)
+            if show_port_values:
+                mocked_client.show_port.side_effect = show_port_values
+        else:
+            for n in nets:
+                ordered_networks.append(
+                    objects.NetworkRequest(network_id=n['id']))
+
+        return expected_show_port_calls
+
+    def _stub_allocate_for_instance_list_networks(self, req_net_ids, nets,
+                                                  mocked_client):
+        if req_net_ids:
+            expected_list_networks_calls = [mock.call(id=req_net_ids)]
+            mocked_client.list_networks.return_value = {'networks': nets}
+        else:
+            expected_list_networks_calls = [
+                mock.call(tenant_id=self.instance.project_id,
+                          shared=False),
+                mock.call(shared=True)]
+            mocked_client.list_networks.side_effect = [
+                {'networks': nets}, {'networks': []}]
+
+        return expected_list_networks_calls
+
+    def _stub_allocate_for_instance_create_port(self, ordered_networks,
+            fixed_ips, nets, mocked_client):
+        create_port_values = []
+        expected_create_port_calls = []
+        for request in ordered_networks:
+            if not request.port_id:
+                # Check network is available, skip if not
+                network = None
+                for net in nets:
+                    if net['id'] == request.network_id:
+                        network = net
+                        break
+                if network is None:
+                    continue
+
+                port_req_body_create = {'port': {'device_id':
+                                                 self.instance.uuid}}
+                request.address = fixed_ips.get(request.network_id)
+                if request.address:
+                    port_req_body_create['port']['fixed_ips'] = [
+                        {'ip_address': str(request.address)}]
+                port_req_body_create['port']['network_id'] = (
+                    request.network_id)
+                port_req_body_create['port']['admin_state_up'] = True
+                port_req_body_create['port']['tenant_id'] = (
+                    self.instance.project_id)
+                res_port = {'port': {'id': uuids.fake}}
+                expected_create_port_calls.append(
+                    mock.call(port_req_body_create))
+                create_port_values.append(res_port)
+        mocked_client.create_port.side_effect = create_port_values
+
+        return expected_create_port_calls
 
 
 class TestNeutronv2Base(_TestNeutronv2Common):
@@ -849,14 +1168,6 @@ class TestNeutronv2(TestNeutronv2Base):
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
         self._allocate_for_instance(1)
 
-    def test_allocate_for_instance_2(self):
-        # Allocate one port in two networks env.
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        api = self._stub_allocate_for_instance(net_idx=2)
-        self.assertRaises(exception.NetworkAmbiguous,
-                          api.allocate_for_instance,
-                          self.context, self.instance, False, None)
-
     def test_allocate_for_instance_accepts_macs_kwargs_None(self):
         # The macs kwarg should be accepted as None.
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
@@ -898,53 +1209,6 @@ class TestNeutronv2(TestNeutronv2Base):
                                     self.port_data1[0]['id']),
                          self._vifs_created[0].address)
 
-    @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
-    def test_allocate_for_instance_not_enough_macs_via_ports(self,
-                                                             mock_unbind):
-        # using a hypervisor MAC via a pre-created port will stop it being
-        # used to dynamically create a port on a network. We put the network
-        # first in requested_networks so that if the code were to not pre-check
-        # requested ports, it would incorrectly assign the mac and not fail.
-        requested_networks = objects.NetworkRequestList(
-            objects = [
-                objects.NetworkRequest(network_id=self.nets2[1]['id']),
-                objects.NetworkRequest(port_id=uuids.portid_1)])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        api = self._stub_allocate_for_instance(
-            net_idx=2, requested_networks=requested_networks,
-            macs=set(['my_mac1']),
-            _break='mac' + self.nets2[1]['id'])
-        self.assertRaises(exception.PortNotFree,
-                          api.allocate_for_instance, self.context,
-                          self.instance, False, requested_networks,
-                          macs=set(['my_mac1']))
-        mock_unbind.assert_called_once_with(self.context, [],
-                                            self.moxed_client, mock.ANY)
-
-    @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
-    def test_allocate_for_instance_not_enough_macs(self, mock_unbind):
-        # If not enough MAC addresses are available to allocate to networks, an
-        # error should be raised.
-        # We could pass in macs=set(), but that wouldn't tell us that
-        # allocate_for_instance tracks used macs properly, so we pass in one
-        # mac, and ask for two networks.
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=self.nets2[1]['id']),
-                     objects.NetworkRequest(network_id=self.nets2[0]['id'])])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        api = self._stub_allocate_for_instance(
-            net_idx=2, requested_networks=requested_networks,
-            macs=set(['my_mac2']),
-            _break='mac' + self.nets2[0]['id'])
-        with mock.patch.object(api, '_delete_ports'):
-            self.assertRaises(exception.PortNotFree,
-                              api.allocate_for_instance, self.context,
-                              self.instance, False,
-                              requested_networks=requested_networks,
-                              macs=set(['my_mac2']))
-        mock_unbind.assert_called_once_with(self.context, [],
-                                            self.moxed_client, mock.ANY)
-
     def test_allocate_for_instance_two_macs_two_networks(self):
         # If two MACs are available and two networks requested, two new ports
         # get made and no exceptions raised.
@@ -955,13 +1219,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self._allocate_for_instance(
             net_idx=2, requested_networks=requested_networks,
             macs=set(['my_mac2', 'my_mac1']))
-
-    def test_allocate_for_instance_without_requested_networks(self):
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        api = self._stub_allocate_for_instance(net_idx=3)
-        self.assertRaises(exception.NetworkAmbiguous,
-                          api.allocate_for_instance,
-                          self.context, self.instance, False, None)
 
     def test_allocate_for_instance_with_requested_non_available_network(self):
         """verify that a non available network is ignored.
@@ -1005,19 +1262,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertRaises(exception.SecurityGroupCannotBeApplied,
                           self._allocate_for_instance, net_idx=4,
                           _break='post_list_extensions')
-
-    def test_allocate_for_instance_with_invalid_network_id(self):
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(
-                network_id=uuids.non_existent_uuid)])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        api = self._stub_allocate_for_instance(net_idx=9,
-            requested_networks=requested_networks,
-            _break='post_list_networks')
-        self.assertRaises(exception.NetworkNotFound,
-                          api.allocate_for_instance,
-                          self.context, self.instance, False,
-                          requested_networks=requested_networks)
 
     def test_allocate_for_instance_with_requested_networks_with_fixedip(self):
         # specify only first and last network
@@ -1186,43 +1430,6 @@ class TestNeutronv2(TestNeutronv2Base):
         nw_info = self._allocate_for_instance()
         self.assertEqual([new_port], nw_info)
 
-    def test_allocate_for_instance_port_in_use(self):
-        # If a port is already in use, an exception should be raised.
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        api = self._stub_allocate_for_instance(
-            requested_networks=requested_networks,
-            _break='pre_list_networks',
-            _device=True)
-        self.assertRaises(exception.PortInUse,
-                          api.allocate_for_instance, self.context,
-                          self.instance, False, requested_networks)
-
-    def test_allocate_for_instance_port_not_found(self):
-        # If a port is not found, an exception should be raised.
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=uuids.non_existent_uuid)])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        api = self._stub_allocate_for_instance(
-            requested_networks=requested_networks,
-            _break='pre_list_networks')
-        self.assertRaises(exception.PortNotFound,
-                          api.allocate_for_instance, self.context,
-                          self.instance, False, requested_networks)
-
-    def test_allocate_for_instance_port_invalid_tenantid(self):
-        self.tenant_id = 'invalid_id'
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        api = self._stub_allocate_for_instance(
-            requested_networks=requested_networks,
-            _break='pre_list_networks')
-        self.assertRaises(exception.PortNotUsable,
-                          api.allocate_for_instance, self.context,
-                          self.instance, False, requested_networks)
-
     def test_allocate_for_instance_with_externalnet_forbidden(self):
         """Only one network is available, it's external, and the client
            is unauthorized to use it.
@@ -1265,23 +1472,6 @@ class TestNeutronv2(TestNeutronv2Base):
             exception.NetworkAmbiguous,
             api.allocate_for_instance,
             self.context, self.instance, False, None)
-
-    def test_allocate_for_instance_with_externalnet_admin_ctx(self):
-        """Only one network is available, it's external, and the client
-           is authorized.
-        """
-        admin_ctx = context.RequestContext('userid', uuids.my_tenant,
-                                           is_admin=True)
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        api = self._stub_allocate_for_instance(net_idx=8)
-        api.allocate_for_instance(admin_ctx, self.instance, False, None)
-
-    def test_allocate_for_instance_with_external_shared_net(self):
-        """Only one network is available, it's external and shared."""
-        ctx = context.RequestContext('userid', uuids.my_tenant)
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        api = self._stub_allocate_for_instance(net_idx=10)
-        api.allocate_for_instance(ctx, self.instance, False, None)
 
     def _deallocate_for_instance(self, number, requested_networks=None):
         # TODO(mriedem): Remove this conversion when all neutronv2 APIs are
@@ -3092,10 +3282,6 @@ class TestNeutronv2(TestNeutronv2Base):
 class TestNeutronv2WithMock(_TestNeutronv2Common):
     """Used to test Neutron V2 API with mock."""
 
-    def setUp(self):
-        super(TestNeutronv2WithMock, self).setUp()
-        self.api = neutronapi.API()
-
     @mock.patch.object(db_api, 'instance_info_cache_get')
     @mock.patch.object(db_api, 'instance_info_cache_update',
                        return_value=fake_info_cache)
@@ -3419,6 +3605,106 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
             expected_list_ports_calls)
         self.assertEqual(len(expected_list_ports_calls),
                          mocked_client.list_ports.call_count)
+
+    def test_allocate_for_instance_2(self):
+        # Allocate one port in two networks env.
+        self._test_allocate_for_instance(
+            net_idx=2, exception=exception.NetworkAmbiguous,
+            get_client_admin_call=False)
+
+    @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
+    def test_allocate_for_instance_not_enough_macs_via_ports(self,
+                                                             mock_unbind):
+        # using a hypervisor MAC via a pre-created port will stop it being
+        # used to dynamically create a port on a network. We put the network
+        # first in requested_networks so that if the code were to not pre-check
+        # requested ports, it would incorrectly assign the mac and not fail.
+        requested_networks = objects.NetworkRequestList(
+            objects = [
+                objects.NetworkRequest(network_id=self.nets2[1]['id']),
+                objects.NetworkRequest(port_id=uuids.portid_1)])
+        _, mocked_client = self._test_allocate_for_instance(
+            net_idx=2, requested_networks=requested_networks,
+            macs=set(['my_mac1']), exception=exception.PortNotFree,
+            _break='mac' + self.nets2[1]['id'])
+        mock_unbind.assert_called_once_with(self.context, [],
+                                            mocked_client, mock.ANY)
+
+    @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
+    def test_allocate_for_instance_not_enough_macs(self, mock_unbind):
+        # If not enough MAC addresses are available to allocate to networks, an
+        # error should be raised.
+        # We could pass in macs=set(), but that wouldn't tell us that
+        # allocate_for_instance tracks used macs properly, so we pass in one
+        # mac, and ask for two networks.
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=self.nets2[1]['id']),
+                     objects.NetworkRequest(network_id=self.nets2[0]['id'])])
+        with mock.patch.object(neutronapi.API, '_delete_ports'):
+            _, mocked_client = self._test_allocate_for_instance(
+                net_idx=2, requested_networks=requested_networks,
+                macs=set(['my_mac2']), exception=exception.PortNotFree,
+                _break='mac' + self.nets2[0]['id'])
+        mock_unbind.assert_called_once_with(self.context, [],
+                                            mocked_client, mock.ANY)
+
+    def test_allocate_for_instance_without_requested_networks(self):
+        self._test_allocate_for_instance(
+            net_idx=3, exception=exception.NetworkAmbiguous,
+            get_client_admin_call=False)
+
+    def test_allocate_for_instance_with_invalid_network_id(self):
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(
+                network_id=uuids.non_existent_uuid)])
+        self._test_allocate_for_instance(net_idx=9,
+            requested_networks=requested_networks,
+            exception=exception.NetworkNotFound,
+            get_client_admin_call=False,
+            _break='post_list_networks')
+
+    def test_allocate_for_instance_port_in_use(self):
+        # If a port is already in use, an exception should be raised.
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
+        self._test_allocate_for_instance(
+            requested_networks=requested_networks,
+            exception=exception.PortInUse,
+            get_client_admin_call=False,
+            _break='pre_list_networks', _device=True)
+
+    def test_allocate_for_instance_port_not_found(self):
+        # If a port is not found, an exception should be raised.
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=uuids.non_existent_uuid)])
+        self._test_allocate_for_instance(
+            requested_networks=requested_networks,
+            exception=exception.PortNotFound,
+            get_client_admin_call=False,
+            _break='pre_list_networks')
+
+    def test_allocate_for_instance_port_invalid_tenantid(self):
+        self.tenant_id = 'invalid_id'
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
+        self._test_allocate_for_instance(
+            requested_networks=requested_networks,
+            exception=exception.PortNotUsable,
+            get_client_admin_call=False,
+            _break='pre_list_networks')
+
+    def test_allocate_for_instance_with_externalnet_admin_ctx(self):
+        """Only one network is available, it's external, and the client
+           is authorized.
+        """
+        admin_ctx = context.RequestContext('userid', uuids.my_tenant,
+                                           is_admin=True)
+        self._test_allocate_for_instance(net_idx=8, context=admin_ctx)
+
+    def test_allocate_for_instance_with_external_shared_net(self):
+        """Only one network is available, it's external and shared."""
+        ctx = context.RequestContext('userid', uuids.my_tenant)
+        self._test_allocate_for_instance(net_idx=10, context=ctx)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_trusted(self, mock_get_client):
