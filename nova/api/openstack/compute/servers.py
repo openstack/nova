@@ -641,6 +641,8 @@ class ServersController(wsgi.Controller):
                 exception.AutoDiskConfigDisabledByImage,
                 exception.ImageCPUPinningForbidden,
                 exception.ImageCPUThreadPolicyForbidden,
+                exception.InvalidCPUAllocationPolicy,
+                exception.InvalidCPUThreadAllocationPolicy,
                 exception.ImageNUMATopologyIncomplete,
                 exception.ImageNUMATopologyForbidden,
                 exception.ImageNUMATopologyAsymmetric,
