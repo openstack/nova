@@ -285,3 +285,12 @@ systems. However, to use the VFAT format, add the following line to the
    config_drive_format=vfat
 
 If you choose VFAT, the configuration drive is 64 MB.
+
+.. deprecated:: 19.0.0
+
+   The :oslo.config:option:`config_drive_format` option was deprecated in 19.0.0
+   (Stein). The option was originally added as a workaround for a bug in
+   libvirt, `#1246201`__, that was resolved in libvirt v1.2.17. As a result,
+   this option is no longer necessary or useful.
+
+   __ https://bugs.launchpad.net/nova/+bug/1246201
