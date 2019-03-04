@@ -49,6 +49,11 @@ You can now confirm the resize to change the status to ``ACTIVE``:
 
    $ openstack server resize --confirm SERVER
 
+.. note::
+
+  The resized server may be automatically confirmed based on
+  the administrator's configuration of the deployment.
+
 If the resize fails or does not work as expected, you can revert the resize.
 This will revert the instance to the old flavor and change the status to
 ``ACTIVE``:
