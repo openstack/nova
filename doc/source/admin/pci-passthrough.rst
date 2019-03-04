@@ -70,8 +70,7 @@ Configure nova-api (Controller)
       [pci]
       alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
 
-   For more information about the syntax of ``alias``, refer to
-   :doc:`/configuration/config`.
+   Refer to :oslo.config:option:`pci.alias` for syntax information.
 
 #. Restart the ``nova-api`` service.
 
@@ -86,7 +85,7 @@ Configure a flavor to request two PCI devices, each with ``vendor_id`` of
    # openstack flavor set m1.large --property "pci_passthrough:alias"="a1:2"
 
 For more information about the syntax for ``pci_passthrough:alias``, refer to
-:doc:`/user/flavors`.
+:ref:`Flavors <extra-spec-pci-passthrough>`.
 
 Enable PCI passthrough (Compute)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -137,8 +136,8 @@ Configure PCI devices (Compute)
    All PCI devices matching the ``vendor_id`` and ``product_id`` are added to
    the pool of PCI devices available for passthrough to VMs.
 
-   For more information about the syntax of ``passthrough_whitelist``,
-   refer to :doc:`/configuration/config`.
+   Refer to :oslo.config:option:`pci.passthrough_whitelist` for syntax
+   information.
 
 #. Specify the PCI alias for the device.
 
@@ -156,7 +155,7 @@ Configure PCI devices (Compute)
       [pci]
       alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
 
-   For more information about the syntax of ``alias``, refer to :doc:`/configuration/config`.
+   Refer to :oslo.config:option:`pci.alias` for syntax information.
 
 #. Restart the ``nova-compute`` service.
 
