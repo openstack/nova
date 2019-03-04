@@ -822,117 +822,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
 
-    def _test_deallocate_port_for_instance(self, number):
-        port_data = number == 1 and self.port_data1 or self.port_data2
-        nets = number == 1 and self.nets1 or self.nets2
-        self.moxed_client.show_port(port_data[0]['id']).AndReturn(
-            {'port': port_data[0]})
-        self.moxed_client.delete_port(port_data[0]['id'])
-
-        net_info_cache = []
-        for port in port_data:
-            net_info_cache.append({"network": {"id": port['network_id']},
-                                   "id": port['id']})
-        self.instance['info_cache'] = self._fake_instance_info_cache(
-            net_info_cache, self.instance['uuid'])
-        api = neutronapi.API()
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(
-            self.moxed_client)
-        self.moxed_client.list_ports(
-            tenant_id=self.instance['project_id'],
-            device_id=self.instance['uuid']).AndReturn(
-                {'ports': port_data[1:]})
-        net_ids = [port['network_id'] for port in port_data]
-        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
-            self.moxed_client)
-        if number == 2:
-            neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
-                self.moxed_client)
-            self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
-            api._get_physnet_tunneled_info(
-                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
-                    (None, False))
-        self.moxed_client.list_networks(id=net_ids).AndReturn(
-            {'networks': nets})
-        float_data = number == 1 and self.float_data1 or self.float_data2
-        for data in port_data[1:]:
-            for ip in data['fixed_ips']:
-                self.moxed_client.list_floatingips(
-                    fixed_ip_address=ip['ip_address'],
-                    port_id=data['id']).AndReturn(
-                        {'floatingips': float_data[1:]})
-        for port in port_data[1:]:
-            self.moxed_client.list_subnets(id=['my_subid2']).AndReturn({})
-
-        self.mox.StubOutWithMock(api.db, 'instance_info_cache_get')
-        api.db.instance_info_cache_get(mox.IgnoreArg(),
-                                       self.instance['uuid']).AndReturn(
-                                           self.instance['info_cache'])
-
-        self.mox.ReplayAll()
-
-        instance = self._fake_instance_object_with_info_cache(self.instance)
-        nwinfo, port_allocation = api.deallocate_port_for_instance(
-            self.context, instance, port_data[0]['id'])
-        self.assertEqual(len(port_data[1:]), len(nwinfo))
-        if len(port_data) > 1:
-            self.assertEqual(uuids.my_netid2, nwinfo[0]['network']['id'])
-
-    def test_deallocate_port_for_instance_1(self):
-        # Test to deallocate the first and only port
-        self._test_deallocate_port_for_instance(1)
-
-    def test_deallocate_port_for_instance_2(self):
-        # Test to deallocate the first port of two
-        self._test_deallocate_port_for_instance(2)
-
-    def test_list_ports(self):
-        search_opts = {'parm': 'value'}
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_ports(**search_opts)
-        self.mox.ReplayAll()
-        neutronapi.API().list_ports(self.context, **search_opts)
-
-    def test_show_port(self):
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.show_port('foo').AndReturn(
-                {'port': self.port_data1[0]})
-        self.mox.ReplayAll()
-        neutronapi.API().show_port(self.context, 'foo')
-
-    def test_validate_networks(self):
-        requested_networks = [(uuids.my_netid1, None, None, None),
-                              (uuids.my_netid2, None, None, None)]
-        ids = [uuids.my_netid1, uuids.my_netid2]
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_networks(
-            id=mox.SameElementsAs(ids)).AndReturn(
-                {'networks': self.nets2})
-        self.moxed_client.show_quota(
-            uuids.my_tenant).AndReturn(
-                    {'quota': {'port': 50}})
-        self.moxed_client.list_ports(
-            tenant_id=uuids.my_tenant, fields=['id']).AndReturn(
-                    {'ports': []})
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        api.validate_networks(self.context, requested_networks, 1)
-
-    def test_validate_networks_without_port_quota_on_network_side(self):
-        requested_networks = [(uuids.my_netid1, None, None, None),
-                              (uuids.my_netid2, None, None, None)]
-        ids = [uuids.my_netid1, uuids.my_netid2]
-        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
-        self.moxed_client.list_networks(
-            id=mox.SameElementsAs(ids)).AndReturn(
-                {'networks': self.nets2})
-        self.moxed_client.show_quota(
-            uuids.my_tenant).AndReturn(
-                    {'quota': {}})
-        self.mox.ReplayAll()
-        api = neutronapi.API()
-        api.validate_networks(self.context, requested_networks, 1)
-
     def test_validate_networks_ex_1(self):
         requested_networks = [(uuids.my_netid1, None, None, None)]
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
@@ -3387,6 +3276,148 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         mocked_client.delete_port.assert_has_calls(expected_delete_port_calls)
         self.assertEqual(len(expected_delete_port_calls),
                          mocked_client.delete_port.call_count)
+
+    @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info',
+                       return_value=(None, False))
+    @mock.patch.object(db_api, 'instance_info_cache_get')
+    @mock.patch.object(neutronapi, 'get_client')
+    def _test_deallocate_port_for_instance(self, number, mock_get_client,
+                                           mock_cache_get, mock_get_physnet):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+
+        port_data = number == 1 and self.port_data1 or self.port_data2
+        nets = number == 1 and self.nets1 or self.nets2
+        mocked_client.show_port.return_value = {'port': port_data[0]}
+
+        net_info_cache = []
+        for port in port_data:
+            net_info_cache.append({"network": {"id": port['network_id']},
+                                   "id": port['id']})
+        self.instance['info_cache'] = self._fake_instance_info_cache(
+            net_info_cache, self.instance['uuid'])
+        mocked_client.list_ports.return_value = {'ports': port_data[1:]}
+        net_ids = [port['network_id'] for port in port_data]
+        mocked_client.list_networks.return_value = {'networks': nets}
+
+        list_floatingips_values = []
+        expected_list_floatingips_calls = []
+        float_data = number == 1 and self.float_data1 or self.float_data2
+        for data in port_data[1:]:
+            for ip in data['fixed_ips']:
+                list_floatingips_values.append({'floatingips': float_data[1:]})
+                expected_list_floatingips_calls.append(
+                    mock.call(fixed_ip_address=ip['ip_address'],
+                              port_id=data['id']))
+        mocked_client.list_floatingips.side_effect = list_floatingips_values
+
+        mocked_client.list_subnets.return_value = {}
+        expected_list_subnets_calls = []
+        for port in port_data[1:]:
+            expected_list_subnets_calls.append(mock.call(id=['my_subid2']))
+
+        mock_cache_get.return_value = self.instance['info_cache']
+
+        instance = self._fake_instance_object_with_info_cache(self.instance)
+        nwinfo, port_allocation = self.api.deallocate_port_for_instance(
+            self.context, instance, port_data[0]['id'])
+        self.assertEqual(len(port_data[1:]), len(nwinfo))
+        if len(port_data) > 1:
+            self.assertEqual(uuids.my_netid2, nwinfo[0]['network']['id'])
+
+        mocked_client.delete_port.assert_called_once_with(port_data[0]['id'])
+        mocked_client.show_port.assert_called_once_with(port_data[0]['id'])
+        expected_get_client_calls = [
+            mock.call(self.context), mock.call(self.context, admin=True)]
+        if number == 2:
+            expected_get_client_calls.append(mock.call(self.context,
+                                                       admin=True))
+        mock_get_client.assert_has_calls(expected_get_client_calls,
+                                         any_order=True)
+        mocked_client.list_ports.assert_called_once_with(
+            tenant_id=self.instance['project_id'],
+            device_id=self.instance['uuid'])
+        mocked_client.list_networks.assert_called_once_with(id=net_ids)
+        mocked_client.list_floatingips.assert_has_calls(
+            expected_list_floatingips_calls)
+        self.assertEqual(len(expected_list_floatingips_calls),
+                         mocked_client.list_floatingips.call_count)
+        mock_cache_get.assert_called_once_with(mock.ANY, self.instance['uuid'])
+        mocked_client.list_subnets.assert_has_calls(
+            expected_list_subnets_calls)
+        self.assertEqual(len(expected_list_subnets_calls),
+                         mocked_client.list_subnets.call_count)
+        if number == 2:
+            mock_get_physnet.assert_called_once_with(mock.ANY, mock.ANY,
+                                                     mock.ANY)
+        else:
+            mock_get_physnet.assert_not_called()
+
+    def test_deallocate_port_for_instance_1(self):
+        # Test to deallocate the first and only port
+        self._test_deallocate_port_for_instance(1)
+
+    def test_deallocate_port_for_instance_2(self):
+        # Test to deallocate the first port of two
+        self._test_deallocate_port_for_instance(2)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_list_ports(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        search_opts = {'parm': 'value'}
+
+        self.api.list_ports(self.context, **search_opts)
+
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_ports.assert_called_once_with(**search_opts)
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_show_port(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        mocked_client.show_port.return_value = {'port': self.port_data1[0]}
+
+        self.api.show_port(self.context, 'foo')
+
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.show_port.assert_called_once_with('foo')
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks(self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        requested_networks = [(uuids.my_netid1, None, None, None),
+                              (uuids.my_netid2, None, None, None)]
+        ids = [uuids.my_netid1, uuids.my_netid2]
+        mocked_client.list_networks.return_value = {'networks': self.nets2}
+        mocked_client.show_quota.return_value = {'quota': {'port': 50}}
+        mocked_client.list_ports.return_value = {'ports': []}
+
+        self.api.validate_networks(self.context, requested_networks, 1)
+
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_called_once_with(id=ids)
+        mocked_client.show_quota.assert_called_once_with(uuids.my_tenant)
+        mocked_client.list_ports.assert_called_once_with(
+            tenant_id=uuids.my_tenant, fields=['id'])
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_validate_networks_without_port_quota_on_network_side(
+            self, mock_get_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        requested_networks = [(uuids.my_netid1, None, None, None),
+                              (uuids.my_netid2, None, None, None)]
+        ids = [uuids.my_netid1, uuids.my_netid2]
+        mocked_client.list_networks.return_value = {'networks': self.nets2}
+        mocked_client.show_quota.return_value = {'quota': {}}
+
+        self.api.validate_networks(self.context, requested_networks, 1)
+
+        mock_get_client.assert_called_once_with(self.context)
+        mocked_client.list_networks.assert_called_once_with(id=ids)
+        mocked_client.show_quota.assert_called_once_with(uuids.my_tenant)
 
     def test_allocate_for_instance_with_requested_networks_duplicates(self):
         # specify a duplicate network to allocate to instance
