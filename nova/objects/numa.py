@@ -137,19 +137,23 @@ class NUMACell(base.NovaObject):
                    cpu_usage=cpu_usage, memory_usage=memory_usage,
                    mempages=[], pinned_cpus=set([]), siblings=[])
 
-    def can_fit_hugepages(self, pagesize, memory):
-        """Returns whether memory can fit into hugepages size
+    def can_fit_pagesize(self, pagesize, memory, use_free=True):
+        """Returns whether memory can fit into a given pagesize.
 
         :param pagesize: a page size in KibB
         :param memory: a memory size asked to fit in KiB
+        :param use_free: if true, assess based on free memory rather than total
+            memory. This means overcommit is not allowed, which should be the
+            case for hugepages since these are memlocked by the kernel and
+            can't be swapped out.
 
         :returns: whether memory can fit in hugepages
         :raises: MemoryPageSizeNotSupported if page size not supported
         """
         for pages in self.mempages:
+            avail_kb = pages.free_kb if use_free else pages.total_kb
             if pages.size_kb == pagesize:
-                return (memory <= pages.free_kb and
-                        (memory % pages.size_kb) == 0)
+                return memory <= avail_kb and (memory % pages.size_kb) == 0
         raise exception.MemoryPageSizeNotSupported(pagesize=pagesize)
 
 
@@ -192,6 +196,11 @@ class NUMAPagesTopology(base.NovaObject):
     def free_kb(self):
         """Returns the avail memory size in KiB."""
         return self.free * self.size_kb
+
+    @property
+    def total_kb(self):
+        """Returns the total memory size in KiB."""
+        return self.total * self.size_kb
 
 
 @base.NovaObjectRegistry.register
