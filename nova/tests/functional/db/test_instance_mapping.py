@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
 
@@ -195,6 +196,15 @@ class InstanceMappingTestCase(test.NoDBTestCase):
         # Four non-deleted instances
         self.assertEqual(4, len(
             [im for im in mappings if im.queued_for_delete is False]))
+
+        # Run it again to make sure we don't query the cell database for
+        # instances if we didn't get any un-migrated mappings.
+        with mock.patch('nova.objects.InstanceList.get_by_filters',
+                        new_callable=mock.NonCallableMock):
+            done, total = instance_mapping.populate_queued_for_delete(
+                self.context, 1000)
+        self.assertEqual(0, done)
+        self.assertEqual(0, total)
 
 
 class InstanceMappingListTestCase(test.NoDBTestCase):

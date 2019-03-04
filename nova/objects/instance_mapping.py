@@ -161,12 +161,14 @@ def populate_queued_for_delete(context, max_count):
             # have not yet received a defined value decision for
             # queued_for_delete
             context.session.query(api_models.InstanceMapping)
-            .options(joinedload('cell_mapping'))
             .filter(
                 api_models.InstanceMapping.queued_for_delete == None)  # noqa
             .filter(api_models.InstanceMapping.cell_id == cell.id)
             .limit(max_count).all())
         ims_by_inst = {im.instance_uuid: im for im in ims}
+        if not ims_by_inst:
+            # If there is nothing from this cell to migrate, move on.
+            continue
         with nova_context.target_cell(context, cell) as cctxt:
             filters = {'uuid': list(ims_by_inst.keys()),
                        'deleted': True,
