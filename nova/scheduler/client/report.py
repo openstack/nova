@@ -1952,12 +1952,15 @@ class SchedulerReportClient(object):
         return r.status_code == 204
 
     @safe_connect
-    def delete_allocation_for_instance(self, context, uuid):
+    def delete_allocation_for_instance(self, context, uuid,
+                                       consumer_type='instance'):
         """Delete the instance allocation from placement
 
         :param context: The security context
-        :param uuid: the instance UUID which will be used as the consumer UUID
-                     towards placement
+        :param uuid: the instance or migration UUID which will be used
+                     as the consumer UUID towards placement
+        :param consumer_type: The type of the consumer specified by uuid.
+                              'instance' or 'migration' (Default: instance)
         :return: Returns True if the allocation is successfully deleted by this
                  call. Returns False if the allocation does not exist.
         :raises AllocationDeleteFailed: If the allocation cannot be read from
@@ -1980,9 +1983,10 @@ class SchedulerReportClient(object):
         if not r:
             # at the moment there is no way placement returns a failure so we
             # could even delete this code
-            LOG.warning('Unable to delete allocation for instance '
+            LOG.warning('Unable to delete allocation for %(consumer_type)s '
                         '%(uuid)s: (%(code)i %(text)s)',
-                        {'uuid': uuid,
+                        {'consumer_type': consumer_type,
+                         'uuid': uuid,
                          'code': r.status_code,
                          'text': r.text})
             raise exception.AllocationDeleteFailed(consumer_uuid=uuid,
@@ -2000,12 +2004,15 @@ class SchedulerReportClient(object):
         r = self.put(url, allocations, global_request_id=context.global_id,
                      version=CONSUMER_GENERATION_VERSION)
         if r.status_code == 204:
-            LOG.info('Deleted allocation for instance %s', uuid)
+            LOG.info('Deleted allocation for %(consumer_type)s %(uuid)s',
+                     {'consumer_type': consumer_type,
+                      'uuid': uuid})
             return True
         else:
-            LOG.warning('Unable to delete allocation for instance '
+            LOG.warning('Unable to delete allocation for %(consumer_type)s '
                         '%(uuid)s: (%(code)i %(text)s)',
-                        {'uuid': uuid,
+                        {'consumer_type': consumer_type,
+                         'uuid': uuid,
                          'code': r.status_code,
                          'text': r.text})
             raise exception.AllocationDeleteFailed(consumer_uuid=uuid,

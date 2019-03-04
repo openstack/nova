@@ -3992,7 +3992,7 @@ class ComputeManager(manager.Manager):
             # NOTE(danms): We're finishing on the source node, so try
             # to delete the allocation based on the migration uuid
             self.reportclient.delete_allocation_for_instance(
-                context, migration.uuid)
+                context, migration.uuid, consumer_type='migration')
         except exception.AllocationDeleteFailed:
             LOG.error('Deleting allocation in placement for migration '
                       '%(migration_uuid)s failed. The instance '
