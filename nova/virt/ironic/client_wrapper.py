@@ -99,6 +99,12 @@ class IronicClientWrapper(object):
         kwargs['os_ironic_api_version'] = [
             '%d.%d' % IRONIC_API_VERSION, '%d.%d' % PRIOR_IRONIC_API_VERSION]
 
+        ironic_conf = CONF[IRONIC_GROUP.name]
+        # valid_interfaces is a list. ironicclient passes this kwarg through to
+        # ksa, which is set up to handle 'interface' as either a list or a
+        # single value.
+        kwargs['interface'] = ironic_conf.valid_interfaces
+
         # NOTE(clenimar/efried): by default, the endpoint is taken from the
         # service catalog. Use `endpoint_override` if you want to override it.
         if CONF.ironic.api_endpoint:
