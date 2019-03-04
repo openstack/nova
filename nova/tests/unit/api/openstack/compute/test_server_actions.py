@@ -545,9 +545,11 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         def return_image_meta(*args, **kwargs):
             image_meta_table = {
-                '2': {'id': 2, 'status': 'active', 'container_format': 'ari'},
+                '2': {'id': uuids.image_id, 'status': 'active',
+                      'container_format': 'ari'},
                 '155d900f-4e14-4e4c-a73d-069cbf4541e6':
-                     {'id': 3, 'status': 'active', 'container_format': 'raw',
+                     {'id': uuids.image_id, 'status': 'active',
+                      'container_format': 'raw',
                       'properties': {'kernel_id': 1, 'ramdisk_id': 2}},
             }
             image_id = args[2]

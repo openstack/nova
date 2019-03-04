@@ -1927,6 +1927,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, fake_inst['uuid'], 'finished')
             mock_inst_save.assert_called_once_with(expected_task_state=[None])
 
+    @mock.patch('nova.compute.api.API._validate_flavor_image_nostatus')
     @mock.patch('nova.objects.Migration')
     @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(quotas_obj.Quotas, 'limit_check_project_and_user')
@@ -1939,7 +1940,8 @@ class _ComputeAPIUnitTestMixIn(object):
     def _test_resize(self, mock_get_all_by_host,
                      mock_get_by_instance_uuid, mock_get_flavor, mock_upsize,
                      mock_inst_save, mock_count, mock_limit, mock_record,
-                     mock_migration, flavor_id_passed=True,
+                     mock_migration, mock_validate,
+                     flavor_id_passed=True,
                      same_host=False, allow_same_host=False,
                      project_id=None,
                      extra_kwargs=None,
@@ -2088,6 +2090,11 @@ class _ComputeAPIUnitTestMixIn(object):
                 mock_upsize.assert_called_once_with(
                     test.MatchType(objects.Flavor),
                     test.MatchType(objects.Flavor))
+                image_meta = utils.get_image_from_system_metadata(
+                    fake_inst.system_metadata)
+                if not same_flavor:
+                    mock_validate.assert_called_once_with(
+                        self.context, image_meta, new_flavor, root_bdm=None)
                 # mock.ANY might be 'instances', 'cores', or 'ram'
                 # depending on how the deltas dict is iterated in check_deltas
                 mock_count.assert_called_once_with(
@@ -2102,6 +2109,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
                 mock_inst_save.assert_called_once_with(
                     expected_task_state=[None])
+            else:
+                # This is a migration
+                mock_validate.assert_not_called()
 
             if self.cell_type == 'api' and request_spec:
                 mock_migration.assert_called_once_with(context=self.context)
@@ -2290,6 +2300,7 @@ class _ComputeAPIUnitTestMixIn(object):
                               self.compute_api.resize, self.context,
                               fake_inst, flavor_id='flavor-id')
 
+    @mock.patch('nova.compute.api.API._validate_flavor_image_nostatus')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch('nova.compute.api.API._resize_cells_support')
@@ -2300,7 +2311,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                                       resize_instance_mock,
                                                       cells_support_mock,
                                                       record_mock,
-                                                      get_by_inst):
+                                                      get_by_inst,
+                                                      validate_mock):
         params = dict(image_ref='')
         fake_inst = self._create_instance_obj(params=params)
 
