@@ -20,7 +20,7 @@ from oslo_config import fixture as config_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 import pkg_resources
 from placement import direct
-from placement.tests import fixtures as placement_db
+from placement.tests.functional.fixtures import placement
 
 from nova.cmd import status
 from nova.compute import provider_tree
@@ -89,10 +89,13 @@ class SchedulerReportClientTestBase(test.TestCase):
     def setUp(self):
         super(SchedulerReportClientTestBase, self).setUp()
         # Because these tests use PlacementDirect we need to manage
-        # the database ourselves.
+        # the database and other config ourselves.
         config = cfg.ConfigOpts()
         placement_conf = self.useFixture(config_fixture.Config(config))
-        self.useFixture(placement_db.Database(placement_conf, set_config=True))
+        self.useFixture(
+            placement.PlacementFixture(conf_fixture=placement_conf, db=True,
+                                       use_intercept=False))
+        self.placement_conf = placement_conf.conf
 
     def _interceptor(self, app=None, latest_microversion=True):
         """Set up an intercepted placement API to test against.
@@ -122,7 +125,7 @@ class SchedulerReportClientTestBase(test.TestCase):
                 return client
 
         interceptor = ReportClientInterceptor(
-            CONF, latest_microversion=latest_microversion)
+            self.placement_conf, latest_microversion=latest_microversion)
         if app:
             interceptor.app = app
         return interceptor
