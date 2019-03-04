@@ -2094,7 +2094,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     fake_inst.system_metadata)
                 if not same_flavor:
                     mock_validate.assert_called_once_with(
-                        self.context, image_meta, new_flavor, root_bdm=None)
+                        self.context, image_meta, new_flavor, root_bdm=None,
+                        validate_pci=True)
                 # mock.ANY might be 'instances', 'cores', or 'ram'
                 # depending on how the deltas dict is iterated in check_deltas
                 mock_count.assert_called_once_with(
@@ -6428,6 +6429,18 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
                      for call in mock_get_service.call_args_list]
             self.assertEqual(['context-for-%s' % c for c in compute_api.CELLS],
                              cells)
+
+    @mock.patch('nova.pci.request.get_pci_requests_from_flavor')
+    def test_pci_validated(self, mock_request):
+        """Tests that calling _validate_flavor_image_nostatus() with
+        validate_pci=True results in get_pci_requests_from_flavor() being
+        called.
+        """
+        image = dict(id=uuids.image_id, status='foo')
+        flavor = self._create_flavor()
+        self.compute_api._validate_flavor_image_nostatus(self.context,
+            image, flavor, root_bdm=None, validate_pci=True)
+        mock_request.assert_called_once_with(flavor)
 
     def test_validate_and_build_base_options_translate_neutron_secgroup(self):
         """Tests that _check_requested_secgroups will return a uuid for a
