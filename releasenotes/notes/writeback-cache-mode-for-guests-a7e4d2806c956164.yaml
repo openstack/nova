@@ -1,0 +1,19 @@
+---
+fixes:
+  - |
+    Update the way QEMU cache mode is configured for Nova guests: If the
+    file system hosting the directory with Nova instances is capable of
+    Linux's O_DIRECT, use ``none``; otherwise fallback to ``writeback``
+    cache mode.  This improves performance without compromising data
+    integrity.  `Bug 1818847`_.
+
+    Context: What makes ``writethrough`` so safe against host crashes is
+    that it never keeps data in a "write cache", but it calls fsync()
+    after *every* write.  This is also what makes it horribly slow.  But
+    cache mode ``none`` doesn't do this and therefore doesn't provide
+    this kind of safety.  The guest OS must explicitly flush the cache
+    in the right places to make sure data is safe on the disk; and all
+    modern OSes flush data as needed.  So if cache mode ``none`` is safe
+    enough for you, then ``writeback`` should be safe enough too.
+
+    .. _Bug 1818847: https://bugs.launchpad.net/nova/+bug/1818847

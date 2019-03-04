@@ -654,7 +654,11 @@ this environment.
 
 Possible cache modes:
 
-* default: Same as writethrough.
+* default: "It Depends" -- For Nova-managed disks, ``none``, if the host
+  file system is capable of Linux's 'O_DIRECT' semantics; otherwise
+  ``writeback``.  For volume drivers, the default is driver-dependent:
+  ``none`` for everything except for SMBFS and Virtuzzo (which use
+  ``writeback``).
 * none: With caching mode set to none, the host page cache is disabled, but
   the disk write cache is enabled for the guest. In this mode, the write
   performance in the guest is optimal because write operations bypass the host
@@ -667,25 +671,25 @@ Possible cache modes:
   writethrough mode. Shareable disk devices, like for a multi-attachable block
   storage volume, will have their cache mode set to 'none' regardless of
   configuration.
-* writethrough: writethrough mode is the default caching mode. With
-  caching set to writethrough mode, the host page cache is enabled, but the
-  disk write cache is disabled for the guest. Consequently, this caching mode
-  ensures data integrity even if the applications and storage stack in the
-  guest do not transfer data to permanent storage properly (either through
-  fsync operations or file system barriers). Because the host page cache is
-  enabled in this mode, the read performance for applications running in the
-  guest is generally better. However, the write performance might be reduced
-  because the disk write cache is disabled.
-* writeback: With caching set to writeback mode, both the host page cache
-  and the disk write cache are enabled for the guest. Because of this, the
-  I/O performance for applications running in the guest is good, but the data
-  is not protected in a power failure. As a result, this caching mode is
-  recommended only for temporary data where potential data loss is not a
-  concern.
-  NOTE: Certain backend disk mechanisms may provide safe writeback cache
-  semantics. Specifically those that bypass the host page cache, such as
-  QEMU's integrated RBD driver. Ceph documentation recommends setting this
-  to writeback for maximum performance while maintaining data safety.
+* writethrough: With caching set to writethrough mode, the host page cache is
+  enabled, but the disk write cache is disabled for the guest. Consequently,
+  this caching mode ensures data integrity even if the applications and storage
+  stack in the guest do not transfer data to permanent storage properly (either
+  through fsync operations or file system barriers). Because the host page
+  cache is enabled in this mode, the read performance for applications running
+  in the guest is generally better. However, the write performance might be
+  reduced because the disk write cache is disabled.
+* writeback: With caching set to writeback mode, both the host page
+  cache and the disk write cache are enabled for the guest. Because of
+  this, the I/O performance for applications running in the guest is
+  good, but the data is not protected in a power failure. As a result,
+  this caching mode is recommended only for temporary data where
+  potential data loss is not a concern.
+  NOTE: Certain backend disk mechanisms may provide safe
+  writeback cache semantics. Specifically those that bypass the host
+  page cache, such as QEMU's integrated RBD driver. Ceph documentation
+  recommends setting this to writeback for maximum performance while
+  maintaining data safety.
 * directsync: Like "writethrough", but it bypasses the host page cache.
 * unsafe: Caching mode of unsafe ignores cache transfer operations
   completely. As its name implies, this caching mode should be used only for

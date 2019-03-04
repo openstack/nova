@@ -407,16 +407,43 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @property
     def disk_cachemode(self):
+        # It can be confusing to understand the QEMU cache mode
+        # behaviour, because each cache=$MODE is a convenient shorthand
+        # to toggle _three_ cache.* booleans.  Consult the below table
+        # (quoting from the QEMU man page):
+        #
+        #              | cache.writeback | cache.direct | cache.no-flush
+        # --------------------------------------------------------------
+        # writeback    | on              | off          | off
+        # none         | on              | on           | off
+        # writethrough | off             | off          | off
+        # directsync   | off             | on           | off
+        # unsafe       | on              | off          | on
+        #
+        # Where:
+        #
+        #  - 'cache.writeback=off' means: QEMU adds an automatic fsync()
+        #    after each write request.
+        #
+        #  - 'cache.direct=on' means: Use Linux's O_DIRECT, i.e. bypass
+        #    the kernel page cache.  Caches in any other layer (disk
+        #    cache, QEMU metadata caches, etc.) can still be present.
+        #
+        #  - 'cache.no-flush=on' means: Ignore flush requests, i.e.
+        #    never call fsync(), even if the guest explicitly requested
+        #    it.
+        #
+        # Use cache mode "none" (cache.writeback=on, cache.direct=on,
+        # cache.no-flush=off) for consistent performance and
+        # migration correctness.  Some filesystems don't support
+        # O_DIRECT, though.  For those we fallback to the next
+        # reasonable option that is "writeback" (cache.writeback=on,
+        # cache.direct=off, cache.no-flush=off).
+
         if self._disk_cachemode is None:
-            # We prefer 'none' for consistent performance, host crash
-            # safety & migration correctness by avoiding host page cache.
-            # Some filesystems don't support O_DIRECT though. For those we
-            # fallback to 'writethrough' which gives host crash safety, and
-            # is safe for migration provided the filesystem is cache coherent
-            # (cluster filesystems typically are, but things like NFS are not).
             self._disk_cachemode = "none"
             if not nova.privsep.utils.supports_direct_io(CONF.instances_path):
-                self._disk_cachemode = "writethrough"
+                self._disk_cachemode = "writeback"
         return self._disk_cachemode
 
     def _set_cache_mode(self, conf):
