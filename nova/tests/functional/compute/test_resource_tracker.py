@@ -22,9 +22,9 @@ from nova.compute import vm_states
 from nova import conf
 from nova import context
 from nova import objects
+from nova import test
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.functional import test_report_client as test_base
 from nova.virt import driver as virt_driver
 
 
@@ -35,7 +35,7 @@ DISK_GB = orc.DISK_GB
 COMPUTE_HOST = 'compute-host'
 
 
-class IronicResourceTrackerTest(test_base.SchedulerReportClientTestBase):
+class IronicResourceTrackerTest(test.TestCase):
     """Tests the behaviour of the resource tracker with regards to the
     transitional period between adding support for custom resource classes in
     the placement API and integrating inventory and allocation records for
