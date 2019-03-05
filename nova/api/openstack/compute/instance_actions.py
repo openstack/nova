@@ -175,8 +175,15 @@ class InstanceActionsController(wsgi.Controller):
         if show_events:
             events_raw = self.action_api.action_events_get(context, instance,
                                                            action_id)
+            # NOTE(takashin): The project IDs of instance action events
+            # become null (None) when instance action events are created
+            # by periodic tasks. If the project ID is null (None),
+            # it causes an error when 'hostId' is generated.
+            # If the project ID is null (None), pass the project ID of
+            # the server instead of that of instance action events.
             action['events'] = [self._format_event(
-                evt, action['project_id'], show_traceback=show_traceback,
+                evt, action['project_id'] or instance.project_id,
+                show_traceback=show_traceback,
                 show_host=show_host, show_hostid=show_hostid
             ) for evt in events_raw]
         return {'instanceAction': action}
