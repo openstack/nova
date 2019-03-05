@@ -5013,9 +5013,6 @@ class LibvirtDriver(driver.ComputeDriver):
     def _create_pty_device(self, guest_cfg, char_dev_cls, target_type=None,
                            log_path=None):
 
-        if CONF.serial_console.enabled:
-            return
-
         consolepty = char_dev_cls()
         consolepty.target_type = target_type
         consolepty.type = "pty"
