@@ -525,13 +525,21 @@ class RequestSpec(base.NovaObject):
             # though they should match.
             if key in ['id', 'instance_uuid']:
                 setattr(spec, key, db_spec[key])
-            elif key == 'requested_resources':
+            elif key in ('requested_destination', 'requested_resources',
+                         'network_metadata'):
                 # Do not override what we already have in the object as this
                 # field is not persisted. If save() is called after
-                # requested_resources is populated, it will reset the field to
+                # requested_resources, requested_destination or
+                # network_metadata is populated, it will reset the field to
                 # None and we'll lose what is set (but not persisted) on the
                 # object.
                 continue
+            elif key == 'retry':
+                # NOTE(takashin): Do not override the 'retry' field
+                # which is not a persistent. It is not lazy-loadable field.
+                # If it is not set, set None.
+                if not spec.obj_attr_is_set(key):
+                    setattr(spec, key, None)
             elif key in spec_obj:
                 setattr(spec, key, getattr(spec_obj, key))
         spec._context = context
