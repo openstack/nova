@@ -1364,8 +1364,7 @@ class API(base_api.NetworkAPI):
 
         bindings_by_port_id = {}
         for port_id in port_ids:
-            resp = client.post('/v2.0/ports/%s/bindings' % port_id,
-                               json=data, raise_exc=False)
+            resp = self._create_port_binding(client, port_id, data)
             if resp:
                 bindings_by_port_id[port_id] = resp.json()['binding']
             else:
@@ -1387,6 +1386,21 @@ class API(base_api.NetworkAPI):
 
         return bindings_by_port_id
 
+    @staticmethod
+    def _create_port_binding(client, port_id, data):
+        """Creates a port binding with the specified data.
+
+        :param client: keystoneauth1.adapter.Adapter
+        :param port_id: The ID of the port on which to create the binding.
+        :param data: dict of port binding data (requires at least the host),
+            for example::
+
+                {'binding': {'host': 'dest.host.com'}}
+        :return: requests.Response object
+        """
+        return client.post('/v2.0/ports/%s/bindings' % port_id,
+                           json=data, raise_exc=False)
+
     def delete_port_binding(self, context, port_id, host):
         """Delete the port binding for the given port ID and host
 
@@ -1400,9 +1414,7 @@ class API(base_api.NetworkAPI):
             response is received from neutron.
         """
         client = _get_ksa_client(context, admin=True)
-        resp = client.delete(
-            '/v2.0/ports/%s/bindings/%s' % (port_id, host),
-            raise_exc=False)
+        resp = self._delete_port_binding(client, port_id, host)
         if resp:
             LOG.debug('Deleted binding for port %s and host %s.',
                       port_id, host)
@@ -1417,6 +1429,18 @@ class API(base_api.NetworkAPI):
                           resp.status_code, resp.text)
                 raise exception.PortBindingDeletionFailed(
                     port_id=port_id, host=host)
+
+    @staticmethod
+    def _delete_port_binding(client, port_id, host):
+        """Deletes the binding for the given host on the given port.
+
+        :param client: keystoneauth1.adapter.Adapter
+        :param port_id: ID of the port from which to delete the binding
+        :param host: A string name of the host on which the port is bound
+        :return: requests.Response object
+        """
+        return client.delete('/v2.0/ports/%s/bindings/%s' % (port_id, host),
+                             raise_exc=False)
 
     def activate_port_binding(self, context, port_id, host):
         """Activates an inactive port binding.

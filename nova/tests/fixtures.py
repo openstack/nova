@@ -35,6 +35,7 @@ from oslo_db import exception as db_exc
 import oslo_messaging as messaging
 from oslo_messaging import conffixture as messaging_conffixture
 from oslo_privsep import daemon as privsep_daemon
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
 from requests import adapters
@@ -51,6 +52,7 @@ from nova.db import migration
 from nova.db.sqlalchemy import api as session
 from nova import exception
 from nova.network import model as network_model
+from nova.network.neutronv2 import constants as neutron_constants
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
@@ -58,6 +60,7 @@ from nova import quota as nova_quota
 from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
+from nova.tests.unit import fake_requests
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 
@@ -1433,8 +1436,33 @@ class NeutronFixture(fixtures.Fixture):
             'get_instances_security_groups_bindings',
             lambda *args, **kwargs: {})
 
+        # Stub out port binding APIs which go through a KSA client Adapter
+        # rather than python-neutronclient.
+        self.test.stub_out(
+            'nova.network.neutronv2.api._get_ksa_client',
+            lambda *args, **kwargs: mock.Mock(
+                spec='keystoneauth1.adapter.Adapter'))
+        self.test.stub_out(
+            'nova.network.neutronv2.api.API._create_port_binding',
+            self.fake_create_port_binding)
+        self.test.stub_out(
+            'nova.network.neutronv2.api.API._delete_port_binding',
+            self.fake_delete_port_binding)
+
         self.test.stub_out('nova.network.neutronv2.api.get_client',
                            lambda *args, **kwargs: self)
+
+    @staticmethod
+    def fake_create_port_binding(client, port_id, data):
+        # TODO(mriedem): Make this smarter by keeping track of our bindings
+        # per port so we can reflect the status accurately.
+        return fake_requests.FakeResponse(200, content=jsonutils.dumps(data))
+
+    @staticmethod
+    def fake_delete_port_binding(client, port_id, host):
+        # TODO(mriedem): Make this smarter by keeping track of our bindings
+        # per port so we can reflect the status accurately.
+        return fake_requests.FakeResponse(204)
 
     def _get_first_id_match(self, id, list):
         filtered_list = [p for p in list if p['id'] == id]
@@ -1444,7 +1472,19 @@ class NeutronFixture(fixtures.Fixture):
             return None
 
     def list_extensions(self, *args, **kwargs):
-        return {'extensions': []}
+        return {
+            'extensions': [
+                {
+                    # Copied from neutron-lib portbindings_extended.py
+                    "updated": "2017-07-17T10:00:00-00:00",
+                    "name": neutron_constants.PORT_BINDING_EXTENDED,
+                    "links": [],
+                    "alias": "binding-extended",
+                    "description": "Expose port bindings of a virtual port to "
+                                   "external application"
+                }
+            ]
+        }
 
     def show_port(self, port_id, **_params):
         if port_id not in self._ports:
