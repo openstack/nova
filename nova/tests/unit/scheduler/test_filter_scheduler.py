@@ -592,10 +592,11 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEqual(0, len(spec_obj.obj_what_changed()),
                          spec_obj.obj_what_changed())
 
+    @mock.patch('nova.scheduler.filter_scheduler.LOG.debug')
     @mock.patch('random.choice', side_effect=lambda x: x[1])
     @mock.patch('nova.scheduler.host_manager.HostManager.get_weighed_hosts')
     @mock.patch('nova.scheduler.host_manager.HostManager.get_filtered_hosts')
-    def test_get_sorted_hosts(self, mock_filt, mock_weighed, mock_rand):
+    def test_get_sorted_hosts(self, mock_filt, mock_weighed, mock_rand, debug):
         """Tests the call that returns a sorted list of hosts by calling the
         host manager's filtering and weighing routines
         """
@@ -610,8 +611,18 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             weights.WeighedHost(hs1, 1.0), weights.WeighedHost(hs2, 1.0),
         ]
 
+        # Make sure that when logging the weighed hosts we are logging them
+        # with the WeighedHost wrapper class rather than the HostState objects.
+        def fake_debug(message, *args, **kwargs):
+            if message.startswith('Weighed'):
+                self.assertEqual(1, len(args))
+                for weighed_host in args[0]['hosts']:
+                    self.assertIsInstance(weighed_host, weights.WeighedHost)
+        debug.side_effect = fake_debug
+
         results = self.driver._get_sorted_hosts(mock.sentinel.spec,
             all_host_states, mock.sentinel.index)
+        debug.assert_called()
 
         mock_filt.assert_called_once_with(all_host_states, mock.sentinel.spec,
             mock.sentinel.index)
