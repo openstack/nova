@@ -485,6 +485,25 @@ class BaseTestCase(test.NoDBTestCase):
          self.driver_mock) = setup_rt(
                  _HOSTNAME, virt_resources, estimate_overhead)
 
+    def _setup_ptree(self, compute):
+        """Set up a ProviderTree with a compute node root, and mock the
+        ReportClient's get_provider_tree_and_ensure_root() to return
+        it.
+
+        update_traits() is mocked so that tests can specify a return
+        value.  Returns the new ProviderTree so that tests can control
+        its behaviour further.
+        """
+        ptree = provider_tree.ProviderTree()
+        ptree.new_root(compute.hypervisor_hostname, compute.uuid)
+        ptree.update_traits = mock.Mock()
+
+        rc_mock = self.rt.reportclient
+        gptaer_mock = rc_mock.get_provider_tree_and_ensure_root
+        gptaer_mock.return_value = ptree
+
+        return ptree
+
 
 class TestUpdateAvailableResources(BaseTestCase):
 
@@ -1395,6 +1414,34 @@ class TestUpdateComputeNode(BaseTestCase):
         save_mock.assert_called_once_with()
         norm_mock.assert_called_once_with(mock.sentinel.inv_data, new_compute)
 
+    def test_existing_node_capabilities_as_traits(self):
+        """The capabilities_as_traits() driver method returns traits
+        information for a node/provider.
+        """
+        self._setup_rt()
+        rc = self.rt.reportclient
+        rc.set_traits_for_provider = mock.MagicMock()
+
+        # Emulate a driver that has implemented the update_from_provider_tree()
+        # virt driver method
+        self.driver_mock.update_provider_tree = mock.Mock()
+        self.driver_mock.capabilities_as_traits.return_value = \
+            {mock.sentinel.trait: True}
+
+        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self.rt.compute_nodes[_NODENAME] = orig_compute
+        self.rt.old_resources[_NODENAME] = orig_compute
+        new_compute = orig_compute.obj_clone()
+
+        ptree = self._setup_ptree(orig_compute)
+
+        self.rt._update(mock.sentinel.ctx, new_compute)
+        self.driver_mock.capabilities_as_traits.assert_called_once()
+        ptree.update_traits.assert_called_once_with(
+            new_compute.hypervisor_hostname,
+            [mock.sentinel.trait]
+        )
+
     @mock.patch('nova.objects.ComputeNode.save')
     def test_existing_node_update_provider_tree_implemented(self, save_mock):
         """The update_provider_tree() virt driver method is only implemented
@@ -1451,23 +1498,24 @@ class TestUpdateComputeNode(BaseTestCase):
         new_compute = orig_compute.obj_clone()
         new_compute.local_gb = 210000
 
-        rc_mock = self.rt.reportclient
-        gptaer_mock = rc_mock.get_provider_tree_and_ensure_root
-        ptree = provider_tree.ProviderTree()
-        ptree.new_root(orig_compute.hypervisor_hostname, orig_compute.uuid)
-        gptaer_mock.return_value = ptree
+        ptree = self._setup_ptree(orig_compute)
 
         self.rt._update(mock.sentinel.ctx, new_compute)
 
         save_mock.assert_called_once_with()
+        gptaer_mock = self.rt.reportclient.get_provider_tree_and_ensure_root
         gptaer_mock.assert_called_once_with(
             mock.sentinel.ctx, new_compute.uuid,
             name=new_compute.hypervisor_hostname)
         self.driver_mock.update_provider_tree.assert_called_once_with(
             ptree, new_compute.hypervisor_hostname)
-        rc_mock.update_from_provider_tree.assert_called_once_with(
+        self.rt.reportclient.update_from_provider_tree.assert_called_once_with(
             mock.sentinel.ctx, ptree, allocations=None)
         self.driver_mock.get_inventory.assert_not_called()
+        ptree.update_traits.assert_called_once_with(
+            new_compute.hypervisor_hostname,
+            []
+        )
         exp_inv = copy.deepcopy(fake_inv)
         # These ratios and reserved amounts come from fake_upt
         exp_inv[orc.VCPU]['allocation_ratio'] = 16.0

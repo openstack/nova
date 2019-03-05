@@ -19,9 +19,11 @@ Provides common functionality for integrated unit tests
 
 import collections
 import random
+import six
 import string
 import time
 
+import os_traits
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 
@@ -375,6 +377,32 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
 
     microversion = 'latest'
 
+    # These must match the capabilities in
+    # nova.virt.libvirt.driver.LibvirtDriver.capabilities
+    expected_libvirt_driver_capability_traits = set([
+        six.u(trait) for trait in [
+            os_traits.COMPUTE_DEVICE_TAGGING,
+            os_traits.COMPUTE_NET_ATTACH_INTERFACE,
+            os_traits.COMPUTE_NET_ATTACH_INTERFACE_WITH_TAG,
+            os_traits.COMPUTE_VOLUME_ATTACH_WITH_TAG,
+            os_traits.COMPUTE_VOLUME_EXTEND,
+            os_traits.COMPUTE_TRUSTED_CERTS,
+        ]
+    ])
+
+    # These must match the capabilities in
+    # nova.virt.fake.FakeDriver.capabilities
+    expected_fake_driver_capability_traits = set([
+        six.u(trait) for trait in [
+            os_traits.COMPUTE_NET_ATTACH_INTERFACE,
+            os_traits.COMPUTE_NET_ATTACH_INTERFACE_WITH_TAG,
+            os_traits.COMPUTE_VOLUME_ATTACH_WITH_TAG,
+            os_traits.COMPUTE_VOLUME_EXTEND,
+            os_traits.COMPUTE_VOLUME_MULTI_ATTACH,
+            os_traits.COMPUTE_TRUSTED_CERTS,
+        ]
+    ])
+
     def setUp(self):
         self.flags(compute_driver=self.compute_driver)
         super(ProviderUsageBaseTestCase, self).setUp()
@@ -445,6 +473,9 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
 
     def _create_trait(self, trait):
         return self.placement_api.put('/traits/%s' % trait, {}, version='1.6')
+
+    def _delete_trait(self, trait):
+        return self.placement_api.delete('/traits/%s' % trait, version='1.6')
 
     def _get_provider_traits(self, provider_uuid):
         return self.placement_api.get(

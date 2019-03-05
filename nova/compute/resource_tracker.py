@@ -917,6 +917,23 @@ class ResourceTracker(object):
             return True
         return False
 
+    def _get_traits(self, nodename, provider_tree=None):
+        # Get the traits from the ProviderTree which will be the set
+        # of virt-owned traits plus any externally defined traits set
+        # on the provider that aren't owned by the virt driver.
+        traits = provider_tree.data(nodename).traits
+
+        # Now get the driver's capabilities and add any supported
+        # traits that are missing, and remove any existing set traits
+        # that are not currently supported.
+        for trait, supported in self.driver.capabilities_as_traits().items():
+            if supported:
+                traits.add(trait)
+            elif trait in traits:
+                traits.remove(trait)
+
+        return list(traits)
+
     @retrying.retry(stop_max_attempt_number=4,
                     retry_on_exception=lambda e: isinstance(
                         e, exception.ResourceProviderUpdateConflict))
@@ -957,6 +974,21 @@ class ResourceTracker(object):
                 self.driver.update_provider_tree(prov_tree, nodename,
                                                  allocations=allocs)
 
+            # Inject driver capabilities traits into the provider
+            # tree.  We need to determine the traits that the virt
+            # driver owns - so those that come from the tree itself
+            # (via the virt driver) plus the compute capabilities
+            # traits, and then merge those with the traits set
+            # externally that the driver does not own - and remove any
+            # set on the provider externally that the virt owns but
+            # aren't in the current list of supported traits.  For
+            # example, let's say we reported multiattach support as a
+            # trait at t1 and then at t2 it's not, so we need to
+            # remove it.  But at both t1 and t2 there is a
+            # CUSTOM_VENDOR_TRAIT_X which we can't touch because it
+            # was set externally on the provider.
+            traits = self._get_traits(nodename, provider_tree=prov_tree)
+            prov_tree.update_traits(nodename, traits)
         except NotImplementedError:
             # update_provider_tree isn't implemented yet - try get_inventory
             try:

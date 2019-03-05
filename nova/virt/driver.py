@@ -23,6 +23,7 @@ Driver base-classes:
 import sys
 
 import os_resource_classes as orc
+import os_traits
 from oslo_log import log as logging
 from oslo_utils import importutils
 import six
@@ -91,6 +92,27 @@ def block_device_info_get_mapping(block_device_info):
     return block_device_mapping
 
 
+# NOTE(aspiers): When adding new capabilities, ensure they are
+# mirrored in ComputeDriver.capabilities, and that the corresponding
+# values should always be standard traits in os_traits.  If something
+# isn't a standard trait, it doesn't need to be a compute node
+# capability trait; and if it needs to be a compute node capability
+# trait, it needs to be (made) standard, and must be prefixed with
+# "COMPUTE_".
+CAPABILITY_TRAITS_MAP = {
+    # Added in os-traits 0.7.0.
+    "supports_attach_interface": os_traits.COMPUTE_NET_ATTACH_INTERFACE,
+    "supports_device_tagging": os_traits.COMPUTE_DEVICE_TAGGING,
+    "supports_tagged_attach_interface":
+        os_traits.COMPUTE_NET_ATTACH_INTERFACE_WITH_TAG,
+    "supports_tagged_attach_volume": os_traits.COMPUTE_VOLUME_ATTACH_WITH_TAG,
+    "supports_extend_volume": os_traits.COMPUTE_VOLUME_EXTEND,
+    "supports_multiattach": os_traits.COMPUTE_VOLUME_MULTI_ATTACH,
+    # Added in os-traits 0.8.0.
+    "supports_trusted_certs": os_traits.COMPUTE_TRUSTED_CERTS
+}
+
+
 class ComputeDriver(object):
     """Base class for compute drivers.
 
@@ -122,6 +144,9 @@ class ComputeDriver(object):
 
     """
 
+    # NOTE(mriedem): When adding new capabilities, consider whether they
+    # should also be added to CAPABILITY_TRAITS_MAP; if so, any new traits
+    # must also be added to the os-traits library.
     capabilities = {
         "has_imagecache": False,
         "supports_evacuate": False,
@@ -995,6 +1020,23 @@ class ComputeDriver(object):
         the supplied node.
         """
         raise NotImplementedError()
+
+    def capabilities_as_traits(self):
+        """Returns this driver's capabilities dict where the keys are traits
+
+        Traits can only be standard compute capabilities traits from
+        the os-traits library.
+
+        :returns: dict, keyed by trait, of this driver's capabilities where the
+            values are booleans indicating if the driver supports the trait
+
+        """
+        traits = {}
+        for capability, supported in self.capabilities.items():
+            if capability in CAPABILITY_TRAITS_MAP:
+                traits[CAPABILITY_TRAITS_MAP[capability]] = supported
+
+        return traits
 
     def get_available_resource(self, nodename):
         """Retrieve resource information.

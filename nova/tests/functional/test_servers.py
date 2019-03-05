@@ -23,6 +23,7 @@ import zlib
 
 from keystoneauth1 import adapter
 import mock
+import os_traits
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import base64
@@ -1755,7 +1756,8 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
                 'step_size': 1,
             },
         }, self._get_provider_inventory(self.host_uuid))
-        self.assertEqual([], self._get_provider_traits(self.host_uuid))
+        self.assertItemsEqual(self.expected_fake_driver_capability_traits,
+                              self._get_provider_traits(self.host_uuid))
 
     def _run_update_available_resource(self, startup):
         self.compute.rt.update_available_resource(
@@ -1820,8 +1822,10 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertIn('CUSTOM_BANDWIDTH', self._get_all_resource_classes())
         self.assertIn('CUSTOM_GOLD', self._get_all_traits())
         self.assertEqual(inv, self._get_provider_inventory(self.host_uuid))
-        self.assertEqual(traits,
-                         set(self._get_provider_traits(self.host_uuid)))
+        self.assertItemsEqual(
+            traits.union(self.expected_fake_driver_capability_traits),
+            self._get_provider_traits(self.host_uuid)
+        )
         self.assertEqual(aggs,
                          set(self._get_provider_aggregates(self.host_uuid)))
 
@@ -2039,8 +2043,12 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
             4,
             self._get_provider_inventory(uuids.pf2_2)['SRIOV_NET_VF']['total'])
 
-        # Compute and NUMAs don't have any traits
-        for uuid in (self.host_uuid, uuids.numa1, uuids.numa2):
+        # Compute don't have any extra traits
+        self.assertItemsEqual(self.expected_fake_driver_capability_traits,
+                              self._get_provider_traits(self.host_uuid))
+
+        # NUMAs don't have any traits
+        for uuid in (uuids.numa1, uuids.numa2):
             self.assertEqual([], self._get_provider_traits(uuid))
 
     def test_update_provider_tree_multiple_providers(self):
@@ -2216,6 +2224,192 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
             mock.call(mock.ANY, 'host1'),
             mock.call(mock.ANY, 'host1', allocations=exp_allocs),
         ])
+
+
+class TraitsTrackingTests(integrated_helpers.ProviderUsageBaseTestCase):
+    compute_driver = 'fake.SmallFakeDriver'
+
+    fake_caps = {
+        'supports_attach_interface': True,
+        'supports_device_tagging': False,
+    }
+
+    def _mock_upt(self, traits_to_add, traits_to_remove):
+        """Set up the compute driver with a fake update_provider_tree()
+        which injects the given traits into the provider tree
+        """
+        original_upt = fake.SmallFakeDriver.update_provider_tree
+
+        def fake_upt(self2, ptree, nodename, allocations=None):
+            original_upt(self2, ptree, nodename, allocations)
+            LOG.debug("injecting traits via fake update_provider_tree(): %s",
+                      traits_to_add)
+            ptree.add_traits(nodename, *traits_to_add)
+            LOG.debug("removing traits via fake update_provider_tree(): %s",
+                      traits_to_remove)
+            ptree.remove_traits(nodename, *traits_to_remove)
+
+        self.stub_out('nova.virt.fake.FakeDriver.update_provider_tree',
+                      fake_upt)
+
+    @mock.patch.dict(fake.SmallFakeDriver.capabilities, clear=True,
+                     values=fake_caps)
+    def test_resource_provider_traits(self):
+        """Test that the compute service reports traits via driver
+        capabilities and registers them on the compute host resource
+        provider in the placement API.
+        """
+        custom_trait = 'CUSTOM_FOO'
+        ptree_traits = [custom_trait, 'HW_CPU_X86_VMX']
+
+        global_traits = self._get_all_traits()
+        self.assertNotIn(custom_trait, global_traits)
+        self.assertIn(os_traits.COMPUTE_NET_ATTACH_INTERFACE, global_traits)
+        self.assertIn(os_traits.COMPUTE_DEVICE_TAGGING, global_traits)
+        self.assertEqual([], self._get_all_providers())
+
+        self._mock_upt(ptree_traits, [])
+
+        self.compute = self._start_compute(host='host1')
+
+        rp_uuid = self._get_provider_uuid_by_host('host1')
+        expected_traits = set(
+            ptree_traits + [os_traits.COMPUTE_NET_ATTACH_INTERFACE]
+        )
+        self.assertItemsEqual(expected_traits,
+                              self._get_provider_traits(rp_uuid))
+        global_traits = self._get_all_traits()
+        # CUSTOM_FOO is now a registered trait because the virt driver
+        # reported it.
+        self.assertIn(custom_trait, global_traits)
+
+        # Now simulate user deletion of driver-provided traits from
+        # the compute node provider.
+        expected_traits.remove(custom_trait)
+        expected_traits.remove(os_traits.COMPUTE_NET_ATTACH_INTERFACE)
+        self._set_provider_traits(rp_uuid, list(expected_traits))
+        self.assertItemsEqual(expected_traits,
+                              self._get_provider_traits(rp_uuid))
+
+        # The above trait deletions are simulations of an out-of-band
+        # placement operation, as if the operator used the CLI.  So
+        # now we have to "SIGHUP the compute process" to clear the
+        # report client cache so the subsequent update picks up the
+        # changes.
+        self.compute.manager.reset()
+
+        # Add the traits back so that the mock update_provider_tree()
+        # can reinject them.
+        expected_traits.update(
+            [custom_trait, os_traits.COMPUTE_NET_ATTACH_INTERFACE])
+
+        # Now when we run the periodic update task, the trait should
+        # reappear in the provider tree and get synced back to
+        # placement.
+        self._run_periodics()
+
+        self.assertItemsEqual(expected_traits,
+                              self._get_provider_traits(rp_uuid))
+        global_traits = self._get_all_traits()
+        self.assertIn(custom_trait, global_traits)
+        self.assertIn(os_traits.COMPUTE_NET_ATTACH_INTERFACE, global_traits)
+
+    @mock.patch.dict(fake.SmallFakeDriver.capabilities, clear=True,
+                     values=fake_caps)
+    def test_admin_traits_preserved(self):
+        """Test that if admin externally sets traits on the resource provider
+        then the compute periodic doesn't remove them from placement.
+        """
+        admin_trait = 'CUSTOM_TRAIT_FROM_ADMIN'
+        self._create_trait(admin_trait)
+        global_traits = self._get_all_traits()
+        self.assertIn(admin_trait, global_traits)
+
+        self.compute = self._start_compute(host='host1')
+        rp_uuid = self._get_provider_uuid_by_host('host1')
+        traits = self._get_provider_traits(rp_uuid)
+        traits.append(admin_trait)
+        self._set_provider_traits(rp_uuid, traits)
+        self.assertIn(admin_trait, self._get_provider_traits(rp_uuid))
+
+        # SIGHUP the compute process to clear the report client
+        # cache, so the subsequent periodic update recalculates everything.
+        self.compute.manager.reset()
+
+        self._run_periodics()
+        self.assertIn(admin_trait, self._get_provider_traits(rp_uuid))
+
+    @mock.patch.dict(fake.SmallFakeDriver.capabilities, clear=True,
+                     values=fake_caps)
+    def test_driver_removing_support_for_trait_via_capability(self):
+        """Test that if a driver initially reports a trait via a supported
+        capability, then at the next periodic update doesn't report
+        support for it again, it gets removed from the provider in the
+        placement service.
+        """
+        self.compute = self._start_compute(host='host1')
+        rp_uuid = self._get_provider_uuid_by_host('host1')
+        trait = os_traits.COMPUTE_NET_ATTACH_INTERFACE
+        self.assertIn(trait, self._get_provider_traits(rp_uuid))
+
+        new_caps = dict(fake.SmallFakeDriver.capabilities,
+                        **{'supports_attach_interface': False})
+        with mock.patch.dict(fake.SmallFakeDriver.capabilities, new_caps):
+            self._run_periodics()
+
+        self.assertNotIn(trait, self._get_provider_traits(rp_uuid))
+
+    def test_driver_removing_trait_via_upt(self):
+        """Test that if a driver reports a trait via update_provider_tree()
+        initially, but at the next periodic update doesn't report it
+        again, that it gets removed from placement.
+        """
+        custom_trait = "CUSTOM_TRAIT_FROM_DRIVER"
+        standard_trait = os_traits.HW_CPU_X86_SGX
+        self._mock_upt([custom_trait, standard_trait], [])
+
+        self.compute = self._start_compute(host='host1')
+        rp_uuid = self._get_provider_uuid_by_host('host1')
+        self.assertIn(custom_trait, self._get_provider_traits(rp_uuid))
+        self.assertIn(standard_trait, self._get_provider_traits(rp_uuid))
+
+        # Now change the fake update_provider_tree() from injecting the
+        # traits to removing them, and run the periodic update.
+        self._mock_upt([], [custom_trait, standard_trait])
+        self._run_periodics()
+
+        self.assertNotIn(custom_trait, self._get_provider_traits(rp_uuid))
+        self.assertNotIn(standard_trait, self._get_provider_traits(rp_uuid))
+
+    @mock.patch.dict(fake.SmallFakeDriver.capabilities, clear=True,
+                     values=fake_caps)
+    def test_driver_removes_unsupported_trait_from_admin(self):
+        """Test that if an admin adds a trait corresponding to a
+        capability which is unsupported, then if the provider cache is
+        reset, the driver will remove it during the next update.
+        """
+        self.compute = self._start_compute(host='host1')
+        rp_uuid = self._get_provider_uuid_by_host('host1')
+
+        traits = self._get_provider_traits(rp_uuid)
+        trait = os_traits.COMPUTE_DEVICE_TAGGING
+        self.assertNotIn(trait, traits)
+
+        # Simulate an admin associating the trait with the host via
+        # the placement API.
+        traits.append(trait)
+        self._set_provider_traits(rp_uuid, traits)
+
+        # Check that worked.
+        traits = self._get_provider_traits(rp_uuid)
+        self.assertIn(trait, traits)
+
+        # SIGHUP the compute process to clear the report client
+        # cache, so the subsequent periodic update recalculates everything.
+        self.compute.manager.reset()
+
+        self._run_periodics()
+        self.assertNotIn(trait, self._get_provider_traits(rp_uuid))
 
 
 class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
