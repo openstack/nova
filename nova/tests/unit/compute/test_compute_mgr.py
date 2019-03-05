@@ -6640,9 +6640,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             uuid=uuids.migration_uuid,
             instance_uuid=self.instance.uuid,
             new_instance_type_id=7,
-            dest_compute=None,
+            dest_compute='dest_compute',
             dest_node=None,
             dest_host=None,
+            source_compute='source_compute',
             source_node='source_node',
             status='migrating')
         self.migration.save = mock.MagicMock()
@@ -6826,6 +6827,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.nw_info = None
 
         def _migrate_instance_finish(context, instance, migration):
+            # The migration.dest_compute is temporarily set to source_compute.
+            self.assertEqual(migration.source_compute, migration.dest_compute)
             self.nw_info = 'nw_info'
 
         def _get_instance_nw_info(context, instance):
@@ -6874,6 +6877,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                               instance=self.instance)
             finish_revert_migration.assert_called_with(self.context,
                 self.instance, 'nw_info', mock.ANY, mock.ANY)
+            # Make sure the migration.dest_compute is not still set to the
+            # source_compute value.
+            self.assertNotEqual(self.migration.dest_compute,
+                                self.migration.source_compute)
 
         do_test()
 
