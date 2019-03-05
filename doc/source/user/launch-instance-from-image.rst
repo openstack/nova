@@ -18,8 +18,8 @@ Follow the steps below to launch an instance from an image.
    For example, you can add a description for your server by providing the
    ``--property description="My Server"`` parameter.
 
-   You can pass :doc:`user data </user/user-data>` in a local file at instance
-   launch by using the ``--user-data USER-DATA-FILE`` parameter.
+   You can pass :ref:`user data <metadata-userdata>` in a local file at
+   instance launch by using the ``--user-data USER-DATA-FILE`` parameter.
 
    .. important::
 

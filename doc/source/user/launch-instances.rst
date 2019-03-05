@@ -16,7 +16,7 @@ Before you can launch an instance, gather the following parameters:
   available hardware configuration for a server. It defines the size of
   a virtual server that can be launched.
 
-- Any **user data** files. A :doc:`user data </user/user-data>` file is a
+- Any **user data** files. A :ref:`user data <metadata-userdata>` file is a
   special key in the metadata service that holds a file that cloud-aware
   applications in the guest instance can access. For example, one application
   that uses user data is the

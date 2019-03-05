@@ -311,12 +311,16 @@ command:
 Metadata service
 ~~~~~~~~~~~~~~~~
 
-.. TODO: This should be moved into its own document once we add information
-         about integrating this with neutron rather than nova-network.
+.. note::
 
-This section provides deployment information about the metadata service. For
-end-user information about the metadata service, see the
-:doc:`user guide </user/metadata-service>`.
+    This section provides deployment information about the metadata service
+    using the deprecated :program:`nova-network` service.
+
+    For information about deploying the metadata service with neutron, refer to
+    the :doc:`metadata service documentation </admin/metadata-service>`.
+
+    For end-user information about the metadata service and instance metadata in
+    general, refer to the :doc:`user guide </user/metadata>`.
 
 The metadata service is implemented by either the ``nova-api`` service or the
 ``nova-api-metadata`` service. Note that the ``nova-api-metadata`` service is
@@ -349,9 +353,6 @@ The default Compute service settings assume that ``nova-network`` and
 ``metadata_host`` configuration option to the IP address of the host where
 ``nova-api`` is running.
 
-.. TODO: Consider grouping the metadata options into the same [metadata]
-   group and then we can just link to that in the generated config option doc.
-
 .. list-table:: Description of metadata configuration options
    :header-rows: 2
 
@@ -380,7 +381,7 @@ The default Compute service settings assume that ``nova-network`` and
        changes to take effect.
    * - :oslo.config:option:`vendordata_providers <api.vendordata_providers>` = StaticJSON
      - (ListOpt) A list of vendordata providers. See
-       :doc:`Vendordata </user/vendordata>` for more information.
+       :doc:`Vendordata </admin/vendordata>` for more information.
    * - :oslo.config:option:`vendordata_jsonfile_path <api.vendordata_jsonfile_path>` = None
      - (StrOpt) File to load JSON formatted vendor data from
 

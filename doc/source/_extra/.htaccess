@@ -1,10 +1,3 @@
-# The following is generated with:
-#
-# git log --follow --name-status --format='%H' 2d0dfc632f.. -- doc/source | \
-#   grep ^R | grep .rst | cut -f2- | \
-#   sed -e 's|doc/source/|redirectmatch 301 ^/nova/([^/]+)/|' -e 's|doc/source/|/nova/$1/|' -e 's/.rst/.html$/' -e 's/.rst/.html/' | \
-#   sort
-
 redirectmatch 301 ^/nova/([^/]+)/addmethod.openstackapi.html$ /nova/$1/contributor/api-2.html
 redirectmatch 301 ^/nova/([^/]+)/admin/flavors2.html$ /nova/$1/admin/flavors.html
 redirectmatch 301 ^/nova/([^/]+)/admin/numa.html$ /nova/$1/admin/cpu-topologies.html
@@ -71,8 +64,12 @@ redirectmatch 301 ^/nova/([^/]+)/testing/serial-console.html$ /nova/$1/contribut
 redirectmatch 301 ^/nova/([^/]+)/testing/zero-downtime-upgrade.html$ /nova/$1/contributor/testing/zero-downtime-upgrade.html
 redirectmatch 301 ^/nova/([^/]+)/threading.html$ /nova/$1/reference/threading.html
 redirectmatch 301 ^/nova/([^/]+)/upgrade.html$ /nova/$1/user/upgrade.html
-redirectmatch 301 ^/nova/([^/]+)/vendordata.html$ /nova/$1/user/vendordata.html
+redirectmatch 301 ^/nova/([^/]+)/user/cellsv2_layout.html$ /nova/$1/user/cellsv2-layout.html
+redirectmatch 301 ^/nova/([^/]+)/user/config-drive.html$ /nova/$1/user/metadata.html
+redirectmatch 301 ^/nova/([^/]+)/user/metadata-service.html$ /nova/$1/user/metadata.html
+redirectmatch 301 ^/nova/([^/]+)/user/placement.html$ /placement/$1/
+redirectmatch 301 ^/nova/([^/]+)/user/user-data.html$ /nova/$1/user/metadata.html
+redirectmatch 301 ^/nova/([^/]+)/user/vendordata.html$ /nova/$1/user/metadata.html
+redirectmatch 301 ^/nova/([^/]+)/vendordata.html$ /nova/$1/user/metadata.html
 redirectmatch 301 ^/nova/([^/]+)/vmstates.html$ /nova/$1/reference/vm-states.html
 redirectmatch 301 ^/nova/([^/]+)/wsgi.html$ /nova/$1/user/wsgi.html
-redirectmatch 301 ^/nova/([^/]+)/user/cellsv2_layout.html$ /nova/$1/user/cellsv2-layout.html
-redirectmatch 301 ^/nova/latest/user/placement.html$ /placement/latest/

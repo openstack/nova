@@ -1014,10 +1014,11 @@ Configure Guest OS
 
 Metadata API
 ------------
-Nova provides a metadata api for servers to retrieve server specific metadata.
-Neutron ensures this metadata api can be accessed through a predefined ip
-address (169.254.169.254). For more details, see :nova-doc:`Metadata Service
-<user/metadata-service.html>`.
+
+Nova provides a metadata API for servers to retrieve server specific metadata.
+Neutron ensures this metadata API can be accessed through a predefined IP
+address, ``169.254.169.254``. For more details, refer to the :nova-doc:`user
+guide <user/metadata.html>`.
 
 Config Drive
 ------------
@@ -1025,20 +1026,19 @@ Config Drive
 Nova is able to write metadata to a special configuration drive that attaches
 to the server when it boots. The server can mount this drive and read files
 from it to get information that is normally available through the metadata
-service. For more details, see :nova-doc:`Config Drive
-<user/config-drive.html>`.
+service. For more details, refer to the :nova-doc:`user guide
+<user/metadata.html>`.
 
 User data
 ---------
+
 A user data file is a special key in the metadata service that holds a file
 that cloud-aware applications in the server can access.
 
-Nova has two ways to send user data to the deployed server, one is by
-metadata service to let server able to access to its metadata through
-a predefined ip address (169.254.169.254), then other way is to use config
-drive which will wrap metadata into a iso9660 or vfat format disk so that
-the deployed server can consume it by active engines such as cloud-init
-during its boot process.
+This information can be accessed via the metadata API or a config drive. The
+latter allows the deployed server to consume it by active engines such as
+cloud-init during its boot process, where network connectivity may not be an
+option.
 
 Server personality
 ------------------
