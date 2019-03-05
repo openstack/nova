@@ -99,7 +99,7 @@ To enable the noVNC VNC console service, you must configure both the
 :program:`nova-novncproxy` service and the :program:`nova-compute` service.
 Most options are defined in the :oslo.config:group:`vnc` group.
 
-The :program:`nova-novncproxy` service accepts the following options.
+The :program:`nova-novncproxy` service accepts the following options:
 
 - :oslo.config:option:`daemon`
 - :oslo.config:option:`ssl_only`
@@ -110,8 +110,8 @@ The :program:`nova-novncproxy` service accepts the following options.
 - :oslo.config:option:`vnc.novncproxy_host`
 - :oslo.config:option:`vnc.novncproxy_port`
 
-In addition, if using the libvirt compute driver and enabling
-:ref:`vnc-security`, the following additional options are accepted.
+If using the libvirt compute driver and enabling :ref:`vnc-security`, the
+following additional options are supported:
 
 - :oslo.config:option:`vnc.auth_schemes`
 - :oslo.config:option:`vnc.vencrypt_client_key`
@@ -120,7 +120,7 @@ In addition, if using the libvirt compute driver and enabling
 
 For example, to configure this via a ``nova-novncproxy.conf`` file:
 
-.. code-block:: console
+.. code-block:: ini
 
    [vnc]
    novncproxy_host = 0.0.0.0
@@ -132,7 +132,7 @@ For example, to configure this via a ``nova-novncproxy.conf`` file:
    configure this, refer to :ref:`vnc-security` below.
 
 The :program:`nova-compute` service requires the following options to configure
-noVNC-based VNC console support.
+noVNC-based VNC console support:
 
 - :oslo.config:option:`vnc.enabled`
 - :oslo.config:option:`vnc.novncproxy_base_url`
@@ -141,14 +141,14 @@ noVNC-based VNC console support.
 - :oslo.config:option:`vnc.keymap`
 
 If using the VMware compute driver, the following additional options are
-relevant.
+supported:
 
 - :oslo.config:option:`vmware.vnc_port`
 - :oslo.config:option:`vmware.vnc_port_total`
 
 For example, to configure this via a ``nova.conf`` file:
 
-.. code-block:: console
+.. code-block:: ini
 
    [vnc]
    enabled = True
@@ -225,9 +225,9 @@ server. In :file:`/etc/libvirt/qemu.conf`, uncomment the following settings:
 
 After editing :file:`qemu.conf`, the ``libvirtd`` service must be restarted:
 
-.. code:: shell
+.. code-block:: shell
 
-  $ systemctl restart libvirtd.service
+   $ systemctl restart libvirtd.service
 
 Changes will not apply to any existing running guests on the Compute node, so
 this configuration should be done before launching any instances.
@@ -240,10 +240,10 @@ scheme, which does no checking. Therefore, it is necessary to enable the
 ``vencrypt`` authentication scheme by editing the :file:`nova.conf` file to
 set.
 
-.. code::
+.. code-block:: ini
 
-  [vnc]
-  auth_schemes=vencrypt,none
+   [vnc]
+   auth_schemes=vencrypt,none
 
 The :oslo.config:option:`vnc.auth_schemes` values should be listed in order
 of preference. If enabling VeNCrypt on an existing deployment which already has
@@ -285,12 +285,12 @@ permitted key use and purpose data.
 Once the certificates have been created, the noVNC console proxy service must
 be told where to find them. This requires editing :file:`nova.conf` to set.
 
-.. code::
+.. code-block:: ini
 
-  [vnc]
-  vencrypt_client_key=/etc/pki/nova-novncproxy/client-key.pem
-  vencrypt_client_cert=/etc/pki/nova-novncproxy/client-cert.pem
-  vencrypt_ca_certs=/etc/pki/nova-novncproxy/ca-cert.pem
+   [vnc]
+   vencrypt_client_key=/etc/pki/nova-novncproxy/client-key.pem
+   vencrypt_client_cert=/etc/pki/nova-novncproxy/client-cert.pem
+   vencrypt_ca_certs=/etc/pki/nova-novncproxy/ca-cert.pem
 
 
 SPICE console
@@ -333,7 +333,7 @@ The :program:`nova-spicehtml5proxy` service accepts the following options.
 
 For example, to configure this via a ``nova-spicehtml5proxy.conf`` file:
 
-.. code-block:: console
+.. code-block:: ini
 
    [spice]
    html5proxy_host = 0.0.0.0
@@ -351,7 +351,7 @@ SPICE console support.
 
 For example, to configure this via a ``nova.conf`` file:
 
-.. code-block:: console
+.. code-block:: ini
 
    [spice]
    agent_enabled = False
@@ -414,7 +414,7 @@ The :program:`nova-serialproxy` service accepts the following options.
 
 For example, to configure this via a ``nova-serialproxy.conf`` file:
 
-.. code-block:: console
+.. code-block:: ini
 
    [serial_console]
    serialproxy_host = 0.0.0.0
@@ -430,7 +430,7 @@ serial console support.
 
 For example, to configure this via a ``nova.conf`` file:
 
-.. code-block:: console
+.. code-block:: ini
 
    [serial_console]
    enabled = True
@@ -486,7 +486,7 @@ RDP console support.
 
 For example, to configure this via a ``nova.conf`` file:
 
-.. code-block:: console
+.. code-block:: ini
 
    [rdp]
    enabled = True
@@ -521,7 +521,7 @@ MKS console support.
 
 For example, to configure this via a ``nova.conf`` file:
 
-.. code-block:: console
+.. code-block:: ini
 
    [mks]
    enabled = True
@@ -559,7 +559,7 @@ The :program:`nova-xvpvncproxy` service accepts the following options.
 
 For example, to configure this via a ``nova-xvpvncproxy.conf`` file:
 
-.. code-block:: console
+.. code-block:: ini
 
    [vnc]
    xvpvncproxy_host = 0.0.0.0
@@ -576,7 +576,7 @@ XVP-based VNC support.
 
 For example, to configure this via a ``nova.conf`` file:
 
-.. code-block:: console
+.. code-block:: ini
 
    [vnc]
    enabled = True
@@ -651,7 +651,7 @@ Frequently Asked Questions
 
   Your ``nova-compute`` configuration file must set the following values:
 
-  .. code-block:: console
+  .. code-block:: ini
 
      [vnc]
      # These flags help construct a connection data structure
@@ -686,7 +686,7 @@ Frequently Asked Questions
 
   Modify the ``width`` and ``height`` options, as follows:
 
-  .. code-block:: console
+  .. code-block:: ini
 
      <iframe src="{{ vnc_url }}" width="720" height="430"></iframe>
 
