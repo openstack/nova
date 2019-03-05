@@ -5125,8 +5125,18 @@ class ServersControllerCreateTest(test.TestCase):
                            alias='fake_name'))
     def test_create_instance_pci_alias_not_defined(self, mock_create):
         # Tests that PciRequestAliasNotDefined is translated to a 400 error.
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self._test_create_extra, {})
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self._test_create_extra, {})
+        self.assertIn('PCI alias fake_name is not defined', six.text_type(ex))
+
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.PciInvalidAlias(
+                           reason='just because'))
+    def test_create_instance_pci_invalid_alias(self, mock_create):
+        # Tests that PciInvalidAlias is translated to a 400 error.
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self._test_create_extra, {})
+        self.assertIn('Invalid PCI alias definition', six.text_type(ex))
 
     def test_create_instance_with_user_data(self):
         value = base64.encode_as_text("A random string")

@@ -642,6 +642,7 @@ class ServersController(wsgi.Controller):
                 exception.MemoryPageSizeInvalid,
                 exception.MemoryPageSizeForbidden,
                 exception.PciRequestAliasNotDefined,
+                exception.PciInvalidAlias,
                 exception.RealtimeConfigurationInvalid,
                 exception.RealtimeMaskNotFoundOrInvalid,
                 exception.SnapshotNotFound,
