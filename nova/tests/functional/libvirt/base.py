@@ -57,11 +57,14 @@ class ServersTestBase(base.ServersTestBase):
         # service in the test
         self.flags(compute_driver='libvirt.LibvirtDriver')
 
-    def _get_connection(self, host_info, pci_info=None):
+    def _get_connection(self, host_info, pci_info=None,
+                        libvirt_version=fakelibvirt.FAKE_LIBVIRT_VERSION,
+                        mdev_info=None):
         fake_connection = fakelibvirt.Connection(
             'qemu:///system',
-            version=fakelibvirt.FAKE_LIBVIRT_VERSION,
+            version=libvirt_version,
             hv_version=fakelibvirt.FAKE_QEMU_VERSION,
             host_info=host_info,
-            pci_info=pci_info)
+            pci_info=pci_info,
+            mdev_info=mdev_info)
         return fake_connection
