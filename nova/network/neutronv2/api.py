@@ -3297,13 +3297,16 @@ class API(base_api.NetworkAPI):
         pci_mapping = None
         port_updates = []
         ports = data['ports']
+        FAILED_VIF_TYPES = (network_model.VIF_TYPE_UNBOUND,
+                            network_model.VIF_TYPE_BINDING_FAILED)
         for p in ports:
             updates = {}
             binding_profile = _get_binding_profile(p)
 
-            # If the host hasn't changed, like in the case of resizing to the
-            # same host, there is nothing to do.
-            if p.get(BINDING_HOST_ID) != host:
+            # We need to update the port binding if the host has changed or if
+            # the binding is clearly wrong due to previous lost messages.
+            vif_type = p.get('binding:vif_type')
+            if p.get(BINDING_HOST_ID) != host or vif_type in FAILED_VIF_TYPES:
                 # TODO(gibi): To support ports with resource request during
                 # server move operations we need to take care of 'allocation'
                 # key in the binding profile per binding.

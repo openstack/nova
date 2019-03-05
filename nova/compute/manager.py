@@ -962,11 +962,10 @@ class ComputeManager(manager.Manager):
             LOG.debug(e, instance=instance)
         except exception.VirtualInterfacePlugException:
             # NOTE(mriedem): If we get here, it could be because the vif_type
-            # in the cache is "binding_failed" or "unbound".  The only way to
-            # fix this is to try and bind the ports again, which would be
-            # expensive here on host startup. We could add a check to
-            # _heal_instance_info_cache to handle this, but probably only if
-            # the instance task_state is None.
+            # in the cache is "binding_failed" or "unbound".
+            # The periodic task _heal_instance_info_cache checks for this
+            # condition. It should fix this by binding the ports again when
+            # it gets to this instance.
             LOG.exception('Virtual interface plugging failed for instance. '
                           'The port binding:host_id may need to be manually '
                           'updated.', instance=instance)
@@ -7116,6 +7115,25 @@ class ComputeManager(manager.Manager):
             action=fields.NotificationAction.LIVE_MIGRATION_ROLLBACK_DEST,
             phase=fields.NotificationPhase.END)
 
+    def _require_nw_info_update(self, context, instance):
+        """Detect whether there is a mismatch in binding:host_id, or
+        binding_failed or unbound binding:vif_type for any of the instances
+        ports.
+        """
+        if not utils.is_neutron():
+            return False
+        search_opts = {'device_id': instance.uuid,
+                       'fields': ['binding:host_id', 'binding:vif_type']}
+        ports = self.network_api.list_ports(context, **search_opts)
+        for p in ports['ports']:
+            if p.get('binding:host_id') != self.host:
+                return True
+            vif_type = p.get('binding:vif_type')
+            if (vif_type == network_model.VIF_TYPE_UNBOUND or
+                    vif_type == network_model.VIF_TYPE_BINDING_FAILED):
+                return True
+        return False
+
     @periodic_task.periodic_task(
         spacing=CONF.heal_instance_info_cache_interval)
     def _heal_instance_info_cache(self, context):
@@ -7194,6 +7212,15 @@ class ComputeManager(manager.Manager):
         if instance:
             # We have an instance now to refresh
             try:
+                # Fix potential mismatch in port binding if evacuation failed
+                # after reassigning the port binding to the dest host but
+                # before the instance host is changed.
+                # Do this only when instance has no pending task.
+                if instance.task_state is None and \
+                        self._require_nw_info_update(context, instance):
+                    LOG.info("Updating ports in neutron", instance=instance)
+                    self.network_api.setup_instance_network_on_host(
+                        context, instance, self.host)
                 # Call to network API to get instance info.. this will
                 # force an update to the instance's info_cache
                 self.network_api.get_instance_nw_info(
