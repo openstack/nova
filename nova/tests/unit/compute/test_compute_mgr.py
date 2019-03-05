@@ -7090,7 +7090,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                                        self.instance,
                                                        self.migration)
         mock_report.delete_allocation_for_instance.assert_called_once_with(
-            self.context, self.migration.uuid)
+            self.context, self.migration.uuid, consumer_type='migration')
 
     def test_revert_allocation(self):
         """New-style migration-based allocation revert."""
