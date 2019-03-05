@@ -99,8 +99,8 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         meta = MetaData()
         meta.bind = db_session.get_api_engine()
 
-        cell_mappings = Table('cell_mappings', meta, autoload=True)
-        count = select([sqlfunc.count()]).select_from(cell_mappings).scalar()
+        cell_mappings = self._get_cell_mappings()
+        count = len(cell_mappings)
         # Two mappings are required at a minimum, cell0 and your first cell
         if count < 2:
             msg = _('There needs to be at least two cell mappings, one for '
@@ -109,10 +109,8 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
                     'retry.')
             return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
 
-        count = select([sqlfunc.count()]).select_from(cell_mappings).where(
-            cell_mappings.c.uuid ==
-                cell_mapping_obj.CellMapping.CELL0_UUID).scalar()
-        if count != 1:
+        cell0 = any(mapping.is_cell0() for mapping in cell_mappings)
+        if not cell0:
             msg = _('No cell0 mapping found. Run command '
                     '\'nova-manage cell_v2 simple_cell_setup\' and then '
                     'retry.')
@@ -189,12 +187,38 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
 
     @staticmethod
     def _get_non_cell0_mappings():
-        """Queries the API database for non-cell0 cell mappings."""
-        meta = MetaData(bind=db_session.get_api_engine())
-        cell_mappings = Table('cell_mappings', meta, autoload=True)
-        return cell_mappings.select().where(
-            cell_mappings.c.uuid !=
-                cell_mapping_obj.CellMapping.CELL0_UUID).execute().fetchall()
+        """Queries the API database for non-cell0 cell mappings.
+
+        :returns: list of nova.objects.CellMapping objects
+        """
+        return UpgradeCommands._get_cell_mappings(include_cell0=False)
+
+    @staticmethod
+    def _get_cell_mappings(include_cell0=True):
+        """Queries the API database for cell mappings.
+
+        .. note:: This method is unique in that it queries the database using
+                  CellMappingList.get_all() rather than a direct query using
+                  the sqlalchemy models. This is because
+                  CellMapping.database_connection can be a template and the
+                  object takes care of formatting the URL. We cannot use
+                  RowProxy objects from sqlalchemy because we cannot set the
+                  formatted 'database_connection' value back on those objects
+                  (they are read-only).
+
+        :param include_cell0: True if cell0 should be returned, False if cell0
+            should be excluded from the results.
+        :returns: list of nova.objects.CellMapping objects
+        """
+        ctxt = nova_context.get_admin_context()
+        cell_mappings = cell_mapping_obj.CellMappingList.get_all(ctxt)
+        if not include_cell0:
+            # Since CellMappingList does not implement remove() we have to
+            # create a new list and exclude cell0.
+            mappings = [mapping for mapping in cell_mappings
+                        if not mapping.is_cell0()]
+            cell_mappings = cell_mapping_obj.CellMappingList(objects=mappings)
+        return cell_mappings
 
     @staticmethod
     def _is_ironic_instance_migrated(extras, inst):
@@ -265,7 +289,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
                                 # instance so increment the number of
                                 # unmigrated instances in this cell.
                                 unmigrated_instance_count_by_cell[
-                                    cell_mapping['uuid']] += 1
+                                    cell_mapping.uuid] += 1
 
         if not cell_mappings:
             # There are no non-cell0 mappings so we can't determine this, just
@@ -309,8 +333,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         nova-conductor.
         """
         meta = MetaData(bind=db_session.get_api_engine())
-        cell_mappings = Table('cell_mappings', meta, autoload=True)
-        mappings = cell_mappings.select().execute().fetchall()
+        mappings = self._get_cell_mappings()
 
         if not mappings:
             # There are no cell mappings so we can't determine this, just
@@ -344,7 +367,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
                     if spec_id is None:
                         # This cell does not have all of its instances
                         # migrated for request specs so track it and move on.
-                        incomplete_cells.append(mapping['uuid'])
+                        incomplete_cells.append(mapping.uuid)
                         break
 
         # It's a failure if there are any unmigrated instances at this point
@@ -380,9 +403,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         # it's possible a deployment could have services stored in the cell0
         # database, if they've defaulted their [database]connection in
         # nova.conf to cell0.
-        meta = MetaData(bind=db_session.get_api_engine())
-        cell_mappings = Table('cell_mappings', meta, autoload=True)
-        mappings = cell_mappings.select().execute().fetchall()
+        mappings = self._get_cell_mappings()
 
         if not mappings:
             # There are no cell mappings so we can't determine this, just
@@ -416,7 +437,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
             # supports storing console token auths in the database backend.
             for mapping in mappings:
                 # Skip cell0 as no compute services should be in it.
-                if mapping['uuid'] == cell_mapping_obj.CellMapping.CELL0_UUID:
+                if mapping.is_cell0():
                     continue
                 # Get the minimum nova-compute service version in this
                 # cell.
