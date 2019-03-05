@@ -1607,6 +1607,26 @@ class TestMoveAllocations(SchedulerReportClientTestCase):
             version=self.expected_microversion,
             global_request_id=self.context.global_id)
 
+    @mock.patch('nova.scheduler.client.report.LOG.info')
+    def test_move_from_empty_source(self, mock_info):
+        """Tests the case that the target has allocations but the source does
+        not so the move_allocations method assumes the allocations were already
+        moved and returns True without trying to POST /allocations.
+        """
+        source_consumer_data = {"allocations": {}}
+        source_rsp = mock.Mock()
+        source_rsp.json.return_value = source_consumer_data
+        self.mock_get.side_effect = [source_rsp, self.target_rsp]
+
+        resp = self.client.move_allocations(
+            self.context, self.source_consumer_uuid, self.target_consumer_uuid)
+
+        self.assertTrue(resp)
+        self.mock_post.assert_not_called()
+        mock_info.assert_called_once()
+        self.assertIn('Allocations not found for consumer',
+                      mock_info.call_args[0][0])
+
     def test_move_to_non_empty_target(self):
         self.mock_get.side_effect = [self.source_rsp, self.target_rsp]
 
