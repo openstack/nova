@@ -121,7 +121,7 @@ Response
   - service.host: host_name_body
   - service.id: service_id_body_2_52
   - service.id: service_id_body_2_53
-  - service.disable_reason: service_disable_reason
+  - service.disabled_reason: service_disable_reason
   - vcpus: hypervisor_vcpus
   - vcpus_used: hypervisor_vcpus_used
   - hypervisor_links: hypervisor_links
@@ -230,7 +230,7 @@ Response
   - service.host: host_name_body
   - service.id: service_id_body_2_52
   - service.id: service_id_body_2_53
-  - service.disable_reason: service_disable_reason
+  - service.disabled_reason: service_disable_reason
   - vcpus: hypervisor_vcpus
   - vcpus_used: hypervisor_vcpus_used
 
