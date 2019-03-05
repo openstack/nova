@@ -6685,8 +6685,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 migration=self.migration
             )
 
-        # Assert that we did not set the migration to an error state
-        self.assertEqual('post-migrating', self.migration.status)
+        # Assert that we set the migration to an error state
+        self.assertEqual("error", self.migration.status)
 
     @contextlib.contextmanager
     def _mock_resize_instance(self):
