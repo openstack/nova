@@ -188,6 +188,10 @@ def get_number_of_serial_ports(flavor, image_meta):
     :param flavor: Flavor object to read extra specs from
     :param image_meta: nova.objects.ImageMeta object instance
 
+    :raises: exception.ImageSerialPortNumberInvalid if the serial port count
+             is not a valid integer
+    :raises: exception.ImageSerialPortNumberExceedFlavorValue if the serial
+             port count defined in image is greater than that of flavor
     :returns: number of serial ports
     """
     flavor_num_ports, image_num_ports = _get_flavor_image_meta(
@@ -252,7 +256,7 @@ def _score_cpu_topology(topology, wanttopology):
     return score
 
 
-def _get_cpu_topology_constraints(flavor, image_meta):
+def get_cpu_topology_constraints(flavor, image_meta):
     """Get the topology constraints declared in flavor or image
 
     Extracts the topology constraints from the configuration defined in
@@ -287,8 +291,8 @@ def _get_cpu_topology_constraints(flavor, image_meta):
     :raises: exception.ImageVCPUTopologyRangeExceeded if the preferred
              counts set against the image exceed the maximum counts set
              against the image or flavor
-    :raises: ValueError if one of the provided flavor properties is a
-             non-integer
+    :raises: exception.InvalidRequest if one of the provided flavor properties
+             is a non-integer
     :returns: A two-tuple of objects.VirtCPUTopology instances. The
               first element corresponds to the preferred topology,
               while the latter corresponds to the maximum topology,
@@ -301,9 +305,13 @@ def _get_cpu_topology_constraints(flavor, image_meta):
     flavor_max_threads, image_max_threads = _get_flavor_image_meta(
         'cpu_max_threads', flavor, image_meta, 0)
     # image metadata is already of the correct type
-    flavor_max_sockets = int(flavor_max_sockets)
-    flavor_max_cores = int(flavor_max_cores)
-    flavor_max_threads = int(flavor_max_threads)
+    try:
+        flavor_max_sockets = int(flavor_max_sockets)
+        flavor_max_cores = int(flavor_max_cores)
+        flavor_max_threads = int(flavor_max_threads)
+    except ValueError as e:
+        msg = _('Invalid flavor extra spec. Error: %s') % six.text_type(e)
+        raise exception.InvalidRequest(msg)
 
     LOG.debug("Flavor limits %(sockets)d:%(cores)d:%(threads)d",
               {"sockets": flavor_max_sockets,
@@ -337,9 +345,13 @@ def _get_cpu_topology_constraints(flavor, image_meta):
         'cpu_cores', flavor, image_meta, 0)
     flavor_threads, image_threads = _get_flavor_image_meta(
         'cpu_threads', flavor, image_meta, 0)
-    flavor_sockets = int(flavor_sockets)
-    flavor_cores = int(flavor_cores)
-    flavor_threads = int(flavor_threads)
+    try:
+        flavor_sockets = int(flavor_sockets)
+        flavor_cores = int(flavor_cores)
+        flavor_threads = int(flavor_threads)
+    except ValueError as e:
+        msg = _('Invalid flavor extra spec. Error: %s') % six.text_type(e)
+        raise exception.InvalidRequest(msg)
 
     LOG.debug("Flavor pref %(sockets)d:%(cores)d:%(threads)d",
               {"sockets": flavor_sockets,
@@ -562,7 +574,7 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
               {"flavor": flavor, "image_meta": image_meta,
                "threads": allow_threads})
 
-    preferred, maximum = _get_cpu_topology_constraints(flavor, image_meta)
+    preferred, maximum = get_cpu_topology_constraints(flavor, image_meta)
     LOG.debug("Topology preferred %(preferred)s, maximum %(maximum)s",
               {"preferred": preferred, "maximum": maximum})
 
@@ -1294,10 +1306,24 @@ def _get_cpu_policy_constraint(flavor, image_meta):
     :param image_meta: ``nova.objects.ImageMeta`` instance
     :raises: exception.ImageCPUPinningForbidden if policy is defined on both
         image and flavor and these policies conflict.
+    :raises: exception.InvalidCPUAllocationPolicy if policy is defined with
+        invalid value in image or flavor.
     :returns: The CPU policy requested.
     """
     flavor_policy, image_policy = _get_flavor_image_meta(
         'cpu_policy', flavor, image_meta)
+
+    if flavor_policy and (flavor_policy not in fields.CPUAllocationPolicy.ALL):
+        raise exception.InvalidCPUAllocationPolicy(
+            source='flavor extra specs',
+            requested=flavor_policy,
+            available=str(fields.CPUAllocationPolicy.ALL))
+
+    if image_policy and (image_policy not in fields.CPUAllocationPolicy.ALL):
+        raise exception.InvalidCPUAllocationPolicy(
+            source='image properties',
+            requested=image_policy,
+            available=str(fields.CPUAllocationPolicy.ALL))
 
     if flavor_policy == fields.CPUAllocationPolicy.DEDICATED:
         cpu_policy = flavor_policy
@@ -1321,10 +1347,26 @@ def _get_cpu_thread_policy_constraint(flavor, image_meta):
     :param image_meta: ``nova.objects.ImageMeta`` instance
     :raises: exception.ImageCPUThreadPolicyForbidden if policy is defined on
         both image and flavor and these policies conflict.
+    :raises: exception.InvalidCPUThreadAllocationPolicy if policy is defined
+        with invalid value in image or flavor.
     :returns: The CPU thread policy requested.
     """
     flavor_policy, image_policy = _get_flavor_image_meta(
         'cpu_thread_policy', flavor, image_meta)
+
+    if flavor_policy and (
+            flavor_policy not in fields.CPUThreadAllocationPolicy.ALL):
+        raise exception.InvalidCPUThreadAllocationPolicy(
+            source='flavor extra specs',
+            requested=flavor_policy,
+            available=str(fields.CPUThreadAllocationPolicy.ALL))
+
+    if image_policy and (
+            image_policy not in fields.CPUThreadAllocationPolicy.ALL):
+        raise exception.InvalidCPUThreadAllocationPolicy(
+            source='image properties',
+            requested=image_policy,
+            available=str(fields.CPUThreadAllocationPolicy.ALL))
 
     if flavor_policy in [None, fields.CPUThreadAllocationPolicy.PREFER]:
         policy = flavor_policy or image_policy
@@ -1496,6 +1538,12 @@ def numa_get_constraints(flavor, image_meta):
              policy conflicts with CPU allocation policy
     :raises: exception.ImageCPUThreadPolicyForbidden if a CPU thread policy
              specified in a flavor conflicts with one defined in image metadata
+    :raises: exception.BadRequirementEmulatorThreadsPolicy if CPU emulator
+             threads policy conflicts with CPU allocation policy
+    :raises: exception.InvalidCPUAllocationPolicy if policy is defined with
+             invalid value in image or flavor.
+    :raises: exception.InvalidCPUThreadAllocationPolicy if policy is defined
+             with invalid value in image or flavor.
     :returns: objects.InstanceNUMATopology, or None
     """
     numa_topology = None

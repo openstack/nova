@@ -4357,12 +4357,16 @@ class ServersControllerCreateTest(test.TestCase):
     @mock.patch('nova.virt.hardware.numa_get_constraints')
     def _test_create_instance_numa_topology_wrong(self, exc,
                                                   numa_constraints_mock):
-        numa_constraints_mock.side_effect = exc(**{'name': None,
-                                                   'cpunum': 0,
-                                                   'cpumax': 0,
-                                                   'cpuset': None,
-                                                   'memsize': 0,
-                                                   'memtotal': 0})
+        numa_constraints_mock.side_effect = exc(**{
+            'name': None,
+            'source': 'flavor',
+            'requested': 'dummy',
+            'available': str(objects.fields.CPUAllocationPolicy.ALL),
+            'cpunum': 0,
+            'cpumax': 0,
+            'cpuset': None,
+            'memsize': 0,
+            'memtotal': 0})
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, body=self.body)
@@ -4374,6 +4378,8 @@ class ServersControllerCreateTest(test.TestCase):
                     exception.ImageNUMATopologyCPUOutOfRange,
                     exception.ImageNUMATopologyCPUDuplicates,
                     exception.ImageNUMATopologyCPUsUnassigned,
+                    exception.InvalidCPUAllocationPolicy,
+                    exception.InvalidCPUThreadAllocationPolicy,
                     exception.ImageNUMATopologyMemoryOutOfRange]:
             self._test_create_instance_numa_topology_wrong(exc)
 

@@ -2279,6 +2279,16 @@ class InvalidEmulatorThreadsPolicy(Invalid):
                 "given: '%(requested)s', available: '%(available)s'.")
 
 
+class InvalidCPUAllocationPolicy(Invalid):
+    msg_fmt = _("CPU policy requested from '%(source)s' is invalid, "
+                "given: '%(requested)s', available: '%(available)s'.")
+
+
+class InvalidCPUThreadAllocationPolicy(Invalid):
+    msg_fmt = _("CPU thread policy requested from '%(source)s' is invalid, "
+                "given: '%(requested)s', available: '%(available)s'.")
+
+
 class BadRequirementEmulatorThreadsPolicy(Invalid):
     msg_fmt = _("An isolated CPU emulator threads option requires a dedicated "
                 "CPU policy option.")

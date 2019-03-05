@@ -359,7 +359,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
             image_meta = objects.ImageMeta.from_dict(topo_test["image"])
             if type(topo_test["expect"]) == tuple:
                 (preferred,
-                 maximum) = hw._get_cpu_topology_constraints(
+                 maximum) = hw.get_cpu_topology_constraints(
                      topo_test["flavor"], image_meta)
 
                 self.assertEqual(topo_test["expect"][0], preferred.sockets)
@@ -370,9 +370,31 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 self.assertEqual(topo_test["expect"][5], maximum.threads)
             else:
                 self.assertRaises(topo_test["expect"],
-                                  hw._get_cpu_topology_constraints,
+                                  hw.get_cpu_topology_constraints,
                                   topo_test["flavor"],
                                   image_meta)
+
+    def test_invalid_flavor_values(self):
+        extra_specs = {
+                    # test non-integer value of these extra specs
+                    "hw:cpu_sockets": "8",
+                    "hw:cpu_cores": "2",
+                    "hw:cpu_threads": "1",
+                    "hw:cpu_max_sockets": "8",
+                    "hw:cpu_max_cores": "2",
+                    "hw:cpu_max_threads": "1",
+            }
+        image_meta = objects.ImageMeta.from_dict({"properties": {}})
+
+        for key in extra_specs:
+            extra_specs_invalid = extra_specs.copy()
+            extra_specs_invalid[key] = 'foo'
+            flavor = objects.Flavor(vcpus=16, memory_mb=2048,
+                                     extra_specs=extra_specs_invalid)
+            self.assertRaises(exception.InvalidRequest,
+                              hw.get_cpu_topology_constraints,
+                              flavor,
+                              image_meta)
 
     def test_possible_topologies(self):
         testdata = [
@@ -1248,7 +1270,42 @@ class NUMATopologyTest(test.NoDBTestCase):
                             cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
                         )]),
             },
-
+            {
+                # Invalid CPU pinning policy
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "hw:cpu_policy": "foo",
+                }),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.InvalidCPUAllocationPolicy,
+            },
+            {
+                # Invalid CPU thread pinning
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
+                    "hw:cpu_thread_policy": "foo",
+                }),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.InvalidCPUThreadAllocationPolicy,
+            },
+            {
+                # Invalid CPU thread pinning in image
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "hw:cpu_policy": fields.CPUAllocationPolicy.SHARED,
+                 }),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
+                    }
+                },
+                "expect": exception.ImageCPUPinningForbidden,
+            },
         ]
 
         for testitem in testdata:
