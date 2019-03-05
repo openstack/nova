@@ -50,6 +50,17 @@ Enable GPU types (Compute)
 
 #. Restart the ``nova-compute`` service.
 
+
+   .. warning::
+
+        Changing the type is possible but since existing physical GPUs can't
+        address multiple guests having different types, that will make Nova
+        return you a NoValidHost if existing instances with the original type
+        still exist. Accordingly, it's highly recommended to instead deploy the
+        new type to new compute nodes that don't already have workloads and
+        rebuild instances on the nodes that need to change types.
+
+
 Configure a flavor (Controller)
 -------------------------------
 
