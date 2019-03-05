@@ -317,10 +317,11 @@ class FilterScheduler(driver.Scheduler):
 
         weighed_hosts = self.host_manager.get_weighed_hosts(filtered_hosts,
             spec_obj)
+        # Log the weighed hosts before stripping off the wrapper class so that
+        # the weight value gets logged.
+        LOG.debug("Weighed %(hosts)s", {'hosts': weighed_hosts})
         # Strip off the WeighedHost wrapper class...
         weighed_hosts = [h.obj for h in weighed_hosts]
-
-        LOG.debug("Weighed %(hosts)s", {'hosts': weighed_hosts})
 
         # We randomize the first element in the returned list to alleviate
         # congestion where the same host is consistently selected among
