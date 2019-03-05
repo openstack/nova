@@ -304,6 +304,21 @@ class LibvirtConfigCapsGuest(LibvirtConfigObject):
         self.ostype = None
         self.domtype = list()
 
+        # Track <emulator> values, which we need in order to be able
+        # to call virConnectGetDomainCapabilities() - typically
+        # something like '/usr/bin/qemu-system-i386'.
+        #
+        # Firstly we track the default for any <domain> child without
+        # its own <emulator> sub-child:
+        self.emulator = None
+        #
+        # Also per-<domain> overrides for the default in self.emulator.
+        # The dict maps domain types such as 'kvm' to the emulator
+        # path for that domain type.  Note that these overrides come
+        # from <emulator> elements under each <domain>; there is no
+        # <domemulator> element.
+        self.domemulator = dict()
+
     def parse_dom(self, xmldoc):
         super(LibvirtConfigCapsGuest, self).parse_dom(xmldoc)
 
@@ -312,9 +327,18 @@ class LibvirtConfigCapsGuest(LibvirtConfigObject):
                 self.ostype = c.text
             elif c.tag == "arch":
                 self.arch = c.get("name")
-                for sc in c.getchildren():
-                    if sc.tag == "domain":
-                        self.domtype.append(sc.get("type"))
+                for ac in c.getchildren():
+                    if ac.tag == "domain":
+                        self.parse_domain(ac)
+                    elif ac.tag == "emulator":
+                        self.emulator = ac.text
+
+    def parse_domain(self, domxml):
+        domtype = domxml.get("type")
+        self.domtype.append(domtype)
+        for dc in domxml.getchildren():
+            if dc.tag == "emulator":
+                self.domemulator[domtype] = dc.text
 
     def format_dom(self):
         caps = super(LibvirtConfigCapsGuest, self).format_dom()
@@ -323,9 +347,14 @@ class LibvirtConfigCapsGuest(LibvirtConfigObject):
             caps.append(self._text_node("os_type", self.ostype))
         if self.arch:
             arch = etree.Element("arch", name=self.arch)
+            if self.emulator is not None:
+                arch.append(self._text_node("emulator", self.emulator))
             for dt in self.domtype:
                 dte = etree.Element("domain")
                 dte.set("type", dt)
+                if dt in self.domemulator:
+                    dte.append(self._text_node("emulator",
+                                               self.domemulator[dt]))
                 arch.append(dte)
             caps.append(arch)
 
