@@ -136,6 +136,12 @@ def bind_ip(device, ip, scope_is_link=False):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def unbind_ip(device, ip):
+    processutils.execute('ip', 'addr', 'del', str(ip) + '/32',
+                         'dev', device, check_exit_code=[0, 2, 254])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def dhcp_release(dev, address, mac_address):
     processutils.execute('dhcp_release', dev, address, mac_address)
 

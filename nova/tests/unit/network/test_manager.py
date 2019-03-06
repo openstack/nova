@@ -1735,8 +1735,9 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.db.api.fixed_ip_get_by_address')
     @mock.patch('nova.db.api.network_get')
     @mock.patch('nova.privsep.linux_net.bind_ip')
+    @mock.patch('nova.privsep.linux_net.unbind_ip')
     def test_ip_association_and_allocation_of_other_project(
-            self, bind_ip, net_get, fixed_get):
+            self, unbind_ip, bind_ip, net_get, fixed_get):
         """Makes sure that we cannot deallocaate or disassociate
         a public IP of other project.
         """
@@ -2843,9 +2844,10 @@ class AllocateTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.set_device_enabled')
     @mock.patch('nova.privsep.linux_net.set_device_macaddr')
     @mock.patch('nova.privsep.linux_net.bind_ip')
-    def test_allocate_for_instance(self, mock_bind, mock_set_macaddr,
-                                   mock_set_enabled, mock_set_mtu,
-                                   mock_add_bridge):
+    @mock.patch('nova.privsep.linux_net.unbind_ip')
+    def test_allocate_for_instance(self, mock_unbind, mock_bind,
+                                   mock_set_macaddr, mock_set_enabled,
+                                   mock_set_mtu, mock_add_bridge):
         address = "10.10.10.10"
         self.flags(auto_assign_floating_ip=True)
 
@@ -3070,7 +3072,8 @@ class FloatingIPTestCase(test.TestCase):
         self.network.deallocate_for_instance(self.context,
                 instance_id=instance_ref['id'])
 
-    def test_deallocation_deleted_instance(self):
+    @mock.patch('nova.privsep.linux_net.unbind_ip')
+    def test_deallocation_deleted_instance(self, mock_unbind_ip):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
         instance = objects.Instance(context=self.context)
@@ -3090,7 +3093,8 @@ class FloatingIPTestCase(test.TestCase):
                 'project_id': self.project_id})
         self.network.deallocate_for_instance(self.context, instance=instance)
 
-    def test_deallocation_duplicate_floating_ip(self):
+    @mock.patch('nova.privsep.linux_net.unbind_ip')
+    def test_deallocation_duplicate_floating_ip(self, mock_unbind_ip):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
         instance = objects.Instance(context=self.context)

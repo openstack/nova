@@ -671,13 +671,6 @@ def bind_floating_ip(floating_ip, device):
         send_arp_for_ip(floating_ip, device, CONF.send_arp_for_ha_count)
 
 
-def unbind_floating_ip(floating_ip, device):
-    """Unbind a public IP from public interface."""
-    _execute('ip', 'addr', 'del', str(floating_ip) + '/32',
-             'dev', device,
-             run_as_root=True, check_exit_code=[0, 2, 254])
-
-
 def ensure_metadata_ip():
     """Sets up local metadata IP."""
     nova.privsep.linux_net.bind_ip('lo', '169.254.169.254',

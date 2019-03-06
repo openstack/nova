@@ -16,6 +16,7 @@
 from oslo_log import log as logging
 
 from nova.network import linux_net
+import nova.privsep.linux_net
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -117,7 +118,7 @@ class LinuxNetL3(L3Driver):
 
     def remove_floating_ip(self, floating_ip, fixed_ip, l3_interface_id,
                            network=None):
-        linux_net.unbind_floating_ip(floating_ip, l3_interface_id)
+        nova.privsep.linux_net.unbind_ip(l3_interface_id, floating_ip)
         linux_net.remove_floating_forward(floating_ip, fixed_ip,
                                           l3_interface_id, network)
         linux_net.clean_conntrack(fixed_ip)
