@@ -789,15 +789,14 @@ def initialize_gateway_device(dev, network_ref):
                 new_ip_params.append(ip_params)
     if not old_ip_params or old_ip_params[0][0] != full_ip:
         old_routes = []
-        result = _execute('ip', 'route', 'show', 'dev', dev)
+        result = nova.privsep.linux_net.routes_show(dev)
         if result:
             out, err = result
             for line in out.split('\n'):
                 fields = line.split()
                 if fields and 'via' in fields:
                     old_routes.append(fields)
-                    _execute('ip', 'route', 'del', fields[0],
-                             'dev', dev, run_as_root=True)
+                    nova.privsep.linux_net.route_delete(dev, fields[0])
         for ip_params in old_ip_params:
             _execute(*_ip_bridge_cmd('del', ip_params, dev),
                      run_as_root=True, check_exit_code=[0, 2, 254])
@@ -806,8 +805,8 @@ def initialize_gateway_device(dev, network_ref):
                      run_as_root=True, check_exit_code=[0, 2, 254])
 
         for fields in old_routes:
-            _execute('ip', 'route', 'add', *fields,
-                     run_as_root=True)
+            # TODO(mikal): this is horrible and should be re-written
+            nova.privsep.linux_net.route_add_horrid(fields)
         if CONF.send_arp_for_ha and CONF.send_arp_for_ha_count > 0:
             send_arp_for_ip(network_ref['dhcp_server'], dev,
                             CONF.send_arp_for_ha_count)
@@ -1446,13 +1445,12 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             # NOTE(danms): We also need to copy routes to the bridge so as
             #              not to break existing connectivity on the interface
             old_routes = []
-            out, err = _execute('ip', 'route', 'show', 'dev', interface)
+            out, err = nova.privsep.linux_net.routes_show(interface)
             for line in out.split('\n'):
                 fields = line.split()
                 if fields and 'via' in fields:
                     old_routes.append(fields)
-                    _execute('ip', 'route', 'del', *fields,
-                             run_as_root=True)
+                    nova.privsep.linux_net.route_delete_horrid(fields)
             out, err = _execute('ip', 'addr', 'show', 'dev', interface,
                                 'scope', 'global')
             for line in out.split('\n'):
@@ -1467,8 +1465,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                     _execute(*_ip_bridge_cmd('add', params, bridge),
                              run_as_root=True, check_exit_code=[0, 2, 254])
             for fields in old_routes:
-                _execute('ip', 'route', 'add', *fields,
-                         run_as_root=True)
+                nova.privsep.linux_net.route_add_horrid(fields)
 
         if filtering:
             # Don't forward traffic unless we were told to be a gateway

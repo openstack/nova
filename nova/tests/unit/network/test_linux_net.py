@@ -592,7 +592,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     @mock.patch('nova.privsep.linux_net.add_bridge',
                 return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.set_device_enabled')
-    def test_linux_bridge_driver_plug(self, mock_enabled, mock_add_bridge,
+    @mock.patch('nova.privsep.linux_net.routes_show',
+                return_value=('fake', 0))
+    def test_linux_bridge_driver_plug(self, mock_routes_show,
+                                      mock_enabled, mock_add_bridge,
                                       mock_add_rule):
         """Makes sure plug doesn't drop FORWARD by default.
 
@@ -872,8 +875,14 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.assertEqual(expected, executes)
 
     @mock.patch.object(utils, 'execute')
-    def _test_initialize_gateway(self, existing, expected, mock_execute,
-                                 routes=''):
+    @mock.patch('nova.privsep.linux_net.routes_show')
+    @mock.patch('nova.privsep.linux_net.route_delete')
+    @mock.patch('nova.privsep.linux_net.route_add_horrid')
+    def _test_initialize_gateway(self, existing, expected, mock_route_add,
+                                 mock_route_delete, mock_routes,
+                                 mock_execute, routes='',
+                                 routes_show_called=True, deleted_routes=None,
+                                 added_routes=None):
         self.flags(fake_network=False)
         executes = []
 
@@ -881,12 +890,11 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             executes.append(args)
             if args[0] == 'ip' and args[1] == 'addr' and args[2] == 'show':
                 return existing, ""
-            if args[0] == 'ip' and args[1] == 'route' and args[2] == 'show':
-                return routes, ""
             if args[0] == 'sysctl':
                 return '1\n', ''
 
         mock_execute.side_effect = fake_execute
+        mock_routes.return_value = (routes, '')
 
         network = {'dhcp_server': '192.168.1.1',
                    'cidr': '192.168.1.0/24',
@@ -895,6 +903,13 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.driver.initialize_gateway_device('eth0', network)
         self.assertEqual(expected, executes)
         self.assertTrue(mock_execute.called)
+
+        if routes_show_called:
+            mock_routes.assert_called_once_with('eth0')
+        if deleted_routes:
+            mock_route_delete.assert_has_calls(deleted_routes)
+        if added_routes:
+            mock_route_add.assert_has_calls(added_routes)
 
     def test_initialize_gateway_moves_wrong_ip(self):
         existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
@@ -906,7 +921,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         expected = [
             ('sysctl', '-n', 'net.ipv4.ip_forward'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
-            ('ip', 'route', 'show', 'dev', 'eth0'),
             ('ip', 'addr', 'del', '192.168.0.1/24',
              'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
             ('ip', 'addr', 'add', '192.168.1.1/24',
@@ -929,7 +943,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         expected = [
             ('sysctl', '-n', 'net.ipv4.ip_forward'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
-            ('ip', 'route', 'show', 'dev', 'eth0'),
             ('ip', 'addr', 'del', '192.168.0.1/24',
              'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
             ('ip', 'addr', 'add', '192.168.1.1/24',
@@ -953,23 +966,25 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         expected = [
             ('sysctl', '-n', 'net.ipv4.ip_forward'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
-            ('ip', 'route', 'show', 'dev', 'eth0'),
-            ('ip', 'route', 'del', 'default', 'dev', 'eth0'),
-            ('ip', 'route', 'del', '192.168.100.0/24', 'dev', 'eth0'),
             ('ip', 'addr', 'del', '192.168.0.1/24',
              'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
             ('ip', 'addr', 'add', '192.168.1.1/24',
              'brd', '192.168.1.255', 'dev', 'eth0'),
             ('ip', 'addr', 'add', '192.168.0.1/24',
              'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
-            ('ip', 'route', 'add', 'default', 'via', '192.168.0.1',
-             'dev', 'eth0'),
-            ('ip', 'route', 'add', '192.168.100.0/24', 'via', '192.168.0.254',
-             'dev', 'eth0', 'proto', 'static'),
             ('ip', '-f', 'inet6', 'addr', 'change',
              '2001:db8::/64', 'dev', 'eth0'),
         ]
-        self._test_initialize_gateway(existing, expected, routes=routes)
+        self._test_initialize_gateway(
+            existing, expected, routes=routes,
+            deleted_routes=[mock.call('eth0', 'default'),
+                            mock.call('eth0', '192.168.100.0/24')],
+            added_routes=[mock.call(['default', 'via', '192.168.0.1',
+                                      'dev', 'eth0']),
+                          mock.call(['192.168.100.0/24', 'via',
+                                     '192.168.0.254',
+                                     'dev', 'eth0', 'proto', 'static'])]
+        )
 
     def test_initialize_gateway_no_move_right_ip(self):
         existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
@@ -985,7 +1000,8 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             ('ip', '-f', 'inet6', 'addr', 'change',
              '2001:db8::/64', 'dev', 'eth0'),
         ]
-        self._test_initialize_gateway(existing, expected)
+        self._test_initialize_gateway(existing, expected,
+                                      routes_show_called=False)
 
     def test_initialize_gateway_add_if_blank(self):
         existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
@@ -996,7 +1012,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         expected = [
             ('sysctl', '-n', 'net.ipv4.ip_forward'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
-            ('ip', 'route', 'show', 'dev', 'eth0'),
             ('ip', 'addr', 'add', '192.168.1.1/24',
              'brd', '192.168.1.255', 'dev', 'eth0'),
             ('ip', '-f', 'inet6', 'addr', 'change',
@@ -1131,7 +1146,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             '_execute': [
                 mock.call('brctl', 'addif', 'bridge', 'eth0',
                           run_as_root=True, check_exit_code=False),
-                mock.call('ip', 'route', 'show', 'dev', 'eth0'),
                 mock.call('ip', 'addr', 'show', 'dev', 'eth0', 'scope',
                           'global'),
                 ]
@@ -1141,9 +1155,11 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                        return_value=True),
             mock.patch('nova.privsep.linux_net.set_device_enabled'),
             mock.patch('nova.privsep.linux_net.set_device_macaddr'),
+            mock.patch('nova.privsep.linux_net.routes_show',
+                       return_value=('fake', '')),
             mock.patch.object(linux_net, '_execute', return_value=('', '')),
             mock.patch.object(netifaces, 'ifaddresses')
-        ) as (device_exists, device_enabled, set_device_macaddr,
+        ) as (device_exists, device_enabled, set_device_macaddr, routes_show,
               _execute, ifaddresses):
             ifaddresses.return_value = fake_ifaces
             driver = linux_net.LinuxBridgeInterfaceDriver()
