@@ -561,7 +561,28 @@ class API(base.Base):
 
     @staticmethod
     def _validate_flavor_image_nostatus(context, image, instance_type,
-                                        root_bdm, validate_numa=True):
+                                        root_bdm, validate_numa=True,
+                                        validate_pci=False):
+        """Validate the flavor and image.
+
+        This is called from the API service to ensure that the flavor
+        extra-specs and image properties are self-consistent and compatible
+        with each other.
+
+        :param context: A context.RequestContext
+        :param image: a dict representation of the image including properties,
+                      enforces the image status is active.
+        :param instance_type: Flavor object
+        :param root_bdm: BlockDeviceMapping for root disk.  Will be None for
+               the resize case.
+        :param validate_numa: Flag to indicate whether or not to validate
+               the NUMA-related metadata.
+        :param validate_pci: Flag to indicate whether or not to validate
+               the PCI-related metadata.
+        :raises: Many different possible exceptions.  See
+                 api.openstack.compute.servers.INVALID_FLAVOR_IMAGE_EXCEPTIONS
+                 for the full list.
+        """
         if not image:
             return
 
@@ -653,6 +674,8 @@ class API(base.Base):
         hardware.get_cpu_topology_constraints(instance_type, image_meta)
         if validate_numa:
             hardware.numa_get_constraints(instance_type, image_meta)
+        if validate_pci:
+            pci_request.get_pci_requests_from_flavor(instance_type)
 
     def _get_image_defined_bdms(self, instance_type, image_meta,
                                 root_device_name):
@@ -3595,7 +3618,8 @@ class API(base.Base):
                 instance.system_metadata)
             # Can skip root_bdm check since it will not change during resize.
             self._validate_flavor_image_nostatus(
-                context, image, new_instance_type, root_bdm=None)
+                context, image, new_instance_type, root_bdm=None,
+                validate_pci=True)
 
         filter_properties = {'ignore_hosts': []}
 
