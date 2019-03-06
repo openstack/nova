@@ -177,3 +177,11 @@ def version_to_string(version):
 
 def cpu_features_to_traits(features):
     return libvirt_utils.cpu_features_to_traits(features)
+
+
+def mdev_name2uuid(mdev_name):
+    return libvirt_utils.mdev_name2uuid(mdev_name)
+
+
+def mdev_uuid2name(mdev_uuid):
+    return libvirt_utils.mdev_uuid2name(mdev_uuid)
