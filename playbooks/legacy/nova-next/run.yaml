@@ -60,9 +60,12 @@
           export PYTHONUNBUFFERED=true
           # Yes we want to run Tempest.
           export DEVSTACK_GATE_TEMPEST=1
-          # Run all compute API tests and all scenario tests at the default
+          # Run all compute API tests and most scenario tests at the default
           # concurrency (nproc/2 which is normally 4 in the gate).
-          export DEVSTACK_GATE_TEMPEST_REGEX="^tempest\.((scenario)|(api\.compute))"
+          # The tempest.scenario.test_network* tests are skipped because they
+          # (1) take a long time and (2) are already covered in the
+          # tempest-slow* job.
+          export DEVSTACK_GATE_TEMPEST_REGEX="^tempest\.((scenario(?!\.test_network))|(api\.compute))"
           # The post_test_hook runs some post-test CLIs for things that
           # Tempest does not test, like archiving deleted records.
           function post_test_hook {
