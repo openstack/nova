@@ -31,10 +31,10 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.network import linux_net
-from nova.network import linux_utils as linux_net_utils
 from nova.network import model as network_model
 from nova.network import os_vif_util
 from nova import objects
+from nova.pci import utils as pci_utils
 import nova.privsep.linux_net
 from nova import profiler
 from nova import utils
@@ -98,6 +98,24 @@ def is_vif_model_valid_for_virt(virt_type, vif_model):
         raise exception.UnsupportedVirtType(virt=virt_type)
 
     return vif_model in valid_models[virt_type]
+
+
+def set_vf_interface_vlan(pci_addr, mac_addr, vlan=0):
+    pf_ifname = pci_utils.get_ifname_by_pci_address(pci_addr,
+                                                    pf_interface=True)
+    vf_ifname = pci_utils.get_ifname_by_pci_address(pci_addr)
+    vf_num = pci_utils.get_vf_num_by_pci_address(pci_addr)
+
+    nova.privsep.linux_net.set_device_macaddr_and_vlan(
+        pf_ifname, vf_num, mac_addr, vlan)
+
+    # Bring up/down the VF's interface
+    # TODO(edand): The mac is assigned as a workaround for the following issue
+    #              https://bugzilla.redhat.com/show_bug.cgi?id=1372944
+    #              once resolved it will be removed
+    port_state = 'up' if vlan > 0 else 'down'
+    nova.privsep.linux_net.set_device_macaddr(vf_ifname, mac_addr,
+                                              port_state=port_state)
 
 
 @profiler.trace_cls("vif_driver")
@@ -616,7 +634,7 @@ class LibvirtGenericVIFDriver(object):
         # TODO(vladikr): This code can be removed once the minimum version of
         # Libvirt is incleased above 1.3.5, as vlan will be set by libvirt
         if vif['vnic_type'] == network_model.VNIC_TYPE_MACVTAP:
-            linux_net_utils.set_vf_interface_vlan(
+            set_vf_interface_vlan(
                 vif['profile']['pci_slot'],
                 mac_addr=vif['address'],
                 vlan=vif['details'][network_model.VIF_DETAILS_VLAN])
@@ -752,8 +770,8 @@ class LibvirtGenericVIFDriver(object):
             # The ip utility accepts the MAC 00:00:00:00:00:00 which can
             # be used to reset the VF mac when no longer in use by a vm.
             # As such we hardcode the 00:00:00:00:00:00 mac.
-            linux_net_utils.set_vf_interface_vlan(vif['profile']['pci_slot'],
-                                                  mac_addr='00:00:00:00:00:00')
+            set_vf_interface_vlan(vif['profile']['pci_slot'],
+                                  mac_addr='00:00:00:00:00:00')
         elif vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
             if "trusted" in vif['profile']:
                 linux_net.set_vf_trusted(vif['profile']['pci_slot'], False)
