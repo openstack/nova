@@ -645,6 +645,7 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
             # code.
             self.assertTrue(sbi.called)
 
+    @mock.patch.object(compute_api.API, '_validate_flavor_image_nostatus')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(compute_api.API, '_resize_cells_support')
@@ -654,7 +655,8 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, '_check_auto_disk_config')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     def test_resize_instance(self, _bdms, _check, _extract, _save, _upsize,
-                             _cells, _record, _spec_get_by_uuid):
+                             _cells, _record, _spec_get_by_uuid,
+                             mock_validate):
         flavor = objects.Flavor(**test_flavor.fake_flavor)
         _extract.return_value = flavor
         orig_system_metadata = {}
@@ -665,7 +667,6 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
                 expected_attrs=['system_metadata'])
         instance.flavor = flavor
         instance.old_flavor = instance.new_flavor = None
-
         self.compute_api.resize(self.context, instance)
         self.assertTrue(self.cells_rpcapi.resize_instance.called)
 
@@ -705,7 +706,7 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
                 launched_at=timeutils.utcnow(), image_ref=uuids.image_id,
                 system_metadata=orig_system_metadata,
                 expected_attrs=['system_metadata'])
-        get_flavor.return_value = ''
+        get_flavor.return_value = {}
         # The API request schema validates that a UUID is passed for the
         # imageRef parameter so we need to provide an image.
         image_href = uuids.image_id

@@ -56,6 +56,35 @@ CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
+INVALID_FLAVOR_IMAGE_EXCEPTIONS = (
+    exception.BadRequirementEmulatorThreadsPolicy,
+    exception.CPUThreadPolicyConfigurationInvalid,
+    exception.ImageCPUPinningForbidden,
+    exception.ImageCPUThreadPolicyForbidden,
+    exception.ImageNUMATopologyAsymmetric,
+    exception.ImageNUMATopologyCPUDuplicates,
+    exception.ImageNUMATopologyCPUOutOfRange,
+    exception.ImageNUMATopologyCPUsUnassigned,
+    exception.ImageNUMATopologyForbidden,
+    exception.ImageNUMATopologyIncomplete,
+    exception.ImageNUMATopologyMemoryOutOfRange,
+    exception.ImageSerialPortNumberExceedFlavorValue,
+    exception.ImageSerialPortNumberInvalid,
+    exception.ImageVCPULimitsRangeExceeded,
+    exception.ImageVCPUTopologyRangeExceeded,
+    exception.InvalidCPUAllocationPolicy,
+    exception.InvalidCPUThreadAllocationPolicy,
+    exception.InvalidEmulatorThreadsPolicy,
+    exception.InvalidNUMANodesNumber,
+    exception.InvalidRequest,
+    exception.MemoryPageSizeForbidden,
+    exception.MemoryPageSizeInvalid,
+    exception.PciInvalidAlias,
+    exception.PciRequestAliasNotDefined,
+    exception.RealtimeConfigurationInvalid,
+    exception.RealtimeMaskNotFoundOrInvalid,
+)
+
 
 class ServersController(wsgi.Controller):
     """The Server API base controller class for the OpenStack API."""
@@ -678,8 +707,7 @@ class ServersController(wsgi.Controller):
         except UnicodeDecodeError as error:
             msg = "UnicodeError: %s" % error
             raise exc.HTTPBadRequest(explanation=msg)
-        except (exception.CPUThreadPolicyConfigurationInvalid,
-                exception.ImageNotActive,
+        except (exception.ImageNotActive,
                 exception.ImageBadRequest,
                 exception.ImageNotAuthorized,
                 exception.FixedIpNotFoundForAddress,
@@ -687,7 +715,6 @@ class ServersController(wsgi.Controller):
                 exception.FlavorDiskTooSmall,
                 exception.FlavorMemoryTooSmall,
                 exception.InvalidMetadata,
-                exception.InvalidRequest,
                 exception.InvalidVolume,
                 exception.MultiplePortsNotApplicable,
                 exception.InvalidFixedIpAndMaxCountRequest,
@@ -710,30 +737,14 @@ class ServersController(wsgi.Controller):
                 exception.InvalidBDMSwapSize,
                 exception.VolumeTypeNotFound,
                 exception.AutoDiskConfigDisabledByImage,
-                exception.ImageCPUPinningForbidden,
-                exception.ImageCPUThreadPolicyForbidden,
-                exception.InvalidCPUAllocationPolicy,
-                exception.InvalidCPUThreadAllocationPolicy,
-                exception.ImageNUMATopologyIncomplete,
-                exception.ImageNUMATopologyForbidden,
-                exception.ImageNUMATopologyAsymmetric,
-                exception.ImageNUMATopologyCPUOutOfRange,
-                exception.ImageNUMATopologyCPUDuplicates,
-                exception.ImageNUMATopologyCPUsUnassigned,
-                exception.ImageNUMATopologyMemoryOutOfRange,
-                exception.InvalidNUMANodesNumber,
                 exception.InstanceGroupNotFound,
-                exception.MemoryPageSizeInvalid,
-                exception.MemoryPageSizeForbidden,
-                exception.PciRequestAliasNotDefined,
-                exception.PciInvalidAlias,
-                exception.RealtimeConfigurationInvalid,
-                exception.RealtimeMaskNotFoundOrInvalid,
                 exception.SnapshotNotFound,
                 exception.UnableToAutoAllocateNetwork,
                 exception.MultiattachNotSupportedOldMicroversion,
                 exception.CertificateValidationFailed,
                 exception.CreateWithPortResourceRequestOldVersion) as error:
+            raise exc.HTTPBadRequest(explanation=error.format_message())
+        except INVALID_FLAVOR_IMAGE_EXCEPTIONS as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.InstanceExists,
@@ -931,8 +942,9 @@ class ServersController(wsgi.Controller):
                 exception.CannotResizeDisk,
                 exception.CannotResizeToSameFlavor,
                 exception.FlavorNotFound,
-                exception.NoValidHost,
-                exception.PciRequestAliasNotDefined) as e:
+                exception.NoValidHost) as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+        except INVALID_FLAVOR_IMAGE_EXCEPTIONS as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.Invalid:
             msg = _("Invalid instance image.")
@@ -1083,13 +1095,16 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.QuotaError as error:
             raise exc.HTTPForbidden(explanation=error.format_message())
-        except (exception.ImageNotActive,
-                exception.ImageUnacceptable,
+        except (exception.AutoDiskConfigDisabledByImage,
+                exception.CertificateValidationFailed,
                 exception.FlavorDiskTooSmall,
                 exception.FlavorMemoryTooSmall,
+                exception.ImageNotActive,
+                exception.ImageUnacceptable,
                 exception.InvalidMetadata,
-                exception.AutoDiskConfigDisabledByImage,
-                exception.CertificateValidationFailed) as error:
+                ) as error:
+            raise exc.HTTPBadRequest(explanation=error.format_message())
+        except INVALID_FLAVOR_IMAGE_EXCEPTIONS as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
         instance = self._get_server(context, req, id, is_detail=True)

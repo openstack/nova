@@ -245,6 +245,17 @@ def load_cells():
         LOG.error('No cells are configured, unable to continue')
 
 
+def _get_image_meta_obj(image_meta_dict):
+    try:
+        image_meta = objects.ImageMeta.from_dict(image_meta_dict)
+    except ValueError as e:
+        # there must be invalid values in the image meta properties so
+        # consider this an invalid request
+        msg = _('Invalid image metadata. Error: %s') % six.text_type(e)
+        raise exception.InvalidRequest(msg)
+    return image_meta
+
+
 @profiler.trace_cls("compute_api")
 class API(base.Base):
     """API for interacting with the compute manager."""
@@ -522,13 +533,37 @@ class API(base.Base):
         # reason, we rely on the DB to cast True to a String.
         return True if bool_val else ''
 
-    def _check_requested_image(self, context, image_id, image,
-                               instance_type, root_bdm):
+    def _validate_flavor_image(self, context, image_id, image,
+                               instance_type, root_bdm, validate_numa=True):
+        """Validate the flavor and image.
+
+        This is called from the API service to ensure that the flavor
+        extra-specs and image properties are self-consistent and compatible
+        with each other.
+
+        :param context: A context.RequestContext
+        :param image_id: UUID of the image
+        :param image: a dict representation of the image including properties,
+                      enforces the image status is active.
+        :param instance_type: Flavor object
+        :param root_bdm: BlockDeviceMapping for root disk.  Will be None for
+               the resize case.
+        :param validate_numa: Flag to indicate whether or not to validate
+               the NUMA-related metadata.
+        :raises: Many different possible exceptions.  See
+                 api.openstack.compute.servers.INVALID_FLAVOR_IMAGE_EXCEPTIONS
+                 for the full list.
+        """
+        if image and image['status'] != 'active':
+            raise exception.ImageNotActive(image_id=image_id)
+        self._validate_flavor_image_nostatus(context, image, instance_type,
+                                             root_bdm, validate_numa)
+
+    @staticmethod
+    def _validate_flavor_image_nostatus(context, image, instance_type,
+                                        root_bdm, validate_numa=True):
         if not image:
             return
-
-        if image['status'] != 'active':
-            raise exception.ImageNotActive(image_id=image_id)
 
         image_properties = image.get('properties', {})
         config_drive_option = image_properties.get(
@@ -607,6 +642,17 @@ class API(base.Base):
                 if not context.can(
                         servers_policies.ZERO_DISK_FLAVOR, fatal=False):
                     raise exception.BootFromVolumeRequiredForZeroDiskFlavor()
+
+        image_meta = _get_image_meta_obj(image)
+
+        # Only validate values of flavor/image so the return results of
+        # following 'get' functions are not used.
+        hardware.get_number_of_serial_ports(instance_type, image_meta)
+        if hardware.is_realtime_enabled(instance_type):
+            hardware.vcpus_realtime_topology(instance_type, image_meta)
+        hardware.get_cpu_topology_constraints(instance_type, image_meta)
+        if validate_numa:
+            hardware.numa_get_constraints(instance_type, image_meta)
 
     def _get_image_defined_bdms(self, instance_type, image_meta,
                                 root_device_name):
@@ -733,11 +779,13 @@ class API(base.Base):
 
     def _checks_for_create_and_rebuild(self, context, image_id, image,
                                        instance_type, metadata,
-                                       files_to_inject, root_bdm):
+                                       files_to_inject, root_bdm,
+                                       validate_numa=True):
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, files_to_inject)
-        self._check_requested_image(context, image_id, image,
-                                    instance_type, root_bdm)
+        self._validate_flavor_image(context, image_id, image,
+                                    instance_type, root_bdm,
+                                    validate_numa=validate_numa)
 
     def _validate_and_build_base_options(self, context, instance_type,
                                          boot_meta, image_href, image_id,
@@ -790,13 +838,7 @@ class API(base.Base):
                 block_device.properties_root_device_name(
                     boot_meta.get('properties', {})))
 
-        try:
-            image_meta = objects.ImageMeta.from_dict(boot_meta)
-        except ValueError as e:
-            # there must be invalid values in the image meta properties so
-            # consider this an invalid request
-            msg = _('Invalid image metadata. Error: %s') % six.text_type(e)
-            raise exception.InvalidRequest(msg)
+        image_meta = _get_image_meta_obj(boot_meta)
         numa_topology = hardware.numa_get_constraints(
                 instance_type, image_meta)
 
@@ -1185,9 +1227,11 @@ class API(base.Base):
 
         # We can't do this check earlier because we need bdms from all sources
         # to have been merged in order to get the root bdm.
+        # Set validate_numa=False since numa validation is already done by
+        # _validate_and_build_base_options().
         self._checks_for_create_and_rebuild(context, image_id, boot_meta,
                 instance_type, metadata, injected_files,
-                block_device_mapping.root_bdm())
+                block_device_mapping.root_bdm(), validate_numa=False)
 
         instance_group = self._get_requested_instance_group(context,
                                    filter_properties)
@@ -3545,6 +3589,13 @@ class API(base.Base):
             self._check_quota_for_upsize(context, instance,
                                          current_instance_type,
                                          new_instance_type)
+
+        if not same_instance_type:
+            image = utils.get_image_from_system_metadata(
+                instance.system_metadata)
+            # Can skip root_bdm check since it will not change during resize.
+            self._validate_flavor_image_nostatus(
+                context, image, new_instance_type, root_bdm=None)
 
         filter_properties = {'ignore_hosts': []}
 

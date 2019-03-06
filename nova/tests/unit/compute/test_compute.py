@@ -12709,8 +12709,10 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         self.assertRaises(exception.FlavorNotFound,
             self.compute_api.create, self.context, self.inst_type, None)
 
+    @mock.patch('nova.compute.api.API._validate_flavor_image_nostatus')
     @mock.patch('nova.objects.RequestSpec')
-    def test_can_resize_to_visible_instance_type(self, mock_reqspec):
+    def test_can_resize_to_visible_instance_type(self, mock_reqspec,
+                                                 mock_validate):
         instance = self._create_fake_instance_obj()
         orig_get_flavor_by_flavor_id =\
                 flavors.get_flavor_by_flavor_id
@@ -13450,51 +13452,51 @@ class CheckRequestedImageTestCase(test.TestCase):
         self.instance_type['root_gb'] = 1
 
     def test_no_image_specified(self):
-        self.compute_api._check_requested_image(self.context, None, None,
+        self.compute_api._validate_flavor_image(self.context, None, None,
                 self.instance_type, None)
 
     def test_image_status_must_be_active(self):
-        image = dict(id='123', status='foo')
+        image = dict(id=uuids.image_id, status='foo')
 
         self.assertRaises(exception.ImageNotActive,
-                self.compute_api._check_requested_image, self.context,
+                self.compute_api._validate_flavor_image, self.context,
                 image['id'], image, self.instance_type, None)
 
         image['status'] = 'active'
-        self.compute_api._check_requested_image(self.context, image['id'],
+        self.compute_api._validate_flavor_image(self.context, image['id'],
                 image, self.instance_type, None)
 
     def test_image_min_ram_check(self):
-        image = dict(id='123', status='active', min_ram='65')
+        image = dict(id=uuids.image_id, status='active', min_ram='65')
 
         self.assertRaises(exception.FlavorMemoryTooSmall,
-                self.compute_api._check_requested_image, self.context,
+                self.compute_api._validate_flavor_image, self.context,
                 image['id'], image, self.instance_type, None)
 
         image['min_ram'] = '64'
-        self.compute_api._check_requested_image(self.context, image['id'],
+        self.compute_api._validate_flavor_image(self.context, image['id'],
                 image, self.instance_type, None)
 
     def test_image_min_disk_check(self):
-        image = dict(id='123', status='active', min_disk='2')
+        image = dict(id=uuids.image_id, status='active', min_disk='2')
 
         self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
-                self.compute_api._check_requested_image, self.context,
+                self.compute_api._validate_flavor_image, self.context,
                 image['id'], image, self.instance_type, None)
 
         image['min_disk'] = '1'
-        self.compute_api._check_requested_image(self.context, image['id'],
+        self.compute_api._validate_flavor_image(self.context, image['id'],
                 image, self.instance_type, None)
 
     def test_image_too_large(self):
-        image = dict(id='123', status='active', size='1073741825')
+        image = dict(id=uuids.image_id, status='active', size='1073741825')
 
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
-                self.compute_api._check_requested_image, self.context,
+                self.compute_api._validate_flavor_image, self.context,
                 image['id'], image, self.instance_type, None)
 
         image['size'] = '1073741824'
-        self.compute_api._check_requested_image(self.context, image['id'],
+        self.compute_api._validate_flavor_image(self.context, image['id'],
                 image, self.instance_type, None)
 
     def test_root_gb_zero_disables_size_check(self):
@@ -13502,9 +13504,9 @@ class CheckRequestedImageTestCase(test.TestCase):
             servers_policy.ZERO_DISK_FLAVOR: servers_policy.RULE_AOO
         }, overwrite=False)
         self.instance_type['root_gb'] = 0
-        image = dict(id='123', status='active', size='1073741825')
+        image = dict(id=uuids.image_id, status='active', size='1073741825')
 
-        self.compute_api._check_requested_image(self.context, image['id'],
+        self.compute_api._validate_flavor_image(self.context, image['id'],
                 image, self.instance_type, None)
 
     def test_root_gb_zero_disables_min_disk(self):
@@ -13512,22 +13514,22 @@ class CheckRequestedImageTestCase(test.TestCase):
             servers_policy.ZERO_DISK_FLAVOR: servers_policy.RULE_AOO
         }, overwrite=False)
         self.instance_type['root_gb'] = 0
-        image = dict(id='123', status='active', min_disk='2')
+        image = dict(id=uuids.image_id, status='active', min_disk='2')
 
-        self.compute_api._check_requested_image(self.context, image['id'],
+        self.compute_api._validate_flavor_image(self.context, image['id'],
                 image, self.instance_type, None)
 
     def test_config_drive_option(self):
-        image = {'id': 1, 'status': 'active'}
+        image = {'id': uuids.image_id, 'status': 'active'}
         image['properties'] = {'img_config_drive': 'optional'}
-        self.compute_api._check_requested_image(self.context, image['id'],
+        self.compute_api._validate_flavor_image(self.context, image['id'],
                 image, self.instance_type, None)
         image['properties'] = {'img_config_drive': 'mandatory'}
-        self.compute_api._check_requested_image(self.context, image['id'],
+        self.compute_api._validate_flavor_image(self.context, image['id'],
                 image, self.instance_type, None)
         image['properties'] = {'img_config_drive': 'bar'}
         self.assertRaises(exception.InvalidImageConfigDrive,
-                          self.compute_api._check_requested_image,
+                          self.compute_api._validate_flavor_image,
                           self.context, image['id'], image, self.instance_type,
                           None)
 
@@ -13546,7 +13548,7 @@ class CheckRequestedImageTestCase(test.TestCase):
             source_type='volume', destination_type='volume',
             volume_id=volume_uuid, volume_size=self.instance_type.root_gb + 1)
 
-        self.compute_api._check_requested_image(self.context, image['id'],
+        self.compute_api._validate_flavor_image(self.context, image['id'],
                 image, self.instance_type, root_bdm)
 
     def test_volume_blockdevicemapping_min_disk(self):
@@ -13564,7 +13566,7 @@ class CheckRequestedImageTestCase(test.TestCase):
             volume_size=self.instance_type.root_gb)
 
         self.assertRaises(exception.VolumeSmallerThanMinDisk,
-                          self.compute_api._check_requested_image,
+                          self.compute_api._validate_flavor_image,
                           self.context, image_uuid, image, self.instance_type,
                           root_bdm)
 
@@ -13580,7 +13582,7 @@ class CheckRequestedImageTestCase(test.TestCase):
             source_type='volume', destination_type='volume',
             volume_id=volume_uuid, volume_size=None)
 
-        self.compute_api._check_requested_image(self.context, image['id'],
+        self.compute_api._validate_flavor_image(self.context, image['id'],
                 image, self.instance_type, root_bdm)
 
     def test_image_blockdevicemapping(self):
@@ -13593,7 +13595,7 @@ class CheckRequestedImageTestCase(test.TestCase):
         root_bdm = block_device_obj.BlockDeviceMapping(
             source_type='image', destination_type='local', image_id=image_uuid)
 
-        self.compute_api._check_requested_image(self.context, image['id'],
+        self.compute_api._validate_flavor_image(self.context, image['id'],
                 image, self.instance_type, root_bdm)
 
     def test_image_blockdevicemapping_too_big(self):
@@ -13608,7 +13610,7 @@ class CheckRequestedImageTestCase(test.TestCase):
             source_type='image', destination_type='local', image_id=image_uuid)
 
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
-                          self.compute_api._check_requested_image,
+                          self.compute_api._validate_flavor_image,
                           self.context, image['id'],
                           image, self.instance_type, root_bdm)
 
@@ -13623,9 +13625,44 @@ class CheckRequestedImageTestCase(test.TestCase):
             source_type='image', destination_type='local', image_id=image_uuid)
 
         self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
-                          self.compute_api._check_requested_image,
+                          self.compute_api._validate_flavor_image,
                           self.context, image['id'],
                           image, self.instance_type, root_bdm)
+
+    def test_cpu_policy(self):
+        image = {'id': uuids.image_id, 'status': 'active'}
+        for v in obj_fields.CPUAllocationPolicy.ALL:
+            image['properties'] = {'hw_cpu_policy': v}
+            self.compute_api._validate_flavor_image(
+                self.context, image['id'], image, self.instance_type, None)
+        image['properties'] = {'hw_cpu_policy': 'bar'}
+        self.assertRaises(exception.InvalidRequest,
+                          self.compute_api._validate_flavor_image,
+                          self.context, image['id'], image, self.instance_type,
+                          None)
+
+    def test_cpu_thread_policy(self):
+        image = {'id': uuids.image_id, 'status': 'active'}
+        image['properties'] = {
+            'hw_cpu_policy': obj_fields.CPUAllocationPolicy.DEDICATED}
+        for v in obj_fields.CPUThreadAllocationPolicy.ALL:
+            image['properties']['hw_cpu_thread_policy'] = v
+            self.compute_api._validate_flavor_image(
+                self.context, image['id'], image, self.instance_type, None)
+        image['properties']['hw_cpu_thread_policy'] = 'bar'
+        self.assertRaises(exception.InvalidRequest,
+                          self.compute_api._validate_flavor_image,
+                          self.context, image['id'], image, self.instance_type,
+                          None)
+
+        image['properties'] = {
+            'hw_cpu_policy': obj_fields.CPUAllocationPolicy.SHARED,
+            'hw_cpu_thread_policy':
+                obj_fields.CPUThreadAllocationPolicy.ISOLATE}
+        self.assertRaises(exception.CPUThreadPolicyConfigurationInvalid,
+                          self.compute_api._validate_flavor_image,
+                          self.context, image['id'], image, self.instance_type,
+                          None)
 
 
 class ComputeHooksTestCase(test.BaseHookTestCase):

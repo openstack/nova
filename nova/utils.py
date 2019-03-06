@@ -945,7 +945,7 @@ def get_image_metadata_from_volume(volume):
             image_meta[attr] = int(val or 0)
     # NOTE(mriedem): Set the status to 'active' as a really old hack
     # from when this method was in the compute API class and is
-    # needed for _check_requested_image which makes sure the image
+    # needed for _validate_flavor_image which makes sure the image
     # is 'active'. For volume-backed servers, if the volume is not
     # available because the image backing the volume is not active,
     # then the compute API trying to reserve the volume should fail.

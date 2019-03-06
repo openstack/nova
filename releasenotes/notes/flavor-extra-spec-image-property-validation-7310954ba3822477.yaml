@@ -1,0 +1,17 @@
+---
+upgrade:
+  - |
+    With added validations for flavor extra-specs and image properties, the
+    APIs for server create, resize and rebuild will now return 400 exceptions
+    where they did not before due to the extra-specs or properties not being
+    properly formatted or being mutually incompatible.
+
+    For all three actions we will now check both the flavor and image to
+    validate the CPU policy, CPU thread policy, CPU topology, memory topology,
+    hugepages, serial ports, realtime CPU mask, NUMA topology details, CPU
+    pinning, and a few other things.
+
+    The main advantage to this is to catch invalid configurations as early
+    as possible so that we can return a useful error to the user rather than
+    fail later on much further down the stack where the operator would have
+    to get involved.
