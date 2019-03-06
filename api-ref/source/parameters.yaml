@@ -6815,6 +6815,17 @@ volume_size:
     The size of the volume (in GiB).
     This is integer value from range 1 to 2147483647
     which can be requested as integer and string.
+    This parameter must be specified in the following cases:
+
+    - An image to volume case
+
+      * ``block_device_mapping_v2.source_type`` is ``image``
+      * ``block_device_mapping_v2.destination_type`` is ``volume``
+
+    - A blank to volume case
+
+      * ``block_device_mapping_v2.source_type`` is ``blank``
+      * ``block_device_mapping_v2.destination_type`` is ``volume``
   in: body
   required: false
   type: integer
