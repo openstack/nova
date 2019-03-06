@@ -930,8 +930,7 @@ def get_dhcp_opts(context, network_ref, fixedips):
 def release_dhcp(dev, address, mac_address):
     if nova.privsep.linux_net.device_exists(dev):
         try:
-            utils.execute('dhcp_release', dev, address, mac_address,
-                          run_as_root=True)
+            nova.privsep.linux_net.dhcp_release(dev, address, mac_address)
         except processutils.ProcessExecutionError:
             raise exception.NetworkDhcpReleaseFailed(address=address,
                                                      mac_address=mac_address)
