@@ -21,6 +21,7 @@ from nova import context as nova_context
 from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional.api import client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 import nova.tests.unit.image.fake
@@ -191,6 +192,22 @@ class AggregateRequestFiltersTest(test.TestCase,
         }
         self.admin_api.post_aggregate_action(agg['id'], action)
 
+    def _set_metadata(self, agg, metadata):
+        """POST /os-aggregates/{aggregate_id}/action (set_metadata)
+
+        :param agg: Name of the nova aggregate
+        :param metadata: dict of aggregate metadata key/value pairs to add,
+            update, or remove if value=None (note "availability_zone" cannot be
+            nulled out once set).
+        """
+        agg = self.aggregates[agg]
+        action = {
+            'set_metadata': {
+                'metadata': metadata
+            },
+        }
+        self.admin_api.post_aggregate_action(agg['id'], action)
+
     def _grant_tenant_aggregate(self, agg, tenants):
         """Grant a set of tenants access to use an aggregate.
 
@@ -207,6 +224,87 @@ class AggregateRequestFiltersTest(test.TestCase,
             },
         }
         self.admin_api.post_aggregate_action(agg['id'], action)
+
+
+class AggregatePostTest(AggregateRequestFiltersTest):
+
+    def test_set_az_for_aggreate_no_instances(self):
+        """Should be possible to update AZ for an empty aggregate.
+
+        Check you can change the AZ name of an aggregate when it does
+        not contain any servers.
+        """
+        self._set_az_aggregate('only-host1', 'fake-az')
+
+    def test_rename_to_same_az(self):
+        """AZ rename should pass successfully if AZ name is not changed"""
+        az = 'fake-az'
+        self._set_az_aggregate('only-host1', az)
+        self._boot_server(az=az)
+        self._set_az_aggregate('only-host1', az)
+
+    def test_fail_set_az(self):
+        """Check it is not possible to update a non-empty aggregate.
+
+        Check you cannot change the AZ name of an aggregate when it
+        contains any servers.
+        """
+        az = 'fake-az'
+        self._set_az_aggregate('only-host1', az)
+        server = self._boot_server(az=az)
+        self.assertRaisesRegex(
+            client.OpenStackApiException,
+            'One or more hosts contain instances in this zone.',
+            self._set_az_aggregate, 'only-host1', 'new' + az)
+
+        # Configure for the SOFT_DELETED scenario.
+        self.flags(reclaim_instance_interval=300)
+        self.api.delete_server(server['id'])
+        server = self._wait_for_state_change(server, from_status='ACTIVE')
+        self.assertEqual('SOFT_DELETED', server['status'])
+        self.assertRaisesRegex(
+            client.OpenStackApiException,
+            'One or more hosts contain instances in this zone.',
+            self._set_az_aggregate, 'only-host1', 'new' + az)
+        # Force delete the SOFT_DELETED server.
+        self.api.api_post(
+            '/servers/%s/action' % server['id'], {'forceDelete': None})
+        # Wait for it to be deleted since forceDelete is asynchronous.
+        self._wait_until_deleted(server)
+        # Now we can rename the AZ since the server is gone.
+        self._set_az_aggregate('only-host1', 'new' + az)
+
+    def test_cannot_delete_az(self):
+        az = 'fake-az'
+        # Assign the AZ to the aggregate.
+        self._set_az_aggregate('only-host1', az)
+        # Set some metadata on the aggregate; note the "availability_zone"
+        # metadata key is not specified.
+        self._set_metadata('only-host1', {'foo': 'bar'})
+        # Verify the AZ was retained.
+        agg = self.admin_api.api_get(
+            '/os-aggregates/%s' %
+            self.aggregates['only-host1']['id']).body['aggregate']
+        self.assertEqual(az, agg['availability_zone'])
+
+
+# NOTE: this test case has the same test methods as AggregatePostTest
+# but for the AZ update it uses PUT /os-aggregates/{aggregate_id} method
+class AggregatePutTest(AggregatePostTest):
+
+    def _set_az_aggregate(self, agg, az):
+        """Set the availability_zone of an aggregate via PUT
+
+        :param agg: Name of the nova aggregate
+        :param az: Availability zone name
+        """
+        agg = self.aggregates[agg]
+        body = {
+            'aggregate': {
+                'availability_zone': az,
+            },
+        }
+        self.admin_api.put_aggregate(agg['id'], body)
 
 
 class TenantAggregateFilterTest(AggregateRequestFiltersTest):

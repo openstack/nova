@@ -5267,7 +5267,8 @@ class AggregateAPI(base.Base):
             aggregate.name = values.pop('name')
             aggregate.save()
         self.is_safe_to_update_az(context, values, aggregate=aggregate,
-                                  action_name=AGGREGATE_ACTION_UPDATE)
+                                  action_name=AGGREGATE_ACTION_UPDATE,
+                                  check_no_instances_in_az=True)
         if values:
             aggregate.update_metadata(values)
             aggregate.updated_at = timeutils.utcnow()
@@ -5283,7 +5284,8 @@ class AggregateAPI(base.Base):
         """Updates the aggregate metadata."""
         aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
         self.is_safe_to_update_az(context, metadata, aggregate=aggregate,
-                                  action_name=AGGREGATE_ACTION_UPDATE_META)
+                                  action_name=AGGREGATE_ACTION_UPDATE_META,
+                                  check_no_instances_in_az=True)
         aggregate.update_metadata(metadata)
         self.query_client.update_aggregates(context, [aggregate])
         # If updated metadata include availability_zones, then the cache
@@ -5325,7 +5327,8 @@ class AggregateAPI(base.Base):
 
     def is_safe_to_update_az(self, context, metadata, aggregate,
                              hosts=None,
-                             action_name=AGGREGATE_ACTION_ADD):
+                             action_name=AGGREGATE_ACTION_ADD,
+                             check_no_instances_in_az=False):
         """Determine if updates alter an aggregate's availability zone.
 
             :param context: local context
@@ -5333,7 +5336,9 @@ class AggregateAPI(base.Base):
             :param aggregate: Aggregate to update
             :param hosts: Hosts to check. If None, aggregate.hosts is used
             :type hosts: list
-            :action_name: Calling method for logging purposes
+            :param action_name: Calling method for logging purposes
+            :param check_no_instances_in_az: if True, it checks
+                there is no instances on any hosts of the aggregate
 
         """
         if 'availability_zone' in metadata:
@@ -5354,6 +5359,18 @@ class AggregateAPI(base.Base):
                         "%s") % conflicting_azs
                 self._raise_invalid_aggregate_exc(action_name, aggregate.id,
                                                   msg)
+            same_az_name = (aggregate.availability_zone ==
+                            metadata['availability_zone'])
+            if check_no_instances_in_az and not same_az_name:
+                instance_count_by_cell = (
+                    nova_context.scatter_gather_skip_cell0(
+                        context,
+                        objects.InstanceList.get_count_by_hosts,
+                        _hosts))
+                if any(cnt for cnt in instance_count_by_cell.values()):
+                    msg = _("One or more hosts contain instances in this zone")
+                    self._raise_invalid_aggregate_exc(
+                        action_name, aggregate.id, msg)
 
     def _raise_invalid_aggregate_exc(self, action_name, aggregate_id, reason):
         if action_name == AGGREGATE_ACTION_ADD:
