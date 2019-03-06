@@ -406,7 +406,8 @@ class Guest(object):
             except libvirt.libvirtError as ex:
                 with excutils.save_and_reraise_exception():
                     errcode = ex.get_error_code()
-                    if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
+                    if errcode in (libvirt.VIR_ERR_OPERATION_FAILED,
+                                   libvirt.VIR_ERR_INTERNAL_ERROR):
                         errmsg = ex.get_error_message()
                         if 'not found' in errmsg:
                             # This will be raised if the live domain
