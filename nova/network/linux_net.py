@@ -775,8 +775,7 @@ def initialize_gateway_device(dev, network_ref):
     full_ip = '%s/%s' % (network_ref['dhcp_server'], prefix)
     new_ip_params = [[full_ip, 'brd', network_ref['broadcast']]]
     old_ip_params = []
-    out, err = _execute('ip', 'addr', 'show', 'dev', dev,
-                        'scope', 'global')
+    out, err = nova.privsep.linux_net.lookup_ip(dev)
     for line in out.split('\n'):
         fields = line.split()
         if fields and fields[0] == 'inet':
@@ -811,9 +810,7 @@ def initialize_gateway_device(dev, network_ref):
             send_arp_for_ip(network_ref['dhcp_server'], dev,
                             CONF.send_arp_for_ha_count)
     if CONF.use_ipv6:
-        _execute('ip', '-f', 'inet6', 'addr',
-                 'change', network_ref['cidr_v6'],
-                 'dev', dev, run_as_root=True)
+        nova.privsep.linux_net.change_ip(dev, network_ref['cidr_v6'])
 
 
 def get_dhcp_leases(context, network_ref):
@@ -1451,8 +1448,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 if fields and 'via' in fields:
                     old_routes.append(fields)
                     nova.privsep.linux_net.route_delete_horrid(fields)
-            out, err = _execute('ip', 'addr', 'show', 'dev', interface,
-                                'scope', 'global')
+            out, err = nova.privsep.linux_net.lookup_ip(interface)
             for line in out.split('\n'):
                 fields = line.split()
                 if fields and fields[0] == 'inet':
