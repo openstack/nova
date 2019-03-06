@@ -1586,12 +1586,12 @@ class API(base.Base):
             snapshot_id = bdm.snapshot_id
             volume_id = bdm.volume_id
             image_id = bdm.image_id
-            if (image_id is not None and
-                    image_id != instance.get('image_ref')):
-                try:
-                    self._get_image(context, image_id)
-                except Exception:
-                    raise exception.InvalidBDMImage(id=image_id)
+            if image_id is not None:
+                if image_id != instance.get('image_ref'):
+                    try:
+                        self._get_image(context, image_id)
+                    except Exception:
+                        raise exception.InvalidBDMImage(id=image_id)
                 if (bdm.source_type == 'image' and
                         bdm.destination_type == 'volume' and
                         not bdm.volume_size):

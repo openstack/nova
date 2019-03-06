@@ -4604,6 +4604,37 @@ class _ComputeAPIUnitTestMixIn(object):
             vol_type_requested.assert_any_call(bdms[1], volume_type,
                                                volume_types)
 
+    @mock.patch('nova.compute.api.API._get_image')
+    def test_validate_bdm_missing_volume_size(self, mock_get_image):
+        """Tests that _validate_bdm fail if there volume_size not provided
+        """
+        instance = self._create_instance_obj()
+        # first we test the case of instance.image_ref == bdm.image_id
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(
+                boot_index=0, image_id=instance.image_ref,
+                source_type='image', destination_type='volume',
+                volume_type=None, snapshot_id=None, volume_id=None,
+                volume_size=None)])
+        self.assertRaises(exception.InvalidBDM,
+                          self.compute_api._validate_bdm,
+                          self.context, instance, objects.Flavor(),
+                          bdms)
+        self.assertEqual(0, mock_get_image.call_count)
+        # then we test the case of instance.image_ref != bdm.image_id
+        image_id = uuids.image_id
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(
+                boot_index=0, image_id=image_id,
+                source_type='image', destination_type='volume',
+                volume_type=None, snapshot_id=None, volume_id=None,
+                volume_size=None)])
+        self.assertRaises(exception.InvalidBDM,
+                          self.compute_api._validate_bdm,
+                          self.context, instance, objects.Flavor(),
+                          bdms)
+        mock_get_image.assert_called_once_with(self.context, image_id)
+
     @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
                        return_value=compute_api.MIN_COMPUTE_VOLUME_TYPE)
     def test_the_specified_volume_type_id_assignment_to_name(
