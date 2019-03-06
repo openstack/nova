@@ -6306,7 +6306,7 @@ class ComputeTestCase(BaseTestCase,
         mock_get_uuid.return_value = fake_bdms
 
         # start test
-        migration = objects.Migration(uuid=uuids.migration)
+        migration = objects.Migration(c, uuid=uuids.migration)
 
         @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
         @mock.patch.object(self.compute, 'reportclient')
@@ -6427,7 +6427,7 @@ class ComputeTestCase(BaseTestCase,
         mock_pre.return_value = migrate_data
 
         # start test
-        migration = objects.Migration(uuid=uuids.migration)
+        migration = objects.Migration(c, uuid=uuids.migration)
         with mock.patch.object(self.compute.driver,
                                'cleanup') as mock_cleanup:
             mock_cleanup.side_effect = test.TestingException
