@@ -519,18 +519,44 @@ disk size: 4.4M
             os.unlink(dst_path)
 
     @mock.patch.object(compute_utils, 'disk_ops_semaphore')
-    def _do_test_extract_snapshot(self, mock_execute, mock_disk_op_sema,
+    @mock.patch('nova.privsep.utils.supports_direct_io', return_value=False)
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_extract_snapshot_no_directio(self, mock_execute,
+                                  mock_direct_io,
+                                  mock_disk_op_sema):
+        # Test a single variant with no support for direct IO.
+        # This could be removed if we add unit tests for convert_image().
+        src_format = 'qcow2'
+        dest_format = 'raw'
+        out_format = 'raw'
+
+        libvirt_utils.extract_snapshot('/path/to/disk/image', src_format,
+                                       '/extracted/snap', dest_format)
+        qemu_img_cmd = ('qemu-img', 'convert', '-t', 'writethrough',
+                        '-O', out_format, '-f', src_format, )
+        if CONF.libvirt.snapshot_compression and dest_format == "qcow2":
+            qemu_img_cmd += ('-c',)
+        qemu_img_cmd += ('/path/to/disk/image', '/extracted/snap')
+        mock_disk_op_sema.__enter__.assert_called_once()
+        mock_direct_io.assert_called_once_with(CONF.instances_path)
+        mock_execute.assert_called_once_with(*qemu_img_cmd)
+
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore')
+    @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
+    def _do_test_extract_snapshot(self, mock_execute, mock_direct_io,
+                                  mock_disk_op_sema,
                                   src_format='qcow2',
                                   dest_format='raw', out_format='raw'):
         libvirt_utils.extract_snapshot('/path/to/disk/image', src_format,
                                        '/extracted/snap', dest_format)
-        qemu_img_cmd = ('qemu-img', 'convert', '-f',
-                        src_format, '-O', out_format)
+        qemu_img_cmd = ('qemu-img', 'convert', '-t', 'none',
+                        '-O', out_format, '-f', src_format, )
         if CONF.libvirt.snapshot_compression and dest_format == "qcow2":
             qemu_img_cmd += ('-c',)
         qemu_img_cmd += ('/path/to/disk/image', '/extracted/snap')
-        mock_execute.assert_called_once_with(*qemu_img_cmd)
         mock_disk_op_sema.__enter__.assert_called_once()
+        mock_direct_io.assert_called_once_with(CONF.instances_path)
+        mock_execute.assert_called_once_with(*qemu_img_cmd)
 
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_extract_snapshot_raw(self, mock_execute):
@@ -701,7 +727,7 @@ disk size: 4.4M
         mock_disk_op_sema.__enter__.assert_called_once()
         mock_convert_image.assert_called_with(
             't.qcow2.part', 't.qcow2.converted', 'qcow2', 'raw',
-            CONF.instances_path)
+            CONF.instances_path, False)
         mock_convert_image.reset_mock()
 
         target = 't.raw'

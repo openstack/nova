@@ -18988,18 +18988,40 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                                   'uuid': 'other_uuid'})
 
     @mock.patch.object(compute_utils, 'disk_ops_semaphore')
+    @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('os.rename')
-    def test_disk_raw_to_qcow2(self, mock_rename, mock_execute,
+    def test_disk_raw_to_qcow2(self, mock_rename, mock_execute, mock_direct_io,
                                mock_disk_op_sema):
         path = '/test/disk'
         _path_qcow = path + '_qcow'
 
         self.drvr._disk_raw_to_qcow2(path)
         mock_disk_op_sema.__enter__.assert_called_once()
+        mock_direct_io.assert_called_once_with(CONF.instances_path)
         mock_execute.assert_has_calls([
-            mock.call('qemu-img', 'convert', '-f', 'raw',
-                      '-O', 'qcow2', path, _path_qcow)])
+            mock.call('qemu-img', 'convert', '-t', 'none',
+                      '-O', 'qcow2', '-f', 'raw', path, _path_qcow)])
+        mock_rename.assert_has_calls([
+            mock.call(_path_qcow, path)])
+
+    @mock.patch.object(compute_utils, 'disk_ops_semaphore')
+    @mock.patch('nova.privsep.utils.supports_direct_io', return_value=False)
+    @mock.patch('oslo_concurrency.processutils.execute')
+    @mock.patch('os.rename')
+    def test_disk_raw_to_qcow2_no_directio(self, mock_rename, mock_execute,
+                                           mock_direct_io, mock_disk_op_sema):
+        # Test the scenario where we have no support for direct IO.
+        # This could be removed when we add unit tests for convert_image().
+        path = '/test/disk'
+        _path_qcow = path + '_qcow'
+
+        self.drvr._disk_raw_to_qcow2(path)
+        mock_disk_op_sema.__enter__.assert_called_once()
+        mock_direct_io.assert_called_once_with(CONF.instances_path)
+        mock_execute.assert_has_calls([
+            mock.call('qemu-img', 'convert', '-t', 'writethrough',
+                      '-O', 'qcow2', '-f', 'raw', path, _path_qcow)])
         mock_rename.assert_has_calls([
             mock.call(_path_qcow, path)])
 
