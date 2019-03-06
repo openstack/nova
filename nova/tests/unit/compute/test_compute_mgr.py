@@ -8569,7 +8569,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         mock_get_bdms.return_value = source_bdms
         migrate_data = objects.LibvirtLiveMigrateData(
             wait_for_vif_plugged=True)
-        mock_rpc.return_value = migrate_data
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
                 network_model.VIF(uuids.port1), network_model.VIF(uuids.port2)
@@ -8589,8 +8588,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         mock_rpc.assert_called_once_with(
             self.context, self.instance, 'block_migration', None,
             'dest-host', migrate_data)
+        # Ensure that rollback is specifically called with the migrate_data
+        # that came back from the call to pre_live_migration on the dest host
+        # rather than the one passed to _do_live_migration.
         mock_rollback.assert_called_once_with(
-            self.context, self.instance, 'dest-host', migrate_data,
+            self.context, self.instance, 'dest-host', mock_rpc.return_value,
             'cancelled', source_bdms=source_bdms)
         mock_usage_notify.assert_called_once_with(
             self.context, self.instance, 'live.migration.abort.end')
