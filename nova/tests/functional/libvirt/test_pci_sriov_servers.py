@@ -26,27 +26,32 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class SRIOVServersTest(base.ServersTestBase):
+class _PCIServersTestBase(base.ServersTestBase):
 
     vfs_alias_name = 'vfs'
     pfs_alias_name = 'pfs'
 
+    pci_passthrough_whitelist = [
+        '{"vendor_id":"8086", "product_id":"1528"}',
+        '{"vendor_id":"8086", "product_id":"1515"}',
+    ]
+    # PFs will be removed from pools unless they are specifically
+    # requested, so we explicitly request them with the 'device_type'
+    # attribute
+    pci_alias = [
+        '{"vendor_id":"8086", "product_id":"1528", "name":"%s", '
+        '"device_type":"%s"}' % (
+            pfs_alias_name, fields.PciDeviceType.SRIOV_PF),
+        '{"vendor_id":"8086", "product_id":"1515", "name":"%s"}' % (
+            vfs_alias_name),
+    ]
+
     def setUp(self):
-        white_list = ['{"vendor_id":"8086","product_id":"1528"}',
-                      '{"vendor_id":"8086","product_id":"1515"}']
-        self.flags(passthrough_whitelist=white_list, group='pci')
+        self.flags(passthrough_whitelist=self.pci_passthrough_whitelist,
+                   alias=self.pci_alias,
+                   group='pci')
 
-        # PFs will be removed from pools, unless these has been specifically
-        # requested. This is especially needed in cases where PFs and VFs have
-        # the same vendor/product id
-        pci_alias = ['{"vendor_id":"8086", "product_id":"1528", "name":"%s",'
-                     ' "device_type":"%s"}' % (self.pfs_alias_name,
-                                               fields.PciDeviceType.SRIOV_PF),
-                     '{"vendor_id":"8086", "product_id":"1515", "name":"%s"}' %
-                     self.vfs_alias_name]
-        self.flags(alias=pci_alias, group='pci')
-
-        super(SRIOVServersTest, self).setUp()
+        super(_PCIServersTestBase, self).setUp()
 
         self.compute_started = False
 
@@ -63,10 +68,12 @@ class SRIOVServersTest(base.ServersTestBase):
 
     def _setup_scheduler_service(self):
         # Enable the 'NUMATopologyFilter', 'PciPassthroughFilter'
+        enabled_filters = CONF.filter_scheduler.enabled_filters + [
+            'NUMATopologyFilter', 'PciPassthroughFilter']
+
         self.flags(driver='filter_scheduler', group='scheduler')
-        self.flags(enabled_filters=CONF.filter_scheduler.enabled_filters
-                   + ['NUMATopologyFilter', 'PciPassthroughFilter'],
-                   group='filter_scheduler')
+        self.flags(enabled_filters=enabled_filters, group='filter_scheduler')
+
         return self.start_service('scheduler')
 
     def _run_build_test(self, flavor_id, end_status='ACTIVE'):
@@ -102,6 +109,9 @@ class SRIOVServersTest(base.ServersTestBase):
         self.assertEqual(end_status, found_server['status'])
         self.addCleanup(self._delete_server, created_server_id)
         return created_server
+
+
+class SRIOVServersTest(_PCIServersTestBase):
 
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
     def test_create_server_with_VF(self, img_mock):
@@ -177,6 +187,9 @@ class SRIOVServersTest(base.ServersTestBase):
         self._run_build_test(flavor_id_vfs)
         self._run_build_test(flavor_id_pfs, end_status='ERROR')
 
+
+class PCIServersTest(_PCIServersTestBase):
+
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
     def test_create_server_with_pci_dev_and_numa(self, img_mock):
         """Verifies that an instance can be booted with cpu pinning and with an
@@ -190,11 +203,11 @@ class SRIOVServersTest(base.ServersTestBase):
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
 
-        # Create a flavor
-        extra_spec = {"pci_passthrough:alias": "%s:1" % self.pfs_alias_name,
-                      'hw:numa_nodes': '1',
-                      'hw:cpu_policy': 'dedicated',
-                      'hw:cpu_thread_policy': 'prefer'}
+        # create a flavor
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+            'pci_passthrough:alias': '%s:1' % self.pfs_alias_name,
+        }
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
         self._run_build_test(flavor_id)
@@ -212,15 +225,64 @@ class SRIOVServersTest(base.ServersTestBase):
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
 
-        # Create a flavor
-        extra_spec_vm = {'hw:cpu_policy': 'dedicated',
-                         'hw:numa_node': '1'}
-        extra_spec = {'pci_passthrough:alias': '%s:1' % self.pfs_alias_name,
-                      'hw:numa_nodes': '1',
-                      'hw:cpu_policy': 'dedicated',
-                      'hw:cpu_thread_policy': 'prefer'}
-        vm_flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec_vm)
-        pf_flavor_id = self._create_flavor(extra_spec=extra_spec)
+        # boot one instance with no PCI device to "fill up" NUMA node 0
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+        }
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
 
-        self._run_build_test(vm_flavor_id)
-        self._run_build_test(pf_flavor_id, end_status='ERROR')
+        self._run_build_test(flavor_id)
+
+        # now boot one with a PCI device, which should fail to boot
+        extra_spec['pci_passthrough:alias'] = '%s:1' % self.pfs_alias_name
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        self._run_build_test(flavor_id, end_status='ERROR')
+
+
+class PCIServersWithNUMAPoliciesTest(_PCIServersTestBase):
+
+    # PFs will be removed from pools unless they are specifically
+    # requested, so we explicitly request them with the 'device_type'
+    # attribute
+    pci_alias = [
+        '{"vendor_id":"8086", "product_id":"1528", "name":"%s", '
+        '"device_type":"%s", "numa_policy":"%s"}' % (
+            _PCIServersTestBase.pfs_alias_name,
+            fields.PciDeviceType.SRIOV_PF,
+            fields.PCINUMAAffinityPolicy.PREFERRED
+        ),
+        '{"vendor_id":"8086", "product_id":"1515", "name":"%s"}' % (
+            _PCIServersTestBase.vfs_alias_name),
+    ]
+
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
+    def test_create_server_with_pci_dev_and_numa(self, img_mock):
+        """Validate behavior of 'preferred' PCI NUMA policy.
+
+        This test ensures that it *is* possible to allocate CPU and memory
+        resources from one NUMA node and a PCI device from another *if* PCI
+        NUMA policies are in use.
+        """
+
+        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
+                                             cpu_cores=2, cpu_threads=2,
+                                             kB_mem=15740000)
+        pci_info = fakelibvirt.HostPciSRIOVDevicesInfo(num_pfs=1, numa_node=0)
+        fake_connection = self._get_connection(host_info, pci_info)
+        self.mock_conn.return_value = fake_connection
+
+        # boot one instance with no PCI device to "fill up" NUMA node 0
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+        }
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        self._run_build_test(flavor_id)
+
+        # now boot one with a PCI device, which should succeed thanks to the
+        # use of the PCI policy
+        extra_spec['pci_passthrough:alias'] = '%s:1' % self.pfs_alias_name
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        self._run_build_test(flavor_id)

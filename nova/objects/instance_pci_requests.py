@@ -90,6 +90,8 @@ class InstancePCIRequests(base.NovaObject,
             request_obj = InstancePCIRequest(
                 count=request['count'], spec=request['spec'],
                 alias_name=request['alias_name'], is_new=False,
+                numa_policy=request.get('numa_policy',
+                                        fields.PCINUMAAffinityPolicy.LEGACY),
                 request_id=request['request_id'],
                 requester_id=request.get('requester_id'))
             request_obj.obj_reset_changes()
@@ -142,6 +144,7 @@ class InstancePCIRequests(base.NovaObject,
                  'spec': x.spec,
                  'alias_name': x.alias_name,
                  'is_new': x.is_new,
+                 'numa_policy': x.numa_policy,
                  'request_id': x.request_id,
                  'requester_id': x.requester_id} for x in self.requests]
         return jsonutils.dumps(blob)

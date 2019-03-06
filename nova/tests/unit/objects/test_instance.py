@@ -574,7 +574,7 @@ class _TestInstanceObject(object):
         expected_json = ('[{"count": 1, "alias_name": null, "is_new": false,'
                          '"request_id": null, "requester_id": null,'
                          '"spec": [{"vendor_id": "8086", '
-                         '"product_id": "1502"}]}]')
+                         '"product_id": "1502"}], "numa_policy": null}]')
 
         inst = objects.Instance()
         inst = objects.Instance._from_db_object(self.context, inst,

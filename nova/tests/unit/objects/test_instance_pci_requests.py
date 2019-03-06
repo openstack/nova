@@ -32,12 +32,14 @@ fake_pci_requests = [
                'device_id': '1502'}],
      'alias_name': 'alias_1',
      'is_new': False,
+     'numa_policy': 'preferred',
      'request_id': FAKE_REQUEST_UUID},
     {'count': 2,
      'spec': [{'vendor_id': '6502',
                'device_id': '07B5'}],
      'alias_name': 'alias_2',
      'is_new': True,
+     'numa_policy': 'preferred',
      'request_id': FAKE_REQUEST_UUID,
      'requester_id': uuids.requester_id},
  ]
@@ -71,6 +73,8 @@ class _TestInstancePCIRequests(object):
                              request.count)
             self.assertEqual(fake_pci_requests[index]['spec'],
                              [dict(x.items()) for x in request.spec])
+            self.assertEqual(fake_pci_requests[index]['numa_policy'],
+                             request.numa_policy)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     def test_get_by_instance_current(self, mock_get):
@@ -118,6 +122,7 @@ class _TestInstancePCIRequests(object):
         self.assertEqual(FAKE_UUID, req.instance_uuid)
         self.assertEqual(2, len(req.requests))
         self.assertEqual('alias_1', req.requests[0].alias_name)
+        self.assertEqual('preferred', req.requests[0].numa_policy)
         self.assertIsNone(None, req.requests[0].requester_id)
         self.assertEqual(uuids.requester_id, req.requests[1].requester_id)
 
