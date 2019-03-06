@@ -296,12 +296,31 @@ class ResourceRequest(object):
             qparams = []
         if self._group_policy is not None:
             qparams.append(('group_policy', self._group_policy))
+        nr_of_numbered_groups = 0
         for ident, rg in self._rg_by_id.items():
             # [('resourcesN', 'rclass:amount,rclass:amount,...'),
             #  ('requiredN', 'trait_name,!trait_name,...'),
             #  ('member_ofN', 'in:uuid,uuid,...'),
             #  ('member_ofN', 'in:uuid,uuid,...')]
             qparams.extend(to_queryparams(rg, ident or ''))
+            if ident:
+                nr_of_numbered_groups += 1
+        if nr_of_numbered_groups >= 2 and not self._group_policy:
+            # we know this will fail in placement so help the troubleshooting
+            LOG.warning(
+                "There is more than one numbered request group in the "
+                "allocation candidate query but the flavor did not specify "
+                "any group policy. This query will fail in placement due to "
+                "the missing group policy. If you specified more than one "
+                "numbered request group in the flavor extra_spec or booted "
+                "with more than one neutron port that has resource request "
+                "(i.e. the port has a QoS minimum bandwidth policy rule "
+                "attached) then you have to specify the group policy in the "
+                "flavor extra_spec. If it is OK to let these groups be "
+                "satisfied by overlapping resource providers then use "
+                "'group_policy': 'None'. If you want each group to be "
+                "satisfied from a separate resource provider then use "
+                "'group_policy': 'isolate'.")
         return parse.urlencode(sorted(qparams))
 
 
