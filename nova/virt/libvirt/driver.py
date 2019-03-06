@@ -6000,6 +6000,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     return {
                         'dev_type': fields.PciDeviceType.SRIOV_VF,
                         'parent_addr': phys_address,
+                        'parent_ifname':
+                            pci_utils.get_ifname_by_pci_address(
+                                pci_address, pf_interface=True),
                     }
 
             return {'dev_type': fields.PciDeviceType.STANDARD}

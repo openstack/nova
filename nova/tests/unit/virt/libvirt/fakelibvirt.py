@@ -1648,6 +1648,12 @@ class FakeLibvirtFixture(fixtures.Fixture):
         self.useFixture(
             fixtures.MockPatch('nova.virt.libvirt.utils.get_fs_info'))
 
+        # libvirt driver needs to call out to the filesystem to get the
+        # parent_ifname for the SRIOV VFs.
+        self.useFixture(fixtures.MockPatch(
+            'nova.pci.utils.get_ifname_by_pci_address',
+            return_value='fake_pf_interface_name'))
+
         # Don't assume that the system running tests has a valid machine-id
         self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.driver.LibvirtDriver'

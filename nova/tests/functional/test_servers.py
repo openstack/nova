@@ -5924,13 +5924,15 @@ class PortResourceRequestBasedSchedulingTestBase(
 
         self._create_networking_rp_tree(self.compute1_rp_uuid)
 
-        # add an extra port and the related network to the neutron fixture
+        # add extra ports and the related network to the neutron fixture
         # specifically for these tests. It cannot be added globally in the
         # fixture init as it adds a second network that makes auto allocation
         # based test to fail due to ambiguous networks.
         self.neutron._ports[
             self.neutron.port_with_sriov_resource_request['id']] = \
             copy.deepcopy(self.neutron.port_with_sriov_resource_request)
+        self.neutron._ports[self.neutron.sriov_port['id']] = \
+            copy.deepcopy(self.neutron.sriov_port)
         self.neutron._networks[
             self.neutron.network_2['id']] = self.neutron.network_2
         self.neutron._subnets[
@@ -6497,6 +6499,118 @@ class PortResourceRequestBasedSchedulingTestIgnoreMicroversionCheck(
         # We expect that the allocation is removed from the port too
         binding_profile = updated_port['binding:profile']
         self.assertNotIn('allocation', binding_profile)
+
+    def test_two_sriov_ports_one_with_request_two_available_pfs(self):
+        """Verify that the port's bandwidth allocated from the same PF as
+        the allocated VF.
+
+        One compute host:
+        * PF1 (0000:01:00) is configured for physnet1
+        * PF2 (0000:02:00) is configured for physnet2, with 1 VF and bandwidth
+          inventory
+        * PF3 (0000:03:00) is configured for physnet2, with 1 VF but without
+          bandwidth inventory
+
+        One instance will be booted with two neutron ports, both ports
+        requested to be connected to physnet2. One port has resource request
+        the other does not have resource request. The port having the resource
+        request cannot be allocated to PF3 and PF1 while the other port that
+        does not have resource request can be allocated to PF2 or PF3.
+
+        For the detailed compute host config see the FakeDriverWithPciResources
+        class. For the necessary passthrough_whitelist config see the setUp of
+        the PortResourceRequestBasedSchedulingTestBase class.
+        """
+
+        sriov_port = self.neutron.sriov_port
+        sriov_port_with_res_req = self.neutron.port_with_sriov_resource_request
+        server = self._create_server(
+            flavor=self.flavor_with_group_policy,
+            networks=[
+                {'port': sriov_port_with_res_req['id']},
+                {'port': sriov_port['id']}])
+
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        sriov_port = self.neutron.show_port(sriov_port['id'])['port']
+        sriov_port_with_res_req = self.neutron.show_port(
+            sriov_port_with_res_req['id'])['port']
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect one set of allocations for the compute resources on the
+        # compute rp and one set for the networking resources on the sriov PF2
+        # rp.
+        self.assertEqual(2, len(allocations))
+        compute_allocations = allocations[self.compute1_rp_uuid]['resources']
+        self.assertEqual(
+            self._resources_from_flavor(self.flavor_with_group_policy),
+            compute_allocations)
+
+        sriov_allocations = allocations[self.sriov_pf2_rp_uuid]['resources']
+        self.assertPortMatchesAllocation(
+            sriov_port_with_res_req, sriov_allocations)
+
+        # We expect that only the RP uuid of the networking RP having the port
+        # allocation is sent in the port binding for the port having resource
+        # request
+        sriov_with_req_binding = sriov_port_with_res_req['binding:profile']
+        self.assertEqual(
+            self.sriov_pf2_rp_uuid, sriov_with_req_binding['allocation'])
+        # and the port without resource request does not have allocation
+        sriov_binding = sriov_port['binding:profile']
+        self.assertNotIn('allocation', sriov_binding)
+
+        # We expect that the selected PCI device matches with the RP from
+        # where the bandwidth is allocated from. The bandwidth is allocated
+        # from 0000:02:00 (PF2) so the PCI device should be a VF of that PF
+        self.assertEqual('0000:02:00.1', sriov_with_req_binding['pci_slot'])
+        # But also the port that has no resource request still gets a pci slot
+        # allocated. The 0000:02:00 has no more VF available but 0000:03:00 has
+        # one VF available and that PF is also on physnet2
+        self.assertEqual('0000:03:00.1', sriov_binding['pci_slot'])
+
+    def test_one_sriov_port_no_vf_and_bandwidth_available_on_the_same_pf(self):
+        """Verify that if there is no PF that both provides bandwidth and VFs
+        then the boot will fail.
+        """
+
+        # boot a server with a single sriov port that has no resource request
+        sriov_port = self.neutron.sriov_port
+        server = self._create_server(
+            flavor=self.flavor_with_group_policy,
+            networks=[{'port': sriov_port['id']}])
+
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        sriov_port = self.neutron.show_port(sriov_port['id'])['port']
+        sriov_binding = sriov_port['binding:profile']
+
+        # We expect that this consume the last available VF from the PF2
+        self.assertEqual('0000:02:00.1', sriov_binding['pci_slot'])
+
+        # Now boot a second server with a port that has resource request
+        # At this point PF2 has available bandwidth but no available VF
+        # and PF3 has available VF but no available bandwidth so we expect
+        # the boot to fail.
+
+        sriov_port_with_res_req = self.neutron.port_with_sriov_resource_request
+        server = self._create_server(
+            flavor=self.flavor_with_group_policy,
+            networks=[{'port': sriov_port_with_res_req['id']}])
+
+        # NOTE(gibi): It should be NoValidHost in an ideal world but that would
+        # require the scheduler to detect the situation instead of the pci
+        # claim. However that is pretty hard as the scheduler does not know
+        # anything about allocation candidates (e.g. that the only candidate
+        # for the port in this case is PF2) it see the whole host as a
+        # candidate and in our host there is available VF for the request even
+        # if that is on the wrong PF.
+        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        self.assertIn(
+            'Exceeded maximum number of retries. Exhausted all hosts '
+            'available for retrying build failures for instance',
+            server['fault']['message'])
 
 
 class PortResourceRequestReSchedulingTestIgnoreMicroversionCheck(

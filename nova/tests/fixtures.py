@@ -1314,16 +1314,33 @@ class NeutronFixture(fixtures.Fixture):
     }
     network_2['subnets'] = [subnet_2['id']]
 
+    sriov_port = {
+        'id': '5460ee0c-ffbb-4e45-8d58-37bfceabd084',
+        'network_id': network_2['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c4',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.13.2',
+                'subnet_id': subnet_2['id']
+            }
+        ],
+        'tenant_id': tenant_id,
+        'resource_request': {},
+        'binding:vnic_type': 'direct',
+    }
+
     port_with_sriov_resource_request = {
         'id': '7059503b-a648-40fd-a561-5ca769304bee',
         'network_id': network_2['id'],
         'admin_state_up': True,
         'status': 'ACTIVE',
-        'mac_address': '52:54:00:1e:59:c4',
+        'mac_address': '52:54:00:1e:59:c5',
         # Do neutron really adds fixed_ips to an direct vnic_type port?
         'fixed_ips': [
             {
-                'ip_address': '192.168.13.2',
+                'ip_address': '192.168.13.3',
                 'subnet_id': subnet_2['id']
             }
         ],
