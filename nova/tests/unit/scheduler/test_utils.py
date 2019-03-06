@@ -623,6 +623,20 @@ class TestUtils(test.NoDBTestCase):
         )
         self.assertEqual(expected_querystring, rr.to_querystring())
 
+    def test_more_than_one_resource_request_without_group_policy_warns(self):
+        extra_specs = {
+            'resources:VCPU': '2',
+            'resources1:CUSTOM_FOO': '1'
+        }
+        rr = utils.ResourceRequest.from_extra_specs(extra_specs)
+        rr.add_request_group(objects.RequestGroup(resources={'CUSTOM_BAR': 5}))
+
+        rr.to_querystring()
+        self.assertIn(
+            "There is more than one numbered request group in the allocation "
+            "candidate query but the flavor did not specify any group policy.",
+            self.stdlog.logger.output)
+
     def test_resource_request_from_extra_specs_append_request(self):
         extra_specs = {
             'resources:VCPU': '2',
