@@ -60,15 +60,17 @@ Nova Database
 
 ``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose] [--until-complete] [--purge]``
     Move deleted rows from production tables to shadow tables. Note that the
-    corresponding rows in the ``instance_mappings`` and ``request_specs`` tables of the
-    API database are purged when instance records are archived and thus,
-    ``CONF.api_database.connection`` is required in the config file. Specifying
-    ``--verbose`` will print the results of the archive operation for any tables that
-    were changed. Specifying ``--until-complete`` will make the command run
-    continuously until all deleted rows are archived. Use the ``--max_rows`` option,
-    which defaults to 1000, as a batch size for each iteration. Specifying ``--purge``
-    will cause a `full` DB purge to be completed after archival. If a date range
-    is desired for the purge, then run ``nova-manage db purge --before
+    corresponding rows in the ``instance_mappings``, ``request_specs`` and
+    ``instance_group_member`` tables of the API database are purged when
+    instance records are archived and thus, ``CONF.api_database.connection`` is
+    required in the config file. Specifying ``--verbose`` will print the results
+    of the archive operation for any tables that were changed. Specifying
+    ``--until-complete`` will make the command run continuously until all
+    deleted rows are archived. Use the ``--max_rows`` option, which defaults to
+    1000, as a batch size for each iteration (note that the purged API database
+    table records are not included in this batch size). Specifying ``--purge``
+    will cause a `full` DB purge to be completed after archival. If a date
+    range is desired for the purge, then run ``nova-manage db purge --before
     <date>`` manually after archiving is complete.
 
 ``nova-manage db purge [--all] [--before <date>] [--verbose] [--all-cells]``

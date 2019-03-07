@@ -497,7 +497,10 @@ Error: %s""") % six.text_type(e))
         print(migration.db_version())
 
     @args('--max_rows', type=int, metavar='<number>', dest='max_rows',
-          help='Maximum number of deleted rows to archive. Defaults to 1000.')
+          help='Maximum number of deleted rows to archive. Defaults to 1000. '
+               'Note that this number does not include the corresponding '
+               'rows, if any, that are removed from the API database for '
+               'deleted instances.')
     @args('--verbose', action='store_true', dest='verbose', default=False,
           help='Print how many rows were archived per table.')
     @args('--until-complete', action='store_true', dest='until_complete',
@@ -528,7 +531,7 @@ Error: %s""") % six.text_type(e))
         try:
             # NOTE(tssurya): This check has been added to validate if the API
             # DB is reachable or not as this is essential for purging the
-            # instance_mappings and request_specs of the deleted instances.
+            # related API database records of the deleted instances.
             objects.CellMappingList.get_all(ctxt)
         except db_exc.CantStartEngineError:
             print(_('Failed to connect to API DB so aborting this archival '
