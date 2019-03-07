@@ -639,6 +639,7 @@ Possible values:
 """),
     cfg.IntOpt('block_device_allocate_retries',
         default=60,
+        min=0,
         help="""
 The number of times to check for a volume to be "available" before attaching
 it during server create.
@@ -662,7 +663,6 @@ Possible values:
 
 * 60 (default)
 * If value is 0, then one attempt is made.
-* Any negative value is treated as 0.
 * For any value > 0, total attempts are (value + 1)
 
 Related options:

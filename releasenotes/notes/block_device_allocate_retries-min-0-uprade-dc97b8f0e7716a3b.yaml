@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The ``[DEFAULT]/block_device_allocate_retries`` configuration option now
+    has a minimum required value of 0. Any previous configuration with a value
+    less than zero will now result in an error.
