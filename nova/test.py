@@ -59,6 +59,7 @@ from nova import objects
 from nova.objects import base as objects_base
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
+from nova.tests.unit import matchers
 from nova.tests.unit import policy_fixture
 from nova import utils
 from nova.virt import images
@@ -510,6 +511,9 @@ class TestCase(testtools.TestCase):
             error.observed = observed
             error.difference = difference
             raise error
+
+    def assertXmlEqual(self, expected, observed):
+        self.assertThat(observed, matchers.XMLMatches(expected))
 
     def assertPublicAPISignatures(self, baseinst, inst):
         def get_public_apis(inst):
