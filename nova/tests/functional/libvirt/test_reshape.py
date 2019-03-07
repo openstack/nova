@@ -16,6 +16,8 @@ import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 
+from nova import context
+from nova import objects
 from nova.tests.functional.libvirt import base
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
@@ -101,6 +103,22 @@ class VGPUReshapeTests(base.ServersTestBase):
             created_server2 = self.api.post_server({'server': server_req})
             server2 = self._wait_for_state_change(created_server2, 'ACTIVE')
 
+        # Determine which device is associated with which instance
+        # { inst.uuid: pgpu_name }
+        inst_to_pgpu = {}
+        ctx = context.get_admin_context()
+        for server in (server1, server2):
+            inst = objects.Instance.get_by_uuid(ctx, server['id'])
+            mdevs = list(
+                self.compute.driver._get_all_assigned_mediated_devices(inst))
+            self.assertEqual(1, len(mdevs))
+            mdev_uuid = mdevs[0]
+            mdev_info = self.compute.driver._get_mediated_device_information(
+                "mdev_" + mdev_uuid.replace('-', '_'))
+            inst_to_pgpu[inst.uuid] = mdev_info['parent']
+        # The VGPUs should have come from different pGPUs
+        self.assertNotEqual(*list(inst_to_pgpu.values()))
+
         # verify that the inventory, usages and allocation are correct before
         # the reshape
         compute_inventory = self.placement_api.get(
@@ -138,12 +156,14 @@ class VGPUReshapeTests(base.ServersTestBase):
         # That said, we need to check all the pGPU inventories for knowing
         # which ones are used.
         usages = {}
+        pgpu_uuid_to_name = {}
         for pci_device in [fakelibvirt.PGPU1_PCI_ADDR,
                            fakelibvirt.PGPU2_PCI_ADDR,
                            fakelibvirt.PGPU3_PCI_ADDR]:
             gpu_rp_uuid = self.placement_api.get(
                 '/resource_providers?name=compute1_%s' % pci_device).body[
                 'resource_providers'][0]['uuid']
+            pgpu_uuid_to_name[gpu_rp_uuid] = pci_device
             gpu_inventory = self.placement_api.get(
                 '/resource_providers/%s/inventories' % gpu_rp_uuid).body[
                 'inventories']
@@ -157,7 +177,7 @@ class VGPUReshapeTests(base.ServersTestBase):
         used_devices = [dev for dev, usage in usages.items() if usage == 1]
         avail_devices = list(set(usages.keys()) - set(used_devices))
         self.assertEqual(2, len(used_devices))
-
+        # Make sure that both instances are using the correct pGPUs
         for server in [server1, server2]:
             allocations = self.placement_api.get(
                 '/allocations/%s' % server['id']).body[
@@ -173,6 +193,9 @@ class VGPUReshapeTests(base.ServersTestBase):
             self.assertEqual(
                 {'VGPU': 1},
                 allocations[gpu_rp_uuid]['resources'])
+            # The pGPU's RP name contains the pGPU name
+            self.assertIn(inst_to_pgpu[server['id']],
+                          pgpu_uuid_to_name[gpu_rp_uuid])
 
         # now create one more instance with vgpu against the reshaped tree
         created_server = self.api.post_server({'server': server_req})
