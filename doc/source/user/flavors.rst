@@ -606,6 +606,8 @@ Large pages allocation
      backed by huge pages. Otherwise, the guest OS will not be getting the
      performance benefit it is expecting.
 
+.. _extra-spec-pci-passthrough:
+
 PCI passthrough
   You can assign PCI devices to a guest by specifying them in the flavor.
 
@@ -618,7 +620,7 @@ PCI passthrough
 
   - ALIAS: (string) The alias which correspond to a particular PCI device class
     as configured in the nova configuration file (see
-    :doc:`/configuration/config`).
+    :oslo.config:option:`pci.alias`).
   - COUNT: (integer) The amount of PCI devices of type ALIAS to be assigned to
     a guest.
 
