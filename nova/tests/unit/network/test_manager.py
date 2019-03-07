@@ -1751,8 +1751,9 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.db.api.network_get')
     @mock.patch('nova.privsep.linux_net.bind_ip')
     @mock.patch('nova.privsep.linux_net.unbind_ip')
+    @mock.patch('nova.privsep.linux_net.clean_conntrack')
     def test_ip_association_and_allocation_of_other_project(
-            self, unbind_ip, bind_ip, net_get, fixed_get):
+            self, clean_conntrack, unbind_ip, bind_ip, net_get, fixed_get):
         """Makes sure that we cannot deallocaate or disassociate
         a public IP of other project.
         """
@@ -2863,7 +2864,9 @@ class AllocateTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.routes_show', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.lookup_ip', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.change_ip')
-    def test_allocate_for_instance(self, mock_change_ip, mock_lookup_ip,
+    @mock.patch('nova.privsep.linux_net.clean_conntrack')
+    def test_allocate_for_instance(self, mock_clean_conntrack,
+                                   mock_change_ip, mock_lookup_ip,
                                    mock_routes_show, mock_unbind, mock_bind,
                                    mock_set_macaddr, mock_set_enabled,
                                    mock_set_mtu, mock_add_bridge):
@@ -3097,7 +3100,9 @@ class FloatingIPTestCase(test.TestCase):
                 instance_id=instance_ref['id'])
 
     @mock.patch('nova.privsep.linux_net.unbind_ip')
-    def test_deallocation_deleted_instance(self, mock_unbind_ip):
+    @mock.patch('nova.privsep.linux_net.clean_conntrack')
+    def test_deallocation_deleted_instance(self, mock_clean_conntrack,
+                                           mock_unbind_ip):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
         instance = objects.Instance(context=self.context)
@@ -3118,7 +3123,9 @@ class FloatingIPTestCase(test.TestCase):
         self.network.deallocate_for_instance(self.context, instance=instance)
 
     @mock.patch('nova.privsep.linux_net.unbind_ip')
-    def test_deallocation_duplicate_floating_ip(self, mock_unbind_ip):
+    @mock.patch('nova.privsep.linux_net.clean_conntrack')
+    def test_deallocation_duplicate_floating_ip(self, mock_clean_conntrack,
+                                                mock_unbind_ip):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
         instance = objects.Instance(context=self.context)
@@ -3143,8 +3150,9 @@ class FloatingIPTestCase(test.TestCase):
     @mock.patch('nova.db.api.fixed_ip_get')
     @mock.patch('nova.db.api.floating_ip_get_by_address')
     @mock.patch('nova.db.api.floating_ip_update')
-    def test_migrate_instance_start(self, floating_update, floating_get,
-                                    fixed_get):
+    @mock.patch('nova.privsep.linux_net.clean_conntrack')
+    def test_migrate_instance_start(self, clean_conntrack, floating_update,
+                                    floating_get, fixed_get):
         called = {'count': 0}
 
         def fake_floating_ip_get_by_address(context, address):
@@ -3175,8 +3183,8 @@ class FloatingIPTestCase(test.TestCase):
                                  fake_is_stale_floating_ip_address)
         self.stubs.Set(self.network.l3driver, 'remove_floating_ip',
                        fake_remove_floating_ip)
-        self.stubs.Set(self.network.driver, 'clean_conntrack',
-                       fake_clean_conntrack)
+        clean_conntrack.side_effect = fake_clean_conntrack
+
         self.mox.ReplayAll()
         addresses = ['172.24.4.23', '172.24.4.24', '172.24.4.25']
         self.network.migrate_instance_start(self.context,
