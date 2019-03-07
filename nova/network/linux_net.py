@@ -654,21 +654,12 @@ def init_host(ip_range, is_external=False):
     iptables_manager.apply()
 
 
-def send_arp_for_ip(ip, device, count):
-    out, err = _execute('arping', '-U', ip,
-                        '-A', '-I', device,
-                        '-c', str(count),
-                        run_as_root=True, check_exit_code=False)
-
-    if err:
-        LOG.debug('arping error for IP %s', ip)
-
-
 def bind_floating_ip(floating_ip, device):
     """Bind IP to public interface."""
     nova.privsep.linux_net.bind_ip(device, floating_ip)
     if CONF.send_arp_for_ha and CONF.send_arp_for_ha_count > 0:
-        send_arp_for_ip(floating_ip, device, CONF.send_arp_for_ha_count)
+        nova.privsep.linux_net.send_arp_for_ip(
+            floating_ip, device, CONF.send_arp_for_ha_count)
 
 
 def ensure_metadata_ip():
@@ -807,8 +798,9 @@ def initialize_gateway_device(dev, network_ref):
             # TODO(mikal): this is horrible and should be re-written
             nova.privsep.linux_net.route_add_horrid(fields)
         if CONF.send_arp_for_ha and CONF.send_arp_for_ha_count > 0:
-            send_arp_for_ip(network_ref['dhcp_server'], dev,
-                            CONF.send_arp_for_ha_count)
+            nova.privsep.linux_net.send_arp_for_ip(
+                network_ref['dhcp_server'], dev,
+                CONF.send_arp_for_ha_count)
     if CONF.use_ipv6:
         nova.privsep.linux_net.change_ip(dev, network_ref['cidr_v6'])
 
