@@ -2490,23 +2490,37 @@ class TestResize(BaseTestCase):
 
         instance = _INSTANCE_FIXTURES[0].obj_clone()
         instance.task_state = task_states.RESIZE_MIGRATING
-        instance.flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        instance.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
         instance.migration_context = objects.MigrationContext()
         instance.migration_context.new_pci_devices = objects.PciDeviceList(
             objects=pci_devs)
 
-        self.rt.tracked_instances = set([instance.uuid])
+        # When reverting a resize and dropping the move claim, the
+        # destination compute calls drop_move_claim to drop the new_flavor
+        # usage and the instance should be in tracked_migrations from when
+        # the resize_claim was made on the dest during prep_resize.
+        self.rt.tracked_migrations = {
+            instance.uuid: objects.Migration(migration_type='resize')}
 
         # not using mock.sentinel.ctx because drop_move_claim calls elevated
         ctx = mock.MagicMock()
 
         with test.nested(
-                mock.patch.object(self.rt, '_update'),
-                mock.patch.object(self.rt.pci_tracker, 'free_device')
-                ) as (update_mock, mock_pci_free_device):
+            mock.patch.object(self.rt, '_update'),
+            mock.patch.object(self.rt.pci_tracker, 'free_device'),
+            mock.patch.object(self.rt, '_get_usage_dict'),
+            mock.patch.object(self.rt, '_update_usage')
+        ) as (
+            update_mock, mock_pci_free_device, mock_get_usage,
+            mock_update_usage,
+        ):
             self.rt.drop_move_claim(ctx, instance, _NODENAME)
             mock_pci_free_device.assert_called_once_with(
                 pci_dev, mock.ANY)
+            mock_get_usage.assert_called_once_with(
+                instance.new_flavor, instance, numa_topology=None)
+            mock_update_usage.assert_called_once_with(
+                mock_get_usage.return_value, _NODENAME, sign=-1)
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)

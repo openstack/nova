@@ -459,31 +459,27 @@ class ResourceTracker(object):
                        attributes. 'old_' or 'new_', with 'new_' being the
                        default.
         """
+        # Remove usage for an instance that is tracked in migrations, such as
+        # on the dest node during revert resize.
         if instance['uuid'] in self.tracked_migrations:
             migration = self.tracked_migrations.pop(instance['uuid'])
-
             if not instance_type:
                 instance_type = self._get_instance_type(instance, prefix,
                                                         migration)
-
-            if instance_type is not None:
-                numa_topology = self._get_migration_context_resource(
-                    'numa_topology', instance, prefix=prefix)
-                usage = self._get_usage_dict(
-                        instance_type, instance, numa_topology=numa_topology)
-                self._drop_pci_devices(instance, nodename, prefix)
-                self._update_usage(usage, nodename, sign=-1)
-
-                ctxt = context.elevated()
-                self._update(ctxt, self.compute_nodes[nodename])
         # Remove usage for an instance that is not tracked in migrations (such
         # as on the source node after a migration).
         # NOTE(lbeliveau): On resize on the same node, the instance is
         # included in both tracked_migrations and tracked_instances.
-        elif (instance['uuid'] in self.tracked_instances):
+        elif instance['uuid'] in self.tracked_instances:
             self.tracked_instances.remove(instance['uuid'])
+
+        if instance_type is not None:
+            numa_topology = self._get_migration_context_resource(
+                'numa_topology', instance, prefix=prefix)
+            usage = self._get_usage_dict(
+                    instance_type, instance, numa_topology=numa_topology)
             self._drop_pci_devices(instance, nodename, prefix)
-            # TODO(lbeliveau): Validate if numa needs the same treatment.
+            self._update_usage(usage, nodename, sign=-1)
 
             ctxt = context.elevated()
             self._update(ctxt, self.compute_nodes[nodename])
