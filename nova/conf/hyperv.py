@@ -171,9 +171,9 @@ Possible values:
 Related options:
 
 * If the config_drive_cdrom option is False, qemu-img will be used to
-  convert the ISO to a VHD, otherwise the configuration drive will
-  remain an ISO. To use configuration drive with Hyper-V, you must
-  set the mkisofs_cmd value to the full path to an mkisofs.exe
+  convert the ISO to a VHD, otherwise the config drive will
+  remain an ISO. To use config drive with Hyper-V, you must
+  set the ``mkisofs_cmd`` value to the full path to an ``mkisofs.exe``
   installation.
 """),
     cfg.StrOpt('vswitch_name',
@@ -212,44 +212,37 @@ Possible values:
     cfg.BoolOpt('config_drive_cdrom',
         default=False,
         help="""
-Configuration drive cdrom
+Mount config drive as a CD drive.
 
-OpenStack can be configured to write instance metadata to
-a configuration drive, which is then attached to the
-instance before it boots. The configuration drive can be
+OpenStack can be configured to write instance metadata to a config drive, which
+is then attached to the instance before it boots. The config drive can be
 attached as a disk drive (default) or as a CD drive.
-
-Possible values:
-
-* True: Attach the configuration drive image as a CD drive.
-* False: Attach the configuration drive image as a disk drive (Default).
 
 Related options:
 
-* This option is meaningful with force_config_drive option set to 'True'
+* This option is meaningful with ``force_config_drive`` option set to ``True``
   or when the REST API call to create an instance will have
-  '--config-drive=True' flag.
-* config_drive_format option must be set to 'iso9660' in order to use
-  CD drive as the configuration drive image.
-* To use configuration drive with Hyper-V, you must set the
-  mkisofs_cmd value to the full path to an mkisofs.exe installation.
-  Additionally, you must set the qemu_img_cmd value to the full path
-  to an qemu-img command installation.
+  ``--config-drive=True`` flag.
+* ``config_drive_format`` option must be set to ``iso9660`` in order to use
+  CD drive as the config drive image.
+* To use config drive with Hyper-V, you must set the
+  ``mkisofs_cmd`` value to the full path to an ``mkisofs.exe`` installation.
+  Additionally, you must set the ``qemu_img_cmd`` value to the full path
+  to an ``qemu-img`` command installation.
 * You can configure the Compute service to always create a configuration
-  drive by setting the force_config_drive option to 'True'.
+  drive by setting the ``force_config_drive`` option to ``True``.
 """),
     cfg.BoolOpt('config_drive_inject_password',
         default=False,
         help="""
-Configuration drive inject password
+Inject password to config drive.
 
-Enables setting the admin password in the configuration drive image.
+When enabled, the admin password will be available from the config drive image.
 
 Related options:
 
 * This option is meaningful when used with other options that enable
-  configuration drive usage with Hyper-V, such as force_config_drive.
-* Currently, the only accepted config_drive_format is 'iso9660'.
+  config drive usage with Hyper-V, such as ``force_config_drive``.
 """),
     cfg.IntOpt('volume_attach_retry_count',
         default=10,

@@ -223,7 +223,7 @@ class DeleteDisk(task.Task):
 
 class CreateAndConnectCfgDrive(task.Task):
 
-    """The task to create the configuration drive."""
+    """The task to create the config drive."""
 
     def __init__(self, adapter, instance, injected_files,
                  network_info, stg_ftsk, admin_pass=None):

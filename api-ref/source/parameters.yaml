@@ -1997,7 +1997,7 @@ code:
   type: string
 config_drive:
   description: |
-    Indicates whether a configuration drive enables metadata injection. The config_drive
+    Indicates whether a config drive enables metadata injection. The config_drive
     setting provides information about a drive that the instance can mount at boot
     time. The instance reads files from the drive to get information that is normally
     available through the metadata service. This metadata is different from the user

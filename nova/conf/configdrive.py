@@ -30,10 +30,10 @@ necessary or useful.
             ('vfat', 'Provided for legacy reasons and to enable live '
              'migration with the libvirt driver and non-shared storage')],
         help="""
-Configuration drive format
+Config drive format.
 
-Configuration drive format that will contain metadata attached to the
-instance when it boots.
+Config drive format that will contain metadata attached to the instance when it
+boots.
 
 Related options:
 
@@ -46,24 +46,24 @@ Related options:
      this is defined by ``img_config_drive`` property for that image.
 
 * A compute node running Hyper-V hypervisor can be configured to attach
-  configuration drive as a CD drive. To attach the configuration drive as a CD
-  drive, set the ``[hyperv] config_drive_cdrom`` option to true.
+  config drive as a CD drive. To attach the config drive as a CD drive, set the
+  ``[hyperv] config_drive_cdrom`` option to true.
 """),
     cfg.BoolOpt('force_config_drive',
         default=False,
         help="""
 Force injection to take place on a config drive
 
-When this option is set to true configuration drive functionality will be
-forced enabled by default, otherwise user can still enable configuration
-drives via the REST API or image metadata properties. Launched VMs are not
-affected by this option.
+When this option is set to true config drive functionality will be forced
+enabled by default, otherwise users can still enable config drives via the REST
+API or image metadata properties. Launched instances are not affected by this
+option.
 
 Possible values:
 
-* True: Force to use of configuration drive regardless the user's input in the
+* True: Force to use of config drive regardless the user's input in the
         REST API call.
-* False: Do not force use of configuration drive. Config drives can still be
+* False: Do not force use of config drive. Config drives can still be
          enabled via the REST API or image metadata properties.
 
 Related options:
@@ -71,7 +71,7 @@ Related options:
 * Use the 'mkisofs_cmd' flag to set the path where you install the
   genisoimage program. If genisoimage is in same path as the
   nova-compute service, you do not need to set this flag.
-* To use configuration drive with Hyper-V, you must set the
+* To use a config drive with Hyper-V, you must set the
   'mkisofs_cmd' value to the full path to an mkisofs.exe installation.
   Additionally, you must set the qemu_img_cmd value in the hyperv
   configuration section to the full path to an qemu-img command
@@ -80,16 +80,16 @@ Related options:
     cfg.StrOpt('mkisofs_cmd',
         default='genisoimage',
         help="""
-Name or path of the tool used for ISO image creation
+Name or path of the tool used for ISO image creation.
 
-Use the mkisofs_cmd flag to set the path where you install the genisoimage
-program. If genisoimage is on the system path, you do not need to change
-the default value.
+Use the ``mkisofs_cmd`` flag to set the path where you install the
+``genisoimage`` program. If ``genisoimage`` is on the system path, you do not
+need to change the default value.
 
-To use configuration drive with Hyper-V, you must set the mkisofs_cmd value
-to the full path to an mkisofs.exe installation. Additionally, you must set
-the qemu_img_cmd value in the hyperv configuration section to the full path
-to an qemu-img command installation.
+To use a config drive with Hyper-V, you must set the ``mkisofs_cmd`` value to
+the full path to an ``mkisofs.exe`` installation. Additionally, you must set
+the ``qemu_img_cmd`` value in the hyperv configuration section to the full path
+to an ``qemu-img`` command installation.
 
 Possible values:
 
@@ -100,8 +100,8 @@ Possible values:
 Related options:
 
 * This option is meaningful when config drives are enabled.
-* To use configuration drive with Hyper-V, you must set the qemu_img_cmd
-  value in the hyperv configuration section to the full path to an qemu-img
+* To use config drive with Hyper-V, you must set the ``qemu_img_cmd``
+  value in the hyperv configuration section to the full path to an ``qemu-img``
   command installation.
 """),
 ]
