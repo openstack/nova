@@ -16,6 +16,7 @@
 import mock
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 
 from nova.objects import fields
 from nova.tests.functional.libvirt import base
@@ -28,27 +29,9 @@ LOG = logging.getLogger(__name__)
 
 class _PCIServersTestBase(base.ServersTestBase):
 
-    vfs_alias_name = 'vfs'
-    pfs_alias_name = 'pfs'
-
-    pci_passthrough_whitelist = [
-        '{"vendor_id":"8086", "product_id":"1528"}',
-        '{"vendor_id":"8086", "product_id":"1515"}',
-    ]
-    # PFs will be removed from pools unless they are specifically
-    # requested, so we explicitly request them with the 'device_type'
-    # attribute
-    pci_alias = [
-        '{"vendor_id":"8086", "product_id":"1528", "name":"%s", '
-        '"device_type":"%s"}' % (
-            pfs_alias_name, fields.PciDeviceType.SRIOV_PF),
-        '{"vendor_id":"8086", "product_id":"1515", "name":"%s"}' % (
-            vfs_alias_name),
-    ]
-
     def setUp(self):
-        self.flags(passthrough_whitelist=self.pci_passthrough_whitelist,
-                   alias=self.pci_alias,
+        self.flags(passthrough_whitelist=self.PCI_PASSTHROUGH_WHITELIST,
+                   alias=self.PCI_ALIAS,
                    group='pci')
 
         super(_PCIServersTestBase, self).setUp()
@@ -113,6 +96,36 @@ class _PCIServersTestBase(base.ServersTestBase):
 
 class SRIOVServersTest(_PCIServersTestBase):
 
+    VFS_ALIAS_NAME = 'vfs'
+    PFS_ALIAS_NAME = 'pfs'
+
+    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(x) for x in (
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PF_PROD_ID,
+        },
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.VF_PROD_ID,
+        },
+    )]
+    # PFs will be removed from pools unless they are specifically
+    # requested, so we explicitly request them with the 'device_type'
+    # attribute
+    PCI_ALIAS = [jsonutils.dumps(x) for x in (
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PF_PROD_ID,
+            'device_type': fields.PciDeviceType.SRIOV_PF,
+            'name': PFS_ALIAS_NAME,
+        },
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.VF_PROD_ID,
+            'name': VFS_ALIAS_NAME,
+        },
+    )]
+
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
     def test_create_server_with_VF(self, img_mock):
 
@@ -124,7 +137,7 @@ class SRIOVServersTest(_PCIServersTestBase):
         self.mock_conn.return_value = fake_connection
 
         # Create a flavor
-        extra_spec = {"pci_passthrough:alias": "%s:1" % self.vfs_alias_name}
+        extra_spec = {"pci_passthrough:alias": "%s:1" % self.VFS_ALIAS_NAME}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
         self._run_build_test(flavor_id)
@@ -140,7 +153,7 @@ class SRIOVServersTest(_PCIServersTestBase):
         self.mock_conn.return_value = fake_connection
 
         # Create a flavor
-        extra_spec = {"pci_passthrough:alias": "%s:1" % self.pfs_alias_name}
+        extra_spec = {"pci_passthrough:alias": "%s:1" % self.PFS_ALIAS_NAME}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
         self._run_build_test(flavor_id)
@@ -157,9 +170,9 @@ class SRIOVServersTest(_PCIServersTestBase):
 
         # Create a flavor
         extra_spec_pfs = {"pci_passthrough:alias": "%s:1" %
-                          self.pfs_alias_name}
+                          self.PFS_ALIAS_NAME}
         extra_spec_vfs = {"pci_passthrough:alias": "%s:1" %
-                          self.vfs_alias_name}
+                          self.VFS_ALIAS_NAME}
         flavor_id_pfs = self._create_flavor(extra_spec=extra_spec_pfs)
         flavor_id_vfs = self._create_flavor(extra_spec=extra_spec_vfs)
 
@@ -178,9 +191,9 @@ class SRIOVServersTest(_PCIServersTestBase):
 
         # Create a flavor
         extra_spec_pfs = {"pci_passthrough:alias": "%s:1" %
-                          self.pfs_alias_name}
+                          self.PFS_ALIAS_NAME}
         extra_spec_vfs = {"pci_passthrough:alias": "%s:1" %
-                          self.vfs_alias_name}
+                          self.VFS_ALIAS_NAME}
         flavor_id_pfs = self._create_flavor(extra_spec=extra_spec_pfs)
         flavor_id_vfs = self._create_flavor(extra_spec=extra_spec_vfs)
 
@@ -189,6 +202,21 @@ class SRIOVServersTest(_PCIServersTestBase):
 
 
 class PCIServersTest(_PCIServersTestBase):
+
+    ALIAS_NAME = 'a1'
+    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PCI_PROD_ID,
+        }
+    )]
+    PCI_ALIAS = [jsonutils.dumps(
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PCI_PROD_ID,
+            'name': ALIAS_NAME,
+        }
+    )]
 
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
     def test_create_server_with_pci_dev_and_numa(self, img_mock):
@@ -199,14 +227,14 @@ class PCIServersTest(_PCIServersTestBase):
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
                                              cpu_cores=2, cpu_threads=2,
                                              kB_mem=15740000)
-        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, numa_node=1)
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=1)
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
 
         # create a flavor
         extra_spec = {
             'hw:cpu_policy': 'dedicated',
-            'pci_passthrough:alias': '%s:1' % self.pfs_alias_name,
+            'pci_passthrough:alias': '%s:1' % self.ALIAS_NAME,
         }
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
@@ -221,7 +249,7 @@ class PCIServersTest(_PCIServersTestBase):
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
                                              cpu_cores=2, cpu_threads=2,
                                              kB_mem=15740000)
-        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, numa_node=0)
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=0)
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
 
@@ -234,7 +262,7 @@ class PCIServersTest(_PCIServersTestBase):
         self._run_build_test(flavor_id)
 
         # now boot one with a PCI device, which should fail to boot
-        extra_spec['pci_passthrough:alias'] = '%s:1' % self.pfs_alias_name
+        extra_spec['pci_passthrough:alias'] = '%s:1' % self.ALIAS_NAME
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
         self._run_build_test(flavor_id, end_status='ERROR')
@@ -242,19 +270,22 @@ class PCIServersTest(_PCIServersTestBase):
 
 class PCIServersWithNUMAPoliciesTest(_PCIServersTestBase):
 
-    # PFs will be removed from pools unless they are specifically
-    # requested, so we explicitly request them with the 'device_type'
-    # attribute
-    pci_alias = [
-        '{"vendor_id":"8086", "product_id":"1528", "name":"%s", '
-        '"device_type":"%s", "numa_policy":"%s"}' % (
-            _PCIServersTestBase.pfs_alias_name,
-            fields.PciDeviceType.SRIOV_PF,
-            fields.PCINUMAAffinityPolicy.PREFERRED
-        ),
-        '{"vendor_id":"8086", "product_id":"1515", "name":"%s"}' % (
-            _PCIServersTestBase.vfs_alias_name),
-    ]
+    ALIAS_NAME = 'a1'
+    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PCI_PROD_ID,
+        }
+    )]
+    PCI_ALIAS = [jsonutils.dumps(
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PCI_PROD_ID,
+            'name': ALIAS_NAME,
+            'device_type': fields.PciDeviceType.STANDARD,
+            'numa_policy': fields.PCINUMAAffinityPolicy.PREFERRED,
+        }
+    )]
 
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
     def test_create_server_with_pci_dev_and_numa(self, img_mock):
@@ -268,7 +299,7 @@ class PCIServersWithNUMAPoliciesTest(_PCIServersTestBase):
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
                                              cpu_cores=2, cpu_threads=2,
                                              kB_mem=15740000)
-        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, numa_node=0)
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=0)
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
 
@@ -282,7 +313,7 @@ class PCIServersWithNUMAPoliciesTest(_PCIServersTestBase):
 
         # now boot one with a PCI device, which should succeed thanks to the
         # use of the PCI policy
-        extra_spec['pci_passthrough:alias'] = '%s:1' % self.pfs_alias_name
+        extra_spec['pci_passthrough:alias'] = '%s:1' % self.ALIAS_NAME
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
         self._run_build_test(flavor_id)
