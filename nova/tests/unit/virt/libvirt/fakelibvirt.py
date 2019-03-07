@@ -13,10 +13,12 @@
 #    under the License.
 
 import sys
+import textwrap
 import time
 
 import fixtures
 from lxml import etree
+from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.objects import fields as obj_fields
@@ -33,6 +35,9 @@ connection_used = False
 def _reset():
     global allow_default_uri_connection
     allow_default_uri_connection = True
+
+
+LOG = logging.getLogger(__name__)
 
 # virDomainState
 VIR_DOMAIN_NOSTATE = 0
@@ -163,14 +168,22 @@ FAKE_LIBVIRT_VERSION = 3000000
 # Libvirt version to match MIN_QEMU_VERSION in driver.py
 FAKE_QEMU_VERSION = 2008000
 
-PF_CAP_TYPE = 'virt_functions'
-VF_CAP_TYPE = 'phys_function'
+PCI_VEND_ID = '8086'
+PCI_VEND_NAME = 'Intel Corporation'
+
+PCI_PROD_ID = '1533'
+PCI_PROD_NAME = 'I210 Gigabit Network Connection'
+PCI_DRIVER_NAME = 'igb'
+
+PF_PROD_ID = '1528'
 PF_PROD_NAME = 'Ethernet Controller 10-Gigabit X540-AT2'
-VF_PROD_NAME = 'X540 Ethernet Controller Virtual Function'
 PF_DRIVER_NAME = 'ixgbe'
+PF_CAP_TYPE = 'virt_functions'
+
+VF_PROD_ID = '1515'
+VF_PROD_NAME = 'X540 Ethernet Controller Virtual Function'
 VF_DRIVER_NAME = 'ixgbevf'
-VF_SLOT = '10'
-PF_SLOT = '00'
+VF_CAP_TYPE = 'phys_function'
 
 NVIDIA_11_VGPU_TYPE = 'nvidia-11'
 PGPU1_PCI_ADDR = 'pci_0000_06_00_0'
@@ -178,117 +191,217 @@ PGPU2_PCI_ADDR = 'pci_0000_07_00_0'
 PGPU3_PCI_ADDR = 'pci_0000_08_00_0'
 
 
-class FakePciDevice(object):
-    pci_dev_template = """<device>
-  <name>pci_0000_81_%(slot)02x_%(dev)d</name>
-  <path>/sys/devices/pci0000:80/0000:80:01.0/0000:81:%(slot)02x.%(dev)d</path>
-  <parent>pci_0000_80_01_0</parent>
-  <driver>
-    <name>%(driver)s</name>
-  </driver>
-  <capability type='pci'>
-    <domain>0</domain>
-    <bus>129</bus>
-    <slot>%(slot)d</slot>
-    <function>%(dev)d</function>
-    <product id='0x%(prod)d'>%(prod_name)s</product>
-    <vendor id='0x8086'>Intel Corporation</vendor>
-    <capability type='%(cap_type)s'>
-    %(functions)s
-    </capability>
-    <iommuGroup number='%(group_id)d'>
- <address domain='0x0000' bus='0x81' slot='%(slot)#02x' function='0x%(dev)d'/>
-    </iommuGroup>
-    <numa node='%(numa_node)s'/>
-    <pci-express>
-      <link validity='cap' port='0' speed='5' width='8'/>
-      <link validity='sta' speed='5' width='8'/>
-    </pci-express>
-  </capability>
-</device>"""
+class FakePCIDevice(object):
+    """Generate a fake PCI device.
 
-    def __init__(self, dev_type, vf_ratio, group, dev, product_id, numa_node):
+    Generate a fake PCI devices corresponding to one of the following
+    real-world PCI devices.
+
+    - I210 Gigabit Network Connection (8086:1533)
+    - Ethernet Controller 10-Gigabit X540-AT2 (8086:1528)
+    - X540 Ethernet Controller Virtual Function (8086:1515)
+    """
+
+    pci_device_template = textwrap.dedent("""
+        <device>
+          <name>pci_0000_81_%(slot)02x_%(function)d</name>
+          <path>/sys/devices/pci0000:80/0000:80:01.0/0000:81:%(slot)02x.%(function)d</path>
+          <parent>pci_0000_80_01_0</parent>
+          <driver>
+            <name>%(driver)s</name>
+          </driver>
+          <capability type='pci'>
+            <domain>0</domain>
+            <bus>129</bus>
+            <slot>%(slot)d</slot>
+            <function>%(function)d</function>
+            <product id='0x%(prod_id)s'>%(prod_name)s</product>
+            <vendor id='0x%(vend_id)s'>%(vend_name)s</vendor>
+        %(capability)s
+            <iommuGroup number='%(iommu_group)d'>
+              <address domain='0x0000' bus='0x81' slot='%(slot)#02x' function='0x%(function)d'/>
+            </iommuGroup>
+            <numa node='%(numa_node)s'/>
+            <pci-express>
+              <link validity='cap' port='0' speed='5' width='8'/>
+              <link validity='sta' speed='5' width='8'/>
+            </pci-express>
+          </capability>
+        </device>""".strip())  # noqa
+    cap_templ = "<capability type='%(cap_type)s'>%(addresses)s</capability>"
+    addr_templ = "<address domain='0x0000' bus='0x81' slot='%(slot)#02x' function='%(function)#02x'/>"  # noqa
+
+    def __init__(self, dev_type, slot, function, iommu_group, numa_node,
+                 vf_ratio=None):
         """Populate pci devices
 
-        :param dev_type: (string) Indicates the type of the device (PF, VF)
-        :param vf_ratio: (int) Ratio of Virtual Functions on Physical
-        :param group: (int) iommu group id
-        :param dev: (int) function number of the device
-        :param product_id: (int) Device product ID
-        :param numa_node: (int) NUMA node of the device
+        :param dev_type: (string) Indicates the type of the device (PCI, PF,
+            VF).
+        :param slot: (int) Slot number of the device.
+        :param function: (int) Function number of the device.
+        :param iommu_group: (int) IOMMU group ID.
+        :param numa_node: (int) NUMA node of the device.
+        :param vf_ratio: (int) Ratio of Virtual Functions on Physical. Only
+            applicable if ``dev_type`` is one of: ``PF``, ``VF``.
         """
-        addr_templ = ("  <address domain='0x0000' bus='0x81' slot='0x%(slot)s'"
-                      " function='0x%(dev)d'/>")
-        self.pci_dev = None
 
-        if dev_type == 'PF':
-            pf_caps = [addr_templ % {'dev': x, 'slot': VF_SLOT}
-                                     for x in range(dev * vf_ratio,
-                                                    (dev + 1) * vf_ratio)]
-            slot = int(str(PF_SLOT), 16)
-            self.pci_dev = self.pci_dev_template % {'dev': dev,
-                         'prod': product_id, 'group_id': group,
-                         'functions': '\n'.join(pf_caps), 'slot': slot,
-                         'cap_type': PF_CAP_TYPE, 'prod_name': PF_PROD_NAME,
-                         'driver': PF_DRIVER_NAME, 'numa_node': numa_node}
+        if dev_type == 'PCI':
+            if vf_ratio:
+                raise ValueError('vf_ratio does not apply for PCI devices')
+
+            prod_id = PCI_PROD_ID
+            prod_name = PCI_PROD_NAME
+            driver = PCI_DRIVER_NAME
+            capability = ''
+        elif dev_type == 'PF':
+            prod_id = PF_PROD_ID
+            prod_name = PF_PROD_NAME
+            driver = PF_DRIVER_NAME
+            capability = self.cap_templ % {
+                'cap_type': PF_CAP_TYPE,
+                'addresses': '\n'.join([
+                    self.addr_templ % {
+                        # these are the slot, function values of the child VFs
+                        # we can only assign 8 functions to a slot (0-7) so
+                        # bump the slot each time we exceed this
+                        'slot': slot + (x // 8),
+                        # ...and wrap the function value
+                        'function': x % 8,
+                    # the offset is because the PF is occupying function 0
+                    } for x in range(1, vf_ratio + 1)])
+            }
         elif dev_type == 'VF':
-            vf_caps = [addr_templ % {'dev': int(dev / vf_ratio),
-                                     'slot': PF_SLOT}]
-            slot = int(str(VF_SLOT), 16)
-            self.pci_dev = self.pci_dev_template % {'dev': dev,
-                         'prod': product_id, 'group_id': group,
-                         'functions': '\n'.join(vf_caps), 'slot': slot,
-                         'cap_type': VF_CAP_TYPE, 'prod_name': VF_PROD_NAME,
-                         'driver': VF_DRIVER_NAME, 'numa_node': numa_node}
+            prod_id = VF_PROD_ID
+            prod_name = VF_PROD_NAME
+            driver = VF_DRIVER_NAME
+            capability = self.cap_templ % {
+                'cap_type': VF_CAP_TYPE,
+                'addresses': self.addr_templ % {
+                    # this is the slot, function value of the parent PF
+                    # if we're e.g. device 8, we'll have a different slot
+                    # to our parent so reverse this
+                    'slot': slot - ((vf_ratio + 1) // 8),
+                    # the parent PF is always function 0
+                    'function': 0,
+                }
+            }
+        else:
+            raise ValueError('Expected one of: PCI, VF, PCI')
+
+        self.pci_device = self.pci_device_template % {
+            'slot': slot,
+            'function': function,
+            'vend_id': PCI_VEND_ID,
+            'vend_name': PCI_VEND_NAME,
+            'prod_id': prod_id,
+            'prod_name': prod_name,
+            'driver': driver,
+            'capability': capability,
+            'iommu_group': iommu_group,
+            'numa_node': numa_node,
+        }
 
     def XMLDesc(self, flags):
-        return self.pci_dev
+        return self.pci_device
 
 
-class HostPciSRIOVDevicesInfo(object):
-    """Represent a pool of host SR-IOV devices."""
+class HostPCIDevicesInfo(object):
+    """Represent a pool of host PCI devices."""
 
-    def __init__(self, vf_product_id=1515, pf_product_id=1528, num_pfs=2,
-                 num_vfs=8, group=47, numa_node=None, total_numa_nodes=2):
-        """Create a new HostPciSRIOVDevicesInfo object.
+    TOTAL_NUMA_NODES = 2
+    pci_devname_template = 'pci_0000_81_%(slot)02x_%(function)d'
 
-        :param vf_product_id: (int) Product ID of the Virtual Functions
-        :param pf_product_id=1528: (int) Product ID of the Physical Functions
-        :param num_pfs: (int) The number of the Physical Functions
-        :param num_vfs: (int) The number of the Virtual Functions
-        :param group: (int) Initial group id
-        :param numa_node: (int) NUMA node of the device, if set all of the
-                          device will be created in the provided node
-        :param total_numa_nodes: (int) total number of NUMA nodes
+    def __init__(self, num_pci=0, num_pfs=2, num_vfs=8, numa_node=None):
+        """Create a new HostPCIDevicesInfo object.
+
+        :param num_pci: (int) The number of (non-SR-IOV) PCI devices.
+        :param num_pfs: (int) The number of PCI SR-IOV Physical Functions.
+        :param num_vfs: (int) The number of PCI SR-IOV Virtual Functions.
+        :param iommu_group: (int) Initial IOMMU group ID.
+        :param numa_node: (int) NUMA node of the device; if set all of the
+            devices will be assigned to the specified node else they will be
+            split between ``$TOTAL_NUMA_NODES`` nodes.
         """
-        def _calc_numa_node(dev):
-            return dev % total_numa_nodes if numa_node is None else numa_node
-
         self.devices = {}
+
+        if not (num_vfs or num_pfs):
+            return
+
         if num_vfs and not num_pfs:
             raise ValueError('Cannot create VFs without PFs')
+
+        if num_vfs % num_pfs:
+            raise ValueError('num_vfs must be a factor of num_pfs')
+
+        slot = 0
+        function = 0
+        iommu_group = 40  # totally arbitrary number
+
+        # Generate PCI devs
+        for dev in range(num_pci):
+            pci_dev_name = self.pci_devname_template % {
+                'slot': slot, 'function': function}
+
+            LOG.info('Generating PCI device %r', pci_dev_name)
+
+            self.devices[pci_dev_name] = FakePCIDevice(
+                dev_type='PCI',
+                slot=slot,
+                function=function,
+                iommu_group=iommu_group,
+                numa_node=self._calc_numa_node(dev, numa_node))
+
+            slot += 1
+            iommu_group += 1
 
         vf_ratio = num_vfs // num_pfs if num_pfs else 0
 
         # Generate PFs
         for dev in range(num_pfs):
-            dev_group = group + dev + 1
-            pci_dev_name = 'pci_0000_81_%(slot)s_%(dev)d' % {'slot': PF_SLOT,
-                                                             'dev': dev}
-            self.devices[pci_dev_name] = FakePciDevice('PF', vf_ratio,
-                                                       dev_group, dev,
-                                                       pf_product_id,
-                                                       _calc_numa_node(dev))
+            function = 0
+            numa_node_pf = self._calc_numa_node(dev, numa_node)
 
-        # Generate VFs
-        for dev in range(num_vfs):
-            dev_group = group + dev + 1
-            pci_dev_name = 'pci_0000_81_%(slot)s_%(dev)d' % {'slot': VF_SLOT,
-                                                             'dev': dev}
-            self.devices[pci_dev_name] = FakePciDevice('VF', vf_ratio,
-                                                       dev_group, dev,
-                                                       vf_product_id,
-                                                       _calc_numa_node(dev))
+            pci_dev_name = self.pci_devname_template % {
+                'slot': slot, 'function': function}
+
+            LOG.info('Generating PF device %r', pci_dev_name)
+
+            self.devices[pci_dev_name] = FakePCIDevice(
+                dev_type='PF',
+                slot=slot,
+                function=function,
+                iommu_group=iommu_group,
+                numa_node=numa_node_pf,
+                vf_ratio=vf_ratio)
+
+            # Generate VFs
+            for _ in range(vf_ratio):
+                function += 1
+                iommu_group += 1
+
+                if function % 8 == 0:
+                    # functions must be 0-7
+                    slot += 1
+                    function = 0
+
+                pci_dev_name = self.pci_devname_template % {
+                    'slot': slot, 'function': function}
+
+                LOG.info('Generating VF device %r', pci_dev_name)
+
+                self.devices[pci_dev_name] = FakePCIDevice(
+                    dev_type='VF',
+                    slot=slot,
+                    function=function,
+                    iommu_group=iommu_group,
+                    numa_node=numa_node_pf,
+                    vf_ratio=vf_ratio)
+
+            slot += 1
+
+    @classmethod
+    def _calc_numa_node(cls, dev, numa_node):
+        return dev % cls.TOTAL_NUMA_NODES if numa_node is None else numa_node
 
     def get_all_devices(self):
         return self.devices.keys()
@@ -1111,8 +1224,9 @@ class Connection(object):
         self.fakeLibVersion = version
         self.fakeVersion = hv_version
         self.host_info = host_info or HostInfo()
-        self.pci_info = pci_info or HostPciSRIOVDevicesInfo(num_pfs=0,
-                                                            num_vfs=0)
+        self.pci_info = pci_info or HostPCIDevicesInfo(num_pci=0,
+                                                       num_pfs=0,
+                                                       num_vfs=0)
         self.mdev_info = mdev_info or []
 
     def _add_filter(self, nwfilter):
