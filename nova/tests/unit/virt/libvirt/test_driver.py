@@ -7964,9 +7964,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         for state in (power_state.RUNNING, power_state.PAUSED):
             guest.get_power_state = mock.Mock(return_value=state)
-            drvr.extend_volume(connection_info, instance)
+            drvr.extend_volume(connection_info,
+                               instance, new_size_in_kb * 1024)
             drvr._extend_volume.assert_called_with(connection_info,
-                                                   instance)
+                                                   instance,
+                                                   new_size_in_kb * 1024)
             guest.get_block_device.assert_called_with('/fake')
             block_device.resize.assert_called_with(20480)
 
@@ -7979,7 +7981,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             connection_info = {'driver_volume_type': 'fake'}
             self.assertRaises(exception.ExtendVolumeNotSupported,
                               drvr.extend_volume,
-                              connection_info, instance)
+                              connection_info, instance, 0)
 
     def test_extend_volume_disk_not_found(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -7998,7 +8000,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr._host.get_guest = mock.Mock(return_value=guest)
         drvr._extend_volume = mock.Mock(return_value=new_size_in_kb)
 
-        drvr.extend_volume(connection_info, instance)
+        drvr.extend_volume(connection_info, instance, new_size_in_kb * 1024)
 
     def test_extend_volume_with_instance_not_found(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -8013,7 +8015,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             connection_info = {'driver_volume_type': 'fake'}
             self.assertRaises(exception.InstanceNotFound,
                               drvr.extend_volume,
-                              connection_info, instance)
+                              connection_info, instance, 0)
 
     def test_extend_volume_with_libvirt_error(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -8038,7 +8040,80 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr.extend_volume,
-                          connection_info, instance)
+                          connection_info, instance, new_size_in_kb * 1024)
+
+    def test_extend_volume_with_no_device_path_attribute(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        connection_info = {
+            'serial': '58a84f6d-3f0c-4e19-a0af-eb657b790657',
+            'driver_volume_type': 'fake',
+            'data': {'cluster_name': 'fake',
+                     'auth_enabled': False,
+                     'volume_id': '58a84f6d-3f0c-4e19-a0af-eb657b790657',
+                     'access_mode': 'rw'}
+        }
+        new_size_in_kb = 20 * 1024 * 1024
+
+        guest = mock.Mock(spec='nova.virt.libvirt.guest.Guest')
+        # block_device
+        block_device = mock.Mock(
+            spec='nova.virt.libvirt.guest.BlockDevice')
+        block_device.resize = mock.Mock()
+        disk = mock.Mock(
+            spec='nova.virt.libvirt.config.LibvirtConfigGuestDisk',
+            serial='58a84f6d-3f0c-4e19-a0af-eb657b790657',
+            target_dev='vdb')
+        guest.get_block_device = mock.Mock(return_value=block_device)
+        guest.get_all_disks = mock.Mock(return_value=[disk])
+        drvr._host.get_guest = mock.Mock(return_value=guest)
+        drvr._extend_volume = mock.Mock(return_value=new_size_in_kb)
+
+        for state in (power_state.RUNNING, power_state.PAUSED):
+            guest.get_power_state = mock.Mock(return_value=state)
+            drvr.extend_volume(connection_info, instance,
+                               new_size_in_kb * 1024)
+            drvr._extend_volume.assert_called_with(connection_info,
+                                                   instance,
+                                                   new_size_in_kb * 1024)
+            guest.get_block_device.assert_called_with('vdb')
+            block_device.resize.assert_called_with(20480)
+
+    def test_extend_volume_no_disk_found_by_serial(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        connection_info = {
+            'serial': '58a84f6d-3f0c-4e19-a0af-eb657b790657',
+            'driver_volume_type': 'fake',
+            'data': {'cluster_name': 'fake',
+                     'auth_enabled': False,
+                     'volume_id': '58a84f6d-3f0c-4e19-a0af-eb657b790657',
+                     'access_mode': 'rw'}
+        }
+        new_size_in_kb = 20 * 1024 * 1024
+
+        guest = mock.Mock(spec='nova.virt.libvirt.guest.Guest')
+        # block_device
+        block_device = mock.Mock(
+            spec='nova.virt.libvirt.guest.BlockDevice')
+        block_device.resize = mock.Mock()
+        disk = mock.Mock(
+            spec='nova.virt.libvirt.config.LibvirtConfigGuestDisk',
+            serial='12345678-abcd-abcd-abcd-0123456789012',
+            target_dev='vdb')
+        guest.get_block_device = mock.Mock(return_value=block_device)
+        guest.get_all_disks = mock.Mock(return_value=[disk])
+        drvr._host.get_guest = mock.Mock(return_value=guest)
+        drvr._extend_volume = mock.Mock(return_value=new_size_in_kb)
+        guest.get_power_state = mock.Mock(return_value=power_state.RUNNING)
+
+        self.assertRaises(
+            exception.VolumeNotFound,
+            drvr.extend_volume,
+            connection_info,
+            instance,
+            new_size_in_kb * 1024
+        )
 
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')

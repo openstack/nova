@@ -241,3 +241,16 @@ class LibvirtNetVolumeDriverTestCase(
                          tree.find('./auth/secret').get('uuid'))
         libvirt_driver.disconnect_volume(connection_info,
                                          mock.sentinel.instance)
+
+    def test_extend_volume(self):
+        device_path = '/dev/fake-dev'
+        connection_info = {'data': {'device_path': device_path}}
+
+        requested_size = 20 * pow(1024, 3)  # 20GiB
+
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
+        new_size = libvirt_driver.extend_volume(connection_info,
+                                                mock.sentinel.instance,
+                                                requested_size)
+
+        self.assertEqual(requested_size, new_size)

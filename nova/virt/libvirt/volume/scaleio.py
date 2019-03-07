@@ -62,7 +62,7 @@ class LibvirtScaleIOVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         super(LibvirtScaleIOVolumeDriver, self).disconnect_volume(
             connection_info, instance)
 
-    def extend_volume(self, connection_info, instance):
+    def extend_volume(self, connection_info, instance, requested_size):
         LOG.debug("calling os-brick to extend ScaleIO Volume",
                   instance=instance)
         new_size = self.connector.extend_volume(connection_info['data'])

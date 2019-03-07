@@ -63,4 +63,5 @@ class LibvirtScaleIOVolumeDriverTestCase(
                                'extend_volume',
                                side_effect=brick_extend_vol):
             self.assertEqual(extended_vol_size,
-                             sio.extend_volume(conn, mock.sentinel.instance))
+                             sio.extend_volume(conn, mock.sentinel.instance,
+                                               extended_vol_size))

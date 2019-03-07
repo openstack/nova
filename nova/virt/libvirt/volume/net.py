@@ -135,3 +135,9 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         super(LibvirtNetVolumeDriver,
               self).disconnect_volume(connection_info, instance)
         self._delete_secret_by_name(connection_info)
+
+    def extend_volume(self, connection_info, instance, requested_size):
+        # There is nothing to do for network volumes. Cinder already extended
+        # the volume and there is no local block device which needs to be
+        # refreshed.
+        return requested_size

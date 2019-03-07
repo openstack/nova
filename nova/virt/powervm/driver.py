@@ -635,12 +635,13 @@ class PowerVMDriver(driver.ComputeDriver):
         # Run the flow
         tf_base.run(flow, instance=instance)
 
-    def extend_volume(self, connection_info, instance):
+    def extend_volume(self, connection_info, instance, requested_size):
         """Extend the disk attached to the instance.
 
         :param dict connection_info: The connection for the extended volume.
         :param nova.objects.instance.Instance instance:
             The instance whose volume gets extended.
+        :param int requested_size: The requested new volume size in bytes.
         :return: None
         """
 

@@ -64,12 +64,15 @@ class LibvirtISCSIVolumeDriverTestCase(
     def test_extend_volume(self):
         device_path = '/dev/fake-dev'
         connection_info = {'data': {'device_path': device_path}}
+        requested_size = 1
 
         libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_host)
-        libvirt_driver.connector.extend_volume = mock.MagicMock(return_value=1)
+        libvirt_driver.connector.extend_volume = mock.MagicMock(
+            return_value=requested_size)
         new_size = libvirt_driver.extend_volume(connection_info,
-                                                mock.sentinel.instance)
+                                                mock.sentinel.instance,
+                                                requested_size)
 
-        self.assertEqual(1, new_size)
+        self.assertEqual(requested_size, new_size)
         libvirt_driver.connector.extend_volume.assert_called_once_with(
            connection_info['data'])

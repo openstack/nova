@@ -592,7 +592,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
     @mock.patch('nova.virt.powervm.volume.fcvscsi.FCVscsiVolumeAdapter')
     def test_extend_volume(self, mock_vscsi_adpt):
         mock_bdm = self._fake_bdms()['block_device_mapping'][0]
-        self.drv.extend_volume(mock_bdm.get('connection_info'), self.inst)
+        self.drv.extend_volume(mock_bdm.get('connection_info'), self.inst, 0)
         mock_vscsi_adpt.return_value.extend_volume.assert_called_once_with()
 
     def test_vol_drv_iter(self):
