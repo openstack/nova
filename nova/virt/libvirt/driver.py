@@ -6158,7 +6158,7 @@ class LibvirtDriver(driver.ComputeDriver):
         device = {
             "dev_id": cfgdev.name,
             # name is like mdev_00ead764_fdc0_46b6_8db9_2963f5c815b4
-            "uuid": str(uuid.UUID(cfgdev.name[5:].replace('_', '-'))),
+            "uuid": libvirt_utils.mdev_name2uuid(cfgdev.name),
             # the physical GPU PCI device
             "parent": cfgdev.parent,
             "type": cfgdev.mdev_information.type,
@@ -6854,7 +6854,7 @@ class LibvirtDriver(driver.ComputeDriver):
         vgpu_count_per_pgpu = collections.defaultdict(int)
         for mdev_uuid in mdev_uuids:
             # libvirt name is like mdev_00ead764_fdc0_46b6_8db9_2963f5c815b4
-            dev_name = "mdev_" + mdev_uuid.replace('-', '_')
+            dev_name = libvirt_utils.mdev_uuid2name(mdev_uuid)
             # Count how many vGPUs are in use for this instance
             dev_info = self._get_mediated_device_information(dev_name)
             pgpu_dev_id = dev_info['parent']

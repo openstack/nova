@@ -21,6 +21,7 @@
 import errno
 import os
 import re
+import uuid
 
 import os_traits
 from oslo_concurrency import processutils
@@ -538,3 +539,17 @@ def get_cpu_model_from_arch(arch):
     elif arch == obj_fields.Architecture.PPC64LE:
         mode = 'POWER8'
     return mode
+
+
+def mdev_name2uuid(mdev_name):
+    """Convert an mdev name (of the form mdev_<uuid_with_underscores>) to a
+    uuid (of the form 8-4-4-4-12).
+    """
+    return str(uuid.UUID(mdev_name[5:].replace('_', '-')))
+
+
+def mdev_uuid2name(mdev_uuid):
+    """Convert an mdev uuid (of the form 8-4-4-4-12) to a name (of the form
+    mdev_<uuid_with_underscores>).
+    """
+    return "mdev_" + mdev_uuid.replace('-', '_')

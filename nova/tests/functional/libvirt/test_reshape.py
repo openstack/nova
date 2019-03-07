@@ -20,6 +20,8 @@ from nova import context
 from nova import objects
 from nova.tests.functional.libvirt import base
 from nova.tests.unit.virt.libvirt import fakelibvirt
+from nova.virt.libvirt import utils
+
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -95,7 +97,7 @@ class VGPUReshapeTests(base.ServersTestBase):
         # NOTE(gibi): during instance_claim() there is a
         # driver.update_provider_tree() call that would detect the old tree and
         # would fail as this is not a good time to reshape. To avoid that we
-        # temporally mock update_provider_tree here.
+        # temporarily mock update_provider_tree here.
         with mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                         'update_provider_tree'):
             created_server1 = self.api.post_server({'server': server_req})
@@ -114,7 +116,7 @@ class VGPUReshapeTests(base.ServersTestBase):
             self.assertEqual(1, len(mdevs))
             mdev_uuid = mdevs[0]
             mdev_info = self.compute.driver._get_mediated_device_information(
-                "mdev_" + mdev_uuid.replace('-', '_'))
+                utils.mdev_uuid2name(mdev_uuid))
             inst_to_pgpu[inst.uuid] = mdev_info['parent']
         # The VGPUs should have come from different pGPUs
         self.assertNotEqual(*list(inst_to_pgpu.values()))
@@ -186,7 +188,7 @@ class VGPUReshapeTests(base.ServersTestBase):
                 {'DISK_GB': 20, 'MEMORY_MB': 2048, 'VCPU': 2},
                 allocations[compute_rp_uuid]['resources'])
             rp_uuids = list(allocations.keys())
-            # We only have two RPs, the compute PR (the root) and the child
+            # We only have two RPs, the compute RP (the root) and the child
             # pGPU RP
             gpu_rp_uuid = (rp_uuids[1] if rp_uuids[0] == compute_rp_uuid
                            else rp_uuids[0])
