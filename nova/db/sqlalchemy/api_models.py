@@ -134,13 +134,18 @@ class InstanceMapping(API_BASE):
     __table_args__ = (Index('project_id_idx', 'project_id'),
                       Index('instance_uuid_idx', 'instance_uuid'),
                       schema.UniqueConstraint('instance_uuid',
-                          name='uniq_instance_mappings0instance_uuid'))
+                          name='uniq_instance_mappings0instance_uuid'),
+                      Index('instance_mappings_user_id_project_id_idx',
+                            'user_id', 'project_id'))
 
     id = Column(Integer, primary_key=True)
     instance_uuid = Column(String(36), nullable=False)
     cell_id = Column(Integer, ForeignKey('cell_mappings.id'),
             nullable=True)
     project_id = Column(String(255), nullable=False)
+    # FIXME(melwitt): This should eventually be non-nullable, but we need a
+    # transition period first.
+    user_id = Column(String(255), nullable=True)
     queued_for_delete = Column(Boolean)
     cell_mapping = orm.relationship('CellMapping',
             backref=backref('instance_mapping', uselist=False),
