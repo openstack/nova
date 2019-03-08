@@ -3484,6 +3484,30 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock_terminate.assert_not_called()
         _test()
 
+    @mock.patch('nova.volume.cinder.API.attachment_delete')
+    @mock.patch('nova.virt.block_device.DriverVolumeBlockDevice.driver_detach')
+    def test_remove_volume_connection_v3_delete_attachment_true(
+            self, driver_detach, attachment_delete):
+        """Tests _remove_volume_connection with a cinder v3 style volume
+        attachment and delete_attachment=True.
+        """
+        instance = objects.Instance(uuid=uuids.instance)
+        volume_id = uuids.volume
+        vol_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': volume_id, 'device_name': '/dev/vdb',
+             'instance_uuid': instance.uuid,
+             'connection_info': '{"test": "test"}'})
+        vol_bdm.attachment_id = uuids.attachment_id
+        self.compute._remove_volume_connection(
+            self.context, vol_bdm, instance, delete_attachment=True)
+        driver_detach.assert_called_once_with(
+            self.context, instance, self.compute.volume_api,
+            self.compute.driver)
+        attachment_delete.assert_called_once_with(
+            self.context, vol_bdm.attachment_id)
+
     def test_delete_disk_metadata(self):
         bdm = objects.BlockDeviceMapping(volume_id=uuids.volume_id, tag='foo')
         instance = fake_instance.fake_instance_obj(self.context)
