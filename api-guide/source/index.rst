@@ -86,6 +86,7 @@ Contents
     polling_changes
     request_and_response_formats
     down_cells
+    port_with_resource_request
 
 .. toctree::
     :hidden:

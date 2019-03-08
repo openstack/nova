@@ -30,3 +30,4 @@ instance for these kind of workloads.
    huge-pages
    virtual-gpu
    file-backed-memory
+   port_with_resource_request
