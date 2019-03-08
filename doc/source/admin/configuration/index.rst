@@ -25,6 +25,5 @@ A list of config options based on different topics can be found below:
    /admin/configuration/iscsi-offload.rst
    /admin/configuration/hypervisors.rst
    /admin/configuration/schedulers.rst
-   /admin/configuration/cells.rst
    /admin/configuration/logs.rst
    /admin/configuration/samples/index.rst

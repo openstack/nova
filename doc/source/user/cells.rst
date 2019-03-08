@@ -22,59 +22,6 @@ Andrew Laski gave at the Austin (Newton) summit which is worth watching.
 
 .. _presentation: https://www.openstack.org/videos/summits/austin-2016/nova-cells-v2-whats-going-on
 
-Cells V1
-========
-
-Historically, Nova has depended on a single logical database and message queue
-that all nodes depend on for communication and data persistence. This becomes
-an issue for deployers as scaling and providing fault tolerance for these
-systems is difficult.
-
-We have an experimental feature in Nova called "cells", hereafter referred to
-as "cells v1", which is used by some large deployments to partition compute
-nodes into smaller groups, coupled with a database and queue. This seems to be
-a well-liked and easy-to-understand arrangement of resources, but the
-implementation of it has issues for maintenance and correctness.
-See `Comparison with Cells V1`_ for more detail.
-
-Status
-~~~~~~
-
-.. deprecated:: 16.0.0
-    Cells v1 is deprecated in favor of Cells v2 as of the 16.0.0 Pike release.
-
-Cells v1 is considered experimental and receives much less testing than the
-rest of Nova. For example, there is no job for testing cells v1 with Neutron.
-
-The priority for the core team is implementation of and migration to cells v2.
-Because of this, there are a few restrictions placed on cells v1:
-
-#. Cells v1 is in feature freeze. This means no new feature proposals for cells
-   v1 will be accepted by the core team, which includes but is not limited to
-   API parity, e.g. supporting virtual interface attach/detach with Neutron.
-#. Latent bugs caused by the cells v1 design will not be fixed, e.g.
-   `bug 1489581 <https://bugs.launchpad.net/nova/+bug/1489581>`_. So if new
-   tests are added to Tempest which trigger a latent bug in cells v1 it may not
-   be fixed. However, regressions in working function should be tracked with
-   bugs and fixed.
-#. Changes proposed to nova will not be automatically tested against a Cells v1
-   environment. To manually trigger Cells v1 integration testing on a nova
-   change in Gerrit, leave a review comment of "check experimental" and the
-   *nova-cells-v1* job will run on it, but the job is non-voting, meaning if
-   it fails it will not prevent the patch from being merged if approved by the
-   core team.
-
-**Suffice it to say, new deployments of cells v1 are not encouraged.**
-
-The restrictions above are basically meant to prioritize effort and focus on
-getting cells v2 completed, and feature requests and hard to fix latent bugs
-detract from that effort. Further discussion on this can be found in the
-`2015/11/12 Nova meeting minutes
-<http://eavesdrop.openstack.org/meetings/nova/2015/nova.2015-11-12-14.00.log.html>`_.
-
-There are no plans to remove Cells V1 until V2 is usable by existing
-deployments and there is a migration path.
-
 .. _cells-v2:
 
 Cells V2
@@ -165,23 +112,6 @@ The benefits of this new organization are:
 
 * Adding new sets of hosts as a new "cell" allows them to be plugged into a
   deployment and tested before allowing builds to be scheduled to them.
-
-Comparison with Cells V1
-------------------------
-
-In reality, the proposed organization is nearly the same as what we currently
-have in cells today. A cell mostly consists of a database, queue, and set of
-compute nodes. The primary difference is that current cells require a
-nova-cells service that synchronizes information up and down from the top level
-to the child cell. Additionally, there are alternate code paths in
-compute/api.py which handle routing messages to cells instead of directly down
-to a compute host. Both of these differences are relevant to why we have a hard
-time achieving feature and test parity with regular nova (because many things
-take an alternate path with cells) and why it's hard to understand what is
-going on (all the extra synchronization of data). The new proposed cellsv2
-organization avoids both of these problems by letting things live where they
-should, teaching nova to natively find the right db, queue, and compute node to
-handle a given request.
 
 
 Database split
@@ -572,6 +502,9 @@ database. This will set up a single cell Nova deployment.
 
 Upgrade with Cells V1
 ~~~~~~~~~~~~~~~~~~~~~
+
+.. todo:: This needs to be removed but `Adding a new cell to an existing deployment`_
+          is still using it.
 
 You are upgrading an existing Nova install that has Cells V1 enabled and have
 compute hosts in your databases. This will set up a multiple cell Nova

@@ -27,8 +27,8 @@
 /nova/latest/man/nova-api-metadata.html 301 /nova/latest/cli/nova-api-metadata.html
 /nova/latest/man/nova-api-os-compute.html 301 /nova/latest/cli/nova-api-os-compute.html
 /nova/latest/man/nova-api.html 301 /nova/latest/cli/nova-api.html
-/nova/latest/man/nova-cells.html 301 /nova/latest/cli/nova-cells.html
 # this is gone and never coming back, indicate that to the end users
+/nova/latest/man/nova-cells.html 301 /nova/latest/cli/nova-cells.html
 /nova/latest/man/nova-compute.html 301 /nova/latest/cli/nova-compute.html
 /nova/latest/man/nova-conductor.html 301 /nova/latest/cli/nova-conductor.html
 /nova/latest/man/nova-console.html 301 /nova/latest/cli/nova-console.html

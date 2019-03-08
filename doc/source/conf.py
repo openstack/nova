@@ -120,7 +120,6 @@ _man_pages = [
     ('nova-api-metadata', u'Cloud controller fabric'),
     ('nova-api-os-compute', u'Cloud controller fabric'),
     ('nova-api', u'Cloud controller fabric'),
-    ('nova-cells', u'Cloud controller fabric'),
     ('nova-compute', u'Cloud controller fabric'),
     ('nova-console', u'Cloud controller fabric'),
     ('nova-consoleauth', u'Cloud controller fabric'),

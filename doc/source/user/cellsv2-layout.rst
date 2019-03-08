@@ -22,12 +22,6 @@ is geared towards people who want to have multiple cells for whatever
 reason, the nature of the cellsv2 support in Nova means that it
 applies in some way to all deployments.
 
-.. note:: The concepts laid out in this document do not in any way
-          relate to CellsV1, which includes the ``nova-cells``
-          service, and the ``[cells]`` section of the configuration
-          file. For more information on the differences, see the main
-          :ref:`cells` page.
-
 Concepts
 ========
 

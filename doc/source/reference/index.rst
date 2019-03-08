@@ -46,7 +46,7 @@ these documents will move into the "Internals" section.
 If you want to get involved in shaping the future of nova's architecture,
 these are a great place to start reading up on the current plans.
 
-* :doc:`/user/cells`: Comparison of Cells v1 and v2, and how v2 is evolving
+* :doc:`/user/cells`: How cells v2 is evolving
 * :doc:`/reference/policy-enforcement`: How we want policy checks on API actions
   to work in the future
 * :doc:`/reference/stable-api`: What stable api means to nova

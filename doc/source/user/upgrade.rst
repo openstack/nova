@@ -279,10 +279,6 @@ RPC version pinning
 
     .. note::
 
-      This does not apply to cells v1 deployments since cells v1 does not
-      support rolling upgrades. It is assumed that cells v1 deployments are
-      upgraded in lockstep so n-1 cells compatibility does not work.
-
       The procedure for rolling upgrades with multiple cells v2 cells is not
       yet determined.
 

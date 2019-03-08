@@ -85,7 +85,6 @@ deployments, but are documented for existing ones.
 .. toctree::
    :maxdepth: 1
 
-   nova-cells
    nova-dhcpbridge
    nova-network
    nova-consoleauth
