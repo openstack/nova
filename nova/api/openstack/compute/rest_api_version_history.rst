@@ -909,8 +909,8 @@ APIs to list the server groups to which the server belongs:
 * ``PUT /servers/{server_id}``
 * ``POST /servers/{server_id}/action (rebuild)``
 
-2.72
-----
+2.72 (Maximum in Stein)
+-----------------------
 
 API microversion 2.72 adds support for creating servers with neutron ports
 that has resource request, e.g. neutron ports with
