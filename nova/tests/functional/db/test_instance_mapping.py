@@ -206,6 +206,16 @@ class InstanceMappingTestCase(test.NoDBTestCase):
         self.assertEqual(0, done)
         self.assertEqual(0, total)
 
+    def test_user_id_not_set_if_null_from_db(self):
+        # Create an instance mapping with user_id=None.
+        db_mapping = create_mapping()
+        self.assertIsNone(db_mapping['user_id'])
+        # Get the mapping to run convert from db object to versioned object.
+        im = instance_mapping.InstanceMapping.get_by_instance_uuid(
+            self.context, db_mapping['instance_uuid'])
+        # Verify the user_id is not set.
+        self.assertNotIn('user_id', im)
+
 
 class InstanceMappingListTestCase(test.NoDBTestCase):
     USES_DB_SELF = True

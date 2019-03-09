@@ -13,6 +13,7 @@
 import mock
 from oslo_utils import uuidutils
 
+from nova import exception
 from nova import objects
 from nova.objects import instance_mapping
 from nova.tests.unit.objects import test_cell_mapping
@@ -25,6 +26,7 @@ def get_db_mapping(**updates):
             'instance_uuid': uuidutils.generate_uuid(),
             'cell_id': None,
             'project_id': 'fake-project',
+            'user_id': 'fake-user',
             'created_at': None,
             'updated_at': None,
             'queued_for_delete': False,
@@ -77,13 +79,15 @@ class _TestInstanceMappingObject(object):
         mapping_obj.cell_mapping = objects.CellMapping(self.context,
                 id=db_mapping['cell_mapping']['id'])
         mapping_obj.project_id = db_mapping['project_id']
+        mapping_obj.user_id = db_mapping['user_id']
 
         mapping_obj.create()
         create_in_db.assert_called_once_with(self.context,
                 {'instance_uuid': uuid,
                  'queued_for_delete': False,
                  'cell_id': db_mapping['cell_mapping']['id'],
-                 'project_id': db_mapping['project_id']})
+                 'project_id': db_mapping['project_id'],
+                 'user_id': db_mapping['user_id']})
         self.compare_obj(mapping_obj, db_mapping,
                          subs={'cell_mapping': 'cell_id'},
                          comparators={
@@ -98,12 +102,14 @@ class _TestInstanceMappingObject(object):
         mapping_obj.instance_uuid = uuid
         mapping_obj.cell_mapping = None
         mapping_obj.project_id = db_mapping['project_id']
+        mapping_obj.user_id = db_mapping['user_id']
 
         mapping_obj.create()
         create_in_db.assert_called_once_with(self.context,
                 {'instance_uuid': uuid,
                  'queued_for_delete': False,
-                 'project_id': db_mapping['project_id']})
+                 'project_id': db_mapping['project_id'],
+                 'user_id': db_mapping['user_id']})
         self.compare_obj(mapping_obj, db_mapping,
                          subs={'cell_mapping': 'cell_id'})
         self.assertIsNone(mapping_obj.cell_mapping)
@@ -116,13 +122,15 @@ class _TestInstanceMappingObject(object):
         mapping_obj.instance_uuid = db_mapping['instance_uuid']
         mapping_obj.cell_mapping = None
         mapping_obj.project_id = db_mapping['project_id']
+        mapping_obj.user_id = db_mapping['user_id']
         mapping_obj.queued_for_delete = True
 
         mapping_obj.create()
         create_in_db.assert_called_once_with(self.context,
                 {'instance_uuid': db_mapping['instance_uuid'],
                  'queued_for_delete': True,
-                 'project_id': db_mapping['project_id']})
+                 'project_id': db_mapping['project_id'],
+                 'user_id': db_mapping['user_id']})
 
     @mock.patch.object(instance_mapping.InstanceMapping, '_save_in_db')
     def test_save(self, save_in_db):
@@ -162,12 +170,31 @@ class _TestInstanceMappingObject(object):
         im_obj = instance_mapping.InstanceMapping(context=self.context)
         fake_im_obj = instance_mapping.InstanceMapping(context=self.context,
                                                        instance_uuid=uuid,
-                                                       queued_for_delete=False)
+                                                       queued_for_delete=False,
+                                                       user_id='fake-user')
+        obj_primitive = fake_im_obj.obj_to_primitive('1.1')
+        obj = im_obj.obj_from_primitive(obj_primitive)
+        self.assertIn('queued_for_delete', obj)
+        self.assertNotIn('user_id', obj)
+
         obj_primitive = fake_im_obj.obj_to_primitive('1.0')
         obj = im_obj.obj_from_primitive(obj_primitive)
         self.assertIn('instance_uuid', obj)
         self.assertEqual(uuid, obj.instance_uuid)
         self.assertNotIn('queued_for_delete', obj)
+
+    @mock.patch('nova.objects.instance_mapping.LOG.error')
+    def test_obj_load_attr(self, mock_log):
+        im_obj = instance_mapping.InstanceMapping()
+        # Access of unset user_id should have special handling
+        self.assertRaises(exception.ObjectActionError, im_obj.obj_load_attr,
+                          'user_id')
+        msg = ('The unset user_id attribute of an unmigrated instance mapping '
+               'should not be accessed.')
+        mock_log.assert_called_once_with(msg)
+        # Access of any other unset attribute should fall back to base class
+        self.assertRaises(NotImplementedError, im_obj.obj_load_attr,
+                          'project_id')
 
 
 class TestInstanceMappingObject(test_objects._LocalTest,

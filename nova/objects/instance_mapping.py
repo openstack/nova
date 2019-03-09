@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
 from oslo_utils import versionutils
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import false
@@ -19,23 +20,29 @@ from nova import context as nova_context
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
+from nova.i18n import _
 from nova import objects
 from nova.objects import base
 from nova.objects import cell_mapping
 from nova.objects import fields
 
 
+LOG = logging.getLogger(__name__)
+
+
 @base.NovaObjectRegistry.register
 class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add queued_for_delete
-    VERSION = '1.1'
+    # Version 1.2: Add user_id
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
         'instance_uuid': fields.UUIDField(),
         'cell_mapping': fields.ObjectField('CellMapping', nullable=True),
         'project_id': fields.StringField(),
+        'user_id': fields.StringField(),
         'queued_for_delete': fields.BooleanField(default=False),
         }
 
@@ -43,9 +50,20 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
         super(InstanceMapping, self).obj_make_compatible(primitive,
                                                          target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2) and 'user_id' in primitive:
+            del primitive['user_id']
         if target_version < (1, 1):
             if 'queued_for_delete' in primitive:
                 del primitive['queued_for_delete']
+
+    def obj_load_attr(self, attrname):
+        if attrname == 'user_id':
+            LOG.error('The unset user_id attribute of an unmigrated instance '
+                      'mapping should not be accessed.')
+            raise exception.ObjectActionError(
+                action='obj_load_attr',
+                reason=_('attribute user_id is not lazy-loadable'))
+        super(InstanceMapping, self).obj_load_attr(attrname)
 
     def _update_with_cell_id(self, updates):
         cell_mapping_obj = updates.pop("cell_mapping", None)
@@ -63,6 +81,11 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
                 if db_value:
                     db_value = cell_mapping.CellMapping._from_db_object(
                         context, cell_mapping.CellMapping(), db_value)
+            if key == 'user_id' and db_value is None:
+                # NOTE(melwitt): If user_id is NULL, we can't set the field
+                # because it's non-nullable. We don't plan for any code to read
+                # the user_id field at this time, so skip setting it.
+                continue
             setattr(instance_mapping, key, db_value)
         instance_mapping.obj_reset_changes()
         instance_mapping._context = context
