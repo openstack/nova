@@ -165,7 +165,7 @@
       TLS console proxy code in the libvirt driver.
       Starting in Stein, the job was changed to run with python 3 and enabled
       volume multi-attach testing.
-      Runs all tempest compute API and scenario tests concurrently.
+      Runs all tempest compute API and most scenario tests concurrently.
     run: playbooks/legacy/nova-next/run.yaml
     post-run: playbooks/legacy/nova-next/post.yaml
 
