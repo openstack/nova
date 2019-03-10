@@ -1804,6 +1804,11 @@ class PciConfigInvalidWhitelist(Invalid):
     msg_fmt = _("Invalid PCI devices Whitelist config: %(reason)s")
 
 
+class PciRequestFromVIFNotFound(NotFound):
+    msg_fmt = _("Failed to locate PCI request associated with the given VIF "
+                "PCI address: %(pci_slot)s on compute node: %(node_id)s")
+
+
 # Cannot be templated, msg needs to be constructed when raised.
 class InternalError(NovaException):
     """Generic hypervisor errors.

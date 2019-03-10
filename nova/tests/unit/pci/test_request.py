@@ -15,9 +15,17 @@
 
 """Tests for PCI request."""
 
+import mock
+
+from oslo_utils.fixture import uuidsentinel
+
+from nova import context
 from nova import exception
+from nova.network import model
+from nova import objects
 from nova.pci import request
 from nova import test
+from nova.tests.unit.api.openstack import fakes
 
 
 _fake_alias1 = """{
@@ -62,7 +70,35 @@ _fake_alias4 = """{
                }"""
 
 
-class AliasTestCase(test.NoDBTestCase):
+class PciRequestTestCase(test.NoDBTestCase):
+
+    @staticmethod
+    def _create_fake_inst_with_pci_devs(pci_req_list, pci_dev_list):
+        """Create a fake Instance object with the provided InstancePciRequests
+        and PciDevices.
+
+        :param pci_req_list: a list of InstancePCIRequest objects.
+        :param pci_dev_list: a list of PciDevice objects, each element
+               associated (via request_id attribute)with a corresponding
+               element from pci_req_list.
+        :return: A fake Instance object associated with the provided
+                 PciRequests and PciDevices.
+        """
+
+        inst = objects.Instance()
+        inst.uuid = uuidsentinel.instance1
+        inst.pci_requests = objects.InstancePCIRequests(
+            requests=pci_req_list)
+        inst.pci_devices = objects.PciDeviceList(objects=pci_dev_list)
+        inst.host = 'fake-host'
+        inst.node = 'fake-node'
+        return inst
+
+    def setUp(self):
+        super(PciRequestTestCase, self).setUp()
+        self.context = context.RequestContext(fakes.FAKE_USER_ID,
+                                              fakes.FAKE_PROJECT_ID)
+        self.mock_inst_cn = mock.Mock()
 
     def test_valid_alias(self):
         self.flags(alias=[_fake_alias1], group='pci')
@@ -231,6 +267,99 @@ class AliasTestCase(test.NoDBTestCase):
         self.assertRaises(exception.PciRequestAliasNotDefined,
                           request._translate_alias_to_requests,
                           "QuicAssistX : 3")
+
+    @mock.patch.object(objects.compute_node.ComputeNode,
+                       'get_by_host_and_nodename')
+    def test_get_instance_pci_request_from_vif_invalid(
+            self,
+            cn_get_by_host_and_node):
+        # Basically make sure we raise an exception if an instance
+        # has an allocated PCI device without having the its corresponding
+        # PCIRequest object in instance.pci_requests
+        self.mock_inst_cn.id = 1
+        cn_get_by_host_and_node.return_value = self.mock_inst_cn
+
+        # Create a fake instance with PCI request and allocated PCI devices
+        pci_dev1 = objects.PciDevice(request_id=uuidsentinel.pci_req_id1,
+                                     address='0000:04:00.0',
+                                     compute_node_id=1)
+
+        pci_req2 = objects.InstancePCIRequest(
+            request_id=uuidsentinel.pci_req_id2)
+        pci_dev2 = objects.PciDevice(request_id=uuidsentinel.pci_req_id2,
+                                     address='0000:05:00.0',
+                                     compute_node_id=1)
+        pci_request_list = [pci_req2]
+        pci_device_list = [pci_dev1, pci_dev2]
+        inst = PciRequestTestCase._create_fake_inst_with_pci_devs(
+            pci_request_list,
+            pci_device_list)
+        # Create a VIF with pci_dev1 that has no corresponding PCI request
+        pci_vif = model.VIF(vnic_type=model.VNIC_TYPE_DIRECT,
+                            profile={'pci_slot': '0000:04:00.0'})
+
+        self.assertRaises(exception.PciRequestFromVIFNotFound,
+                          request.get_instance_pci_request_from_vif,
+                          self.context,
+                          inst,
+                          pci_vif)
+
+    @mock.patch.object(objects.compute_node.ComputeNode,
+                       'get_by_host_and_nodename')
+    def test_get_instance_pci_request_from_vif(self, cn_get_by_host_and_node):
+        self.mock_inst_cn.id = 1
+        cn_get_by_host_and_node.return_value = self.mock_inst_cn
+
+        # Create a fake instance with PCI request and allocated PCI devices
+        pci_req1 = objects.InstancePCIRequest(
+            request_id=uuidsentinel.pci_req_id1)
+        pci_dev1 = objects.PciDevice(request_id=uuidsentinel.pci_req_id1,
+                                     address='0000:04:00.0',
+                                     compute_node_id = 1)
+        pci_req2 = objects.InstancePCIRequest(
+            request_id=uuidsentinel.pci_req_id2)
+        pci_dev2 = objects.PciDevice(request_id=uuidsentinel.pci_req_id2,
+                                     address='0000:05:00.0',
+                                     compute_node_id=1)
+        pci_request_list = [pci_req1, pci_req2]
+        pci_device_list = [pci_dev1, pci_dev2]
+        inst = PciRequestTestCase._create_fake_inst_with_pci_devs(
+            pci_request_list,
+            pci_device_list)
+
+        # Create a vif with normal port and make sure no PCI request returned
+        normal_vif = model.VIF(vnic_type=model.VNIC_TYPE_NORMAL)
+        self.assertIsNone(request.get_instance_pci_request_from_vif(
+            self.context,
+            inst,
+            normal_vif))
+
+        # Create a vif with PCI address under profile, make sure the correct
+        # PCI request is returned
+        pci_vif = model.VIF(vnic_type=model.VNIC_TYPE_DIRECT,
+                            profile={'pci_slot': '0000:05:00.0'})
+        self.assertEqual(uuidsentinel.pci_req_id2,
+                         request.get_instance_pci_request_from_vif(
+                             self.context,
+                             inst,
+                             pci_vif).request_id)
+
+        # Create a vif with PCI under profile which is not claimed
+        # for the instance, i.e no matching pci device in instance.pci_devices
+        nonclaimed_pci_vif = model.VIF(vnic_type=model.VNIC_TYPE_DIRECT,
+                                       profile={'pci_slot': '0000:08:00.0'})
+        self.assertIsNone(request.get_instance_pci_request_from_vif(
+            self.context,
+            inst,
+            nonclaimed_pci_vif))
+
+        # "Move" the instance to another compute node, make sure that no
+        # matching PCI request against the new compute.
+        self.mock_inst_cn.id = 2
+        self.assertIsNone(request.get_instance_pci_request_from_vif(
+            self.context,
+            inst,
+            pci_vif))
 
     def test_get_pci_requests_from_flavor(self):
         self.flags(alias=[_fake_alias1, _fake_alias3], group='pci')
