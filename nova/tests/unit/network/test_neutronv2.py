@@ -6352,6 +6352,10 @@ class TestPortBindingWithMock(test.NoDBTestCase):
     @mock.patch('nova.network.neutronv2.api._get_ksa_client')
     def test_bind_ports_to_host(self, mock_client):
         """Tests a single port happy path where everything is successful."""
+        def post_side_effect(*args, **kwargs):
+            self.assertDictEqual(binding, kwargs['json'])
+            return mock.DEFAULT
+
         nwinfo = model.NetworkInfo([model.VIF(uuids.port)])
         inst = objects.Instance(
             info_cache=objects.InstanceInfoCache(network_info=nwinfo))
@@ -6359,11 +6363,58 @@ class TestPortBindingWithMock(test.NoDBTestCase):
         binding = {'binding': {'host': 'fake-host',
                                'vnic_type': 'normal',
                                'profile': {'foo': 'bar'}}}
+
+        resp = fake_req.FakeResponse(200, content=jsonutils.dumps(binding))
+        mock_client.return_value.post.return_value = resp
+        mock_client.return_value.post.side_effect = post_side_effect
+        result = self.api.bind_ports_to_host(
+            ctxt, inst, 'fake-host', {uuids.port: 'normal'},
+            {uuids.port: {'foo': 'bar'}})
+        self.assertEqual(1, mock_client.return_value.post.call_count)
+        self.assertDictEqual({uuids.port: binding['binding']}, result)
+
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client')
+    def test_bind_ports_to_host_with_vif_profile_and_vnic(self, mock_client):
+        """Tests bind_ports_to_host with default/non-default parameters."""
+        def post_side_effect(*args, **kwargs):
+            self.assertDictEqual(binding, kwargs['json'])
+            return mock.DEFAULT
+
+        ctxt = context.get_context()
+        vif_profile = {'foo': 'default'}
+        nwinfo = model.NetworkInfo([model.VIF(id=uuids.port,
+                                              vnic_type="direct",
+                                              profile=vif_profile)])
+        inst = objects.Instance(
+            info_cache=objects.InstanceInfoCache(network_info=nwinfo))
+        binding = {'binding': {'host': 'fake-host',
+                               'vnic_type': 'direct',
+                               'profile': vif_profile}}
+        resp = fake_req.FakeResponse(200, content=jsonutils.dumps(binding))
+        mock_client.return_value.post.return_value = resp
+        mock_client.return_value.post.side_effect = post_side_effect
+        result = self.api.bind_ports_to_host(ctxt, inst, 'fake-host')
+        self.assertEqual(1, mock_client.return_value.post.call_count)
+        self.assertDictEqual({uuids.port: binding['binding']}, result)
+
+        # assert that that if vnic_type and profile are set in VIF object
+        # the provided vnic_type and profile take precedence.
+
+        nwinfo = model.NetworkInfo([model.VIF(id=uuids.port,
+                                              vnic_type='direct',
+                                              profile=vif_profile)])
+        inst = objects.Instance(
+            info_cache=objects.InstanceInfoCache(network_info=nwinfo))
+        vif_profile_per_port = {uuids.port: {'foo': 'overridden'}}
+        vnic_type_per_port = {uuids.port: "direct-overridden"}
+        binding = {'binding': {'host': 'fake-host',
+                               'vnic_type': 'direct-overridden',
+                               'profile': {'foo': 'overridden'}}}
         resp = fake_req.FakeResponse(200, content=jsonutils.dumps(binding))
         mock_client.return_value.post.return_value = resp
         result = self.api.bind_ports_to_host(
-            ctxt, inst, 'fake-host', 'normal', {'foo': 'bar'})
-        self.assertEqual(1, mock_client.return_value.post.call_count)
+            ctxt, inst, 'fake-host', vnic_type_per_port, vif_profile_per_port)
+        self.assertEqual(2, mock_client.return_value.post.call_count)
         self.assertDictEqual({uuids.port: binding['binding']}, result)
 
     @mock.patch('nova.network.neutronv2.api._get_ksa_client')

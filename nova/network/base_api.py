@@ -399,7 +399,7 @@ class NetworkAPI(base.Base):
         return False
 
     def bind_ports_to_host(self, context, instance, host,
-                           vnic_type=None, profile=None):
+                           vnic_types=None, port_profiles=None):
         """Attempts to bind the ports from the instance on the given host
 
         If the ports are already actively bound to another host, like the
@@ -420,17 +420,17 @@ class NetworkAPI(base.Base):
         :param host: the host on which to bind the ports which
                      are attached to the instance
         :type host: str
-        :param vnic_type: optional vnic type string for the host
-                          port binding
-        :type vnic_type: str
-        :param profile: optional vif profile dict for the host port
-                        binding; note that the port binding profile is mutable
+        :param vnic_types: optional dict for the host port binding
+        :type vnic_types: dict of <port_id> : <vnic_type>
+        :param port_profiles: optional dict per port ID for the host port
+                        binding profile.
+                        note that the port binding profile is mutable
                         via the networking "Port Binding" API so callers that
                         pass in a profile should ensure they have the latest
                         version from neutron with their changes merged,
                         which can be determined using the "revision_number"
                         attribute of the port.
-        :type profile: dict
+        :type port_profiles: dict of <port_id> : <port_profile>
         :raises: PortBindingFailed if any of the ports failed to be bound to
                  the destination host
         :returns: dict, keyed by port ID, of a new host port
