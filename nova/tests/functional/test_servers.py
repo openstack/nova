@@ -6465,8 +6465,8 @@ class PortResourceRequestBasedSchedulingTest(
         self.api.detach_interface(
             server['id'], self.neutron.port_with_resource_request['id'])
 
-        self._wait_for_port_unbind(
-            self.neutron, self.neutron.port_with_resource_request['id'])
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.interface_detach.end')
 
         updated_port = self.neutron.show_port(
             self.neutron.port_with_resource_request['id'])['port']
