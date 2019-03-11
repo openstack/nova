@@ -4058,13 +4058,8 @@ class ServerRescheduleTests(integrated_helpers.ProviderUsageBaseTestCase):
                                 consumer_uuid=uuids.inst1, error='testing')]):
 
             server = self.api.post_server({'server': server_req})
-            # NOTE(gibi): Due to bug 1819460 the server stuck in BUILD state
-            # instead of going to ERROR state
             server = self._wait_for_state_change(
-                self.admin_api, server, 'ERROR',
-                fail_when_run_out_of_retries=False)
-
-            self.assertEqual('BUILD', server['status'])
+                self.admin_api, server, 'ERROR')
 
         self._delete_and_check_allocations(server)
 
@@ -6811,23 +6806,16 @@ class PortResourceRequestReSchedulingTest(
             server = self._create_server(
                 flavor=self.flavor,
                 networks=[{'port': port['id']}])
-            # NOTE(gibi): Due to bug 1819460 the server stuck in BUILD state
             server = self._wait_for_state_change(
-                self.admin_api, server, 'ERROR',
-                fail_when_run_out_of_retries=False)
+                self.admin_api, server, 'ERROR')
 
-            self.assertEqual('BUILD', server['status'])
+        self.assertIn(
+            'Failed to get traits for resource provider',
+            server['fault']['message'])
 
-        # NOTE(gibi): Due to bug 1819460 the server stuck in BUILD state and no
-        # error is presented to the user
-        # self.assertIn(
-        #     'Failed to get traits for resource provider',
-        #     server['fault']['message'])
-        #
-        # NOTE(gibi): even after delete the allocation of such server is leaked
-        # self._delete_and_check_allocations(server)
-        #
-        # # assert that unbind removes the allocation from the binding
-        # updated_port = self.neutron.show_port(port['id'])['port']
-        # binding_profile = updated_port['binding:profile']
-        # self.assertNotIn('allocation', binding_profile)
+        self._delete_and_check_allocations(server)
+
+        # assert that unbind removes the allocation from the binding
+        updated_port = self.neutron.show_port(port['id'])['port']
+        binding_profile = updated_port['binding:profile']
+        self.assertNotIn('allocation', binding_profile)

@@ -540,6 +540,23 @@ class ComputeTaskManager(base.Base):
                     bdm.attachment_id = attachment['id']
                     bdm.save()
 
+    def _cleanup_when_reschedule_fails(
+            self, context, instance, exception, legacy_request_spec,
+            requested_networks):
+        """Set the instance state and clean up.
+
+        It is only used in case build_instance fails while rescheduling the
+        instance
+        """
+
+        updates = {'vm_state': vm_states.ERROR,
+                   'task_state': None}
+        self._set_vm_state_and_notify(
+            context, instance.uuid, 'build_instances', updates, exception,
+            legacy_request_spec)
+        self._cleanup_allocated_networks(
+            context, instance, requested_networks)
+
     # NOTE(danms): This is never cell-targeted because it is only used for
     # cellsv1 (which does not target cells directly) and n-cpu reschedules
     # (which go to the cell conductor and thus are always cell-specific).
@@ -628,11 +645,7 @@ class ComputeTaskManager(base.Base):
             # disabled in those cases.
             num_attempts = filter_properties.get(
                 'retry', {}).get('num_attempts', 1)
-            updates = {'vm_state': vm_states.ERROR, 'task_state': None}
             for instance in instances:
-                self._set_vm_state_and_notify(
-                    context, instance.uuid, 'build_instances', updates,
-                    exc, legacy_request_spec)
                 # If num_attempts > 1, we're in a reschedule and probably
                 # either hit NoValidHost or MaxRetriesExceeded. Either way,
                 # the build request should already be gone and we probably
@@ -645,8 +658,9 @@ class ComputeTaskManager(base.Base):
                         self._destroy_build_request(context, instance)
                     except exception.BuildRequestNotFound:
                         pass
-                self._cleanup_allocated_networks(
-                    context, instance, requested_networks)
+                self._cleanup_when_reschedule_fails(
+                    context, instance, exc, legacy_request_spec,
+                    requested_networks)
             return
 
         elevated = context.elevated()
@@ -667,17 +681,23 @@ class ComputeTaskManager(base.Base):
                     else:
                         alloc_req = None
                     if alloc_req:
-                        host_available = scheduler_utils.claim_resources(
+                        try:
+                            host_available = scheduler_utils.claim_resources(
                                 elevated, self.report_client, spec_obj,
                                 instance.uuid, alloc_req,
                                 host.allocation_request_version)
-                        if request_spec:
-                            # NOTE(gibi): redo the request group - resource
-                            # provider mapping as the above claim call moves
-                            # the allocation of the instance to another host
-                            # TODO(gibi): handle if the below call raises
-                            self._fill_provider_mapping(
-                                context, instance.uuid, request_spec, host)
+                            if request_spec:
+                                # NOTE(gibi): redo the request group - resource
+                                # provider mapping as the above claim call
+                                # moves the allocation of the instance to
+                                # another host
+                                self._fill_provider_mapping(
+                                    context, instance.uuid, request_spec, host)
+                        except Exception as exc:
+                            self._cleanup_when_reschedule_fails(
+                                context, instance, exc, legacy_request_spec,
+                                requested_networks)
+                            return
                     else:
                         # Some deployments use different schedulers that do not
                         # use Placement, so they will not have an
