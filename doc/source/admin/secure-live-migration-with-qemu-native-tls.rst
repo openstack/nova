@@ -183,7 +183,7 @@ Related information
 
 - If they are not already open, ensure you open up these TCP ports on
   your firewall: ``16514`` (where the authenticated and encrypted TCP/IP
-  socket will be listeing on) and ``49152-49215`` (for regular
+  socket will be listening on) and ``49152-49215`` (for regular
   migration) on all relevant compute nodes.   (Otherwise you get
   ``error: internal error: unable to execute QEMU command
   'drive-mirror': Failed to connect socket: No route to host``).
