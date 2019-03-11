@@ -20,13 +20,15 @@ from nova import exception
 from nova.objects import cell_mapping
 from nova.objects import instance
 from nova.objects import instance_mapping
+from nova.objects import virtual_interface
 from nova import test
 from nova.tests import fixtures
 
 
 sample_mapping = {'instance_uuid': '',
                   'cell_id': 3,
-                  'project_id': 'fake-project'}
+                  'project_id': 'fake-project',
+                  'user_id': 'fake-user'}
 
 
 sample_cell_mapping = {'id': 3,
@@ -208,13 +210,193 @@ class InstanceMappingTestCase(test.NoDBTestCase):
 
     def test_user_id_not_set_if_null_from_db(self):
         # Create an instance mapping with user_id=None.
-        db_mapping = create_mapping()
+        db_mapping = create_mapping(user_id=None)
         self.assertIsNone(db_mapping['user_id'])
         # Get the mapping to run convert from db object to versioned object.
         im = instance_mapping.InstanceMapping.get_by_instance_uuid(
             self.context, db_mapping['instance_uuid'])
         # Verify the user_id is not set.
         self.assertNotIn('user_id', im)
+
+    @mock.patch('nova.objects.instance_mapping.LOG.warning')
+    def test_populate_user_id(self, mock_log_warning):
+        cells = []
+        celldbs = fixtures.CellDatabases()
+
+        # Create two cell databases and map them
+        for uuid in (uuidsentinel.cell1, uuidsentinel.cell2):
+            cm = cell_mapping.CellMapping(context=self.context, uuid=uuid,
+                                          database_connection=uuid,
+                                          transport_url='fake://')
+            cm.create()
+            cells.append(cm)
+            celldbs.add_cell_database(uuid)
+        self.useFixture(celldbs)
+
+        # Create 5 instances per cell
+        for cell in cells:
+            for i in range(0, 5):
+                with context.target_cell(self.context, cell) as cctxt:
+                    inst = instance.Instance(
+                        cctxt,
+                        project_id=self.context.project_id,
+                        user_id=self.context.user_id)
+                    inst.create()
+                # Make every other mapping have a NULL user_id
+                # Will be a total of four mappings with NULL user_id
+                user_id = self.context.user_id if i % 2 == 0 else None
+                create_mapping(project_id=self.context.project_id,
+                               user_id=user_id, cell_id=cell.id,
+                               instance_uuid=inst.uuid)
+
+        # Create a SOFT_DELETED instance with a user_id=None instance mapping.
+        # This should get migrated.
+        with context.target_cell(self.context, cells[0]) as cctxt:
+            inst = instance.Instance(
+                cctxt, project_id=self.context.project_id,
+                user_id=self.context.user_id, vm_state=vm_states.SOFT_DELETED)
+            inst.create()
+        create_mapping(project_id=self.context.project_id, user_id=None,
+                       cell_id=cells[0].id, instance_uuid=inst.uuid,
+                       queued_for_delete=True)
+
+        # Create a deleted instance with a user_id=None instance mapping.
+        # This should get migrated.
+        with context.target_cell(self.context, cells[1]) as cctxt:
+            inst = instance.Instance(
+                cctxt, project_id=self.context.project_id,
+                user_id=self.context.user_id)
+            inst.create()
+            inst.destroy()
+        create_mapping(project_id=self.context.project_id, user_id=None,
+                       cell_id=cells[1].id, instance_uuid=inst.uuid,
+                       queued_for_delete=True)
+
+        # Create an instance mapping for an instance not yet scheduled. It
+        # should not get migrated because we won't know what user_id to use.
+        unscheduled = create_mapping(project_id=self.context.project_id,
+                                     user_id=None, cell_id=None)
+
+        # Create two instance mappings for instances that no longer exist.
+        # Example: residue from a manual cleanup or after a periodic compute
+        # purge and before a database archive. This record should not get
+        # migrated.
+        nonexistent = []
+        for i in range(2):
+            nonexistent.append(
+                create_mapping(project_id=self.context.project_id,
+                               user_id=None, cell_id=cells[i].id,
+                               instance_uuid=uuidutils.generate_uuid()))
+
+        # Create an instance mapping simulating a virtual interface migration
+        # marker instance which has had map_instances run on it.
+        # This should not be found by the migration.
+        create_mapping(project_id=virtual_interface.FAKE_UUID, user_id=None)
+
+        found, done = instance_mapping.populate_user_id(self.context, 2)
+        # Two needed fixing, and honored the limit.
+        self.assertEqual(2, found)
+        self.assertEqual(2, done)
+
+        found, done = instance_mapping.populate_user_id(self.context, 1000)
+        # Only four left were fixable. The fifth instance found has no
+        # cell and cannot be migrated yet. The 6th and 7th instances found have
+        # no corresponding instance records and cannot be migrated.
+        self.assertEqual(7, found)
+        self.assertEqual(4, done)
+
+        # Verify the orphaned instance mappings warning log message was only
+        # emitted once.
+        mock_log_warning.assert_called_once()
+
+        # Check that we have only the expected number of records with
+        # user_id set. We created 10 instances (5 per cell with 2 per cell
+        # with NULL user_id), 1 SOFT_DELETED instance with NULL user_id,
+        # 1 deleted instance with NULL user_id, and 1 not-yet-scheduled
+        # instance with NULL user_id.
+        # We expect 12 of them to have user_id set after migration (15 total,
+        # with the not-yet-scheduled instance and the orphaned instance
+        # mappings ignored).
+        ims = instance_mapping.InstanceMappingList.get_by_project_id(
+            self.context, self.context.project_id)
+        self.assertEqual(12, len(
+            [im for im in ims if 'user_id' in im]))
+
+        # Check that one instance mapping record (not yet scheduled) has not
+        # been migrated by this script.
+        # Check that two other instance mapping records (no longer existing
+        # instances) have not been migrated by this script.
+        self.assertEqual(15, len(ims))
+
+        # Set the cell and create the instance for the mapping without a cell,
+        # then run the migration again.
+        unscheduled = instance_mapping.InstanceMapping.get_by_instance_uuid(
+            self.context, unscheduled['instance_uuid'])
+        unscheduled.cell_mapping = cells[0]
+        unscheduled.save()
+        with context.target_cell(self.context, cells[0]) as cctxt:
+            inst = instance.Instance(
+                cctxt,
+                uuid=unscheduled.instance_uuid,
+                project_id=self.context.project_id,
+                user_id=self.context.user_id)
+            inst.create()
+        found, done = instance_mapping.populate_user_id(self.context, 1000)
+        # Should have found the not-yet-scheduled instance and the orphaned
+        # instance mappings.
+        self.assertEqual(3, found)
+        # Should have only migrated the not-yet-schedule instance.
+        self.assertEqual(1, done)
+
+        # Delete the orphaned instance mapping (simulate manual cleanup by an
+        # operator).
+        for db_im in nonexistent:
+            nonexist = instance_mapping.InstanceMapping.get_by_instance_uuid(
+                self.context, db_im['instance_uuid'])
+            nonexist.destroy()
+
+        # Run the script one last time to make sure it finds nothing left to
+        # migrate.
+        found, done = instance_mapping.populate_user_id(self.context, 1000)
+        self.assertEqual(0, found)
+        self.assertEqual(0, done)
+
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    def test_populate_user_id_instance_get_fail(self, mock_inst_get):
+        cells = []
+        celldbs = fixtures.CellDatabases()
+
+        # Create two cell databases and map them
+        for uuid in (uuidsentinel.cell1, uuidsentinel.cell2):
+            cm = cell_mapping.CellMapping(context=self.context, uuid=uuid,
+                                          database_connection=uuid,
+                                          transport_url='fake://')
+            cm.create()
+            cells.append(cm)
+            celldbs.add_cell_database(uuid)
+        self.useFixture(celldbs)
+
+        # Create one instance per cell
+        for cell in cells:
+            with context.target_cell(self.context, cell) as cctxt:
+                inst = instance.Instance(
+                    cctxt,
+                    project_id=self.context.project_id,
+                    user_id=self.context.user_id)
+                inst.create()
+            create_mapping(project_id=self.context.project_id,
+                           user_id=None, cell_id=cell.id,
+                           instance_uuid=inst.uuid)
+
+        # Simulate the first cell is down/has some error
+        mock_inst_get.side_effect = [test.TestingException(),
+                                     instance.InstanceList(objects=[inst])]
+
+        found, done = instance_mapping.populate_user_id(self.context, 1000)
+        # Verify we continue to the next cell when a down/error cell is
+        # encountered.
+        self.assertEqual(2, found)
+        self.assertEqual(1, done)
 
 
 class InstanceMappingListTestCase(test.NoDBTestCase):

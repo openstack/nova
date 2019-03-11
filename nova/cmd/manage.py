@@ -419,6 +419,8 @@ class DbCommands(object):
         compute_node_obj.migrate_empty_ratio,
         # Added in Stein
         virtual_interface_obj.fill_virtual_interface_list,
+        # Added in Stein
+        instance_mapping_obj.populate_user_id,
     )
 
     def __init__(self):
