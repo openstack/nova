@@ -1012,6 +1012,7 @@ class API(base.Base):
                 inst_mapping = objects.InstanceMapping(context=context)
                 inst_mapping.instance_uuid = instance_uuid
                 inst_mapping.project_id = context.project_id
+                inst_mapping.user_id = context.user_id
                 inst_mapping.cell_mapping = None
                 inst_mapping.create()
 
@@ -2458,6 +2459,18 @@ class API(base.Base):
             inst_map = None
         return inst_map
 
+    @staticmethod
+    def _save_user_id_in_instance_mapping(mapping, instance):
+        # TODO(melwitt): We take the opportunity to migrate user_id on the
+        # instance mapping if it's not yet been migrated. This can be removed
+        # in a future release, when all migrations are complete.
+        # If the instance came from a RequestSpec because of a down cell, its
+        # user_id could be None and the InstanceMapping.user_id field is
+        # non-nullable. Avoid trying to set/save the user_id in that case.
+        if 'user_id' not in mapping and instance.user_id is not None:
+            mapping.user_id = instance.user_id
+            mapping.save()
+
     def _get_instance_from_cell(self, context, im, expected_attrs,
                                 cell_down_support):
         # NOTE(danms): Even though we're going to scatter/gather to the
@@ -2471,7 +2484,9 @@ class API(base.Base):
             expected_attrs=expected_attrs)
         cell_uuid = im.cell_mapping.uuid
         if not nova_context.is_cell_failure_sentinel(result[cell_uuid]):
-            return result[cell_uuid]
+            inst = result[cell_uuid]
+            self._save_user_id_in_instance_mapping(im, inst)
+            return inst
         elif isinstance(result[cell_uuid], exception.InstanceNotFound):
             raise exception.InstanceNotFound(instance_id=uuid)
         elif cell_down_support:
@@ -2491,7 +2506,7 @@ class API(base.Base):
                 # and its id.
                 image_ref = (rs.image.id if rs.image and
                              'id' in rs.image else None)
-                return objects.Instance(context=context, power_state=0,
+                inst = objects.Instance(context=context, power_state=0,
                                         uuid=uuid,
                                         project_id=im.project_id,
                                         created_at=im.created_at,
@@ -2499,6 +2514,8 @@ class API(base.Base):
                                         flavor=rs.flavor,
                                         image_ref=image_ref,
                                         availability_zone=rs.availability_zone)
+                self._save_user_id_in_instance_mapping(im, inst)
+                return inst
             except exception.RequestSpecNotFound:
                 # could be that a deleted instance whose request
                 # spec has been archived is being queried.

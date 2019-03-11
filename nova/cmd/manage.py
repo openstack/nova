@@ -1199,6 +1199,7 @@ class CellV2Commands(object):
                 mapping.instance_uuid = instance.uuid
                 mapping.cell_mapping = cell_mapping
                 mapping.project_id = instance.project_id
+                mapping.user_id = instance.user_id
                 mapping.create()
             except db_exc.DBDuplicateEntry:
                 continue
@@ -1293,8 +1294,11 @@ class CellV2Commands(object):
             # Don't judge me. There's already an InstanceMapping with this UUID
             # so the marker needs to be non destructively modified.
             next_marker = next_marker.replace('-', ' ')
+            # This is just the marker record, so set user_id to the special
+            # marker name as well.
             objects.InstanceMapping(ctxt, instance_uuid=next_marker,
-                    project_id=marker_project_id).create()
+                    project_id=marker_project_id,
+                    user_id=marker_project_id).create()
             return 1
         return 0
 

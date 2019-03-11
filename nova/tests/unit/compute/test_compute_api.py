@@ -4878,6 +4878,8 @@ class _ComputeAPIUnitTestMixIn(object):
                              inst_mapping_mock.instance_uuid)
             self.assertIsNone(inst_mapping_mock.cell_mapping)
             self.assertEqual(ctxt.project_id, inst_mapping_mock.project_id)
+            # Verify that the instance mapping created has user_id populated.
+            self.assertEqual(ctxt.user_id, inst_mapping_mock.user_id)
         do_test()
 
     @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
@@ -5759,6 +5761,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                                  None,
                                                  limit=3)
 
+    @mock.patch('nova.compute.api.API._save_user_id_in_instance_mapping',
+                new=mock.MagicMock())
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_get_instance_from_cell_success(self, mock_get_inst):
         cell_mapping = objects.CellMapping(uuid=uuids.cell1,
@@ -5786,9 +5790,11 @@ class _ComputeAPIUnitTestMixIn(object):
             im, [], False)
         self.assertIn('could not be found', six.text_type(exp))
 
+    @mock.patch('nova.compute.api.API._save_user_id_in_instance_mapping')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch('nova.context.scatter_gather_cells')
-    def test_get_instance_with_cell_down_support(self, mock_sg, mock_rs):
+    def test_get_instance_with_cell_down_support(self, mock_sg, mock_rs,
+                                                 mock_save_uid):
         cell_mapping = objects.CellMapping(uuid=uuids.cell1,
                                            name='1', id=1)
         im1 = objects.InstanceMapping(instance_uuid=uuids.inst1,
@@ -5840,6 +5846,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(uuids.inst2, result.uuid)
         self.assertEqual('nova', result.availability_zone)
         self.assertEqual(uuids.image, result.image_ref)
+        # Verify that user_id is populated during a compute_api.get().
+        mock_save_uid.assert_called_once_with(im2, result)
 
         # Same as above, but boot-from-volume where image is not None but the
         # id of the image is not set.
@@ -5903,6 +5911,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                 'security_groups', 'info_cache'])
         self.assertEqual(instance, inst_from_build_req)
 
+    @mock.patch('nova.compute.api.API._save_user_id_in_instance_mapping',
+                new=mock.MagicMock())
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
@@ -5988,11 +5998,34 @@ class _ComputeAPIUnitTestMixIn(object):
                                                       'info_cache'])
             self.assertEqual(instance, inst_from_get)
 
+    @mock.patch('nova.objects.InstanceMapping.save')
+    def test_save_user_id_in_instance_mapping(self, im_save):
+        # Verify user_id is populated if it not set
+        im = objects.InstanceMapping()
+        i = objects.Instance(user_id='fake')
+        self.compute_api._save_user_id_in_instance_mapping(im, i)
+        self.assertEqual(im.user_id, i.user_id)
+        im_save.assert_called_once_with()
+        # Verify user_id is not saved if it is already set
+        im_save.reset_mock()
+        im.user_id = 'fake-other'
+        self.compute_api._save_user_id_in_instance_mapping(im, i)
+        self.assertNotEqual(im.user_id, i.user_id)
+        im_save.assert_not_called()
+        # Verify user_id is not saved if it is None
+        im_save.reset_mock()
+        im = objects.InstanceMapping()
+        i = objects.Instance(user_id=None)
+        self.compute_api._save_user_id_in_instance_mapping(im, i)
+        self.assertNotIn('user_id', im)
+        im_save.assert_not_called()
+
+    @mock.patch('nova.compute.api.API._save_user_id_in_instance_mapping')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_get_instance_in_cell(self, mock_get_inst, mock_get_build_req,
-            mock_get_inst_map):
+            mock_get_inst_map, mock_save_uid):
         self.useFixture(nova_fixtures.AllServicesCurrent())
         # This just checks that the instance is looked up normally and not
         # synthesized from a BuildRequest object. Verification of pulling the
@@ -6010,6 +6043,8 @@ class _ComputeAPIUnitTestMixIn(object):
         if self.cell_type is None:
             mock_get_inst_map.assert_called_once_with(self.context,
                                                       instance.uuid)
+            # Verify that user_id is populated during a compute_api.get().
+            mock_save_uid.assert_called_once_with(inst_map, instance)
         else:
             self.assertFalse(mock_get_inst_map.called)
         self.assertEqual(instance, returned_inst)
