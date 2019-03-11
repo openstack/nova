@@ -12476,6 +12476,30 @@ class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
     @mock.patch.object(objects.CellMapping, 'get_by_uuid',
             side_effect=exception.CellMappingNotFound(uuid=uuids.volume))
+    @mock.patch('nova.network.neutron.API.has_substr_port_filtering_extension',
+                return_value=False)
+    def test_ip_filtering_no_limit_applied(self, mock_has_port_filter_ext,
+                                           _mock_cell_map_get,
+                                           mock_buildreq_get):
+        c = context.get_admin_context()
+        # Limit is not applied before passing instances to _ip_filter
+        with mock.patch('nova.compute.instance_list.'
+                        'get_instance_objects_sorted') as m_get:
+            with mock.patch('nova.compute.api.API._ip_filter') as m_ip_filter:
+                insts = [objects.Instance(uuid=uuids.instance_one),
+                         objects.Instance(uuid=uuids.instance_two)]
+                m_get.return_value = objects.InstanceList(
+                    objects=insts), list()
+                self.compute_api.get_all(c, search_opts={'ip': '.10'}, limit=1)
+                self.assertEqual(1, m_get.call_count)
+                self.assertEqual(1, m_ip_filter.call_count)
+                args = m_ip_filter.call_args[0]
+                self.assertEqual(len(args[0]), 2, 'Instances were filtered '
+                                 'before getting passed to _ip_filter()')
+
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid',
+            side_effect=exception.CellMappingNotFound(uuid=uuids.volume))
     def test_ip_filtering_pass_limit_to_db(self, _mock_cell_map_get,
                                            mock_buildreq_get):
         c = context.get_admin_context()
