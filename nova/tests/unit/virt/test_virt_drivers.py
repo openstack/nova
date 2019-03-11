@@ -39,7 +39,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_block_device
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import utils as test_utils
-from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import event as virtevent
 from nova.virt import fake
@@ -86,19 +85,12 @@ class _FakeDriverBackendTestCase(object):
             self.saved_libvirt = None
 
         from nova.tests.unit.virt.libvirt import fake_imagebackend
-        from nova.tests.unit.virt.libvirt import fake_libvirt_utils
         from nova.tests.unit.virt.libvirt import fakelibvirt
 
         from nova.tests.unit.virt.libvirt import fake_os_brick_connector
 
         self.useFixture(fake_imagebackend.ImageBackendFixture())
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.libvirt_utils',
-            fake_libvirt_utils))
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.imagebackend.libvirt_utils',
-            fake_libvirt_utils))
 
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.connector',
@@ -310,7 +302,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     @mock.patch('os.unlink')
-    def test_unrescue_unrescued_instance(self, mock_unlink):
+    @mock.patch('nova.virt.libvirt.utils.load_file', return_value='')
+    def test_unrescue_unrescued_instance(self, mock_load_file, mock_unlink):
         instance_ref, network_info = self._get_running_instance()
         self.connection.unrescue(instance_ref, network_info)
 
@@ -553,7 +546,6 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_get_console_output(self):
-        fake_libvirt_utils.files['dummy.log'] = ''
         instance_ref, network_info = self._get_running_instance()
         console_output = self.connection.get_console_output(self.ctxt,
             instance_ref)
