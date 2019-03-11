@@ -463,7 +463,8 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         self.api = self.admin_api
 
         # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
+        self.image_service = (
+            nova.tests.unit.image.fake.stub_out_image_service(self))
 
         self.start_service('conductor')
         self.scheduler_service = self.start_service('scheduler')
