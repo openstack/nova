@@ -12857,7 +12857,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_stat.assert_called_once_with(path)
         mock_get_size.assert_called_once_with(path)
 
-    def test_spawn_with_network_info(self):
+    def test_spawn_with_network_info(self, power_on=True):
         def fake_getLibVersion():
             return fakelibvirt.FAKE_LIBVIRT_VERSION
 
@@ -12918,18 +12918,28 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         ):
             self.flags(instances_path=tmpdir)
 
-            hw_running = hardware.InstanceInfo(state=power_state.RUNNING)
-            mock_get_info.return_value = hw_running
+            if power_on:
+                hw_running = hardware.InstanceInfo(state=power_state.RUNNING)
+                mock_get_info.return_value = hw_running
+            else:
+                # Avoid a test timeout since _wait_for_boot is threaded.
+                mock_get_info.side_effect = Exception('do not call get_info')
             mock_build_device_metadata.return_value = None
 
             del mock_orig_libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
             drvr.spawn(self.context, instance, image_meta, [], 'herp', {},
-                       network_info=network_info)
+                       network_info=network_info, power_on=power_on)
 
-            mock_get_info.assert_called_once_with(instance)
+            if power_on:
+                mock_get_info.assert_called_once_with(instance)
+            else:
+                mock_get_info.assert_not_called()
             mock_build_device_metadata.assert_called_once_with(self.context,
                                                                instance)
+
+    def test_spawn_power_on_false(self):
+        self.test_spawn_with_network_info(power_on=False)
 
     # Methods called directly by spawn()
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_guest_xml')

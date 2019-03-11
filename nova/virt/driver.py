@@ -342,11 +342,12 @@ class ComputeDriver(object):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
-              block_device_info=None):
+              block_device_info=None, power_on=True):
         """Create a new instance/VM/domain on the virtualization platform.
 
         Once this successfully completes, the instance should be
-        running (power_state.RUNNING).
+        running (power_state.RUNNING) if ``power_on`` is True, else the
+        instance should be stopped (power_state.SHUTDOWN).
 
         If this fails, any partial instance should be completely
         cleaned up, and the virtualization platform should be in the state
@@ -366,6 +367,8 @@ class ComputeDriver(object):
         :param network_info: instance network information
         :param block_device_info: Information about block devices to be
                                   attached to the instance.
+        :param power_on: True if the instance should be powered on, False
+                         otherwise
         """
         raise NotImplementedError()
 
