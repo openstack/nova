@@ -876,6 +876,27 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         mock_debug.assert_called_once()
         self.assertIn('Allowing migration from cell',
                       mock_debug.call_args[0][0])
+        self.assertEqual(mock_get_im.return_value.cell_mapping,
+                         self.request_spec.requested_destination.cell)
+
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                return_value=objects.InstanceMapping(
+                    cell_mapping=objects.CellMapping(uuid=uuids.cell1)))
+    @mock.patch('nova.conductor.tasks.migrate.LOG.debug')
+    def test_set_requested_destination_cell_allow_cross_cell_resize_true_host(
+            self, mock_debug, mock_get_im):
+        """Tests the scenario that the RequestSpec is configured for
+        allow_cross_cell_resize=True and there is a requested target host.
+        """
+        task = self._generate_task()
+        legacy_props = self.request_spec.to_legacy_filter_properties_dict()
+        self.request_spec.requested_destination = objects.Destination(
+            allow_cross_cell_move=True, host='fake-host')
+        task._set_requested_destination_cell(legacy_props)
+        mock_get_im.assert_called_once_with(self.context, self.instance.uuid)
+        mock_debug.assert_called_once()
+        self.assertIn('Not restricting cell', mock_debug.call_args[0][0])
+        self.assertIsNone(self.request_spec.requested_destination.cell)
 
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
                 return_value=objects.InstanceMapping(

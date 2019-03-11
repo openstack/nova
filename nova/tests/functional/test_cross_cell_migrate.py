@@ -176,15 +176,21 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # Before resizing make sure quota usage is only 1 for total instances.
         self.assert_quota_usage(expected_num_instances=1)
 
-        # Resize it which should migrate the server to the host in the
-        # other cell.
-        new_flavor = flavors[1]
-        body = {'resize': {'flavorRef': new_flavor['id']}}
+        if target_host:
+            # Cold migrate the server to the target host.
+            new_flavor = old_flavor  # flavor does not change for cold migrate
+            body = {'migrate': {'host': target_host}}
+            expected_host = target_host
+        else:
+            # Resize it which should migrate the server to the host in the
+            # other cell.
+            new_flavor = flavors[1]
+            body = {'resize': {'flavorRef': new_flavor['id']}}
+            expected_host = 'host1' if original_host == 'host2' else 'host2'
         self.api.post_server_action(server['id'], body)
         # Wait for the server to be resized and then verify the host has
         # changed to be the host in the other cell.
         server = self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
-        expected_host = 'host1' if original_host == 'host2' else 'host2'
         self.assertEqual(expected_host, server['OS-EXT-SRV-ATTR:host'])
         # Assert that the instance is only listed one time from the API (to
         # make sure it's not listed out of both cells).
@@ -256,7 +262,12 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
                 inst.new_flavor,
                 'instance.new_flavor not saved in target cell')
             self.assertEqual(inst.flavor.flavorid, inst.new_flavor.flavorid)
-            self.assertNotEqual(inst.flavor.flavorid, inst.old_flavor.flavorid)
+            if target_host:  # cold migrate so flavor does not change
+                self.assertEqual(
+                    inst.flavor.flavorid, inst.old_flavor.flavorid)
+            else:
+                self.assertNotEqual(
+                    inst.flavor.flavorid, inst.old_flavor.flavorid)
             self.assertEqual(old_flavor['id'], inst.old_flavor.flavorid)
             self.assertEqual(new_flavor['id'], inst.new_flavor.flavorid)
             # Assert the ComputeManager._set_instance_info fields
@@ -349,8 +360,17 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             instance = objects.Instance.get_by_uuid(cctxt, server['id'])
             self.assertTrue(instance.hidden)
 
-    # TODO(mriedem): Test cold migration with a specified target host in
-    # another cell.
+    def test_cold_migrate_target_host_in_other_cell(self):
+        """Tests cold migrating to a target host in another cell. This is
+        mostly just to ensure the API does not restrict the target host to
+        the source cell when cross-cell resize is allowed by policy.
+        """
+        # _resize_and_validate creates the server on host1 which is in cell1.
+        # To make things interesting, start a third host but in cell1 so we can
+        # be sure the requested host from cell2 is honored.
+        self._start_compute(
+            'host3', cell_name=self.host_to_cell_mappings['host1'])
+        self._resize_and_validate(target_host='host2')
 
     # TODO(mriedem): Test cross-cell list where the source cell has two
     # hosts so the CrossCellWeigher picks the other host in the source cell
