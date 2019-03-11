@@ -22719,18 +22719,16 @@ def _fake_convert_image(source, dest, in_format, out_format,
     libvirt_driver.libvirt_utils.files[dest] = b''
 
 
+def _fake_file_like_object(*args, **kwargs):
+    return io.BytesIO(b'')
+
+
 class _BaseSnapshotTests(test.NoDBTestCase):
     def setUp(self):
         super(_BaseSnapshotTests, self).setUp()
         self.flags(snapshots_directory='./', group='libvirt')
         self.context = context.get_admin_context()
 
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.libvirt_utils',
-            fake_libvirt_utils))
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.imagebackend.libvirt_utils',
-            fake_libvirt_utils))
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
         self.image_service = nova.tests.unit.image.fake.stub_out_image_service(
@@ -22761,6 +22759,8 @@ class _BaseSnapshotTests(test.NoDBTestCase):
                     expected_properties.items():
                 self.assertEqual(expected_value, props[expected_key])
 
+    @mock.patch('nova.virt.libvirt.utils.create_image',
+                new=mock.NonCallableMock())
     def _create_image(self, extra_properties=None):
         properties = {'instance_id': self.instance_ref['id'],
                       'user_id': str(self.context.user_id)}
@@ -22777,13 +22777,25 @@ class _BaseSnapshotTests(test.NoDBTestCase):
         recv_meta = self.image_service.create(self.context, sent_meta)
         return recv_meta
 
+    @mock.patch('nova.privsep.path.chown')
     @mock.patch.object(compute_utils, 'disk_ops_semaphore',
                        new_callable=compute_utils.UnlimitedSemaphore)
     @mock.patch.object(host.Host, 'has_min_version')
     @mock.patch.object(imagebackend.Image, 'resolve_driver_format')
     @mock.patch.object(host.Host, '_get_domain')
-    def _snapshot(self, image_id, mock_get_domain, mock_resolve, mock_version,
-                  mock_disk_op_sema):
+    @mock.patch('nova.virt.libvirt.utils.get_disk_size',
+                new=mock.Mock(return_value=0))
+    @mock.patch('nova.virt.libvirt.utils.create_cow_image',
+                new=mock.Mock())
+    @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file',
+                new=mock.Mock(return_value=None))
+    @mock.patch('nova.virt.libvirt.utils.extract_snapshot',
+                side_effect=_fake_file_like_object)
+    @mock.patch('nova.virt.libvirt.utils.file_open',
+                side_effect=_fake_file_like_object)
+    def _snapshot(self, image_id, mock_file_open, mock_extract_snapshot,
+                  mock_get_domain, mock_resolve, mock_version,
+                  mock_disk_op_sema, mock_chown):
         mock_get_domain.return_value = FakeVirtDomain()
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         driver.snapshot(self.context, self.instance_ref, image_id,
@@ -22800,13 +22812,10 @@ class _BaseSnapshotTests(test.NoDBTestCase):
 
 class LibvirtSnapshotTests(_BaseSnapshotTests):
 
-    def setUp(self):
-        super(LibvirtSnapshotTests, self).setUp()
-        # All paths through livesnapshot trigger a chown behind privsep
-        self.privsep_chown = mock.patch.object(nova.privsep.path, 'chown')
-        self.addCleanup(self.privsep_chown.stop)
-        self.privsep_chown.start()
-
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value=None))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('filename', 'qcow2')))
     def test_ami(self):
         # Assign different image_ref from nova/images/fakes for testing ami
         self.instance_ref.image_ref = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
@@ -22816,31 +22825,53 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
 
         self._test_snapshot(disk_format='ami')
 
-    @mock.patch.object(fake_libvirt_utils, 'disk_type', new='raw')
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value=None))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('filename', 'raw')))
     @mock.patch.object(libvirt_driver.imagebackend.images,
                        'convert_image',
                        side_effect=_fake_convert_image)
     def test_raw(self, mock_convert_image):
         self._test_snapshot(disk_format='raw')
 
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value=None))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('filename', 'qcow2')))
     def test_qcow2(self):
         self._test_snapshot(disk_format='qcow2')
 
-    @mock.patch.object(fake_libvirt_utils, 'disk_type', new='ploop')
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value='ploop'))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('unknown_disk_type', None)))
     @mock.patch.object(libvirt_driver.imagebackend.images,
                        'convert_image',
                        side_effect=_fake_convert_image)
     def test_ploop(self, mock_convert_image):
         self._test_snapshot(disk_format='ploop')
 
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value=None))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('filename', 'qcow2')))
     def test_no_image_architecture(self):
         self.instance_ref.image_ref = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         self._test_snapshot(disk_format='qcow2')
 
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value=None))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('filename', 'qcow2')))
     def test_no_original_image(self):
         self.instance_ref.image_ref = '661122aa-1234-dede-fefe-babababababa'
         self._test_snapshot(disk_format='qcow2')
 
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value=None))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('filename', 'qcow2')))
     def test_snapshot_metadata_image(self):
         # Assign an image with an architecture defined (x86_64)
         self.instance_ref.image_ref = 'a440c04b-79fa-479c-bed1-0b816eaec379'
@@ -22853,6 +22884,10 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
         self._test_snapshot(disk_format='qcow2',
                             extra_properties=extra_properties)
 
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value=None))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('filename', 'qcow2')))
     @mock.patch.object(libvirt_driver.LOG, 'exception')
     def test_snapshot_update_task_state_failed(self, mock_exception):
         res = [None, exception.InstanceNotFound(instance_id='foo')]
@@ -22861,6 +22896,8 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
                           disk_format='qcow2')
         self.assertFalse(mock_exception.called)
 
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('filename', 'qcow2')))
     @mock.patch.object(host.Host, 'get_guest')
     @mock.patch.object(host.Host, 'write_instance_config')
     def test_failing_domain_not_found(self, mock_write_config, mock_get_guest):
@@ -22878,6 +22915,11 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
         self.assertRaises(exception.InstanceNotFound, self._test_snapshot,
                           disk_format='qcow2')
 
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value='rbd'))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('rbd://some/fake/rbd/image',
+                                            'raw')))
     @mock.patch.object(rbd_utils, 'RBDDriver')
     @mock.patch.object(rbd_utils, 'rbd')
     def test_raw_with_rbd_clone(self, mock_rbd, mock_driver):
@@ -22885,69 +22927,65 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
         rbd = mock_driver.return_value
         rbd.parent_info = mock.Mock(return_value=['test-pool', '', ''])
         rbd.parse_url = mock.Mock(return_value=['a', 'b', 'c', 'd'])
-        with mock.patch.object(fake_libvirt_utils, 'find_disk',
-                               return_value=('rbd://some/fake/rbd/image',
-                                             'raw')):
-            with mock.patch.object(fake_libvirt_utils, 'disk_type', new='rbd'):
-                self._test_snapshot(disk_format='raw')
+        self._test_snapshot(disk_format='raw')
         rbd.clone.assert_called_with(mock.ANY, mock.ANY, dest_pool='test-pool')
         rbd.flatten.assert_called_with(mock.ANY, pool='test-pool')
 
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value='rbd'))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('rbd://some/fake/rbd/image',
+                                            'raw')))
+    @mock.patch.object(libvirt_driver.imagebackend.images,
+                       'convert_image', return_value=b'')
     @mock.patch.object(rbd_utils, 'RBDDriver')
     @mock.patch.object(rbd_utils, 'rbd')
-    def test_raw_with_rbd_clone_graceful_fallback(self, mock_rbd, mock_driver):
+    def test_raw_with_rbd_clone_graceful_fallback(
+            self, mock_rbd, mock_driver, mock_convert_image):
         self.flags(images_type='rbd', group='libvirt')
         rbd = mock_driver.return_value
         rbd.parent_info = mock.Mock(side_effect=exception.ImageUnacceptable(
             image_id='fake_id', reason='rbd testing'))
-        with test.nested(
-                mock.patch.object(libvirt_driver.imagebackend.images,
-                                  'convert_image',
-                                  side_effect=_fake_convert_image),
-                mock.patch.object(fake_libvirt_utils, 'find_disk',
-                                  return_value=('rbd://some/fake/rbd/image',
-                                                'raw')),
-                mock.patch.object(fake_libvirt_utils, 'disk_type', new='rbd')):
-            self._test_snapshot(disk_format='raw')
-            self.assertFalse(rbd.clone.called)
+        self._test_snapshot(disk_format='raw')
+        self.assertFalse(rbd.clone.called)
 
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value='rbd'))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('rbd://some/fake/rbd/image',
+                                            'raw')))
+    @mock.patch.object(libvirt_driver.imagebackend.images,
+                       'convert_image', return_value=b'')
     @mock.patch.object(rbd_utils, 'RBDDriver')
     @mock.patch.object(rbd_utils, 'rbd')
-    def test_raw_with_rbd_clone_eperm(self, mock_rbd, mock_driver):
+    def test_raw_with_rbd_clone_eperm(self, mock_rbd, mock_driver,
+                                      mock_convert_image):
         self.flags(images_type='rbd', group='libvirt')
         rbd = mock_driver.return_value
         rbd.parent_info = mock.Mock(return_value=['test-pool', '', ''])
         rbd.parse_url = mock.Mock(return_value=['a', 'b', 'c', 'd'])
         rbd.clone = mock.Mock(side_effect=exception.Forbidden(
                 image_id='fake_id', reason='rbd testing'))
-        with test.nested(
-                mock.patch.object(libvirt_driver.imagebackend.images,
-                                  'convert_image',
-                                  side_effect=_fake_convert_image),
-                mock.patch.object(fake_libvirt_utils, 'find_disk',
-                                  return_value=('rbd://some/fake/rbd/image',
-                                                'raw')),
-                mock.patch.object(fake_libvirt_utils, 'disk_type', new='rbd')):
-            self._test_snapshot(disk_format='raw')
-            # Ensure that the direct_snapshot attempt was cleaned up
-            rbd.remove_snap.assert_called_with('c', 'd', ignore_errors=False,
-                                               pool='b', force=True)
+        self._test_snapshot(disk_format='raw')
+        # Ensure that the direct_snapshot attempt was cleaned up
+        rbd.remove_snap.assert_called_with('c', 'd', ignore_errors=False,
+                                           pool='b', force=True)
 
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value='rbd'))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('rbd://some/fake/rbd/image',
+                                            'raw')))
     @mock.patch.object(rbd_utils, 'RBDDriver')
     @mock.patch.object(rbd_utils, 'rbd')
-    def test_raw_with_rbd_clone_post_process_fails(self, mock_rbd,
-                                                   mock_driver):
+    def test_raw_with_rbd_clone_post_process_fails(
+            self, mock_rbd, mock_driver):
         self.flags(images_type='rbd', group='libvirt')
         rbd = mock_driver.return_value
         rbd.parent_info = mock.Mock(return_value=['test-pool', '', ''])
         rbd.parse_url = mock.Mock(return_value=['a', 'b', 'c', 'd'])
-        with test.nested(
-                mock.patch.object(fake_libvirt_utils, 'find_disk',
-                                  return_value=('rbd://some/fake/rbd/image',
-                                                'raw')),
-                mock.patch.object(fake_libvirt_utils, 'disk_type', new='rbd'),
-                mock.patch.object(self.image_service, 'update',
-                                  side_effect=test.TestingException)):
+        with mock.patch.object(self.image_service, 'update',
+                               side_effect=test.TestingException):
             self.assertRaises(test.TestingException, self._test_snapshot,
                               disk_format='raw')
         rbd.clone.assert_called_with(mock.ANY, mock.ANY, dest_pool='test-pool')
@@ -22956,15 +22994,20 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
         rbd.remove_snap.assert_called_with('c', 'd', ignore_errors=True,
                                            pool='b', force=True)
 
-    @mock.patch.object(imagebackend.Image, 'direct_snapshot')
-    @mock.patch.object(imagebackend.Image, 'resolve_driver_format')
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value='rbd'))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('rbd://some/fake/rbd/image',
+                                            'raw')))
+    @mock.patch.object(rbd_utils, 'RBDDriver')
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch('nova.virt.libvirt.imagebackend.Rbd.direct_snapshot')
+    @mock.patch('nova.virt.libvirt.imagebackend.Rbd.resolve_driver_format')
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(host.Host, 'get_guest')
-    def test_raw_with_rbd_clone_is_live_snapshot(self,
-                                                 mock_get_guest,
-                                                 mock_version,
-                                                 mock_resolve,
-                                                 mock_snapshot):
+    def test_raw_with_rbd_clone_is_live_snapshot(
+            self, mock_get_guest, mock_version, mock_resolve,
+            mock_snapshot, mock_rbd, mock_driver):
         self.flags(images_type='rbd', group='libvirt')
         mock_guest = mock.Mock(spec=libvirt_guest.Guest)
         mock_guest._domain = mock.Mock()
@@ -22976,22 +23019,23 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
                             self.mock_update_task_state)
             self.assertFalse(mock_suspend.called)
 
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value='rbd'))
     @mock.patch.object(libvirt_driver.imagebackend.images, 'convert_image',
-                       side_effect=_fake_convert_image)
-    @mock.patch.object(fake_libvirt_utils, 'find_disk')
-    @mock.patch.object(imagebackend.Image, 'resolve_driver_format')
+                       new=mock.Mock(side_effect=[io.BytesIO(b''),
+                                                  io.BytesIO(b'')]))
+    @mock.patch('nova.virt.libvirt.utils.file_open',
+                new=mock.Mock(return_value=io.BytesIO(b'')))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                return_value=('filename', 'rbd'))
+    @mock.patch('nova.virt.libvirt.imagebackend.Rbd.resolve_driver_format')
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(host.Host, 'get_guest')
     @mock.patch.object(rbd_utils, 'RBDDriver')
     @mock.patch.object(rbd_utils, 'rbd')
-    def test_raw_with_rbd_clone_failure_does_cold_snapshot(self,
-                                                           mock_rbd,
-                                                           mock_driver,
-                                                           mock_get_guest,
-                                                           mock_version,
-                                                           mock_resolve,
-                                                           mock_find_disk,
-                                                           mock_convert):
+    def test_raw_with_rbd_clone_failure_does_cold_snapshot(
+            self, mock_rbd, mock_driver, mock_get_guest, mock_version,
+            mock_resolve, mock_find_disk):
         self.flags(images_type='rbd', group='libvirt')
         rbd = mock_driver.return_value
         rbd.parent_info = mock.Mock(side_effect=exception.ImageUnacceptable(
@@ -23004,12 +23048,20 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         recv_meta = self._create_image()
 
-        with mock.patch.object(fake_libvirt_utils, 'disk_type', new='rbd'):
-            with mock.patch.object(driver, "suspend") as mock_suspend:
-                driver.snapshot(self.context, self.instance_ref,
-                                recv_meta['id'], self.mock_update_task_state)
-                self.assertTrue(mock_suspend.called)
+        with mock.patch.object(driver, "suspend") as mock_suspend:
+            driver.snapshot(self.context, self.instance_ref,
+                            recv_meta['id'], self.mock_update_task_state)
+            self.assertTrue(mock_suspend.called)
 
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value='rbd'))
+    @mock.patch.object(libvirt_driver.imagebackend.images, 'convert_image',
+                       new=mock.Mock(side_effect=[io.BytesIO(b''),
+                                                  io.BytesIO(b'')]))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('filename', 'rbd')))
+    @mock.patch('nova.virt.libvirt.utils.file_open',
+                new=mock.Mock(return_value=io.BytesIO(b'')))
     @mock.patch.object(host.Host, 'get_guest')
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     def test_cold_snapshot_based_on_power_state(
@@ -23049,13 +23101,19 @@ class LXCSnapshotTests(LibvirtSnapshotTests):
 
 
 class LVMSnapshotTests(_BaseSnapshotTests):
-    @mock.patch.object(fake_libvirt_utils, 'disk_type', new='lvm')
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('/dev/nova-vg/lv', 'raw')))
+    @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file',
+                new=mock.Mock(return_value=None))
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value='lvm'))
+    @mock.patch('nova.virt.libvirt.utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
     @mock.patch.object(libvirt_driver.imagebackend.images,
-                       'convert_image',
-                       side_effect=_fake_convert_image)
+                       'convert_image')
     @mock.patch.object(libvirt_driver.imagebackend.lvm, 'volume_info')
     def _test_lvm_snapshot(self, disk_format, mock_volume_info,
-                           mock_convert_image):
+                           mock_convert_image, mock_file_open):
         self.flags(images_type='lvm',
                    images_volume_group='nova-vg', group='libvirt')
 
