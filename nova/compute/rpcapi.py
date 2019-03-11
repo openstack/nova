@@ -363,6 +363,7 @@ class ComputeAPI(object):
         'pike': '4.17',
         'queens': '5.0',
         'rocky': '5.0',
+        'stein': '5.1',
     }
 
     def __init__(self):
