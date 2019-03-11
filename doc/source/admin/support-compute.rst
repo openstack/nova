@@ -526,3 +526,11 @@ configuration file, for example:
 And configure the other identity options as necessary for the service user,
 much like you would configure nova to work with the image service (glance)
 or networking service.
+
+.. note::
+
+  Please note that the role of the :oslo.config:group:`service_user` you
+  configure needs to be a superset of
+  :oslo.config:option:`keystone_authtoken.service_token_roles` (The option
+  :oslo.config:option:`keystone_authtoken.service_token_roles` is configured
+  in cinder, glance and neutron).
