@@ -245,8 +245,7 @@ class _IntegratedTestBase(test.TestCase):
 
 class InstanceHelperMixin(object):
     def _wait_for_server_parameter(self, admin_api, server, expected_params,
-                                   max_retries=10,
-                                   fail_when_run_out_of_retries=True):
+                                   max_retries=10):
         retry_count = 0
         while True:
             server = admin_api.get_server(server['id'])
@@ -255,22 +254,17 @@ class InstanceHelperMixin(object):
                 break
             retry_count += 1
             if retry_count == max_retries:
-                if fail_when_run_out_of_retries:
                     self.fail('Wait for state change failed, '
                               'expected_params=%s, server=%s'
                               % (expected_params, server))
-                else:
-                    break
             time.sleep(0.5)
 
         return server
 
     def _wait_for_state_change(self, admin_api, server, expected_status,
-                               max_retries=10,
-                               fail_when_run_out_of_retries=True):
+                               max_retries=10):
         return self._wait_for_server_parameter(
-            admin_api, server, {'status': expected_status}, max_retries,
-            fail_when_run_out_of_retries=fail_when_run_out_of_retries)
+            admin_api, server, {'status': expected_status}, max_retries)
 
     def _build_minimal_create_server_request(self, api, name, image_uuid=None,
                                              flavor_id=None, networks=None,
