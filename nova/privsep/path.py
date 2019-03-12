@@ -70,10 +70,12 @@ def chmod(path, mode):
 def utime(path):
     if not os.path.exists(path):
         raise exception.FileNotFound(file_path=path)
-    # context wrapper ensures the file exists before trying to modify time
-    # which fixes a race condition with NFS image caching (see LP#1809123)
-    with open(path, 'a'):
-        os.utime(path, None)
+
+    # NOTE(mikal): the old version of this used execute(touch, ...), which
+    # would apparently fail on shared storage when multiple instances were
+    # being launched at the same time. If we see failures here, we might need
+    # to wrap this in a try / except.
+    os.utime(path, None)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint

@@ -1,8 +1,0 @@
----
-fixes:
-  - |
-    Fixes a race condition when multiple instances are launched at the same
-    time, which leads to a failure when modifying the modified time of the
-    instance base image. This issue was noticed when using an NFS backend. For
-    more information see https://bugs.launchpad.net/nova/+bug/1809123
-
