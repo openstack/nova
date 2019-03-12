@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
@@ -19,6 +20,8 @@ from nova import db
 from nova import exception
 from nova.objects import base
 from nova.objects import fields
+
+LOG = logging.getLogger(__name__)
 
 
 @base.NovaObjectRegistry.register
@@ -80,3 +83,32 @@ class MigrationContext(base.NovaPersistentObject, base.NovaObject):
             return None
 
         return cls.obj_from_db_obj(db_extra['migration_context'])
+
+    def get_pci_mapping_for_migration(self, revert):
+        """Get the mapping between the old PCI devices and the new PCI
+        devices that have been allocated during this migration.  The
+        correlation is based on PCI request ID which is unique per PCI
+        devices for SR-IOV ports.
+
+        :param revert: If True, return a reverse mapping i.e
+               mapping between new PCI devices and old PCI devices.
+        :returns: dictionary of PCI mapping.
+                  if revert==False:
+                      {'<old pci address>': <New PciDevice>}
+                  if revert==True:
+                      {'<new pci address>': <Old PciDevice>}
+        """
+        step = -1 if revert else 1
+        current_pci_devs, updated_pci_devs = (self.old_pci_devices,
+                                              self.new_pci_devices)[::step]
+        if current_pci_devs and updated_pci_devs:
+            LOG.debug("Determining PCI devices mapping using migration "
+                      "context: current_pci_devs: %(cur)s, "
+                      "updated_pci_devs: %(upd)s",
+                      {'cur': [dev for dev in current_pci_devs],
+                       'upd': [dev for dev in updated_pci_devs]})
+            return {curr_dev.address: upd_dev
+                    for curr_dev in current_pci_devs
+                        for upd_dev in updated_pci_devs
+                            if curr_dev.request_id == upd_dev.request_id}
+        return {}

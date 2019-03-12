@@ -2647,45 +2647,14 @@ class API(base_api.NetworkAPI):
         # device_id field on the port which is not what we'd want for shelve.
         pass
 
-    def _get_pci_devices_from_migration_context(self, migration_context,
-                                                migration):
-        if migration and migration.get('status') == 'reverted':
-            # In case of revert, swap old and new devices to
-            # update the ports back to the original devices.
-            return (migration_context.new_pci_devices,
-                    migration_context.old_pci_devices)
-        return (migration_context.old_pci_devices,
-                migration_context.new_pci_devices)
-
-    def _get_pci_mapping_for_migration(self, context, instance, migration):
-        """Get the mapping between the old PCI devices and the new PCI
-        devices that have been allocated during this migration.  The
-        correlation is based on PCI request ID which is unique per PCI
-        devices for SR-IOV ports.
-
-        :param context:  The request context.
-        :param instance: Get PCI mapping for this instance.
-        :param migration: The migration for this instance.
-        :Returns: dictionary of mapping {'<old pci address>': <New PciDevice>}
-        """
-        migration_context = instance.migration_context
-        if not migration_context:
+    def _get_pci_mapping_for_migration(self, instance, migration):
+        if not instance.migration_context:
             return {}
-
-        old_pci_devices, new_pci_devices = \
-            self._get_pci_devices_from_migration_context(migration_context,
-                                                         migration)
-        if old_pci_devices and new_pci_devices:
-            LOG.debug("Determining PCI devices mapping using migration"
-                      "context: old_pci_devices: %(old)s, "
-                      "new_pci_devices: %(new)s",
-                      {'old': [dev for dev in old_pci_devices],
-                       'new': [dev for dev in new_pci_devices]})
-            return {old.address: new
-                    for old in old_pci_devices
-                        for new in new_pci_devices
-                            if old.request_id == new.request_id}
-        return {}
+        # In case of revert, swap old and new devices to
+        # update the ports back to the original devices.
+        revert = (migration and
+                  migration.get('status') == 'reverted')
+        return instance.migration_context.get_pci_mapping_for_migration(revert)
 
     def _update_port_binding_for_instance(self, context, instance, host,
                                           migration=None):
@@ -2724,7 +2693,7 @@ class API(base_api.NetworkAPI):
             if (vnic_type in network_model.VNIC_TYPES_SRIOV
                     and migration is not None):
                 if not pci_mapping:
-                    pci_mapping = self._get_pci_mapping_for_migration(context,
+                    pci_mapping = self._get_pci_mapping_for_migration(
                         instance, migration)
 
                 pci_slot = binding_profile.get('pci_slot')

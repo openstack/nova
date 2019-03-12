@@ -4143,56 +4143,29 @@ class TestNeutronv2WithMock(test.TestCase):
     def test_get_pci_mapping_for_migration(self):
         instance = fake_instance.fake_instance_obj(self.context)
         instance.migration_context = objects.MigrationContext()
-        old_pci_devices = objects.PciDeviceList(
-            objects=[objects.PciDevice(vendor_id='1377',
-                                       product_id='0047',
-                                       address='0000:0a:00.1',
-                                       compute_node_id=1,
-                                       request_id='1234567890')])
-
-        new_pci_devices = objects.PciDeviceList(
-            objects=[objects.PciDevice(vendor_id='1377',
-                                       product_id='0047',
-                                       address='0000:0b:00.1',
-                                       compute_node_id=2,
-                                       request_id='1234567890')])
-
-        instance.migration_context.old_pci_devices = old_pci_devices
-        instance.migration_context.new_pci_devices = new_pci_devices
-        instance.pci_devices = instance.migration_context.old_pci_devices
         migration = {'status': 'confirmed'}
 
-        pci_mapping = self.api._get_pci_mapping_for_migration(
-            self.context, instance, migration)
-        self.assertEqual(
-            {old_pci_devices[0].address: new_pci_devices[0]}, pci_mapping)
+        with mock.patch.object(instance.migration_context,
+                               'get_pci_mapping_for_migration') as map_func:
+            self.api._get_pci_mapping_for_migration(instance, migration)
+            map_func.assert_called_with(False)
 
     def test_get_pci_mapping_for_migration_reverted(self):
         instance = fake_instance.fake_instance_obj(self.context)
         instance.migration_context = objects.MigrationContext()
-        old_pci_devices = objects.PciDeviceList(
-            objects=[objects.PciDevice(vendor_id='1377',
-                                       product_id='0047',
-                                       address='0000:0a:00.1',
-                                       compute_node_id=1,
-                                       request_id='1234567890')])
-
-        new_pci_devices = objects.PciDeviceList(
-            objects=[objects.PciDevice(vendor_id='1377',
-                                       product_id='0047',
-                                       address='0000:0b:00.1',
-                                       compute_node_id=2,
-                                       request_id='1234567890')])
-
-        instance.migration_context.old_pci_devices = old_pci_devices
-        instance.migration_context.new_pci_devices = new_pci_devices
-        instance.pci_devices = instance.migration_context.old_pci_devices
         migration = {'status': 'reverted'}
 
+        with mock.patch.object(instance.migration_context,
+                               'get_pci_mapping_for_migration') as map_func:
+            self.api._get_pci_mapping_for_migration(instance, migration)
+            map_func.assert_called_with(True)
+
+    def test_get_pci_mapping_for_migration_no_migration_context(self):
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.migration_context = None
         pci_mapping = self.api._get_pci_mapping_for_migration(
-            self.context, instance, migration)
-        self.assertEqual(
-            {new_pci_devices[0].address: old_pci_devices[0]}, pci_mapping)
+            instance, None)
+        self.assertDictEqual({}, pci_mapping)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_profile_for_migration_teardown_false(
