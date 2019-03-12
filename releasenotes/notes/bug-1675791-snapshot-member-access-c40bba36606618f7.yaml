@@ -1,0 +1,26 @@
+---
+fixes:
+  - |
+    `Bug 1675791`_ has been fixed by granting image membership access to
+    snapshot images when the owner of the server is not performing the
+    snapshot/backup/shelve operation on the server. For example, an admin
+    shelves a user's server and the user needs to unshelve the server so the
+    user needs access to the shelved snapshot image.
+
+    Note that only the image owner may delete the image, so in the case of
+    a shelved offloaded server, if the user unshelves or deletes the server,
+    that operation will work but there will be a warning in the logs because
+    the shelved snapshot image could not be deleted since the user does not
+    own the image. Similarly, if an admin creates a snapshot of a server in
+    another project, the admin owns the snapshot image and the non-admin
+    project, while having shared image member access to see the image, cannot
+    delete the snapshot.
+
+    The bug fix applies to both the ``nova-osapi_compute`` and ``nova-compute``
+    service so older compute services will need to be patched.
+
+    Refer to the image API reference for details on image sharing:
+
+    https://developer.openstack.org/api-ref/image/v2/index.html#sharing
+
+    .. _Bug 1675791: https://launchpad.net/bugs/1675791

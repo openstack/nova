@@ -1502,7 +1502,7 @@ class TestCreate(test.NoDBTestCase):
         }
         trans_to_mock.return_value = translated
         trans_from_mock.return_value = mock.sentinel.trans_from
-        image_mock = mock.MagicMock(spec=dict)
+        image_mock = {}
         client = mock.MagicMock()
         client.call.return_value = {'id': '123'}
         ctx = mock.sentinel.ctx
@@ -1567,7 +1567,7 @@ class TestCreate(test.NoDBTestCase):
         }
         trans_to_mock.return_value = translated
         trans_from_mock.return_value = mock.sentinel.trans_from
-        image_mock = mock.MagicMock(spec=dict)
+        image_mock = {}
         client = mock.MagicMock()
         client.call.return_value = translated
         ctx = mock.sentinel.ctx
@@ -1577,6 +1577,62 @@ class TestCreate(test.NoDBTestCase):
         self.assertEqual(2, client.call.call_count)
         trans_from_mock.assert_called_once_with(translated)
         self.assertEqual(mock.sentinel.trans_from, image_meta)
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._translate_to_glance')
+    def test_create_success_v2_with_sharing(
+            self, trans_to_mock, trans_from_mock):
+        """Tests creating a snapshot image by one tenant that is shared with
+        the owner of the instance.
+        """
+        translated = {
+            'name': mock.sentinel.name,
+            'visibility': 'shared'
+        }
+        trans_to_mock.return_value = translated
+        trans_from_mock.return_value = mock.sentinel.trans_from
+        image_meta = {
+            'name': mock.sentinel.name,
+            'visibility': 'shared',
+            'properties': {
+                # This triggers the image_members.create call to glance.
+                'instance_owner': uuids.instance_uuid
+            }
+        }
+        client = mock.MagicMock()
+
+        def fake_call(_ctxt, _version, method, controller=None, args=None,
+                      kwargs=None):
+            if method == 'create':
+                if controller is None:
+                    # Call to create the image.
+                    translated['id'] = uuids.image_id
+                    return translated
+                if controller == 'image_members':
+                    self.assertIsNotNone(args)
+                    self.assertEqual(
+                        (uuids.image_id, uuids.instance_uuid), args)
+                    # Call to share the image with the instance owner.
+                    return mock.sentinel.member
+            self.fail('Unexpected glanceclient call %s.%s' %
+                      (controller or 'images', method))
+
+        client.call.side_effect = fake_call
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        ret_image = service.create(ctx, image_meta)
+
+        translated_image_meta = copy.copy(image_meta)
+        # The instance_owner property should have been popped off and not sent
+        # to glance during the create() call.
+        translated_image_meta['properties'].pop('instance_owner', None)
+        trans_to_mock.assert_called_once_with(translated_image_meta)
+        # glanceclient should be called twice:
+        # - once for the image create
+        # - once for sharing the image with the instance owner
+        self.assertEqual(2, client.call.call_count)
+        trans_from_mock.assert_called_once_with(translated)
+        self.assertEqual(mock.sentinel.trans_from, ret_image)
 
     @mock.patch('nova.image.glance._reraise_translated_exception')
     @mock.patch('nova.image.glance._translate_from_glance')

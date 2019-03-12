@@ -38,8 +38,7 @@ class SnapshotOps(object):
     def _save_glance_image(self, context, image_id, image_vhd_path):
         (glance_image_service,
          image_id) = glance.get_remote_image_service(context, image_id)
-        image_metadata = {"is_public": False,
-                          "disk_format": "vhd",
+        image_metadata = {"disk_format": "vhd",
                           "container_format": "bare"}
         with self._pathutils.open(image_vhd_path, 'rb') as f:
             glance_image_service.update(context, image_id, image_metadata, f,

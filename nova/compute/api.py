@@ -3093,7 +3093,7 @@ class API(base.Base):
         :returns: the new image metadata
         """
         image_meta = compute_utils.initialize_instance_snapshot_metadata(
-            instance, name, extra_properties)
+            context, instance, name, extra_properties)
         # the new image is simply a bucket of properties (particularly the
         # block device mapping, kernel and ramdisk IDs) with no image data,
         # hence the zero size
