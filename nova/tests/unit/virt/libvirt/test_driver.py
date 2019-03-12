@@ -698,9 +698,6 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
                       lambda *a, **kw: None)
         self.stub_out('nova.virt.disk.api.extend',
                       lambda image, size, use_cow=False: None)
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.imagebackend.libvirt_utils',
-            fake_libvirt_utils))
 
     def _fake_instance(self, uuid):
         return objects.Instance(id=1, uuid=uuid)
