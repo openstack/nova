@@ -328,6 +328,28 @@ class GuestTestCase(test.NoDBTestCase):
         # Some time later, we can do the wait/retry to ensure detach
         self.assertRaises(exception.DeviceNotFound, retry_detach)
 
+    @mock.patch.object(libvirt_guest.Guest, "detach_device")
+    def test_detach_device_with_retry_operation_internal(self, mock_detach):
+        # This simulates a retry of the transient/live domain detach
+        # failing because the device is not found
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+        self.domain.isPersistent.return_value = True
+
+        get_config = mock.Mock(return_value=conf)
+        fake_device = "vdb"
+        fake_exc = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError, "",
+            error_message="operation failed: disk vdb not found",
+            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR,
+            error_domain=fakelibvirt.VIR_FROM_DOMAIN)
+        mock_detach.side_effect = [None, fake_exc]
+        retry_detach = self.guest.detach_device_with_retry(
+            get_config, fake_device, live=True,
+            inc_sleep_time=.01, max_retry_count=3)
+        # Some time later, we can do the wait/retry to ensure detach
+        self.assertRaises(exception.DeviceNotFound, retry_detach)
+
     def test_detach_device_with_retry_invalid_argument(self):
         # This simulates a persistent domain detach failing because
         # the device is not found
