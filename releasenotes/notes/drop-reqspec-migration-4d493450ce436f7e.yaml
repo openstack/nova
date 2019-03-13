@@ -5,6 +5,6 @@ upgrade:
     added in the 14.0.0 Newton release, has now been removed. Compatibility
     code in the controller services for old instances without a matching
     ``request_specs`` entry in the ``nova_api`` database is also gone.
-    Ensure that the ``'Request Spec Migration`` check in the
+    Ensure that the ``Request Spec Migration`` check in the
     ``nova-status upgrade check`` command is successful before upgrading to
     the 19.0.0 Stein release.
