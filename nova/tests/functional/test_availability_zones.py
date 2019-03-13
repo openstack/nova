@@ -165,10 +165,4 @@ class TestAvailabilityZoneScheduling(
         # Revert the resize and the server should be back in the original AZ.
         self.api.post_server_action(server['id'], {'revertResize': None})
         server = self._wait_for_state_change(self.api, server, 'ACTIVE')
-        # FIXME(mriedem): This is bug 1819963 where the API will show the
-        # source host AZ but the instance.availability_zone value in the DB
-        # is still wrong because nothing updated it on revert. Remove the
-        # explicit API check and uncomment the _assert_instance_az call when
-        # the bug is fixed.
-        self.assertEqual(original_az, server['OS-EXT-AZ:availability_zone'])
-        # self._assert_instance_az(server, original_az)
+        self._assert_instance_az(server, original_az)
