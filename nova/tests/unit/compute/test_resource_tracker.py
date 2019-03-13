@@ -2747,6 +2747,27 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
         self.assertFalse(upd_mock.called)
         self.assertEqual(mig1.status, "error")
 
+    @mock.patch('nova.objects.migration.Migration.save')
+    @mock.patch.object(resource_tracker.ResourceTracker,
+                       '_update_usage_from_migration')
+    def test_evacuate_and_resizing_states(self, mock_update_usage, mock_save):
+        self._setup_rt()
+        migration_context = objects.MigrationContext(migration_id=1)
+        instance = objects.Instance(
+            vm_state=vm_states.STOPPED, task_state=None,
+            migration_context=migration_context)
+        migration = objects.Migration(
+            source_compute='other-host', source_node='other-node',
+            dest_compute=_HOSTNAME, dest_node=_NODENAME,
+            instance_uuid=uuids.instance, id=1, instance=instance)
+        for state in task_states.rebuild_states + task_states.resizing_states:
+            instance.task_state = state
+            self.rt._update_usage_from_migrations(
+                mock.sentinel.ctx, [migration], _NODENAME)
+            mock_update_usage.assert_called_once_with(
+                mock.sentinel.ctx, instance, migration, _NODENAME)
+            mock_update_usage.reset_mock()
+
 
 class TestUpdateUsageFromInstance(BaseTestCase):
 
