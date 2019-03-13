@@ -897,11 +897,21 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param instance: the instance object.
         :returns: an InstanceInfo object
         """
-        try:
-            node = self._validate_instance_and_node(instance)
-        except exception.InstanceNotFound:
-            return hardware.InstanceInfo(
-                state=map_power_state(ironic_states.NOSTATE))
+        # we should already have a cache for our nodes, refreshed on every
+        # RT loop. but if we don't have a cache, generate it.
+        if not self.node_cache:
+            self._refresh_cache()
+
+        for node in self.node_cache.values():
+            if instance.uuid == node.instance_uuid:
+                break
+        else:
+            # if we can't find the instance, fall back to ironic
+            try:
+                node = self._validate_instance_and_node(instance)
+            except exception.InstanceNotFound:
+                return hardware.InstanceInfo(
+                    state=map_power_state(ironic_states.NOSTATE))
 
         return hardware.InstanceInfo(state=map_power_state(node.power_state))
 

@@ -1160,8 +1160,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertEqual(0, mock_get.call_count)
         mock_nr.assert_called_once_with(node)
 
+    @mock.patch.object(ironic_driver.IronicDriver, '_get_node_list')
+    @mock.patch.object(objects.InstanceList, 'get_uuids_by_host')
+    @mock.patch.object(objects.ServiceList, 'get_all_computes_by_hv_type')
     @mock.patch.object(FAKE_CLIENT.node, 'get_by_instance_uuid')
-    def test_get_info(self, mock_gbiu):
+    def test_get_info(self, mock_gbiu, mock_svc_by_hv,
+                      mock_uuids_by_host, mock_get_node_list):
         properties = {'memory_mb': 512, 'cpus': 2}
         power_state = ironic_states.POWER_ON
         node = _get_cached_node(
@@ -1169,24 +1173,95 @@ class IronicDriverTestCase(test.NoDBTestCase):
                 power_state=power_state)
 
         mock_gbiu.return_value = node
+        mock_svc_by_hv.return_value = []
+        mock_get_node_list.return_value = []
 
         # ironic_states.POWER_ON should be mapped to
         # nova_states.RUNNING
         instance = fake_instance.fake_instance_obj('fake-context',
                                                    uuid=self.instance_uuid)
+        mock_uuids_by_host.return_value = [instance.uuid]
         result = self.driver.get_info(instance)
         self.assertEqual(hardware.InstanceInfo(state=nova_states.RUNNING),
                          result)
+        mock_gbiu.assert_called_once_with(instance.uuid,
+                                          fields=ironic_driver._NODE_FIELDS)
 
+    @mock.patch.object(ironic_driver.IronicDriver, '_get_node_list')
+    @mock.patch.object(objects.InstanceList, 'get_uuids_by_host')
+    @mock.patch.object(objects.ServiceList, 'get_all_computes_by_hv_type')
     @mock.patch.object(FAKE_CLIENT.node, 'get_by_instance_uuid')
-    def test_get_info_http_not_found(self, mock_gbiu):
+    def test_get_info_cached(self, mock_gbiu, mock_svc_by_hv,
+                             mock_uuids_by_host, mock_get_node_list):
+        properties = {'memory_mb': 512, 'cpus': 2}
+        power_state = ironic_states.POWER_ON
+        node = _get_cached_node(
+                instance_uuid=self.instance_uuid, properties=properties,
+                power_state=power_state)
+
+        mock_gbiu.return_value = node
+        mock_svc_by_hv.return_value = []
+        mock_get_node_list.return_value = [node]
+
+        # ironic_states.POWER_ON should be mapped to
+        # nova_states.RUNNING
+        instance = fake_instance.fake_instance_obj('fake-context',
+                                                   uuid=self.instance_uuid)
+        mock_uuids_by_host.return_value = [instance.uuid]
+        result = self.driver.get_info(instance)
+        self.assertEqual(hardware.InstanceInfo(state=nova_states.RUNNING),
+                         result)
+        mock_gbiu.assert_not_called()
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_get_node_list')
+    @mock.patch.object(objects.InstanceList, 'get_uuids_by_host')
+    @mock.patch.object(objects.ServiceList, 'get_all_computes_by_hv_type')
+    @mock.patch.object(FAKE_CLIENT.node, 'get_by_instance_uuid')
+    def test_get_info_not_found_in_cache(self, mock_gbiu, mock_svc_by_hv,
+                                         mock_uuids_by_host,
+                                         mock_get_node_list):
+        properties = {'memory_mb': 512, 'cpus': 2}
+        power_state = ironic_states.POWER_ON
+        node = _get_cached_node(
+                instance_uuid=self.instance_uuid, properties=properties,
+                power_state=power_state)
+        node2 = _get_cached_node()
+
+        mock_gbiu.return_value = node
+        mock_svc_by_hv.return_value = []
+        mock_get_node_list.return_value = [node2]
+
+        # ironic_states.POWER_ON should be mapped to
+        # nova_states.RUNNING
+        instance = fake_instance.fake_instance_obj('fake-context',
+                                                   uuid=self.instance_uuid)
+        mock_uuids_by_host.return_value = [instance.uuid]
+        result = self.driver.get_info(instance)
+        self.assertEqual(hardware.InstanceInfo(state=nova_states.RUNNING),
+                         result)
+        mock_gbiu.assert_called_once()
+        mock_gbiu.assert_called_once_with(instance.uuid,
+                                          fields=ironic_driver._NODE_FIELDS)
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_get_node_list')
+    @mock.patch.object(objects.InstanceList, 'get_uuids_by_host')
+    @mock.patch.object(objects.ServiceList, 'get_all_computes_by_hv_type')
+    @mock.patch.object(FAKE_CLIENT.node, 'get_by_instance_uuid')
+    def test_get_info_http_not_found(self, mock_gbiu, mock_svc_by_hv,
+                                     mock_uuids_by_host, mock_get_node_list):
         mock_gbiu.side_effect = ironic_exception.NotFound()
+        mock_svc_by_hv.return_value = []
+        mock_get_node_list.return_value = []
 
         instance = fake_instance.fake_instance_obj(
                                   self.ctx, uuid=uuidutils.generate_uuid())
+        mock_uuids_by_host.return_value = [instance]
+        mock_uuids_by_host.return_value = [instance.uuid]
         result = self.driver.get_info(instance)
         self.assertEqual(hardware.InstanceInfo(state=nova_states.NOSTATE),
                          result)
+        mock_gbiu.assert_called_once_with(instance.uuid,
+                                          fields=ironic_driver._NODE_FIELDS)
 
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
