@@ -63,7 +63,7 @@
 
 - job:
     name: nova-tox-functional-py35
-    parent: openstack-tox
+    parent: openstack-tox-functional-py35
     description: |
       Run tox-based functional tests for the OpenStack Nova project
       under cPython version 3.5. with Nova specific irrelevant-files list.
