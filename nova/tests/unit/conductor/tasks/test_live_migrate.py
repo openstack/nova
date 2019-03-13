@@ -77,7 +77,9 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             servicegroup.API(), query.SchedulerQueryClient(),
             report.SchedulerReportClient(), self.fake_spec)
 
-    def test_execute_with_destination(self):
+    @mock.patch('nova.availability_zones.get_host_availability_zone',
+                return_value='fake-az')
+    def test_execute_with_destination(self, mock_get_az):
         dest_node = objects.ComputeNode(hypervisor_hostname='dest_node')
         with test.nested(
             mock.patch.object(self.task, '_check_host_is_up'),
@@ -112,6 +114,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 migration=self.migration,
                 migrate_data=None)
             self.assertTrue(mock_save.called)
+            mock_get_az.assert_called_once_with(self.context, self.destination)
+            self.assertEqual('fake-az', self.instance.availability_zone)
             # make sure the source/dest fields were set on the migration object
             self.assertEqual(self.instance.node, self.migration.source_node)
             self.assertEqual(dest_node.hypervisor_hostname,
@@ -131,7 +135,9 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         # modify the request spec
         self.ensure_network_metadata_mock.assert_not_called()
 
-    def test_execute_without_destination(self):
+    @mock.patch('nova.availability_zones.get_host_availability_zone',
+                return_value='nova')
+    def test_execute_without_destination(self, mock_get_az):
         self.destination = None
         self._generate_task()
         self.assertIsNone(self.task.destination)
@@ -159,6 +165,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 migration=self.migration,
                 migrate_data=None)
             self.assertTrue(mock_save.called)
+            mock_get_az.assert_called_once_with(self.context, 'found_host')
             self.assertEqual('found_host', self.migration.dest_compute)
             self.assertEqual('found_node', self.migration.dest_node)
             self.assertEqual(self.instance.node, self.migration.source_node)

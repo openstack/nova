@@ -14,6 +14,7 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 import six
 
+from nova import availability_zones
 from nova.compute import power_state
 from nova.compute import utils as compute_utils
 from nova.conductor.tasks import base
@@ -117,6 +118,10 @@ class LiveMigrationTask(base.TaskBase):
             # dest_node is a ComputeNode object, so we need to get the actual
             # node name off it to set in the Migration object below.
             dest_node = dest_node.hypervisor_hostname
+
+        self.instance.availability_zone = (
+            availability_zones.get_host_availability_zone(
+                self.context, self.destination))
 
         self.migration.source_node = self.instance.node
         self.migration.dest_node = dest_node
