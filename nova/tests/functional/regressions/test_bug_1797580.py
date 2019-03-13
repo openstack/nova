@@ -60,9 +60,9 @@ class ColdMigrateTargetHostThenLiveMigrateTest(
         self.start_service('conductor')
         self.start_service('scheduler')
 
+        self.addCleanup(fake.restore_nodes)
         for host in ('host1', 'host2'):
             fake.set_nodes([host])
-            self.addCleanup(fake.restore_nodes)
             self.start_service('compute', host=host)
 
     def test_cold_migrate_target_host_then_live_migrate(self):

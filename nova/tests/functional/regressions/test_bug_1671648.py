@@ -77,7 +77,6 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
         self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host1')
         fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host2')
 
         self.scheduler_service = self.start_service('scheduler')

@@ -68,7 +68,6 @@ class TestEvacuationWithSourceReturningDuringRebuild(
         self.computes['host1'] = self.start_service('compute', host='host1')
 
         fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.computes['host2'] = self.start_service('compute', host='host2')
 
         self.image_id = self.api.get_images()[0]['id']
