@@ -88,7 +88,8 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
             'retry_interval': CONF.ironic.api_retry_interval,
             'os_ironic_api_version': ['1.46', '1.38'],
             'endpoint':
-                self.get_ksa_adapter.return_value.get_endpoint.return_value}
+                self.get_ksa_adapter.return_value.get_endpoint.return_value,
+            'interface': ['internal', 'public']}
         mock_ir_cli.assert_called_once_with(1, **expected)
 
     @mock.patch.object(keystoneauth1.session, 'Session')
@@ -113,7 +114,8 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
                     'max_retries': CONF.ironic.api_max_retries,
                     'retry_interval': CONF.ironic.api_retry_interval,
                     'os_ironic_api_version': ['1.46', '1.38'],
-                    'endpoint': None}
+                    'endpoint': None,
+                    'interface': ['internal', 'public']}
         mock_ir_cli.assert_called_once_with(1, **expected)
 
     @mock.patch.object(keystoneauth1.session, 'Session')
@@ -131,7 +133,28 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
                     'max_retries': CONF.ironic.api_max_retries,
                     'retry_interval': CONF.ironic.api_retry_interval,
                     'os_ironic_api_version': ['1.46', '1.38'],
-                    'endpoint': endpoint}
+                    'endpoint': endpoint,
+                    'interface': ['internal', 'public']}
+        mock_ir_cli.assert_called_once_with(1, **expected)
+
+    @mock.patch.object(keystoneauth1.session, 'Session')
+    @mock.patch.object(ironic_client, 'get_client')
+    def test__get_client_and_valid_interfaces(self, mock_ir_cli, mock_session):
+        """Endpoint discovery via legacy api_endpoint conf option."""
+        mock_session.return_value = 'session'
+        endpoint = 'https://baremetal.example.com/endpoint'
+        self.flags(api_endpoint=endpoint, group='ironic')
+        self.flags(valid_interfaces='admin', group='ironic')
+        ironicclient = client_wrapper.IronicClientWrapper()
+        # dummy call to have _get_client() called
+        ironicclient.call("node.list")
+        self.get_ksa_adapter.assert_not_called()
+        expected = {'session': 'session',
+                    'max_retries': CONF.ironic.api_max_retries,
+                    'retry_interval': CONF.ironic.api_retry_interval,
+                    'os_ironic_api_version': ['1.46', '1.38'],
+                    'endpoint': endpoint,
+                    'interface': ['admin']}
         mock_ir_cli.assert_called_once_with(1, **expected)
 
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')
