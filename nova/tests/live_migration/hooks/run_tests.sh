@@ -43,13 +43,15 @@ echo '2. NFS testing is skipped due to setup failures with Ubuntu 16.04'
 #run_tempest  "NFS shared storage test" "live_migration"
 #nfs_teardown
 
-echo '3. test with Ceph for root + ephemeral disks'
-prepare_ceph
-GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
-configure_and_start_glance
+# TODO(gmann): unskip the ceph live migration testing once bug#1819944
+# is fixed for Bionic setup.
+#echo '3. test with Ceph for root + ephemeral disks'
+#prepare_ceph
+#GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
+#configure_and_start_glance
 
-configure_and_start_nova
-run_tempest "Ceph nova&glance test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
+#configure_and_start_nova
+#run_tempest "Ceph nova&glance test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
 
 set +e
 #echo '4. test with Ceph for volumes and root + ephemeral disk'
