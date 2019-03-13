@@ -849,7 +849,7 @@ one.
 
 Related options:
 
-* virt.use_cow_images
+* compute.use_cow_images
 * images_volume_group
 * [workarounds]/ensure_libvirt_rbd_instance_dir_cleanup
 """),
