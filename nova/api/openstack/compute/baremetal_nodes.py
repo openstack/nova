@@ -49,6 +49,9 @@ def _check_ironic_client_enabled():
 def _get_ironic_client():
     """return an Ironic client."""
     # TODO(NobodyCam): Fix insecure setting
+    # NOTE(efried): This should all be replaced by ksa adapter options; but the
+    # nova-to-baremetal API is deprecated, so not changing it.
+    # https://developer.openstack.org/api-ref/compute/#bare-metal-nodes-os-baremetal-nodes-deprecated  # noqa
     kwargs = {'os_username': CONF.ironic.admin_username,
               'os_password': CONF.ironic.admin_password,
               'os_auth_url': CONF.ironic.admin_url,
@@ -56,7 +59,7 @@ def _get_ironic_client():
               'os_service_type': 'baremetal',
               'os_endpoint_type': 'public',
               'insecure': 'true',
-              'endpoint': CONF.ironic.api_endpoint}
+              'endpoint': CONF.ironic.endpoint_override}
     # NOTE(mriedem): The 1 api_version arg here is the only valid value for
     # the client, but it's not even used so it doesn't really matter. The
     # ironic client wrapper in the virt driver actually uses a hard-coded

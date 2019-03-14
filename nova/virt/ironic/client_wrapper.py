@@ -107,34 +107,28 @@ class IronicClientWrapper(object):
 
         # NOTE(clenimar/efried): by default, the endpoint is taken from the
         # service catalog. Use `endpoint_override` if you want to override it.
-        if CONF.ironic.api_endpoint:
-            # NOTE(efried): `api_endpoint` still overrides service catalog and
-            # `endpoint_override` conf options. This will be removed in a
-            # future release.
-            ironic_url = CONF.ironic.api_endpoint
-        else:
-            try:
-                ksa_adap = utils.get_ksa_adapter(
-                    nova.conf.ironic.DEFAULT_SERVICE_TYPE,
-                    ksa_auth=auth_plugin, ksa_session=sess,
-                    min_version=(IRONIC_API_VERSION[0], 0),
-                    max_version=(IRONIC_API_VERSION[0], ks_disc.LATEST))
-                ironic_url = ksa_adap.get_endpoint()
-                ironic_url_none_reason = 'returned None'
-            except exception.ServiceNotFound:
-                # NOTE(efried): No reason to believe service catalog lookup
-                # won't also fail in ironic client init, but this way will
-                # yield the expected exception/behavior.
-                ironic_url = None
-                ironic_url_none_reason = 'raised ServiceNotFound'
+        try:
+            ksa_adap = utils.get_ksa_adapter(
+                nova.conf.ironic.DEFAULT_SERVICE_TYPE,
+                ksa_auth=auth_plugin, ksa_session=sess,
+                min_version=(IRONIC_API_VERSION[0], 0),
+                max_version=(IRONIC_API_VERSION[0], ks_disc.LATEST))
+            ironic_url = ksa_adap.get_endpoint()
+            ironic_url_none_reason = 'returned None'
+        except exception.ServiceNotFound:
+            # NOTE(efried): No reason to believe service catalog lookup
+            # won't also fail in ironic client init, but this way will
+            # yield the expected exception/behavior.
+            ironic_url = None
+            ironic_url_none_reason = 'raised ServiceNotFound'
 
-            if ironic_url is None:
-                LOG.warning("Could not discover ironic_url via keystoneauth1: "
-                            "Adapter.get_endpoint %s", ironic_url_none_reason)
-                # NOTE(eandersson): We pass in region here to make sure
-                # that the Ironic client can make an educated decision when
-                # we don't have a valid endpoint to pass on.
-                kwargs['region_name'] = ironic_conf.region_name
+        if ironic_url is None:
+            LOG.warning("Could not discover ironic_url via keystoneauth1: "
+                        "Adapter.get_endpoint %s", ironic_url_none_reason)
+            # NOTE(eandersson): We pass in region here to make sure
+            # that the Ironic client can make an educated decision when
+            # we don't have a valid endpoint to pass on.
+            kwargs['region_name'] = ironic_conf.region_name
 
         try:
             cli = ironic.client.get_client(IRONIC_API_VERSION[0],
