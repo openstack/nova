@@ -106,21 +106,6 @@ class Hypervisor(object):
         self._reqh.call('guest_create_network_interface',
                         name, distro, nets)
 
-    def guest_get_definition_info(self, name):
-        """Get user direct info
-
-        :returns: User direct is server definition, it will be
-                  returned in a string format
-        """
-        return self._reqh.call('guest_get_definition_info', name)
-
-    def guest_get_nic_vswitch_info(self, name):
-        """Get the nic and vswitch info
-
-        :returns: Return the nic and vswitch info in dict
-        """
-        return self._reqh.call('guest_get_nic_vswitch_info', name)
-
     def guest_config_minidisks(self, name, disk_list):
         self._reqh.call('guest_config_minidisks', name, disk_list)
 
