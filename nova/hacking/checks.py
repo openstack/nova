@@ -486,7 +486,7 @@ class CheckForUncalledTestClosure(BaseASTChecker):
     def visit_FunctionDef(self, node):
         # self._filename is 'stdin' in the unit test for this check.
         if (not os.path.basename(self._filename).startswith('test_') and
-            not 'stdin'):
+                os.path.basename(self._filename) != 'stdin'):
             return
 
         closures = []
