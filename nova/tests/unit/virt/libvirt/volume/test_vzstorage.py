@@ -110,4 +110,4 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.assertEqual('file', conf.source_type)
         self.assertEqual(file_path, conf.source_path)
         self.assertEqual('raw', conf.driver_format)
-        self.assertEqual('writethrough', conf.driver_cache)
+        self.assertEqual('writeback', conf.driver_cache)

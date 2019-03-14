@@ -71,7 +71,7 @@ class LibvirtVZStorageVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
                      self).get_config(connection_info, disk_info)
 
         conf.source_type = 'file'
-        conf.driver_cache = 'writethrough'
+        conf.driver_cache = 'writeback'
         conf.source_path = connection_info['data']['device_path']
         conf.driver_format = connection_info['data'].get('format', 'raw')
         return conf
