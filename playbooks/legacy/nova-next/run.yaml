@@ -38,7 +38,10 @@
           cat << 'EOF' >>"/tmp/dg-local.conf"
           [[local|localrc]]
           NOVA_USE_SERVICE_TOKEN=True
-          NOVA_CONSOLE_PROXY_COMPUTE_TLS=True
+          # TODO (gmann): enable TLS console proxy once
+          # bug#1819794 is fixed. Something to take care
+          # while moving these jobs to devstack zuulv3 jobs.
+          # NOVA_CONSOLE_PROXY_COMPUTE_TLS=True
           USE_PYTHON3=True
           ENABLE_VOLUME_MULTIATTACH=True
 
@@ -56,7 +59,10 @@
           set -e
           set -x
           # tls-proxy is needed to initialize the CA and cert.
-          export ENABLED_SERVICES=tls-proxy
+          # TODO (gmann): enable TLS console proxy once
+          # bug#1819794 is fixed. Something to take care
+          # while moving these jobs to devstack zuulv3 jobs
+          # export ENABLED_SERVICES=tls-proxy
           export PYTHONUNBUFFERED=true
           # Yes we want to run Tempest.
           export DEVSTACK_GATE_TEMPEST=1
