@@ -6669,13 +6669,11 @@ class ComputeTestCase(BaseTestCase,
                               '_get_instance_block_device_info'),
             mock.patch.object(self.compute.driver, 'get_volume_connector'),
             mock.patch.object(cinder.API, 'terminate_connection'),
-            mock.patch('nova.compute.resource_tracker.ResourceTracker.'
-                       'delete_allocation_for_migrated_instance'),
         ) as (
             migrate_instance_start, post_live_migration_at_destination,
             setup_networks_on_host, clear_events_for_instance,
             get_instance_volume_block_device_info, get_volume_connector,
-            terminate_connection, delete_alloc,
+            terminate_connection,
         ):
             get_volume_connector.return_value = 'fake-connector'
 

@@ -1391,45 +1391,13 @@ class ResourceTracker(object):
 
     def delete_allocation_for_evacuated_instance(self, context, instance, node,
                                                  node_type='source'):
-        self._delete_allocation_for_moved_instance(
-            context, instance, node, 'evacuated', node_type)
-
-    def delete_allocation_for_migrated_instance(self, context, instance, node):
-        self._delete_allocation_for_moved_instance(context, instance, node,
-                                                   'migrated')
-
-    def _delete_allocation_for_moved_instance(
-            self, context, instance, node, move_type, node_type='source'):
         # Clean up the instance allocation from this node in placement
         cn_uuid = self.compute_nodes[node].uuid
         if not self.reportclient.remove_provider_tree_from_instance_allocation(
                 context, instance.uuid, cn_uuid):
-            LOG.error("Failed to clean allocation of %s "
+            LOG.error("Failed to clean allocation of evacuated "
                       "instance on the %s node %s",
-                      move_type, node_type, cn_uuid, instance=instance)
-
-    def delete_allocation_for_failed_resize(self, context, instance, node,
-                                            flavor):
-        """Delete instance allocations for the node during a failed resize
-
-        :param context: The request context.
-        :param instance: The instance being resized/migrated.
-        :param node: The node provider on which the instance should have
-            allocations to remove. If this is a resize to the same host, then
-            the new_flavor resources are subtracted from the single allocation.
-        :param flavor: This is the new_flavor during a resize.
-        """
-        cn = self.compute_nodes[node]
-        if not self.reportclient.remove_provider_tree_from_instance_allocation(
-                context, instance.uuid, cn.uuid):
-            if instance.instance_type_id == flavor.id:
-                operation = 'migration'
-            else:
-                operation = 'resize'
-            LOG.error('Failed to clean allocation after a failed '
-                      '%(operation)s on node %(node)s',
-                      {'operation': operation, 'node': cn.uuid},
-                      instance=instance)
+                      node_type, cn_uuid, instance=instance)
 
     def _find_orphaned_instances(self):
         """Given the set of instances and migrations already account for
