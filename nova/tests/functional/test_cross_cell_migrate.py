@@ -13,10 +13,12 @@
 import mock
 
 from nova import context as nova_context
+from nova import exception
 from nova import objects
 from nova.scheduler import weights
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
+from nova.tests.unit import fake_notifier
 from nova.tests.unit.image import fake as fake_image
 from nova import utils
 
@@ -461,5 +463,76 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self._resize_and_validate(volume_backed=True, stopped=True)
         # TODO(mriedem): Confirm the resize and assert the guest remains off
 
-    # TODO(mriedem): Test a failure scenario where the server is recovered via
-    # rebuild in the source cell.
+    def test_finish_snapshot_based_resize_at_dest_spawn_fails(self):
+        """Negative test where the driver spawn fails on the dest host during
+        finish_snapshot_based_resize_at_dest which triggers a rollback of the
+        instance data in the target cell. Furthermore, the test will hard
+        reboot the server in the source cell to recover it from ERROR status.
+        """
+        # Create a volume-backed server. This is more interesting for rollback
+        # testing to make sure the volume attachments in the target cell were
+        # cleaned up on failure.
+        flavors = self.api.get_flavors()
+        server = self._create_server(flavors[0], volume_backed=True)
+
+        # Now mock out the spawn method on the destination host to fail
+        # during _finish_snapshot_based_resize_at_dest_spawn and then resize
+        # the server.
+        error = exception.HypervisorUnavailable(host='host2')
+        with mock.patch.object(self.computes['host2'].driver, 'spawn',
+                               side_effect=error):
+            flavor2 = flavors[1]['id']
+            body = {'resize': {'flavorRef': flavor2}}
+            self.api.post_server_action(server['id'], body)
+            # The server should go to ERROR state with a fault record and
+            # the API should still be showing the server from the source cell
+            # because the instance mapping was not updated.
+            server = self._wait_for_server_parameter(
+                self.admin_api, server,
+                {'status': 'ERROR', 'OS-EXT-STS:task_state': None})
+
+        # The migration should be in 'error' status.
+        self._wait_for_migration_status(server, ['error'])
+        # Assert a fault was recorded.
+        self.assertIn('fault', server)
+        self.assertIn('Connection to the hypervisor is broken',
+                      server['fault']['message'])
+        # The instance in the target cell DB should have been hard-deleted.
+        target_cell = self.cell_mappings['cell2']
+        ctxt = nova_context.get_admin_context(read_deleted='yes')
+        with nova_context.target_cell(ctxt, target_cell) as cctxt:
+            self.assertRaises(
+                exception.InstanceNotFound,
+                objects.Instance.get_by_uuid, cctxt, server['id'])
+
+        # Assert that there is only one volume attachment for the server, i.e.
+        # the one in the target cell was deleted.
+        self.assertEqual(1, self._count_volume_attachments(server['id']),
+                         self.cinder.volume_to_attachment)
+
+        # Assert that migration-based allocations were properly reverted. Since
+        # this happens in MigrationTask.rollback in conductor, we need to wait
+        # for something which happens after that, which is the
+        # ComputeTaskManager._cold_migrate method sending the
+        # compute_task.migrate_server.error event.
+        fake_notifier.wait_for_versioned_notifications(
+            'compute_task.migrate_server.error')
+        mig_uuid = self.get_migration_uuid_for_instance(server['id'])
+        mig_allocs = self._get_allocations_by_server_uuid(mig_uuid)
+        self.assertEqual({}, mig_allocs)
+        source_rp_uuid = self._get_provider_uuid_by_host(
+            server['OS-EXT-SRV-ATTR:host'])
+        server_allocs = self._get_allocations_by_server_uuid(server['id'])
+        self.assertFlavorMatchesAllocation(
+            flavors[0], server_allocs[source_rp_uuid]['resources'],
+            volume_backed=True)
+
+        # Now hard reboot the server in the source cell and it should go back
+        # to ACTIVE.
+        self.api.post_server_action(server['id'], {'reboot': {'type': 'HARD'}})
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # Now retry the resize without the fault in the target host to make
+        # sure things are OK (no duplicate entry errors in the target DB).
+        self.api.post_server_action(server['id'], body)
+        self._wait_for_state_change(self.admin_api, server, 'VERIFY_RESIZE')

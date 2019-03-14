@@ -209,7 +209,18 @@ class FakeDriver(driver.ComputeDriver):
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
-        pass
+        # If the guest is not on the hypervisor and we're doing a hard reboot
+        # then mimic the libvirt driver by spawning the guest.
+        if (instance.uuid not in self.instances and
+                reboot_type.lower() == 'hard'):
+            injected_files = admin_password = allocations = None
+            self.spawn(context, instance, instance.image_meta, injected_files,
+                       admin_password, allocations,
+                       block_device_info=block_device_info)
+        else:
+            # Just try to power on the guest.
+            self.power_on(context, instance, network_info,
+                          block_device_info=block_device_info)
 
     def get_host_ip_addr(self):
         return '192.168.0.1'
