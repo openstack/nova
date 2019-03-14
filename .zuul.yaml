@@ -120,6 +120,24 @@
       Config drive is forced on all instances.
     run: playbooks/legacy/nova-live-migration/run.yaml
     post-run: playbooks/legacy/nova-live-migration/post.yaml
+    irrelevant-files: &live-migration-irrelevant-files
+      # We define our own irrelevant-files because we need to run
+      # this if there are changes to nova/tests/live_migration/.
+      # TODO(mriedem): Move the nova/tests/live_migration/ scripts to gate/
+      # so this job can use the standard dsvm-irrelevant-files.
+      - ^api-.*$
+      - ^(test-|)requirements.txt$
+      - ^.*\.rst$
+      - ^.git.*$
+      - ^doc/.*$
+      - ^nova/hacking/.*$
+      - ^nova/locale/.*$
+      - ^nova/tests/(?!live_migration/).*$
+      - ^releasenotes/.*$
+      - ^setup.cfg$
+      - ^tests-py3.txt$
+      - ^tools/.*$
+      - ^tox.ini$
 
 - job:
     name: nova-lvm
@@ -208,24 +226,7 @@
       - openstack-dev/grenade
       - openstack-infra/devstack-gate
       - openstack/nova
-    irrelevant-files:
-      # We define our own irrelevant-files because we need to run
-      # this if there are changes to nova/tests/live_migration/.
-      # TODO(mriedem): Move the nova/tests/live_migration/ scripts to gate/
-      # so this job can use the standard dsvm-irrelevant-files.
-      - ^api-.*$
-      - ^(test-|)requirements.txt$
-      - ^.*\.rst$
-      - ^.git.*$
-      - ^doc/.*$
-      - ^nova/hacking/.*$
-      - ^nova/locale/.*$
-      - ^nova/tests/(?!live_migration/).*$
-      - ^releasenotes/.*$
-      - ^setup.cfg$
-      - ^tests-py3.txt$
-      - ^tools/.*$
-      - ^tox.ini$
+    irrelevant-files: *live-migration-irrelevant-files
 
 - project:
     # Please try to keep the list of job names sorted alphabetically.
