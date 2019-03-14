@@ -216,6 +216,22 @@ class InstanceHelperMixin(object):
 
         self.fail('The line "%(log_line)s" did not appear in the log')
 
+    def _create_aggregate(self, name, availability_zone=None):
+        """Creates a host aggregate with the given name and optional AZ
+
+        :param name: The name of the host aggregate
+        :param availability_zone: Optional availability zone that the aggregate
+            represents
+        :returns: The id value of the created aggregate
+        """
+        api = getattr(self, 'admin_api', self.api)
+        body = {
+            'aggregate': {
+                'name': name, 'availability_zone': availability_zone
+            }
+        }
+        return api.post_aggregate(body)['id']
+
 
 class _IntegratedTestBase(test.TestCase):
     REQUIRES_LOCKING = True
