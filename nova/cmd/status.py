@@ -44,9 +44,6 @@ from nova import version
 
 CONF = nova.conf.CONF
 
-PLACEMENT_DOCS_LINK = 'https://docs.openstack.org/nova/latest' \
-                      '/user/placement.html'
-
 # NOTE(efried): 1.30 is required by nova-compute to support resource provider
 # reshaping (inventory and allocation data migration).
 # NOTE: If you bump this version, remember to update the history
