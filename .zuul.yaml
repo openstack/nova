@@ -39,7 +39,6 @@
       - openstack/nova
       - openstack/tempest
     irrelevant-files: *dsvm-irrelevant-files
-    nodeset: legacy-ubuntu-xenial-2-node
 
 - job:
     name: nova-tox-functional
