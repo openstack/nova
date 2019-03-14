@@ -34,8 +34,6 @@ from nova.policies import volumes as vol_policies
 from nova.policies import volumes_attachments as va_policies
 from nova.volume import cinder
 
-ALIAS = "os-volumes"
-
 
 def _translate_volume_detail_view(context, vol):
     """Maps keys for volumes details view."""
