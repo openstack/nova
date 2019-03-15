@@ -418,10 +418,11 @@ class FilterScheduler(driver.Scheduler):
                           if w.weight == weighed_hosts[0].weight]
             random.shuffle(best_hosts)
             weighed_hosts = best_hosts + weighed_hosts[len(best_hosts):]
+        # Log the weighed hosts before stripping off the wrapper class so that
+        # the weight value gets logged.
+        LOG.debug("Weighed %(hosts)s", {'hosts': weighed_hosts})
         # Strip off the WeighedHost wrapper class...
         weighed_hosts = [h.obj for h in weighed_hosts]
-
-        LOG.debug("Weighed %(hosts)s", {'hosts': weighed_hosts})
 
         # We randomize the first element in the returned list to alleviate
         # congestion where the same host is consistently selected among
