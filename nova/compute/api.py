@@ -2134,7 +2134,9 @@ class API(base.Base):
 
     def _confirm_resize_on_deleting(self, context, instance):
         # If in the middle of a resize, use confirm_resize to
-        # ensure the original instance is cleaned up too
+        # ensure the original instance is cleaned up too along
+        # with its allocations (and migration-based allocations)
+        # in placement.
         migration = None
         for status in ('finished', 'confirming'):
             try:
