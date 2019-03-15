@@ -72,17 +72,6 @@ Key areas we are evolving
 Here we discuss, at a high level, areas that are being addressed as part of
 the scheduler evolution work.
 
-Fixing the Scheduler DB model
-------------------------------
-
-We need the nova and scheduler data models to be independent of each other.
-
-The first step is breaking the link between the ComputeNode and Service
-DB tables. In theory where the Service information is stored should be
-pluggable through the service group API, and should be independent of the
-scheduler service. For example, it could be managed via zookeeper rather
-than polling the nova DB.
-
 Versioning Scheduler Placement Interfaces
 ------------------------------------------
 
