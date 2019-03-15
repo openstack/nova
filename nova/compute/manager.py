@@ -1706,7 +1706,7 @@ class ComputeManager(manager.Manager):
                                         bdms=None):
         """Transform block devices to the driver block_device format."""
 
-        if not bdms:
+        if bdms is None:
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
         block_device_info = driver.get_block_device_info(instance, bdms)
@@ -5996,6 +5996,9 @@ class ComputeManager(manager.Manager):
 
                     # save current attachment so we can detach it on success,
                     # or restore it on a rollback.
+                    # NOTE(mdbooth): This data is no longer used by the source
+                    # host since change I0390c9ff. We can't remove it until we
+                    # are sure the source host has been upgraded.
                     migrate_data.old_vol_attachment_ids[bdm.volume_id] = \
                         bdm.attachment_id
 
@@ -6113,13 +6116,15 @@ class ComputeManager(manager.Manager):
         # done on source/destination. For now, this is just here for status
         # reporting
         self._set_migration_status(migration, 'preparing')
+        source_bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
 
         events = self._get_neutron_events_for_live_migration(instance)
         try:
             if ('block_migration' in migrate_data and
                     migrate_data.block_migration):
                 block_device_info = self._get_instance_block_device_info(
-                    context, instance)
+                    context, instance, bdms=source_bdms)
                 disk = self.driver.get_instance_disk_info(
                     instance, block_device_info=block_device_info)
             else:
@@ -6161,10 +6166,19 @@ class ComputeManager(manager.Manager):
 
         if migrate_data:
             migrate_data.migration = migration
+
+        # NOTE(mdbooth): pre_live_migration will update connection_info and
+        # attachment_id on all volume BDMS to reflect the new destination
+        # host attachment. We fetch BDMs before that to retain connection_info
+        # and attachment_id relating to the source host for post migration
+        # cleanup.
+        post_live_migration = functools.partial(self._post_live_migration,
+                                                source_bdms=source_bdms)
+
         LOG.debug('live_migration data is %s', migrate_data)
         try:
             self.driver.live_migration(context, instance, dest,
-                                       self._post_live_migration,
+                                       post_live_migration,
                                        self._rollback_live_migration,
                                        block_migration, migrate_data)
         except Exception:
@@ -6296,8 +6310,9 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @wrap_instance_fault
-    def _post_live_migration(self, ctxt, instance,
-                            dest, block_migration=False, migrate_data=None):
+    def _post_live_migration(self, ctxt, instance, dest,
+                             block_migration=False, migrate_data=None,
+                             source_bdms=None):
         """Post operations for live migration.
 
         This method is called from live_migration
@@ -6308,24 +6323,25 @@ class ComputeManager(manager.Manager):
         :param dest: destination host
         :param block_migration: if true, prepare for block migration
         :param migrate_data: if not None, it is a dict which has data
+        :param source_bdms: BDMs prior to modification by the destination
+                            compute host. Set by _do_live_migration and not
+                            part of the callback interface, so this is never
+                            None
         required for live migration without shared storage
 
         """
         LOG.info('_post_live_migration() is started..',
                  instance=instance)
 
-        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, instance.uuid)
-
         # Cleanup source host post live-migration
         block_device_info = self._get_instance_block_device_info(
-                            ctxt, instance, bdms=bdms)
+                            ctxt, instance, bdms=source_bdms)
         self.driver.post_live_migration(ctxt, instance, block_device_info,
                                         migrate_data)
 
         # Detaching volumes.
         connector = self.driver.get_volume_connector(instance)
-        for bdm in bdms:
+        for bdm in source_bdms:
             if bdm.is_volume:
                 # Detaching volumes is a call to an external API that can fail.
                 # If it does, we need to handle it gracefully so that the call
@@ -6350,10 +6366,9 @@ class ComputeManager(manager.Manager):
                     else:
                         # cinder v3.44 api flow - delete the old attachment
                         # for the source host
-                        old_attachment_id = \
-                            migrate_data.old_vol_attachment_ids[bdm.volume_id]
                         self.volume_api.attachment_delete(ctxt,
-                                                          old_attachment_id)
+                                                          bdm.attachment_id)
+
                 except Exception as e:
                     if bdm.attachment_id is None:
                         LOG.error('Connection for volume %s not terminated on '
@@ -6363,7 +6378,7 @@ class ComputeManager(manager.Manager):
                     else:
                         LOG.error('Volume attachment %s not deleted on source '
                                   'host %s during post_live_migration: %s',
-                                  old_attachment_id, self.host,
+                                  bdm.attachment_id, self.host,
                                   six.text_type(e), instance=instance)
 
         # Releasing vlan.
