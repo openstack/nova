@@ -238,6 +238,7 @@
       - openstack-python-jobs
       - openstack-python35-jobs
       - openstack-python36-jobs
+      - openstack-python37-jobs
       - periodic-stable-jobs
       - publish-openstack-docs-pti
       - release-notes-jobs-python3
@@ -319,7 +320,6 @@
             irrelevant-files: *dsvm-irrelevant-files
         - os-vif-ovs:
             irrelevant-files: *dsvm-irrelevant-files
-        - openstack-tox-py37
         # NOTE(mriedem): Consider moving nova-tox-functional-py36 to the
         # check and gate queues once it's stable (like openstack-python36-jobs)
         - nova-tox-functional-py36
