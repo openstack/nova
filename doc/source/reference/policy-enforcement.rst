@@ -15,7 +15,7 @@
       under the License.
 
 
-Rest API Policy Enforcement
+REST API Policy Enforcement
 ===========================
 
 Here is a vision of how we want policy to be enforced in nova.
