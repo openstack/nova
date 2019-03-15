@@ -89,15 +89,15 @@ it is expected that gap with shrink over time.
 Driver Parity
 **************
 
-Our goal for the Nova API to provide a consistent abstraction to access
+Our goal for the Nova API is to provide a consistent abstraction to access
 on demand compute resources. We are not aiming to expose all features of all
 hypervisors. Where the details of the underlying hypervisor leak through
 our APIs, we have failed in this goal, and we must work towards better
-abstractions that are more interoperable.
+abstractions that are more `interoperable`_.
 This is one reason why we put so much emphasis on the use of Tempest in third
 party CI systems.
 
-The key tenant of driver parity is that if a feature is supported in a driver,
+The key tenet of driver parity is that if a feature is supported in a driver,
 it must feel the same to users, as if they where using any of the other
 drivers that also support that feature. The exception is that, if possible for
 widely different performance characteristics, but the effect of that API call
@@ -107,10 +107,12 @@ Following on from that, should a feature only be added to one of the drivers,
 we must make every effort to ensure another driver could be implemented to
 match that behavior.
 
-Its important that drivers support enough features, so the API actually
+It is important that drivers support enough features, so the API actually
 provides a consistent abstraction. For example, being unable to create a
-server or delete a server, would severely undermine that goal.
+server or delete a server would severely undermine that goal.
 In fact, Nova only ever manages resources it creates.
+
+.. _interoperable: https://www.openstack.org/brand/interop/
 
 Upgrades
 ---------
