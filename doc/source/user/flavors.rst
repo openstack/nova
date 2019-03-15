@@ -732,3 +732,48 @@ Forbidden traits
     Traits can be managed using the `osc-placement plugin`_.
 
 .. _osc-placement plugin: https://docs.openstack.org/osc-placement/latest/index.html
+
+Numbered groupings of resource classes and traits
+    Added in the 18.0.0 Rocky release.
+
+    Specify numbered groupings of resource classes and traits.
+
+    The syntax is as follows (``N`` and ``VALUE`` are integers):
+
+    .. parsed-literal::
+
+      resources\ *N*:*<resource_class_name>*\ =\ *VALUE*
+      trait\ *N*:*<trait_name>*\ =required
+
+    A given numbered ``resources`` or ``trait`` key may be repeated to
+    specify multiple resources/traits in the same grouping,
+    just as with the un-numbered syntax.
+
+    Specify inter-group affinity policy via the ``group_policy`` key,
+    which may have the following values:
+
+    * ``isolate``: Different numbered request groups will be satisfied by
+      *different* providers.
+    * ``none``: Different numbered request groups may be satisfied
+      by different providers *or* common providers.
+
+    For example, to create a server with the following VFs:
+
+    * One SR-IOV virtual function (VF) on NET1 with bandwidth 10000 bytes/sec
+    * One SR-IOV virtual function (VF) on NET2 with bandwidth 20000 bytes/sec
+      on a *different* NIC with SSL acceleration
+
+    It is specified in the extra specs as follows::
+
+      resources1:SRIOV_NET_VF=1
+      resources1:NET_EGRESS_BYTES_SEC=10000
+      trait1:CUSTOM_PHYSNET_NET1=required
+      resources2:SRIOV_NET_VF=1
+      resources2:NET_EGRESS_BYTES_SEC:20000
+      trait2:CUSTOM_PHYSNET_NET2=required
+      trait2:HW_NIC_ACCEL_SSL=required
+      group_policy=isolate
+
+    See `Granular Resource Request Syntax`_ for more details.
+
+.. _Granular Resource Request Syntax: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/granular-resource-requests.html
