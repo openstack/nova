@@ -66,7 +66,3 @@ this was to change to process to be the following:
 This new process means the scheduler only deals with scheduling, the compute
 only deals with building an instance, and the conductor manages the workflow.
 The code is now cleaner in the scheduler and computes.
-
-The resize/migrate process has not yet been fully converted to a style to take
-advantage of what conductor can provide so expect that this will change over
-time.
