@@ -122,3 +122,17 @@ class InstanceObjectTestCase(test.TestCase):
         self.assertEqual(1, count_hit)
         inst3 = objects.Instance.get_by_uuid(self.context, uuid3)
         self.assertEqual('nova-test', inst3.availability_zone)
+
+    def test_get_count_by_hosts(self):
+        self._create_instance(host='fake_host1')
+        self._create_instance(host='fake_host1')
+        self._create_instance(host='fake_host2')
+        count = objects.InstanceList.get_count_by_hosts(
+            self.context, hosts=['fake_host1'])
+        self.assertEqual(2, count)
+        count = objects.InstanceList.get_count_by_hosts(
+            self.context, hosts=['fake_host2'])
+        self.assertEqual(1, count)
+        count = objects.InstanceList.get_count_by_hosts(
+            self.context, hosts=['fake_host1', 'fake_host2'])
+        self.assertEqual(3, count)
