@@ -16075,6 +16075,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             guest.domtype = ['kvm']
             caps.guests.append(guest)
 
+            # Include one that is not known to nova to make sure it
+            # does not trip us up.
+            guest = vconfig.LibvirtConfigGuest()
+            guest.ostype = 'hvm'
+            guest.arch = 'itanic'
+            guest.domtype = ['kvm']
+            caps.guests.append(guest)
+
             return caps
 
         self.stub_out('nova.virt.libvirt.host.Host.get_capabilities',
