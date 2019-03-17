@@ -36,13 +36,13 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_processutils
-from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova import utils
 from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt.storage import rbd_utils
+from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = nova.conf.CONF
 
@@ -82,7 +82,7 @@ class _ImageTestCase(object):
         self.CONTEXT = context.get_admin_context()
 
         self.PATH = os.path.join(
-            fake_libvirt_utils.get_instance_path(self.INSTANCE), self.NAME)
+            libvirt_utils.get_instance_path(self.INSTANCE), self.NAME)
 
         # TODO(mikal): rename template_dir to base_dir and template_path
         # to cached_image_path. This will be less confusing.
@@ -92,10 +92,6 @@ class _ImageTestCase(object):
         # Ensure can_fallocate is not initialised on the class
         if hasattr(self.image_class, 'can_fallocate'):
             del self.image_class.can_fallocate
-
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.imagebackend.libvirt_utils',
-            fake_libvirt_utils))
 
         # This will be used to mock some decorations like utils.synchronize
         def _fake_deco(func):
@@ -368,7 +364,7 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
             self.assertFalse(image.resize_image.called)
 
     @mock.patch.object(imagebackend.disk, 'extend')
-    @mock.patch.object(fake_libvirt_utils, 'copy_image')
+    @mock.patch('nova.virt.libvirt.utils.copy_image')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.privsep.path.utime')
     def test_create_image(self, mock_utime, mock_sync, mock_copy, mock_extend):
@@ -384,7 +380,7 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
         mock_utime.assert_called()
 
     @mock.patch.object(imagebackend.disk, 'extend')
-    @mock.patch.object(fake_libvirt_utils, 'copy_image')
+    @mock.patch('nova.virt.libvirt.utils.copy_image')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     def test_create_image_generated(self, mock_sync, mock_copy, mock_extend):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
@@ -399,7 +395,7 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertFalse(mock_extend.called)
 
     @mock.patch.object(imagebackend.disk, 'extend')
-    @mock.patch.object(fake_libvirt_utils, 'copy_image')
+    @mock.patch('nova.virt.libvirt.utils.copy_image')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch.object(images, 'qemu_img_info',
                        return_value=imageutils.QemuImgInfo())
@@ -529,7 +525,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         mock_exists.assert_has_calls(exist_calls)
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
-    @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
+    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch('nova.privsep.path.utime')
     def test_create_image(self, mock_utime, mock_extend, mock_create,
@@ -547,7 +543,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         mock_utime.assert_called()
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
-    @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
+    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(os.path, 'exists', side_effect=[])
     @mock.patch.object(imagebackend.Image, 'verify_base_size')
@@ -577,7 +573,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         mock_utime.assert_called()
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
-    @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
+    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(os.path, 'exists', side_effect=[])
     @mock.patch.object(imagebackend.Qcow2, 'get_disk_size')
@@ -602,12 +598,12 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertFalse(mock_extend.called)
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
-    @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
-    @mock.patch.object(fake_libvirt_utils, 'get_disk_backing_file')
+    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
+    @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(os.path, 'exists', side_effect=[])
     @mock.patch.object(imagebackend.Image, 'verify_base_size')
-    @mock.patch.object(fake_libvirt_utils, 'copy_image')
+    @mock.patch('nova.virt.libvirt.utils.copy_image')
     @mock.patch('nova.privsep.path.utime')
     def test_generate_resized_backing_files(self, mock_utime, mock_copy,
                                             mock_verify, mock_exist,
@@ -641,8 +637,8 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         mock_utime.assert_called()
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
-    @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
-    @mock.patch.object(fake_libvirt_utils, 'get_disk_backing_file')
+    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
+    @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(os.path, 'exists', side_effect=[])
     @mock.patch.object(imagebackend.Image, 'verify_base_size')
@@ -972,10 +968,6 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 mock.patch.object(self.dmcrypt, 'create_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'delete_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'list_volumes', mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'create_lvm_image',
-                                  mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'remove_logical_volumes',
-                                  mock.Mock()),
                 mock.patch('nova.privsep.qemu.convert_image'),
                 mock.patch.object(compute_utils, 'disk_ops_semaphore')):
             fn = mock.Mock()
@@ -1010,10 +1002,6 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 mock.patch.object(self.dmcrypt, 'create_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'delete_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'list_volumes', mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'create_lvm_image',
-                                  mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'remove_logical_volumes',
-                                  mock.Mock()),
                 mock.patch('nova.privsep.qemu.convert_image')):
             fn = mock.Mock()
 
@@ -1049,10 +1037,6 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 mock.patch.object(self.dmcrypt, 'create_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'delete_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'list_volumes', mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'create_lvm_image',
-                                  mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'remove_logical_volumes',
-                                  mock.Mock()),
                 mock.patch('nova.privsep.qemu.convert_image'),
                 mock.patch.object(compute_utils, 'disk_ops_semaphore')):
             fn = mock.Mock()
@@ -1111,10 +1095,6 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 mock.patch.object(self.dmcrypt, 'create_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'delete_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'list_volumes', mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'create_lvm_image',
-                                  mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'remove_logical_volumes',
-                                  mock.Mock()),
                 mock.patch.object(self.utils, 'execute', mock.Mock())):
             fn = mock.Mock()
             self.lvm.create_volume.side_effect = RuntimeError()
@@ -1152,10 +1132,6 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 mock.patch.object(self.dmcrypt, 'create_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'delete_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'list_volumes', mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'create_lvm_image',
-                                  mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'remove_logical_volumes',
-                                  mock.Mock()),
                 mock.patch.object(self.utils, 'execute', mock.Mock())):
             fn = mock.Mock()
             self.dmcrypt.create_volume.side_effect = RuntimeError()
@@ -1198,10 +1174,6 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 mock.patch.object(self.dmcrypt, 'create_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'delete_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'list_volumes', mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'create_lvm_image',
-                                  mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'remove_logical_volumes',
-                                  mock.Mock()),
                 mock.patch.object(self.utils, 'execute', mock.Mock())):
             fn = mock.Mock()
             fn.side_effect = RuntimeError()
@@ -1244,10 +1216,6 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 mock.patch.object(self.dmcrypt, 'create_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'delete_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'list_volumes', mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'create_lvm_image',
-                                  mock.Mock()),
-                mock.patch.object(self.libvirt_utils, 'remove_logical_volumes',
-                                  mock.Mock()),
                 mock.patch.object(self.utils, 'execute', mock.Mock())):
             fn = mock.Mock()
             fn.side_effect = RuntimeError()
@@ -1756,7 +1724,7 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
     @mock.patch.object(imagebackend.Ploop, 'get_disk_size',
                        return_value=2048)
     @mock.patch.object(imagebackend.utils, 'synchronized')
-    @mock.patch.object(fake_libvirt_utils, 'copy_image')
+    @mock.patch('nova.virt.libvirt.utils.copy_image')
     @mock.patch('nova.privsep.libvirt.ploop_restore_descriptor')
     @mock.patch.object(imagebackend.disk, 'extend')
     def test_create_image(self, mock_extend, mock_ploop_restore_descriptor,
