@@ -351,6 +351,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             mock.call(expected_url, mock.ANY, version='1.28',
                       global_request_id=self.context.global_id)] * 2)
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
     def test_put_allocations_retry_gives_up(self, mock_put):
 
@@ -987,6 +988,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         self.assertTrue(res)
 
+    @mock.patch('time.sleep', new=mock.Mock())
     def test_claim_resources_fail_due_to_rp_generation_retry_success(self):
         get_resp_mock = mock.Mock(status_code=200)
         get_resp_mock.json.return_value = {
@@ -3663,6 +3665,7 @@ class TestAllocations(SchedulerReportClientTestCase):
             ],
             mock_put.mock_calls)
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient.put")
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
     def test_remove_res_from_alloc_run_out_of_retries(
