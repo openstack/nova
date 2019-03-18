@@ -917,7 +917,7 @@ class ResourceTracker(object):
             return True
         return False
 
-    def _get_traits(self, nodename, provider_tree=None):
+    def _get_traits(self, nodename, provider_tree):
         # Get the traits from the ProviderTree which will be the set
         # of virt-owned traits plus any externally defined traits set
         # on the provider that aren't owned by the virt driver.
