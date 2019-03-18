@@ -269,14 +269,19 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         consumer_uuid = mock.sentinel.consumer
         data = {"MEMORY_MB": 1024}
         expected_url = "/allocations/%s" % consumer_uuid
-        resp = self.client.put_allocations(self.context, rp_uuid,
-                                           consumer_uuid, data,
-                                           mock.sentinel.project_id,
-                                           mock.sentinel.user_id,
-                                           mock.sentinel.consumer_generation)
+        payload = {
+            "allocations": {
+                rp_uuid: {"resources": data}
+            },
+            "project_id": mock.sentinel.project_id,
+            "user_id": mock.sentinel.user_id,
+            "consumer_generation": mock.sentinel.consumer_generation
+        }
+        resp = self.client.put_allocations(
+            self.context, consumer_uuid, payload)
         self.assertTrue(resp)
         mock_put.assert_called_once_with(
-            expected_url, mock.ANY, version='1.28',
+            expected_url, payload, version='1.28',
             global_request_id=self.context.global_id)
 
     @mock.patch.object(report.LOG, 'warning')
@@ -288,14 +293,20 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         consumer_uuid = mock.sentinel.consumer
         data = {"MEMORY_MB": 1024}
         expected_url = "/allocations/%s" % consumer_uuid
-        resp = self.client.put_allocations(self.context, rp_uuid,
-                                           consumer_uuid, data,
-                                           mock.sentinel.project_id,
-                                           mock.sentinel.user_id,
-                                           mock.sentinel.consumer_generation)
+        payload = {
+            "allocations": {
+                rp_uuid: {"resources": data}
+            },
+            "project_id": mock.sentinel.project_id,
+            "user_id": mock.sentinel.user_id,
+            "consumer_generation": mock.sentinel.consumer_generation
+        }
+        resp = self.client.put_allocations(
+            self.context, consumer_uuid, payload)
+
         self.assertFalse(resp)
         mock_put.assert_called_once_with(
-            expected_url, mock.ANY, version='1.28',
+            expected_url, payload, version='1.28',
             global_request_id=self.context.global_id)
         log_msg = mock_warn.call_args[0][0]
         self.assertIn("Failed to save allocation for", log_msg)
@@ -313,13 +324,17 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         consumer_uuid = mock.sentinel.consumer
         data = {"MEMORY_MB": 1024}
         expected_url = "/allocations/%s" % consumer_uuid
+        payload = {
+            "allocations": {
+                rp_uuid: {"resources": data}
+            },
+            "project_id": mock.sentinel.project_id,
+            "user_id": mock.sentinel.user_id,
+            "consumer_generation": mock.sentinel.consumer_generation
+        }
         self.assertRaises(exception.AllocationUpdateFailed,
                           self.client.put_allocations,
-                          self.context, rp_uuid,
-                          consumer_uuid, data,
-                          mock.sentinel.project_id,
-                          mock.sentinel.user_id,
-                          mock.sentinel.consumer_generation)
+                          self.context, consumer_uuid, payload)
 
         mock_put.assert_called_once_with(
             expected_url, mock.ANY, version='1.28',
@@ -343,14 +358,19 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         consumer_uuid = mock.sentinel.consumer
         data = {"MEMORY_MB": 1024}
         expected_url = "/allocations/%s" % consumer_uuid
-        resp = self.client.put_allocations(self.context, rp_uuid,
-                                           consumer_uuid, data,
-                                           mock.sentinel.project_id,
-                                           mock.sentinel.user_id,
-                                           mock.sentinel.consumer_generation)
+        payload = {
+            "allocations": {
+                rp_uuid: {"resources": data}
+            },
+            "project_id": mock.sentinel.project_id,
+            "user_id": mock.sentinel.user_id,
+            "consumer_generation": mock.sentinel.consumer_generation
+        }
+        resp = self.client.put_allocations(
+            self.context, consumer_uuid, payload)
         self.assertTrue(resp)
         mock_put.assert_has_calls([
-            mock.call(expected_url, mock.ANY, version='1.28',
+            mock.call(expected_url, payload, version='1.28',
                       global_request_id=self.context.global_id)] * 2)
 
     @mock.patch('time.sleep', new=mock.Mock())
@@ -369,14 +389,19 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         consumer_uuid = mock.sentinel.consumer
         data = {"MEMORY_MB": 1024}
         expected_url = "/allocations/%s" % consumer_uuid
-        resp = self.client.put_allocations(self.context, rp_uuid,
-                                           consumer_uuid, data,
-                                           mock.sentinel.project_id,
-                                           mock.sentinel.user_id,
-                                           mock.sentinel.consumer_generation)
+        payload = {
+            "allocations": {
+                rp_uuid: {"resources": data}
+            },
+            "project_id": mock.sentinel.project_id,
+            "user_id": mock.sentinel.user_id,
+            "consumer_generation": mock.sentinel.consumer_generation
+        }
+        resp = self.client.put_allocations(
+            self.context, consumer_uuid, payload)
         self.assertFalse(resp)
         mock_put.assert_has_calls([
-            mock.call(expected_url, mock.ANY, version='1.28',
+            mock.call(expected_url, payload, version='1.28',
             global_request_id=self.context.global_id)] * 3)
 
     def test_claim_resources_success(self):

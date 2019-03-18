@@ -21,6 +21,7 @@ import ddt
 import fixtures
 import mock
 from oslo_db import exception as db_exc
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
 from six.moves import StringIO
@@ -2469,8 +2470,9 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                 return_value=objects.ComputeNode(uuid=uuidsentinel.node))
     @mock.patch('nova.scheduler.utils.resources_from_flavor',
                 return_value=mock.sentinel.resources)
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'put_allocations', return_value=False)
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
+                return_value=fake_requests.FakeResponse(
+                    500, content=jsonutils.dumps({"errors": [{"code": ""}]})))
     def test_heal_allocations_put_allocations_fails(
             self, mock_put_allocations, mock_res_from_flavor,
             mock_get_compute_node, mock_get_allocs, mock_get_instances,
@@ -2481,46 +2483,20 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         instance = mock_get_instances.return_value[0]
         mock_res_from_flavor.assert_called_once_with(
             instance, instance.flavor)
-        mock_put_allocations.assert_called_once_with(
-            test.MatchType(context.RequestContext), uuidsentinel.node,
-            uuidsentinel.instance, mock.sentinel.resources, 'fake-project',
-            'fake-user', consumer_generation=None)
 
-    @mock.patch('nova.objects.CellMappingList.get_all',
-                return_value=objects.CellMappingList(objects=[
-                    objects.CellMapping(name='cell1',
-                                        uuid=uuidsentinel.cell1)]))
-    @mock.patch('nova.objects.InstanceList.get_by_filters',
-                return_value=objects.InstanceList(objects=[
-                    objects.Instance(
-                        uuid=uuidsentinel.instance, host='fake', node='fake',
-                        task_state=None, flavor=objects.Flavor(),
-                        project_id='fake-project', user_id='fake-user')]))
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_allocs_for_consumer', return_value={})
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
-                return_value=objects.ComputeNode(uuid=uuidsentinel.node))
-    @mock.patch('nova.scheduler.utils.resources_from_flavor',
-                return_value=mock.sentinel.resources)
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'put_allocations',
-                side_effect=exception.AllocationUpdateFailed(
-                    consumer_uuid=uuidsentinel.instance,
-                    error="consumer generation conflict"))
-    def test_heal_allocations_put_allocations_fails_with_consumer_conflict(
-            self, mock_put_allocations, mock_res_from_flavor,
-            mock_get_compute_node, mock_get_allocs, mock_get_instances,
-            mock_get_all_cells):
-        self.assertEqual(3, self.cli.heal_allocations())
-        self.assertIn('Failed to update allocations for consumer',
-                      self.output.getvalue())
-        instance = mock_get_instances.return_value[0]
-        mock_res_from_flavor.assert_called_once_with(
-            instance, instance.flavor)
+        expected_payload = {
+            'allocations': {
+                uuidsentinel.node: {
+                    'resources': mock.sentinel.resources
+                }
+            },
+            'user_id': 'fake-user',
+            'project_id': 'fake-project',
+            'consumer_generation': None
+        }
         mock_put_allocations.assert_called_once_with(
-            test.MatchType(context.RequestContext), uuidsentinel.node,
-            uuidsentinel.instance, mock.sentinel.resources, 'fake-project',
-            'fake-user', consumer_generation=None)
+            '/allocations/%s' % instance.uuid, expected_payload,
+            global_request_id=mock.ANY, version='1.28')
 
     @mock.patch('nova.objects.CellMappingList.get_all',
                 new=mock.Mock(return_value=objects.CellMappingList(objects=[
@@ -2560,8 +2536,8 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                     return_value=objects.ComputeNode(uuid=uuidsentinel.node)))
     @mock.patch('nova.scheduler.utils.resources_from_flavor',
                 new=mock.Mock(return_value=mock.sentinel.resources))
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'put_allocations', return_value=True)
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
+                return_value=fake_requests.FakeResponse(204))
     def test_heal_allocations_get_allocs_retrieval_fails(self, mock_put,
                                                          mock_getinst):
         # This "succeeds"
@@ -2612,7 +2588,8 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                 }
             },
             "project_id": uuidsentinel.project_id,
-            "user_id": uuidsentinel.user_id
+            "user_id": uuidsentinel.user_id,
+            "consumer_generation": 12,
         }
         self.assertEqual(0, self.cli.heal_allocations(verbose=True))
         self.assertIn('Processed 1 instances.', self.output.getvalue())
@@ -2623,7 +2600,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         expected_put_data['user_id'] = 'fake-user'
         mock_put.assert_called_once_with(
             '/allocations/%s' % uuidsentinel.instance, expected_put_data,
-            version='1.28')
+            global_request_id=mock.ANY, version='1.28')
 
     @mock.patch('nova.objects.CellMappingList.get_all',
                 return_value=objects.CellMappingList(objects=[
@@ -2639,8 +2616,11 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                 'get_allocs_for_consumer')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
                 return_value=fake_requests.FakeResponse(
-                    409, content='Inventory and/or allocations changed while '
-                                 'attempting to allocate'))
+                    409,
+                    content=jsonutils.dumps(
+                        {"errors": [
+                            {"code": "placement.concurrent_update",
+                             "detail": "consumer generation conflict"}]})))
     def test_heal_allocations_put_fails(
             self, mock_put, mock_get_allocs, mock_get_instances,
             mock_get_all_cells):
@@ -2666,7 +2646,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         }
         self.assertEqual(3, self.cli.heal_allocations(verbose=True))
         self.assertIn(
-            'Inventory and/or allocations changed', self.output.getvalue())
+            'consumer generation conflict', self.output.getvalue())
         mock_get_allocs.assert_called_once_with(
             test.MatchType(context.RequestContext), uuidsentinel.instance)
         expected_put_data = mock_get_allocs.return_value
@@ -2674,7 +2654,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         expected_put_data['user_id'] = 'fake-user'
         mock_put.assert_called_once_with(
             '/allocations/%s' % uuidsentinel.instance, expected_put_data,
-            version='1.28')
+            global_request_id=mock.ANY, version='1.28')
 
     @mock.patch('nova.compute.api.AggregateAPI.get_aggregate_list',
                 return_value=objects.AggregateList(objects=[

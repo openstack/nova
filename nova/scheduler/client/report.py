@@ -1930,27 +1930,17 @@ class SchedulerReportClient(object):
                      'text': r.text})
         return r.status_code == 204
 
+    # TODO(gibi): kill safe_connect
     @safe_connect
     @retries
-    def put_allocations(self, context, rp_uuid, consumer_uuid, alloc_data,
-                        project_id, user_id, consumer_generation):
-        """Creates allocation records for the supplied instance UUID against
-        the supplied resource provider.
-
-        :note Currently we only allocate against a single resource provider.
-              Once shared storage and things like NUMA allocations are a
-              reality, this will change to allocate against multiple providers.
+    def put_allocations(self, context, consumer_uuid, payload):
+        """Creates allocation records for the supplied consumer UUID based on
+        the provided allocation dict
 
         :param context: The security context
-        :param rp_uuid: The UUID of the resource provider to allocate against.
         :param consumer_uuid: The instance's UUID.
-        :param alloc_data: Dict, keyed by resource class, of amounts to
-                           consume.
-        :param project_id: The project_id associated with the allocations.
-        :param user_id: The user_id associated with the allocations.
-        :param consumer_generation: The current generation of the consumer or
-                                    None if this the initial allocation of the
-                                    consumer
+        :param payload: Dict in the format expected by the placement
+            PUT /allocations/{consumer_uuid} API
         :returns: True if the allocations were created, False otherwise.
         :raises: Retry if the operation should be retried due to a concurrent
                  resource provider update.
@@ -1958,14 +1948,6 @@ class SchedulerReportClient(object):
                                         generation conflict
         """
 
-        payload = {
-            'allocations': {
-                rp_uuid: {'resources': alloc_data},
-            },
-            'project_id': project_id,
-            'user_id': user_id,
-            'consumer_generation': consumer_generation
-        }
         r = self._put_allocations(context, consumer_uuid, payload)
         if r.status_code != 204:
             err = r.json()['errors'][0]
