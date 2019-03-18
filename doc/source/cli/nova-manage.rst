@@ -367,12 +367,36 @@ Nova Cells v2
 Placement
 ~~~~~~~~~
 
-``nova-manage placement heal_allocations [--max-count <max_count>] [--verbose] [--dry-run] [--instance <instance_uuid>]``
+``nova-manage placement heal_allocations [--max-count <max_count>] [--verbose] [--skip-port-allocations] [--dry-run] [--instance <instance_uuid>]``
     Iterates over non-cell0 cells looking for instances which do not have
     allocations in the Placement service and which are not undergoing a task
     state transition. For each instance found, allocations are created against
     the compute node resource provider for that instance based on the flavor
     associated with the instance.
+
+    Also if the instance has any port attached that has resource request
+    (e.g. :neutron-doc:`Quality of Service (QoS): Guaranteed Bandwidth
+    <admin/config-qos-min-bw.html>`) but the corresponding
+    allocation is not found then the allocation is created against the
+    network device resource providers according to the resource request of
+    that port. It is possible that the missing allocation cannot be created
+    either due to not having enough resource inventory on the host the instance
+    resides on or because more than one resource provider could fulfill the
+    request. In this case the instance needs to be manually deleted or the
+    port needs to be detached.  When nova `supports migrating instances
+    with guaranteed bandwidth ports`_, migration will heal missing allocations
+    for these instances.
+
+    Before the allocations for the ports are persisted in placement nova-manage
+    tries to update each port in neutron to refer to the resource provider UUID
+    which provides the requested resources. If any of the port updates fail in
+    neutron or the allocation update fails in placement the command tries to
+    roll back the partial updates to the ports. If the roll back fails
+    then the process stops with exit code ``7`` and the admin needs to do the
+    rollback in neutron manually according to the description in the exit code
+    section.
+
+    .. _supports migrating instances with guaranteed bandwidth ports: https://specs.openstack.org/openstack/nova-specs/specs/train/approved/support-move-ops-with-qos-ports.html
 
     There is also a special case handled for instances that *do* have
     allocations created before Placement API microversion 1.8 where project_id
@@ -393,6 +417,13 @@ Placement
     specified the ``--max-count`` option has no effect.
     *(Since 20.0.0 Train)*
 
+    Specify ``--skip-port-allocations`` to skip the healing of the resource
+    allocations of bound ports, e.g. healing bandwidth resource allocation for
+    ports having minimum QoS policy rules attached. If your deployment does
+    not use such a feature then the performance impact of querying neutron
+    ports for each instance can be avoided with this flag.
+    *(Since 20.0.0 Train)*
+
     This command requires that the ``[api_database]/connection`` and
     ``[placement]`` configuration options are set. Placement API >= 1.28 is
     required.
@@ -405,6 +436,14 @@ Placement
     * 3: Unable to create (or update) allocations for an instance against its
       compute node resource provider.
     * 4: Command completed successfully but no allocations were created.
+    * 5: Unable to query ports from neutron
+    * 6: Unable to update ports in neutron
+    * 7: Cannot roll back neutron port updates. Manual steps needed. The error
+      message will indicate which neutron ports need to be changed to clean up
+      ``binding:profile`` of the port::
+
+        $ openstack port unset <port_uuid> --binding-profile allocation
+
     * 127: Invalid input.
 
 ``nova-manage placement sync_aggregates [--verbose]``

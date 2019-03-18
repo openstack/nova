@@ -2412,6 +2412,8 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         self.output = StringIO()
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.cli = manage.PlacementCommands()
+        self.useFixture(
+            fixtures.MockPatch('nova.network.neutronv2.api.get_client'))
 
     @ddt.data(-1, 0, "one")
     def test_heal_allocations_invalid_max_count(self, max_count):
@@ -2469,7 +2471,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
                 return_value=objects.ComputeNode(uuid=uuidsentinel.node))
     @mock.patch('nova.scheduler.utils.resources_from_flavor',
-                return_value=mock.sentinel.resources)
+                return_value={'VCPU': 1})
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
                 return_value=fake_requests.FakeResponse(
                     500, content=jsonutils.dumps({"errors": [{"code": ""}]})))
@@ -2487,7 +2489,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         expected_payload = {
             'allocations': {
                 uuidsentinel.node: {
-                    'resources': mock.sentinel.resources
+                    'resources': {'VCPU': 1}
                 }
             },
             'user_id': 'fake-user',
@@ -2788,6 +2790,119 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                       "(%s)." % (uuidsentinel.rp_uuid, uuidsentinel.aggregate),
                       self.output.getvalue())
         self.assertIn("Conflict!", self.output.getvalue())
+
+    def test_has_request_but_no_allocation(self):
+        # False because there is a full resource_request and allocation set.
+        self.assertFalse(
+            self.cli._has_request_but_no_allocation(
+                {
+                    'id': uuidsentinel.healed,
+                    'resource_request': {
+                        'resources': {
+                            'NET_BW_EGR_KILOBIT_PER_SEC': 1000,
+                        },
+                        'required': [
+                            'CUSTOM_VNIC_TYPE_NORMAL'
+                        ]
+                    },
+                    'binding:profile': {'allocation': uuidsentinel.rp1}
+                }))
+        # True because there is a full resource_request but no allocation set.
+        self.assertTrue(
+            self.cli._has_request_but_no_allocation(
+                {
+                    'id': uuidsentinel.needs_healing,
+                    'resource_request': {
+                        'resources': {
+                            'NET_BW_EGR_KILOBIT_PER_SEC': 1000,
+                        },
+                        'required': [
+                            'CUSTOM_VNIC_TYPE_NORMAL'
+                        ]
+                    },
+                    'binding:profile': {}
+                }))
+        # True because there is a full resource_request but no allocation set.
+        self.assertTrue(
+            self.cli._has_request_but_no_allocation(
+                {
+                    'id': uuidsentinel.needs_healing_null_profile,
+                    'resource_request': {
+                        'resources': {
+                            'NET_BW_EGR_KILOBIT_PER_SEC': 1000,
+                        },
+                        'required': [
+                            'CUSTOM_VNIC_TYPE_NORMAL'
+                        ]
+                    },
+                    'binding:profile': None,
+                }))
+        # False because there are no resources in the resource_request.
+        self.assertFalse(
+            self.cli._has_request_but_no_allocation(
+                {
+                    'id': uuidsentinel.empty_resources,
+                    'resource_request': {
+                        'resources': {},
+                        'required': [
+                            'CUSTOM_VNIC_TYPE_NORMAL'
+                        ]
+                    },
+                    'binding:profile': {}
+                }))
+        # False because there are no resources in the resource_request.
+        self.assertFalse(
+            self.cli._has_request_but_no_allocation(
+                {
+                    'id': uuidsentinel.missing_resources,
+                    'resource_request': {
+                        'required': [
+                            'CUSTOM_VNIC_TYPE_NORMAL'
+                        ]
+                    },
+                    'binding:profile': {}
+                }))
+        # False because there are no required traits in the resource_request.
+        self.assertFalse(
+            self.cli._has_request_but_no_allocation(
+                {
+                    'id': uuidsentinel.empty_required,
+                    'resource_request': {
+                        'resources': {
+                            'NET_BW_EGR_KILOBIT_PER_SEC': 1000,
+                        },
+                        'required': []
+                    },
+                    'binding:profile': {}
+                }))
+        # False because there are no required traits in the resource_request.
+        self.assertFalse(
+            self.cli._has_request_but_no_allocation(
+                {
+                    'id': uuidsentinel.missing_required,
+                    'resource_request': {
+                        'resources': {
+                            'NET_BW_EGR_KILOBIT_PER_SEC': 1000,
+                        },
+                    },
+                    'binding:profile': {}
+                }))
+        # False because there are no resources or required traits in the
+        # resource_request.
+        self.assertFalse(
+            self.cli._has_request_but_no_allocation(
+                {
+                    'id': uuidsentinel.empty_resource_request,
+                    'resource_request': {},
+                    'binding:profile': {}
+                }))
+        # False because there is no resource_request.
+        self.assertFalse(
+            self.cli._has_request_but_no_allocation(
+                {
+                    'id': uuidsentinel.missing_resource_request,
+                    'binding:profile': {}
+                }))
 
 
 class TestNovaManageMain(test.NoDBTestCase):

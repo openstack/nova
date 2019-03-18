@@ -1601,7 +1601,9 @@ class NeutronFixture(fixtures.Fixture):
 
     def update_port(self, port_id, body=None):
         port = self._ports[port_id]
-        port.update(body['port'])
+        # We need to deepcopy here as well as the body can have a nested dict
+        # which can be modified by the caller after this update_port call
+        port.update(copy.deepcopy(body['port']))
         return {'port': copy.deepcopy(port)}
 
     def show_quota(self, project_id):
