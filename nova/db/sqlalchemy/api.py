@@ -1788,7 +1788,7 @@ def instance_destroy(context, instance_uuid, constraint=None):
     if uuidutils.is_uuid_like(instance_uuid):
         instance_ref = _instance_get_by_uuid(context, instance_uuid)
     else:
-        raise exception.InvalidUUID(instance_uuid)
+        raise exception.InvalidUUID(uuid=instance_uuid)
 
     query = model_query(context, models.Instance).\
                     filter_by(uuid=instance_uuid)
@@ -2772,7 +2772,7 @@ def _instance_metadata_update_in_place(context, instance, metadata_type, model,
 
 def _instance_update(context, instance_uuid, values, expected, original=None):
     if not uuidutils.is_uuid_like(instance_uuid):
-        raise exception.InvalidUUID(instance_uuid)
+        raise exception.InvalidUUID(uuid=instance_uuid)
 
     if expected is None:
         expected = {}
