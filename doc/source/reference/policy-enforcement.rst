@@ -112,31 +112,6 @@ This will affect EC2 API and V2.1 API. For EC2 API, it need deployer update
 their policy config. For V2.1 API, there isn't any user yet, so there won't
 any effect.
 
-
-Group the policy rules into different policy files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-After group the policy rules for different API, we can separate them into
-different files. Then deployer will more clear for which rule he can set for
-specific API. The rules can be grouped as below:
-
-* policy.json: It only contains the generic rule, like: ::
-
-  "context_is_admin":  "role:admin",
-  "admin_or_owner":  "is_admin:True or project_id:%(project_id)s",
-  "default": "rule:admin_or_owner",
-
-* policy.d/00-ec2-api.conf: It contains all the policy rules for EC2 API.
-
-* policy.d/00-v2-api.conf: It contains all the policy rules for nova V2 API.
-
-* policy.d/00-v2.1-api.conf: It contains all the policy rules for nova v2.1
-  API.
-
-The prefix '00-' is used to order the configure file. All the files in
-policy.d will be loaded by alphabetical order. '00-' means those files will
-be loaded very early.
-
 Existed Nova API being restricted
 ---------------------------------
 
