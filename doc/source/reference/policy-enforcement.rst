@@ -33,9 +33,6 @@ There are several problems for current API policy.
   rule for all the APIs. Deployer can't get better granularity control for
   the APIs.
 
-* More easy way to override default policy settings for deployer. And
-  Currently all the API(EC2, V2, V2.1) rules mix in one policy.json file.
-
 These are the kinds of things we need to make easier:
 
 1. Operator wants to enable a specific role to access the service API which
@@ -45,9 +42,6 @@ is not possible because there is currently a hard coded admin check.
 redundant check in the compute API can confuse developers and deployers.
 
 3. Operator can specify different rules for APIs that in same extension.
-
-4. Operator can override the default policy rule easily without mixing his own
-config and default config in one policy.json file.
 
 Future of policy enforcement
 ----------------------------
@@ -91,14 +85,6 @@ For Nova V2 API, the hard-code permission checks will be moved to REST API
 layer to guarantee it won't break the back-compatibility. That may ugly
 some hard-code permission check in API layer, but V2 API will be removed
 once V2.1 API ready, so our choice will reduce the risk.
-
-Port policy.d into nova
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This feature make deployer can override default policy rule easily. And
-When nova default policy config changed, deployer only need replace default
-policy config files with new one. It won't affect his own policy config in
-other files.
 
 Use different prefix in policy rule name for EC2/V2/V2.1 API
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
