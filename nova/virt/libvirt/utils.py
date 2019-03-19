@@ -541,6 +541,21 @@ def get_cpu_model_from_arch(arch):
     return mode
 
 
+def machine_type_mappings():
+    mappings = {}
+    for mapping in CONF.libvirt.hw_machine_type or {}:
+        host_arch, _, machine_type = mapping.partition('=')
+        if machine_type == '':
+            LOG.warning("Invalid hw_machine_type config value %s", mapping)
+        else:
+            mappings[host_arch] = machine_type
+    return mappings
+
+
+def get_default_machine_type(arch):
+    return machine_type_mappings().get(arch)
+
+
 def mdev_name2uuid(mdev_name):
     """Convert an mdev name (of the form mdev_<uuid_with_underscores>) to a
     uuid (of the form 8-4-4-4-12).

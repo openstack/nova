@@ -4227,13 +4227,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return meta
 
-    def _machine_type_mappings(self):
-        mappings = {}
-        for mapping in CONF.libvirt.hw_machine_type:
-            host_arch, _, machine_type = mapping.partition('=')
-            mappings[host_arch] = machine_type
-        return mappings
-
     def _get_machine_type(self, image_meta, caps):
         # The guest machine type can be set as an image metadata
         # property, or otherwise based on architecture-specific
@@ -4257,9 +4250,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 mach_type = 's390-ccw-virtio'
 
             # If set in the config, use that as the default.
-            if CONF.libvirt.hw_machine_type:
-                mappings = self._machine_type_mappings()
-                mach_type = mappings.get(caps.host.cpu.arch)
+            mach_type = (
+                libvirt_utils.get_default_machine_type(caps.host.cpu.arch)
+                or mach_type
+            )
 
         return mach_type
 
