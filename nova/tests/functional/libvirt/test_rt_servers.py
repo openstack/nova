@@ -13,6 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import io
+import mock
+
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -43,7 +46,16 @@ class RealTimeServersTest(base.ServersTestBase):
             client.OpenStackApiException,
             self.api.post_server, {'server': server})
 
-    def test_success(self):
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
+                return_value={'total': 128,
+                              'used': 44,
+                              'free': 84})
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
+                return_value=True)
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
+    def test_success(
+            self, mock_file_open, mock_valid_hostname, mock_get_fs_info):
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
                                              cpu_cores=2, cpu_threads=2,
                                              kB_mem=15740000)
