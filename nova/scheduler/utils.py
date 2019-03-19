@@ -596,9 +596,7 @@ def claim_resources_on_destination(
             # the host. This is because we need Placement to have an
             # accurate reflection of what's allocated on all nodes so the
             # scheduler can make accurate decisions about which nodes have
-            # capacity for building an instance. We also cannot rely on the
-            # resource tracker in the compute service automatically healing
-            # the allocations since that code is going away in Queens.
+            # capacity for building an instance.
             reason = (_('Unable to move instance %(instance_uuid)s to '
                         'host %(host)s. There is not enough capacity on '
                         'the host for the instance.') %

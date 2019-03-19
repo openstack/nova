@@ -922,7 +922,7 @@ class ComputeTaskManager(base.Base):
                                 'not found.', instance.host, instance.node,
                                 instance=instance)
 
-        # TODO(mriedem): In Queens, call select_destinations() with a
+        # TODO(mriedem): Call select_destinations() with a
         # skip_filters=True flag so the scheduler does the work of
         # claiming resources on the destination in Placement but still
         # bypass the scheduler filters, which honors the 'force' flag

@@ -97,7 +97,7 @@ class LiveMigrationTask(base.TaskBase):
             # to the destination compute node. Normally select_destinations()
             # in the scheduler would do this for us, but when forcing the
             # target host we don't call the scheduler.
-            # TODO(mriedem): In Queens, call select_destinations() with a
+            # TODO(mriedem): Call select_destinations() with a
             # skip_filters=True flag so the scheduler does the work of claiming
             # resources on the destination in Placement but still bypass the
             # scheduler filters, which honors the 'force' flag in the API.
