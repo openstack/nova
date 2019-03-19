@@ -18,30 +18,42 @@
 REST API Policy Enforcement
 ===========================
 
-Here is a vision of how we want policy to be enforced in nova.
+The following describes some of the shortcomings in how policy is used and
+enforced in nova, along with some benefits of fixing those issues. Each issue
+has a section dedicated to describing the underlying cause and historical
+context in greater detail.
 
 Problems with current system
 ----------------------------
 
-There are several problems for current API policy.
+The following is a list of issues with the existing policy enforcement system:
 
-* The permission checking is spread through the various levels of the nova
-  code, also there are some hard-coded permission checks that make some
-  policies not enforceable.
+* Default policies lack exhaustive testing
+* Mismatch between authoritative scope and resources
+* Policies are inconsistently named
+* Current defaults do not use default roles provided from keystone
+* Policy enforcement is spread across multiple levels and components
+* Some policies use hard-coded check strings
+* Some APIs do not use granular rules
 
-* API policy rules need better granularity. Some of extensions just use one
-  rule for all the APIs. Deployer can't get better granularity control for
-  the APIs.
+Addressing the list above helps operators by:
 
-These are the kinds of things we need to make easier:
+1. Providing them with flexible and useful defaults
+2. Reducing the likelihood of writing and maintaining custom policies
+3. Improving interoperability between deployments
+4. Increasing RBAC confidence through first-class testing and verification
+5. Reducing complexity by using consistent policy naming conventions
+6. Exposing more functionality to end-users, safely, making the entire nova API
+   more self-serviceable resulting in less operational overhead for operators
+   to do things on behalf of users
 
-1. Operator wants to enable a specific role to access the service API which
-is not possible because there is currently a hard coded admin check.
+Additionally, the following is a list of benefits to contributors:
 
-2. One policy rule per API action. Having a check in the REST API and a
-redundant check in the compute API can confuse developers and deployers.
-
-3. Operator can specify different rules for APIs that in same extension.
+1. Reduce developer maintenance and cost by isolating policy enforcement into a
+   single layer
+2. Reduce complexity by using consistent policy naming conventions
+3. Increased confidence in RBAC refactoring through exhaustive testing that
+   prevents regressions before they merge
 
 Future of policy enforcement
 ----------------------------
