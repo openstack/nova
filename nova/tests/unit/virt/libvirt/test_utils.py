@@ -532,7 +532,7 @@ disk size: 4.4M
 
         libvirt_utils.extract_snapshot('/path/to/disk/image', src_format,
                                        '/extracted/snap', dest_format)
-        qemu_img_cmd = ('qemu-img', 'convert', '-t', 'writethrough',
+        qemu_img_cmd = ('qemu-img', 'convert', '-t', 'writeback',
                         '-O', out_format, '-f', src_format, )
         if CONF.libvirt.snapshot_compression and dest_format == "qcow2":
             qemu_img_cmd += ('-c',)

@@ -125,7 +125,7 @@ class QemuTestCase(test.NoDBTestCase):
                                                      mock_disk_op_sema):
         images._convert_image('source', 'dest', 'in_format', 'out_format',
                               run_as_root=False)
-        expected = ('qemu-img', 'convert', '-t', 'writethrough',
+        expected = ('qemu-img', 'convert', '-t', 'writeback',
                     '-O', 'out_format', '-f', 'in_format', 'source', 'dest')
         mock_disk_op_sema.__enter__.assert_called_once()
         self.assertTupleEqual(expected, mock_execute.call_args[0])

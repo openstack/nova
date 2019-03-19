@@ -35,23 +35,30 @@ def convert_image(source, dest, in_format, out_format, instances_path,
 # NOTE(mikal): this method is deliberately not wrapped in a privsep entrypoint
 def unprivileged_convert_image(source, dest, in_format, out_format,
                                instances_path, compress):
-    # NOTE(mdbooth): qemu-img convert defaults to cache=unsafe, which means
-    # that data is not synced to disk at completion. We explicitly use
-    # cache=none here to (1) ensure that we don't interfere with other
-    # applications using the host's io cache, and (2) ensure that the data is
-    # on persistent storage when the command exits. Without (2), a host crash
-    # may leave a corrupt image in the image cache, which Nova cannot recover
-    # automatically.
-    # NOTE(zigo): we cannot use -t none if the instances dir is mounted on a
-    # filesystem that doesn't have support for O_DIRECT, which is the case
-    # for example with tmpfs. This simply crashes "openstack server create"
-    # in environments like live distributions. In such case, the best choice
-    # is writethrough, which is power-failure safe, but still faster than
-    # writeback.
+    # NOTE(mdbooth, kchamart): `qemu-img convert` defaults to
+    # 'cache=writeback' for the source image, and 'cache=unsafe' for the
+    # target, which means that data is not synced to disk at completion.
+    # We explicitly use 'cache=none' here, for the target image, to (1)
+    # ensure that we don't interfere with other applications using the
+    # host's I/O cache, and (2) ensure that the data is on persistent
+    # storage when the command exits. Without (2), a host crash may
+    # leave a corrupt image in the image cache, which Nova cannot
+    # recover automatically.
+
+    # NOTE(zigo, kchamart): We cannot use `qemu-img convert -t none` if
+    # the 'instance_dir' is mounted on a filesystem that doesn't support
+    # O_DIRECT, which is the case, for example, with 'tmpfs'. This
+    # simply crashes `openstack server create` in environments like live
+    # distributions. In such cases, the best choice is 'writeback',
+    # which (a) makes the conversion multiple times faster; and (b) is
+    # as safe as it can be, because at the end of the conversion it,
+    # just like 'writethrough', calls fsync(2)|fdatasync(2), which
+    # ensures to safely write the data to the physical disk.
+
     if nova.privsep.utils.supports_direct_io(instances_path):
         cache_mode = 'none'
     else:
-        cache_mode = 'writethrough'
+        cache_mode = 'writeback'
     cmd = ('qemu-img', 'convert', '-t', cache_mode, '-O', out_format)
 
     if in_format is not None:

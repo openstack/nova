@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    By using ``writeback`` QEMU cache mode, make Nova's disk image
+    conversion (e.g. from raw to QCOW2 or vice versa) dramatically
+    faster, without compromising data integrity.  `Bug 1818847`_.
+
+    .. _Bug 1818847: https://bugs.launchpad.net/nova/+bug/1818847

@@ -19099,7 +19099,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_disk_op_sema.__enter__.assert_called_once()
         mock_direct_io.assert_called_once_with(CONF.instances_path)
         mock_execute.assert_has_calls([
-            mock.call('qemu-img', 'convert', '-t', 'writethrough',
+            mock.call('qemu-img', 'convert', '-t', 'writeback',
                       '-O', 'qcow2', '-f', 'raw', path, _path_qcow)])
         mock_rename.assert_has_calls([
             mock.call(_path_qcow, path)])
