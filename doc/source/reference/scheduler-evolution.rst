@@ -43,14 +43,6 @@ that is close to the shared storage where that volume is. Similarly, for
 the sake of performance, it can be desirable to use a compute node that
 is in a particular location in relation to a pre-created port.
 
-Accessing Aggregates in Filters and Weights
---------------------------------------------
-
-Any DB access in a filter or weight slows down the scheduler. Until the
-end of kilo, there was no way to deal with the scheduler accessing
-information about aggregates without querying the DB in every call to
-host_passes() in a filter.
-
 Filter Scheduler Alternatives
 ------------------------------
 
@@ -91,10 +83,6 @@ pluggable through the service group API, and should be independent of the
 scheduler service. For example, it could be managed via zookeeper rather
 than polling the nova DB.
 
-There are also places where filters and weights call into the nova DB to
-find out information about aggregates. This needs to be sent to the
-scheduler, rather than reading directly from the nova database.
-
 Versioning Scheduler Placement Interfaces
 ------------------------------------------
 
@@ -123,9 +111,6 @@ This is linked to the work on the resource tracker.
 
 Updating the Scheduler about other data
 ----------------------------------------
-
-For things like host aggregates, we need the scheduler to cache information
-about those, and know when there are changes so it can update its cache.
 
 Over time, its possible that we need to send cinder and neutron data, so
 the scheduler can use that data to help pick a nova-compute host.
