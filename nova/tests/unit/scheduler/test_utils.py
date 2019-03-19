@@ -12,6 +12,7 @@
 
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
+import six
 
 from nova import context as nova_context
 from nova import exception
@@ -759,10 +760,15 @@ class TestUtils(test.NoDBTestCase):
                            'claim_resources',
                            new_callable=mock.NonCallableMock)
         def test(mock_claim, mock_get_allocs):
-            utils.claim_resources_on_destination(
+            ex = self.assertRaises(
+                exception.ConsumerAllocationRetrievalFailed,
+                utils.claim_resources_on_destination,
                 self.context, reportclient, instance, source_node, dest_node)
             mock_get_allocs.assert_called_once_with(
                 self.context, instance.uuid)
+            self.assertIn(
+                'Expected to find allocations for source node resource '
+                'provider %s' % source_node.uuid, six.text_type(ex))
 
         test()
 
