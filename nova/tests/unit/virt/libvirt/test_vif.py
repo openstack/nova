@@ -30,7 +30,6 @@ from nova.network import model as network_model
 from nova import objects
 from nova.pci import utils as pci_utils
 from nova import test
-from nova.tests.unit import matchers
 from nova.tests.unit.virt import fakelibosinfo
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import config as vconfig
@@ -577,7 +576,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def _assertXmlEqual(self, expectedXmlstr, actualXmlstr):
         if not isinstance(actualXmlstr, six.string_types):
             actualXmlstr = etree.tostring(actualXmlstr, pretty_print=True)
-        self.assertThat(actualXmlstr, matchers.XMLMatches(expectedXmlstr))
+        self.assertXmlEqual(actualXmlstr, expectedXmlstr)
 
     def _get_conf(self):
         conf = vconfig.LibvirtConfigGuest()

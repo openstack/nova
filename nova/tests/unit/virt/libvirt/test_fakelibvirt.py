@@ -18,7 +18,6 @@ import six
 
 from nova.objects import fields as obj_fields
 from nova import test
-from nova.tests.unit import matchers
 import nova.tests.unit.virt.libvirt.fakelibvirt as libvirt
 from nova.virt.libvirt import config as vconfig
 
@@ -486,8 +485,8 @@ class FakeLibvirtTests(test.NoDBTestCase):
         gen_pf = pci_info.get_device_by_name('pci_0000_81_00_0')
         gen_vf = pci_info.get_device_by_name('pci_0000_81_00_1')
 
-        self.assertThat(gen_pf.XMLDesc(0), matchers.XMLMatches(pf_xml))
-        self.assertThat(gen_vf.XMLDesc(0), matchers.XMLMatches(vf_xml))
+        self.assertXmlEqual(gen_pf.XMLDesc(0), pf_xml)
+        self.assertXmlEqual(gen_vf.XMLDesc(0), vf_xml)
 
         # parse the generated xml with a libvirt config class and compare
         # device address

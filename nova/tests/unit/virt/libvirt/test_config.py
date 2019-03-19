@@ -18,13 +18,11 @@ from oslo_utils import units
 
 from nova.objects import fields as obj_fields
 from nova import test
-from nova.tests.unit import matchers
 from nova.virt.libvirt import config
 
 
 class LibvirtConfigBaseTest(test.NoDBTestCase):
-    def assertXmlEqual(self, expectedXmlstr, actualXmlstr):
-        self.assertThat(actualXmlstr, matchers.XMLMatches(expectedXmlstr))
+    pass
 
 
 class LibvirtConfigTest(LibvirtConfigBaseTest):
