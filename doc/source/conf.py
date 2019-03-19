@@ -19,35 +19,31 @@
 import os
 import sys
 
-from nova.version import version_info
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../../'))
 sys.path.insert(0, os.path.abspath('../'))
-sys.path.insert(0, os.path.abspath('./'))
 
 # -- General configuration ----------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 
-extensions = ['sphinx.ext.autodoc',
-              'sphinx.ext.todo',
-              'openstackdocstheme',
-              'sphinx.ext.coverage',
-              'sphinx.ext.graphviz',
-              'sphinx_feature_classification.support_matrix',
-              'oslo_config.sphinxconfiggen',
-              'oslo_config.sphinxext',
-              'oslo_policy.sphinxpolicygen',
-              'oslo_policy.sphinxext',
-              'ext.versioned_notifications',
-              'ext.feature_matrix',
-              'sphinxcontrib.actdiag',
-              'sphinxcontrib.seqdiag',
-              ]
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.todo',
+    'sphinx.ext.graphviz',
+    'openstackdocstheme',
+    'sphinx_feature_classification.support_matrix',
+    'oslo_config.sphinxconfiggen',
+    'oslo_config.sphinxext',
+    'oslo_policy.sphinxpolicygen',
+    'oslo_policy.sphinxext',
+    'ext.versioned_notifications',
+    'ext.feature_matrix',
+    'sphinxcontrib.actdiag',
+    'sphinxcontrib.seqdiag',
+]
 
 # openstackdocstheme options
 repository_name = 'openstack/nova'
@@ -70,9 +66,6 @@ seqdiag_antialias = True
 
 todo_include_todos = True
 
-# The suffix of source filenames.
-source_suffix = '.rst'
-
 # The master toctree document.
 master_doc = 'index'
 
@@ -80,36 +73,8 @@ master_doc = 'index'
 project = u'nova'
 copyright = u'2010-present, OpenStack Foundation'
 
-# The version info for the project you're documenting, acts as replacement for
-# |version| and |release|, also used in various other places throughout the
-# built documents.
-#
-# The full version, including alpha/beta/rc tags.
-release = version_info.release_string()
-# The short X.Y version.
-version = version_info.version_string()
-
-# A list of glob-style patterns that should be excluded when looking for
-# source files. They are matched against the source file names relative to the
-# source directory, using slashes as directory separators on all platforms.
-exclude_patterns = [
-    'api/nova.wsgi.nova-*',
-    'api/nova.tests.*',
-]
-
-# If true, the current module name will be prepended to all description
-# unit titles (such as .. function::).
-add_module_names = False
-
-# If true, sectionauthor and moduleauthor directives will be shown in the
-# output. They are ignored by default.
-show_authors = False
-
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
-
-# A list of ignored prefixes for module index sorting.
-modindex_common_prefix = ['nova.']
 
 # -- Options for man page output ----------------------------------------------
 
@@ -154,9 +119,6 @@ html_static_path = ['_static']
 # robots.txt.
 html_extra_path = ['_extra']
 
-# If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
-# using the given strftime format.
-html_last_updated_fmt = '%Y-%m-%d %H:%M'
 
 # -- Options for LaTeX output -------------------------------------------------
 
@@ -167,6 +129,7 @@ latex_documents = [
     ('index', 'Nova.tex', u'Nova Documentation',
      u'OpenStack Foundation', 'manual'),
 ]
+
 
 # -- Options for openstackdocstheme -------------------------------------------
 
