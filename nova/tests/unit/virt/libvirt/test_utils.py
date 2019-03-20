@@ -248,17 +248,6 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         finally:
             os.unlink(dst_path)
 
-    def test_write_to_file(self):
-        dst_fd, dst_path = tempfile.mkstemp()
-        try:
-            os.close(dst_fd)
-
-            libvirt_utils.write_to_file(dst_path, 'hello')
-            with open(dst_path, 'r') as fp:
-                self.assertEqual(fp.read(), 'hello')
-        finally:
-            os.unlink(dst_path)
-
     @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=False)
     @mock.patch('oslo_concurrency.processutils.execute')
@@ -330,8 +319,8 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         try:
             os.close(dst_fd)
 
-            # We have a test for write_to_file. If that is sound, this suffices
-            libvirt_utils.write_to_file(dst_path, 'hello')
+            with open(dst_path, 'w') as f:
+                f.write('hello')
             self.assertEqual(libvirt_utils.load_file(dst_path), 'hello')
         finally:
             os.unlink(dst_path)
@@ -341,8 +330,8 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         try:
             os.close(dst_fd)
 
-            # We have a test for write_to_file. If that is sound, this suffices
-            libvirt_utils.write_to_file(dst_path, 'hello')
+            with open(dst_path, 'w') as f:
+                f.write('hello')
             with libvirt_utils.file_open(dst_path, 'r') as fp:
                 self.assertEqual(fp.read(), 'hello')
         finally:
