@@ -458,6 +458,16 @@ class VIF(Model):
                     'ips': ips}
         return []
 
+    def has_bind_time_event(self):
+        """When updating the port binding to a host that already has the
+        instance in a shutoff state (in practice, this currently means
+        reverting a resize or cold migration), the following Neutron/port
+        configurations cause network-vif-plugged events to be sent as soon as
+        the binding is updated:
+        - OVS with hybrid plug
+        """
+        return self.is_hybrid_plug_enabled()
+
     def is_hybrid_plug_enabled(self):
         return self['details'].get(VIF_DETAILS_OVS_HYBRID_PLUG, False)
 
@@ -514,6 +524,24 @@ class NetworkInfo(list):
 
     def json(self):
         return jsonutils.dumps(self)
+
+    def get_bind_time_events(self):
+        """When updating the port binding to a host that already has the
+        instance in a shutoff state (in practice, this currently means
+        reverting a resize or cold migration), return external events that are
+        sent as soon as the binding is updated.
+        """
+        return [('network-vif-plugged', vif['id'])
+                for vif in self if vif.has_bind_time_event()]
+
+    def get_plug_time_events(self):
+        """When updating the port binding to a host that already has the
+        instance in a shutoff state (in practice, this currently means
+        reverting a resize or cold migration), return external events that are
+        sent when the VIF is plugged.
+        """
+        return [('network-vif-plugged', vif['id'])
+                for vif in self if not vif.has_bind_time_event()]
 
 
 class NetworkInfoAsyncWrapper(NetworkInfo):
