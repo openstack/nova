@@ -185,6 +185,9 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
     def instance(self, instance):
         self._cached_instance = instance
 
+    def is_same_host(self):
+        return self.source_compute == self.dest_compute
+
 
 @base.NovaObjectRegistry.register
 class MigrationList(base.ObjectListBase, base.NovaObject):
