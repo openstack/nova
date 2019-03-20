@@ -458,6 +458,17 @@ class VIF(Model):
                     'ips': ips}
         return []
 
+    def has_bind_time_event(self, migration):
+        """Returns whether this VIF's network-vif-plugged external event will
+        be sent by Neutron at "bind-time" - in other words, as soon as the port
+        binding is updated. This is in the context of updating the port binding
+        to a host that already has the instance in a shutoff state - in
+        practice, this means reverting either a cold migration or a
+        non-same-host resize.
+        """
+        return (self.is_hybrid_plug_enabled() and not
+                migration.is_same_host())
+
     def is_hybrid_plug_enabled(self):
         return self['details'].get(VIF_DETAILS_OVS_HYBRID_PLUG, False)
 
@@ -514,6 +525,20 @@ class NetworkInfo(list):
 
     def json(self):
         return jsonutils.dumps(self)
+
+    def get_bind_time_events(self, migration):
+        """Returns whether any of our VIFs have "bind-time" events. See
+        has_bind_time_event() docstring for more details.
+        """
+        return [('network-vif-plugged', vif['id'])
+                for vif in self if vif.has_bind_time_event(migration)]
+
+    def get_plug_time_events(self, migration):
+        """Complementary to get_bind_time_events(), any event that does not
+        fall in that category is a plug-time event.
+        """
+        return [('network-vif-plugged', vif['id'])
+                for vif in self if not vif.has_bind_time_event(migration)]
 
 
 class NetworkInfoAsyncWrapper(NetworkInfo):

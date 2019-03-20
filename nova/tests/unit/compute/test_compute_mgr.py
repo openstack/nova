@@ -5088,6 +5088,97 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                     self.context, fake_instance, fake_bdm)
         block_stats.assert_called_once_with(fake_instance, 'vda')
 
+    def _test_finish_revert_resize_network_migrate_finish(
+            self, vifs, events, migration=None):
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.info_cache = objects.InstanceInfoCache(
+            network_info=network_model.NetworkInfo(vifs))
+        if migration is None:
+            migration = objects.Migration(
+                source_compute='fake-source',
+                dest_compute='fake-dest')
+
+        def fake_migrate_instance_finish(context, instance, migration):
+            # NOTE(artom) This looks weird, but it's checking that the
+            # temporaty_mutation() context manager did its job.
+            self.assertEqual(migration.dest_compute, migration.source_compute)
+
+        with test.nested(
+            mock.patch.object(self.compute.virtapi,
+                              'wait_for_instance_event'),
+            mock.patch.object(self.compute.network_api,
+                              'migrate_instance_finish',
+                              side_effect=fake_migrate_instance_finish)
+        ) as (mock_wait, mock_migrate_instance_finish):
+            self.compute._finish_revert_resize_network_migrate_finish(
+                self.context, instance, migration)
+            mock_wait.assert_called_once_with(
+                instance, events, deadline=CONF.vif_plugging_timeout,
+                error_callback=self.compute._neutron_failed_migration_callback)
+            mock_migrate_instance_finish.assert_called_once_with(
+                self.context, instance, migration)
+
+    def test_finish_revert_resize_network_migrate_finish_wait(self):
+        """Test that we wait for bind-time events if we have a hybrid-plugged
+        VIF.
+        """
+        self._test_finish_revert_resize_network_migrate_finish(
+            [network_model.VIF(id=uuids.hybrid_vif,
+                               details={'ovs_hybrid_plug': True}),
+             network_model.VIF(id=uuids.normal_vif,
+                               details={'ovs_hybrid_plug': False})],
+            [('network-vif-plugged', uuids.hybrid_vif)])
+
+    def test_finish_revert_resize_network_migrate_finish_same_host(self):
+        """Test that we're not waiting for any events if its a same host
+        resize revert.
+        """
+        migration = objects.Migration(
+            source_compute='fake-source', dest_compute='fake-source')
+
+        self._test_finish_revert_resize_network_migrate_finish(
+            [network_model.VIF(id=uuids.hybrid_vif,
+                               details={'ovs_hybrid_plug': True}),
+             network_model.VIF(id=uuids.normal_vif,
+                               details={'ovs_hybrid_plug': False})],
+            [], migration=migration
+        )
+
+    def test_finish_revert_resize_network_migrate_finish_dont_wait(self):
+        """Test that we're not waiting for any events if we don't have any
+        hybrid-plugged VIFs.
+        """
+        self._test_finish_revert_resize_network_migrate_finish(
+            [network_model.VIF(id=uuids.hybrid_vif,
+                               details={'ovs_hybrid_plug': False}),
+             network_model.VIF(id=uuids.normal_vif,
+                               details={'ovs_hybrid_plug': False})],
+            [])
+
+    def test_finish_revert_resize_network_migrate_finish_no_vif_timeout(self):
+        """Test that we're not waiting for any events if vif_plugging_timeout
+        is 0.
+        """
+        self.flags(vif_plugging_timeout=0)
+        self._test_finish_revert_resize_network_migrate_finish(
+            [network_model.VIF(id=uuids.hybrid_vif,
+                               details={'ovs_hybrid_plug': True}),
+             network_model.VIF(id=uuids.normal_vif,
+                               details={'ovs_hybrid_plug': True})],
+            [])
+
+    @mock.patch.object(utils, 'is_neutron', return_value=False)
+    def test_finish_revert_resize_network_migrate_finish_not_neutron(self, _):
+        """Test that we're not waiting for any events if we're not using
+        Neutron.
+        """
+        self._test_finish_revert_resize_network_migrate_finish(
+            [network_model.VIF(id=uuids.hybrid_vif,
+                               details={'ovs_hybrid_plug': True}),
+             network_model.VIF(id=uuids.normal_vif,
+                               details={'ovs_hybrid_plug': True})],
+            [])
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
