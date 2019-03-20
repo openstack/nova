@@ -71,7 +71,8 @@ class TestLocalDeleteAllocations(test.TestCase,
                                              set_config=True))
         # Get allocations, make sure they are 0.
         with func_fixtures.PlacementFixture(
-                conf_fixture=placement_config, db=False) as placement:
+                conf_fixture=placement_config, db=False,
+                register_opts=False) as placement:
             compute = self.start_service('compute')
             placement_api = placement.api
             resp = placement_api.get('/resource_providers')
@@ -103,7 +104,8 @@ class TestLocalDeleteAllocations(test.TestCase,
         self._wait_until_deleted(server)
 
         with func_fixtures.PlacementFixture(
-                conf_fixture=placement_config, db=False) as placement:
+                conf_fixture=placement_config, db=False,
+                register_opts=False) as placement:
             placement_api = placement.api
             # Assert usages are still non-zero.
             usages_during = self._get_usages(placement_api, rp_uuid)
