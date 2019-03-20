@@ -1,0 +1,16 @@
+---
+issues:
+  - |
+    Nova leaks bandwidth resources if a bound port that has QoS minimum
+    bandwidth rules is deleted in Neutron before the port is logically detached
+    from the server. To avoid any leaks, users should detach the port from the
+    server using the Nova API first before deleting the port in Neutron. If the
+    server is in a state such that the port cannot be detached using the Nova
+    API, bandwidth resources will be freed when the server is deleted. Another
+    alternative to clean up the leak is to remove the
+    ``NET_BW_EGR_KILOBIT_PER_SEC`` and/or ``NET_BW_IGR_KILOBIT_PER_SEC``
+    allocations related to the deleted port for the server `using the CLI`_.
+    See related bug https://bugs.launchpad.net/nova/+bug/1820588 for more
+    details.
+
+    .. _using the CLI: https://docs.openstack.org/osc-placement/latest/cli/index.html#resource-provider-allocation-set
