@@ -706,6 +706,16 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
         self.wh.do_proxy.assert_called_with('<socket>')
 
+    def test_tcp_rst_no_compute_rpcapi(self):
+        # Tests that we don't create a ComputeAPI object if we receive a
+        # TCP RST message. Simulate by raising the socket.err upon recv.
+        err = socket.error('[Errno 104] Connection reset by peer')
+        self.wh.socket.recv.side_effect = err
+        conn = mock.MagicMock()
+        address = mock.MagicMock()
+        self.wh.server.top_new_client(conn, address)
+        self.assertIsNone(self.wh._compute_rpcapi)
+
 
 class NovaWebsocketSecurityProxyTestCase(test.NoDBTestCase):
 
