@@ -941,7 +941,9 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.routes_show', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.lookup_ip', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.change_ip')
-    def test_vpn_allocate_fixed_ip(self, mock_change_ip, mock_lookup_ip,
+    @mock.patch('nova.privsep.linux_net.address_command_deprecated')
+    def test_vpn_allocate_fixed_ip(self, mock_address_command,
+                                   mock_change_ip, mock_lookup_ip,
                                    mock_routes_show, mock_enabled,
                                    mock_add_bridge):
         self.mox.StubOutWithMock(db, 'fixed_ip_associate')
@@ -981,8 +983,9 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.routes_show', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.lookup_ip', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.change_ip')
-    def test_allocate_fixed_ip(self, mock_change_ip, mock_lookup_ip,
-                               mock_routes_show, mock_enabled,
+    @mock.patch('nova.privsep.linux_net.address_command_deprecated')
+    def test_allocate_fixed_ip(self, mock_address_command, mock_change_ip,
+                               mock_lookup_ip, mock_routes_show, mock_enabled,
                                mock_add_bridge):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
@@ -1706,9 +1709,10 @@ class VlanNetworkTestCase(test.TestCase):
                 return_value=('fake', 0))
     @mock.patch('nova.privsep.linux_net.lookup_ip', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.change_ip')
+    @mock.patch('nova.privsep.linux_net.address_command_deprecated')
     def test_add_fixed_ip_instance_without_vpn_requested_networks(
-            self, mock_change_ip, mock_lookup_ip, mock_routes_show,
-            mock_enabled, mock_add_bridge):
+            self, mock_address_command, mock_change_ip, mock_lookup_ip,
+            mock_routes_show, mock_enabled, mock_add_bridge):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
                 lambda *a, **kw: None)
@@ -2865,7 +2869,9 @@ class AllocateTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.lookup_ip', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.change_ip')
     @mock.patch('nova.privsep.linux_net.clean_conntrack')
+    @mock.patch('nova.privsep.linux_net.address_command_deprecated')
     def test_allocate_for_instance(self, mock_clean_conntrack,
+                                   mock_address_command,
                                    mock_change_ip, mock_lookup_ip,
                                    mock_routes_show, mock_unbind, mock_bind,
                                    mock_set_macaddr, mock_set_enabled,
@@ -2940,7 +2946,9 @@ class AllocateTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.routes_show', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.lookup_ip', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.change_ip')
-    def test_allocate_for_instance_with_mac(self, mock_change_ip,
+    @mock.patch('nova.privsep.linux_net.address_command_deprecated')
+    def test_allocate_for_instance_with_mac(self, mock_address_command,
+                                            mock_change_ip,
                                             mock_lookup_ip,
                                             mock_routes_show,
                                             mock_set_addr, mock_enabled,
