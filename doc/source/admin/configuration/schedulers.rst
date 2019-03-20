@@ -307,6 +307,8 @@ features in some virt drivers and querying traits is efficient. For more detail,
 :ref:`Forbidden traits <extra-specs-forbidden-traits>` and
 `Report CPU features to the Placement service <https://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/report-cpu-features-as-traits.html>`_.
 
+Also refer to `Compute capabilities as traits`_.
+
 .. _ComputeFilter:
 
 ComputeFilter
@@ -1037,6 +1039,8 @@ nova service-disable [--reason <reason>] <id>
 
       ERROR: Policy doesn't allow compute_extension:hosts to be performed. (HTTP 403) (Request-ID: req-ef2400f6-6776-4ea3-b6f1-7704085c27d1)
 
+.. _config-sch-for-aggs:
+
 Configure scheduler to support host aggregates
 ----------------------------------------------
 
@@ -1449,3 +1453,72 @@ related commands. To enable or disable a cell, use
 :command:`nova-manage cell_v2 update_cell` and to create pre-disabled cells,
 use :command:`nova-manage cell_v2 create_cell`. See the
 :ref:`man-page-cells-v2` man page for details on command usage.
+
+
+Compute capabilities as traits
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Starting with the 19.0.0 Stein release, the ``nova-compute`` service will
+report certain ``COMPUTE_*`` traits based on its compute driver capabilities
+to the placement service. The traits will be associated with the resource
+provider for that compute service. These traits can be used during scheduling
+by configuring flavors with
+:ref:`Required traits <extra-specs-required-traits>` or
+:ref:`Forbidden traits <extra-specs-forbidden-traits>`. For example, if you
+have a host aggregate with a set of compute nodes that support multi-attach
+volumes, you can restrict a flavor to that aggregate by adding the
+``trait:COMPUTE_VOLUME_MULTI_ATTACH=required`` extra spec to the flavor and
+then restrict the flavor to the aggregate
+:ref:`as normal <config-sch-for-aggs>`.
+
+Here is an example of a libvirt compute node resource provider that is
+exposing some CPU features as traits, driver capabilities as traits, and a
+custom trait denoted by the ``CUSTOM_`` prefix:
+
+.. code-block:: console
+
+  $ openstack --os-placement-api-version 1.6 resource provider trait list \
+  > d9b3dbc4-50e2-42dd-be98-522f6edaab3f --sort-column name
+  +---------------------------------------+
+  | name                                  |
+  +---------------------------------------+
+  | COMPUTE_DEVICE_TAGGING                |
+  | COMPUTE_NET_ATTACH_INTERFACE          |
+  | COMPUTE_NET_ATTACH_INTERFACE_WITH_TAG |
+  | COMPUTE_TRUSTED_CERTS                 |
+  | COMPUTE_VOLUME_ATTACH_WITH_TAG        |
+  | COMPUTE_VOLUME_EXTEND                 |
+  | COMPUTE_VOLUME_MULTI_ATTACH           |
+  | CUSTOM_IMAGE_TYPE_RBD                 |
+  | HW_CPU_X86_MMX                        |
+  | HW_CPU_X86_SSE                        |
+  | HW_CPU_X86_SSE2                       |
+  | HW_CPU_X86_SVM                        |
+  +---------------------------------------+
+
+**Rules**
+
+There are some rules associated with capability-defined traits.
+
+1. The compute service "owns" these traits and will add/remove them when the
+   ``nova-compute`` service starts and when the ``update_available_resource``
+   periodic task runs, with run intervals controlled by config option
+   :oslo.config:option:`update_resources_interval`.
+
+2. The compute service will not remove any custom traits set on the resource
+   provider externally, such as the ``CUSTOM_IMAGE_TYPE_RBD`` trait in the
+   example above.
+
+3. If compute-owned traits are removed from the resource provider externally,
+   for example by running ``openstack resource provider trait delete <rp_uuid>``,
+   the compute service will add its traits again on restart or SIGHUP.
+
+4. If a compute trait is set on the resource provider externally which is not
+   supported by the driver, for example by adding the ``COMPUTE_VOLUME_EXTEND``
+   trait when the driver does not support that capability, the compute service
+   will automatically remove the unsupported trait on restart or SIGHUP.
+
+5. Compute capability traits are standard traits defined in the `os-traits`_
+   library.
+
+.. _os-traits: http://git.openstack.org/cgit/openstack/os-traits/tree/os_traits/compute
