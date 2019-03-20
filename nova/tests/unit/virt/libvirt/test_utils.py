@@ -505,20 +505,6 @@ disk size: 4.4M
         finally:
             os.unlink(dst_path)
 
-    def test_write_to_file_with_umask(self):
-        dst_fd, dst_path = tempfile.mkstemp()
-        try:
-            os.close(dst_fd)
-            os.unlink(dst_path)
-
-            libvirt_utils.write_to_file(dst_path, 'hello', umask=0o277)
-            with open(dst_path, 'r') as fp:
-                self.assertEqual(fp.read(), 'hello')
-            mode = os.stat(dst_path).st_mode
-            self.assertEqual(mode & 0o277, 0)
-        finally:
-            os.unlink(dst_path)
-
     @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=False)
     @mock.patch('oslo_concurrency.processutils.execute')
