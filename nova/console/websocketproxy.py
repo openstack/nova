@@ -304,11 +304,17 @@ class NovaProxyRequestHandlerBase(object):
 class NovaProxyRequestHandler(NovaProxyRequestHandlerBase,
                               websockify.ProxyRequestHandler):
     def __init__(self, *args, **kwargs):
-        # Order matters here. ProxyRequestHandler.__init__() will eventually
-        # call new_websocket_client() and we need self.compute_rpcapi set
-        # before then.
-        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+        self._compute_rpcapi = None
         websockify.ProxyRequestHandler.__init__(self, *args, **kwargs)
+
+    @property
+    def compute_rpcapi(self):
+        # Lazy load the rpcapi/ComputeAPI upon first use for this connection.
+        # This way, if we receive a TCP RST, we will not create a ComputeAPI
+        # object we won't use.
+        if not self._compute_rpcapi:
+            self._compute_rpcapi = compute_rpcapi.ComputeAPI()
+        return self._compute_rpcapi
 
     def socket(self, *args, **kwargs):
         return websockify.WebSocketServer.socket(*args, **kwargs)
