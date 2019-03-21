@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    [`bug 1818295 <https://bugs.launchpad.net/nova/+bug/1818295>`_]
+    Fixes the problem with endpoint lookup in Ironic driver where only public
+    endpoint is possible, which breaks deployments where the controllers have
+    no route to the public network per security requirement. Note that
+    python-ironicclient fix I610836e5038774621690aca88b2aee25670f0262 must
+    also be present to resolve the bug.
