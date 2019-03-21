@@ -929,4 +929,4 @@ API limitations:
   unshelving after shelve offload) servers with ports having resource
   request is not yet supported.
 
-.. _QoS minimum bandwidth rule: https://docs.openstack.org/neutron/latest/admin/config-qos.html
+.. _QoS minimum bandwidth rule: https://docs.openstack.org/neutron/latest/admin/config-qos-min-bw.html

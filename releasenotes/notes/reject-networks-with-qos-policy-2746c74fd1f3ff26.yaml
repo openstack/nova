@@ -6,4 +6,4 @@ other:
     network referenced in the request body has `QoS minimum bandwidth rule`_
     attached as Nova currently cannot support such operations.
 
-    .. _QoS minimum bandwidth rule: https://docs.openstack.org/neutron/latest/admin/config-qos.html
+    .. _QoS minimum bandwidth rule: https://docs.openstack.org/neutron/latest/admin/config-qos-min-bw.html
