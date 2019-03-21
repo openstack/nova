@@ -32,6 +32,7 @@ from nova import objects
 from nova.objects import fields as obj_fields
 import nova.privsep.fs
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.disk import api as disk
@@ -969,3 +970,29 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
         disk_path, format = libvirt_utils.find_disk(guest)
         self.assertEqual('/test/disk', disk_path)
         self.assertEqual('ploop', format)
+
+    def test_machine_type_mappings(self):
+        self.useFixture(nova_fixtures.ConfPatcher(
+            group="libvirt", hw_machine_type=['x86_64=q35', 'i686=legacy']))
+        self.assertDictEqual({'x86_64': 'q35', 'i686': 'legacy'},
+                             libvirt_utils.machine_type_mappings())
+
+    def test_invalid_machine_type_mappings(self):
+        self.useFixture(nova_fixtures.ConfPatcher(
+            group="libvirt", hw_machine_type=['x86_64=q35', 'foo']))
+        self.assertDictEqual({'x86_64': 'q35'},
+                             libvirt_utils.machine_type_mappings())
+
+    def test_get_default_machine_type(self):
+        self.useFixture(nova_fixtures.ConfPatcher(
+            group="libvirt", hw_machine_type=['x86_64=q35', 'i686=legacy']))
+        self.assertEqual('q35',
+                         libvirt_utils.get_default_machine_type('x86_64'))
+
+    def test_get_default_machine_type_empty(self):
+        self.assertIsNone(libvirt_utils.get_default_machine_type('sparc'))
+
+    def test_get_default_machine_type_missing(self):
+        self.useFixture(nova_fixtures.ConfPatcher(
+            group="libvirt", hw_machine_type=['x86_64=q35', 'i686=legacy']))
+        self.assertIsNone(libvirt_utils.get_default_machine_type('sparc'))
