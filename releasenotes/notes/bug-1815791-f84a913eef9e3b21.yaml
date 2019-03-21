@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Fixes a race condition that could allow a newly created Ironic
+    instance to be powered off after deployment, without letting
+    the user power it back on.
+upgrade:
+  - |
+    Adds a ``use_cache`` parameter to the virt driver ``get_info``
+    method. Out of tree drivers should add support for this
+    parameter.
