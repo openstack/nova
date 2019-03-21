@@ -1,0 +1,77 @@
+---
+prelude: |
+    The 19.0.0 release includes many new features and bug fixes. Please be
+    sure to read the upgrade section which describes the required actions to
+    upgrade your cloud from 18.0.0 (Rocky) to 19.0.0 (Stein).
+
+    There are a few major changes worth mentioning. This is not an exhaustive
+    list:
+
+    - The latest Compute API microversion supported for Stein is v2.72. Details
+      on REST API microversions added since the 18.0.0 Rocky release can be
+      found in the `REST API Version History`_ page.
+
+    - It is now possible to run Nova with version 1.0.0 of the recently
+      extracted placement service, hosted from its own repository. Note
+      that install/upgrade of an extracted placement service is not yet fully
+      implemented in all deployment tools. Operators should check with their
+      particular deployment tool for support before proceeding. See the
+      placement `install`_ and `upgrade`_ documentation for more details.
+      In Stein, operators may choose to continue to run with the integrated
+      placement service from the Nova repository, but should begin planning a
+      migration to the extracted placement service by Train, as the removal of
+      the integrated placement code from Nova is planned for the Train release.
+
+    - Users can now specify a volume type when creating servers when using the
+      2.67 compute API microversion. See the `block device mapping`_
+      documentation for more details.
+
+    - The 2.69 compute API microversion adds handling of server details in the
+      presence of down or poor-performing cells in a multi-cell environment for
+      the ``GET /servers``, ``GET /servers/detail``,
+      ``GET /servers/{server_id}``, ``GET /os-services`` REST APIs. See the
+      `handling down cells`_ documentation for more details.
+
+    - Users are now able to create servers with Neutron ports that have QoS
+      minimum bandwidth rules when using the 2.72 compute API microversion. See
+      the `using ports with resource request`_ documentation for more details.
+
+    - Operators can now set overcommit allocation ratios using Nova
+      configuration files or the placement API, by making use of the initial
+      allocation ratio configuration options. See the `initial allocation
+      ratios`_ documentation for more details.
+
+    - Compute capabilities are now exposed as traits in the placement API.
+      See the `compute capabilities as traits`_ documentation for more details.
+
+    - The configuration option
+      ``[compute]resource_provider_association_refresh`` can now be set to zero
+      to disable refresh entirely. This should be useful for large-scale
+      deployments.
+
+    - The VMwareVCDriver now supports live migration. See the
+      `live migration configuration`_ documentation for information on how to
+      enable it.
+
+    - Nova now supports nested resource providers in two cases:
+
+      #. QoS-enabled ports will have inventories and allocations created on
+         nested resource providers from the start.
+      #. Libvirt compute nodes reporting VGPU inventory will have that VGPU
+         inventory and corresponding allocations moved to a child resource
+         provider on restart of the nova-compute service after upgrading to
+         Stein.
+
+      In both cases this means when looking at resource providers, depending on
+      the scenario, you can see more than one provider where there was
+      initially just a root compute node provider per compute service.
+
+    .. _REST API Version History: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html
+    .. _install: https://docs.openstack.org/placement/latest/install/index.html
+    .. _upgrade: https://docs.openstack.org/placement/latest/upgrade/to-stein.html
+    .. _handling down cells: https://developer.openstack.org/api-guide/compute/down_cells.html
+    .. _block device mapping: https://docs.openstack.org/nova/latest/user/block-device-mapping.html
+    .. _using ports with resource request: https://developer.openstack.org/api-guide/compute/port_with_resource_request.html
+    .. _initial allocation ratios: https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html#allocation-ratios
+    .. _compute capabilities as traits: https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html#compute-capabilities-as-traits
+    .. _live migration configuration: https://docs.openstack.org/nova/latest/admin/configuring-migrations.html#vmware
