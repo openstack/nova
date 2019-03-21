@@ -511,9 +511,11 @@ class RequestSpec(base.NovaObject):
             if 'instance_group' in spec and spec.instance_group:
                 spec.instance_group.members = None
                 spec.instance_group.hosts = None
-            # NOTE(mriedem): Don't persist retries since those are per-request
-            if 'retry' in spec and spec.retry:
-                spec.retry = None
+            # NOTE(mriedem): Don't persist retries or requested_destination
+            # since those are per-request
+            for excluded in ('retry', 'requested_destination'):
+                if excluded in spec and getattr(spec, excluded):
+                    setattr(spec, excluded, None)
 
             db_updates = {'spec': jsonutils.dumps(spec.obj_to_primitive())}
             if 'instance_uuid' in updates:
