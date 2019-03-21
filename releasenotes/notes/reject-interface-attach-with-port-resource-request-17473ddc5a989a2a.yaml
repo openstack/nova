@@ -7,4 +7,4 @@ other:
     example a Neutron port has resource request if a `QoS minimum bandwidth
     rule`_ is attached to that port in Neutron.
 
-    .. _QoS minimum bandwidth rule: https://docs.openstack.org/neutron/latest/admin/config-qos.html
+    .. _QoS minimum bandwidth rule: https://docs.openstack.org/neutron/latest/admin/config-qos-min-bw.html
