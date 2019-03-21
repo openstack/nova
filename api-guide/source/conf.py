@@ -286,4 +286,6 @@ pdf_documents = [
 
 openstack_projects = [
     'nova',
+    'neutron',
+    'placement',
 ]
