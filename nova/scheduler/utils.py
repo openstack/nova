@@ -529,6 +529,9 @@ def claim_resources_on_destination(
                                      consumer
     """
     # Get the current allocations for the source node and the instance.
+    # NOTE(gibi) For the live migrate case, the caller provided the
+    # allocation that needs to be used on the dest_node along with the
+    # expected consumer_generation of the consumer (which is the instance).
     if not source_allocations:
         # NOTE(gibi): This is the forced evacuate case where the caller did not
         # provide any allocation request. So we ask placement here for the
@@ -544,78 +547,69 @@ def claim_resources_on_destination(
             context, instance.uuid)
         source_allocations = allocations.get('allocations', {})
         consumer_generation = allocations.get('consumer_generation')
-    else:
-        # NOTE(gibi) This is the live migrate case. The caller provided the
-        # allocation that needs to be used on the dest_node along with the
-        # expected consumer_generation of the consumer (which is the instance).
-        pass
 
-    if source_allocations:
-        # Generate an allocation request for the destination node.
-        # NOTE(gibi): if the source allocation allocates from more than one RP
-        # then we need to fail as the dest allocation might also need to be
-        # complex (e.g. nested) and we cannot calculate that allocation request
-        # properly without a placement allocation candidate call.
-        # Alternatively we could sum up the source allocation and try to
-        # allocate that from the root RP of the dest host. It would only work
-        # if the dest host would not require nested allocation for this server
-        # which is really a rare case.
-        if len(source_allocations) > 1:
-            reason = (_('Unable to move instance %(instance_uuid)s to '
-                        'host %(host)s. The instance has complex allocations '
-                        'on the source host so move cannot be forced.') %
-                      {'instance_uuid': instance.uuid,
-                       'host': dest_node.host})
-            raise exception.NoValidHost(reason=reason)
-        alloc_request = {
-            'allocations': {
-                dest_node.uuid: {
-                    'resources':
-                        source_allocations[source_node.uuid]['resources']}
-            },
-        }
-        # import locally to avoid cyclic import
-        from nova.scheduler.client import report
-        # The claim_resources method will check for existing allocations
-        # for the instance and effectively "double up" the allocations for
-        # both the source and destination node. That's why when requesting
-        # allocations for resources on the destination node before we move,
-        # we use the existing resource allocations from the source node.
-        if reportclient.claim_resources(
-                context, instance.uuid, alloc_request,
-                instance.project_id, instance.user_id,
-                allocation_request_version=report.CONSUMER_GENERATION_VERSION,
-                consumer_generation=consumer_generation):
-            LOG.debug('Instance allocations successfully created on '
-                      'destination node %(dest)s: %(alloc_request)s',
-                      {'dest': dest_node.uuid,
-                       'alloc_request': alloc_request},
-                      instance=instance)
-        else:
-            # We have to fail even though the user requested that we force
-            # the host. This is because we need Placement to have an
-            # accurate reflection of what's allocated on all nodes so the
-            # scheduler can make accurate decisions about which nodes have
-            # capacity for building an instance.
-            reason = (_('Unable to move instance %(instance_uuid)s to '
-                        'host %(host)s. There is not enough capacity on '
-                        'the host for the instance.') %
-                      {'instance_uuid': instance.uuid,
-                       'host': dest_node.host})
-            raise exception.NoValidHost(reason=reason)
+        if not source_allocations:
+            # This shouldn't happen, so just raise an error since we cannot
+            # proceed.
+            raise exception.ConsumerAllocationRetrievalFailed(
+                consumer_uuid=instance.uuid,
+                error=_(
+                    'Expected to find allocations for source node resource '
+                    'provider %s. Retry the operation without forcing a '
+                    'destination host.') % source_node.uuid)
+
+    # Generate an allocation request for the destination node.
+    # NOTE(gibi): if the source allocation allocates from more than one RP
+    # then we need to fail as the dest allocation might also need to be
+    # complex (e.g. nested) and we cannot calculate that allocation request
+    # properly without a placement allocation candidate call.
+    # Alternatively we could sum up the source allocation and try to
+    # allocate that from the root RP of the dest host. It would only work
+    # if the dest host would not require nested allocation for this server
+    # which is really a rare case.
+    if len(source_allocations) > 1:
+        reason = (_('Unable to move instance %(instance_uuid)s to '
+                    'host %(host)s. The instance has complex allocations '
+                    'on the source host so move cannot be forced.') %
+                  {'instance_uuid': instance.uuid,
+                   'host': dest_node.host})
+        raise exception.NoValidHost(reason=reason)
+    alloc_request = {
+        'allocations': {
+            dest_node.uuid: {
+                'resources':
+                    source_allocations[source_node.uuid]['resources']}
+        },
+    }
+    # import locally to avoid cyclic import
+    from nova.scheduler.client import report
+    # The claim_resources method will check for existing allocations
+    # for the instance and effectively "double up" the allocations for
+    # both the source and destination node. That's why when requesting
+    # allocations for resources on the destination node before we move,
+    # we use the existing resource allocations from the source node.
+    if reportclient.claim_resources(
+            context, instance.uuid, alloc_request,
+            instance.project_id, instance.user_id,
+            allocation_request_version=report.CONSUMER_GENERATION_VERSION,
+            consumer_generation=consumer_generation):
+        LOG.debug('Instance allocations successfully created on '
+                  'destination node %(dest)s: %(alloc_request)s',
+                  {'dest': dest_node.uuid,
+                   'alloc_request': alloc_request},
+                  instance=instance)
     else:
-        # This shouldn't happen, but it could be a case where there are
-        # older (Ocata) computes still so the existing allocations are
-        # getting overwritten by the update_available_resource periodic
-        # task in the compute service.
-        # TODO(mriedem): Make this an error when the auto-heal
-        # compatibility code in the resource tracker is removed.
-        LOG.warning('No instance allocations found for source node '
-                    '%(source)s in Placement. Not creating allocations '
-                    'for destination node %(dest)s and assuming the '
-                    'compute service will heal the allocations.',
-                    {'source': source_node.uuid, 'dest': dest_node.uuid},
-                    instance=instance)
+        # We have to fail even though the user requested that we force
+        # the host. This is because we need Placement to have an
+        # accurate reflection of what's allocated on all nodes so the
+        # scheduler can make accurate decisions about which nodes have
+        # capacity for building an instance.
+        reason = (_('Unable to move instance %(instance_uuid)s to '
+                    'host %(host)s. There is not enough capacity on '
+                    'the host for the instance.') %
+                  {'instance_uuid': instance.uuid,
+                   'host': dest_node.host})
+        raise exception.NoValidHost(reason=reason)
 
 
 def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
