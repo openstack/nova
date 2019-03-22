@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-09-23 05:27+0000\n"
+"POT-Creation-Date: 2019-03-22 03:06+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -2283,10 +2283,6 @@ msgstr "인스턴스와 연관된 Fixed IP가 없음"
 
 msgid "No floating IP addresses have been defined."
 msgstr "정의된 부동 IP 주소가 없습니다. "
-
-#, python-format
-msgid "No free disk device names for prefix '%s'"
-msgstr "'%s' 접두부에 대한 여유 디스크 디바이스 이름이 없음"
 
 msgid "No free nbd devices"
 msgstr "여유 nbd 디바이스 없음"

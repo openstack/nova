@@ -36,7 +36,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-09-21 04:59+0000\n"
+"POT-Creation-Date: 2019-03-22 03:06+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -554,16 +554,6 @@ msgstr "单元%(name)s已存在。"
 msgid ""
 "Change would make usage less than 0 for the following resources: %(unders)s"
 msgstr "对于下列资源，更改将导致使用量小于 0：%(unders)s"
-
-#, python-format
-msgid ""
-"Check: %(name)s\n"
-"Result: %(result)s\n"
-"Details: %(details)s"
-msgstr ""
-"检查: %(name)s\n"
-"结果: %(result)s\n"
-"详情: %(details)s"
 
 #, python-format
 msgid "Cinder API version %(version)s is not available."
@@ -1129,9 +1119,6 @@ msgstr "插入vif时失败"
 
 msgid "Failed while unplugging vif"
 msgstr "拔出 vif 时失败"
-
-msgid "Failure"
-msgstr "失败"
 
 msgid "Failure prepping block device."
 msgstr "准备块设备失败。"
@@ -2254,10 +2241,6 @@ msgstr "没有固定 IP 与实例相关联"
 
 msgid "No floating IP addresses have been defined."
 msgstr "没有定义浮动IP。"
-
-#, python-format
-msgid "No free disk device names for prefix '%s'"
-msgstr "对于前缀“%s”，没有任何可用的磁盘设备名"
 
 msgid "No free nbd devices"
 msgstr "没有空闲NBD设备"
@@ -3535,9 +3518,6 @@ msgstr "不支持的Content-Type"
 msgid "Update conflict: %(error)s"
 msgstr "更新冲突: %(error)s"
 
-msgid "Upgrade Check Results"
-msgstr "升级检查结果"
-
 msgid "Upgrade DB using Essex release first."
 msgstr "请首先使用 Essex 发行版来升级数据库。"
 
@@ -3668,9 +3648,6 @@ msgid ""
 "Volume sets block size, but the current libvirt hypervisor '%s' does not "
 "support custom block size"
 msgstr "卷设置块大小，但是当前libvirt监测器 '%s'不支持定制化块大小"
-
-msgid "Warning"
-msgstr "警告"
 
 #, python-format
 msgid ""
