@@ -2179,6 +2179,60 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.params['request_specs'][0].requested_resources = []
         self._do_schedule_and_build_instances_test(self.params)
 
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_cleanup_build_artifacts(self, inst_map_get):
+        """Simple test to ensure the order of operations in the cleanup method
+        is enforced.
+        """
+        req_spec = fake_request_spec.fake_spec_obj()
+        build_req = fake_build_request.fake_req_obj(self.context)
+        instance = build_req.instance
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(instance_uuid=instance.uuid)])
+        tags = objects.TagList(objects=[objects.Tag(tag='test')])
+        cell1 = self.cell_mappings['cell1']
+        cell_mapping_cache = {instance.uuid: cell1}
+        err = exc.TooManyInstances('test')
+
+        # We need to assert that BDMs and tags are created in the cell DB
+        # before the instance mapping is updated.
+        def fake_create_block_device_mapping(*args, **kwargs):
+            inst_map_get.return_value.save.assert_not_called()
+
+        def fake_create_tags(*args, **kwargs):
+            inst_map_get.return_value.save.assert_not_called()
+
+        with test.nested(
+            mock.patch.object(self.conductor_manager,
+                              '_set_vm_state_and_notify'),
+            mock.patch.object(self.conductor_manager,
+                              '_create_block_device_mapping',
+                              side_effect=fake_create_block_device_mapping),
+            mock.patch.object(self.conductor_manager, '_create_tags',
+                              side_effect=fake_create_tags),
+            mock.patch.object(build_req, 'destroy'),
+            mock.patch.object(req_spec, 'destroy'),
+        ) as (
+            _set_vm_state_and_notify, _create_block_device_mapping,
+            _create_tags, build_req_destroy, req_spec_destroy,
+        ):
+            self.conductor_manager._cleanup_build_artifacts(
+                self.context, err, [instance], [build_req], [req_spec], bdms,
+                tags, cell_mapping_cache)
+        # Assert the various mock calls.
+        _set_vm_state_and_notify.assert_called_once_with(
+            test.MatchType(context.RequestContext), instance.uuid,
+            'build_instances',
+            {'vm_state': vm_states.ERROR, 'task_state': None}, err, req_spec)
+        _create_block_device_mapping.assert_called_once_with(
+            cell1, instance.flavor, instance.uuid, bdms)
+        _create_tags.assert_called_once_with(
+            test.MatchType(context.RequestContext), instance.uuid, tags)
+        inst_map_get.return_value.save.assert_called_once_with()
+        self.assertEqual(cell1, inst_map_get.return_value.cell_mapping)
+        build_req_destroy.assert_called_once_with()
+        req_spec_destroy.assert_called_once_with()
+
     @mock.patch('nova.objects.CellMapping.get_by_uuid')
     def test_bury_in_cell0_no_cell0(self, mock_cm_get):
         mock_cm_get.side_effect = exc.CellMappingNotFound(uuid='0')
