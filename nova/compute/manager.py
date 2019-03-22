@@ -6192,7 +6192,7 @@ class ComputeManager(manager.Manager):
                                 if None, calculate it in driver
         :param disk_over_commit: if true, allow disk over commit
                                  if None, ignore disk usage checking
-        :returns: a dict containing migration info
+        :returns: a LiveMigrateData object (hypervisor-dependent)
         """
         src_compute_info = obj_base.obj_to_primitive(
             self._get_compute_info(ctxt, instance.host))
@@ -6223,7 +6223,7 @@ class ComputeManager(manager.Manager):
         :param ctxt: security context
         :param instance: dict of instance data
         :param dest_check_data: result of check_can_live_migrate_destination
-        :returns: a dict containing migration info
+        :returns: a LiveMigrateData object
         """
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
             ctxt, instance.uuid)
