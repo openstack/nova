@@ -12,8 +12,6 @@
 
 from oslo_policy import policy
 
-COMPUTE_API = 'os_compute_api'
-
 RULE_ADMIN_OR_OWNER = 'rule:admin_or_owner'
 RULE_ADMIN_API = 'rule:admin_api'
 RULE_ANY = '@'
