@@ -1524,13 +1524,16 @@ class SchedulerReportClient(object):
         return allocations.get(
             rp_uuid, {}).get('resources', {})
 
-    # NOTE(jaypipes): Currently, this method is ONLY used in two places:
+    # NOTE(jaypipes): Currently, this method is ONLY used in three places:
     # 1. By the scheduler to allocate resources on the selected destination
     #    hosts.
     # 2. By the conductor LiveMigrationTask to allocate resources on a forced
-    #    destination host. This is a short-term fix for Pike which should be
-    #    replaced in Queens by conductor calling the scheduler in the force
-    #    host case.
+    #    destination host. In this case, the source node allocations have
+    #    already been moved to the migration record so the instance should not
+    #    have allocations and _move_operation_alloc_request will not be called.
+    # 3. By the conductor ComputeTaskManager to allocate resources on a forced
+    #    destination host during evacuate. This case will call the
+    #    _move_operation_alloc_request method.
     # This method should not be called by the resource tracker.
     @safe_connect
     @retries
@@ -1546,10 +1549,7 @@ class SchedulerReportClient(object):
         host). In order to prevent compute nodes currently performing move
         operations from being scheduled to improperly, we create a "doubled-up"
         allocation that consumes resources on *both* the source and the
-        destination host during the move operation. When the move operation
-        completes, the destination host will end up setting allocations for the
-        instance only on the destination host thereby freeing up resources on
-        the source host appropriately.
+        destination host during the move operation.
 
         :param context: The security context
         :param consumer_uuid: The instance's UUID.
