@@ -1,0 +1,24 @@
+---
+other:
+  - |
+    The ``[workarounds]/ensure_libvirt_rbd_instance_dir_cleanup`` configuration
+    option has been introduced. This can be used by operators to ensure that
+    instance directories are always removed during cleanup within the Libvirt
+    driver while using ``[libvirt]/images_type = rbd``. This works around known
+    issues such as `bug 1414895`_ when cleaning up after an evacuation and
+    `bug 1761062`_ when reverting from an instance resize.
+
+    Operators should be aware that this workaround only applies when using the
+    libvirt compute driver and rbd images_type as enabled by the following
+    configuration options:
+
+    * ``[DEFAULT]/compute_driver = libvirt``
+    * ``[libvirt]/images_type = rbd``
+
+    .. warning:: Operators will need to ensure that the instance directory
+      itself, specified by ``[DEFAULT]/instances_path``, is not shared between
+      computes before enabling this workaround, otherwise files associated with
+      running instances may be removed.
+
+    .. _bug 1414895: https://bugs.launchpad.net/nova/+bug/1414895
+    .. _bug 1761062: https://bugs.launchpad.net/nova/+bug/1761062
