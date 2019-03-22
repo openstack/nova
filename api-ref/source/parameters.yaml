@@ -2587,9 +2587,15 @@ event_hostId:
   type: string
 event_name:
   description: |
-    The event name. A valid value is ``network-changed``, ``network-vif-plugged``,
-    ``network-vif-unplugged``, ``network-vif-deleted``, or ``volume-extended``.
-    The event name ``volume-extended`` is added since microversion ``2.51``.
+    The event name. A valid value is:
+
+    - ``network-changed``
+    - ``network-vif-plugged``
+    - ``network-vif-unplugged``
+    - ``network-vif-deleted``
+    - ``volume-extended`` (since microversion ``2.51``)
+    - ``power-update`` (since microversion ``2.76``)
+
   in: body
   required: true
   type: string
@@ -2623,7 +2629,13 @@ event_status:
   type: string
 event_tag:
   description: |
-    A string value that identifies the event.
+    A string value that identifies the event. Certain types of events require
+    specific tags:
+
+    - For the ``power-update`` event the tag must be either be ``POWER_ON``
+      or ``POWER_OFF``.
+    - For the ``volume-extended`` event the tag must be the volume id.
+
   in: body
   required: false
   type: string

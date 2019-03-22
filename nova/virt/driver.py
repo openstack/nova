@@ -865,6 +865,19 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def power_update_event(self, instance, target_power_state):
+        """Update power, vm and task states of the specified instance.
+
+        Note that the driver is expected to set the task_state of the
+        instance back to None.
+
+        :param instance: nova.objects.instance.Instance
+        :param target_power_state: The desired target power state for the
+                                   instance; possible values are "POWER_ON"
+                                   and "POWER_OFF".
+        """
+        raise NotImplementedError()
+
     def trigger_crash_dump(self, instance):
         """Trigger crash dump mechanism on the given instance.
 

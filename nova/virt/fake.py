@@ -44,6 +44,7 @@ from nova.objects import fields as obj_fields
 from nova.objects import migrate_data
 from nova.virt import driver
 from nova.virt import hardware
+from nova.virt.ironic import driver as ironic
 from nova.virt import virtapi
 
 CONF = nova.conf.CONF
@@ -685,6 +686,18 @@ class MediumFakeDriver(FakeDriver):
     vcpus = 10
     memory_mb = 8192
     local_gb = 1028
+
+
+class PowerUpdateFakeDriver(SmallFakeDriver):
+    # A specific fake driver for the power-update external event testing.
+
+    def __init__(self, virtapi):
+        super(PowerUpdateFakeDriver, self).__init__(virtapi=None)
+        self.driver = ironic.IronicDriver(virtapi=virtapi)
+
+    def power_update_event(self, instance, target_power_state):
+        """Update power state of the specified instance in the nova DB."""
+        self.driver.power_update_event(instance, target_power_state)
 
 
 class MediumFakeDriverWithNestedCustomResources(MediumFakeDriver):

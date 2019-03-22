@@ -31,6 +31,7 @@ import six
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova.compute import instance_actions
+from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
@@ -3963,6 +3964,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(objects.InstanceAction, 'action_start')
     def test_external_instance_event(self, mock_action_start):
+
         instances = [
             objects.Instance(uuid=uuids.instance_1, host='host1',
                              migration_context=None),
@@ -3972,6 +3974,14 @@ class _ComputeAPIUnitTestMixIn(object):
                              migration_context=None),
             objects.Instance(uuid=uuids.instance_4, host='host2',
                              migration_context=None),
+            objects.Instance(uuid=uuids.instance_5, host='host2',
+                             migration_context=None, task_state=None,
+                             vm_state=vm_states.STOPPED,
+                             power_state=power_state.SHUTDOWN),
+            objects.Instance(uuid=uuids.instance_6, host='host2',
+                             migration_context=None, task_state=None,
+                             vm_state=vm_states.ACTIVE,
+                             power_state=power_state.RUNNING)
             ]
         # Create a single cell context and associate it with all instances
         mapping = objects.InstanceMapping.get_by_instance_uuid(
@@ -3996,6 +4006,14 @@ class _ComputeAPIUnitTestMixIn(object):
                 instance_uuid=uuids.instance_4,
                 name='volume-extended',
                 tag=volume_id),
+            objects.InstanceExternalEvent(
+                instance_uuid=uuids.instance_5,
+                name='power-update',
+                tag="POWER_ON"),
+            objects.InstanceExternalEvent(
+                instance_uuid=uuids.instance_6,
+                name='power-update',
+                tag="POWER_OFF"),
             ]
         self.compute_api.compute_rpcapi = mock.MagicMock()
         self.compute_api.external_instance_event(self.context,
@@ -4005,10 +4023,67 @@ class _ComputeAPIUnitTestMixIn(object):
                                host='host1')
         method.assert_any_call(cell_context, instances[2:], events[2:],
                                host='host2')
-        mock_action_start.assert_called_once_with(
-            self.context, uuids.instance_4, instance_actions.EXTEND_VOLUME,
-            want_result=False)
+        calls = [mock.call(self.context, uuids.instance_4,
+                           instance_actions.EXTEND_VOLUME, want_result=False),
+                 mock.call(self.context, uuids.instance_5,
+                           instance_actions.START, want_result=False),
+                 mock.call(self.context, uuids.instance_6,
+                           instance_actions.STOP, want_result=False)]
+        mock_action_start.assert_has_calls(calls)
         self.assertEqual(2, method.call_count)
+
+    def test_external_instance_event_power_update_invalid_tag(self):
+        instance1 = objects.Instance(self.context)
+        instance1.uuid = uuids.instance1
+        instance1.id = 1
+        instance1.vm_state = vm_states.ACTIVE
+        instance1.task_state = None
+        instance1.power_state = power_state.RUNNING
+        instance1.host = 'host1'
+        instance1.migration_context = None
+        instance2 = objects.Instance(self.context)
+        instance2.uuid = uuids.instance2
+        instance2.id = 2
+        instance2.vm_state = vm_states.STOPPED
+        instance2.task_state = None
+        instance2.power_state = power_state.SHUTDOWN
+        instance2.host = 'host2'
+        instance2.migration_context = None
+        instances = [instance1, instance2]
+        events = [
+            objects.InstanceExternalEvent(
+                instance_uuid=instance1.uuid,
+                name='power-update',
+                tag="VACATION"),
+            objects.InstanceExternalEvent(
+                instance_uuid=instance2.uuid,
+                name='power-update',
+                tag="POWER_ON")
+            ]
+        with test.nested(
+            mock.patch.object(self.compute_api.compute_rpcapi,
+                              'external_instance_event'),
+            mock.patch.object(objects.InstanceAction, 'action_start'),
+            mock.patch.object(compute_api, 'LOG')
+        ) as (
+            mock_ex, mock_action_start, mock_log
+        ):
+            self.compute_api.external_instance_event(self.context,
+                instances, events)
+            self.assertEqual(2, mock_ex.call_count)
+            # event VACATION requested on instance1 is ignored because
+            # its an invalid event tag.
+            mock_ex.assert_has_calls(
+                [mock.call(self.context, [instance2],
+                           [events[1]], host=u'host2'),
+                 mock.call(self.context, [instance1], [], host=u'host1')],
+                any_order=True)
+            mock_action_start.assert_called_once_with(
+                self.context, instance2.uuid, instance_actions.START,
+                want_result=False)
+            self.assertEqual(1, mock_log.warning.call_count)
+            self.assertIn(
+                'Invalid power state', mock_log.warning.call_args[0][0])
 
     def test_external_instance_event_evacuating_instance(self):
         # Since we're patching the db's migration_get(), use a dict here so

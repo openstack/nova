@@ -41,6 +41,9 @@ LOG = logging.getLogger(__name__)
 QUOTAS = quota.QUOTAS
 
 
+POWER_ON = 'POWER_ON'
+POWER_OFF = 'POWER_OFF'
+
 _STATE_MAP = {
     vm_states.ACTIVE: {
         'default': 'ACTIVE',

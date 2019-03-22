@@ -83,6 +83,7 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import external_event as external_event_obj
 from nova.objects import fields
 from nova.objects import instance as obj_instance
 from nova.objects import migrate_data as migrate_data_obj
@@ -8652,6 +8653,106 @@ class ComputeManager(manager.Manager):
                         instance=instance)
             raise
 
+    @staticmethod
+    def _is_state_valid_for_power_update_event(instance, target_power_state):
+        """Check if the current state of the instance allows it to be
+        a candidate for the power-update event.
+
+        :param instance: The nova instance object.
+        :param target_power_state: The desired target power state; this should
+                                   either be "POWER_ON" or "POWER_OFF".
+        :returns Boolean: True if the instance can be subjected to the
+                          power-update event.
+        """
+        if ((target_power_state == external_event_obj.POWER_ON and
+                instance.task_state is None and
+                instance.vm_state == vm_states.STOPPED and
+                instance.power_state == power_state.SHUTDOWN) or
+            (target_power_state == external_event_obj.POWER_OFF and
+                instance.task_state is None and
+                instance.vm_state == vm_states.ACTIVE and
+                instance.power_state == power_state.RUNNING)):
+            return True
+        return False
+
+    @wrap_exception()
+    @reverts_task_state
+    @wrap_instance_event(prefix='compute')
+    @wrap_instance_fault
+    def power_update(self, context, instance, target_power_state):
+        """Power update of an instance prompted by an external event.
+        :param context: The API request context.
+        :param instance: The nova instance object.
+        :param target_power_state: The desired target power state;
+                                   this should either be "POWER_ON" or
+                                   "POWER_OFF".
+        """
+
+        @utils.synchronized(instance.uuid)
+        def do_power_update():
+            LOG.debug('Handling power-update event with target_power_state %s '
+                      'for instance', target_power_state, instance=instance)
+            if not self._is_state_valid_for_power_update_event(
+                    instance, target_power_state):
+                pow_state = fields.InstancePowerState.from_index(
+                    instance.power_state)
+                LOG.info('The power-update %(tag)s event for instance '
+                         '%(uuid)s is a no-op since the instance is in '
+                         'vm_state %(vm_state)s, task_state '
+                         '%(task_state)s and power_state '
+                         '%(power_state)s.',
+                         {'tag': target_power_state, 'uuid': instance.uuid,
+                         'vm_state': instance.vm_state,
+                         'task_state': instance.task_state,
+                         'power_state': pow_state})
+                return
+            LOG.debug("Trying to %s instance",
+                      target_power_state, instance=instance)
+            if target_power_state == external_event_obj.POWER_ON:
+                action = fields.NotificationAction.POWER_ON
+                notification_name = "power_on."
+                instance.task_state = task_states.POWERING_ON
+            else:
+                # It's POWER_OFF
+                action = fields.NotificationAction.POWER_OFF
+                notification_name = "power_off."
+                instance.task_state = task_states.POWERING_OFF
+                instance.progress = 0
+
+            try:
+                # Note that the task_state is set here rather than the API
+                # because this is a best effort operation and deferring
+                # updating the task_state until we get to the compute service
+                # avoids error handling in the API and needing to account for
+                # older compute services during rolling upgrades from Stein.
+                # If we lose a race, UnexpectedTaskStateError is handled
+                # below.
+                instance.save(expected_task_state=[None])
+                self._notify_about_instance_usage(context, instance,
+                                                  notification_name + "start")
+                compute_utils.notify_about_instance_action(context, instance,
+                    self.host, action=action,
+                    phase=fields.NotificationPhase.START)
+                # UnexpectedTaskStateError raised from the driver will be
+                # handled below and not result in a fault, error notification
+                # or failure of the instance action. Other driver errors like
+                # NotImplementedError will be record a fault, send an error
+                # notification and mark the instance action as failed.
+                self.driver.power_update_event(instance, target_power_state)
+                self._notify_about_instance_usage(context, instance,
+                                                  notification_name + "end")
+                compute_utils.notify_about_instance_action(context, instance,
+                    self.host, action=action,
+                    phase=fields.NotificationPhase.END)
+            except exception.UnexpectedTaskStateError as e:
+                # Handling the power-update event is best effort and if we lost
+                # a race with some other action happening to the instance we
+                # just log it and return rather than fail the action.
+                LOG.info("The power-update event was possibly preempted: %s ",
+                         e.format_message(), instance=instance)
+                return
+        do_power_update()
+
     @wrap_exception()
     def external_instance_event(self, context, instances, events):
         # NOTE(danms): Some event types are handled by the manager, such
@@ -8687,6 +8788,8 @@ class ComputeManager(manager.Manager):
                              instance=instance)
             elif event.name == 'volume-extended':
                 self.extend_volume(context, instance, event.tag)
+            elif event.name == 'power-update':
+                self.power_update(context, instance, event.tag)
             else:
                 self._process_instance_event(instance, event)
 

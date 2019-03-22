@@ -974,3 +974,11 @@ Multiple API cleanups is done in API microversion 2.75:
 
 * Return ``servers`` field always in the response of GET
   hypervisors API even there are no servers on hypervisor.
+
+2.76
+----
+
+Adds ``power-update`` event name to ``os-server-external-events`` API. The
+changes to the power state of an instance caused by this event can be viewed
+through ``GET /servers/{server_id}/os-instance-actions`` and
+``GET /servers/{server_id}/os-instance-actions/{request_id}``.

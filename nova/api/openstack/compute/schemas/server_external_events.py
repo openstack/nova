@@ -55,3 +55,7 @@ create = {
 create_v251 = copy.deepcopy(create)
 name = create_v251['properties']['events']['items']['properties']['name']
 name['enum'].append('volume-extended')
+
+create_v276 = copy.deepcopy(create_v251)
+name = create_v276['properties']['events']['items']['properties']['name']
+name['enum'].append('power-update')

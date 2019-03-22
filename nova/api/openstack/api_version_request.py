@@ -196,6 +196,11 @@ REST_API_VERSION_HISTORY = """REST API Version History:
                string to 0 (integer) in flavor APIs.
              - Return ``servers`` field always in the response of GET
                hypervisors API even there are no servers on hypervisor.
+    * 2.76 - Adds ``power-update`` event to ``os-server-external-events`` API.
+             The changes to the power state of an instance caused by this event
+             can be viewed through
+             ``GET /servers/{server_id}/os-instance-actions`` and
+             ``GET /servers/{server_id}/os-instance-actions/{request_id}``.
 """
 
 # The minimum and maximum versions of the API supported
@@ -204,7 +209,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.75"
+_MAX_API_VERSION = "2.76"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

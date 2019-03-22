@@ -421,6 +421,10 @@ class TestOpenStackClient(object):
     def delete_server_group(self, group_id):
         self.api_delete('/os-server-groups/%s' % group_id)
 
+    def create_server_external_events(self, events):
+        body = {'events': events}
+        return self.api_post('/os-server-external-events', body).body['events']
+
     def get_instance_actions(self, server_id):
         return self.api_get('/servers/%s/os-instance-actions' %
                             (server_id)).body['instanceActions']

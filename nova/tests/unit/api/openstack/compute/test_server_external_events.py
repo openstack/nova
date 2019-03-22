@@ -12,8 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures as fx
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
+import six
 import webob
 
 from nova.api.openstack.compute import server_external_events \
@@ -22,6 +24,7 @@ from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
 
 
@@ -207,3 +210,48 @@ class ServerExternalEventsTestV251(ServerExternalEventsTestV21):
         self.assertEqual(400, result['events'][1]['code'])
         self.assertEqual('failed', result['events'][1]['status'])
         self.assertEqual(207, code)
+
+
+@mock.patch('nova.objects.InstanceMappingList.get_by_instance_uuids',
+            fake_get_by_instance_uuids)
+@mock.patch('nova.objects.InstanceList.get_by_filters',
+            fake_get_by_filters)
+class ServerExternalEventsTestV276(ServerExternalEventsTestV21):
+    wsgi_api_version = '2.76'
+
+    def setUp(self):
+        super(ServerExternalEventsTestV276, self).setUp()
+        self.useFixture(fx.EnvironmentVariable('OS_DEBUG', '1'))
+
+        self.stdlog = self.useFixture(fixtures.StandardLogging())
+
+    def test_create_with_missing_tag(self):
+        body = self.default_body
+        body['events'][0]['name'] = 'power-update'
+        body['events'][1]['name'] = 'power-update'
+        result, code = self._assert_call(body,
+                                         [fake_instance_uuids[0]],
+                                         ['power-update'])
+        msg = "Event tag is missing for instance"
+        self.assertIn(msg, self.stdlog.logger.output)
+        self.assertEqual(200, result['events'][0]['code'])
+        self.assertEqual('completed', result['events'][0]['status'])
+        self.assertEqual(400, result['events'][1]['code'])
+        self.assertEqual('failed', result['events'][1]['status'])
+        self.assertEqual(207, code)
+
+    def test_create_event_auth_pre_2_76_fails(self):
+        # Negative test to make sure you can't create 'power-update'
+        # before 2.76.
+        body = self.default_body
+        body['events'][0]['name'] = 'power-update'
+        body['events'][1]['name'] = 'power-update'
+        req = fakes.HTTPRequestV21.blank(
+            '/os-server-external-events', version='2.75')
+        exp = self.assertRaises(
+                exception.ValidationError,
+                self.api.create,
+                req,
+                body=body)
+        self.assertIn('Invalid input for field/attribute name.',
+                      six.text_type(exp))
