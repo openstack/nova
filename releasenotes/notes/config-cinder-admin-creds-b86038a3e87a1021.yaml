@@ -1,0 +1,19 @@
+---
+fixes:
+  - |
+    It is now possible to configure the ``[cinder]`` section of nova.conf to
+    allow setting admin-role credentials for scenarios where a user token is
+    not available to perform actions on a volume. For example, when
+    ``reclaim_instance_interval`` is a positive integer, instances are
+    soft deleted until the nova-compute service periodic task removes them.
+    If a soft deleted instance has volumes attached, the compute service needs
+    to be able to detach and possibly delete the associated volumes, otherwise
+    they will be orphaned in the block storage service. Similarly, if
+    ``running_deleted_instance_poll_interval`` is set and
+    ``running_deleted_instance_action = reap``, then the compute service will
+    need to be able to detach and possibly delete volumes attached to
+    instances that are reaped. See `bug 1733736`_ and `bug 1734025`_ for more
+    details.
+
+    .. _bug 1733736: https://bugs.launchpad.net/nova/+bug/1733736
+    .. _bug 1734025: https://bugs.launchpad.net/nova/+bug/1734025
