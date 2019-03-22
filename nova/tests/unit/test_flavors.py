@@ -24,25 +24,6 @@ from nova import test
 
 class InstanceTypeTestCase(test.TestCase):
     """Test cases for flavor  code."""
-    def test_will_not_get_bad_default_instance_type(self):
-        # ensures error raised on bad default flavor.
-        self.flags(default_flavor='unknown_flavor')
-        self.assertRaises(exception.FlavorNotFound,
-                          flavors.get_default_flavor)
-
-    def test_flavor_get_by_None_name_returns_default(self):
-        # Ensure get by name returns default flavor with no name.
-        default = flavors.get_default_flavor()
-        actual = flavors.get_flavor_by_name(None)
-        self.assertIsInstance(default, objects.Flavor)
-        self.assertIsInstance(actual, objects.Flavor)
-        self.assertEqual(default.flavorid, actual.flavorid)
-
-    def test_will_not_get_flavor_with_bad_name(self):
-        # Ensure get by name returns default flavor with bad name.
-        self.assertRaises(exception.FlavorNotFound,
-                          flavors.get_flavor_by_name, 10000)
-
     def test_will_not_get_instance_by_unknown_flavor_id(self):
         # Ensure get by flavor raises error with wrong flavorid.
         self.assertRaises(exception.FlavorNotFound,
@@ -50,7 +31,8 @@ class InstanceTypeTestCase(test.TestCase):
                           'unknown_flavor')
 
     def test_will_get_instance_by_flavor_id(self):
-        default_instance_type = flavors.get_default_flavor()
+        default_instance_type = objects.Flavor.get_by_name(
+            context.get_admin_context(), 'm1.small')
         flavorid = default_instance_type.flavorid
         fetched = flavors.get_flavor_by_flavor_id(flavorid)
         self.assertIsInstance(fetched, objects.Flavor)
@@ -58,11 +40,16 @@ class InstanceTypeTestCase(test.TestCase):
 
 
 class InstanceTypeToolsTest(test.TestCase):
+
+    def setUp(self):
+        super(InstanceTypeToolsTest, self).setUp()
+        self.context = context.get_admin_context()
+
     def _dict_to_metadata(self, data):
         return [{'key': key, 'value': value} for key, value in data.items()]
 
     def _test_extract_flavor(self, prefix):
-        instance_type = flavors.get_default_flavor()
+        instance_type = objects.Flavor.get_by_name(self.context, 'm1.small')
         instance_type_p = obj_base.obj_to_primitive(instance_type)
 
         metadata = {}
@@ -92,7 +79,7 @@ class InstanceTypeToolsTest(test.TestCase):
         self._test_extract_flavor('foo_')
 
     def test_save_flavor_info(self):
-        instance_type = flavors.get_default_flavor()
+        instance_type = objects.Flavor.get_by_name(self.context, 'm1.small')
 
         example = {}
         example_prefix = {}
@@ -110,7 +97,7 @@ class InstanceTypeToolsTest(test.TestCase):
         self.assertEqual(example_prefix, metadata)
 
     def test_flavor_numa_extras_are_saved(self):
-        instance_type = flavors.get_default_flavor()
+        instance_type = objects.Flavor.get_by_name(self.context, 'm1.small')
         instance_type['extra_specs'] = {
             'hw:numa_mem.0': '123',
             'hw:numa_cpus.0': '456',

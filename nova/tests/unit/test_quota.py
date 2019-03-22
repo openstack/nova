@@ -19,7 +19,6 @@ from oslo_db.sqlalchemy import enginefacade
 from six.moves import range
 
 from nova import compute
-from nova.compute import flavors
 import nova.conf
 from nova import context
 from nova.db import api as db
@@ -68,6 +67,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         self.context = context.RequestContext(self.user_id,
                                               self.project_id,
                                               is_admin=True)
+        self.inst_type = objects.Flavor.get_by_name(self.context, 'm1.small')
 
         nova.tests.unit.image.fake.stub_out_image_service(self)
 
@@ -94,7 +94,7 @@ class QuotaIntegrationTestCase(test.TestCase):
             inst.reservation_id = 'r-fakeres'
             inst.user_id = self.user_id
             inst.project_id = self.project_id
-            inst.flavor = flavors.get_flavor_by_name(flavor_name)
+            inst.flavor = objects.Flavor.get_by_name(cctxt, flavor_name)
             # This is needed for instance quota counting until we have the
             # ability to count allocations in placement.
             inst.vcpus = inst.flavor.vcpus
@@ -111,11 +111,10 @@ class QuotaIntegrationTestCase(test.TestCase):
     def test_too_many_instances(self):
         for i in range(CONF.quota.instances):
             self._create_instance()
-        inst_type = flavors.get_flavor_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         try:
             self.compute_api.create(self.context, min_count=1, max_count=1,
-                                    instance_type=inst_type,
+                                    instance_type=self.inst_type,
                                     image_href=image_uuid)
         except exception.QuotaError as e:
             expected_kwargs = {'code': 413,
@@ -129,11 +128,10 @@ class QuotaIntegrationTestCase(test.TestCase):
 
     def test_too_many_cores(self):
         self._create_instance()
-        inst_type = flavors.get_flavor_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         try:
             self.compute_api.create(self.context, min_count=1, max_count=1,
-                                    instance_type=inst_type,
+                                    instance_type=self.inst_type,
                                     image_href=image_uuid)
         except exception.QuotaError as e:
             expected_kwargs = {'code': 413,
@@ -199,30 +197,27 @@ class QuotaIntegrationTestCase(test.TestCase):
         metadata = {}
         for i in range(CONF.quota.metadata_items + 1):
             metadata['key%s' % i] = 'value%s' % i
-        inst_type = flavors.get_flavor_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         self.assertRaises(exception.QuotaError, self.compute_api.create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
-                                            instance_type=inst_type,
+                                            instance_type=self.inst_type,
                                             image_href=image_uuid,
                                             metadata=metadata)
 
     def _create_with_injected_files(self, files):
         api = self.compute_api
-        inst_type = flavors.get_flavor_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         api.create(self.context, min_count=1, max_count=1,
-                instance_type=inst_type, image_href=image_uuid,
+                instance_type=self.inst_type, image_href=image_uuid,
                 injected_files=files)
 
     def test_no_injected_files(self):
         api = self.compute_api
-        inst_type = flavors.get_flavor_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         api.create(self.context,
-                   instance_type=inst_type,
+                   instance_type=self.inst_type,
                    image_href=image_uuid)
 
     def test_max_injected_files(self):

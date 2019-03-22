@@ -125,23 +125,6 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     return flavor
 
 
-def get_default_flavor():
-    """Get the default flavor."""
-    name = CONF.default_flavor
-    return get_flavor_by_name(name)
-
-
-def get_flavor_by_name(name, ctxt=None):
-    """Retrieves single flavor by name."""
-    if name is None:
-        return get_default_flavor()
-
-    if ctxt is None:
-        ctxt = context.get_admin_context()
-
-    return objects.Flavor.get_by_name(ctxt, name)
-
-
 # TODO(termie): flavor-specific code should probably be in the API that uses
 #               flavors.
 def get_flavor_by_flavor_id(flavorid, ctxt=None, read_deleted="yes"):

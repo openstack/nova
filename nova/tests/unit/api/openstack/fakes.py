@@ -487,7 +487,8 @@ def stub_instance(id=1, user_id=None, project_id=None, host=None,
     info_cache = create_info_cache(nw_cache)
 
     if instance_type is None:
-        instance_type = flavors.get_default_flavor()
+        instance_type = objects.Flavor.get_by_name(
+            context.get_admin_context(), 'm1.small')
     flavorinfo = jsonutils.dumps({
         'cur': instance_type.obj_to_primitive(),
         'old': None,

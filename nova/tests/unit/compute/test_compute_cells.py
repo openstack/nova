@@ -176,7 +176,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
                                   headroom=fake_headroom, usages=fake_usages)
         check_deltas_mock.side_effect = [None, exc]
 
-        inst_type = flavors.get_default_flavor()
+        inst_type = objects.Flavor.get_by_name(self.context, 'm1.small')
         # Try to create 3 instances.
         self.assertRaises(exception.QuotaError, self.compute_api.create,
             self.context, inst_type, self.fake_image['id'], min_count=3)
@@ -220,7 +220,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         # Disable recheck_quota.
         self.flags(recheck_quota=False, group='quota')
 
-        inst_type = flavors.get_default_flavor()
+        inst_type = objects.Flavor.get_by_name(self.context, 'm1.small')
         (refs, resv_id) = self.compute_api.create(self.context,
                                                   inst_type,
                                                   self.fake_image['id'])
@@ -550,7 +550,7 @@ class CellsShelveComputeAPITestCase(test_shelve.ShelveComputeAPITestCase):
 
     def _create_fake_instance_obj(self, params=None, type_name='m1.tiny',
                                   services=False, context=None):
-        flavor = flavors.get_flavor_by_name(type_name)
+        flavor = objects.Flavor.get_by_name(self.context, type_name)
         inst = objects.Instance(context=context or self.context)
         inst.cell_name = 'api!child'
         inst.vm_state = vm_states.ACTIVE

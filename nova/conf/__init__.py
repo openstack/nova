@@ -33,7 +33,6 @@ from nova.conf import consoleauth
 from nova.conf import database
 from nova.conf import devices
 from nova.conf import ephemeral_storage
-from nova.conf import flavors
 from nova.conf import glance
 from nova.conf import guestfs
 from nova.conf import hyperv
@@ -88,7 +87,6 @@ consoleauth.register_opts(CONF)
 database.register_opts(CONF)
 devices.register_opts(CONF)
 ephemeral_storage.register_opts(CONF)
-flavors.register_opts(CONF)
 glance.register_opts(CONF)
 guestfs.register_opts(CONF)
 hyperv.register_opts(CONF)
