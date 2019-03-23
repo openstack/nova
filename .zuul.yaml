@@ -269,9 +269,6 @@
         - nova-tox-functional-py35
         - tempest-full-py3:
             irrelevant-files: *dsvm-irrelevant-files
-        - tempest-multinode-full:
-            voting: false
-            irrelevant-files: *dsvm-irrelevant-files
         - tempest-slow-py3:
             irrelevant-files: *dsvm-irrelevant-files
         - grenade-py3:
