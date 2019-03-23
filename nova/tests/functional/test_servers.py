@@ -22,6 +22,7 @@ import zlib
 
 from keystoneauth1 import adapter
 import mock
+import os_resource_classes as orc
 import os_traits
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -39,7 +40,6 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import block_device as block_device_obj
-from nova import rc_fields
 from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -5998,10 +5998,8 @@ class PortResourceRequestBasedSchedulingTestBase(
         self._set_provider_inventories(
             ovs_bridge_rp_uuid,
             {"inventories": {
-                rc_fields.ResourceClass.NET_BW_IGR_KILOBIT_PER_SEC:
-                    {"total": 10000},
-                rc_fields.ResourceClass.NET_BW_EGR_KILOBIT_PER_SEC:
-                    {"total": 10000},
+                orc.NET_BW_IGR_KILOBIT_PER_SEC: {"total": 10000},
+                orc.NET_BW_EGR_KILOBIT_PER_SEC: {"total": 10000},
             }})
 
         self._create_trait(self.CUSTOM_VNIC_TYPE_NORMAL)
@@ -6066,10 +6064,8 @@ class PortResourceRequestBasedSchedulingTestBase(
 
         self.sriov_pf1_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF1')
         inventories = {
-            rc_fields.ResourceClass.NET_BW_IGR_KILOBIT_PER_SEC:
-                {"total": 100000},
-            rc_fields.ResourceClass.NET_BW_EGR_KILOBIT_PER_SEC:
-                {"total": 100000},
+            orc.NET_BW_IGR_KILOBIT_PER_SEC: {"total": 100000},
+            orc.NET_BW_EGR_KILOBIT_PER_SEC: {"total": 100000},
         }
         traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_PHYSNET1]
         self._create_pf_device_rp(
@@ -6078,10 +6074,8 @@ class PortResourceRequestBasedSchedulingTestBase(
 
         self.sriov_pf2_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF2')
         inventories = {
-            rc_fields.ResourceClass.NET_BW_IGR_KILOBIT_PER_SEC:
-                {"total": 100000},
-            rc_fields.ResourceClass.NET_BW_EGR_KILOBIT_PER_SEC:
-                {"total": 100000},
+            orc.NET_BW_IGR_KILOBIT_PER_SEC: {"total": 100000},
+            orc.NET_BW_EGR_KILOBIT_PER_SEC: {"total": 100000},
         }
         traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_PHYSNET2]
         self._create_pf_device_rp(
