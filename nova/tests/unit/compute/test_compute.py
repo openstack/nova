@@ -636,21 +636,6 @@ class ComputeVolumeTestCase(BaseTestCase):
         attempts = c._await_block_device_map_created(self.context, '1')
         self.assertEqual(attempts, 3)
 
-    def test_await_block_device_created_retries_negative(self):
-        c = self.compute
-        self.flags(block_device_allocate_retries=-1)
-        self.flags(block_device_allocate_retries_interval=0.1)
-
-        def volume_get(self, context, vol_id):
-            return {
-                'status': 'available',
-                'id': 'blah',
-            }
-
-        self.stub_out('nova.volume.cinder.API.get', volume_get)
-        attempts = c._await_block_device_map_created(self.context, '1')
-        self.assertEqual(1, attempts)
-
     def test_await_block_device_created_retries_zero(self):
         c = self.compute
         self.flags(block_device_allocate_retries=0)

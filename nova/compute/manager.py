@@ -1311,13 +1311,8 @@ class ComputeManager(manager.Manager):
         # TODO(yamahata): eliminate dumb polling
         start = time.time()
         retries = CONF.block_device_allocate_retries
-        if retries < 0:
-            LOG.warning("Treating negative config value (%(retries)s) for "
-                        "'block_device_retries' as 0.",
-                        {'retries': retries})
-        # (1) treat  negative config value as 0
-        # (2) the configured value is 0, one attempt should be made
-        # (3) the configured value is > 0, then the total number attempts
+        # (1) if the configured value is 0, one attempt should be made
+        # (2) if the configured value is > 0, then the total number attempts
         #      is (retries + 1)
         attempts = 1
         if retries >= 1:
