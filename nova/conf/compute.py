@@ -640,10 +640,23 @@ Possible values:
     cfg.IntOpt('block_device_allocate_retries',
         default=60,
         help="""
-Number of times to retry block device allocation on failures. Starting with
-Liberty, Cinder can use image volume cache. This may help with block device
-allocation performance. Look at the cinder image_volume_cache_enabled
-configuration option.
+The number of times to check for a volume to be "available" before attaching
+it during server create.
+
+When creating a server with block device mappings where ``source_type`` is
+one of ``blank``, ``image`` or ``snapshot`` and the ``destination_type`` is
+``volume``, the ``nova-compute`` service will create a volume and then attach
+it to the server. Before the volume can be attached, it must be in status
+"available". This option controls how many times to check for the created
+volume to be "available" before it is attached.
+
+If the operation times out, the volume will be deleted if the block device
+mapping ``delete_on_termination`` value is True.
+
+It is recommended to configure the image cache in the block storage service
+to speed up this operation. See
+https://docs.openstack.org/cinder/latest/admin/blockstorage-image-volume-cache.html
+for details.
 
 Possible values:
 
@@ -651,6 +664,11 @@ Possible values:
 * If value is 0, then one attempt is made.
 * Any negative value is treated as 0.
 * For any value > 0, total attempts are (value + 1)
+
+Related options:
+
+* ``block_device_allocate_retries_interval`` - controls the interval between
+  checks
 """),
     cfg.IntOpt('sync_power_state_pool_size',
         default=1000,
@@ -1019,7 +1037,7 @@ Related options:
 Interval (in seconds) between block device allocation retries on failures.
 
 This option allows the user to specify the time interval between
-consecutive retries. 'block_device_allocate_retries' option specifies
+consecutive retries. The ``block_device_allocate_retries`` option specifies
 the maximum number of retries.
 
 Possible values:
@@ -1029,7 +1047,7 @@ Possible values:
 
 Related options:
 
-* ``block_device_allocate_retries`` in compute_manager_opts group.
+* ``block_device_allocate_retries`` - controls the number of retries
 """),
     cfg.IntOpt('scheduler_instance_sync_interval',
         default=120,
