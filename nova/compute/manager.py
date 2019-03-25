@@ -3696,6 +3696,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
+    @errors_out_migration
     @wrap_instance_fault
     def confirm_resize(self, context, instance, migration):
         """Confirms a migration/resize and deletes the 'old' instance.

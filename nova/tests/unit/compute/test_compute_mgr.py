@@ -6256,12 +6256,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         self.migration = objects.Migration(
             context=self.context.elevated(),
+            id=1,
             uuid=mock.sentinel.uuid,
             instance_uuid=self.instance.uuid,
             new_instance_type_id=7,
             dest_compute=None,
             dest_node=None,
             dest_host=None,
+            source_compute='source_compute',
             status='migrating')
         self.migration.save = mock.MagicMock()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
@@ -6663,6 +6665,53 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 instance.user_id, instance.project_id,
                 mock_resources.return_value)
         do_it()
+
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    @mock.patch('nova.objects.Migration.get_by_id')
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.compute.utils.notify_about_instance_usage')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch('nova.objects.Instance.save')
+    def test_confirm_resize_driver_confirm_migration_fails(
+            self, instance_save, notify_action, notify_usage,
+            instance_get_by_uuid, migration_get_by_id, add_fault):
+        """Tests the scenario that driver.confirm_migration raises some error
+        to make sure the error is properly handled, like the instance and
+        migration status is set to 'error'.
+        """
+        self.migration.status = 'confirming'
+        migration_get_by_id.return_value = self.migration
+        instance_get_by_uuid.return_value = self.instance
+
+        error = exception.HypervisorUnavailable(
+            host=self.migration.source_compute)
+        with test.nested(
+            mock.patch.object(self.compute, 'network_api'),
+            mock.patch.object(self.compute.driver, 'confirm_migration',
+                              side_effect=error)
+        ) as (
+            network_api, confirm_migration
+        ):
+            self.assertRaises(exception.HypervisorUnavailable,
+                              self.compute.confirm_resize,
+                              self.context, self.instance, self.migration)
+        # Make sure the instance is in ERROR status.
+        self.assertEqual(vm_states.ERROR, self.instance.vm_state)
+        # Make sure the migration is in error status.
+        self.assertEqual('error', self.migration.status)
+        # Instance.save is called twice, once to clear the resize metadata
+        # and once to set the instance to ERROR status.
+        self.assertEqual(2, instance_save.call_count)
+        # The migration.status should have been saved.
+        self.migration.save.assert_called_once_with()
+        # Assert other mocks we care less about.
+        notify_usage.assert_called_once()
+        notify_action.assert_called_once()
+        add_fault.assert_called_once()
+        confirm_migration.assert_called_once()
+        network_api.setup_networks_on_host.assert_called_once()
+        instance_get_by_uuid.assert_called_once()
+        migration_get_by_id.assert_called_once()
 
     @mock.patch('nova.scheduler.utils.resources_from_flavor')
     def test_delete_allocation_after_move_confirm_by_migration(self, mock_rff):
