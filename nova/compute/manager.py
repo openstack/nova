@@ -3746,7 +3746,31 @@ class ComputeManager(manager.Manager):
                          instance=instance)
                 return
 
-            self._confirm_resize(context, instance, migration=migration)
+            with self._error_out_instance_on_exception(context, instance):
+                old_instance_type = instance.old_flavor
+                try:
+                    self._confirm_resize(
+                        context, instance, migration=migration)
+                except Exception:
+                    # Something failed when cleaning up the source host so
+                    # log a traceback and leave a hint about hard rebooting
+                    # the server to correct its state in the DB.
+                    with excutils.save_and_reraise_exception(logger=LOG):
+                        LOG.exception(
+                            'Confirm resize failed on source host %s. '
+                            'Resource allocations in the placement service '
+                            'will be removed regardless because the instance '
+                            'is now on the destination host %s. You can try '
+                            'hard rebooting the instance to correct its '
+                            'state.', self.host, migration.dest_compute,
+                            instance=instance)
+                finally:
+                    # Whether an error occurred or not, at this point the
+                    # instance is on the dest host so to avoid leaking
+                    # allocations in placement, delete them here.
+                    self._delete_allocation_after_move(
+                        context, instance, migration, old_instance_type,
+                        migration.source_node)
 
         do_confirm_resize(context, instance, migration.id)
 
@@ -3758,63 +3782,59 @@ class ComputeManager(manager.Manager):
             self.host, action=fields.NotificationAction.RESIZE_CONFIRM,
             phase=fields.NotificationPhase.START)
 
-        with self._error_out_instance_on_exception(context, instance):
-            # NOTE(danms): delete stashed migration information
-            old_instance_type = instance.old_flavor
-            instance.old_flavor = None
-            instance.new_flavor = None
-            instance.system_metadata.pop('old_vm_state', None)
-            instance.save()
+        # NOTE(danms): delete stashed migration information
+        old_instance_type = instance.old_flavor
+        instance.old_flavor = None
+        instance.new_flavor = None
+        instance.system_metadata.pop('old_vm_state', None)
+        instance.save()
 
-            # NOTE(tr3buchet): tear down networks on source host
-            self.network_api.setup_networks_on_host(context, instance,
-                               migration.source_compute, teardown=True)
+        # NOTE(tr3buchet): tear down networks on source host
+        self.network_api.setup_networks_on_host(context, instance,
+                           migration.source_compute, teardown=True)
 
-            network_info = self.network_api.get_instance_nw_info(context,
-                                                                 instance)
-            # TODO(mriedem): Get BDMs here and pass them to the driver.
-            self.driver.confirm_migration(context, migration, instance,
-                                          network_info)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                             instance)
+        # TODO(mriedem): Get BDMs here and pass them to the driver.
+        self.driver.confirm_migration(context, migration, instance,
+                                      network_info)
 
-            migration.status = 'confirmed'
-            with migration.obj_as_admin():
-                migration.save()
+        migration.status = 'confirmed'
+        with migration.obj_as_admin():
+            migration.save()
 
-            rt = self._get_resource_tracker()
-            rt.drop_move_claim(context, instance, migration.source_node,
-                               old_instance_type, prefix='old_')
-            self._delete_allocation_after_move(context, instance, migration,
-                                               old_instance_type,
-                                               migration.source_node)
-            instance.drop_migration_context()
+        rt = self._get_resource_tracker()
+        rt.drop_move_claim(context, instance, migration.source_node,
+                           old_instance_type, prefix='old_')
+        instance.drop_migration_context()
 
-            # NOTE(mriedem): The old_vm_state could be STOPPED but the user
-            # might have manually powered up the instance to confirm the
-            # resize/migrate, so we need to check the current power state
-            # on the instance and set the vm_state appropriately. We default
-            # to ACTIVE because if the power state is not SHUTDOWN, we
-            # assume _sync_instance_power_state will clean it up.
-            p_state = instance.power_state
-            vm_state = None
-            if p_state == power_state.SHUTDOWN:
-                vm_state = vm_states.STOPPED
-                LOG.debug("Resized/migrated instance is powered off. "
-                          "Setting vm_state to '%s'.", vm_state,
-                          instance=instance)
-            else:
-                vm_state = vm_states.ACTIVE
+        # NOTE(mriedem): The old_vm_state could be STOPPED but the user
+        # might have manually powered up the instance to confirm the
+        # resize/migrate, so we need to check the current power state
+        # on the instance and set the vm_state appropriately. We default
+        # to ACTIVE because if the power state is not SHUTDOWN, we
+        # assume _sync_instance_power_state will clean it up.
+        p_state = instance.power_state
+        vm_state = None
+        if p_state == power_state.SHUTDOWN:
+            vm_state = vm_states.STOPPED
+            LOG.debug("Resized/migrated instance is powered off. "
+                      "Setting vm_state to '%s'.", vm_state,
+                      instance=instance)
+        else:
+            vm_state = vm_states.ACTIVE
 
-            instance.vm_state = vm_state
-            instance.task_state = None
-            instance.save(expected_task_state=[None, task_states.DELETING,
-                                               task_states.SOFT_DELETING])
+        instance.vm_state = vm_state
+        instance.task_state = None
+        instance.save(expected_task_state=[None, task_states.DELETING,
+                                           task_states.SOFT_DELETING])
 
-            self._notify_about_instance_usage(
-                context, instance, "resize.confirm.end",
-                network_info=network_info)
-            compute_utils.notify_about_instance_action(context, instance,
-                   self.host, action=fields.NotificationAction.RESIZE_CONFIRM,
-                   phase=fields.NotificationPhase.END)
+        self._notify_about_instance_usage(
+            context, instance, "resize.confirm.end",
+            network_info=network_info)
+        compute_utils.notify_about_instance_action(context, instance,
+               self.host, action=fields.NotificationAction.RESIZE_CONFIRM,
+               phase=fields.NotificationPhase.END)
 
     def _delete_allocation_after_move(self, context, instance, migration,
                                       flavor, nodename):
