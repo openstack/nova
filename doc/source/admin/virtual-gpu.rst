@@ -14,10 +14,6 @@ This feature is highly dependent on the hypervisor, its version and the
 physical devices present on the host. In addition, the vendor's vGPU driver software
 must be installed and configured on the host at the same time.
 
-.. important:: As of the Queens release, there is no upstream continuous
-               integration testing with a hardware environment that has virtual
-               GPUs and therefore this feature is considered experimental.
-
 Hypervisor-specific caveats are mentioned in the `Caveats`_ section.
 
 To enable virtual GPUs, follow the steps below:
