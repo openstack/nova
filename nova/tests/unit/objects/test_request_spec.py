@@ -555,7 +555,8 @@ class _TestRequestSpecObject(object):
                 fake_spec['instance_uuid'])
 
         self.assertEqual(1, req_obj.num_instances)
-        self.assertEqual(['host2', 'host4'], req_obj.ignore_hosts)
+        # ignore_hosts is not persisted
+        self.assertIsNone(req_obj.ignore_hosts)
         self.assertEqual('fake', req_obj.project_id)
         self.assertEqual({'hint': ['over-there']}, req_obj.scheduler_hints)
         self.assertEqual(['host1', 'host3'], req_obj.force_hosts)
@@ -579,7 +580,7 @@ class _TestRequestSpecObject(object):
                 jsonutils.loads(changes['spec']))
 
         # primitive fields
-        for field in ['instance_uuid', 'num_instances', 'ignore_hosts',
+        for field in ['instance_uuid', 'num_instances',
                 'project_id', 'scheduler_hints', 'force_hosts',
                 'availability_zone', 'force_nodes']:
             self.assertEqual(getattr(req_obj, field),
@@ -596,6 +597,7 @@ class _TestRequestSpecObject(object):
         self.assertIsNone(serialized_obj.instance_group.hosts)
         self.assertIsNone(serialized_obj.retry)
         self.assertIsNone(serialized_obj.requested_destination)
+        self.assertIsNone(serialized_obj.ignore_hosts)
 
     def test_create(self):
         req_obj = fake_request_spec.fake_spec_obj(remove_id=True)
@@ -679,6 +681,7 @@ class _TestRequestSpecObject(object):
                 objects.ComputeNode(host='host2', hypervisor_hostname='node2'),
             ]))
         req_obj.retry = expected_retry
+        req_obj.ignore_hosts = [uuids.ignored_host]
 
         orig_save_in_db = request_spec.RequestSpec._save_in_db
         with mock.patch.object(request_spec.RequestSpec, '_save_in_db') \
@@ -691,16 +694,19 @@ class _TestRequestSpecObject(object):
             # 1. network_metadata
             # 2. requested_destination
             # 3. retry
+            # 4. ignore_hosts
             data = jsonutils.loads(updates['spec'])['nova_object.data']
             self.assertNotIn('network_metadata', data)
             self.assertIsNone(data['requested_destination'])
             self.assertIsNone(data['retry'])
+            self.assertIsNone(data['ignore_hosts'])
             self.assertIsNotNone(data['instance_uuid'])
 
         # also we expect that the following fields are not reset after save
         # 1. network_metadata
         # 2. requested_destination
         # 3. retry
+        # 4. ignore_hosts
         self.assertIsNotNone(req_obj.network_metadata)
         self.assertJsonEqual(expected_network_metadata.obj_to_primitive(),
                              req_obj.network_metadata.obj_to_primitive())
@@ -710,6 +716,8 @@ class _TestRequestSpecObject(object):
         self.assertIsNotNone(req_obj.retry)
         self.assertJsonEqual(expected_retry.obj_to_primitive(),
                              req_obj.retry.obj_to_primitive())
+        self.assertIsNotNone(req_obj.ignore_hosts)
+        self.assertEqual([uuids.ignored_host], req_obj.ignore_hosts)
 
     def test_save(self):
         req_obj = fake_request_spec.fake_spec_obj()

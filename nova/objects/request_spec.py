@@ -504,10 +504,10 @@ class RequestSpec(base.NovaObject):
                 # it will reset the field to None and we'll lose what is set
                 # (but not persisted) on the object.
                 continue
-            elif key == 'retry':
-                # NOTE(takashin): Do not override the 'retry' field
-                # which is not a persistent. It is not lazy-loadable field.
-                # If it is not set, set None.
+            elif key in ('retry', 'ignore_hosts'):
+                # NOTE(takashin): Do not override the 'retry' or 'ignore_hosts'
+                # fields which are not persisted. They are not lazy-loadable
+                # fields. If they are not set, set None.
                 if not spec.obj_attr_is_set(key):
                     setattr(spec, key, None)
             elif key in spec_obj:
@@ -571,9 +571,9 @@ class RequestSpec(base.NovaObject):
             if 'instance_group' in spec and spec.instance_group:
                 spec.instance_group.members = None
                 spec.instance_group.hosts = None
-            # NOTE(mriedem): Don't persist retries or requested_destination
-            # since those are per-request
-            for excluded in ('retry', 'requested_destination'):
+            # NOTE(mriedem): Don't persist retries, requested_destination
+            # or ignored hosts since those are per-request
+            for excluded in ('retry', 'requested_destination', 'ignore_hosts'):
                 if excluded in spec and getattr(spec, excluded):
                     setattr(spec, excluded, None)
             # NOTE(stephenfin): Don't persist network metadata since we have
