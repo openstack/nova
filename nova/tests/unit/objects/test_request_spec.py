@@ -504,7 +504,8 @@ class _TestRequestSpecObject(object):
                 fake_spec['instance_uuid'])
 
         self.assertEqual(1, req_obj.num_instances)
-        self.assertEqual(['host2', 'host4'], req_obj.ignore_hosts)
+        # ignore_hosts is not persisted
+        self.assertIsNone(req_obj.ignore_hosts)
         self.assertEqual('fake', req_obj.project_id)
         self.assertEqual({'hint': ['over-there']}, req_obj.scheduler_hints)
         self.assertEqual(['host1', 'host3'], req_obj.force_hosts)
@@ -527,7 +528,7 @@ class _TestRequestSpecObject(object):
                 jsonutils.loads(changes['spec']))
 
         # primitive fields
-        for field in ['instance_uuid', 'num_instances', 'ignore_hosts',
+        for field in ['instance_uuid', 'num_instances',
                 'project_id', 'scheduler_hints', 'force_hosts',
                 'availability_zone', 'force_nodes']:
             self.assertEqual(getattr(req_obj, field),
@@ -543,6 +544,7 @@ class _TestRequestSpecObject(object):
         self.assertIsNone(serialized_obj.instance_group.members)
         self.assertIsNone(serialized_obj.instance_group.hosts)
         self.assertIsNone(serialized_obj.retry)
+        self.assertIsNone(serialized_obj.ignore_hosts)
 
     def test_create(self):
         req_obj = fake_request_spec.fake_spec_obj(remove_id=True)
@@ -562,6 +564,39 @@ class _TestRequestSpecObject(object):
         req_obj.id = 3
 
         self.assertRaises(exception.ObjectActionError, req_obj.create)
+
+    def test_save_does_not_persist_requested_fields(self):
+        req_obj = fake_request_spec.fake_spec_obj(remove_id=True)
+        req_obj.create()
+        # change something to make sure _save_in_db is called
+        expected_destination = request_spec.Destination(host='sample-host')
+        req_obj.requested_destination = expected_destination
+        expected_retry = objects.SchedulerRetries(
+            num_attempts=2,
+            hosts=objects.ComputeNodeList(objects=[
+                objects.ComputeNode(host='host1', hypervisor_hostname='node1'),
+                objects.ComputeNode(host='host2', hypervisor_hostname='node2'),
+            ]))
+        req_obj.retry = expected_retry
+        req_obj.ignore_hosts = [uuids.ignored_host]
+
+        orig_save_in_db = request_spec.RequestSpec._save_in_db
+        with mock.patch.object(request_spec.RequestSpec, '_save_in_db') \
+                as mock_save_in_db:
+            mock_save_in_db.side_effect = orig_save_in_db
+            req_obj.save()
+            mock_save_in_db.assert_called_once()
+            updates = mock_save_in_db.mock_calls[0][1][2]
+            # assert that the following fields are not stored in the db
+            # 1. ignore_hosts
+            data = jsonutils.loads(updates['spec'])['nova_object.data']
+            self.assertIsNone(data['ignore_hosts'])
+            self.assertIsNotNone(data['instance_uuid'])
+
+        # also we expect that the following fields are not reset after save
+        # 1. ignore_hosts
+        self.assertIsNotNone(req_obj.ignore_hosts)
+        self.assertEqual([uuids.ignored_host], req_obj.ignore_hosts)
 
     def test_save(self):
         req_obj = fake_request_spec.fake_spec_obj()

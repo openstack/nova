@@ -434,7 +434,13 @@ class RequestSpec(base.NovaObject):
             # though they should match.
             if key in ['id', 'instance_uuid']:
                 setattr(spec, key, db_spec[key])
-            else:
+            elif key == 'ignore_hosts':
+                # NOTE(mriedem): Do not override the 'ignore_hosts'
+                # field which is not persisted. It is not a lazy-loadable
+                # field. If it is not set, set None.
+                if not spec.obj_attr_is_set(key):
+                    setattr(spec, key, None)
+            elif key in spec_obj:
                 setattr(spec, key, getattr(spec_obj, key))
         spec._context = context
 
@@ -494,9 +500,11 @@ class RequestSpec(base.NovaObject):
             if 'instance_group' in spec and spec.instance_group:
                 spec.instance_group.members = None
                 spec.instance_group.hosts = None
-            # NOTE(mriedem): Don't persist retries since those are per-request
-            if 'retry' in spec and spec.retry:
-                spec.retry = None
+            # NOTE(mriedem): Don't persist retries or ignored hosts since
+            # those are per-request
+            for excluded in ('retry', 'ignore_hosts'):
+                if excluded in spec and getattr(spec, excluded):
+                    setattr(spec, excluded, None)
 
             db_updates = {'spec': jsonutils.dumps(spec.obj_to_primitive())}
             if 'instance_uuid' in updates:

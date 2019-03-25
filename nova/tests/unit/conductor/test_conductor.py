@@ -1374,7 +1374,7 @@ class _BaseTaskTestCase(object):
                                instance=inst_obj,
                                **compute_args)
 
-    def test_rebuild_instance_with_request_spec(self):
+    def test_evacuate_instance_with_request_spec(self):
         inst_obj = self._create_fake_instance_obj()
         inst_obj.host = 'noselect'
         expected_host = 'thebesthost'
@@ -1382,11 +1382,11 @@ class _BaseTaskTestCase(object):
         expected_limits = 'fake-limits'
         request_spec = {}
         filter_properties = {'ignore_hosts': [(inst_obj.host)]}
-        fake_spec = objects.RequestSpec(ignore_hosts=[])
+        fake_spec = objects.RequestSpec(ignore_hosts=[uuids.ignored_host])
         augmented_spec = objects.RequestSpec(ignore_hosts=[inst_obj.host])
         rebuild_args, compute_args = self._prepare_rebuild_args(
             {'host': None, 'node': expected_node, 'limits': expected_limits,
-             'request_spec': fake_spec})
+             'request_spec': fake_spec, 'recreate': True})
         with test.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
@@ -1409,14 +1409,13 @@ class _BaseTaskTestCase(object):
             self.conductor_manager.rebuild_instance(context=self.context,
                                             instance=inst_obj,
                                             **rebuild_args)
-            if rebuild_args['recreate']:
-                reset_fd.assert_called_once_with()
-            else:
-                reset_fd.assert_not_called()
+            reset_fd.assert_called_once_with()
             to_reqspec.assert_called_once_with()
             to_filtprops.assert_called_once_with()
             fp_mock.assert_called_once_with(self.context, request_spec,
                                             filter_properties)
+            # The RequestSpec.ignore_hosts field should be overwritten.
+            self.assertEqual([inst_obj.host], fake_spec.ignore_hosts)
             select_dest_mock.assert_called_once_with(self.context,
                                                      augmented_spec)
             compute_args['host'] = expected_host
