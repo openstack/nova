@@ -7192,6 +7192,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         do_finish_revert_resize()
 
     def test_confirm_resize_deletes_allocations(self):
+        @mock.patch('nova.objects.Instance.get_by_uuid')
+        @mock.patch('nova.objects.Migration.get_by_id')
         @mock.patch.object(self.migration, 'save')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch.object(self.compute, 'network_api')
@@ -7201,13 +7203,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         @mock.patch.object(self.instance, 'save')
         def do_confirm_resize(mock_save, mock_drop, mock_delete,
                               mock_confirm, mock_nwapi, mock_notify,
-                              mock_mig_save):
+                              mock_mig_save, mock_mig_get, mock_inst_get):
             self._mock_rt()
             self.instance.migration_context = objects.MigrationContext()
             self.migration.source_compute = self.instance['host']
             self.migration.source_node = self.instance['node']
-            self.compute._confirm_resize(self.context, self.instance,
-                                         self.migration)
+            self.migration.status = 'confirming'
+            mock_mig_get.return_value = self.migration
+            mock_inst_get.return_value = self.instance
+            self.compute.confirm_resize(self.context, self.instance,
+                                        self.migration)
             mock_delete.assert_called_once_with(self.context, self.instance,
                                                 self.migration)
             mock_save.assert_called_with(expected_task_state=
@@ -7238,9 +7243,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         with test.nested(
             mock.patch.object(self.compute, 'network_api'),
             mock.patch.object(self.compute.driver, 'confirm_migration',
-                              side_effect=error)
+                              side_effect=error),
+            mock.patch.object(self.compute, '_delete_allocation_after_move')
         ) as (
-            network_api, confirm_migration
+            network_api, confirm_migration, delete_allocation
         ):
             self.assertRaises(exception.HypervisorUnavailable,
                               self.compute.confirm_resize,
@@ -7254,6 +7260,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertEqual(2, instance_save.call_count)
         # The migration.status should have been saved.
         self.migration.save.assert_called_once_with()
+        # Allocations should always be cleaned up even if cleaning up the
+        # source host fails.
+        delete_allocation.assert_called_once_with(
+            self.context, self.instance, self.migration)
         # Assert other mocks we care less about.
         notify_usage.assert_called_once()
         notify_action.assert_called_once()
