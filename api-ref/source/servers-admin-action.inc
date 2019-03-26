@@ -211,6 +211,7 @@ Response
 
 If successful, this method does not return content in the response body.
 
+.. _os-resetState:
 
 Reset Server State (os-resetState Action)
 =========================================
