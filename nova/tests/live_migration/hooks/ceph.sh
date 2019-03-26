@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function prepare_ceph {
-    git clone git://git.openstack.org/openstack/devstack-plugin-ceph /tmp/devstack-plugin-ceph
+    git clone https://git.openstack.org/openstack/devstack-plugin-ceph /tmp/devstack-plugin-ceph
     source /tmp/devstack-plugin-ceph/devstack/settings
     source /tmp/devstack-plugin-ceph/devstack/lib/ceph
     install_ceph
@@ -10,7 +10,7 @@ function prepare_ceph {
     $ANSIBLE subnodes --sudo -f 5 -i "$WORKSPACE/inventory" -m raw -a "executable=/bin/bash
     source $BASE/new/devstack/functions
     source $BASE/new/devstack/functions-common
-    git clone git://git.openstack.org/openstack/devstack-plugin-ceph /tmp/devstack-plugin-ceph
+    git clone https://git.openstack.org/openstack/devstack-plugin-ceph /tmp/devstack-plugin-ceph
     source /tmp/devstack-plugin-ceph/devstack/lib/ceph
     install_ceph_remote
     "
