@@ -828,3 +828,14 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
                 label="Demo Net",
                 subnets=[]),)
         self.assertIsNone(os_vif_util.nova_to_osvif_vif(vif))
+
+    def test_nova_to_osvif_vif_unbound(self):
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type="unbound",
+            address="22:52:25:62:e2:aa",
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                subnets=[]),)
+        self.assertIsNone(os_vif_util.nova_to_osvif_vif(vif))
