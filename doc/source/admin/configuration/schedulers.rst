@@ -601,7 +601,7 @@ With the API, use the ``os:scheduler_hints`` key:
            "flavorRef": "1"
        },
        "os:scheduler_hints": {
-           "query": "[>=,$free_ram_mb,1024]"
+           "query": "[\">=\",\"$free_ram_mb\",1024]"
        }
    }
 
