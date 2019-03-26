@@ -5410,6 +5410,66 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[5].type, "qxl")
         self.assertEqual(cfg.devices[5].vram, 64 * units.Mi / units.Ki)
 
+    def _test_add_video_driver(self, model):
+        self.flags(virt_type='kvm', group='libvirt')
+        # we could have used VNC here also we just need to enable
+        # one of the graphic consoles libvirt supports or else
+        # the call to _guest_add_video_device will not work.
+        self.flags(enabled=True, agent_enabled=True, group='spice')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        guest = vconfig.LibvirtConfigGuest()
+        instance_ref = objects.Instance(**self.test_instance)
+        flavor = instance_ref.get_flavor()
+        image_meta = objects.ImageMeta.from_dict({
+            'properties': {'hw_video_model': model}})
+
+        self.assertTrue(drvr._guest_add_video_device(guest))
+        video = drvr._add_video_driver(guest, image_meta,
+                                       flavor)
+        self.assertEqual(model, video.type)
+
+    def test__add_video_driver(self):
+        self._test_add_video_driver('qxl')
+
+    def test__video_model_supported(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        with mock.patch.object(drvr._host, "has_min_version",
+                               return_value=True) as min_version_mock:
+            model_versions = libvirt_driver.MIN_LIBVIRT_VIDEO_MODEL_VERSIONS
+            # assert that all known vif models pass
+            for model in nova.objects.fields.VideoModel.ALL:
+                min_version_mock.reset_mock()
+                self.assertTrue(drvr._video_model_supported(model))
+                # and that vif models with minium versions are checked
+                if model in model_versions:
+                    ver = model_versions[model]
+                    min_version_mock.assert_called_with(lv_ver=ver)
+                else:
+                    min_version_mock.assert_not_called()
+        # then assert that fake models fail
+        self.assertFalse(drvr._video_model_supported("fake"))
+        # finally if the min version is not met assert that
+        # the video model is not supported.
+        min_version_mock.return_value = False
+        self.assertFalse(drvr._video_model_supported("gop"))
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_video_model_supported')
+    def test__add_video_driver_gop(self, _supports_gop_video):
+        _supports_gop_video.return_value = True
+        self._test_add_video_driver('gop')
+        _supports_gop_video.return_value = False
+        self.assertRaises(exception.InvalidVideoMode,
+                          self._test_add_video_driver, 'gop')
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_video_model_supported')
+    def test__add_video_driver_none(self, _supports_none_video):
+        _supports_none_video.return_value = True
+        self._test_add_video_driver('none')
+        _supports_none_video.return_value = False
+        self.assertRaises(exception.InvalidVideoMode,
+                          self._test_add_video_driver, 'none')
+
     @mock.patch('nova.virt.disk.api.teardown_container')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
     @mock.patch('nova.virt.disk.api.setup_container')

@@ -171,12 +171,22 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.19: Added 'img_hide_hypervisor_id' type field
     # Version 1.20: Added 'traits_required' list field
     # Version 1.21: Added 'hw_time_hpet' field
-    VERSION = '1.21'
+    # Version 1.22: Added 'gop', 'virtio' and 'none' to hw_video_model field
+    VERSION = '1.22'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        # NOTE(sean-k-mooney): unlike other nova object we version this object
+        # when composed object are updated.
+        if target_version < (1, 22):
+            video = primitive.get('hw_video_model', None)
+            if video in ('gop', 'virtio', 'none'):
+                raise exception.ObjectActionError(
+                    action='obj_make_compatible',
+                    reason='hw_video_model=%s not supported in version %s' % (
+                        video, target_version))
         if target_version < (1, 21):
             primitive.pop('hw_time_hpet', None)
         if target_version < (1, 20):
