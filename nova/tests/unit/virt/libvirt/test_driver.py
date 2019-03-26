@@ -15905,6 +15905,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                             <model type="virtio"/>
                             <target dev="br0"/>
                         </interface>
+                        <interface type='hostdev' managed='yes'>
+                            <mac address="54:56:00:a6:40:40"/>
+                            <driver name='vfio'/>
+                        </interface>
                     </devices>
                 </domain>
             """
@@ -15997,6 +16001,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          tx_errors=0,
                          tx_octets=0,
                          tx_packets=0)
+
+        expected.add_nic(mac_address='54:56:00:a6:40:40')
+
         self.assertDiagnosticsEqual(expected, actual)
 
     @mock.patch.object(host.Host, "list_instance_domains")
