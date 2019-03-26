@@ -31,7 +31,7 @@ enable the ``nova-compute`` service.
 
    .. code-block:: console
 
-      $ openstack compute service set --disable --disable-reason trial log nova nova-compute
+      $ openstack compute service set --disable --disable-reason "trial log" compute nova-compute
       +----------+--------------+----------+-------------------+
       | Host     | Binary       | Status   | Disabled Reason   |
       +----------+--------------+----------+-------------------+
@@ -64,7 +64,7 @@ enable the ``nova-compute`` service.
 
    .. code-block:: console
 
-      $ openstack compute service set --enable nova nova-compute
+      $ openstack compute service set --enable compute nova-compute
       +----------+--------------+---------+
       | Host     | Binary       | Status  |
       +----------+--------------+---------+
