@@ -160,6 +160,12 @@ Or links to the pages describing them should be added.
 
     - Whether the scheduler choose a destination host or not
 
+* Sort order of response results
+
+  - Describe sorting order of response results if the API implements the order
+    (e.g. The response is sorted by ``created_at`` and ``id``
+    in descending order by default)
+
 * Policy
 
   - Default policy (the admin only, the admin or the owner)
