@@ -42,6 +42,8 @@ while keeping users happy and keeping developers productive.
 
 * :doc:`/contributor/blueprints`: An overview of our tracking artifacts.
 
+* :doc:`/contributor/ptl-guide`: A chronological PTL reference guide
+
 Reviewing
 =========
 
