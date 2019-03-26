@@ -437,6 +437,14 @@ class TestOpenStackClient(object):
     def get_limits(self):
         return self.api_get('/limits').body['limits']
 
+    def get_server_tags(self, server_id):
+        """Get the tags on the given server.
+
+        :param server_id: The server uuid
+        :return: The list of tags from the response
+        """
+        return self.api_get('/servers/%s/tags' % server_id).body['tags']
+
     def put_server_tags(self, server_id, tags):
         """Put (or replace) a list of tags on the given server.
 
