@@ -1020,12 +1020,23 @@ class Domain(object):
 
         nics = ''
         for nic in self._def['devices']['nics']:
-            nics += '''<interface type='%(type)s'>
-      <mac address='%(mac)s'/>
-      <source %(type)s='%(source)s'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
-               function='0x0'/>
-    </interface>''' % nic
+            if 'source' in nic:
+                nics += '''<interface type='%(type)s'>
+          <mac address='%(mac)s'/>
+          <source %(type)s='%(source)s'/>
+          <target dev='tap274487d1-60'/>
+          <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
+                   function='0x0'/>
+        </interface>''' % nic
+            # this covers for direct nic type
+            else:
+                nics += '''<interface type='%(type)s'>
+          <mac address='%(mac)s'/>
+          <source>
+              <address type='pci' domain='0x0000' bus='0x81' slot='0x00'
+                   function='0x01'/>
+          </source>
+        </interface>''' % nic
 
         hostdevs = ''
         for hostdev in self._def['devices']['hostdevs']:
