@@ -228,6 +228,7 @@ class ResourceRequest(object):
     def _clean_empties(self):
         """Get rid of any empty ResourceGroup instances."""
         for ident, rg in list(self._rg_by_id.items()):
+            # TODO(magnusbe) Fix bug #1821824
             if not any((rg.resources, rg.required_traits)):
                 self._rg_by_id.pop(ident)
 

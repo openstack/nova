@@ -3825,22 +3825,94 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         return server
 
     def test_flavor_traits_based_scheduling(self):
-        """Tests that a server create request using a required trait on flavor
-        ends up on the single compute node resource provider that also has that
-        trait in Placement.
+        """Tests that a server create request using a required trait in the
+        flavor ends up on the single compute node resource provider that also
+        has that trait in Placement. That test will however pass half of the
+        times even if the trait is not taken into consideration, so we are
+        also disabling the compute node that has the required trait and try
+        again, which should result in a no valid host error.
         """
 
-        # Decorate compute1 resource provider with that same trait.
+        # Decorate compute1 resource provider with the required trait.
         rp_uuid = self._get_provider_uuid_by_host(self.compute1.host)
         self._set_provider_traits(rp_uuid, ['HW_CPU_X86_VMX'])
 
-        # Create server using only flavor trait
+        # Create server using flavor with required trait
         server = self._create_server_with_traits(self.flavor_with_trait['id'],
                                                  self.image_id_without_trait)
         server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
         # Assert the server ended up on the expected compute host that has
         # the required trait.
         self.assertEqual(self.compute1.host, server['OS-EXT-SRV-ATTR:host'])
+
+        # Disable the compute node that has the required trait
+        compute1_service_id = self.admin_api.get_services(
+            host=self.compute1.host, binary='nova-compute')[0]['id']
+        self.admin_api.put_service(compute1_service_id, {'status': 'disabled'})
+
+        # Create server using flavor with required trait
+        server = self._create_server_with_traits(self.flavor_with_trait['id'],
+                                                 self.image_id_without_trait)
+
+        # The server should go to ERROR state because there is no valid host.
+        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
+        # Make sure the failure was due to NoValidHost by checking the fault.
+        self.assertIn('fault', server)
+        self.assertIn('No valid host', server['fault']['message'])
+
+    def test_flavor_forbidden_traits_based_scheduling(self):
+        """Tests that a server create request using a forbidden trait in the
+        flavor ends up on the single compute host that doesn't have that
+        trait in Placement. That test will however pass half of the times even
+        if the trait is not taken into consideration, so we are also disabling
+        the compute node that doesn't have the forbidden trait and try again,
+        which should result in a no valid host error.
+        """
+
+        # Decorate compute1 resource provider with forbidden trait
+        rp_uuid = self._get_provider_uuid_by_host(self.compute1.host)
+        self._set_provider_traits(rp_uuid, ['HW_CPU_X86_SGX'])
+
+        # Create server using flavor with forbidden trait
+        server = self._create_server_with_traits(
+            self.flavor_with_forbidden_trait['id'],
+            self.image_id_without_trait
+        )
+
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # Temporarily pass until bug #1821824 is fixed
+        # Assert the server ended up on the expected compute host that doesn't
+        # have the forbidden trait.
+        # TODO(magnusbe) Uncomment when commiting fix for bug #1821824
+        # self.assertEqual(self.compute2.host, server['OS-EXT-SRV-ATTR:host'])
+
+        # Disable the compute node that doesn't have the forbidden trait
+        compute2_service_id = self.admin_api.get_services(
+            host=self.compute2.host, binary='nova-compute')[0]['id']
+        self.admin_api.put_service(compute2_service_id, {'status': 'disabled'})
+
+        # Create server using flavor with forbidden trait
+        server = self._create_server_with_traits(
+            self.flavor_with_forbidden_trait['id'],
+            self.image_id_without_trait
+        )
+
+        # Temporarily pass if server goes to ACTIVE STATE until bug #1821824
+        # is fixed.
+        # TODO(magnusbe) Remove when commiting fix for bug #1821824
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # The server should go to ERROR state because there is no valid host.
+        # This is the expected behaviour. However, at this time bug #1821824
+        # prevents this from working.
+        # TODO(magnusbe) Uncomment when commiting fix for bug #1821824
+        # server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        # self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
+        # Make sure the failure was due to NoValidHost by checking the fault.
+        # self.assertIn('fault', server)
+        # self.assertIn('No valid host', server['fault']['message'])
 
     def test_image_traits_based_scheduling(self):
         """Tests that a server create request using a required trait on image
