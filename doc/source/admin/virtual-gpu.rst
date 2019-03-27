@@ -173,6 +173,101 @@ Depending on your hypervisor:
 
     ...
 
+Checking allocations and inventories for virtual GPUs
+-----------------------------------------------------
+
+.. note::
+
+   The information below is only valid from the 19.0.0 Stein release and only
+   for the libvirt driver. Before this release or when using the Xen driver,
+   inventories and allocations related to a ``VGPU`` resource class are still
+   on the root resource provider related to the compute node.
+   If upgrading from Rocky and using the libvirt driver, ``VGPU`` inventory and
+   allocations are moved to child resource providers that represent actual
+   physical GPUs.
+
+The examples you will see are using the `osc-placement plugin`_ for
+OpenStackClient. For details on specific commands, see its documentation.
+
+#. Get the list of resource providers
+
+   .. code-block:: console
+
+     $ openstack resource provider list
+     +--------------------------------------+---------------------------------------------------------+------------+
+     | uuid                                 | name                                                    | generation |
+     +--------------------------------------+---------------------------------------------------------+------------+
+     | 5958a366-3cad-416a-a2c9-cfbb5a472287 | virtlab606.xxxxxxxxxxxxxxxxxxxxxxxxxxx                  |          7 |
+     | fc9b9287-ef5e-4408-aced-d5577560160c | virtlab606.xxxxxxxxxxxxxxxxxxxxxxxxxxx_pci_0000_86_00_0 |          2 |
+     | e2f8607b-0683-4141-a8af-f5e20682e28c | virtlab606.xxxxxxxxxxxxxxxxxxxxxxxxxxx_pci_0000_85_00_0 |          3 |
+     | 85dd4837-76f9-41f2-9f19-df386017d8a0 | virtlab606.xxxxxxxxxxxxxxxxxxxxxxxxxxx_pci_0000_87_00_0 |          2 |
+     | 7033d860-8d8a-4963-8555-0aa902a08653 | virtlab606.xxxxxxxxxxxxxxxxxxxxxxxxxxx_pci_0000_84_00_0 |          2 |
+     +--------------------------------------+---------------------------------------------------------+------------+
+
+   In this example, we see the root resource provider
+   ``5958a366-3cad-416a-a2c9-cfbb5a472287`` with four other resource providers
+   that are its children and where each of them corresponds to a single
+   physical GPU.
+
+#. Check the inventory of each resource provider to see resource classes
+
+   .. code-block:: console
+
+     $ openstack resource provider inventory list 5958a366-3cad-416a-a2c9-cfbb5a472287
+     +----------------+------------------+----------+----------+-----------+----------+-------+
+     | resource_class | allocation_ratio | max_unit | reserved | step_size | min_unit | total |
+     +----------------+------------------+----------+----------+-----------+----------+-------+
+     | VCPU           |             16.0 |       48 |        0 |         1 |        1 |    48 |
+     | MEMORY_MB      |              1.5 |    65442 |      512 |         1 |        1 | 65442 |
+     | DISK_GB        |              1.0 |       49 |        0 |         1 |        1 |    49 |
+     +----------------+------------------+----------+----------+-----------+----------+-------+
+     $ openstack resource provider inventory list e2f8607b-0683-4141-a8af-f5e20682e28c
+     +----------------+------------------+----------+----------+-----------+----------+-------+
+     | resource_class | allocation_ratio | max_unit | reserved | step_size | min_unit | total |
+     +----------------+------------------+----------+----------+-----------+----------+-------+
+     | VGPU           |              1.0 |       16 |        0 |         1 |        1 |    16 |
+     +----------------+------------------+----------+----------+-----------+----------+-------+
+
+   Here you can see a ``VGPU`` inventory on the child resource provider while
+   other resource class inventories are still located on the root resource
+   provider.
+
+#. Check allocations for each server that is using virtual GPUs
+
+   .. code-block:: console
+
+     $ openstack server list
+     +--------------------------------------+-------+--------+---------------------------------------------------------+--------------------------+--------+
+     | ID                                   | Name  | Status | Networks                                                | Image                    | Flavor |
+     +--------------------------------------+-------+--------+---------------------------------------------------------+--------------------------+--------+
+     | 5294f726-33d5-472a-bef1-9e19bb41626d | vgpu2 | ACTIVE | private=10.0.0.14, fd45:cdad:c431:0:f816:3eff:fe78:a748 | cirros-0.4.0-x86_64-disk | vgpu   |
+     | a6811fc2-cec8-4f1d-baea-e2c6339a9697 | vgpu1 | ACTIVE | private=10.0.0.34, fd45:cdad:c431:0:f816:3eff:fe54:cc8f | cirros-0.4.0-x86_64-disk | vgpu   |
+     +--------------------------------------+-------+--------+---------------------------------------------------------+--------------------------+--------+
+
+     $ openstack resource provider allocation show 5294f726-33d5-472a-bef1-9e19bb41626d
+     +--------------------------------------+------------+------------------------------------------------+
+     | resource_provider                    | generation | resources                                      |
+     +--------------------------------------+------------+------------------------------------------------+
+     | 5958a366-3cad-416a-a2c9-cfbb5a472287 |          8 | {u'VCPU': 1, u'MEMORY_MB': 512, u'DISK_GB': 1} |
+     | 7033d860-8d8a-4963-8555-0aa902a08653 |          3 | {u'VGPU': 1}                                   |
+     +--------------------------------------+------------+------------------------------------------------+
+
+     $ openstack resource provider allocation show a6811fc2-cec8-4f1d-baea-e2c6339a9697
+     +--------------------------------------+------------+------------------------------------------------+
+     | resource_provider                    | generation | resources                                      |
+     +--------------------------------------+------------+------------------------------------------------+
+     | e2f8607b-0683-4141-a8af-f5e20682e28c |          3 | {u'VGPU': 1}                                   |
+     | 5958a366-3cad-416a-a2c9-cfbb5a472287 |          8 | {u'VCPU': 1, u'MEMORY_MB': 512, u'DISK_GB': 1} |
+     +--------------------------------------+------------+------------------------------------------------+
+
+   In this example, two servers were created using a flavor asking for 1
+   ``VGPU``, so when looking at the allocations for each consumer UUID (which
+   is the server UUID), you can see that VGPU allocation is against the child
+   resource provider while other allocations are for the root resource
+   provider. Here, that means that the virtual GPU used by
+   ``a6811fc2-cec8-4f1d-baea-e2c6339a9697`` is actually provided by the
+   physical GPU having the PCI ID ``0000:85:00.0``.
+
 
 Caveats
 -------
@@ -234,3 +329,4 @@ For XenServer:
 .. Links
 .. _Intel GVT-g: https://01.org/igvt-g
 .. _NVIDIA GRID vGPU: http://docs.nvidia.com/grid/5.0/pdf/grid-vgpu-user-guide.pdf
+.. _osc-placement plugin: https://docs.openstack.org/osc-placement/latest/index.html
