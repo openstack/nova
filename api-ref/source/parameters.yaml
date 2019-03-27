@@ -5182,7 +5182,7 @@ os:scheduler_hints_query:
     Schedule the server by using a custom filter in JSON format.
     For example::
 
-      "query": "[&gt;=,$free_ram_mb,1024]"
+      "query": "[\">=\",\"$free_ram_mb\",1024]"
 
     It is available when ``JsonFilter`` is available on cloud side.
   in: body
