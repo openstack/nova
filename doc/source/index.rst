@@ -218,6 +218,7 @@ looking parts of our architecture. These are collected below.
    contributor/how-to-get-involved
    contributor/process
    contributor/project-scope
+   contributor/ptl-guide
    reference/api-microversion-history.rst
    reference/gmr
    reference/i18n
