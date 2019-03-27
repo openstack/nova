@@ -1297,14 +1297,15 @@ class ComputeTaskManager(base.Base):
         ar = jsonutils.loads(host_selection.allocation_request)
         allocs = ar['allocations']
 
-        # TODO(mriedem): Short-term we can optimize this by passing a cache by
-        # reference of the RP->traits mapping because if we are processing
-        # a multi-create request we could have the same RPs being used for
-        # multiple instances and avoid duplicate calls. Long-term we could
-        # stash the RP->traits mapping on the Selection object since we can
-        # pull the traits for each provider from the GET /allocation_candidates
-        # response in the scheduler (or leverage the change from the spec
-        # mentioned in the docstring above).
+        # NOTE(gibi): Getting traits from placement for each instance in a
+        # instance multi-create scenario is unnecessarily expensive. But
+        # instance multi-create cannot be used with pre-created neutron ports
+        # and this code can only be triggered with such pre-created ports so
+        # instance multi-create is not an issue. If this ever become an issue
+        # in the future then we could stash the RP->traits mapping on the
+        # Selection object since we can pull the traits for each provider from
+        # the GET /allocation_candidates response in the scheduler (or leverage
+        # the change from the spec mentioned in the docstring above).
         provider_traits = {
             rp_uuid: self.report_client.get_provider_traits(
                 context, rp_uuid).traits
