@@ -41,17 +41,29 @@ DRIVER_IO = 'native'
 VALID_SYSD_STATES = ["starting", "running", "degraded"]
 SYSTEMCTL_CHECK_PATH = "/run/systemd/system"
 
+sysd_checked = False
+found_sysd = False
+
 
 def is_systemd():
     """Checks if the host is running systemd"""
+    global sysd_checked
+    global found_sysd
     if psutil.Process(1).name() == "systemd" or os.path.exists(
             SYSTEMCTL_CHECK_PATH):
+        # NOTE(kaisers): exit code might be >1 in theory but in practice this
+        # is hard coded to 1. Due to backwards compatibility and systemd
+        # CODING_STYLE this is unlikely to change.
         sysdout, sysderr = processutils.execute("systemctl",
                                        "is-system-running",
                                         check_exit_code=[0, 1])
         for state in VALID_SYSD_STATES:
-            if state in sysdout:
-                return True
+            if state == sysdout.strip():
+                found_sysd = True
+                sysd_checked = True
+                return found_sysd
+
+    sysd_checked = True
     return False
 
 
@@ -61,7 +73,7 @@ def mount_volume(volume, mnt_base, configfile=None):
 
     # Note(kaisers): with systemd this requires a separate CGROUP to
     # prevent Nova service stop/restarts from killing the mount.
-    if is_systemd():
+    if found_sysd:
         LOG.debug('Mounting volume %s at mount point %s via systemd-run',
                   volume, mnt_base)
         libvirt.systemd_run_qb_mount(volume, mnt_base, cfg_file=configfile)
@@ -76,10 +88,10 @@ def mount_volume(volume, mnt_base, configfile=None):
 def umount_volume(mnt_base):
     """Wraps execute calls for unmouting a Quobyte volume"""
     try:
-        if is_systemd():
-            libvirt.qb_umount(mnt_base)
+        if found_sysd:
+            libvirt.umount(mnt_base)
         else:
-            libvirt.unprivileged_qb_umount(mnt_base)
+            libvirt.unprivileged_umount(mnt_base)
     except processutils.ProcessExecutionError as exc:
         if 'Device or resource busy' in six.text_type(exc):
             LOG.error("The Quobyte volume at %s is still in use.", mnt_base)
@@ -119,6 +131,9 @@ def validate_volume(mount_path):
 class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
     """Class implements libvirt part of volume driver for Quobyte."""
 
+    def __init__(self, host):
+        super(LibvirtQuobyteVolumeDriver, self).__init__(host)
+
     def _get_mount_point_base(self):
         return CONF.libvirt.quobyte_mount_point_base
 
@@ -139,6 +154,11 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
     @utils.synchronized('connect_qb_volume')
     def connect_volume(self, connection_info, instance):
         """Connect the volume."""
+        if is_systemd():
+            LOG.debug("systemd detected.")
+        else:
+            LOG.debug("No systemd detected.")
+
         data = connection_info['data']
         quobyte_volume = self._normalize_export(data['export'])
         mount_path = self._get_mount_path(connection_info)

@@ -56,6 +56,7 @@ from nova.network.neutronv2 import constants as neutron_constants
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
+from nova import privsep
 from nova import quota as nova_quota
 from nova import rpc
 from nova import service
@@ -2037,6 +2038,16 @@ class PrivsepNoHelperFixture(fixtures.Fixture):
         self.useFixture(fixtures.MonkeyPatch(
             'oslo_privsep.daemon.RootwrapClientChannel',
             UnHelperfulClientChannel))
+
+
+class PrivsepFixture(fixtures.Fixture):
+    """Disable real privsep checking so we can test the guts of methods
+    decorated with sys_admin_pctxt.
+    """
+    def setUp(self):
+        super(PrivsepFixture, self).setUp()
+        self.useFixture(fixtures.MockPatchObject(
+            privsep.sys_admin_pctxt, 'client_mode', False))
 
 
 class NoopQuotaDriverFixture(fixtures.Fixture):
