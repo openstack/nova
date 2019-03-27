@@ -43,6 +43,14 @@ class TestAvailabilityZoneScheduling(
         self.start_service('conductor')
         self.start_service('scheduler')
 
+        # Start two compute services in separate zones.
+        self._start_host_in_zone('host1', 'zone1')
+        self._start_host_in_zone('host2', 'zone2')
+
+        flavors = self.api.get_flavors()
+        self.flavor1 = flavors[0]['id']
+        self.flavor2 = flavors[1]['id']
+
     def _start_host_in_zone(self, host, zone):
         # Start the nova-compute service.
         fake.set_nodes([host])
@@ -66,6 +74,29 @@ class TestAvailabilityZoneScheduling(
         self.api.api_post(
             '/os-aggregates/%s/action' % aggregate['id'], add_host_body)
 
+    def _create_server(self, name):
+        # Create a server, it doesn't matter which host it ends up in.
+        server_body = self._build_minimal_create_server_request(
+            self.api, name, image_uuid=fake_image.get_valid_image_id(),
+            flavor_id=self.flavor1, networks='none')
+        server = self.api.post_server({'server': server_body})
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        original_host = server['OS-EXT-SRV-ATTR:host']
+        # Assert the server has the AZ set (not None or 'nova').
+        expected_zone = 'zone1' if original_host == 'host1' else 'zone2'
+        self.assertEqual(expected_zone, server['OS-EXT-AZ:availability_zone'])
+        return server
+
+    def _assert_instance_az(self, server, expected_zone):
+        # Check the API.
+        self.assertEqual(expected_zone, server['OS-EXT-AZ:availability_zone'])
+        # Check the DB.
+        ctxt = context.get_admin_context()
+        with context.target_cell(
+                ctxt, self.cell_mappings[test.CELL1_NAME]) as cctxt:
+            instance = objects.Instance.get_by_uuid(cctxt, server['id'])
+            self.assertEqual(expected_zone, instance.availability_zone)
+
     def test_live_migrate_implicit_az(self):
         """Tests live migration of an instance with an implicit AZ.
 
@@ -87,21 +118,8 @@ class TestAvailabilityZoneScheduling(
         the request spec does not include an explicit AZ, so the instance is
         still not restricted to its current zone even if it says it is in one.
         """
-        # Start two compute services in separate zones.
-        self._start_host_in_zone('host1', 'zone1')
-        self._start_host_in_zone('host2', 'zone2')
-
-        # Create a server, it doesn't matter which host it ends up in.
-        server_body = self._build_minimal_create_server_request(
-            self.api, 'test_live_migrate_implicit_az_restriction',
-            image_uuid=fake_image.get_valid_image_id(),
-            networks='none')
-        server = self.api.post_server({'server': server_body})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._create_server('test_live_migrate_implicit_az')
         original_host = server['OS-EXT-SRV-ATTR:host']
-        # Assert the server has the AZ set (not None or 'nova').
-        expected_zone = 'zone1' if original_host == 'host1' else 'zone2'
-        self.assertEqual(expected_zone, server['OS-EXT-AZ:availability_zone'])
 
         # Attempt to live migrate the instance; again, we don't specify a host
         # because there are only two hosts so the scheduler would only be able
@@ -123,10 +141,34 @@ class TestAvailabilityZoneScheduling(
         # aggregate if instance.host is not None.
         server = self.api.get_server(server['id'])
         expected_zone = 'zone2' if original_host == 'host1' else 'zone1'
-        self.assertEqual(expected_zone, server['OS-EXT-AZ:availability_zone'])
+        self._assert_instance_az(server, expected_zone)
 
-        ctxt = context.get_admin_context()
-        with context.target_cell(
-                ctxt, self.cell_mappings[test.CELL1_NAME]) as cctxt:
-            instance = objects.Instance.get_by_uuid(cctxt, server['id'])
-            self.assertEqual(expected_zone, instance.availability_zone)
+    def test_resize_revert_across_azs(self):
+        """Creates two compute service hosts in separate AZs. Creates a server
+        without an explicit AZ so it lands in one AZ, and then resizes the
+        server which moves it to the other AZ. Then the resize is reverted and
+        asserts the server is shown as back in the original source host AZ.
+        """
+        server = self._create_server('test_resize_revert_across_azs')
+        original_host = server['OS-EXT-SRV-ATTR:host']
+        original_az = 'zone1' if original_host == 'host1' else 'zone2'
+
+        # Resize the server which should move it to the other zone.
+        self.api.post_server_action(
+            server['id'], {'resize': {'flavorRef': self.flavor2}})
+        server = self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+
+        # Now the server should be in the other AZ.
+        new_zone = 'zone2' if original_host == 'host1' else 'zone1'
+        self._assert_instance_az(server, new_zone)
+
+        # Revert the resize and the server should be back in the original AZ.
+        self.api.post_server_action(server['id'], {'revertResize': None})
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        # FIXME(mriedem): This is bug 1819963 where the API will show the
+        # source host AZ but the instance.availability_zone value in the DB
+        # is still wrong because nothing updated it on revert. Remove the
+        # explicit API check and uncomment the _assert_instance_az call when
+        # the bug is fixed.
+        self.assertEqual(original_az, server['OS-EXT-AZ:availability_zone'])
+        # self._assert_instance_az(server, original_az)
