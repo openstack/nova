@@ -562,6 +562,14 @@ migrate, rescue or unshelve task states are running on it.
 JsonFilter
 ----------
 
+.. warning:: This filter is not enabled by default and not comprehensively
+    tested, and thus could fail to work as expected in non-obvious ways.
+    Furthermore, the filter variables are based on attributes of the
+    `HostState`_ class which could change from release to release so usage
+    of this filter is generally not recommended. Consider using other filters
+    such as the :ref:`ImagePropertiesFilter` or
+    :ref:`traits-based scheduling <extra-specs-required-traits>`.
+
 The JsonFilter allows a user to construct a custom filter by passing a
 scheduler hint in JSON format. The following operators are supported:
 
@@ -575,10 +583,12 @@ scheduler hint in JSON format. The following operators are supported:
 * or
 * and
 
-The filter supports the following variables:
+The filter supports any attribute in the `HostState`_ class such as the
+following variables:
 
 * ``$free_ram_mb``
 * ``$free_disk_mb``
+* ``$hypervisor_hostname``
 * ``$total_usable_ram_mb``
 * ``$vcpus_total``
 * ``$vcpus_used``
@@ -604,6 +614,8 @@ With the API, use the ``os:scheduler_hints`` key:
            "query": "[\">=\",\"$free_ram_mb\",1024]"
        }
    }
+
+.. _HostState: http://git.openstack.org/cgit/openstack/nova/tree/nova/scheduler/host_manager.py
 
 MetricsFilter
 -------------
