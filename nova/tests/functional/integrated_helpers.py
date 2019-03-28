@@ -381,6 +381,12 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
             os_traits.COMPUTE_VOLUME_ATTACH_WITH_TAG,
             os_traits.COMPUTE_VOLUME_EXTEND,
             os_traits.COMPUTE_TRUSTED_CERTS,
+            os_traits.COMPUTE_IMAGE_TYPE_AKI,
+            os_traits.COMPUTE_IMAGE_TYPE_AMI,
+            os_traits.COMPUTE_IMAGE_TYPE_ARI,
+            os_traits.COMPUTE_IMAGE_TYPE_ISO,
+            os_traits.COMPUTE_IMAGE_TYPE_QCOW2,
+            os_traits.COMPUTE_IMAGE_TYPE_RAW,
         ]
     ])
 

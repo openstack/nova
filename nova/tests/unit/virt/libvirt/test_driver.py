@@ -945,6 +945,38 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                         'Driver capabilities for '
                         '\'supports_trusted_certs\' '
                         'is invalid')
+        self.assertTrue(drvr.capabilities['supports_image_type_qcow2'],
+                        'Driver capabilities for '
+                        '\'supports_image_type_qcow2\' '
+                        'is invalid')
+
+    def test_driver_capabilities_qcow2_with_rbd(self):
+        self.flags(images_type='rbd', group='libvirt')
+        self.flags(force_raw_images=False)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertFalse(drvr.capabilities['supports_image_type_qcow2'],
+                         'Driver capabilities for '
+                         '\'supports_image_type_qcow2\' '
+                         'is invalid when \'images_type=rbd\'')
+
+        self.flags(images_type='rbd', group='libvirt')
+        self.flags(force_raw_images=True)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertTrue(drvr.capabilities['supports_image_type_qcow2'])
+
+    def test_driver_capabilities_qcow2_with_lvm(self):
+        self.flags(images_type='lvm', group='libvirt')
+        self.flags(force_raw_images=False)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertFalse(drvr.capabilities['supports_image_type_qcow2'],
+                         'Driver capabilities for '
+                         '\'supports_image_type_qcow2\' '
+                         'is invalid when \'images_type=lvm\'')
+
+        self.flags(images_type='lvm', group='libvirt')
+        self.flags(force_raw_images=True)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertTrue(drvr.capabilities['supports_image_type_qcow2'])
 
     def create_fake_libvirt_mock(self, **kwargs):
         """Defining mocks for LibvirtDriver(libvirt is not used)."""

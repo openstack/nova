@@ -290,6 +290,14 @@ class LibvirtDriver(driver.ComputeDriver):
         # capabilities on the instance rather than on the class.
         # This prevents the risk of one test setting a capability
         # which bleeds over into other tests.
+
+        # LVM and RBD require raw images. If we are not configured to
+        # force convert images into raw format, then we _require_ raw
+        # images only.
+        raw_only = ('rbd', 'lvm')
+        requires_raw_image = (CONF.libvirt.images_type in raw_only and
+                              not CONF.force_raw_images)
+
         self.capabilities = {
             "has_imagecache": True,
             "supports_evacuate": True,
@@ -303,6 +311,21 @@ class LibvirtDriver(driver.ComputeDriver):
             # determined in init_host.
             "supports_multiattach": False,
             "supports_trusted_certs": True,
+            # Supported image types
+            "supports_image_type_aki": True,
+            "supports_image_type_ari": True,
+            "supports_image_type_ami": True,
+            # FIXME(danms): I can see a future where people might want to
+            # configure certain compute nodes to not allow giant raw images
+            # to be booted (like nodes that are across a WAN). Thus, at some
+            # point we may want to be able to _not_ expose "supports raw" on
+            # some nodes by policy. Until then, raw is always supported.
+            "supports_image_type_raw": True,
+            "supports_image_type_iso": True,
+            # NOTE(danms): Certain backends do not work with complex image
+            # formats. If we are configured for those backends, then we
+            # should not expose the corresponding support traits.
+            "supports_image_type_qcow2": not requires_raw_image,
         }
         super(LibvirtDriver, self).__init__(virtapi)
 
