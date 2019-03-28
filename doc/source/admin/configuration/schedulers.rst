@@ -453,6 +453,12 @@ sparse or copy on write so that each virtual instance does not require a 1:1
 allocation of a virtual disk to a physical storage, it may be useful to allow
 the overcommitment of disk space.
 
+When disk space is overcommitted, the value of ``disk_available_least`` can
+be negative. Rather than rounding up to 0, the original negative value is
+reported, as this way a user can see the amount by which they are
+overcommitting, and the disk weigher can select a host which is less
+overcommitted than another host.
+
 To enable scheduling instances while overcommitting disk resources on the node,
 adjust the value of the ``disk_allocation_ratio`` configuration option to
 greater than ``1.0``:
