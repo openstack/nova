@@ -235,6 +235,8 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
             client_factory, extra_specs.memory_limits,
             'ns0:ResourceAllocationInfo')
 
+    config_spec.memoryReservationLockedToMax = CONF.vmware.reserve_all_memory
+
     if extra_specs.firmware:
         config_spec.firmware = extra_specs.firmware
 

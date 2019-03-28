@@ -94,6 +94,13 @@ Specifies the server where the Virtual Serial Port Concentrator is
 storing console log files and responding to get requests.
 If defined it will override serial_log_dir.
 """),
+    cfg.BoolOpt('reserve_all_memory',
+                default=False,
+                help="""
+If true, it is not possible to over-commit memory in the vCenter, but there's
+also no swap file pre-created on the ephemeral storage. Swap still works, but
+is hot-created.
+""")
 ]
 
 vmwareapi_opts = [
