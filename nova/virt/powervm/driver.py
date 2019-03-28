@@ -77,6 +77,18 @@ class PowerVMDriver(driver.ComputeDriver):
             'supports_extend_volume': True,
             'supports_multiattach': False,
             'supports_trusted_certs': False,
+
+            # Supported image types
+            "supports_image_type_aki": False,
+            "supports_image_type_ami": False,
+            "supports_image_type_ari": False,
+            "supports_image_type_iso": False,
+            "supports_image_type_qcow2": False,
+            "supports_image_type_raw": True,
+            "supports_image_type_vdi": False,
+            "supports_image_type_vhd": False,
+            "supports_image_type_vhdx": False,
+            "supports_image_type_vmdk": False,
         }
         super(PowerVMDriver, self).__init__(virtapi)
 
