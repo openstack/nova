@@ -1198,7 +1198,7 @@ of related resource providers. Since compute nodes in nova are
 represented in placement as resource providers, they can be added to a
 placement aggregate as well. For example, get the uuid of the compute
 node using :command:`openstack hypervisor list` and add it to an
-aggregate in placement using :command:`openstack placement aggregate
+aggregate in placement using :command:`openstack resource provider aggregate
 set`.
 
 .. code-block:: console
