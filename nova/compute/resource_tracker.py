@@ -558,7 +558,6 @@ class ResourceTracker(object):
             cn = self.compute_nodes[nodename]
             self._copy_resources(cn, resources)
             self._setup_pci_tracker(context, cn, resources)
-            self._update(context, cn)
             return
 
         # now try to get the compute node record from the
@@ -568,7 +567,6 @@ class ResourceTracker(object):
             self.compute_nodes[nodename] = cn
             self._copy_resources(cn, resources)
             self._setup_pci_tracker(context, cn, resources)
-            self._update(context, cn)
             return
 
         if self._check_for_nodes_rebalance(context, resources, nodename):
@@ -587,7 +585,6 @@ class ResourceTracker(object):
                  {'host': self.host, 'node': nodename, 'uuid': cn.uuid})
 
         self._setup_pci_tracker(context, cn, resources)
-        self._update(context, cn)
 
     def _setup_pci_tracker(self, context, compute_node, resources):
         if not self.pci_tracker:
