@@ -518,15 +518,11 @@ class ComputeManager(manager.Manager):
                 CONF.max_concurrent_builds)
         else:
             self._build_semaphore = compute_utils.UnlimitedSemaphore()
-        if max(CONF.max_concurrent_live_migrations, 0) != 0:
+        if CONF.max_concurrent_live_migrations > 0:
             self._live_migration_executor = futurist.GreenThreadPoolExecutor(
                 max_workers=CONF.max_concurrent_live_migrations)
         else:
-            if CONF.max_concurrent_live_migrations < 0:
-                LOG.warning('The value of the max_concurrent_live_migrations '
-                            'config option is less than 0. '
-                            'It is treated as 0 and will raise ValueError '
-                            'in a future release.')
+            # CONF.max_concurrent_live_migrations is 0 (unlimited)
             self._live_migration_executor = futurist.GreenThreadPoolExecutor()
         # This is a dict, keyed by instance uuid, to a two-item tuple of
         # migration object and Future for the queued live migration.
