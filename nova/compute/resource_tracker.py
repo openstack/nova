@@ -616,10 +616,31 @@ class ResourceTracker(object):
         stats.digest_stats(resources.get('stats'))
         compute_node.stats = stats
 
-        # update the allocation ratios for the related ComputeNode object
-        compute_node.ram_allocation_ratio = self.ram_allocation_ratio
-        compute_node.cpu_allocation_ratio = self.cpu_allocation_ratio
-        compute_node.disk_allocation_ratio = self.disk_allocation_ratio
+        # Update the allocation ratios for the related ComputeNode object
+        # but only if the configured values are not the default 0.0; the
+        # ComputeNode._from_db_object method takes care of providing default
+        # allocation ratios when the config is left at the 0.0 default, so
+        # we'll really end up with something like a
+        # ComputeNode.cpu_allocation_ratio of 16.0, not 0.0. We want to avoid
+        # resetting the ComputeNode fields to 0.0 because that will make
+        # the _resource_change method think something changed when really it
+        # didn't.
+        # TODO(mriedem): Will this break any scenarios where an operator is
+        # trying to *reset* the allocation ratios by changing config from
+        # non-0.0 back to 0.0? Maybe we should only do this if the fields on
+        # the ComputeNode object are not already set. For example, let's say
+        # the cpu_allocation_ratio config was 1.0 and then the operator wants
+        # to get back to the default (16.0 via the facade), and to do that they
+        # change the config back to 0.0 (or just unset the config option).
+        # Should we support that or treat these config options as "sticky" in
+        # that once you start setting them, you can't go back to the implied
+        # defaults by unsetting or resetting to 0.0? Sort of like how
+        # per-tenant quota is sticky once you change it in the API.
+        for res in ('cpu', 'disk', 'ram'):
+            attr = '%s_allocation_ratio' % res
+            conf_alloc_ratio = getattr(self, attr)
+            if conf_alloc_ratio != 0.0:
+                setattr(compute_node, attr, conf_alloc_ratio)
 
         # now copy rest to compute_node
         compute_node.update_from_virt_driver(resources)

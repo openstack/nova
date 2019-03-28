@@ -1333,6 +1333,41 @@ class TestUpdateComputeNode(BaseTestCase):
         self.assertRaises(exc.ComputeHostNotFound,
                           self.rt.get_node_uuid, 'foo')
 
+    def test_copy_resources_no_update_allocation_ratios(self):
+        """Tests that a ComputeNode object's allocation ratio fields are
+        not set if the configured allocation ratio values are default 0.0.
+        """
+        self._setup_rt()
+        compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        compute.obj_reset_changes()  # make sure we start clean
+        self.rt._copy_resources(
+            compute, self.driver_mock.get_available_resource.return_value)
+        # Assert that the ComputeNode fields were not changed.
+        changes = compute.obj_get_changes()
+        for res in ('cpu', 'disk', 'ram'):
+            attr_name = '%s_allocation_ratio' % res
+            self.assertNotIn(attr_name, changes)
+
+    def test_copy_resources_update_allocation_ratios_from_config(self):
+        """Tests that a ComputeNode object's allocation ratio fields are
+        set if the configured allocation ratio values are not 0.0.
+        """
+        # Set explicit ratio config values to 1.0 (the default is 0.0).
+        for res in ('cpu', 'disk', 'ram'):
+            opt_name = '%s_allocation_ratio' % res
+            CONF.set_override(opt_name, 1.0)
+        self._setup_rt()
+        compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        compute.obj_reset_changes()  # make sure we start clean
+        self.rt._copy_resources(
+            compute, self.driver_mock.get_available_resource.return_value)
+        # Assert that the ComputeNode fields were changed.
+        changes = compute.obj_get_changes()
+        for res in ('cpu', 'disk', 'ram'):
+            attr_name = '%s_allocation_ratio' % res
+            self.assertIn(attr_name, changes)
+            self.assertEqual(1.0, changes[attr_name])
+
 
 class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
     def test_normalize_libvirt(self):
