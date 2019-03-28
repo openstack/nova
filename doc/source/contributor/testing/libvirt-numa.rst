@@ -105,7 +105,7 @@ devstack repo:
 .. code-block:: bash
 
   $ sudo dnf install git
-  $ git clone git://github.com/openstack-dev/devstack.git
+  $ git clone https://git.openstack.org/openstack-dev/devstack
   $ cd devstack
 
 At this point a fairly standard devstack setup can be done with one exception:
