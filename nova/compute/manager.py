@@ -4684,6 +4684,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
+    @errors_out_migration
     @wrap_instance_fault
     def finish_resize(self, context, disk_info, image, instance,
                       migration):
@@ -4710,8 +4711,7 @@ class ComputeManager(manager.Manager):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
             context, instance.uuid)
 
-        with self._error_out_instance_on_exception(context, instance), \
-             errors_out_migration_ctxt(migration):
+        with self._error_out_instance_on_exception(context, instance):
             image_meta = objects.ImageMeta.from_dict(image)
             network_info = self._finish_resize(context, instance, migration,
                                                disk_info, image_meta, bdms)
