@@ -5180,8 +5180,7 @@ class ConsumerGenerationConflictTest(
         self.assertEqual('migration', migrations[0]['migration_type'])
         self.assertEqual(server['id'], migrations[0]['instance_uuid'])
         self.assertEqual(source_hostname, migrations[0]['source_compute'])
-        # NOTE(gibi): it might be better to mark the migration as error
-        self.assertEqual('confirmed', migrations[0]['status'])
+        self.assertEqual('error', migrations[0]['status'])
 
         # NOTE(gibi): Nova leaks the allocation held by the migration_uuid even
         # after the instance is deleted. At least nova logs a fat ERROR.
