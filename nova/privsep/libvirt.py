@@ -219,6 +219,7 @@ def create_mdev(physical_device, mdev_type, uuid=None):
 @nova.privsep.sys_admin_pctxt.entrypoint
 def systemd_run_qb_mount(qb_vol, mnt_base, cfg_file=None):
     """Mount QB volume in separate CGROUP"""
+    # Note(kaisers): Details on why we run without --user at bug #1756823
     sysdr_cmd = ['systemd-run', '--scope', 'mount.quobyte', '--disable-xattrs',
                  qb_vol, mnt_base]
     if cfg_file:
@@ -236,13 +237,13 @@ def unprivileged_qb_mount(qb_vol, mnt_base, cfg_file=None):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def qb_umount(mnt_base):
-    """Unmount QB volume"""
-    unprivileged_qb_umount(mnt_base)
+def umount(mnt_base):
+    """Unmount volume"""
+    unprivileged_umount(mnt_base)
 
 
 # NOTE(kaisers): this method is deliberately not wrapped in a privsep entryp.
-def unprivileged_qb_umount(mnt_base):
-    """Unmount QB volume"""
-    umnt_cmd = ['umount.quobyte', mnt_base]
+def unprivileged_umount(mnt_base):
+    """Unmount volume"""
+    umnt_cmd = ['umount', mnt_base]
     return processutils.execute(*umnt_cmd)
