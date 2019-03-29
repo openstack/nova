@@ -27,7 +27,6 @@ from oslo_versionedobjects import fixture
 import six
 
 from nova import context
-from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -577,27 +576,6 @@ class _TestObject(object):
                          len(SubclassedObject.fields))
         self.assertEqual(set(myobj_fields) | set(myobj3_fields),
                          set(SubclassedObject.fields.keys()))
-
-    def test_obj_as_admin(self):
-        obj = MyObj(context=self.context)
-
-        def fake(*args, **kwargs):
-            self.assertTrue(obj._context.is_admin)
-
-        with mock.patch.object(obj, 'obj_reset_changes') as mock_fn:
-            mock_fn.side_effect = fake
-            with obj.obj_as_admin():
-                obj.save()
-            self.assertTrue(mock_fn.called)
-
-        self.assertFalse(obj._context.is_admin)
-
-    def test_obj_as_admin_orphaned(self):
-        def testme():
-            obj = MyObj()
-            with obj.obj_as_admin():
-                pass
-        self.assertRaises(exception.OrphanedObjectError, testme)
 
     def test_obj_alternate_context(self):
         obj = MyObj(context=self.context)

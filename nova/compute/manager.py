@@ -122,8 +122,7 @@ def errors_out_migration_ctxt(migration):
                 # errored via the legacy path.
                 migration.status = 'error'
                 try:
-                    with migration.obj_as_admin():
-                        migration.save()
+                    migration.save()
                 except Exception:
                     LOG.debug(
                         'Error setting migration status for instance %s.',
@@ -4004,8 +4003,7 @@ class ComputeManager(manager.Manager):
                                           network_info)
 
             migration.status = 'confirmed'
-            with migration.obj_as_admin():
-                migration.save()
+            migration.save()
 
             self.rt.drop_move_claim(context, instance, migration.source_node,
                                     old_instance_type, prefix='old_')
@@ -4102,8 +4100,7 @@ class ComputeManager(manager.Manager):
             self._terminate_volume_connections(context, instance, bdms)
 
             migration.status = 'reverted'
-            with migration.obj_as_admin():
-                migration.save()
+            migration.save()
 
             # NOTE(ndipanov): We need to do this here because dropping the
             # claim means we lose the migration_context data. We really should
@@ -4459,8 +4456,7 @@ class ComputeManager(manager.Manager):
                                                                  instance)
 
             migration.status = 'migrating'
-            with migration.obj_as_admin():
-                migration.save()
+            migration.save()
 
             instance.task_state = task_states.RESIZE_MIGRATING
             instance.save(expected_task_state=task_states.RESIZE_PREP)
@@ -4490,8 +4486,7 @@ class ComputeManager(manager.Manager):
                                                     migration_p)
 
             migration.status = 'post-migrating'
-            with migration.obj_as_admin():
-                migration.save()
+            migration.save()
 
             instance.host = migration.dest_compute
             instance.node = migration.dest_node
@@ -7369,8 +7364,7 @@ class ComputeManager(manager.Manager):
                         {'migration_id': migration['id'], 'reason': reason},
                         **kwargs)
             migration.status = 'error'
-            with migration.obj_as_admin():
-                migration.save()
+            migration.save()
 
         for migration in migrations:
             instance_uuid = migration.instance_uuid
@@ -8443,8 +8437,7 @@ class ComputeManager(manager.Manager):
                         self.driver.delete_instance_files(instance)
                         try:
                             migration.status = 'failed'
-                            with migration.obj_as_admin():
-                                migration.save()
+                            migration.save()
                         except exception.MigrationNotFound:
                             LOG.warning("Migration %s is not found.",
                                         migration.id,
