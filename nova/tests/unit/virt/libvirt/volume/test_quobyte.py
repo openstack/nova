@@ -25,7 +25,6 @@ import psutil
 import six
 
 from nova import exception as nova_exception
-from nova.privsep import libvirt
 from nova import test
 from nova.tests.unit.virt.libvirt.volume import test_volume
 from nova import utils
@@ -106,7 +105,7 @@ class QuobyteTestCase(test.NoDBTestCase):
 
     @ddt.data(None, '/some/arbitrary/path')
     @mock.patch.object(fileutils, "ensure_tree")
-    @mock.patch.object(libvirt, "unprivileged_qb_mount")
+    @mock.patch('nova.privsep.libvirt.unprivileged_qb_mount')
     def test_quobyte_mount_volume_not_systemd(self, cfg_file, mock_mount,
                                               mock_ensure_tree):
         mnt_base = '/mnt'
@@ -122,7 +121,7 @@ class QuobyteTestCase(test.NoDBTestCase):
         mock_mount.assert_has_calls(expected_commands)
 
     @ddt.data(None, '/some/arbitrary/path')
-    @mock.patch.object(libvirt, 'systemd_run_qb_mount')
+    @mock.patch('nova.privsep.libvirt.systemd_run_qb_mount')
     @mock.patch.object(fileutils, "ensure_tree")
     def test_quobyte_mount_volume_systemd(self, cfg_file, mock_ensure_tree,
                                           mock_privsep_sysdr):
@@ -140,9 +139,8 @@ class QuobyteTestCase(test.NoDBTestCase):
                                                    cfg_file=cfg_file)
 
     @mock.patch.object(fileutils, "ensure_tree")
-    @mock.patch.object(libvirt, 'unprivileged_qb_mount',
-                       side_effect=(processutils.
-                                    ProcessExecutionError))
+    @mock.patch('nova.privsep.libvirt.unprivileged_qb_mount',
+                side_effect=processutils.ProcessExecutionError)
     def test_quobyte_mount_volume_fails(self, mock_mount, mock_ensure_tree):
         mnt_base = '/mnt'
         quobyte_volume = '192.168.1.1/volume-00001'
@@ -155,7 +153,7 @@ class QuobyteTestCase(test.NoDBTestCase):
                           export_mnt_base)
         mock_ensure_tree.assert_called_once_with(export_mnt_base)
 
-    @mock.patch.object(libvirt, 'unprivileged_umount')
+    @mock.patch('nova.privsep.libvirt.unprivileged_umount')
     def test_quobyte_umount_volume_non_sysd(self, mock_lv_umount):
         mnt_base = '/mnt'
         quobyte_volume = '192.168.1.1/volume-00001'
@@ -166,7 +164,7 @@ class QuobyteTestCase(test.NoDBTestCase):
 
         mock_lv_umount.assert_called_once_with(export_mnt_base)
 
-    @mock.patch.object(libvirt, 'umount')
+    @mock.patch('nova.privsep.libvirt.umount')
     def test_quobyte_umount_volume_sysd(self, mock_lv_umount):
         mnt_base = '/mnt'
         quobyte_volume = '192.168.1.1/volume-00001'
@@ -179,7 +177,7 @@ class QuobyteTestCase(test.NoDBTestCase):
         mock_lv_umount.assert_called_once_with(export_mnt_base)
 
     @mock.patch.object(quobyte.LOG, "error")
-    @mock.patch.object(libvirt, 'umount')
+    @mock.patch('nova.privsep.libvirt.umount')
     def test_quobyte_umount_volume_warns(self, mock_execute, mock_debug):
         mnt_base = '/mnt'
         quobyte_volume = '192.168.1.1/volume-00001'
@@ -200,8 +198,8 @@ class QuobyteTestCase(test.NoDBTestCase):
                                  export_mnt_base))
 
     @mock.patch.object(quobyte.LOG, "exception")
-    @mock.patch.object(libvirt, 'umount',
-                       side_effect=(processutils.ProcessExecutionError))
+    @mock.patch('nova.privsep.libvirt.umount',
+                side_effect=processutils.ProcessExecutionError)
     def test_quobyte_umount_volume_fails(self, mock_unmount, mock_exception):
         mnt_base = '/mnt'
         quobyte_volume = '192.168.1.1/volume-00001'

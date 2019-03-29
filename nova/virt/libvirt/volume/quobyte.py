@@ -25,7 +25,7 @@ import six
 import nova.conf
 from nova import exception as nova_exception
 from nova.i18n import _
-from nova.privsep import libvirt
+import nova.privsep.libvirt
 from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import fs
@@ -76,12 +76,14 @@ def mount_volume(volume, mnt_base, configfile=None):
     if found_sysd:
         LOG.debug('Mounting volume %s at mount point %s via systemd-run',
                   volume, mnt_base)
-        libvirt.systemd_run_qb_mount(volume, mnt_base, cfg_file=configfile)
+        nova.privsep.libvirt.systemd_run_qb_mount(volume, mnt_base,
+                                                  cfg_file=configfile)
     else:
         LOG.debug('Mounting volume %s at mount point %s via mount.quobyte',
                   volume, mnt_base, cfg_file=configfile)
 
-        libvirt.unprivileged_qb_mount(volume, mnt_base, cfg_file=configfile)
+        nova.privsep.libvirt.unprivileged_qb_mount(volume, mnt_base,
+                                                   cfg_file=configfile)
     LOG.info('Mounted volume: %s', volume)
 
 
@@ -89,9 +91,9 @@ def umount_volume(mnt_base):
     """Wraps execute calls for unmouting a Quobyte volume"""
     try:
         if found_sysd:
-            libvirt.umount(mnt_base)
+            nova.privsep.libvirt.umount(mnt_base)
         else:
-            libvirt.unprivileged_umount(mnt_base)
+            nova.privsep.libvirt.unprivileged_umount(mnt_base)
     except processutils.ProcessExecutionError as exc:
         if 'Device or resource busy' in six.text_type(exc):
             LOG.error("The Quobyte volume at %s is still in use.", mnt_base)
