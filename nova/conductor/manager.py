@@ -686,7 +686,7 @@ class ComputeTaskManager(base.Base):
                                 elevated, self.report_client, spec_obj,
                                 instance.uuid, alloc_req,
                                 host.allocation_request_version)
-                            if request_spec:
+                            if request_spec and host_available:
                                 # NOTE(gibi): redo the request group - resource
                                 # provider mapping as the above claim call
                                 # moves the allocation of the instance to
