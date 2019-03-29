@@ -1776,11 +1776,14 @@ class FakeLibvirtFixture(fixtures.Fixture):
         disable_event_thread(self)
 
         if self.stub_os_vif:
-            # Make sure to never try and actually plug VIFs in os-vif unless
-            # we're explicitly testing that code and the test itself will
-            # handle the appropriate mocking.
+            # Make sure to never try and actually plug/unplug VIFs in os-vif
+            # unless we're explicitly testing that code and the test itself
+            # will handle the appropriate mocking.
             self.useFixture(fixtures.MonkeyPatch(
                 'nova.virt.libvirt.vif.LibvirtGenericVIFDriver._plug_os_vif',
+                lambda *a, **kw: None))
+            self.useFixture(fixtures.MonkeyPatch(
+                'nova.virt.libvirt.vif.LibvirtGenericVIFDriver._unplug_os_vif',
                 lambda *a, **kw: None))
 
         # os_vif.initialize is typically done in nova-compute startup
