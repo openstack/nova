@@ -19424,6 +19424,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_cleanup.assert_called_once_with(
             self.context, ins_ref, _fake_network_info(self, 1))
 
+    @mock.patch('time.sleep', new=mock.Mock())
     def test_cleanup_resize_same_host(self):
         CONF.set_override('policy_dirs', [], group='oslo_policy')
         ins_ref = self._create_instance({'host': CONF.host})
@@ -19445,6 +19446,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_get_path.assert_called_once_with(ins_ref)
             self.assertEqual(5, mock_rmtree.call_count)
 
+    @mock.patch('time.sleep', new=mock.Mock())
     def test_cleanup_resize_not_same_host(self):
         CONF.set_override('policy_dirs', [], group='oslo_policy')
         host = 'not' + CONF.host
@@ -19477,6 +19479,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_unplug.assert_called_once_with(ins_ref, fake_net)
             mock_unfilter.assert_called_once_with(ins_ref, fake_net)
 
+    @mock.patch('time.sleep', new=mock.Mock())
     def test_cleanup_resize_not_same_host_volume_backed(self):
         """Tests cleaning up after a resize is confirmed with a volume-backed
         instance. The key point is that the instance base directory should not
@@ -19513,6 +19516,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_unplug.assert_called_once_with(ins_ref, fake_net)
             mock_unfilter.assert_called_once_with(ins_ref, fake_net)
 
+    @mock.patch('time.sleep', new=mock.Mock())
     def test_cleanup_resize_snap_backend(self):
         CONF.set_override('policy_dirs', [], group='oslo_policy')
         self.flags(images_type='rbd', group='libvirt')
@@ -19537,6 +19541,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                     libvirt_utils.RESIZE_SNAPSHOT_NAME)
             self.assertEqual(5, mock_rmtree.call_count)
 
+    @mock.patch('time.sleep', new=mock.Mock())
     def test_cleanup_resize_snap_backend_image_does_not_exist(self):
         CONF.set_override('policy_dirs', [], group='oslo_policy')
         ins_ref = self._create_instance({'host': CONF.host})
@@ -22021,6 +22026,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             self.c, instance, guest, self.volume_uuid,
             self.create_info['new_file'])
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch.object(FakeVirtDomain, 'blockCommit')
     @mock.patch.object(FakeVirtDomain, 'blockRebase')
     @mock.patch.object(FakeVirtDomain, 'XMLDesc')
@@ -22054,6 +22060,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         mock_commit.assert_not_called()
         fakelibvirt.__dict__.update({'VIR_DOMAIN_BLOCK_REBASE_RELATIVE': 8})
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch.object(FakeVirtDomain, 'blockCommit')
     @mock.patch.object(FakeVirtDomain, 'blockRebase')
     @mock.patch.object(FakeVirtDomain, 'XMLDesc')
@@ -22184,6 +22191,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                    snapshot_id, self.delete_info_1)
             self.assertIn('has not been fully tested', six.text_type(ex))
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch.object(host.Host, '_get_domain')
     @mock.patch.object(FakeVirtDomain, 'blockCommit')
     @mock.patch.object(FakeVirtDomain, 'blockRebase')
@@ -22340,6 +22348,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                             'error_deleting')
         mock_get.assert_not_called()
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch.object(host.Host, '_get_domain')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     def test_volume_snapshot_delete_netdisk_1(
@@ -22384,6 +22393,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         fakelibvirt.__dict__.update({'VIR_DOMAIN_BLOCK_REBASE_RELATIVE': 8})
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch.object(host.Host, '_get_domain')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     def test_volume_snapshot_delete_netdisk_relative_1(
@@ -22426,6 +22436,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                 flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
             mock_commit.assert_not_called()
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch.object(host.Host, '_get_domain')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     def test_volume_snapshot_delete_netdisk_relative_2(
