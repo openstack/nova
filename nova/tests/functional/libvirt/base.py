@@ -45,6 +45,8 @@ class ServersTestBase(base.ServersTestBase):
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.useFixture(func_fixtures.PlacementFixture())
 
+        self.stub_out('nova.privsep.utils.supports_direct_io', lambda _: True)
+
         # Mock the 'get_connection' function, as we're going to need to provide
         # custom capabilities for each test
         _p = mock.patch('nova.virt.libvirt.host.Host.get_connection')
