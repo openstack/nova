@@ -3882,11 +3882,9 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
 
         server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
-        # Temporarily pass until bug #1821824 is fixed
         # Assert the server ended up on the expected compute host that doesn't
         # have the forbidden trait.
-        # TODO(magnusbe) Uncomment when commiting fix for bug #1821824
-        # self.assertEqual(self.compute2.host, server['OS-EXT-SRV-ATTR:host'])
+        self.assertEqual(self.compute2.host, server['OS-EXT-SRV-ATTR:host'])
 
         # Disable the compute node that doesn't have the forbidden trait
         compute2_service_id = self.admin_api.get_services(
@@ -3899,20 +3897,12 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
             self.image_id_without_trait
         )
 
-        # Temporarily pass if server goes to ACTIVE STATE until bug #1821824
-        # is fixed.
-        # TODO(magnusbe) Remove when commiting fix for bug #1821824
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
-
         # The server should go to ERROR state because there is no valid host.
-        # This is the expected behaviour. However, at this time bug #1821824
-        # prevents this from working.
-        # TODO(magnusbe) Uncomment when commiting fix for bug #1821824
-        # server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
-        # self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
+        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
         # Make sure the failure was due to NoValidHost by checking the fault.
-        # self.assertIn('fault', server)
-        # self.assertIn('No valid host', server['fault']['message'])
+        self.assertIn('fault', server)
+        self.assertIn('No valid host', server['fault']['message'])
 
     def test_image_traits_based_scheduling(self):
         """Tests that a server create request using a required trait on image
