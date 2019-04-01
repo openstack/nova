@@ -43,17 +43,18 @@ fi
 
 image_id=$(openstack image list -f value -c ID | awk 'NR==1{print $1}')
 flavor_id=$(openstack flavor list -f value -c ID | awk 'NR==1{print $1}')
+network_id=$(openstack network list --no-share -f value -c ID | awk 'NR==1{print $1}')
 
 echo "Creating ephemeral test server on subnode"
 openstack server create --image ${image_id} --flavor ${flavor_id} \
---availability-zone nova:${subnode} --wait evacuate-test
+--nic net-id=${network_id} --availability-zone nova:${subnode} --wait evacuate-test
 
 echo "Creating BFV test server on subnode"
 # TODO(mriedem): Use OSC when it supports boot from volume where nova creates
 # the root volume from an image.
 nova boot --flavor ${flavor_id} --poll \
 --block-device id=${image_id},source=image,dest=volume,size=1,bootindex=0,shutdown=remove \
---availability-zone nova:${subnode} evacuate-bfv-test
+--nic net-id=${network_id} --availability-zone nova:${subnode} evacuate-bfv-test
 
 echo "Forcing down the subnode so we can evacuate from it"
 openstack --os-compute-api-version 2.11 compute service set --down ${subnode} nova-compute
