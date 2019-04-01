@@ -693,6 +693,17 @@ def _pack_instance_onto_cores(available_siblings,
     for sib in available_siblings:
         for threads_no in range(1, len(sib) + 1):
             sibling_sets[threads_no].append(sib)
+
+    # Because we don't claim pinned CPUs in the scheduler, it is possible for
+    # multiple instances to race and land on the same host. When this happens,
+    # the CPUs that we thought were free may not longer be free. We should fail
+    # fast in this scenario.
+    if not sibling_sets:
+        LOG.debug('No available siblings. This is likely due to a race '
+                  'caused by multiple instances attempting to claim the same '
+                  'resources')
+        return
+
     LOG.debug('Built sibling_sets: %(siblings)s', {'siblings': sibling_sets})
 
     pinning = None
@@ -871,6 +882,7 @@ def _pack_instance_onto_cores(available_siblings,
         if (instance_cell.cpu_thread_policy !=
                 fields.CPUThreadAllocationPolicy.REQUIRE and
                 not pinning):
+            sibling_set = sibling_sets[min(sibling_sets)]
             pinning = list(zip(sorted(instance_cell.cpuset),
                                itertools.chain(*sibling_set)))
 

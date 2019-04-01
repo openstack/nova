@@ -2398,6 +2398,26 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         got_pinning = {x: x for x in range(0, 4)}
         self.assertEqual(got_pinning, inst_pin.cpu_pinning)
 
+    def test_get_pinning_host_siblings_fails(self):
+        """Validate that pinning fails if there are no free host CPUs.
+
+        This can happen due to raciness caused by nova-scheduler not claiming
+        pinned CPU resources, meaning multiple instances can race, landing on
+        the same host and attempting to claim the same resources.
+        """
+        # This host has 8 cores but 2 of them are disabled via 'vcpu_pin_set',
+        # meaning they have no thread siblings and aren't included in
+        # 'siblings' below. This can break thread-aware checks, which assume a
+        # sum(siblings) == sum(cpus).
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3, 4, 6]),
+                                    memory=4096, memory_usage=0,
+                                    siblings=[set([0, 1]), set([2, 3])],
+                                    mempages=[], pinned_cpus=set([0, 1, 2, 3]))
+        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1]),
+                                            memory=2048)
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertIsNone(inst_pin)
+
     def test_get_pinning_require_policy_no_siblings(self):
         host_pin = objects.NUMACell(
                 id=0,
