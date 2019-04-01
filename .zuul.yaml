@@ -83,6 +83,8 @@
       Run tox-based functional tests for the OpenStack Nova project
       under cPython version 3.6 with Nova specific irrelevant-files list.
       Uses tox with the ``functional-py36`` environment.
+    required-projects:
+      - openstack/placement
     irrelevant-files: *functional-irrelevant-files
     vars:
       tox_envlist: functional-py36
@@ -97,6 +99,8 @@
       Run tox-based functional tests for the OpenStack Nova project
       under cPython version 3.7 with Nova specific irrelevant-files list.
       Uses tox with the ``functional-py37`` environment.
+    required-projects:
+      - openstack/placement
     irrelevant-files: *functional-irrelevant-files
     vars:
       tox_envlist: functional-py37
