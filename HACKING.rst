@@ -70,6 +70,9 @@ Nova Specific Commandments
 - [N360] Yield must always be followed by a space when yielding a value.
 - [N361] Check for usage of deprecated assertRegexpMatches and
   assertNotRegexpMatches
+- [N362] Imports for privsep modules should be specific. Use "import nova.privsep.path",
+  not "from nova.privsep import path". This ensures callers know that the method they're
+  calling is using priviledge escalation.
 
 Creating Unit Tests
 -------------------
