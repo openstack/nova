@@ -548,7 +548,7 @@ class ComputeManager(manager.Manager):
 
     def reset(self):
         LOG.info('Reloading compute RPC API')
-        compute_rpcapi.LAST_VERSION = None
+        compute_rpcapi.reset_globals()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.reportclient.clear_provider_cache()
 

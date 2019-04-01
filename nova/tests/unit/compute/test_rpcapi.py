@@ -79,9 +79,9 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_auto_pin_fails_if_too_old(self, mock_get_min):
         mock_get_min.return_value = 1955
         self.flags(compute='auto', group='upgrade_levels')
-        compute_rpcapi.LAST_VERSION = None
         self.assertRaises(exception.ServiceTooOld,
-                          compute_rpcapi.ComputeAPI)
+                          compute_rpcapi.ComputeAPI()._determine_version_cap,
+                          mock.Mock)
 
     @mock.patch('nova.objects.service.get_minimum_version_all_cells')
     def test_auto_pin_with_service_version_zero(self, mock_get_min):
@@ -100,8 +100,9 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         mock_get_min.return_value = 1
         self.flags(compute='auto', group='upgrade_levels')
         compute_rpcapi.LAST_VERSION = None
-        compute_rpcapi.ComputeAPI()
-        compute_rpcapi.ComputeAPI()
+        api = compute_rpcapi.ComputeAPI()
+        for x in range(2):
+            api._determine_version_cap(mock.Mock())
         mock_get_min.assert_called_once_with(mock.ANY, ['nova-compute'])
         self.assertEqual('4.4', compute_rpcapi.LAST_VERSION)
 
@@ -594,11 +595,9 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self.flags(connection=None, group='api_database')
         self.flags(compute='auto', group='upgrade_levels')
         mock_minver.return_value = 0
-        compute_rpcapi.NO_COMPUTES_WARNING = False
-        compute_rpcapi.LAST_VERSION = None
-        compute_rpcapi.ComputeAPI()
-        compute_rpcapi.ComputeAPI()
-        self.assertEqual(1, mock_log.debug.call_count)
+        api = compute_rpcapi.ComputeAPI()
+        for x in range(2):
+            api._determine_version_cap(mock.Mock())
         mock_allcells.assert_not_called()
         mock_minver.assert_has_calls([
             mock.call(mock.ANY, 'nova-compute'),
@@ -609,9 +608,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_version_cap_all_cells(self, mock_allcells, mock_minver):
         self.flags(connection='sqlite:///', group='api_database')
         self.flags(compute='auto', group='upgrade_levels')
-        compute_rpcapi.LAST_VERSION = None
         mock_allcells.return_value = 0
-        compute_rpcapi.ComputeAPI()
+        compute_rpcapi.ComputeAPI()._determine_version_cap(mock.Mock())
         mock_allcells.assert_called_once_with(mock.ANY, ['nova-compute'])
         mock_minver.assert_not_called()
 

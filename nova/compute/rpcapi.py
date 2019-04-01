@@ -15,6 +15,7 @@
 Client side of the compute RPC API.
 """
 
+from oslo_concurrency import lockutils
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -36,6 +37,18 @@ RPC_TOPIC = "compute"
 LOG = logging.getLogger(__name__)
 LAST_VERSION = None
 NO_COMPUTES_WARNING = False
+# Global for ComputeAPI.router.
+_ROUTER = None
+
+
+def reset_globals():
+    global NO_COMPUTES_WARNING
+    global LAST_VERSION
+    global _ROUTER
+
+    NO_COMPUTES_WARNING = False
+    LAST_VERSION = None
+    _ROUTER = None
 
 
 def _compute_host(host, instance):
@@ -367,25 +380,38 @@ class ComputeAPI(object):
         'stein': '5.1',
     }
 
-    def __init__(self):
-        super(ComputeAPI, self).__init__()
-        target = messaging.Target(topic=RPC_TOPIC, version='5.0')
-        upgrade_level = CONF.upgrade_levels.compute
-        if upgrade_level == 'auto':
-            version_cap = self._determine_version_cap(target)
-        else:
-            version_cap = self.VERSION_ALIASES.get(upgrade_level,
-                                                   upgrade_level)
-        serializer = objects_base.NovaObjectSerializer()
+    @property
+    def router(self):
+        """Provides singleton access to nova.rpc.ClientRouter for this API
 
-        # NOTE(danms): We need to poke this path to register CONF options
-        # that we use in self.get_client()
-        rpc.get_client(target, version_cap, serializer)
+        The ClientRouter is constructed and accessed as a singleton to avoid
+        querying all cells for a minimum nova-compute service version when
+        [upgrade_levels]/compute=auto and we have access to the API DB.
+        """
+        global _ROUTER
+        if _ROUTER is None:
+            with lockutils.lock('compute-rpcapi-router'):
+                if _ROUTER is None:
+                    target = messaging.Target(topic=RPC_TOPIC, version='5.0')
+                    upgrade_level = CONF.upgrade_levels.compute
+                    if upgrade_level == 'auto':
+                        version_cap = self._determine_version_cap(target)
+                    else:
+                        version_cap = self.VERSION_ALIASES.get(upgrade_level,
+                                                               upgrade_level)
+                    serializer = objects_base.NovaObjectSerializer()
 
-        default_client = self.get_client(target, version_cap, serializer)
-        self.router = rpc.ClientRouter(default_client)
+                    # NOTE(danms): We need to poke this path to register CONF
+                    # options that we use in self.get_client()
+                    rpc.get_client(target, version_cap, serializer)
 
-    def _determine_version_cap(self, target):
+                    default_client = self.get_client(target, version_cap,
+                                                     serializer)
+                    _ROUTER = rpc.ClientRouter(default_client)
+        return _ROUTER
+
+    @staticmethod
+    def _determine_version_cap(target):
         global LAST_VERSION
         global NO_COMPUTES_WARNING
         if LAST_VERSION:
