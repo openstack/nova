@@ -84,7 +84,7 @@ Example response::
     "remote_console": {
       "protocol": "vnc",
       "type": "novnc",
-      "url": "http://example.com:6080/vnc_auto.html?token=XYZ"
+      "url": "http://example.com:6080/vnc_auto.html?path=%3Ftoken%3DXYZ"
     }
   }
 

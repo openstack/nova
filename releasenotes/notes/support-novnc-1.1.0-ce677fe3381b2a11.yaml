@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Add support for noVNC >= v1.1.0 for VNC consoles. Prior to this fix, VNC
+    console token validation always failed regardless of actual token validity
+    with noVNC >= v1.1.0. See
+    https://bugs.launchpad.net/nova/+bug/1822676 for more details.
