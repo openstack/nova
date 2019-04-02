@@ -8522,7 +8522,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         tree = etree.fromstring(xml)
         disks = tree.findall('./devices/disk/driver')
         for guest_disk in disks:
-            self.assertEqual(guest_disk.get("cache"), "writethrough")
+            self.assertEqual(guest_disk.get("cache"), "writeback")
 
     def _check_xml_and_disk_bus(self, image_meta,
                                 block_device_info, wantConfig):
@@ -16123,7 +16123,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         """Tests that when conf.shareable is True, the configuration is
         ignored and the driver_cache is forced to 'none'.
         """
-        self.flags(disk_cachemodes=['block=writethrough'], group='libvirt')
+        self.flags(disk_cachemodes=['block=writeback'], group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         fake_conf = FakeConfigGuestDisk()
         fake_conf.shareable = True
