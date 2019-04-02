@@ -83,6 +83,7 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self._assertFileTypeEquals(tree, file_path)
+        self.assertEqual('writeback', conf.driver_cache)
 
     @mock.patch.object(libvirt_utils, 'is_mounted')
     @mock.patch('oslo_utils.fileutils.ensure_tree')
