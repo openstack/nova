@@ -19,6 +19,7 @@ import mock
 from oslo_db.exception import DBDuplicateEntry
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
+import six.moves.urllib.parse as urlparse
 
 from nova import exception
 from nova.objects import console_auth_token as token_obj
@@ -70,9 +71,9 @@ class _TestConsoleAuthToken(object):
         self.compare_obj(obj, expected)
 
         url = obj.access_url
-        expected_url = '%s?token=%s' % (
-            fakes.fake_token_dict['access_url_base'],
-            fakes.fake_token)
+        path = urlparse.urlencode({'path': '?token=%s' % fakes.fake_token})
+        expected_url = '%s?%s' % (
+            fakes.fake_token_dict['access_url_base'], path)
         self.assertEqual(expected_url, url)
 
     @mock.patch('nova.db.api.console_auth_token_create')
