@@ -1103,7 +1103,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         for i in range(3):
             expected += ('Host host%s is already mapped to cell %s\n' %
                          (i, cell_mapping_uuid))
-        expected += 'All hosts are already mapped to cell(s), exiting.'
+        expected += 'All hosts are already mapped to cell(s).'
         self.assertEqual(expected, output)
 
     def test_map_cell_and_hosts_partial_update(self):
