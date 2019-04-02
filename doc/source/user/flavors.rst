@@ -566,15 +566,27 @@ Emulator threads policy
      $ openstack flavor set FLAVOR-NAME \
          --property hw:emulator_threads_policy=THREAD-POLICY
 
-  Valid THREAD-POLICY values are:
+  The expected behavior of emulator threads depends on the value of the
+  ``hw:emulator_threads_policy`` flavor extra spec and the value of
+  :oslo.config:option:`compute.cpu_shared_set`. It is presented in the
+  following table:
 
-  - ``share``: (default) The emulator threads float across the pCPUs
-    associated to the guest. To place a workload's emulator threads on
-    a set of isolated physical CPUs, set ``share`` and the
-    :oslo.config:option:`compute.cpu_shared_set` configuration option to the
-    set of host CPUs that should be used for best-effort CPU resources.
+  .. list-table::
+     :header-rows: 1
+     :stub-columns: 1
 
-  - ``isolate``: The emulator threads are isolated on a single pCPU.
+     * -
+       - :oslo.config:option:`compute.cpu_shared_set` set
+       - :oslo.config:option:`compute.cpu_shared_set` unset
+     * - ``hw:emulator_treads_policy`` unset (default)
+       - Pinned to all of the instance's pCPUs
+       - Pinned to all of the instance's pCPUs
+     * - ``hw:emulator_threads_policy`` = ``share``
+       - Pinned to :oslo.config:option:`compute.cpu_shared_set`
+       - Pinned to all of the instance's pCPUs
+     * - ``hw:emulator_threads_policy`` = ``isolate``
+       - Pinned to a single pCPU distinct from the instance's pCPUs
+       - Pinned to a single pCPU distinct from the instance's pCPUs
 
 Large pages allocation
   You can configure the size of large pages used to back the VMs.
