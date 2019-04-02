@@ -15103,6 +15103,28 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_get_net_name.called_once_with(parent_address)
             mock_dev_lookup.called_once_with(dev_name)
 
+    @mock.patch.object(pci_utils, 'get_ifname_by_pci_address')
+    def test_get_pcidev_info_non_nic(self, mock_get_ifname):
+        self.stub_out('nova.virt.libvirt.host.Host.device_lookup_by_name',
+                      lambda self, name: FakeNodeDevice(
+                          _fake_NodeDevXml[name]))
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        id = "pci_0000_04_10_7"
+        mock_get_ifname.side_effect = exception.PciDeviceNotFoundById(id=id)
+        actualvf = drvr._get_pcidev_info(id)
+        expect_vf = {
+            "dev_id": id,
+            "address": "0000:04:10.7",
+            "product_id": '1520',
+            "numa_node": None,
+            "vendor_id": '8086',
+            "label": 'label_8086_1520',
+            "dev_type": fields.PciDeviceType.SRIOV_VF,
+            'parent_addr': '0000:04:00.3',
+            }
+        self.assertEqual(expect_vf, actualvf)
+
     @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
                 return_value='ens1')
     def test_get_pcidev_info(self, mock_get_ifname):
