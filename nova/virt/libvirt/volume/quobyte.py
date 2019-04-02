@@ -41,30 +41,34 @@ DRIVER_IO = 'native'
 VALID_SYSD_STATES = ["starting", "running", "degraded"]
 SYSTEMCTL_CHECK_PATH = "/run/systemd/system"
 
-sysd_checked = False
-found_sysd = False
+
+_is_systemd = None
 
 
 def is_systemd():
     """Checks if the host is running systemd"""
-    global sysd_checked
-    global found_sysd
+    global _is_systemd
+
+    if _is_systemd is not None:
+        return _is_systemd
+
+    tmp_is_systemd = False
+
     if psutil.Process(1).name() == "systemd" or os.path.exists(
             SYSTEMCTL_CHECK_PATH):
         # NOTE(kaisers): exit code might be >1 in theory but in practice this
         # is hard coded to 1. Due to backwards compatibility and systemd
         # CODING_STYLE this is unlikely to change.
         sysdout, sysderr = processutils.execute("systemctl",
-                                       "is-system-running",
-                                        check_exit_code=[0, 1])
+                                                "is-system-running",
+                                                check_exit_code=[0, 1])
         for state in VALID_SYSD_STATES:
             if state == sysdout.strip():
-                found_sysd = True
-                sysd_checked = True
-                return found_sysd
+                tmp_is_systemd = True
+                break
 
-    sysd_checked = True
-    return False
+    _is_systemd = tmp_is_systemd
+    return _is_systemd
 
 
 def mount_volume(volume, mnt_base, configfile=None):
@@ -73,7 +77,7 @@ def mount_volume(volume, mnt_base, configfile=None):
 
     # Note(kaisers): with systemd this requires a separate CGROUP to
     # prevent Nova service stop/restarts from killing the mount.
-    if found_sysd:
+    if is_systemd():
         LOG.debug('Mounting volume %s at mount point %s via systemd-run',
                   volume, mnt_base)
         nova.privsep.libvirt.systemd_run_qb_mount(volume, mnt_base,
@@ -90,7 +94,7 @@ def mount_volume(volume, mnt_base, configfile=None):
 def umount_volume(mnt_base):
     """Wraps execute calls for unmouting a Quobyte volume"""
     try:
-        if found_sysd:
+        if is_systemd():
             nova.privsep.libvirt.umount(mnt_base)
         else:
             nova.privsep.libvirt.unprivileged_umount(mnt_base)
@@ -132,9 +136,6 @@ def validate_volume(mount_path):
 
 class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
     """Class implements libvirt part of volume driver for Quobyte."""
-
-    def __init__(self, host):
-        super(LibvirtQuobyteVolumeDriver, self).__init__(host)
 
     def _get_mount_point_base(self):
         return CONF.libvirt.quobyte_mount_point_base
