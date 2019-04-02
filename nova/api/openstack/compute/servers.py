@@ -750,7 +750,6 @@ class ServersController(wsgi.Controller):
                 exception.InstanceExists,
                 exception.NetworkAmbiguous,
                 exception.NoUniqueMatch,
-                exception.MultiattachSupportNotYetAvailable,
                 exception.VolumeTypeSupportNotYetAvailable,
                 exception.CertificateValidationNotYetAvailable) as error:
             raise exc.HTTPConflict(explanation=error.format_message())
