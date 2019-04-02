@@ -926,9 +926,8 @@ class VolumeAttachTestsV260(test.NoDBTestCase):
 
     def test_attach_with_multiattach_fails_not_available(self):
         """Tests the case that the user tries to attach with a
-        multiattach volume but before the compute hosting the instance
-        is upgraded. This would come from reserve_block_device_name in
-        the compute RPC API client.
+        multiattach volume on cells v1 where multiattach volumes are
+        not supported.
         """
         with mock.patch.object(
                 self.controller.compute_api, 'attach_volume',
