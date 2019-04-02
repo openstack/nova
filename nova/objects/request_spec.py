@@ -989,7 +989,8 @@ class RequestGroup(base.NovaObject):
     """
     # Version 1.0: Initial version
     # Version 1.1: add requester_id and provider_uuids fields
-    VERSION = '1.1'
+    # Version 1.2: add in_tree field
+    VERSION = '1.2'
 
     fields = {
         'use_same_provider': fields.BooleanField(default=True),
@@ -1010,6 +1011,7 @@ class RequestGroup(base.NovaObject):
         # NOTE(gibi): this can be more than one if this is the unnumbered
         # request group (i.e. use_same_provider=False)
         'provider_uuids': fields.ListOfUUIDField(default=[]),
+        'in_tree': fields.UUIDField(nullable=True, default=None),
     }
 
     def __init__(self, context=None, **kwargs):
@@ -1054,6 +1056,9 @@ class RequestGroup(base.NovaObject):
         super(RequestGroup, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2):
+            if 'in_tree' in primitive:
+                del primitive['in_tree']
         if target_version < (1, 1):
             if 'requester_id' in primitive:
                 del primitive['requester_id']

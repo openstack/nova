@@ -930,8 +930,9 @@ class TestRequestGroupObject(test.TestCase):
         self.assertEqual(set(), rg.required_traits)
         self.assertEqual(set(), rg.forbidden_traits)
         self.assertEqual([], rg.aggregates)
-        self.assertIsNone(None, rg.requester_id)
+        self.assertIsNone(rg.requester_id)
         self.assertEqual([], rg.provider_uuids)
+        self.assertIsNone(rg.in_tree)
 
     def test_from_port_request(self):
         port_resource_request = {
@@ -983,8 +984,23 @@ class TestRequestGroupObject(test.TestCase):
             required_traits=set(['CUSTOM_PHYSNET_2']))
         versions = ovo_base.obj_tree_get_versions('RequestGroup')
         primitive = req_obj.obj_to_primitive(
+            target_version='1.2',
+            version_manifest=versions)['nova_object.data']
+        self.assertIn('in_tree', primitive)
+        self.assertIn('requester_id', primitive)
+        self.assertIn('provider_uuids', primitive)
+        self.assertIn('required_traits', primitive)
+        primitive = req_obj.obj_to_primitive(
+            target_version='1.1',
+            version_manifest=versions)['nova_object.data']
+        self.assertNotIn('in_tree', primitive)
+        self.assertIn('requester_id', primitive)
+        self.assertIn('provider_uuids', primitive)
+        self.assertIn('required_traits', primitive)
+        primitive = req_obj.obj_to_primitive(
             target_version='1.0',
             version_manifest=versions)['nova_object.data']
+        self.assertNotIn('in_tree', primitive)
         self.assertNotIn('requester_id', primitive)
         self.assertNotIn('provider_uuids', primitive)
         self.assertIn('required_traits', primitive)
