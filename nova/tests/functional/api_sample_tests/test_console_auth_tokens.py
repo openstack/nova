@@ -15,6 +15,7 @@
 import re
 
 from oslo_serialization import jsonutils
+import six.moves.urllib.parse as urlparse
 
 from nova.tests.functional.api_sample_tests import test_servers
 
@@ -32,7 +33,8 @@ class ConsoleAuthTokensSampleJsonTests(test_servers.ServersSampleBase):
                                  {'action': 'os-getRDPConsole'})
 
         url = self._get_console_url(response.content)
-        return re.match('.+?token=([^&]+)', url).groups()[0]
+        path = urlparse.urlencode({'path': '?token='})
+        return re.match('.+?%s([^&]+)' % path, url).groups()[0]
 
     def test_get_console_connect_info(self):
         self.flags(enabled=True, group='rdp')

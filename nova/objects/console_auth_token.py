@@ -18,6 +18,7 @@ from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
+import six.moves.urllib.parse as urlparse
 
 from nova.db import api as db
 from nova import exception
@@ -60,7 +61,9 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
         specific to this authorization.
         """
         if self.obj_attr_is_set('id'):
-            return '%s?token=%s' % (self.access_url_base, self.token)
+            qparams = {'path': '?token=%s' % self.token}
+            return '%s?%s' % (self.access_url_base,
+                              urlparse.urlencode(qparams))
 
     @staticmethod
     def _from_db_object(context, obj, db_obj):
