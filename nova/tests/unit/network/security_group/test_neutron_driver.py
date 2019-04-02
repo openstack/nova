@@ -137,7 +137,7 @@ class TestNeutronDriver(test.NoDBTestCase):
                         search_opts=search_opts)
 
             mock_list_secgroup.assert_called_once_with(
-                tenant_id=self.context.tenant)
+                tenant_id=self.context.project_id)
 
     def test_get_with_name_duplicated(self):
         sg_name = 'web_server'
