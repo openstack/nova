@@ -7267,6 +7267,19 @@ class ComputeTestCase(BaseTestCase,
             self.assertTrue(val)
             mock_list_ports.assert_called_once_with(ctxt, **search_opts)
 
+    def test_require_nw_info_update_for_baremetal(self):
+        """Tests _require_nw_info_update for baremetal instance,
+        expected behavior is to return False.
+        """
+        compute_mgr = compute_manager.ComputeManager('ironic.IronicDriver')
+        with mock.patch.object(compute_mgr, 'network_api') as \
+                network_api_mock:
+            ctxt = context.get_admin_context()
+            instance = self._create_fake_instance_obj()
+            val = compute_mgr._require_nw_info_update(ctxt, instance)
+            self.assertFalse(val)
+            network_api_mock.assert_not_called()
+
     def _heal_instance_info_cache(self,
                                   _get_instance_nw_info_raise=False,
                                   _get_instance_nw_info_raise_cache=False,

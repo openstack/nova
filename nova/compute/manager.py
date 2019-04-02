@@ -7204,8 +7204,14 @@ class ComputeManager(manager.Manager):
         binding_failed or unbound binding:vif_type for any of the instances
         ports.
         """
-        if not utils.is_neutron():
+        # Only update port bindings if compute manager does manage port
+        # bindings instead of the compute driver. For example IronicDriver
+        # manages the port binding for baremetal instance ports, hence,
+        # external intervention with the binding is not desired.
+        if (not utils.is_neutron() or
+                self.driver.manages_network_binding_host_id()):
             return False
+
         search_opts = {'device_id': instance.uuid,
                        'fields': ['binding:host_id', 'binding:vif_type']}
         ports = self.network_api.list_ports(context, **search_opts)
