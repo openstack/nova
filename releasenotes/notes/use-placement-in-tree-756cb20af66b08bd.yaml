@@ -1,0 +1,14 @@
+---
+fixes:
+  - |
+    There had been `bug 1777591`_ that placement filters out the specified
+    target host when deploying an instance by the random limitation. In
+    previous releases the bug has been worked around by unlimiting the results
+    from the Placement service if the target host is specified. From this
+    release, the Nova scheduler uses more optimized path retrieving only the
+    target host information from placement. Note that it still uses the unlimit
+    workaround if a target host is specified without a specific node and
+    multiple nodes are found for the target host. This can happen in some of
+    the virt drivers such as the Ironic driver.
+
+    .. _bug 1777591: https://bugs.launchpad.net/nova/+bug/1777591

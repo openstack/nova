@@ -445,6 +445,7 @@ class TestUtils(test.NoDBTestCase):
                 self.context, fake_spec, self.mock_host_manager)
         self.assertResourceRequestsEqual(expected, resources)
         expected_querystring = (
+            'in_tree=12345678-1234-1234-1234-123456789012&'
             'limit=1000&resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1')
         self.assertEqual(expected_querystring, resources.to_querystring())
         self.mock_host_manager.get_compute_nodes_by_host_or_node.\
@@ -477,6 +478,7 @@ class TestUtils(test.NoDBTestCase):
                 self.context, fake_spec, self.mock_host_manager)
         self.assertResourceRequestsEqual(expected, resources)
         expected_querystring = (
+            'in_tree=12345678-1234-1234-1234-123456789012&'
             'limit=1000&resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1')
         self.assertEqual(expected_querystring, resources.to_querystring())
         self.mock_host_manager.get_compute_nodes_by_host_or_node.\
@@ -550,6 +552,7 @@ class TestUtils(test.NoDBTestCase):
                 self.context, fake_spec, self.mock_host_manager)
         self.assertResourceRequestsEqual(expected, resources)
         expected_querystring = (
+            'in_tree=12345678-1234-1234-1234-123456789012&'
             'limit=1000&resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1')
         self.assertEqual(expected_querystring, resources.to_querystring())
         self.mock_host_manager.get_compute_nodes_by_host_or_node.\

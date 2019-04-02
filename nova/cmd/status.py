@@ -44,11 +44,11 @@ from nova import version
 
 CONF = nova.conf.CONF
 
-# NOTE(efried): 1.30 is required by nova-compute to support resource provider
-# reshaping (inventory and allocation data migration).
+# NOTE(tetsuro): 1.31 is required by nova-scheduler to use in_tree
+# queryparam to get allocation candidates.
 # NOTE: If you bump this version, remember to update the history
 # section in the nova-status man page (doc/source/cli/nova-status).
-MIN_PLACEMENT_MICROVERSION = "1.30"
+MIN_PLACEMENT_MICROVERSION = "1.31"
 
 
 class UpgradeCommands(upgradecheck.UpgradeCommands):

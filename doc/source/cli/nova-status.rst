@@ -130,6 +130,10 @@ Upgrade
   * The "API Service Version" upgrade check was removed since the corresponding
     code for that check was removed in Stein.
 
+  **20.0.0 (Train)**
+
+  * Checks for the Placement API are modified to require version 1.31.
+
 See Also
 ========
 
