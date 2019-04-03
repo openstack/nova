@@ -2601,7 +2601,7 @@ event_traceback:
   type: string
 events:
   description: |
-    The action.
+    List of external events to process.
   in: body
   required: true
   type: array
