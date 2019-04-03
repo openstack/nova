@@ -3876,7 +3876,7 @@ injectNetworkInfo:
   type: none
 instance_action_events_2_50:
   description: |
-    The events which occurred in this action.
+    The events which occurred in this action in descending order of creation.
 
     Policy defaults enable only users with the administrative role to see
     instance action event information. Cloud providers can change these
@@ -3887,7 +3887,7 @@ instance_action_events_2_50:
   max_version: 2.50
 instance_action_events_2_51:
   description: |
-    The events which occurred in this action.
+    The events which occurred in this action in descending order of creation.
 
     Policy defaults enable only users with the administrative role or the owner
     of the server to see instance action event information. Cloud providers can
@@ -3958,7 +3958,7 @@ instanceAction:
   type: object
 instanceActions:
   description: |
-    List of the actions for the given instance.
+    List of the actions for the given instance in descending order of creation.
   in: body
   required: true
   type: array
