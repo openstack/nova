@@ -64,7 +64,6 @@ from nova.objects import compute_node as compute_node_obj
 from nova.objects import host_mapping as host_mapping_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_mapping as instance_mapping_obj
-from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import virtual_interface as virtual_interface_obj
 from nova import quota
@@ -389,8 +388,6 @@ class DbCommands(object):
     # not migratable (or don't need migrating), but all migrations that can
     # complete have finished.
     online_migrations = (
-        # Added in Newton
-        keypair_obj.migrate_keypairs_to_api_db,
         # Added in Ocata
         # NOTE(mriedem): This online migration is going to be backported to
         # Newton also since it's an upgrade issue when upgrading from Mitaka.

@@ -20,7 +20,6 @@ from oslo_utils import versionutils
 from nova.db import api as db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
-from nova.db.sqlalchemy import models as main_models
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -236,49 +235,3 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
     def get_count_by_user(cls, context, user_id):
         return (cls._get_count_from_db(context, user_id) +
                 db.key_pair_count_by_user(context, user_id))
-
-
-@db_api.pick_context_manager_reader
-def _count_unmigrated_instances(context):
-    return context.session.query(main_models.InstanceExtra).\
-        filter_by(keypairs=None).\
-        filter_by(deleted=0).\
-        count()
-
-
-@db_api.pick_context_manager_reader
-def _get_main_keypairs(context, limit):
-    return context.session.query(main_models.KeyPair).\
-        filter_by(deleted=0).\
-        limit(limit).\
-        all()
-
-
-def migrate_keypairs_to_api_db(context, count):
-    bad_instances = _count_unmigrated_instances(context)
-    if bad_instances:
-        LOG.error('Some instances are still missing keypair '
-                  'information. Unable to run keypair migration '
-                  'at this time.')
-        return 0, 0
-
-    main_keypairs = _get_main_keypairs(context, count)
-    done = 0
-    for db_keypair in main_keypairs:
-        kp = objects.KeyPair(context=context,
-                             user_id=db_keypair.user_id,
-                             name=db_keypair.name,
-                             fingerprint=db_keypair.fingerprint,
-                             public_key=db_keypair.public_key,
-                             type=db_keypair.type)
-        try:
-            kp._create()
-        except exception.KeyPairExists:
-            # NOTE(danms): If this got created somehow in the API DB,
-            # then it's newer and we just continue on to destroy the
-            # old one in the cell DB.
-            pass
-        db_api.key_pair_destroy(context, db_keypair.user_id, db_keypair.name)
-        done += 1
-
-    return len(main_keypairs), done
