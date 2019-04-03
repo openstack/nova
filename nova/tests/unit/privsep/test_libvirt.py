@@ -16,7 +16,7 @@
 import ddt
 import mock
 
-from nova.privsep import libvirt
+import nova.privsep.libvirt
 from nova import test
 
 
@@ -38,9 +38,9 @@ class PrivsepLibvirtMountTestCase(test.NoDBTestCase):
         sysd_bin = "systemd-run"
         sysd_opt_1 = "--scope"
 
-        libvirt.systemd_run_qb_mount(self.FAKE_VOLUME,
-                                     self.FAKE_MOUNT_BASE,
-                                     cfg_file=cfg_file)
+        nova.privsep.libvirt.systemd_run_qb_mount(self.FAKE_VOLUME,
+                                                  self.FAKE_MOUNT_BASE,
+                                                  cfg_file=cfg_file)
 
         if cfg_file:
             mock_execute.assert_called_once_with(sysd_bin, sysd_opt_1,
@@ -61,9 +61,9 @@ class PrivsepLibvirtMountTestCase(test.NoDBTestCase):
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_unprivileged_qb_mount(self, cfg_file, mock_execute):
 
-        libvirt.unprivileged_qb_mount(self.FAKE_VOLUME,
-                                      self.FAKE_MOUNT_BASE,
-                                      cfg_file=cfg_file)
+        nova.privsep.libvirt.unprivileged_qb_mount(self.FAKE_VOLUME,
+                                                   self.FAKE_MOUNT_BASE,
+                                                   cfg_file=cfg_file)
 
         if cfg_file:
             mock_execute.assert_called_once_with(self.QB_BINARY,

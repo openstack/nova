@@ -40,7 +40,7 @@ import six
 from nova.compute import power_state
 from nova import exception
 from nova.i18n import _
-from nova.privsep import libvirt as libvirt_privsep
+import nova.privsep.libvirt
 from nova.virt import hardware
 from nova.virt.libvirt import compat
 from nova.virt.libvirt import config as vconfig
@@ -200,7 +200,7 @@ class Guest(object):
         interfaces = self.get_interfaces()
         try:
             for interface in interfaces:
-                libvirt_privsep.enable_hairpin(interface)
+                nova.privsep.libvirt.enable_hairpin(interface)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.error('Error enabling hairpin mode with XML: %s',

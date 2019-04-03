@@ -16,7 +16,7 @@ import fixtures
 import mock
 from six.moves import StringIO
 
-from nova.privsep import idmapshift
+import nova.privsep.idmapshift
 from nova import test
 
 
@@ -45,38 +45,39 @@ class BaseTestCase(test.NoDBTestCase):
 
 class FindTargetIDTestCase(BaseTestCase):
     def test_find_target_id_range_1_first(self):
-        actual_target = idmapshift.find_target_id(0, self.uid_maps,
-                                                  idmapshift.NOBODY_ID, dict())
+        actual_target = nova.privsep.idmapshift.find_target_id(
+            0, self.uid_maps, nova.privsep.idmapshift.NOBODY_ID, dict())
         self.assertEqual(10000, actual_target)
 
     def test_find_target_id_inside_range_1(self):
-        actual_target = idmapshift.find_target_id(2, self.uid_maps,
-                                                  idmapshift.NOBODY_ID, dict())
+        actual_target = nova.privsep.idmapshift.find_target_id(
+            2, self.uid_maps, nova.privsep.idmapshift.NOBODY_ID, dict())
         self.assertEqual(10002, actual_target)
 
     def test_find_target_id_range_2_first(self):
-        actual_target = idmapshift.find_target_id(10, self.uid_maps,
-                                                  idmapshift.NOBODY_ID, dict())
+        actual_target = nova.privsep.idmapshift.find_target_id(
+            10, self.uid_maps, nova.privsep.idmapshift.NOBODY_ID, dict())
         self.assertEqual(20000, actual_target)
 
     def test_find_target_id_inside_range_2(self):
-        actual_target = idmapshift.find_target_id(100, self.uid_maps,
-                                                  idmapshift.NOBODY_ID, dict())
+        actual_target = nova.privsep.idmapshift.find_target_id(
+            100, self.uid_maps, nova.privsep.idmapshift.NOBODY_ID, dict())
         self.assertEqual(20090, actual_target)
 
     def test_find_target_id_outside_range(self):
-        actual_target = idmapshift.find_target_id(10000, self.uid_maps,
-                                                  idmapshift.NOBODY_ID, dict())
-        self.assertEqual(idmapshift.NOBODY_ID, actual_target)
+        actual_target = nova.privsep.idmapshift.find_target_id(
+            10000, self.uid_maps, nova.privsep.idmapshift.NOBODY_ID, dict())
+        self.assertEqual(nova.privsep.idmapshift.NOBODY_ID, actual_target)
 
     def test_find_target_id_no_mappings(self):
-        actual_target = idmapshift.find_target_id(0, [],
-                                                  idmapshift.NOBODY_ID, dict())
-        self.assertEqual(idmapshift.NOBODY_ID, actual_target)
+        actual_target = nova.privsep.idmapshift.find_target_id(
+            0, [], nova.privsep.idmapshift.NOBODY_ID, dict())
+        self.assertEqual(nova.privsep.idmapshift.NOBODY_ID, actual_target)
 
     def test_find_target_id_updates_memo(self):
         memo = dict()
-        idmapshift.find_target_id(0, self.uid_maps, idmapshift.NOBODY_ID, memo)
+        nova.privsep.idmapshift.find_target_id(
+            0, self.uid_maps, nova.privsep.idmapshift.NOBODY_ID, memo)
         self.assertIn(0, memo)
         self.assertEqual(10000, memo[0])
 
@@ -84,19 +85,19 @@ class FindTargetIDTestCase(BaseTestCase):
         uid_maps = [(500, 10000, 10)]
 
         # Below range
-        actual_target = idmapshift.find_target_id(499, uid_maps,
-                                                  idmapshift.NOBODY_ID, dict())
-        self.assertEqual(idmapshift.NOBODY_ID, actual_target)
+        actual_target = nova.privsep.idmapshift.find_target_id(
+            499, uid_maps, nova.privsep.idmapshift.NOBODY_ID, dict())
+        self.assertEqual(nova.privsep.idmapshift.NOBODY_ID, actual_target)
 
         # Match
-        actual_target = idmapshift.find_target_id(501, uid_maps,
-                                                  idmapshift.NOBODY_ID, dict())
+        actual_target = nova.privsep.idmapshift.find_target_id(
+            501, uid_maps, nova.privsep.idmapshift.NOBODY_ID, dict())
         self.assertEqual(10001, actual_target)
 
         # Beyond range
-        actual_target = idmapshift.find_target_id(510, uid_maps,
-                                                  idmapshift.NOBODY_ID, dict())
-        self.assertEqual(idmapshift.NOBODY_ID, actual_target)
+        actual_target = nova.privsep.idmapshift.find_target_id(
+            510, uid_maps, nova.privsep.idmapshift.NOBODY_ID, dict())
+        self.assertEqual(nova.privsep.idmapshift.NOBODY_ID, actual_target)
 
 
 class ShiftPathTestCase(BaseTestCase):
@@ -104,8 +105,9 @@ class ShiftPathTestCase(BaseTestCase):
     @mock.patch('os.lstat')
     def test_shift_path(self, mock_lstat, mock_lchown):
         mock_lstat.return_value = FakeStat(0, 0)
-        idmapshift.shift_path('/test/path', self.uid_maps, self.gid_maps,
-                              idmapshift.NOBODY_ID, dict(), dict())
+        nova.privsep.idmapshift.shift_path(
+            '/test/path', self.uid_maps, self.gid_maps,
+            nova.privsep.idmapshift.NOBODY_ID, dict(), dict())
         mock_lstat.assert_has_calls([mock.call('/test/path')])
         mock_lchown.assert_has_calls([mock.call('/test/path', 10000, 10000)])
 
@@ -118,15 +120,16 @@ class ShiftDirTestCase(BaseTestCase):
         mock_walk.return_value = [('/', ['a', 'b'], ['c', 'd'])]
         mock_join.side_effect = join_side_effect
 
-        idmapshift.shift_dir('/', self.uid_maps, self.gid_maps,
-                             idmapshift.NOBODY_ID)
+        nova.privsep.idmapshift.shift_dir('/', self.uid_maps, self.gid_maps,
+                             nova.privsep.idmapshift.NOBODY_ID)
 
         files = ['a', 'b', 'c', 'd']
         mock_walk.assert_has_calls([mock.call('/')])
         mock_join_calls = [mock.call('/', x) for x in files]
         mock_join.assert_has_calls(mock_join_calls)
 
-        args = (self.uid_maps, self.gid_maps, idmapshift.NOBODY_ID)
+        args = (self.uid_maps, self.gid_maps,
+                nova.privsep.idmapshift.NOBODY_ID)
         kwargs = dict(uid_memo=dict(), gid_memo=dict())
         shift_path_calls = [mock.call('/', *args, **kwargs)]
         shift_path_calls += [mock.call('/' + x, *args, **kwargs)
@@ -141,8 +144,8 @@ class ConfirmPathTestCase(test.NoDBTestCase):
         gid_ranges = [(300, 399)]
         mock_lstat.return_value = FakeStat(1000, 301)
 
-        result = idmapshift.confirm_path('/test/path', uid_ranges, gid_ranges,
-                                         50000)
+        result = nova.privsep.idmapshift.confirm_path(
+            '/test/path', uid_ranges, gid_ranges, 50000)
 
         mock_lstat.assert_has_calls([mock.call('/test/path')])
         self.assertTrue(result)
@@ -153,8 +156,8 @@ class ConfirmPathTestCase(test.NoDBTestCase):
         gid_ranges = [(300, 399)]
         mock_lstat.return_value = FakeStat(50000, 50000)
 
-        result = idmapshift.confirm_path('/test/path', uid_ranges, gid_ranges,
-                                         50000)
+        result = nova.privsep.idmapshift.confirm_path(
+            '/test/path', uid_ranges, gid_ranges, 50000)
 
         mock_lstat.assert_has_calls([mock.call('/test/path')])
         self.assertTrue(result)
@@ -165,8 +168,8 @@ class ConfirmPathTestCase(test.NoDBTestCase):
         gid_ranges = [(300, 399)]
         mock_lstat.return_value = FakeStat(0, 301)
 
-        result = idmapshift.confirm_path('/test/path', uid_ranges, gid_ranges,
-                                         50000)
+        result = nova.privsep.idmapshift.confirm_path(
+            '/test/path', uid_ranges, gid_ranges, 50000)
 
         mock_lstat.assert_has_calls([mock.call('/test/path')])
         self.assertFalse(result)
@@ -177,8 +180,8 @@ class ConfirmPathTestCase(test.NoDBTestCase):
         gid_ranges = [(300, 399)]
         mock_lstat.return_value = FakeStat(1000, 0)
 
-        result = idmapshift.confirm_path('/test/path', uid_ranges, gid_ranges,
-                                         50000)
+        result = nova.privsep.idmapshift.confirm_path(
+            '/test/path', uid_ranges, gid_ranges, 50000)
 
         mock_lstat.assert_has_calls([mock.call('/test/path')])
         self.assertFalse(result)
@@ -189,8 +192,8 @@ class ConfirmPathTestCase(test.NoDBTestCase):
         gid_ranges = [(300, 399)]
         mock_lstat.return_value = FakeStat(50000, 301)
 
-        result = idmapshift.confirm_path('/test/path', uid_ranges, gid_ranges,
-                                         50000)
+        result = nova.privsep.idmapshift.confirm_path(
+            '/test/path', uid_ranges, gid_ranges, 50000)
 
         mock_lstat.assert_has_calls([mock.call('/test/path')])
         self.assertTrue(result)
@@ -201,8 +204,8 @@ class ConfirmPathTestCase(test.NoDBTestCase):
         gid_ranges = [(300, 399)]
         mock_lstat.return_value = FakeStat(1000, 50000)
 
-        result = idmapshift.confirm_path('/test/path', uid_ranges, gid_ranges,
-                                         50000)
+        result = nova.privsep.idmapshift.confirm_path(
+            '/test/path', uid_ranges, gid_ranges, 50000)
 
         mock_lstat.assert_has_calls([mock.call('/test/path')])
         self.assertTrue(result)
@@ -211,8 +214,8 @@ class ConfirmPathTestCase(test.NoDBTestCase):
 class ConfirmDirTestCase(BaseTestCase):
     def setUp(self):
         super(ConfirmDirTestCase, self).setUp()
-        self.uid_map_ranges = idmapshift.get_ranges(self.uid_maps)
-        self.gid_map_ranges = idmapshift.get_ranges(self.gid_maps)
+        self.uid_map_ranges = nova.privsep.idmapshift.get_ranges(self.uid_maps)
+        self.gid_map_ranges = nova.privsep.idmapshift.get_ranges(self.gid_maps)
 
     @mock.patch('nova.privsep.idmapshift.confirm_path')
     @mock.patch('os.path.join')
@@ -222,15 +225,16 @@ class ConfirmDirTestCase(BaseTestCase):
         mock_join.side_effect = join_side_effect
         mock_confirm_path.return_value = True
 
-        idmapshift.confirm_dir('/', self.uid_maps, self.gid_maps,
-                               idmapshift.NOBODY_ID)
+        nova.privsep.idmapshift.confirm_dir('/', self.uid_maps, self.gid_maps,
+                               nova.privsep.idmapshift.NOBODY_ID)
 
         files = ['a', 'b', 'c', 'd']
         mock_walk.assert_has_calls([mock.call('/')])
         mock_join_calls = [mock.call('/', x) for x in files]
         mock_join.assert_has_calls(mock_join_calls)
 
-        args = (self.uid_map_ranges, self.gid_map_ranges, idmapshift.NOBODY_ID)
+        args = (self.uid_map_ranges, self.gid_map_ranges,
+                nova.privsep.idmapshift.NOBODY_ID)
         confirm_path_calls = [mock.call('/', *args)]
         confirm_path_calls += [mock.call('/' + x, *args)
                                for x in files]
@@ -245,10 +249,11 @@ class ConfirmDirTestCase(BaseTestCase):
         mock_join.side_effect = join_side_effect
         mock_confirm_path.return_value = False
 
-        idmapshift.confirm_dir('/', self.uid_maps, self.gid_maps,
-                               idmapshift.NOBODY_ID)
+        nova.privsep.idmapshift.confirm_dir('/', self.uid_maps, self.gid_maps,
+                               nova.privsep.idmapshift.NOBODY_ID)
 
-        args = (self.uid_map_ranges, self.gid_map_ranges, idmapshift.NOBODY_ID)
+        args = (self.uid_map_ranges, self.gid_map_ranges,
+                nova.privsep.idmapshift.NOBODY_ID)
         confirm_path_calls = [mock.call('/', *args)]
         mock_confirm_path.assert_has_calls(confirm_path_calls)
 
@@ -267,13 +272,14 @@ class ConfirmDirTestCase(BaseTestCase):
 
         mock_confirm_path.side_effect = confirm_path_side_effect
 
-        idmapshift.confirm_dir('/', self.uid_maps, self.gid_maps,
-                               idmapshift.NOBODY_ID)
+        nova.privsep.idmapshift.confirm_dir('/', self.uid_maps, self.gid_maps,
+                               nova.privsep.idmapshift.NOBODY_ID)
 
         mock_walk.assert_has_calls([mock.call('/')])
         mock_join.assert_has_calls([mock.call('/', 'a')])
 
-        args = (self.uid_map_ranges, self.gid_map_ranges, idmapshift.NOBODY_ID)
+        args = (self.uid_map_ranges, self.gid_map_ranges,
+                nova.privsep.idmapshift.NOBODY_ID)
         confirm_path_calls = [mock.call('/', *args),
                               mock.call('/' + 'a', *args)]
         mock_confirm_path.assert_has_calls(confirm_path_calls)
@@ -293,15 +299,16 @@ class ConfirmDirTestCase(BaseTestCase):
 
         mock_confirm_path.side_effect = confirm_path_side_effect
 
-        idmapshift.confirm_dir('/', self.uid_maps, self.gid_maps,
-                               idmapshift.NOBODY_ID)
+        nova.privsep.idmapshift.confirm_dir('/', self.uid_maps, self.gid_maps,
+                               nova.privsep.idmapshift.NOBODY_ID)
 
         files = ['a', 'b', 'c']
         mock_walk.assert_has_calls([mock.call('/')])
         mock_join_calls = [mock.call('/', x) for x in files]
         mock_join.assert_has_calls(mock_join_calls)
 
-        args = (self.uid_map_ranges, self.gid_map_ranges, idmapshift.NOBODY_ID)
+        args = (self.uid_map_ranges, self.gid_map_ranges,
+                nova.privsep.idmapshift.NOBODY_ID)
         confirm_path_calls = [mock.call('/', *args)]
         confirm_path_calls += [mock.call('/' + x, *args)
                                for x in files]
@@ -333,15 +340,16 @@ class IntegrationTestCase(BaseTestCase):
 
         mock_lstat.side_effect = lstat
 
-        idmapshift.shift_dir('/tmp/test', self.uid_maps, self.gid_maps,
-                             idmapshift.NOBODY_ID)
+        nova.privsep.idmapshift.shift_dir('/tmp/test', self.uid_maps,
+                                          self.gid_maps,
+                                          nova.privsep.idmapshift.NOBODY_ID)
 
         lchown_calls = [
             mock.call('/tmp/test', 10000, 10000),
             mock.call('/tmp/test/a', 10000, 10000),
             mock.call('/tmp/test/b', 10000, 10002),
-            mock.call('/tmp/test/c', idmapshift.NOBODY_ID,
-                      idmapshift.NOBODY_ID),
+            mock.call('/tmp/test/c', nova.privsep.idmapshift.NOBODY_ID,
+                      nova.privsep.idmapshift.NOBODY_ID),
             mock.call('/tmp/test/d', 20090, 20090),
             mock.call('/tmp/test/d/1', 10000, 20090),
             mock.call('/tmp/test/d/2', 20090, 20090),
@@ -362,7 +370,8 @@ class IntegrationTestCase(BaseTestCase):
                 't': FakeStat(10000, 10000),
                 'a': FakeStat(10000, 10000),
                 'b': FakeStat(10000, 10002),
-                'c': FakeStat(idmapshift.NOBODY_ID, idmapshift.NOBODY_ID),
+                'c': FakeStat(nova.privsep.idmapshift.NOBODY_ID,
+                              nova.privsep.idmapshift.NOBODY_ID),
                 'd': FakeStat(20090, 20090),
                 '1': FakeStat(10000, 20090),
                 '2': FakeStat(20090, 20090),
@@ -371,8 +380,9 @@ class IntegrationTestCase(BaseTestCase):
 
         mock_lstat.side_effect = lstat
 
-        result = idmapshift.confirm_dir('/tmp/test', self.uid_maps,
-                                        self.gid_maps, idmapshift.NOBODY_ID)
+        result = nova.privsep.idmapshift.confirm_dir(
+            '/tmp/test', self.uid_maps, self.gid_maps,
+            nova.privsep.idmapshift.NOBODY_ID)
 
         self.assertTrue(result)
 
@@ -399,7 +409,8 @@ class IntegrationTestCase(BaseTestCase):
 
         mock_lstat.side_effect = lstat
 
-        result = idmapshift.confirm_dir('/tmp/test', self.uid_maps,
-                                        self.gid_maps, idmapshift.NOBODY_ID)
+        result = nova.privsep.idmapshift.confirm_dir(
+            '/tmp/test', self.uid_maps, self.gid_maps,
+            nova.privsep.idmapshift.NOBODY_ID)
 
         self.assertFalse(result)
