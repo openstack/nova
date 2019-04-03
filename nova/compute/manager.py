@@ -6501,6 +6501,15 @@ class ComputeManager(manager.Manager):
                 self._cleanup_pre_live_migration(
                     context, dest, instance, migration, migrate_data)
 
+        # Set migrate_data.migration because that is how _post_live_migration
+        # and _rollback_live_migration get the migration object for cleanup.
+        # Yes this is gross but changing the _post_live_migration and
+        # _rollback_live_migration interfaces would also mean changing how the
+        # virt drivers call them from the driver.live_migration method, i.e.
+        # we would have to pass the migration object through the driver (or
+        # consider using a partial but some do not like that pattern).
+        migrate_data.migration = migration
+
         # NOTE(Kevin_Zheng): Pop the migration from the waiting queue
         # if it exist in the queue, then we are good to moving on, if
         # not, some other process must have aborted it, then we should
@@ -6510,15 +6519,12 @@ class ComputeManager(manager.Manager):
         except KeyError:
             LOG.debug('Migration %s aborted by another process, rollback.',
                       migration.uuid, instance=instance)
-            migrate_data.migration = migration
             self._rollback_live_migration(context, instance, dest,
                                           migrate_data, 'cancelled')
             self._notify_live_migrate_abort_end(context, instance)
             return
 
         self._set_migration_status(migration, 'running')
-        if migrate_data:
-            migrate_data.migration = migration
 
         # NOTE(mdbooth): pre_live_migration will update connection_info and
         # attachment_id on all volume BDMS to reflect the new destination
@@ -6548,6 +6554,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
+    @errors_out_migration
     @wrap_instance_fault
     def live_migration(self, context, dest, instance, block_migration,
                        migration, migrate_data):
@@ -6577,7 +6584,6 @@ class ComputeManager(manager.Manager):
             # _cleanup_live_migrations_in_pool.
             LOG.info('Migration %s failed to submit as the compute service '
                      'is shutting down.', migration.uuid, instance=instance)
-            self._set_migration_status(migration, 'error')
             raise exception.LiveMigrationNotSubmitted(
                 migration_uuid=migration.uuid, instance_uuid=instance.uuid)
 

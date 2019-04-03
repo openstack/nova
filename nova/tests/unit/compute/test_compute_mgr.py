@@ -7833,7 +7833,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def test_live_migration_submit_failed(self, mock_notify, mock_exc):
-        migration = objects.Migration(uuid=uuids.migration)
+        migration = objects.Migration(self.context, uuid=uuids.migration)
         migration.save = mock.MagicMock()
         with mock.patch.object(
                 self.compute._live_migration_executor, 'submit') as mock_sub:
