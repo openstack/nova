@@ -35,6 +35,7 @@ from requests import models
 from nova.cmd import status
 import nova.conf
 from nova import context
+from nova import exception
 # NOTE(mriedem): We only use objects as a convenience to populate the database
 # in the tests, we don't use them in the actual CLI.
 from nova import objects
@@ -780,3 +781,42 @@ class TestUpgradeCheckConsoles(test.NoDBTestCase):
                       "host if you are performing a rolling upgrade to enable "
                       "consoles to function during a partial upgrade.",
                       result.details)
+
+
+class TestUpgradeCheckCinderAPI(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestUpgradeCheckCinderAPI, self).setUp()
+        self.cmd = status.UpgradeCommands()
+
+    def test_cinder_not_configured(self):
+        self.flags(auth_type=None, group='cinder')
+        self.assertEqual(upgradecheck.Code.SUCCESS,
+                         self.cmd._check_cinder().code)
+
+    @mock.patch('nova.volume.cinder.is_microversion_supported',
+                side_effect=exception.CinderAPIVersionNotAvailable(
+                    version='3.44'))
+    def test_microversion_not_available(self, mock_version_check):
+        self.flags(auth_type='password', group='cinder')
+        result = self.cmd._check_cinder()
+        mock_version_check.assert_called_once()
+        self.assertEqual(upgradecheck.Code.FAILURE, result.code)
+        self.assertIn('Cinder API 3.44 or greater is required.',
+                      result.details)
+
+    @mock.patch('nova.volume.cinder.is_microversion_supported',
+                side_effect=test.TestingException('oops'))
+    def test_unknown_error(self, mock_version_check):
+        self.flags(auth_type='password', group='cinder')
+        result = self.cmd._check_cinder()
+        mock_version_check.assert_called_once()
+        self.assertEqual(upgradecheck.Code.WARNING, result.code)
+        self.assertIn('oops', result.details)
+
+    @mock.patch('nova.volume.cinder.is_microversion_supported')
+    def test_microversion_available(self, mock_version_check):
+        self.flags(auth_type='password', group='cinder')
+        result = self.cmd._check_cinder()
+        mock_version_check.assert_called_once()
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
