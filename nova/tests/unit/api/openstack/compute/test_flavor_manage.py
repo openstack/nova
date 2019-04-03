@@ -172,6 +172,10 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self.request_body['flavor']['name'] = 'a' * 256
         self._create_flavor_bad_request_case(self.request_body)
 
+    def test_create_with_short_name(self):
+        self.request_body['flavor']['name'] = ''
+        self._create_flavor_bad_request_case(self.request_body)
+
     def test_create_with_name_leading_trailing_spaces(self):
         self.request_body['flavor']['name'] = '  test  '
         self._create_flavor_bad_request_case(self.request_body)
