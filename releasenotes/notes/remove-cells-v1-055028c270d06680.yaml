@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    The *cells v1* feature has been deprecated since the 16.0.0 Pike release
+    and has now been removed. The ``nova-cells`` service has been removed.
