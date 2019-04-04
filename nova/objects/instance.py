@@ -25,9 +25,6 @@ from sqlalchemy.sql import func
 from sqlalchemy.sql import null
 
 from nova import availability_zones as avail_zone
-from nova.cells import opts as cells_opts
-from nova.cells import rpcapi as cells_rpcapi
-from nova.cells import utils as cells_utils
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.db import api as db
@@ -185,6 +182,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'shutdown_terminate': fields.BooleanField(default=False),
         'disable_terminate': fields.BooleanField(default=False),
 
+        # TODO(stephenfin): Remove this in version 3.0 of the object
         'cell_name': fields.StringField(nullable=True),
 
         'metadata': fields.DictOfStringsField(),
@@ -720,6 +718,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 value = jsonutils.dumps(obj.obj_to_primitive())
             self._extra_values_to_save[field] = value
 
+    # TODO(stephenfin): Remove the 'admin_state_reset' field in version 3.0 of
+    # the object
     @base.remotable
     def save(self, expected_vm_state=None,
              expected_task_state=None, admin_state_reset=False):
@@ -737,35 +737,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         :param admin_state_reset: True if admin API is forcing setting
                                   of task_state/vm_state
         """
-        # Store this on the class because _cell_name_blocks_sync is useless
-        # after the db update call below.
-        self._sync_cells = not self._cell_name_blocks_sync()
-
         context = self._context
-        cell_type = cells_opts.get_cell_type()
-
-        if cell_type is not None:
-            # NOTE(comstud): We need to stash a copy of ourselves
-            # before any updates are applied.  When we call the save
-            # methods on nested objects, we will lose any changes to
-            # them.  But we need to make sure child cells can tell
-            # what is changed.
-            #
-            # We also need to nuke any updates to vm_state and task_state
-            # unless admin_state_reset is True.  compute cells are
-            # authoritative for their view of vm_state and task_state.
-            stale_instance = self.obj_clone()
-
-        cells_update_from_api = (cell_type == 'api' and self.cell_name and
-                                 self._sync_cells)
-
-        if cells_update_from_api:
-            def _handle_cell_update_from_api():
-                cells_api = cells_rpcapi.CellsAPI()
-                cells_api.instance_update_from_api(context, stale_instance,
-                            expected_vm_state,
-                            expected_task_state,
-                            admin_state_reset)
 
         self._extra_values_to_save = {}
         updates = {}
@@ -794,20 +766,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                     # as a result of bug.
                     raise exception.InstanceNotFound(instance_id=self.uuid)
             elif field in changes:
-                if (field == 'cell_name' and self[field] is not None and
-                        self[field].startswith(cells_utils.BLOCK_SYNC_FLAG)):
-                    updates[field] = self[field].replace(
-                            cells_utils.BLOCK_SYNC_FLAG, '', 1)
-                else:
-                    updates[field] = self[field]
+                updates[field] = self[field]
 
         if self._extra_values_to_save:
             db.instance_extra_update_by_uuid(context, self.uuid,
                                              self._extra_values_to_save)
 
         if not updates:
-            if cells_update_from_api:
-                _handle_cell_update_from_api()
             return
 
         # Cleaned needs to be turned back into an int here
@@ -839,24 +804,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self._from_db_object(context, self, inst_ref,
                              expected_attrs=expected_attrs)
 
-        if cells_update_from_api:
-            _handle_cell_update_from_api()
-
-        def _notify():
-            # NOTE(danms): We have to be super careful here not to trigger
-            # any lazy-loads that will unmigrate or unbackport something. So,
-            # make a copy of the instance for notifications first.
-            new_ref = self.obj_clone()
-
-            notifications.send_update(context, old_ref, new_ref)
-
-        # NOTE(alaski): If cell synchronization is blocked it means we have
-        # already run this block of code in either the parent or child of this
-        # cell.  Therefore this notification has already been sent.
-        if not self._sync_cells:
-            _notify = lambda: None  # noqa: F811
-
-        _notify()
+        # NOTE(danms): We have to be super careful here not to trigger
+        # any lazy-loads that will unmigrate or unbackport something. So,
+        # make a copy of the instance for notifications first.
+        new_ref = self.obj_clone()
+        notifications.send_update(context, old_ref, new_ref)
 
         self.obj_reset_changes()
 
@@ -1205,49 +1157,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         notifications.send_update(self._context, self, self)
         if not md_was_changed:
             self.obj_reset_changes(['metadata'])
-
-    def _cell_name_blocks_sync(self):
-        if (self.obj_attr_is_set('cell_name') and
-                self.cell_name is not None and
-                self.cell_name.startswith(cells_utils.BLOCK_SYNC_FLAG)):
-            return True
-        return False
-
-    def _normalize_cell_name(self):
-        """Undo skip_cell_sync()'s cell_name modification if applied"""
-
-        if not self.obj_attr_is_set('cell_name') or self.cell_name is None:
-            return
-        cn_changed = 'cell_name' in self.obj_what_changed()
-        if self.cell_name.startswith(cells_utils.BLOCK_SYNC_FLAG):
-            self.cell_name = self.cell_name.replace(
-                    cells_utils.BLOCK_SYNC_FLAG, '', 1)
-            # cell_name is not normally an empty string, this means it was None
-            # or unset before cells_utils.BLOCK_SYNC_FLAG was applied.
-            if len(self.cell_name) == 0:
-                self.cell_name = None
-        if not cn_changed:
-            self.obj_reset_changes(['cell_name'])
-
-    @contextlib.contextmanager
-    def skip_cells_sync(self):
-        """Context manager to save an instance without syncing cells.
-
-        Temporarily disables the cells syncing logic, if enabled.  This should
-        only be used when saving an instance that has been passed down/up from
-        another cell in order to avoid passing it back to the originator to be
-        re-saved.
-        """
-        cn_changed = 'cell_name' in self.obj_what_changed()
-        if not self.obj_attr_is_set('cell_name') or self.cell_name is None:
-            self.cell_name = ''
-        self.cell_name = '%s%s' % (cells_utils.BLOCK_SYNC_FLAG, self.cell_name)
-        if not cn_changed:
-            self.obj_reset_changes(['cell_name'])
-        try:
-            yield
-        finally:
-            self._normalize_cell_name()
 
     def get_network_info(self):
         if self.info_cache is None:

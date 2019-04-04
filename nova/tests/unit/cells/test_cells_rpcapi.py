@@ -433,22 +433,6 @@ class CellsAPITestCase(test.NoDBTestCase):
         self._check_result(call_info, 'get_migrations', expected_args,
                            version="1.11")
 
-    def test_instance_update_from_api(self):
-        call_info = self._stub_rpc_method('cast', None)
-
-        self.cells_rpcapi.instance_update_from_api(
-                self.fake_context, 'fake-instance',
-                expected_vm_state='exp_vm',
-                expected_task_state='exp_task',
-                admin_state_reset='admin_reset')
-
-        expected_args = {'instance': 'fake-instance',
-                         'expected_vm_state': 'exp_vm',
-                         'expected_task_state': 'exp_task',
-                         'admin_state_reset': 'admin_reset'}
-        self._check_result(call_info, 'instance_update_from_api',
-                expected_args, version='1.16')
-
     def test_start_instance(self):
         call_info = self._stub_rpc_method('cast', None)
 

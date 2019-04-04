@@ -426,14 +426,6 @@ class CellsManager(manager.Manager):
             migrations.extend(response.value_or_raise().objects)
         return objects.MigrationList(objects=migrations)
 
-    def instance_update_from_api(self, ctxt, instance, expected_vm_state,
-                        expected_task_state, admin_state_reset):
-        """Update an instance in its cell."""
-        self.msg_runner.instance_update_from_api(ctxt, instance,
-                                                 expected_vm_state,
-                                                 expected_task_state,
-                                                 admin_state_reset)
-
     def start_instance(self, ctxt, instance):
         """Start an instance in its cell."""
         self.msg_runner.start_instance(ctxt, instance)

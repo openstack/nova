@@ -637,20 +637,6 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         response = self.cells_manager.get_migrations(self.ctxt, filters)
         self.assertEqual(migrations.objects, response.objects)
 
-    def test_instance_update_from_api(self):
-        self.mox.StubOutWithMock(self.msg_runner,
-                                 'instance_update_from_api')
-        self.msg_runner.instance_update_from_api(self.ctxt,
-                                                 'fake-instance',
-                                                 'exp_vm', 'exp_task',
-                                                 'admin_reset')
-        self.mox.ReplayAll()
-        self.cells_manager.instance_update_from_api(
-                self.ctxt, instance='fake-instance',
-                expected_vm_state='exp_vm',
-                expected_task_state='exp_task',
-                admin_state_reset='admin_reset')
-
     def test_start_instance(self):
         self.mox.StubOutWithMock(self.msg_runner, 'start_instance')
         self.msg_runner.start_instance(self.ctxt, 'fake-instance')
