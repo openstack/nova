@@ -627,30 +627,6 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
                 console_type=console_type)
         self.assertEqual('fake-response', response)
 
-    def test_bdm_update_or_create_at_top(self):
-        self.mox.StubOutWithMock(self.msg_runner,
-                                 'bdm_update_or_create_at_top')
-        self.msg_runner.bdm_update_or_create_at_top(self.ctxt,
-                                                    'fake-bdm',
-                                                    create='foo')
-        self.mox.ReplayAll()
-        self.cells_manager.bdm_update_or_create_at_top(self.ctxt,
-                                                       'fake-bdm',
-                                                       create='foo')
-
-    def test_bdm_destroy_at_top(self):
-        self.mox.StubOutWithMock(self.msg_runner, 'bdm_destroy_at_top')
-        self.msg_runner.bdm_destroy_at_top(self.ctxt,
-                                           'fake_instance_uuid',
-                                           device_name='fake_device_name',
-                                           volume_id='fake_volume_id')
-
-        self.mox.ReplayAll()
-        self.cells_manager.bdm_destroy_at_top(self.ctxt,
-                                              'fake_instance_uuid',
-                                              device_name='fake_device_name',
-                                              volume_id='fake_volume_id')
-
     def test_get_migrations(self):
         filters = {'status': 'confirmed'}
         cell1_migrations = objects.MigrationList(

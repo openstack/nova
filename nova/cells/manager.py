@@ -36,7 +36,6 @@ from nova import context
 from nova import exception
 from nova import manager
 from nova import objects
-from nova.objects import base as base_obj
 from nova.objects import instance as instance_obj
 
 
@@ -424,19 +423,6 @@ class CellsManager(manager.Manager):
 
     def get_capacities(self, ctxt, cell_name):
         return self.state_manager.get_capacities(cell_name)
-
-    def bdm_update_or_create_at_top(self, ctxt, bdm, create=None):
-        """BDM was created/updated in this cell.  Tell the API cells."""
-        # TODO(ndipanov): Move inter-cell RPC to use objects
-        bdm = base_obj.obj_to_primitive(bdm)
-        self.msg_runner.bdm_update_or_create_at_top(ctxt, bdm, create=create)
-
-    def bdm_destroy_at_top(self, ctxt, instance_uuid, device_name=None,
-                           volume_id=None):
-        """BDM was destroyed for instance in this cell.  Tell the API cells."""
-        self.msg_runner.bdm_destroy_at_top(ctxt, instance_uuid,
-                                           device_name=device_name,
-                                           volume_id=volume_id)
 
     def get_migrations(self, ctxt, filters):
         """Fetch migrations applying the filters."""
