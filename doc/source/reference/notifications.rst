@@ -333,10 +333,27 @@ requires the notification.
   object and use the SCHEMA field to map the internal object to the
   notification payload. This way the evolution of the internal object model
   can be decoupled from the evolution of the notification payload.
+
+  .. important:: This does not mean that every field from internal objects
+                 should be mirrored in the notification payload objects.
+                 Think about what is actually needed by a consumer before
+                 adding it to a payload. When in doubt, if no one is requesting
+                 specific information in notifications, then leave it out until
+                 someone asks for it.
+
 * The delete notification should contain the same information as the create or
   update notifications. This makes it possible for the consumer to listen only to
   the delete notifications but still filter on some fields of the entity
   (e.g. project_id).
+
+What should **NOT** be in the notification payload
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* Generally anything that contains sensitive information about the internals
+  of the nova deployment, for example fields that contain access credentials
+  to a cell database or message queue (see `bug 1823104`_).
+
+.. _bug 1823104: https://bugs.launchpad.net/nova/+bug/1823104
 
 Existing versioned notifications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
