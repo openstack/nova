@@ -9936,8 +9936,6 @@ class ComputeAPITestCase(BaseTestCase):
         """Verify building one instance doesn't do anything funky with
         the display and host names.
         """
-        # TODO(stephenfin): Remove cells_enabled parameter when we removed
-        # cells v1
         num_instances = 1
         refs, _ = self.compute_api.create(self.context,
                 self.default_flavor,
@@ -9948,12 +9946,10 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(refs[0]['display_name'], name)
         self.assertEqual(refs[0]['hostname'], name)
 
-    def test_multi_instance_display_name(self, cells_enabled=False):
+    def test_multi_instance_display_name(self):
         """Verify building two instances at once results in a unique
         display and host name.
         """
-        # TODO(stephenfin): Remove cells_enabled parameter when we removed
-        # cells v1
         num_instances = 2
         refs, _ = self.compute_api.create(self.context,
                 self.default_flavor,
@@ -9961,10 +9957,9 @@ class ComputeAPITestCase(BaseTestCase):
                 min_count=num_instances, max_count=num_instances,
                 display_name='x')
         for i in range(num_instances):
-            name = 'x' if cells_enabled else 'x-%s' % (i + 1,)
-            hostname = None if cells_enabled else name
+            name = 'x-%s' % (i + 1,)
             self.assertEqual(refs[i]['display_name'], name)
-            self.assertEqual(refs[i]['hostname'], hostname)
+            self.assertEqual(refs[i]['hostname'], name)
 
     def test_instance_architecture(self):
         # Test the instance architecture.
