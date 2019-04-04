@@ -325,21 +325,18 @@ class SchedulerRetriesPayload(base.NotificationPayloadBase):
 @nova_base.NovaObjectRegistry.register_notification
 class CellMappingPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 2.0: Remove transport_url and database_connection fields.
+    VERSION = '2.0'
 
     SCHEMA = {
         'uuid': ('cell', 'uuid'),
         'name': ('cell', 'name'),
-        'transport_url': ('cell', 'transport_url'),
-        'database_connection': ('cell', 'database_connection'),
         'disabled': ('cell', 'disabled'),
     }
 
     fields = {
         'uuid': fields.UUIDField(),
         'name': fields.StringField(nullable=True),
-        'transport_url': fields.StringField(),
-        'database_connection': fields.StringField(),
         'disabled': fields.BooleanField(default=False),
     }
 

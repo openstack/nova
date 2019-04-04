@@ -957,14 +957,12 @@ class TestInstanceNotificationSample(
             'nova_object.data': {
                 'aggregates': None,
                 'cell': {
-                    'nova_object.version': '1.0',
+                    'nova_object.version': '2.0',
                     'nova_object.namespace': 'nova',
                     'nova_object.name': 'CellMappingPayload',
                     'nova_object.data': {
-                        'database_connection': cell1.database_connection,
                         'disabled': False,
                         'name': u'cell1',
-                        'transport_url': u'fake://nowhere/',
                         'uuid': cell1.uuid
                     }
                 }
