@@ -611,15 +611,3 @@ class CellsAPI(object):
         cctxt = self.client.prepare(version='1.29')
         cctxt.cast(ctxt, 'set_admin_password', instance=instance,
                 new_pass=new_pass)
-
-    def get_keypair_at_top(self, ctxt, user_id, name):
-        if not CONF.cells.enable:
-            return
-
-        cctxt = self.client.prepare(version='1.37')
-        keypair = cctxt.call(ctxt, 'get_keypair_at_top', user_id=user_id,
-                             name=name)
-        if keypair is None:
-            raise exception.KeypairNotFound(user_id=user_id,
-                                            name=name)
-        return keypair

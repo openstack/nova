@@ -30,8 +30,6 @@ from nova.api.metadata import password
 from nova.api.metadata import vendordata_dynamic
 from nova.api.metadata import vendordata_json
 from nova import block_device
-from nova.cells import opts as cells_opts
-from nova.cells import rpcapi as cells_rpcapi
 import nova.conf
 from nova import context
 from nova import exception
@@ -327,23 +325,12 @@ class InstanceMetadata(object):
             metadata['network_config'] = self.network_config
 
         if self.instance.key_name:
-            if cells_opts.get_cell_type() == 'compute':
-                cells_api = cells_rpcapi.CellsAPI()
-                try:
-                    keypair = cells_api.get_keypair_at_top(
-                      context.get_admin_context(), self.instance.user_id,
-                      self.instance.key_name)
-                except exception.KeypairNotFound:
-                    # NOTE(lpigueir): If keypair was deleted, treat
-                    # it like it never had any
-                    keypair = None
-            else:
-                keypairs = self.instance.keypairs
-                # NOTE(mriedem): It's possible for the keypair to be deleted
-                # before it was migrated to the instance_extra table, in which
-                # case lazy-loading instance.keypairs will handle the 404 and
-                # just set an empty KeyPairList object on the instance.
-                keypair = keypairs[0] if keypairs else None
+            keypairs = self.instance.keypairs
+            # NOTE(mriedem): It's possible for the keypair to be deleted
+            # before it was migrated to the instance_extra table, in which
+            # case lazy-loading instance.keypairs will handle the 404 and
+            # just set an empty KeyPairList object on the instance.
+            keypair = keypairs[0] if keypairs else None
 
             if keypair:
                 metadata['public_keys'] = {
