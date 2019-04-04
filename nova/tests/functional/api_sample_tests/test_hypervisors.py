@@ -15,8 +15,6 @@
 
 import mock
 
-from nova.cells import utils as cells_utils
-from nova import objects
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.virt import fake
 
@@ -91,48 +89,6 @@ class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         subs = {
             'hypervisor_id': hypervisor_id,
         }
-        self._verify_response('hypervisors-uptime-resp', subs, response, 200)
-
-
-@mock.patch("nova.servicegroup.API.service_is_up", return_value=True)
-class HypervisorsCellsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
-    ADMIN_API = True
-    sample_dir = "os-hypervisors"
-
-    def setUp(self):
-        self.flags(enable=True, cell_type='api', group='cells')
-        super(HypervisorsCellsSampleJsonTests, self).setUp()
-
-    def test_hypervisor_uptime(self, mocks):
-        fake_hypervisor = objects.ComputeNode(id=1, host='fake-mini',
-                                              hypervisor_hostname='fake-mini')
-
-        def fake_get_host_uptime(self, context, hyp):
-            return (" 08:32:11 up 93 days, 18:25, 12 users,  load average:"
-                    " 0.20, 0.12, 0.14")
-
-        def fake_compute_node_get(self, context, hyp):
-            return fake_hypervisor
-
-        def fake_service_get_by_compute_host(self, context, host):
-            return cells_utils.ServiceProxy(
-                objects.Service(id=1, host='fake-mini', disabled=False,
-                                disabled_reason=None),
-                'cell1')
-
-        self.stub_out(
-            'nova.compute.cells_api.HostAPI.compute_node_get',
-            fake_compute_node_get)
-        self.stub_out(
-            'nova.compute.cells_api.HostAPI.service_get_by_compute_host',
-            fake_service_get_by_compute_host)
-        self.stub_out(
-            'nova.compute.cells_api.HostAPI.get_host_uptime',
-            fake_get_host_uptime)
-
-        hypervisor_id = fake_hypervisor.id
-        response = self._do_get('os-hypervisors/%s/uptime' % hypervisor_id)
-        subs = {'hypervisor_id': str(hypervisor_id)}
         self._verify_response('hypervisors-uptime-resp', subs, response, 200)
 
 

@@ -24,7 +24,6 @@ from webob import exc
 
 from nova.api.openstack.compute import hypervisors \
         as hypervisors_v21
-from nova.cells import utils as cells_utils
 from nova import exception
 from nova import objects
 from nova import test
@@ -188,7 +187,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
     # compute node primary key integer id or the uuid.
     expect_uuid_for_id = False
 
-    # copying the objects locally so the cells testcases can provide their own
+    # TODO(stephenfin): These should just be defined here
     TEST_HYPERS_OBJ = copy.deepcopy(TEST_HYPERS_OBJ)
     TEST_SERVICES = copy.deepcopy(TEST_SERVICES)
     TEST_SERVERS = copy.deepcopy(TEST_SERVERS)
@@ -721,93 +720,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
         req = self._get_request(False)
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.statistics, req)
-
-
-_CELL_PATH = 'cell1'
-
-
-class CellHypervisorsTestV21(HypervisorsTestV21):
-    TEST_HYPERS_OBJ = [cells_utils.ComputeNodeProxy(obj, _CELL_PATH)
-                       for obj in TEST_HYPERS_OBJ]
-    TEST_SERVICES = [cells_utils.ServiceProxy(obj, _CELL_PATH)
-                     for obj in TEST_SERVICES]
-
-    TEST_SERVERS = [dict(server,
-                         host=cells_utils.cell_with_item(_CELL_PATH,
-                                                         server['host']))
-                    for server in TEST_SERVERS]
-
-    DETAIL_HYPERS_DICTS = copy.deepcopy(HypervisorsTestV21.DETAIL_HYPERS_DICTS)
-    DETAIL_HYPERS_DICTS = [dict(hyp, id=cells_utils.cell_with_item(_CELL_PATH,
-                                                                   hyp['id']),
-                                service=dict(hyp['service'],
-                                             id=cells_utils.cell_with_item(
-                                                 _CELL_PATH,
-                                                 hyp['service']['id']),
-                                             host=cells_utils.cell_with_item(
-                                                 _CELL_PATH,
-                                                 hyp['service']['host'])))
-                           for hyp in DETAIL_HYPERS_DICTS]
-
-    INDEX_HYPER_DICTS = copy.deepcopy(HypervisorsTestV21.INDEX_HYPER_DICTS)
-    INDEX_HYPER_DICTS = [dict(hyp, id=cells_utils.cell_with_item(_CELL_PATH,
-                                                                 hyp['id']))
-                         for hyp in INDEX_HYPER_DICTS]
-
-    # __deepcopy__ is added for copying an object locally in
-    # _test_view_hypervisor_detail_cpuinfo_null
-    cells_utils.ComputeNodeProxy.__deepcopy__ = (lambda self, memo:
-        cells_utils.ComputeNodeProxy(copy.deepcopy(self._obj, memo),
-                                     self._cell_path))
-
-    @classmethod
-    def fake_compute_node_get_all(cls, context, limit=None, marker=None):
-        return cls.TEST_HYPERS_OBJ
-
-    @classmethod
-    def fake_compute_node_search_by_hypervisor(cls, context, hypervisor_re):
-        return cls.TEST_HYPERS_OBJ
-
-    @classmethod
-    def fake_compute_node_get(cls, context, compute_id):
-        for hyper in cls.TEST_HYPERS_OBJ:
-            if hyper.id == compute_id:
-                return hyper
-        raise exception.ComputeHostNotFound(host=compute_id)
-
-    @classmethod
-    def fake_service_get_by_compute_host(cls, context, host):
-        for service in cls.TEST_SERVICES:
-            if service.host == host:
-                return service
-
-    @classmethod
-    def fake_instance_get_all_by_host(cls, context, host):
-        results = []
-        for inst in cls.TEST_SERVERS:
-            if inst['host'] == host:
-                results.append(inst)
-        return results
-
-    def setUp(self):
-
-        self.flags(enable=True, cell_type='api', group='cells')
-
-        super(CellHypervisorsTestV21, self).setUp()
-
-        host_api = self.controller.host_api
-        host_api.compute_node_get_all = mock.MagicMock(
-            side_effect=self.fake_compute_node_get_all)
-        host_api.service_get_by_compute_host = mock.MagicMock(
-            side_effect=self.fake_service_get_by_compute_host)
-        host_api.compute_node_search_by_hypervisor = mock.MagicMock(
-            side_effect=self.fake_compute_node_search_by_hypervisor)
-        host_api.compute_node_get = mock.MagicMock(
-            side_effect=self.fake_compute_node_get)
-        host_api.compute_node_statistics = mock.MagicMock(
-            side_effect=fake_compute_node_statistics)
-        host_api.instance_get_all_by_host = mock.MagicMock(
-            side_effect=self.fake_instance_get_all_by_host)
 
 
 class HypervisorsTestV228(HypervisorsTestV21):

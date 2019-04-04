@@ -27,7 +27,6 @@ from nova.api.openstack.compute.schemas import hypervisors as hyper_schema
 from nova.api.openstack.compute.views import hypervisors as hyper_view
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova.cells import utils as cells_utils
 from nova import compute
 from nova import exception
 from nova.i18n import _
@@ -267,11 +266,6 @@ class HypervisorsController(wsgi.Controller):
                 msg = _('Invalid uuid %s') % hypervisor_id
                 raise webob.exc.HTTPBadRequest(explanation=msg)
         else:
-            # This API is supported for cells v1 and as such the id can be
-            # a cell v1 delimited string, so we have to parse it first.
-            if cells_utils.CELL_ITEM_SEP in str(hypervisor_id):
-                hypervisor_id = cells_utils.split_cell_and_item(
-                    hypervisor_id)[1]
             try:
                 utils.validate_integer(hypervisor_id, 'id')
             except exception.InvalidInput:
