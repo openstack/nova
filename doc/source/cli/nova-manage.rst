@@ -184,13 +184,11 @@ Nova Cells v2
 ~~~~~~~~~~~~~
 
 ``nova-manage cell_v2 simple_cell_setup [--transport-url <transport_url>]``
-    Setup a fresh cells v2 environment; this should not be used if you
-    currently have a cells v1 environment. If a transport_url is not
+    Setup a fresh cells v2 environment. If a ``transport_url`` is not
     specified, it will use the one defined by ``[DEFAULT]/transport_url``
     in the configuration file. Returns 0 if setup is completed
     (or has already been done), 1 if no hosts are reporting (and cannot be
-    mapped), 1 if the transport url is missing or invalid, and 2 if run in a
-    cells v1 environment.
+    mapped) and 1 if the transport url is missing or invalid.
 
 ``nova-manage cell_v2 map_cell0 [--database_connection <database_connection>]``
     Create a cell mapping to the database connection for the cell0 database.

@@ -891,159 +891,6 @@ class ApiDbCommands(object):
         print(migration.db_version(database='api'))
 
 
-class CellCommands(object):
-    """Commands for managing cells v1 functionality."""
-
-    # TODO(stephenfin): Remove this when cells v1 is removed
-    description = ('DEPRECATED: The cell commands, which configure cells v1 '
-                   'functionality, are deprecated as Cells v1 itself has '
-                   'been deprecated. They will be removed in an upcoming '
-                   'release.')
-
-    @staticmethod
-    def _parse_server_string(server_str):
-        """Parses the given server_string and returns a tuple of host and port.
-        If it's not a combination of host part and port, the port element is an
-        empty string. If the input is invalid expression, return a tuple of two
-        empty strings.
-        """
-        try:
-            # First of all, exclude pure IPv6 address (w/o port).
-            if netaddr.valid_ipv6(server_str):
-                return (server_str, '')
-
-            # Next, check if this is IPv6 address with a port number
-            # combination.
-            if server_str.find("]:") != -1:
-                (address, port) = server_str.replace('[', '', 1).split(']:')
-                return (address, port)
-
-            # Third, check if this is a combination of an address and a port
-            if server_str.find(':') == -1:
-                return (server_str, '')
-
-            # This must be a combination of an address and a port
-            (address, port) = server_str.split(':')
-            return (address, port)
-
-        except (ValueError, netaddr.AddrFormatError):
-            print('Invalid server_string: %s' % server_str)
-            return ('', '')
-
-    def _create_transport_hosts(self, username, password,
-                                broker_hosts=None, hostname=None, port=None):
-        """Returns a list of oslo.messaging.TransportHost objects."""
-        transport_hosts = []
-        # Either broker-hosts or hostname should be set
-        if broker_hosts:
-            hosts = broker_hosts.split(',')
-            for host in hosts:
-                host = host.strip()
-                broker_hostname, broker_port = self._parse_server_string(host)
-                if not broker_port:
-                    msg = _('Invalid broker_hosts value: %s. It should be'
-                            ' in hostname:port format') % host
-                    raise ValueError(msg)
-                try:
-                    broker_port = int(broker_port)
-                except ValueError:
-                    msg = _('Invalid port value: %s. It should be '
-                             'an integer') % broker_port
-                    raise ValueError(msg)
-                transport_hosts.append(
-                               messaging.TransportHost(
-                                   hostname=broker_hostname,
-                                   port=broker_port,
-                                   username=username,
-                                   password=password))
-        else:
-            try:
-                port = int(port)
-            except ValueError:
-                msg = _("Invalid port value: %s. Should be an integer") % port
-                raise ValueError(msg)
-            transport_hosts.append(
-                           messaging.TransportHost(
-                               hostname=hostname,
-                               port=port,
-                               username=username,
-                               password=password))
-        return transport_hosts
-
-    @args('--name', metavar='<name>', help='Name for the new cell')
-    @args('--cell_type', metavar='<parent|api|child|compute>',
-         help='Whether the cell is parent/api or child/compute')
-    @args('--username', metavar='<username>',
-         help='Username for the message broker in this cell')
-    @args('--password', metavar='<password>',
-         help='Password for the message broker in this cell')
-    @args('--broker_hosts', metavar='<broker_hosts>',
-         help='Comma separated list of message brokers in this cell. '
-              'Each Broker is specified as hostname:port with both '
-              'mandatory. This option overrides the --hostname '
-              'and --port options (if provided). ')
-    @args('--hostname', metavar='<hostname>',
-         help='Address of the message broker in this cell')
-    @args('--port', metavar='<number>',
-         help='Port number of the message broker in this cell')
-    @args('--virtual_host', metavar='<virtual_host>',
-         help='The virtual host of the message broker in this cell')
-    @args('--woffset', metavar='<float>')
-    @args('--wscale', metavar='<float>')
-    def create(self, name, cell_type='child', username=None, broker_hosts=None,
-               password=None, hostname=None, port=None, virtual_host=None,
-               woffset=None, wscale=None):
-
-        if cell_type not in ['parent', 'child', 'api', 'compute']:
-            print("Error: cell type must be 'parent'/'api' or "
-                "'child'/'compute'")
-            return 2
-
-        # Set up the transport URL
-        transport_hosts = self._create_transport_hosts(
-                                                 username, password,
-                                                 broker_hosts, hostname,
-                                                 port)
-        transport_url = rpc.get_transport_url()
-        transport_url.hosts.extend(transport_hosts)
-        transport_url.virtual_host = virtual_host
-
-        is_parent = False
-        if cell_type in ['api', 'parent']:
-            is_parent = True
-        values = {'name': name,
-                  'is_parent': is_parent,
-                  'transport_url': urlparse.unquote(str(transport_url)),
-                  'weight_offset': float(woffset),
-                  'weight_scale': float(wscale)}
-        ctxt = context.get_admin_context()
-        db.cell_create(ctxt, values)
-
-    @args('--cell_name', metavar='<cell_name>',
-          help='Name of the cell to delete')
-    def delete(self, cell_name):
-        ctxt = context.get_admin_context()
-        db.cell_delete(ctxt, cell_name)
-
-    def list(self):
-        ctxt = context.get_admin_context()
-        cells = db.cell_get_all(ctxt)
-        fmt = "%3s  %-10s  %-6s  %-10s  %-15s  %-5s  %-10s"
-        print(fmt % ('Id', 'Name', 'Type', 'Username', 'Hostname',
-                'Port', 'VHost'))
-        print(fmt % ('-' * 3, '-' * 10, '-' * 6, '-' * 10, '-' * 15,
-                '-' * 5, '-' * 10))
-        for cell in cells:
-            url = rpc.get_transport_url(cell.transport_url)
-            host = url.hosts[0] if url.hosts else messaging.TransportHost()
-            print(fmt % (cell.id, cell.name,
-                    'parent' if cell.is_parent else 'child',
-                    host.username, host.hostname,
-                    host.port, url.virtual_host))
-        print(fmt % ('-' * 3, '-' * 10, '-' * 6, '-' * 10, '-' * 15,
-                '-' * 5, '-' * 10))
-
-
 class CellV2Commands(object):
     """Commands for managing cells v2."""
 
@@ -1085,14 +932,10 @@ class CellV2Commands(object):
         """Simple cellsv2 setup.
 
         This simplified command is for use by existing non-cells users to
-        configure the default environment. If you are using CellsV1, this
-        will not work for you. Returns 0 if setup is completed (or has
-        already been done), 1 if no hosts are reporting (and this cannot
-        be mapped) and 2 if run in a CellsV1 environment.
+        configure the default environment. Returns 0 if setup is completed (or
+        has already been done) and 1 if no hosts are reporting (and this cannot
+        be mapped).
         """
-        if CONF.cells.enable:
-            print('CellsV1 users cannot use this simplified setup command')
-            return 2
         transport_url = self._validate_transport_url(transport_url)
         if not transport_url:
             return 1
@@ -2332,7 +2175,6 @@ class PlacementCommands(object):
 
 CATEGORIES = {
     'api_db': ApiDbCommands,
-    'cell': CellCommands,
     'cell_v2': CellV2Commands,
     'db': DbCommands,
     'floating': FloatingIpCommands,
