@@ -662,14 +662,6 @@ class TestUpgradeCheckConsoles(test.NoDBTestCase):
 
         return service
 
-    def test_check_cells_v1_enabled(self):
-        """This is a 'success' case since the console auths check is
-        ignored when running cells v1.
-        """
-        self.flags(enable=True, group='cells')
-        result = self.cmd._check_console_auths()
-        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
-
     def test_check_workaround_enabled(self):
         """This is a 'success' case since the console auths check is
         ignored when the workaround is already enabled.

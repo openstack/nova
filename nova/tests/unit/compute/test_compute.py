@@ -10178,7 +10178,7 @@ class ComputeAPITestCase(BaseTestCase):
         mock_get.assert_called_once_with(
                 self.context, instance=fake_instance,
                 console_type=fake_console_type)
-        if enable_consoleauth or CONF.cells.enable:
+        if enable_consoleauth:
             mock_auth.assert_called_once_with(
                 self.context, 'fake_token', fake_console_type,
                 'fake_console_host', 'fake_console_port', 'fake_access_path',
@@ -10222,7 +10222,7 @@ class ComputeAPITestCase(BaseTestCase):
         mock_spice.assert_called_once_with(self.context,
                                            instance=fake_instance,
                                            console_type=fake_console_type)
-        if enable_consoleauth or CONF.cells.enable:
+        if enable_consoleauth:
             mock_auth.assert_called_once_with(
                 self.context, 'fake_token', fake_console_type,
                 'fake_console_host', 'fake_console_port', 'fake_access_path',
@@ -10283,7 +10283,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(console, {'url': 'fake_console_url'})
         mock_rdp.assert_called_once_with(self.context, instance=fake_instance,
                                          console_type=fake_console_type)
-        if enable_consoleauth or CONF.cells.enable:
+        if enable_consoleauth:
             mock_auth.assert_called_once_with(
                 self.context, 'fake_token', fake_console_type,
                 'fake_console_host', 'fake_console_port', 'fake_access_path',
@@ -11416,7 +11416,7 @@ class ComputeAPITestCase(BaseTestCase):
                 disk_over_commit=True,
                 request_spec=fake_spec, async_=False)
 
-            if CONF.workarounds.enable_consoleauth or CONF.cells.enable:
+            if CONF.workarounds.enable_consoleauth:
                 delete_tokens_for_instance.assert_called_once_with(
                     self.context, instance.uuid)
             else:

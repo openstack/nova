@@ -23,7 +23,6 @@ import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
 from nova import cache_utils
-from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
 from nova import context as nova_context
@@ -47,7 +46,6 @@ class ConsoleAuthManager(manager.Manager):
         self._mc = None
         self._mc_instance = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
-        self.cells_rpcapi = cells_rpcapi.CellsAPI()
 
     @property
     def mc(self):
@@ -108,13 +106,6 @@ class ConsoleAuthManager(manager.Manager):
         instance_uuid = token['instance_uuid']
         if instance_uuid is None:
             return False
-
-        # NOTE(comstud): consoleauth was meant to run in API cells.  So,
-        # if cells is enabled, we must call down to the child cell for
-        # the instance.
-        if CONF.cells.enable:
-            return self.cells_rpcapi.validate_console_port(context,
-                    instance_uuid, token['port'], token['console_type'])
 
         mapping = objects.InstanceMapping.get_by_instance_uuid(context,
                                                                instance_uuid)

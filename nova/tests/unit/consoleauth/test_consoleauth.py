@@ -238,14 +238,3 @@ class ControlauthMemcacheEncodingTestCase(test.NoDBTestCase):
             mock_instance_get.assert_has_calls([mock.call(b'instance')])
             mock_instance_delete.assert_has_calls([mock.call(b'instance')])
             mock_delete_multi.assert_has_calls([mock.call([b'token'])])
-
-
-class CellsConsoleauthTestCase(ConsoleauthTestCase):
-    """Test Case for consoleauth w/ cells enabled."""
-
-    rpcapi = 'nova.cells.rpcapi.CellsAPI.'
-
-    def setUp(self):
-        super(CellsConsoleauthTestCase, self).setUp()
-        self.flags(enable=True, group='cells')
-        self.is_cells = True

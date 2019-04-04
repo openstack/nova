@@ -2031,10 +2031,7 @@ class API(base.Base):
             instance.progress = 0
             instance.save()
 
-            # NOTE(dtp): cells.enable = False means "use cells v2".
-            # Run everywhere except v1 compute cells.
-            if (not CONF.cells.enable and CONF.workarounds.enable_consoleauth
-               ) or self.cell_type == 'api':
+            if CONF.workarounds.enable_consoleauth:
                 # TODO(melwitt): Remove the conditions for running this line
                 # with cells v2, when consoleauth is no longer being used by
                 # cells v2, in Stein.
@@ -4551,7 +4548,7 @@ class API(base.Base):
         # we convert to using the database. Remove the condition for running
         # this line with cells v2, when consoleauth is no longer being used by
         # cells v2, in Stein.
-        if CONF.cells.enable or CONF.workarounds.enable_consoleauth:
+        if CONF.workarounds.enable_consoleauth:
             self.consoleauth_rpcapi.delete_tokens_for_instance(
                 context, instance.uuid)
 

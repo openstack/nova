@@ -181,12 +181,6 @@ this flag should be disabled. For example, if a deployment has configured a
 token TTL of one hour, the operator may disable the flag, one hour after
 deploying the new code during an upgrade.
 
-.. note:: Cells v1 was not converted to use the database backend for
-  console token authorizations. Cells v1 console token authorizations will
-  continue to be supported by the ``nova-consoleauth`` service and use of
-  the ``[workarounds]/enable_consoleauth`` option does not apply to
-  Cells v1 users.
-
 Related options:
 
 * ``[consoleauth]/token_ttl``

@@ -1202,8 +1202,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 mock_terminate.assert_called_once_with(
                     self.context, inst, [], delete_type=delete_type)
 
-        if ((self.cell_type is None and CONF.workarounds.enable_consoleauth)
-                or self.cell_type == 'api'):
+        if CONF.workarounds.enable_consoleauth:
             mock_del_token.assert_called_once_with(self.context, instance_uuid)
         else:
             mock_del_token.assert_not_called()

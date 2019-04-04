@@ -4605,8 +4605,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 'clean_console_auths_for_instance')
     def test_clean_instance_console_tokens(self, g1, g2, g3, g4, g5,
                                            mock_clean):
-        # Make sure cells v1 is disabled
-        self.flags(enable=False, group='cells')
         # Enable one of each of the console types and disable the rest
         self.flags(enabled=True, group=g1)
         for g in [g2, g3, g4, g5]:
@@ -4626,28 +4624,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_clean.assert_not_called()
 
     @mock.patch('nova.objects.ConsoleAuthToken.'
-                'clean_console_auths_for_instance')
-    def test_clean_instance_console_tokens_cells_v1_enabled(self, mock_clean):
-        # Enable cells v1
-        self.flags(enable=True, group='cells')
-        self.flags(enabled=True, group='vnc')
-        instance = objects.Instance(uuid=uuids.instance)
-        self.compute._clean_instance_console_tokens(self.context, instance)
-        mock_clean.assert_not_called()
-
-    @mock.patch('nova.objects.ConsoleAuthToken.'
                 'clean_expired_console_auths_for_host')
     def test_cleanup_expired_console_auth_tokens(self, mock_clean):
-        # Make sure cells v1 is disabled
-        self.flags(enable=False, group='cells')
         self.compute._cleanup_expired_console_auth_tokens(self.context)
         mock_clean.assert_called_once_with(self.context, self.compute.host)
-
-        # Enable cells v1
-        mock_clean.reset_mock()
-        self.flags(enable=True, group='cells')
-        self.compute._cleanup_expired_console_auth_tokens(self.context)
-        mock_clean.assert_not_called()
 
     @mock.patch.object(nova.context.RequestContext, 'elevated')
     @mock.patch.object(nova.objects.InstanceList, 'get_by_host')

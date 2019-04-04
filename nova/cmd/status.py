@@ -389,11 +389,9 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         telling the user to set [workarounds]enable_consoleauth = True if they
         are performing a rolling upgrade.
         """
-        # If we're using cells v1, we don't need to check if the workaround
-        # needs to be used because cells v1 always uses nova-consoleauth.
         # If the operator has already enabled the workaround, we don't need
         # to check anything.
-        if CONF.cells.enable or CONF.workarounds.enable_consoleauth:
+        if CONF.workarounds.enable_consoleauth:
             return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
         # We need to check cell0 for nova-consoleauth service records because

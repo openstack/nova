@@ -6927,8 +6927,8 @@ class ComputeManager(manager.Manager):
     def _clean_instance_console_tokens(self, ctxt, instance):
         """Clean console tokens stored for an instance."""
         # If the database backend isn't in use, don't bother trying to clean
-        # tokens. The database backend is not supported for cells v1.
-        if not CONF.cells.enable and self._consoles_enabled():
+        # tokens.
+        if self._consoles_enabled():
             objects.ConsoleAuthToken.\
                 clean_console_auths_for_instance(ctxt, instance.uuid)
 
@@ -8530,8 +8530,5 @@ class ComputeManager(manager.Manager):
         instance. After a time they expire. We periodically remove any expired
         tokens from the database.
         """
-        # If the database backend isn't in use, don't bother looking for
-        # expired tokens. The database backend is not supported for cells v1.
-        if not CONF.cells.enable:
-            objects.ConsoleAuthToken.\
-                clean_expired_console_auths_for_host(context, self.host)
+        objects.ConsoleAuthToken.clean_expired_console_auths_for_host(
+            context, self.host)

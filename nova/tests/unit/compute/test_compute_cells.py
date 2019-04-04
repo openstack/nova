@@ -19,6 +19,7 @@ import copy
 import functools
 import inspect
 
+import ddt
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
@@ -110,6 +111,7 @@ def deploy_stubs(stubs, api, original_instance=None):
     stubs.Set(api, '_cast_to_cells', cast)
 
 
+@ddt.ddt
 class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
     def setUp(self):
         self.flags(use_neutron=False)
@@ -519,6 +521,18 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
     def test_multi_instance_display_name(self):
         super(CellsComputeAPITestCase,
               self).test_multi_instance_display_name(cells_enabled=True)
+
+    @ddt.data(True, False)
+    def test_rdp_console(self, enabled_consoleauth):
+        self.skipTest("Removing cells v1")
+
+    @ddt.data(True, False)
+    def test_spice_console(self, enabled_consoleauth):
+        self.skipTest("Removing cells v1")
+
+    @ddt.data(True, False)
+    def test_vnc_console(self, enabled_consoleauth):
+        self.skipTest("Removing cells v1")
 
 
 class CellsShelveComputeAPITestCase(test_shelve.ShelveComputeAPITestCase):

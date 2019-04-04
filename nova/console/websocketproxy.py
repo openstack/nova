@@ -150,26 +150,19 @@ class NovaProxyRequestHandlerBase(object):
     def _get_connect_info(self, ctxt, token):
         """Validate the token and get the connect info."""
         connect_info = None
-        # NOTE(PaulMurray) if we are using cells v1, we use the old consoleauth
-        # way of doing things. The database backend is not supported for cells
-        # v1.
-        if CONF.cells.enable:
+
+        # NOTE(melwitt): If consoleauth is enabled to aid in transitioning
+        # to the database backend, check it first before falling back to
+        # the database. Tokens that existed pre-database-backend will
+        # reside in the consoleauth service storage.
+        if CONF.workarounds.enable_consoleauth:
             connect_info = self._get_connect_info_consoleauth(ctxt, token)
-            if not connect_info:
-                raise exception.InvalidToken(token='***')
-        else:
-            # NOTE(melwitt): If consoleauth is enabled to aid in transitioning
-            # to the database backend, check it first before falling back to
-            # the database. Tokens that existed pre-database-backend will
-            # reside in the consoleauth service storage.
-            if CONF.workarounds.enable_consoleauth:
-                connect_info = self._get_connect_info_consoleauth(ctxt, token)
-            # If consoleauth is enabled to aid in transitioning to the database
-            # backend and we didn't find a token in the consoleauth service
-            # storage, check the database for a token because it's probably a
-            # post-database-backend token, which are stored in the database.
-            if not connect_info:
-                connect_info = self._get_connect_info_database(ctxt, token)
+        # If consoleauth is enabled to aid in transitioning to the database
+        # backend and we didn't find a token in the consoleauth service
+        # storage, check the database for a token because it's probably a
+        # post-database-backend token, which are stored in the database.
+        if not connect_info:
+            connect_info = self._get_connect_info_database(ctxt, token)
 
         return connect_info
 
