@@ -184,8 +184,7 @@ class ApiTestCase(test.TestCase):
             return fake_info_cache
 
         def fake_update_instance_cache_with_nw_info(api, context, instance,
-                                                    nw_info=None,
-                                                    update_cells=True):
+                                                    nw_info=None):
             return
 
         with test.nested(
@@ -555,8 +554,7 @@ class ApiTestCase(test.TestCase):
         result = self.network_api.get_instance_nw_info(self.context, instance)
         mock_get.assert_called_once_with(self.context, instance)
         mock_update.assert_called_once_with(self.network_api, self.context,
-                                            instance, nw_info=fake_result,
-                                            update_cells=False)
+                                            instance, nw_info=fake_result)
         self.assertEqual(fake_result, result)
 
 

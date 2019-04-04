@@ -1129,8 +1129,7 @@ class API(base_api.NetworkAPI):
             context, instance, networks=ordered_nets,
             port_ids=ordered_port_ids,
             admin_client=admin_client,
-            preexisting_port_ids=preexisting_port_ids,
-            update_cells=True)
+            preexisting_port_ids=preexisting_port_ids)
         # Only return info about ports we processed in this run, which might
         # have been pre-existing neutron ports or ones that nova created. In
         # the initial allocation case (server create), this will be everything

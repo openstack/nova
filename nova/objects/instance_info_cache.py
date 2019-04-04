@@ -14,8 +14,6 @@
 
 from oslo_log import log as logging
 
-from nova.cells import opts as cells_opts
-from nova.cells import rpcapi as cells_rpcapi
 from nova.db import api as db
 from nova import exception
 from nova.objects import base
@@ -71,33 +69,16 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
                     instance_uuid=instance_uuid)
         return cls._from_db_object(context, cls(context), db_obj)
 
-    @staticmethod
-    def _info_cache_cells_update(ctxt, info_cache):
-        cell_type = cells_opts.get_cell_type()
-        if cell_type != 'compute':
-            return
-        cells_api = cells_rpcapi.CellsAPI()
-        try:
-            cells_api.instance_info_cache_update_at_top(ctxt, info_cache)
-        except Exception:
-            LOG.exception("Failed to notify cells of instance info "
-                          "cache update")
-
+    # TODO(stephenfin): Remove 'update_cells' in version 2.0
     @base.remotable
     def save(self, update_cells=True):
         if 'network_info' in self.obj_what_changed():
-            if update_cells:
-                stale_instance = self.obj_clone()
             nw_info_json = self.fields['network_info'].to_primitive(
                 self, 'network_info', self.network_info)
             rv = db.instance_info_cache_update(self._context,
                                                self.instance_uuid,
                                                {'network_info': nw_info_json})
             self._from_db_object(self._context, self, rv)
-            if update_cells:
-                # Send a copy of ourselves before updates are applied so
-                # that cells can tell what changed.
-                self._info_cache_cells_update(self._context, stale_instance)
         self.obj_reset_changes()
 
     @base.remotable
