@@ -28,6 +28,7 @@ from nova import objects
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_requests
 
 
@@ -1654,8 +1655,11 @@ class TestMoveAllocations(SchedulerReportClientTestCase):
             }
         }
 
-        resp = self.client.move_allocations(
-            self.context, self.source_consumer_uuid, self.target_consumer_uuid)
+        with fixtures.EnvironmentVariable('OS_DEBUG', '1'):
+            with nova_fixtures.StandardLogging() as stdlog:
+                resp = self.client.move_allocations(
+                    self.context, self.source_consumer_uuid,
+                    self.target_consumer_uuid)
 
         self.assertTrue(resp)
         self.mock_post.assert_called_once_with(
@@ -1663,7 +1667,7 @@ class TestMoveAllocations(SchedulerReportClientTestCase):
             version=self.expected_microversion,
             global_request_id=self.context.global_id)
         self.assertIn('Overwriting current allocation',
-                      self.stdlog.logger.output)
+                      stdlog.logger.output)
 
     @mock.patch('time.sleep')
     def test_409_concurrent_provider_update(self, mock_sleep):
