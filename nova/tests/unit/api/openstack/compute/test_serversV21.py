@@ -264,16 +264,6 @@ class ServersControllerTest(ControllerTest):
 
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
-    def test_cellsv1_instance_lookup_no_target(self, mock_get_im,
-                                               mock_get_inst):
-        self.flags(enable=True, group='cells')
-        ctxt = context.RequestContext('fake', 'fake')
-        self.controller._get_instance(ctxt, 'foo')
-        self.assertFalse(mock_get_im.called)
-        self.assertIsNone(ctxt.db_connection)
-
-    @mock.patch('nova.objects.Instance.get_by_uuid')
-    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
     def test_instance_lookup_targets(self, mock_get_im, mock_get_inst):
         ctxt = context.RequestContext('fake', 'fake')
         mock_get_im.return_value.cell_mapping.database_connection = uuids.cell1

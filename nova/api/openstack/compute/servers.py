@@ -1226,12 +1226,9 @@ class ServersController(wsgi.Controller):
     def _get_instance(self, context, instance_uuid):
         try:
             attrs = ['system_metadata', 'metadata']
-            if not CONF.cells.enable:
-                # NOTE(danms): We can't target a cell database if we're
-                # in cellsv1 otherwise we'll short-circuit the replication.
-                mapping = objects.InstanceMapping.get_by_instance_uuid(
-                    context, instance_uuid)
-                nova_context.set_target_cell(context, mapping.cell_mapping)
+            mapping = objects.InstanceMapping.get_by_instance_uuid(
+                context, instance_uuid)
+            nova_context.set_target_cell(context, mapping.cell_mapping)
             return objects.Instance.get_by_uuid(
                 context, instance_uuid, expected_attrs=attrs)
         except (exception.InstanceNotFound,
