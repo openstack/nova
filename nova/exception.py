@@ -1281,28 +1281,8 @@ class CellExists(NovaException):
     msg_fmt = _("Cell with name %(name)s already exists.")
 
 
-class CellRoutingInconsistency(NovaException):
-    msg_fmt = _("Inconsistency in cell routing: %(reason)s")
-
-
-class CellServiceAPIMethodNotFound(NotFound):
-    msg_fmt = _("Service API method not found: %(detail)s")
-
-
 class CellTimeout(NotFound):
     msg_fmt = _("Timeout waiting for response from cell")
-
-
-class CellMaxHopCountReached(NovaException):
-    msg_fmt = _("Cell message has reached maximum hop count: %(hop_count)s")
-
-
-class NoCellsAvailable(NovaException):
-    msg_fmt = _("No cells available matching scheduling criteria.")
-
-
-class CellsUpdateUnsupported(NovaException):
-    msg_fmt = _("Cannot update cells configuration file.")
 
 
 class InstanceUnknownCell(NotFound):

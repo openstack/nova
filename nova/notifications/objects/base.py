@@ -172,6 +172,8 @@ class NotificationPublisher(NotificationObject):
     #         2.2: New enum for source fields added
     VERSION = '2.2'
 
+    # TODO(stephenfin): Remove 'nova-cells' from 'NotificationSourceField' enum
+    # when bumping this object to version 3.0
     fields = {
         'host': fields.StringField(nullable=False),
         'source': fields.NotificationSourceField(nullable=False),

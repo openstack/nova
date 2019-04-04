@@ -39,7 +39,6 @@ from six.moves import range
 
 from nova import availability_zones
 from nova import block_device
-from nova.cells import opts as cells_opts
 from nova.compute import flavors
 from nova.compute import instance_actions
 from nova.compute import instance_list
@@ -207,14 +206,6 @@ def check_instance_lock(function):
     return inner
 
 
-def check_instance_cell(fn):
-    @six.wraps(fn)
-    def _wrapped(self, context, instance, *args, **kwargs):
-        self._validate_cell(instance)
-        return fn(self, context, instance, *args, **kwargs)
-    return _wrapped
-
-
 def _diff_dict(orig, new):
     """Return a dict describing how to change orig to new.  The keys
     correspond to values that have changed; the value will be a list
@@ -279,18 +270,6 @@ class API(base.Base):
         # Help us to record host in EventReporter
         self.host = CONF.host
         super(API, self).__init__(**kwargs)
-
-    @property
-    def cell_type(self):
-        return getattr(self, '_cell_type', cells_opts.get_cell_type())
-
-    def _validate_cell(self, instance):
-        if self.cell_type != 'api':
-            return
-        cell_name = instance.cell_name
-        if not cell_name:
-            raise exception.InstanceUnknownCell(
-                    instance_uuid=instance.uuid)
 
     def _record_action_start(self, context, instance, action):
         objects.InstanceAction.action_start(context, instance.uuid,
@@ -1329,50 +1308,16 @@ class API(base.Base):
             instances.append(instance)
             request_specs.append(rs)
 
-        if CONF.cells.enable:
-            # NOTE(danms): CellsV1 can't do the new thing, so we
-            # do the old thing here. We can remove this path once
-            # we stop supporting v1.
-            for instance in instances:
-                instance.create()
-            # NOTE(melwitt): We recheck the quota after creating the objects
-            # to prevent users from allocating more resources than their
-            # allowed quota in the event of a race. This is configurable
-            # because it can be expensive if strict quota limits are not
-            # required in a deployment.
-            if CONF.quota.recheck_quota:
-                try:
-                    compute_utils.check_num_instances_quota(
-                        context, instance_type, 0, 0,
-                        orig_num_req=len(instances))
-                except exception.TooManyInstances:
-                    with excutils.save_and_reraise_exception():
-                        # Need to clean up all the instances we created
-                        # along with the build requests, request specs,
-                        # and instance mappings.
-                        self._cleanup_build_artifacts(instances,
-                                                      instances_to_build)
-
-            self.compute_task_api.build_instances(context,
-                instances=instances, image=boot_meta,
-                filter_properties=filter_properties,
-                admin_password=admin_password,
-                injected_files=injected_files,
-                requested_networks=requested_networks,
-                security_groups=security_groups,
-                block_device_mapping=block_device_mapping,
-                legacy_bdm=False)
-        else:
-            self.compute_task_api.schedule_and_build_instances(
-                context,
-                build_requests=build_requests,
-                request_spec=request_specs,
-                image=boot_meta,
-                admin_password=admin_password,
-                injected_files=injected_files,
-                requested_networks=requested_networks,
-                block_device_mapping=block_device_mapping,
-                tags=tags)
+        self.compute_task_api.schedule_and_build_instances(
+            context,
+            build_requests=build_requests,
+            request_spec=request_specs,
+            image=boot_meta,
+            admin_password=admin_password,
+            injected_files=injected_files,
+            requested_networks=requested_networks,
+            block_device_mapping=block_device_mapping,
+            tags=tags)
 
         return instances, reservation_id
 
@@ -1907,16 +1852,13 @@ class API(base.Base):
             # guaranteed everyone is using cellsv2.
             pass
 
-        if (inst_map is None or inst_map.cell_mapping is None or
-                CONF.cells.enable):
+        if inst_map is None or inst_map.cell_mapping is None:
             # If inst_map is None then the deployment has not migrated to
             # cellsv2 yet.
             # If inst_map.cell_mapping is None then the instance is not in a
             # cell yet. Until instance creation moves to the conductor the
             # instance can be found in the configured database, so attempt
             # to look it up.
-            # If we're on cellsv1, we can't yet short-circuit the cells
-            # messaging path
             cell = None
             try:
                 instance = objects.Instance.get_by_uuid(context, uuid)
@@ -2089,12 +2031,6 @@ class API(base.Base):
                 self.consoleauth_rpcapi.delete_tokens_for_instance(
                     context, instance.uuid)
 
-            if self.cell_type == 'api':
-                # NOTE(comstud): If we're in the API cell, we need to
-                # skip all remaining logic and just call the callback,
-                # which will cause a cast to the child cell.
-                cb(context, instance, bdms)
-                return
             if not instance.host and not may_have_ports_or_volumes:
                 try:
                     with compute_utils.notify_about_instance_delete(
@@ -2271,27 +2207,26 @@ class API(base.Base):
                 delete_type if delete_type != 'soft_delete' else 'delete'):
 
             elevated = context.elevated()
-            if self.cell_type != 'api':
-                # NOTE(liusheng): In nova-network multi_host scenario,deleting
-                # network info of the instance may need instance['host'] as
-                # destination host of RPC call. If instance in
-                # SHELVED_OFFLOADED state, instance['host'] is None, here, use
-                # shelved_host as host to deallocate network info and reset
-                # instance['host'] after that. Here we shouldn't use
-                # instance.save(), because this will mislead user who may think
-                # the instance's host has been changed, and actually, the
-                # instance.host is always None.
-                orig_host = instance.host
-                try:
-                    if instance.vm_state == vm_states.SHELVED_OFFLOADED:
-                        sysmeta = getattr(instance,
-                                          obj_base.get_attrname(
-                                              'system_metadata'))
-                        instance.host = sysmeta.get('shelved_host')
-                    self.network_api.deallocate_for_instance(elevated,
-                                                             instance)
-                finally:
-                    instance.host = orig_host
+            # NOTE(liusheng): In nova-network multi_host scenario,deleting
+            # network info of the instance may need instance['host'] as
+            # destination host of RPC call. If instance in
+            # SHELVED_OFFLOADED state, instance['host'] is None, here, use
+            # shelved_host as host to deallocate network info and reset
+            # instance['host'] after that. Here we shouldn't use
+            # instance.save(), because this will mislead user who may think
+            # the instance's host has been changed, and actually, the
+            # instance.host is always None.
+            orig_host = instance.host
+            try:
+                if instance.vm_state == vm_states.SHELVED_OFFLOADED:
+                    sysmeta = getattr(instance,
+                                      obj_base.get_attrname(
+                                          'system_metadata'))
+                    instance.host = sysmeta.get('shelved_host')
+                self.network_api.deallocate_for_instance(elevated,
+                                                         instance)
+            finally:
+                instance.host = orig_host
 
             # cleanup volumes
             self._local_cleanup_bdm_volumes(bdms, instance, context)
@@ -2350,7 +2285,6 @@ class API(base.Base):
 
     # NOTE(maoy): we allow delete to be called no matter what vm_state says.
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=None, task_state=None,
                           must_have_launched=True)
     def soft_delete(self, context, instance):
@@ -2367,7 +2301,6 @@ class API(base.Base):
                      task_state=task_states.DELETING)
 
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=None, task_state=None,
                           must_have_launched=False)
     def delete(self, context, instance):
@@ -2425,7 +2358,6 @@ class API(base.Base):
 
     @check_instance_lock
     @check_instance_host
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.ERROR])
     def stop(self, context, instance, do_cast=True, clean_shutdown=True):
         """Stop an instance."""
@@ -2433,7 +2365,6 @@ class API(base.Base):
 
     @check_instance_lock
     @check_instance_host
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.STOPPED])
     def start(self, context, instance):
         """Start an instance."""
@@ -2450,7 +2381,6 @@ class API(base.Base):
 
     @check_instance_lock
     @check_instance_host
-    @check_instance_cell
     @check_instance_state(vm_state=vm_states.ALLOW_TRIGGER_CRASH_DUMP)
     def trigger_crash_dump(self, context, instance):
         """Trigger crash dump in an instance."""
@@ -2577,11 +2507,6 @@ class API(base.Base):
 
     def _get_instance(self, context, instance_uuid, expected_attrs,
                       cell_down_support=False):
-        # If we're on cellsv1, we need to consult the top-level
-        # merged replica instead of the cell directly.
-        if CONF.cells.enable:
-            return objects.Instance.get_by_uuid(context, instance_uuid,
-                                                expected_attrs=expected_attrs)
         inst_map = self._get_instance_map_or_none(context, instance_uuid)
         if inst_map and (inst_map.cell_mapping is not None):
             instance = self._get_instance_from_cell(context, inst_map,
@@ -2956,7 +2881,6 @@ class API(base.Base):
 
     # NOTE(melwitt): We don't check instance lock for backup because lock is
     #                intended to prevent accidental change/delete of instances
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.PAUSED, vm_states.SUSPENDED])
     def backup(self, context, instance, name, backup_type, rotation,
@@ -3001,7 +2925,6 @@ class API(base.Base):
 
     # NOTE(melwitt): We don't check instance lock for snapshot because lock is
     #                intended to prevent accidental change/delete of instances
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.PAUSED, vm_states.SUSPENDED])
     def snapshot(self, context, instance, name, extra_properties=None):
@@ -3236,7 +3159,6 @@ class API(base.Base):
                                             reboot_type='HARD')
 
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
     def rebuild(self, context, instance, image_href, admin_password,
@@ -3461,7 +3383,6 @@ class API(base.Base):
                                                  allowed=total_alloweds)
 
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.RESIZED])
     def revert_resize(self, context, instance):
         """Reverts a resize, deleting the 'new' instance in the process."""
@@ -3514,7 +3435,6 @@ class API(base.Base):
                                           migration.dest_compute)
 
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.RESIZED])
     def confirm_resize(self, context, instance, migration=None):
         """Confirms a migration/resize and deletes the 'old' instance."""
@@ -3539,28 +3459,7 @@ class API(base.Base):
                                            migration,
                                            migration.source_compute)
 
-    @staticmethod
-    def _resize_cells_support(context, instance,
-                              current_instance_type, new_instance_type):
-        """Special API cell logic for resize."""
-        # NOTE(johannes/comstud): The API cell needs a local migration
-        # record for later resize_confirm and resize_reverts.
-        # We don't need source and/or destination
-        # information, just the old and new flavors. Status is set to
-        # 'finished' since nothing else will update the status along
-        # the way.
-        mig = objects.Migration(context=context.elevated())
-        mig.instance_uuid = instance.uuid
-        mig.old_instance_type_id = current_instance_type['id']
-        mig.new_instance_type_id = new_instance_type['id']
-        mig.status = 'finished'
-        mig.migration_type = (
-            mig.old_instance_type_id != mig.new_instance_type_id and
-            'resize' or 'migration')
-        mig.create()
-
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def resize(self, context, instance, flavor_id=None, clean_shutdown=True,
                host_name=None, **extra_instance_updates):
@@ -3621,7 +3520,7 @@ class API(base.Base):
         if not same_instance_type and new_instance_type.get('disabled'):
             raise exception.FlavorNotFound(flavor_id=flavor_id)
 
-        if same_instance_type and flavor_id and self.cell_type != 'compute':
+        if same_instance_type and flavor_id:
             raise exception.CannotResizeToSameFlavor()
 
         # ensure there is sufficient headroom for upsizes
@@ -3664,12 +3563,6 @@ class API(base.Base):
         instance.progress = 0
         instance.update(extra_instance_updates)
         instance.save(expected_task_state=[None])
-
-        if self.cell_type == 'api':
-            # Create migration record.
-            self._resize_cells_support(context, instance,
-                                       current_instance_type,
-                                       new_instance_type)
 
         if not flavor_id:
             self._record_action_start(context, instance,
@@ -3767,7 +3660,6 @@ class API(base.Base):
                 instance=instance, address=address)
 
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE])
     def pause(self, context, instance):
         """Pause the given instance."""
@@ -3777,7 +3669,6 @@ class API(base.Base):
         self.compute_rpcapi.pause_instance(context, instance)
 
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.PAUSED])
     def unpause(self, context, instance):
         """Unpause the given instance."""
@@ -3798,7 +3689,6 @@ class API(base.Base):
                                                             instance=instance)
 
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE])
     def suspend(self, context, instance):
         """Suspend the given instance."""
@@ -3808,7 +3698,6 @@ class API(base.Base):
         self.compute_rpcapi.suspend_instance(context, instance)
 
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.SUSPENDED])
     def resume(self, context, instance):
         """Resume the given instance."""
@@ -3856,7 +3745,6 @@ class API(base.Base):
         self.compute_rpcapi.unrescue_instance(context, instance=instance)
 
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE])
     def set_admin_password(self, context, instance, password=None):
         """Set the root/admin password for the given instance.
@@ -3897,13 +3785,6 @@ class API(base.Base):
         return {'url': connect_info['access_url']}
 
     @check_instance_host
-    def get_vnc_connect_info(self, context, instance, console_type):
-        """Used in a child cell to get console info."""
-        connect_info = self.compute_rpcapi.get_vnc_console(context,
-                instance=instance, console_type=console_type)
-        return connect_info
-
-    @check_instance_host
     @reject_instance_state(
         task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_spice_console(self, context, instance, console_type):
@@ -3922,13 +3803,6 @@ class API(base.Base):
                     access_url=connect_info['access_url'])
 
         return {'url': connect_info['access_url']}
-
-    @check_instance_host
-    def get_spice_connect_info(self, context, instance, console_type):
-        """Used in a child cell to get console info."""
-        connect_info = self.compute_rpcapi.get_spice_console(context,
-                instance=instance, console_type=console_type)
-        return connect_info
 
     @check_instance_host
     @reject_instance_state(
@@ -3951,13 +3825,6 @@ class API(base.Base):
         return {'url': connect_info['access_url']}
 
     @check_instance_host
-    def get_rdp_connect_info(self, context, instance, console_type):
-        """Used in a child cell to get console info."""
-        connect_info = self.compute_rpcapi.get_rdp_console(context,
-                instance=instance, console_type=console_type)
-        return connect_info
-
-    @check_instance_host
     @reject_instance_state(
         task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_serial_console(self, context, instance, console_type):
@@ -3976,13 +3843,6 @@ class API(base.Base):
                     connect_info['internal_access_path'], instance.uuid,
                     access_url=connect_info['access_url'])
         return {'url': connect_info['access_url']}
-
-    @check_instance_host
-    def get_serial_console_connect_info(self, context, instance, console_type):
-        """Used in a child cell to get serial console."""
-        connect_info = self.compute_rpcapi.get_serial_console(context,
-                instance=instance, console_type=console_type)
-        return connect_info
 
     @check_instance_host
     @reject_instance_state(
@@ -4064,13 +3924,11 @@ class API(base.Base):
             source=fields_obj.NotificationSource.API)
 
     @check_instance_lock
-    @check_instance_cell
     def reset_network(self, context, instance):
         """Reset networking on the instance."""
         self.compute_rpcapi.reset_network(context, instance=instance)
 
     @check_instance_lock
-    @check_instance_cell
     def inject_network_info(self, context, instance):
         """Inject network info for the instance."""
         self.compute_rpcapi.inject_network_info(context, instance=instance)
@@ -4181,6 +4039,8 @@ class API(base.Base):
                       'create a new style volume attachment.')
             self.volume_api.reserve_volume(context, volume_id)
 
+    # TODO(stephenfin): Fold this back in now that cells v1 no longer needs to
+    # override it.
     def _attach_volume(self, context, instance, volume, device,
                        disk_bus, device_type, tag=None,
                        supports_multiattach=False):
@@ -4318,6 +4178,8 @@ class API(base.Base):
                                    disk_bus, device_type, tag=tag,
                                    supports_multiattach=supports_multiattach)
 
+    # TODO(stephenfin): Fold this back in now that cells v1 no longer needs to
+    # override it.
     def _detach_volume(self, context, instance, volume):
         """Detach volume from instance.
 
@@ -4520,7 +4382,6 @@ class API(base.Base):
         return _metadata
 
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED])
     def live_migrate(self, context, instance, block_migration,
                      disk_over_commit, host_name, force=None, async_=False):
@@ -4584,7 +4445,6 @@ class API(base.Base):
                                                           messaging_timeout)
 
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE],
                           task_state=[task_states.MIGRATING])
     def live_migrate_force_complete(self, context, instance, migration_id):
@@ -4616,7 +4476,6 @@ class API(base.Base):
             context, instance, migration)
 
     @check_instance_lock
-    @check_instance_cell
     @check_instance_state(task_state=[task_states.MIGRATING])
     def live_migrate_abort(self, context, instance, migration_id,
                            support_abort_in_queue=False):
