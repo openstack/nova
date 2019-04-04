@@ -1877,10 +1877,10 @@ class SchedulerReportClient(object):
                          'they were already moved to consumer %s',
                          source_consumer_uuid, target_consumer_uuid)
                 return True
-            LOG.warning('Overwriting current allocation %(allocation)s on '
-                        'consumer %(consumer)s',
-                        {'allocation': target_alloc,
-                         'consumer': target_consumer_uuid})
+            LOG.debug('Overwriting current allocation %(allocation)s on '
+                      'consumer %(consumer)s',
+                      {'allocation': target_alloc,
+                       'consumer': target_consumer_uuid})
 
         new_allocs = {
             source_consumer_uuid: {
