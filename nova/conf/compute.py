@@ -113,10 +113,10 @@ a time.
 Possible values:
 
 * An empty list will disable the feature (Default).
-* An example value that would enable both the CPU and NUMA memory
-  bandwidth monitors that use the virt driver variant:
+* An example value that would enable the CPU
+  bandwidth monitor that uses the virt driver variant::
 
-    compute_monitors = cpu.virt_driver, numa_mem_bw.virt_driver
+    compute_monitors = cpu.virt_driver
 """),
     cfg.StrOpt('default_ephemeral_format',
         help="""
