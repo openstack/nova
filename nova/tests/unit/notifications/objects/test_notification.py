@@ -370,7 +370,7 @@ notification_object_data = {
     'AuditPeriodPayload': '1.0-2b429dd307b8374636703b843fa3f9cb',
     'BandwidthPayload': '1.0-ee2616a7690ab78406842a2b68e34130',
     'BlockDevicePayload': '1.0-29751e1b6d41b1454e36768a1e764df8',
-    'CellMappingPayload': '1.0-cf7faeb3cdd6b0c742ff74c80b88fb11',
+    'CellMappingPayload': '2.0-8acd412eb4edff1cd2ecb9867feeb243',
     'ComputeTaskNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ComputeTaskPayload': '1.0-e3d34762c14d131c98337b72e8c600e1',
     'DestinationPayload': '1.0-4ccf26318dd18c4377dada2b1e74ec2e',
