@@ -73,7 +73,6 @@ limited to some maximum microversion.
 .. include:: os-security-group-default-rules.inc
 .. include:: os-security-group-rules.inc
 .. include:: os-hosts.inc
-.. include:: os-cells.inc
 
 =============
 Obsolete APIs
@@ -89,3 +88,4 @@ Compute API in the past, but no longer exist.
 .. include:: os-fixed-ips.inc
 .. include:: os-floating-ips-bulk.inc
 .. include:: os-floating-ip-dns.inc
+.. include:: os-cells.inc

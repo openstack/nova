@@ -200,24 +200,6 @@ valid_az_name_leading_trailing_spaces_regex = ValidationRegex(
       "with at least one non space character"))
 
 
-valid_cell_name_regex = ValidationRegex(
-    valid_name_regex_base % (
-        _build_regex_range(ws=False, invert=True),
-        _build_regex_range(exclude=['!', '.', '@']),
-        _build_regex_range(ws=False, invert=True)),
-    _("printable characters except !, ., @. "
-      "Can not start or end with whitespace."))
-
-
-# cell's name disallow '!',  '.' and '@'.
-valid_cell_name_leading_trailing_spaces_regex = ValidationRegex(
-    valid_name_leading_trailing_spaces_regex_base % {
-        'ws': _build_regex_range(exclude=['!', '.', '@']),
-        'no_ws': _build_regex_range(ws=False, exclude=['!', '.', '@'])},
-    _("printable characters except !, ., @, "
-      "with at least one non space character"))
-
-
 valid_name_leading_trailing_spaces_regex = ValidationRegex(
     valid_name_leading_trailing_spaces_regex_base % {
         'ws': _build_regex_range(),
@@ -315,18 +297,6 @@ az_name_with_leading_trailing_spaces = {
 }
 
 
-cell_name = {
-    'type': 'string', 'minLength': 1, 'maxLength': 255,
-    'format': 'cell_name'
-}
-
-
-cell_name_leading_trailing_spaces = {
-    'type': 'string', 'minLength': 1, 'maxLength': 255,
-    'format': 'cell_name_with_leading_trailing_spaces'
-}
-
-
 name_with_leading_trailing_spaces = {
     'type': 'string', 'minLength': 1, 'maxLength': 255,
     'format': 'name_with_leading_trailing_spaces'
@@ -339,6 +309,7 @@ description = {
 }
 
 
+# TODO(stephenfin): This is no longer used and should be removed
 tcp_udp_port = {
     'type': ['integer', 'string'], 'pattern': '^[0-9]*$',
     'minimum': 0, 'maximum': 65535,

@@ -2,4 +2,18 @@
 upgrade:
   - |
     The *cells v1* feature has been deprecated since the 16.0.0 Pike release
-    and has now been removed. The ``nova-cells`` service has been removed.
+    and has now been removed. The ``nova-cells`` service has been removed. The
+    *cells v1* specific REST APIs have been removed along with their related
+    policy rules. Calling these APIs will now result in a ``410 (Gone)`` error
+    response.
+
+    * ``GET /os-cells``
+    * ``POST /os-cells``
+    * ``GET /os-cells/capacities``
+    * ``GET /os-cells/detail``
+    * ``GET /os-cells/info``
+    * ``POST /os-cells/sync_instances``
+    * ``GET /os-cells/{cell_id}``
+    * ``PUT /os-cells/{cell_id}``
+    * ``DELETE /os-cells/{cell_id}``
+    * ``GET /os-cells/{cell_id}/capacities``

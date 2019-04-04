@@ -1,8 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
-
 
 ==============================
  Cells (os-cells, capacities)
@@ -11,10 +7,13 @@
 Adds neighbor cells, lists neighbor cells, and shows the capabilities of
 the local cell. By default, only administrators can manage cells.
 
-.. warning:: These APIs refer to a Cells v1 deployment which was deprecated
-  in the 16.0.0 Pike release. These are not used with Cells v2
-  which is required beginning with the 15.0.0 Ocata release where all Nova
-  deployments consist of at least one Cells v2 cell.
+.. warning::
+
+   These APIs refer to a Cells v1 deployment which was deprecated in the 16.0.0
+   Pike release. These are not used with Cells v2 which is required beginning
+   with the 15.0.0 Ocata release where all Nova deployments consist of at least
+   one Cells v2 cell.
+   They were removed in the 20.0.0 Train release.
 
 List Cells
 ==========
@@ -26,7 +25,7 @@ Lists cells.
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-NotImplemented(501)
+gone(410), notImplemented(501)
 
 Request
 -------
@@ -52,10 +51,10 @@ Create Cell
 
 Create a new cell.
 
-Normal response code: 200
+Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-NotImplemented(501)
+gone(410), notImplemented(501)
 
 Capacities
 ==========
@@ -64,8 +63,10 @@ Capacities
 
 Retrieve capacities.
 
+Normal response codes: 200
+
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-NotImplemented(501)
+gone(410), notImplemented(501)
 
 List Cells With Details
 =======================
@@ -77,7 +78,7 @@ Lists cells with details of capabilities.
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-NotImplemented(501)
+gone(410), notImplemented(501)
 
 Request
 -------
@@ -94,10 +95,10 @@ Info For This Cell
 
 Retrieve info about the current cell.
 
-Normal response code: 200
+Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-NotImplemented(501)
+gone(410), notImplemented(501)
 
 Show Cell Data
 ==============
@@ -109,7 +110,7 @@ Shows data for a cell.
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-itemNotFound(404), NotImplemented(501)
+itemNotFound(404), gone(410), notImplemented(501)
 
 Request
 -------
@@ -129,15 +130,15 @@ Response
 Update a Cell
 =============
 
-.. rest_method:: PUT /os-cells/{cell_od}
+.. rest_method:: PUT /os-cells/{cell_id}
 
 
 Update an existing cell.
 
-Normal response code: 200
+Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-itemNotFound(404), NotImplemented(501)
+itemNotFound(404), gone(410), notImplemented(501)
 
 Delete a Cell
 =============
@@ -146,10 +147,10 @@ Delete a Cell
 
 Remove a cell.
 
-Normal response code: 200
+Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-itemNotFound(404), NotImplemented(501)
+itemNotFound(404), gone(410), notImplemented(501)
 
 Show Cell Capacities
 ====================
@@ -158,10 +159,10 @@ Show Cell Capacities
 
 Shows capacities for a cell.
 
-Normal response codes: 200,501
+Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-itemNotFound(404), NotImplemented(501)
+itemNotFound(404), gone(410), notImplemented(501)
 
 Request
 -------

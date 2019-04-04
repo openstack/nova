@@ -14,7 +14,6 @@
 #    under the License.
 
 import collections
-import functools
 import itertools
 import re
 
@@ -493,15 +492,6 @@ def get_flavor(context, flavor_id):
         return objects.Flavor.get_by_flavor_id(context, flavor_id)
     except exception.FlavorNotFound as error:
         raise exc.HTTPNotFound(explanation=error.format_message())
-
-
-def check_cells_enabled(function):
-    @functools.wraps(function)
-    def inner(*args, **kwargs):
-        if not CONF.cells.enable:
-            raise_feature_not_supported()
-        return function(*args, **kwargs)
-    return inner
 
 
 def is_all_tenants(search_opts):
