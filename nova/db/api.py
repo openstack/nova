@@ -1521,33 +1521,6 @@ def pci_device_update(context, node_id, address, value):
     return IMPL.pci_device_update(context, node_id, address, value)
 
 
-###################
-
-def cell_create(context, values):
-    """Create a new child Cell entry."""
-    return IMPL.cell_create(context, values)
-
-
-def cell_update(context, cell_name, values):
-    """Update a child Cell entry."""
-    return IMPL.cell_update(context, cell_name, values)
-
-
-def cell_delete(context, cell_name):
-    """Delete a child Cell."""
-    return IMPL.cell_delete(context, cell_name)
-
-
-def cell_get(context, cell_name):
-    """Get a specific child Cell."""
-    return IMPL.cell_get(context, cell_name)
-
-
-def cell_get_all(context):
-    """Get all child Cells."""
-    return IMPL.cell_get_all(context)
-
-
 ####################
 
 

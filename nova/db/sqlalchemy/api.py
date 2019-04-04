@@ -4577,51 +4577,6 @@ def console_get(context, console_id, instance_uuid=None):
     return result
 
 
-##################
-
-
-@pick_context_manager_writer
-def cell_create(context, values):
-    cell = models.Cell()
-    cell.update(values)
-    try:
-        cell.save(context.session)
-    except db_exc.DBDuplicateEntry:
-        raise exception.CellExists(name=values['name'])
-    return cell
-
-
-def _cell_get_by_name_query(context, cell_name):
-    return model_query(context, models.Cell).filter_by(name=cell_name)
-
-
-@pick_context_manager_writer
-def cell_update(context, cell_name, values):
-    cell_query = _cell_get_by_name_query(context, cell_name)
-    if not cell_query.update(values):
-        raise exception.CellNotFound(cell_name=cell_name)
-    cell = cell_query.first()
-    return cell
-
-
-@pick_context_manager_writer
-def cell_delete(context, cell_name):
-    return _cell_get_by_name_query(context, cell_name).soft_delete()
-
-
-@pick_context_manager_reader
-def cell_get(context, cell_name):
-    result = _cell_get_by_name_query(context, cell_name).first()
-    if not result:
-        raise exception.CellNotFound(cell_name=cell_name)
-    return result
-
-
-@pick_context_manager_reader
-def cell_get_all(context):
-    return model_query(context, models.Cell, read_deleted="no").all()
-
-
 ########################
 # User-provided metadata
 

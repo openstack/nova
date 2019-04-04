@@ -340,6 +340,7 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
 
     # OpenStack compute cell name.  This will only be set at the top of
     # the cells tree and it'll be a full cell name such as 'api!hop1!hop2'
+    # TODO(stephenfin): Remove this
     cell_name = Column(String(255))
 
     # NOTE(pumaranikar): internal_id attribute is no longer used (bug 1441242)
@@ -1088,6 +1089,8 @@ class InstanceTypeExtraSpecs(BASE, NovaBase, models.SoftDeleteMixin):
                  'InstanceTypeExtraSpecs.deleted == 0)')
 
 
+# TODO(stephenfin): Remove this in the U release or later, once we're sure we
+# won't want it back (it's for cells v1, so we won't)
 class Cell(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents parent and child cells of this cell.  Cells can
     have multiple parents and children, so there could be any number
