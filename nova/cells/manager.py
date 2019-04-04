@@ -175,10 +175,7 @@ class CellsManager(manager.Manager):
         """Broadcast an instance_update or instance_destroy message up to
         parent cells.
         """
-        if instance.deleted:
-            self.instance_destroy_at_top(ctxt, instance)
-        else:
-            self.instance_update_at_top(ctxt, instance)
+        pass
 
     def build_instances(self, ctxt, build_inst_kwargs):
         """Pick a cell (possibly ourselves) to build new instance(s) and
@@ -216,14 +213,6 @@ class CellsManager(manager.Manager):
                                                           call)
         if call:
             return response.value_or_raise()
-
-    def instance_update_at_top(self, ctxt, instance):
-        """Update an instance at the top level cell."""
-        self.msg_runner.instance_update_at_top(ctxt, instance)
-
-    def instance_destroy_at_top(self, ctxt, instance):
-        """Destroy an instance at the top level cell."""
-        self.msg_runner.instance_destroy_at_top(ctxt, instance)
 
     def instance_delete_everywhere(self, ctxt, instance, delete_type):
         """This is used by API cell when it didn't know what cell

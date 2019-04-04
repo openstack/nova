@@ -112,7 +112,6 @@ class CellsScheduler(base.Base):
             self.compute_api._create_block_device_mapping(block_device_mapping)
 
             instances.append(instance)
-            self.msg_runner.instance_update_at_top(ctxt, instance)
         return instances
 
     def _create_action_here(self, ctxt, instance_uuids):
@@ -238,7 +237,6 @@ class CellsScheduler(base.Base):
             for instance_uuid in instance_uuids:
                 instance = objects.Instance(context=ctxt, uuid=instance_uuid,
                                             vm_state=vm_states.ERROR)
-                self.msg_runner.instance_update_at_top(ctxt, instance)
                 try:
                     instance.vm_state = vm_states.ERROR
                     instance.save()
