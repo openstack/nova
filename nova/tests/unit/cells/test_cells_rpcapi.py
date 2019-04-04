@@ -199,19 +199,6 @@ class CellsAPITestCase(test.NoDBTestCase):
         self._check_result(call_info, 'instance_delete_everywhere',
                 expected_args, version='1.27')
 
-    def test_instance_fault_create_at_top(self):
-        fake_instance_fault = {'id': 2,
-                               'other': 'meow'}
-
-        call_info = self._stub_rpc_method('cast', None)
-
-        self.cells_rpcapi.instance_fault_create_at_top(
-                self.fake_context, fake_instance_fault)
-
-        expected_args = {'instance_fault': fake_instance_fault}
-        self._check_result(call_info, 'instance_fault_create_at_top',
-                expected_args)
-
     def test_bw_usage_update_at_top(self):
         update_args = ('fake_uuid', 'fake_mac', 'fake_start_period',
                 'fake_bw_in', 'fake_bw_out', 'fake_ctr_in',

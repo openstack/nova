@@ -187,15 +187,6 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
                 self.ctxt, instance='fake-instance',
                 delete_type='fake-type')
 
-    def test_instance_fault_create_at_top(self):
-        self.mox.StubOutWithMock(self.msg_runner,
-                                 'instance_fault_create_at_top')
-        self.msg_runner.instance_fault_create_at_top(self.ctxt,
-                                                     'fake-fault')
-        self.mox.ReplayAll()
-        self.cells_manager.instance_fault_create_at_top(
-                self.ctxt, instance_fault='fake-fault')
-
     def test_bw_usage_update_at_top(self):
         self.mox.StubOutWithMock(self.msg_runner,
                                  'bw_usage_update_at_top')
