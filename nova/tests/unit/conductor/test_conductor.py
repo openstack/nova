@@ -1687,6 +1687,10 @@ class _BaseTaskTestCase(object):
             reset_fd.assert_called_once_with()
             # The RequestSpec.ignore_hosts field should be overwritten.
             self.assertEqual([inst_obj.host], fake_spec.ignore_hosts)
+            # The RequestSpec.requested_destination.cell field should be set.
+            self.assertIn('requested_destination', fake_spec)
+            self.assertIn('cell', fake_spec.requested_destination)
+            self.assertIsNotNone(fake_spec.requested_destination.cell)
             select_dest_mock.assert_called_once_with(self.context,
                     fake_spec, [inst_obj.uuid], return_objects=True,
                     return_alternates=False)
