@@ -162,7 +162,7 @@ Specify the ``confirmResize`` action in the request body.
 After you make this request, you typically must keep polling the server
 status to determine whether the request succeeded. A successfully
 confirming resize operation shows a status of ``ACTIVE`` or ``SHUTOFF``
-and a migration_status of ``confirmed``. You can also see the resized
+and a migration status of ``confirmed``. You can also see the resized
 server in the compute node that OpenStack Compute manages.
 
 **Preconditions**
@@ -175,9 +175,20 @@ to confirm the server.
 
 **Troubleshooting**
 
-If the server status remains ``RESIZED``, the request failed. Ensure you
+If the server status remains ``VERIFY_RESIZE``, the request failed. Ensure you
 meet the preconditions and run the request again. If the request fails
-again, investigate the compute back end or ask your cloud provider.
+again, the server status should be ``ERROR`` and a migration status of
+``error``. Investigate the compute back end or ask your cloud provider.
+There are some options for trying to correct the server status:
+
+* If the server is running and networking works, a user with proper
+  authority could reset the status of the server to ``active`` using the
+  :ref:`os-resetState` API.
+* If the server is not running, you can try hard rebooting the server using
+  the :ref:`reboot` API.
+
+Note that the cloud provider may still need to cleanup any orphaned resources
+on the source hypervisor.
 
 Normal response codes: 204
 
@@ -451,6 +462,7 @@ Response
 
 If successful, this method does not return content in the response body.
 
+.. _reboot:
 
 Reboot Server (reboot Action)
 =============================
