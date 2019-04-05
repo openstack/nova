@@ -104,28 +104,20 @@ class BaseFilterHandler(loadables.BaseLoader):
                           {'cls_name': cls_name, 'obj_len': len(list_objs)})
         if not list_objs:
             # Log the filtration history
-            # NOTE(sbauza): Since the Cells scheduler still provides a legacy
-            # dictionary for filter_props, and since we agreed on not modifying
-            # the Cells scheduler to support that because of Cells v2, we
-            # prefer to define a compatible way to address both types
-            if isinstance(spec_obj, dict):
-                rspec = spec_obj.get("request_spec", {})
-                inst_props = rspec.get("instance_properties", {})
-                inst_uuid = inst_props.get("uuid", "")
-            else:
-                inst_uuid = spec_obj.instance_uuid
-            msg_dict = {"inst_uuid": inst_uuid,
-                        "str_results": str(full_filter_results),
-                       }
+            msg_dict = {
+                "inst_uuid": spec_obj.instance_uuid,
+                "str_results": str(full_filter_results),
+            }
             full_msg = ("Filtering removed all hosts for the request with "
                         "instance ID "
                         "'%(inst_uuid)s'. Filter results: %(str_results)s"
                        ) % msg_dict
-            msg_dict["str_results"] = str(part_filter_results)
-            part_msg = _LI("Filtering removed all hosts for the request with "
-                           "instance ID "
-                           "'%(inst_uuid)s'. Filter results: %(str_results)s"
-                           ) % msg_dict
             LOG.debug(full_msg)
+
+            msg_dict["str_results"] = str(part_filter_results)
+            part_msg = ("Filtering removed all hosts for the request with "
+                        "instance ID "
+                        "'%(inst_uuid)s'. Filter results: %(str_results)s"
+                       ) % msg_dict
             LOG.info(part_msg)
         return list_objs
