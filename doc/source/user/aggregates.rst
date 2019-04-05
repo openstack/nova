@@ -106,6 +106,34 @@ the user resizes the server, the scheduler will try to move it back to zone A
 which may or may not work, e.g. if the admin deleted or renamed zone A in the
 interim.
 
+Resource affinity
+~~~~~~~~~~~~~~~~~
+
+The :oslo.config:option:`cinder.cross_az_attach` configuration option can be
+used to restrict servers and the volumes attached to servers to the same
+availability zone.
+
+A typical use case for setting ``cross_az_attach=False`` is to enforce compute
+and block storage affinity, for example in a High Performance Compute cluster.
+
+By default ``cross_az_attach`` is True meaning that the volumes attached to
+a server can be in a different availability zone than the server. If set to
+False, then when creating a server with pre-existing volumes or attaching a
+volume to a server, the server and volume zone must match otherwise the
+request will fail. In addition, if the nova-compute service creates the volumes
+to attach to the server during server create, it will request that those
+volumes are created in the same availability zone as the server, which must
+exist in the block storage (cinder) service.
+
+As noted in the `Implications for moving servers`_ section, forcefully moving
+a server to another zone could also break affinity with attached volumes.
+
+.. note:: ``cross_az_attach=False`` is not widely used nor tested extensively
+    and thus suffers from some known issues:
+
+    * `Bug 1694844 <https://bugs.launchpad.net/nova/+bug/1694844>`_
+    * `Bug 1781421 <https://bugs.launchpad.net/nova/+bug/1781421>`_
+
 Design
 ------
 
