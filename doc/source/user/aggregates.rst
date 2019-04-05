@@ -72,6 +72,40 @@ between aggregates and availability zones:
 There is a nice educational video about availability zones from the Rocky
 summit which can be found here: https://www.openstack.org/videos/vancouver-2018/curse-your-bones-availability-zones-1
 
+Implications for moving servers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are several ways to move a server to another host: evacuate, resize,
+cold migrate, live migrate, and unshelve. Move operations typically go through
+the scheduler to pick the target host *unless* a target host is specified and
+the request forces the server to that host by bypassing the scheduler. Only
+evacuate and live migrate can forcefully bypass the scheduler and move a
+server to a specified host and even then it is highly recommended to *not*
+force and bypass the scheduler.
+
+With respect to availability zones, a server is restricted to a zone if:
+
+1. The server was created in a specific zone with the ``POST /servers`` request
+   containing the ``availability_zone`` parameter.
+2. If the server create request did not contain the ``availability_zone``
+   parameter but the API service is configured for
+   :oslo.config:option:`default_schedule_zone` then by default the server will
+   be scheduled to that zone.
+
+If the server was not created in a specific zone then it is free to be moved
+to other zones, i.e. the :ref:`AvailabilityZoneFilter <AvailabilityZoneFilter>`
+is a no-op.
+
+Knowing this, it is dangerous to force a server to another host with evacuate
+or live migrate if the server is restricted to a zone and is then forced to
+move to a host in another zone, because that will create an inconsistency in
+the internal tracking of where that server should live and may require manually
+updating the database for that server. For example, if a user creates a server
+in zone A and then the admin force live migrates the server to zone B, and then
+the user resizes the server, the scheduler will try to move it back to zone A
+which may or may not work, e.g. if the admin deleted or renamed zone A in the
+interim.
+
 Design
 ------
 
