@@ -973,12 +973,6 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         else:
             self.compute_api.delete(message.ctxt, instance)
 
-    def bw_usage_update_at_top(self, message, bw_update_info, **kwargs):
-        """Update Bandwidth usage in the DB if we're a top level cell."""
-        if not self._at_the_top():
-            return
-        self.db.bw_usage_update(message.ctxt, **bw_update_info)
-
     def _sync_instance(self, ctxt, instance):
         pass
 
@@ -1252,13 +1246,6 @@ class MessageRunner(object):
                                     'instance_delete_everywhere',
                                     method_kwargs, 'down',
                                     run_locally=False)
-        message.process()
-
-    def bw_usage_update_at_top(self, ctxt, bw_update_info):
-        """Update bandwidth usage at top level cell."""
-        message = _BroadcastMessage(self, ctxt, 'bw_usage_update_at_top',
-                                    dict(bw_update_info=bw_update_info),
-                                    'up', run_locally=False)
         message.process()
 
     def sync_instances(self, ctxt, project_id, updated_since, deleted):

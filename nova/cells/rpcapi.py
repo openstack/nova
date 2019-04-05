@@ -215,20 +215,6 @@ class CellsAPI(object):
         cctxt.cast(ctxt, 'instance_delete_everywhere', instance=instance,
                 delete_type=delete_type)
 
-    def bw_usage_update_at_top(self, ctxt, uuid, mac, start_period,
-            bw_in, bw_out, last_ctr_in, last_ctr_out, last_refreshed=None):
-        """Broadcast upwards that bw_usage was updated."""
-        bw_update_info = {'uuid': uuid,
-                          'mac': mac,
-                          'start_period': start_period,
-                          'bw_in': bw_in,
-                          'bw_out': bw_out,
-                          'last_ctr_in': last_ctr_in,
-                          'last_ctr_out': last_ctr_out,
-                          'last_refreshed': last_refreshed}
-        self.client.cast(ctxt, 'bw_usage_update_at_top',
-                         bw_update_info=bw_update_info)
-
     def get_cell_info_for_neighbors(self, ctxt):
         """Get information about our neighbor cells from the manager."""
         if not CONF.cells.enable:

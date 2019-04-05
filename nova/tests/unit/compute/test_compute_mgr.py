@@ -4549,8 +4549,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             bw_usage_update.assert_called_once_with(self.context,
                     uuids.instance,
                     'fake-mac', 0, 4, 6, 1, 2,
-                    last_refreshed=mock.ANY,
-                    update_cells=False)
+                    last_refreshed=mock.ANY)
 
     def test_reverts_task_state_instance_not_found(self):
         # Tests that the reverts_task_state decorator in the compute manager

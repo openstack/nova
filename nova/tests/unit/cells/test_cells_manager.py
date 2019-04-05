@@ -173,15 +173,6 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
                 self.ctxt, instance='fake-instance',
                 delete_type='fake-type')
 
-    def test_bw_usage_update_at_top(self):
-        self.mox.StubOutWithMock(self.msg_runner,
-                                 'bw_usage_update_at_top')
-        self.msg_runner.bw_usage_update_at_top(self.ctxt,
-                                               'fake-bw-info')
-        self.mox.ReplayAll()
-        self.cells_manager.bw_usage_update_at_top(
-                self.ctxt, bw_update_info='fake-bw-info')
-
     def test_heal_instances(self):
         self.flags(instance_updated_at_threshold=1000,
                    instance_update_num_instances=2,
