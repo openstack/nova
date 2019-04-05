@@ -56,7 +56,7 @@ from nova.network.neutronv2 import constants as neutron_constants
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
-from nova import privsep
+import nova.privsep
 from nova import quota as nova_quota
 from nova import rpc
 from nova import service
@@ -2047,7 +2047,7 @@ class PrivsepFixture(fixtures.Fixture):
     def setUp(self):
         super(PrivsepFixture, self).setUp()
         self.useFixture(fixtures.MockPatchObject(
-            privsep.sys_admin_pctxt, 'client_mode', False))
+            nova.privsep.sys_admin_pctxt, 'client_mode', False))
 
 
 class NoopQuotaDriverFixture(fixtures.Fixture):

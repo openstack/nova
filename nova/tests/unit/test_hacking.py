@@ -860,3 +860,37 @@ class HackingTestCase(test.NoDBTestCase):
                    self.assertNotRegexpMatchesbar("Notmatch", output)
                """
         self._assert_has_no_errors(code, checks.assert_regexpmatches)
+
+    def test_import_alias_privsep(self):
+        code = """
+                  from nova import privsep
+                  import nova.privsep as nova_privsep
+                  from nova.privsep import linux_net
+                  import nova.privsep.linux_net as privsep_linux_net
+               """
+        errors = [(x + 1, 0, 'N362') for x in range(4)]
+        bad_filenames = ('nova/foo/bar.py',
+                         'nova/foo/privsep.py',
+                         'nova/privsep_foo/bar.py')
+        for filename in bad_filenames:
+            self._assert_has_errors(
+                code, checks.privsep_imports_not_aliased,
+                expected_errors=errors,
+                filename=filename)
+        good_filenames = ('nova/privsep.py',
+                          'nova/privsep/__init__.py',
+                          'nova/privsep/foo.py')
+        for filename in good_filenames:
+            self._assert_has_no_errors(
+                code, checks.privsep_imports_not_aliased, filename=filename)
+        code = """
+                  import nova.privsep
+                  import nova.privsep.foo
+                  import nova.privsep.foo.bar
+                  import nova.foo.privsep
+                  import nova.foo.privsep.bar
+                  import nova.tests.unit.whatever
+               """
+        for filename in (good_filenames + bad_filenames):
+            self._assert_has_no_errors(
+                code, checks.privsep_imports_not_aliased, filename=filename)

@@ -102,6 +102,9 @@ redundant_import_alias_re = re.compile(r"import (?:.*\.)?(.+) as \1$")
 yield_not_followed_by_space = re.compile(r"^\s*yield(?:\(|{|\[|\"|').*$")
 asse_regexpmatches = re.compile(
     r"(assertRegexpMatches|assertNotRegexpMatches)\(")
+privsep_file_re = re.compile('^nova/privsep[./]')
+privsep_import_re = re.compile(
+    r"^(?:import|from).*\bprivsep\b")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -851,6 +854,34 @@ def assert_regexpmatches(logical_line):
                   "of assertRegexpMatches/assertNotRegexpMatches.")
 
 
+def privsep_imports_not_aliased(logical_line, filename):
+    """Do not abbreviate or alias privsep module imports.
+
+    When accessing symbols under nova.privsep in code or tests, the full module
+    path (e.g. nova.privsep.linux_net.delete_bridge(...)) should be used
+    explicitly rather than importing and using an alias/abbreviation such as:
+
+      from nova.privsep import linux_net
+      ...
+      linux_net.delete_bridge(...)
+
+    See Ief177dbcb018da6fbad13bb0ff153fc47292d5b9.
+
+    N362
+    """
+    if (
+            # Give modules under nova.privsep a pass
+            not privsep_file_re.match(filename) and
+            # Any style of import of privsep...
+            privsep_import_re.match(logical_line) and
+            # ...that isn't 'import nova.privsep[.foo...]'
+            logical_line.count(' ') > 1):
+        yield (0, "N362: always import privsep modules so that the use of "
+                  "escalated permissions is obvious to callers. For example, "
+                  "use 'import nova.privsep.path' instead of "
+                  "'from nova.privsep import path'.")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -895,3 +926,4 @@ def factory(register):
     register(no_redundant_import_alias)
     register(yield_followed_by_space)
     register(assert_regexpmatches)
+    register(privsep_imports_not_aliased)
