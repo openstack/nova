@@ -141,8 +141,7 @@ class ComputeTaskAPI(object):
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate=False, on_shared_storage=False,
                          preserve_ephemeral=False, host=None,
-                         request_spec=None, kwargs=None):
-        # kwargs unused but required for cell compatibility
+                         request_spec=None):
         self.conductor_compute_rpcapi.rebuild_instance(context,
                 instance=instance,
                 new_pass=new_pass,

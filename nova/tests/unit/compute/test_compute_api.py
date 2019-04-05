@@ -3687,7 +3687,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     orig_image_ref=image_href,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
                     preserve_ephemeral=False, host=instance.host,
-                    request_spec=fake_spec, kwargs={})
+                    request_spec=fake_spec)
 
         _check_auto_disk_config.assert_called_once_with(image=image)
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,
@@ -3757,7 +3757,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     orig_image_ref=orig_image_href,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
                     preserve_ephemeral=False, host=None,
-                    request_spec=fake_spec, kwargs={})
+                    request_spec=fake_spec)
             # assert the request spec was modified so the scheduler picks
             # the existing instance host/node
             req_spec_save.assert_called_once_with()
@@ -3824,7 +3824,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     orig_image_ref=image_href,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
                     preserve_ephemeral=False, host=instance.host,
-                    request_spec=fake_spec, kwargs={})
+                    request_spec=fake_spec)
 
         _check_auto_disk_config.assert_called_once_with(image=image)
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,
@@ -3884,7 +3884,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 orig_image_ref=image_href,
                 orig_sys_metadata=orig_system_metadata, bdms=bdms,
                 preserve_ephemeral=False, host=instance.host,
-                request_spec=fake_spec, kwargs={})
+                request_spec=fake_spec)
 
         _check_auto_disk_config.assert_called_once_with(image=image)
         _checks_for_create_and_rebuild.assert_called_once_with(
@@ -3950,7 +3950,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 orig_image_ref=image_href,
                 orig_sys_metadata=orig_system_metadata, bdms=bdms,
                 preserve_ephemeral=False, host=instance.host,
-                request_spec=fake_spec, kwargs={})
+                request_spec=fake_spec)
 
         _check_auto_disk_config.assert_called_once_with(image=image)
         _checks_for_create_and_rebuild.assert_called_once_with(

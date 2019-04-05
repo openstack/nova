@@ -414,7 +414,7 @@ class ComputeTaskAPI(object):
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
             recreate=False, on_shared_storage=False, host=None,
-            preserve_ephemeral=False, request_spec=None, kwargs=None):
+            preserve_ephemeral=False, request_spec=None):
         version = '1.12'
         kw = {'instance': instance,
               'new_pass': new_pass,
