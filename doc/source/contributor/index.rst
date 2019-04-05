@@ -78,6 +78,8 @@ be Python code. All new code needs to be validated somehow.
 
   * :doc:`/contributor/testing/zero-downtime-upgrade`
 
+  * :doc:`/contributor/testing/down-cell`
+
 The Nova API
 ============
 

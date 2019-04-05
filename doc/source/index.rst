@@ -215,6 +215,7 @@ looking parts of our architecture. These are collected below.
    contributor/testing/libvirt-numa
    contributor/testing/serial-console
    contributor/testing/zero-downtime-upgrade
+   contributor/testing/down-cell
    contributor/how-to-get-involved
    contributor/process
    contributor/project-scope
