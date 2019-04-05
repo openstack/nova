@@ -6013,13 +6013,21 @@ class LibvirtDriver(driver.ComputeDriver):
                         fun_cap.device_addrs[0][1],
                         fun_cap.device_addrs[0][2],
                         fun_cap.device_addrs[0][3])
-                    return {
+                    result = {
                         'dev_type': fields.PciDeviceType.SRIOV_VF,
                         'parent_addr': phys_address,
-                        'parent_ifname':
-                            pci_utils.get_ifname_by_pci_address(
-                                pci_address, pf_interface=True),
                     }
+                    parent_ifname = None
+                    try:
+                        parent_ifname = pci_utils.get_ifname_by_pci_address(
+                            pci_address, pf_interface=True)
+                    except exception.PciDeviceNotFoundById:
+                        # NOTE(sean-k-mooney): we ignore this error as it
+                        # is expected when the virtual function is not a NIC.
+                        pass
+                    if parent_ifname:
+                        result['parent_ifname'] = parent_ifname
+                    return result
 
             return {'dev_type': fields.PciDeviceType.STANDARD}
 
