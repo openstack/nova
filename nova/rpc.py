@@ -432,9 +432,7 @@ class ClientRouter(periodic_task.PeriodicTasks):
         self.default_client = default_client
         self.target = default_client.target
         self.version_cap = default_client.version_cap
-        # NOTE(melwitt): Cells v1 does its own serialization and won't
-        # have a serializer available on the client object.
-        self.serializer = getattr(default_client, 'serializer', None)
+        self.serializer = default_client.serializer
 
     def client(self, context):
         transport = context.mq_connection
