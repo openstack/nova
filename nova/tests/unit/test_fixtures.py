@@ -18,6 +18,7 @@ import copy
 import sys
 
 import fixtures as fx
+import futurist
 import mock
 from oslo_config import cfg
 from oslo_db import exception as db_exc
@@ -412,6 +413,17 @@ class TestSpawnIsSynchronousFixture(testtools.TestCase):
 
         gt.link(fake, passed_arg)
         self.assertEqual(1, len(call_count))
+
+
+class TestSynchronousThreadPoolExecutorFixture(testtools.TestCase):
+    def test_submit_passes_through(self):
+        self.useFixture(fixtures.SynchronousThreadPoolExecutorFixture())
+        tester = mock.MagicMock()
+        executor = futurist.GreenThreadPoolExecutor()
+        future = executor.submit(tester.function, 'foo', bar='bar')
+        tester.function.assert_called_once_with('foo', bar='bar')
+        result = future.result()
+        self.assertEqual(tester.function.return_value, result)
 
 
 class TestBannedDBSchemaOperations(testtools.TestCase):
