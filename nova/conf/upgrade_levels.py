@@ -60,30 +60,6 @@ Possible values:
 * An OpenStack release name, in lower case, such as 'mitaka' or
   'liberty'.
 """),
-    cfg.StrOpt('cells',
-        help="""
-Cells RPC API version cap.
-
-Possible values:
-
-* By default send the latest version the client knows about
-* A string representing a version number in the format 'N.N';
-  for example, possible values might be '1.12' or '2.0'.
-* An OpenStack release name, in lower case, such as 'mitaka' or
-  'liberty'.
-"""),
-    cfg.StrOpt('intercell',
-        help="""
-Intercell RPC API version cap.
-
-Possible values:
-
-* By default send the latest version the client knows about
-* A string representing a version number in the format 'N.N';
-  for example, possible values might be '1.12' or '2.0'.
-* An OpenStack release name, in lower case, such as 'mitaka' or
-  'liberty'.
-"""),
     cfg.StrOpt("cert",
         deprecated_for_removal=True,
         deprecated_since='18.0.0',
