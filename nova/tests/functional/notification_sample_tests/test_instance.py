@@ -1056,11 +1056,9 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    @mock.patch('nova.compute.manager.ComputeManager._reschedule',
-                return_value=True)
     @mock.patch('nova.compute.manager.ComputeManager._prep_resize')
     def test_resize_server_error_but_reschedule_was_success(
-            self, mock_prep_resize, mock_reschedule):
+            self, mock_prep_resize):
         """Test it, when the prep_resize method raise an exception,
         but the reschedule_resize_or_reraise was successful and
         scheduled the resize. In this case we get a notification
@@ -1089,6 +1087,14 @@ class TestInstanceNotificationSample(
         }
         fake_notifier.reset()
         mock_prep_resize.side_effect = _build_resources
+        # NOTE(gibi): the first resize_instance call (from the API) should be
+        # unaffected so that we can reach _prep_resize at all. But the
+        # subsequent resize_instance call (from _reschedule_resize_or_reraise)
+        # needs to be mocked as there is no alternative host to resize to.
+        patcher = mock.patch.object(self.compute.manager.compute_task_api,
+                                    'resize_instance')
+        self.addCleanup(patcher.stop)
+        patcher.start()
         self.api.post_server_action(server['id'], post)
         self._wait_for_notification('instance.resize.error')
         self._pop_and_verify_dest_select_notification(server['id'],
@@ -1120,10 +1126,9 @@ class TestInstanceNotificationSample(
             },
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
 
-    @mock.patch('nova.compute.manager.ComputeManager._reschedule')
     @mock.patch('nova.compute.manager.ComputeManager._prep_resize')
     def test_resize_server_error_and_reschedule_was_failed(
-            self, mock_prep_resize, mock_reschedule):
+            self, mock_prep_resize):
         """Test it, when the prep_resize method raise an exception,
         after trying again with the reschedule_resize_or_reraise method
         call, but the rescheduled also was unsuccessful. In this
@@ -1156,9 +1161,17 @@ class TestInstanceNotificationSample(
         }
         fake_notifier.reset()
         mock_prep_resize.side_effect = _build_resources
-        # This isn't realistic that _reschedule would raise FlavorDiskTooSmall,
-        # but it's needed for the notification sample to work.
-        mock_reschedule.side_effect = _build_resources
+        # NOTE(gibi): the first resize_instance call (from the API) should be
+        # unaffected so that we can reach _prep_resize at all. But the
+        # subsequent resize_instance call (from _reschedule_resize_or_reraise)
+        # needs to fail. It isn't realistic that resize_instance would raise
+        # FlavorDiskTooSmall, but it's needed for the notification sample
+        # to work.
+        patcher = mock.patch.object(self.compute.manager.compute_task_api,
+                                    'resize_instance',
+                                    side_effect=_build_resources)
+        self.addCleanup(patcher.stop)
+        patcher.start()
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.api, server, expected_status='ERROR')
         self._wait_for_notification('compute.exception')
