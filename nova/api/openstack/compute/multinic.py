@@ -47,8 +47,6 @@ class MultinicController(wsgi.Controller):
         network_id = body['addFixedIp']['networkId']
         try:
             self.compute_api.add_fixed_ip(context, instance, network_id)
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.NoMoreFixedIps as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
@@ -67,7 +65,5 @@ class MultinicController(wsgi.Controller):
 
         try:
             self.compute_api.remove_fixed_ip(context, instance, address)
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.FixedIpNotFoundForSpecificInstance as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())

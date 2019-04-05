@@ -44,8 +44,6 @@ class AdminActionsController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.reset_network(context, instance)
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
 
@@ -59,8 +57,6 @@ class AdminActionsController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.inject_network_info(context, instance)
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
 
