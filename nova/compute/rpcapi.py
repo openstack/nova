@@ -987,16 +987,12 @@ class ComputeAPI(object):
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'suspend_instance', instance=instance)
 
-    def terminate_instance(self, ctxt, instance, bdms, delete_type=None):
-        # NOTE(rajesht): The `delete_type` parameter is passed because
-        # the method signature has to match with `terminate_instance()`
-        # method of cells rpcapi.
+    def terminate_instance(self, ctxt, instance, bdms):
         client = self.router.client(ctxt)
         version = '5.0'
         cctxt = client.prepare(
                 server=_compute_host(None, instance), version=version)
-        cctxt.cast(ctxt, 'terminate_instance',
-                   instance=instance, bdms=bdms)
+        cctxt.cast(ctxt, 'terminate_instance', instance=instance, bdms=bdms)
 
     def unpause_instance(self, ctxt, instance):
         version = '5.0'
