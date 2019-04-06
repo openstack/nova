@@ -1329,7 +1329,7 @@ class CellV2Commands(object):
                 # we should support.
                 cell_mapping_uuid = host_mapping.cell_mapping.uuid
         if not missing_nodes:
-            print(_('All hosts are already mapped to cell(s), exiting.'))
+            print(_('All hosts are already mapped to cell(s).'))
             return cell_mapping_uuid
         # Create the cell mapping in the API database
         if cell_mapping_uuid is not None:
