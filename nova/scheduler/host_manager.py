@@ -641,6 +641,69 @@ class HostManager(object):
                                  for service in _services})
         return compute_nodes, services
 
+    def _get_cell_by_host(self, ctxt, host):
+        '''Get CellMapping object of a cell the given host belongs to.'''
+        try:
+            host_mapping = objects.HostMapping.get_by_host(ctxt, host)
+            return host_mapping.cell_mapping
+        except exception.HostMappingNotFound:
+            LOG.warning('No host-to-cell mapping found for selected '
+                        'host %(host)s.', {'host': host})
+            return
+
+    def get_compute_nodes_by_host_or_node(self, ctxt, host, node, cell=None):
+        '''Get compute nodes from given host or node'''
+        def return_empty_list_for_not_found(func):
+            def wrapper(*args, **kwargs):
+                try:
+                    ret = func(*args, **kwargs)
+                except exception.NotFound:
+                    ret = objects.ComputeNodeList()
+                return ret
+            return wrapper
+
+        @return_empty_list_for_not_found
+        def _get_by_host_and_node(ctxt):
+            compute_node = objects.ComputeNode.get_by_host_and_nodename(
+                ctxt, host, node)
+            return objects.ComputeNodeList(objects=[compute_node])
+
+        @return_empty_list_for_not_found
+        def _get_by_host(ctxt):
+            return objects.ComputeNodeList.get_all_by_host(ctxt, host)
+
+        @return_empty_list_for_not_found
+        def _get_by_node(ctxt):
+            compute_node = objects.ComputeNode.get_by_nodename(ctxt, node)
+            return objects.ComputeNodeList(objects=[compute_node])
+
+        if host and node:
+            target_fnc = _get_by_host_and_node
+        elif host:
+            target_fnc = _get_by_host
+        else:
+            target_fnc = _get_by_node
+
+        if host and not cell:
+            # optimization not to issue queries to every cell DB
+            cell = self._get_cell_by_host(ctxt, host)
+
+        cells = [cell] if cell else self.enabled_cells
+
+        timeout = context_module.CELL_TIMEOUT
+        nodes_by_cell = context_module.scatter_gather_cells(
+            ctxt, cells, timeout, target_fnc)
+        try:
+            # Only one cell should have a value for the compute nodes
+            # so we get it here
+            nodes = next(
+                nodes for nodes in nodes_by_cell.values() if nodes)
+        except StopIteration:
+            # ...or we find no node if none of the cells has a value
+            nodes = objects.ComputeNodeList()
+
+        return nodes
+
     def refresh_cells_caches(self):
         # NOTE(tssurya): This function is called from the scheduler manager's
         # reset signal handler and also upon startup of the scheduler.

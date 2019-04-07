@@ -1048,6 +1048,100 @@ class HostManagerTestCase(test.NoDBTestCase):
                                         mock.sentinel.c1n2]}, cns)
         self.assertEqual(['a', 'b'], sorted(srv.keys()))
 
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.ComputeNode.get_by_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_host')
+    def test_get_compute_nodes_by_host_or_node(self,
+            mock_get_all, mock_get_host_node, mock_get_node, mock_get_hm):
+        def _varify_result(expected, result):
+            self.assertEqual(len(expected), len(result))
+            for expected_cn, result_cn in zip(expected, result):
+                self.assertEqual(expected_cn.host, result_cn.host)
+                self.assertEqual(expected_cn.node, result_cn.node)
+
+        context = nova_context.RequestContext('fake', 'fake')
+
+        cn1 = objects.ComputeNode(host='fake_multihost', node='fake_node1')
+        cn2 = objects.ComputeNode(host='fake_multihost', node='fake_node2')
+        cn3 = objects.ComputeNode(host='fake_host1', node='fake_node')
+        mock_get_all.return_value = objects.ComputeNodeList(objects=[cn1, cn2])
+        mock_get_host_node.return_value = cn1
+        mock_get_node.return_value = cn3
+
+        mock_get_hm.return_value = objects.HostMapping(
+            context=context,
+            host='fake_multihost',
+            cell_mapping=objects.CellMapping(uuid=uuids.cell1,
+                                             db_connection='none://1',
+                                             transport_url='none://'))
+
+        # Case1: call it with host
+        host = 'fake_multihost'
+        node = None
+
+        result = self.host_manager.get_compute_nodes_by_host_or_node(
+            context, host, node)
+        expected = objects.ComputeNodeList(objects=[cn1, cn2])
+
+        _varify_result(expected, result)
+        mock_get_all.assert_called_once_with(context, 'fake_multihost')
+        mock_get_host_node.assert_not_called()
+        mock_get_node.assert_not_called()
+        mock_get_hm.assert_called_once_with(context, 'fake_multihost')
+
+        mock_get_all.reset_mock()
+        mock_get_hm.reset_mock()
+
+        # Case2: call it with host and node
+        host = 'fake_multihost'
+        node = 'fake_node1'
+
+        result = self.host_manager.get_compute_nodes_by_host_or_node(
+            context, host, node)
+        expected = objects.ComputeNodeList(objects=[cn1])
+
+        _varify_result(expected, result)
+        mock_get_all.assert_not_called()
+        mock_get_host_node.assert_called_once_with(
+            context, 'fake_multihost', 'fake_node1')
+        mock_get_node.assert_not_called()
+        mock_get_hm.assert_called_once_with(context, 'fake_multihost')
+
+        mock_get_host_node.reset_mock()
+        mock_get_hm.reset_mock()
+
+        # Case3: call it with node
+        host = None
+        node = 'fake_node'
+
+        result = self.host_manager.get_compute_nodes_by_host_or_node(
+            context, host, node)
+        expected = objects.ComputeNodeList(objects=[cn3])
+
+        _varify_result(expected, result)
+        mock_get_all.assert_not_called()
+        mock_get_host_node.assert_not_called()
+        mock_get_node.assert_called_once_with(context, 'fake_node')
+        mock_get_hm.assert_not_called()
+
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_host')
+    def test_get_compute_nodes_by_host_or_node_empty_list(
+            self, mock_get_all, mock_get_hm):
+        mock_get_all.side_effect = exception.ComputeHostNotFound(host='fake')
+        mock_get_hm.side_effect = exception.HostMappingNotFound(name='fake')
+
+        context = nova_context.RequestContext('fake', 'fake')
+
+        host = 'fake'
+        node = None
+
+        result = self.host_manager.get_compute_nodes_by_host_or_node(
+            context, host, node)
+
+        self.assertEqual(0, len(result))
+
 
 class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     """Test case for HostManager class."""
