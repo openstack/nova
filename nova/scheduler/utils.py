@@ -412,9 +412,16 @@ def resources_from_flavor(instance, flavor):
     return resources
 
 
-def resources_from_request_spec(spec_obj):
+def resources_from_request_spec(ctxt, spec_obj, host_manager):
     """Given a RequestSpec object, returns a ResourceRequest of the resources,
     traits, and aggregates it represents.
+
+    :param context: The request context.
+    :param spec_obj: A RequestSpec object.
+    :param host_manager: A HostManager object.
+
+    :return: A ResourceRequest object.
+    :raises NoValidHost: If the specified host/node is not found in the DB.
     """
     spec_resources = {
         orc.VCPU: spec_obj.vcpus,
@@ -478,18 +485,54 @@ def resources_from_request_spec(spec_obj):
     for group in requested_resources:
         res_req.add_request_group(group)
 
+    # values to get the destination target compute uuid
+    target_host = None
+    target_node = None
+    target_cell = None
+
     if 'requested_destination' in spec_obj:
         destination = spec_obj.requested_destination
-        if destination and destination.aggregates:
-            grp = res_req.get_request_group(None)
-            grp.aggregates = [ored.split(',')
-                              for ored in destination.aggregates]
+        if destination:
+            if 'host' in destination:
+                target_host = destination.host
+            if 'node' in destination:
+                target_node = destination.node
+            if 'cell' in destination:
+                target_cell = destination.cell
+            if destination.aggregates:
+                grp = res_req.get_request_group(None)
+                grp.aggregates = [ored.split(',')
+                                  for ored in destination.aggregates]
 
-    # Don't limit allocation candidates when using force_hosts or force_nodes.
     if 'force_hosts' in spec_obj and spec_obj.force_hosts:
-        res_req._limit = None
+        # Prioritize the value from requested_destination just in case
+        # so that we don't inadvertently overwrite it to the old value
+        # of force_hosts persisted in the DB
+        target_host = target_host or spec_obj.force_hosts[0]
+
     if 'force_nodes' in spec_obj and spec_obj.force_nodes:
-        res_req._limit = None
+        # Prioritize the value from requested_destination just in case
+        # so that we don't inadvertently overwrite it to the old value
+        # of force_nodes persisted in the DB
+        target_node = target_node or spec_obj.force_nodes[0]
+
+    if target_host or target_node:
+        nodes = host_manager.get_compute_nodes_by_host_or_node(
+            ctxt, target_host, target_node, cell=target_cell)
+        if not nodes:
+            reason = (_('No such host - host: %(host)s node: %(node)s ') %
+                      {'host': target_host, 'node': target_node})
+            raise exception.NoValidHost(reason=reason)
+        if len(nodes) == 1:
+            grp = res_req.get_request_group(None)
+            grp.in_tree = nodes[0].uuid
+        else:
+            # Multiple nodes are found when a target host is specified
+            # without a specific node. Since placement doesn't support
+            # multiple uuids in the `in_tree` queryparam, what we can do here
+            # is to remove the limit from the `GET /a_c` query to prevent
+            # the found nodes from being filtered out in placement.
+            res_req._limit = None
 
     return res_req
 

@@ -133,7 +133,8 @@ class SchedulerManager(manager.Manager):
             except exception.RequestFilterFailed as e:
                 raise exception.NoValidHost(reason=e.message)
 
-            resources = utils.resources_from_request_spec(spec_obj)
+            resources = utils.resources_from_request_spec(
+                ctxt, spec_obj, self.driver.host_manager)
             res = self.placement_client.get_allocation_candidates(ctxt,
                                                                   resources)
             if res is None:
