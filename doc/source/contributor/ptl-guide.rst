@@ -243,6 +243,18 @@ Immediately after RC
 
 * Look for bot proposed changes to reno and stable/<cycle>
 
+* Follow the post-release checklist
+
+  * https://wiki.openstack.org/wiki/Nova/ReleaseChecklist
+
+  * Add database migration placeholders
+
+    * Example: https://review.openstack.org/650964
+
+  * Drop old RPC compat code (if there was a RPC major version bump)
+
+    * Example: https://review.openstack.org/543580
+
 * Create the launchpad series for the next cycle
 
 * Set the development focus of the project to the new cycle series
