@@ -24,9 +24,6 @@ from nova.policies import flavor_extra_specs as fes_policies
 from nova.policies import flavor_manage as fm_policies
 
 
-ALIAS = "os-flavor-manage"
-
-
 class FlavorManageController(wsgi.Controller):
     """The Flavor Lifecycle API controller for the OpenStack API."""
     _view_builder_class = flavors_view.ViewBuilder

@@ -29,8 +29,6 @@ from nova import objects
 from nova.policies import flavor_extra_specs as fes_policies
 from nova import utils
 
-ALIAS = 'flavors'
-
 
 class FlavorsController(wsgi.Controller):
     """Flavor controller for the OpenStack API."""
