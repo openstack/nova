@@ -1137,7 +1137,6 @@ class ComputeTaskManager(base.Base):
                          "Either specify a different image during rebuild "
                          "or create a new server with the specified image "
                          "and a compatible flavor."))
-            return
 
         # If image traits are present, then validate against allocations.
         allocations = self.report_client.get_allocations_for_consumer(
