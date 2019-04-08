@@ -171,20 +171,6 @@ def require_context(f):
     return wrapper
 
 
-def require_instance_exists_using_uuid(f):
-    """Decorator to require the specified instance to exist.
-
-    Requires the wrapped function to use context and instance_uuid as
-    their first two arguments.
-    """
-    @functools.wraps(f)
-    def wrapper(context, instance_uuid, *args, **kwargs):
-        instance_get_by_uuid(context, instance_uuid)
-        return f(context, instance_uuid, *args, **kwargs)
-
-    return wrapper
-
-
 def select_db_reader_mode(f):
     """Decorator to select synchronous or asynchronous reader mode.
 
@@ -1596,7 +1582,6 @@ def virtual_interface_get_by_uuid(context, vif_uuid):
 
 
 @require_context
-@require_instance_exists_using_uuid
 @pick_context_manager_reader_allow_async
 def virtual_interface_get_by_instance(context, instance_uuid):
     """Gets all virtual interfaces for instance.
