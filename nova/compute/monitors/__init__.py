@@ -84,8 +84,10 @@ class MonitorHandler(object):
         if namespace + '.' + ext.name in cfg_monitors:
             self.type_monitor_loaded[namespace] = ext.name
             return True
-        LOG.warning("Excluding %(namespace)s monitor %(monitor_name)s. "
-                    "Not in the list of enabled monitors "
-                    "(CONF.compute_monitors).",
-                    {'namespace': namespace, 'monitor_name': ext.name})
+        # Only log something if compute_monitors is not empty.
+        if CONF.compute_monitors:
+            LOG.warning("Excluding %(namespace)s monitor %(monitor_name)s. "
+                        "Not in the list of enabled monitors "
+                        "(CONF.compute_monitors).",
+                        {'namespace': namespace, 'monitor_name': ext.name})
         return False

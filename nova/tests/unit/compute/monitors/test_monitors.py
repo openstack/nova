@@ -51,3 +51,12 @@ class MonitorsTestCase(test.NoDBTestCase):
                                'mon2')
         self.assertTrue(handler.check_enabled_monitor(ext_cpu_mon1))
         self.assertFalse(handler.check_enabled_monitor(ext_cpu_mon2))
+
+        # Run the check but with no monitors enabled to make sure we don't log.
+        self.flags(compute_monitors=[])
+        handler = monitors.MonitorHandler(None)
+        ext_cpu_mon1 = FakeExt('nova.compute.monitors.cpu.virt_driver:Monitor',
+                               'mon1')
+        with mock.patch.object(monitors.LOG, 'warning') as mock_warning:
+            self.assertFalse(handler.check_enabled_monitor(ext_cpu_mon1))
+        mock_warning.assert_not_called()
