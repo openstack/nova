@@ -42,7 +42,6 @@ from nova.objects import migration as migration_obj
 from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
 from nova import rpc
-from nova.scheduler.client import query
 from nova.scheduler.client import report
 from nova import utils
 from nova.virt import hardware
@@ -147,7 +146,6 @@ class ResourceTracker(object):
         monitor_handler = monitors.MonitorHandler(self)
         self.monitors = monitor_handler.monitors
         self.old_resources = collections.defaultdict(objects.ComputeNode)
-        self.query_client = query.SchedulerQueryClient()
         self.reportclient = report.SchedulerReportClient()
         self.ram_allocation_ratio = CONF.ram_allocation_ratio
         self.cpu_allocation_ratio = CONF.cpu_allocation_ratio
