@@ -180,6 +180,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         ocata_placeholders = list(range(348, 358))
         pike_placeholders = list(range(363, 373))
         queens_placeholders = list(range(379, 389))
+        # We forgot to add the rocky placeholder. We've also switched to 5
+        # placeholders per cycle since the rate of DB changes has dropped
+        # significantly
+        stein_placeholders = list(range(392, 397))
 
         return (special +
                 havana_placeholders +
@@ -191,7 +195,8 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                 newton_placeholders +
                 ocata_placeholders +
                 pike_placeholders +
-                queens_placeholders)
+                queens_placeholders +
+                stein_placeholders)
 
     def migrate_up(self, version, with_data=False):
         if with_data:
