@@ -31,13 +31,6 @@ from nova.tests.unit.virt import powervm
 from nova.virt.powervm import vm
 
 
-LPAR_MAPPING = (
-    {
-        'z3-9-5-126-127-00000001': '089ffb20-5d19-4a8c-bb80-13650627d985',
-        'z3-9-5-126-208-000001f0': '668b0882-c24a-4ae9-91c8-297e95e3fe29'
-    })
-
-
 class TestVMBuilder(test.NoDBTestCase):
 
     def setUp(self):

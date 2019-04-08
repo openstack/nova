@@ -101,14 +101,6 @@ def mask_passwd_in_url(url):
     return urlparse.urlunparse(new_parsed)
 
 
-def _db_error(caught_exception):
-    print(caught_exception)
-    print(_("The above error may show that the database has not "
-            "been created.\nPlease create a database using "
-            "'nova-manage db sync' before running this command."))
-    sys.exit(1)
-
-
 class FloatingIpCommands(object):
     """Class for managing floating IP."""
 
