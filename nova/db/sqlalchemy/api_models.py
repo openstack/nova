@@ -250,6 +250,7 @@ class BuildRequest(API_BASE):
         )
 
     id = Column(Integer, primary_key=True)
+    # TODO(mriedem): instance_uuid should be nullable=False
     instance_uuid = Column(String(36))
     project_id = Column(String(255), nullable=False)
     instance = Column(MediumText())

@@ -59,7 +59,6 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import block_device as block_device_obj
-from nova.objects import build_request as build_request_obj
 from nova.objects import compute_node as compute_node_obj
 from nova.objects import host_mapping as host_mapping_obj
 from nova.objects import instance as instance_obj
@@ -380,10 +379,6 @@ class DbCommands(object):
     # not migratable (or don't need migrating), but all migrations that can
     # complete have finished.
     online_migrations = (
-        # Added in Ocata
-        # NOTE(mriedem): This online migration is going to be backported to
-        # Newton also since it's an upgrade issue when upgrading from Mitaka.
-        build_request_obj.delete_build_requests_with_no_instance_uuid,
         # Added in Pike
         db.service_uuids_online_data_migration,
         # Added in Pike
