@@ -1,4 +1,5 @@
 # Copyright 2013 OpenStack Foundation
+# Copyright 2019 Aptira Pty Ltd
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,9 +18,137 @@ import mock
 
 import nova.privsep.fs
 from nova import test
+from nova.tests import fixtures
 
 
 class PrivsepFilesystemHelpersTestCase(test.NoDBTestCase):
+    """Test filesystem related utility methods."""
+
+    def setUp(self):
+        super(PrivsepFilesystemHelpersTestCase, self).setUp()
+        self.useFixture(fixtures.PrivsepFixture())
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_mount_simple(self, mock_execute):
+        nova.privsep.fs.mount(None, '/dev/nosuch', '/fake/path', None)
+        mock_execute.assert_called_with('mount', '/dev/nosuch', '/fake/path')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_mount_less_simple(self, mock_execute):
+        nova.privsep.fs.mount('ext4', '/dev/nosuch', '/fake/path',
+                              ['-o', 'remount'])
+        mock_execute.assert_called_with('mount', '-t', 'ext4',
+                                        '-o', 'remount',
+                                         '/dev/nosuch', '/fake/path')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_umount(self, mock_execute):
+        nova.privsep.fs.umount('/fake/path')
+        mock_execute.assert_called_with('umount', '/fake/path',
+                                        attempts=3, delay_on_retry=True)
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_lvcreate_simple(self, mock_execute):
+        nova.privsep.fs.lvcreate(1024, 'lv', 'vg')
+        mock_execute.assert_called_with('lvcreate', '-L', '1024b', '-n', 'lv',
+                                        'vg', attempts=3)
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_lvcreate_preallocated(self, mock_execute):
+        nova.privsep.fs.lvcreate(1024, 'lv', 'vg', preallocated=512)
+        mock_execute.assert_called_with('lvcreate', '-L', '512b',
+                                        '--virtualsize', '1024b',
+                                        '-n', 'lv', 'vg', attempts=3)
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_vginfo(self, mock_execute):
+        nova.privsep.fs.vginfo('vg')
+        mock_execute.assert_called_with('vgs', '--noheadings', '--nosuffix',
+                                        '--separator', '|', '--units', 'b',
+                                        '-o', 'vg_size,vg_free', 'vg')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_lvlist(self, mock_execute):
+        nova.privsep.fs.lvlist('vg')
+        mock_execute.assert_called_with('lvs', '--noheadings', '-o',
+                                        'lv_name', 'vg')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_lvinfo(self, mock_execute):
+        nova.privsep.fs.lvinfo('/path/to/lv')
+        mock_execute.assert_called_with('lvs', '-o', 'vg_all,lv_all',
+                                        '--separator', '|', '/path/to/lv')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_lvremove(self, mock_execute):
+        nova.privsep.fs.lvremove('/path/to/lv')
+        mock_execute.assert_called_with('lvremove', '-f', '/path/to/lv',
+                                        attempts=3)
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_blockdev_size(self, mock_execute):
+        nova.privsep.fs.blockdev_size('/dev/nosuch')
+        mock_execute.assert_called_with('blockdev', '--getsize64',
+                                        '/dev/nosuch')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_blockdev_flush(self, mock_execute):
+        nova.privsep.fs.blockdev_flush('/dev/nosuch')
+        mock_execute.assert_called_with('blockdev', '--flushbufs',
+                                        '/dev/nosuch')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_clear_simple(self, mock_execute):
+        nova.privsep.fs.clear('/dev/nosuch', 1024)
+        mock_execute.assert_called_with('shred', '-n0', '-z', '-s1024',
+                                        '/dev/nosuch')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_clear_with_shred(self, mock_execute):
+        nova.privsep.fs.clear('/dev/nosuch', 1024, shred=True)
+        mock_execute.assert_called_with('shred', '-n3', '-s1024',
+                                        '/dev/nosuch')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_loopsetup(self, mock_execute):
+        nova.privsep.fs.loopsetup('/dev/nosuch')
+        mock_execute.assert_called_with('losetup', '--find', '--show',
+                                        '/dev/nosuch')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_loopremove(self, mock_execute):
+        nova.privsep.fs.loopremove('/dev/nosuch')
+        mock_execute.assert_called_with('losetup', '--detach', '/dev/nosuch',
+                                        attempts=3)
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_nbd_connect(self, mock_execute):
+        nova.privsep.fs.nbd_connect('/dev/nosuch', '/fake/path')
+        mock_execute.assert_called_with('qemu-nbd', '-c', '/dev/nosuch',
+                                        '/fake/path')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_nbd_disconnect(self, mock_execute):
+        nova.privsep.fs.nbd_disconnect('/dev/nosuch')
+        mock_execute.assert_called_with('qemu-nbd', '-d', '/dev/nosuch')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_create_device_maps(self, mock_execute):
+        nova.privsep.fs.create_device_maps('/dev/nosuch')
+        mock_execute.assert_called_with('kpartx', '-a', '/dev/nosuch')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_remove_device_maps(self, mock_execute):
+        nova.privsep.fs.remove_device_maps('/dev/nosuch')
+        mock_execute.assert_called_with('kpartx', '-d', '/dev/nosuch')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_get_filesystem_type(self, mock_execute):
+        nova.privsep.fs.get_filesystem_type('/dev/nosuch')
+        mock_execute.assert_called_with('blkid', '-o', 'value', '-s',
+                                        'TYPE', '/dev/nosuch',
+                                        check_exit_code=[0, 2])
+
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_list_partitions(self, mock_execute):
         parted_return = "BYT;\n...\n"
