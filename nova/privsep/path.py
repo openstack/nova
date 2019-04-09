@@ -34,7 +34,7 @@ def readfile(path):
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def writefile(path, mode, content):
-    if not os.path.exists(path):
+    if not os.path.exists(os.path.dirname(path)):
         raise exception.FileNotFound(file_path=path)
     with open(path, mode) as f:
         f.write(content)
