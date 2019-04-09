@@ -625,21 +625,14 @@ class Guest(object):
            VIR_MIGRATE_UNDEFINE_SOURCE If the migration is successful,
                                        undefine the domain on the
                                        source host.
-           VIR_MIGRATE_PAUSED Leave the domain suspended on the remote
-                              side.
-           VIR_MIGRATE_NON_SHARED_DISK Migration with non-shared
-                                       storage with full disk copy
            VIR_MIGRATE_NON_SHARED_INC Migration with non-shared
                                       storage with incremental disk
                                       copy
-           VIR_MIGRATE_CHANGE_PROTECTION Protect against domain
-                                         configuration changes during
-                                         the migration process (set
-                                         automatically when
-                                         supported).
-           VIR_MIGRATE_UNSAFE Force migration even if it is considered
-                              unsafe.
-           VIR_MIGRATE_OFFLINE Migrate offline
+           VIR_MIGRATE_AUTO_CONVERGE Slow down domain to make sure it does
+                                     not change its memory faster than a
+                                     hypervisor can transfer the changed
+                                     memory to the destination host
+           VIR_MIGRATE_POSTCOPY Tell libvirt to enable post-copy migration
            VIR_MIGRATE_TLS Use QEMU-native TLS
         :param bandwidth: The maximum bandwidth in MiB/s
         """
