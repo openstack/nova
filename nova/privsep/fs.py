@@ -142,7 +142,9 @@ def e2fsck(image, flags='-fp'):
     unprivileged_e2fsck(image, flags=flags)
 
 
-# NOTE(mikal): this method is deliberately not wrapped in a privsep entrypoint
+# NOTE(mikal): this method is deliberately not wrapped in a privsep
+# entrypoint. This is not for unit testing, there are some callers who do
+# not require elevated permissions when calling this.
 def unprivileged_e2fsck(image, flags='-fp'):
     processutils.execute('e2fsck', flags, image, check_exit_code=[0, 1, 2])
 
@@ -152,7 +154,9 @@ def resize2fs(image, check_exit_code, size=None):
     unprivileged_resize2fs(image, check_exit_code=check_exit_code, size=size)
 
 
-# NOTE(mikal): this method is deliberately not wrapped in a privsep entrypoint
+# NOTE(mikal): this method is deliberately not wrapped in a privsep
+# entrypoint. This is not for unit testing, there are some callers who do
+# not require elevated permissions when calling this.
 def unprivileged_resize2fs(image, check_exit_code, size=None):
     if size:
         cmd = ['resize2fs', image, size]
@@ -180,7 +184,9 @@ def list_partitions(device):
     return unprivileged_list_partitions(device)
 
 
-# NOTE(mikal): this method is deliberately not wrapped in a privsep entrypoint
+# NOTE(mikal): this method is deliberately not wrapped in a privsep
+# entrypoint. This is not for unit testing, there are some callers who do
+# not require elevated permissions when calling this.
 def unprivileged_list_partitions(device):
     """Return partition information (num, size, type) for a device."""
 
@@ -206,11 +212,6 @@ def unprivileged_list_partitions(device):
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def resize_partition(device, start, end, bootable):
-    return unprivileged_resize_partition(device, start, end, bootable)
-
-
-# NOTE(mikal): this method is deliberately not wrapped in a privsep entrypoint
-def unprivileged_resize_partition(device, start, end, bootable):
     processutils.execute('parted', '--script', device, 'rm', '1')
     processutils.execute('parted', '--script', device, 'mkpart',
                          'primary', '%ds' % start, '%ds' % end)
@@ -237,7 +238,7 @@ def ext_journal_enable(device):
 
 # NOTE(mikal): I really feel like this whole thing should be deprecated, I
 # just don't think its a great idea to let people specify a command in a
-# configuration option to run a root.
+# configuration option to run as root.
 
 _MKFS_COMMAND = {}
 _DEFAULT_MKFS_COMMAND = None
@@ -309,7 +310,9 @@ def mkfs(fs, path, label=None):
     unprivileged_mkfs(fs, path, label=None)
 
 
-# NOTE(mikal): this method is deliberately not wrapped in a privsep entrypoint
+# NOTE(mikal): this method is deliberately not wrapped in a privsep
+# entrypoint. This is not for unit testing, there are some callers who do
+# not require elevated permissions when calling this.
 def unprivileged_mkfs(fs, path, label=None):
     """Format a file or block device
 
