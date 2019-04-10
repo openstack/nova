@@ -703,13 +703,13 @@ class ServicesTestV21(test.TestCase):
             self.assertRaises(webob.exc.HTTPBadRequest,
                               self.controller.delete, self.req, 1234)
 
-    @mock.patch('nova.objects.InstanceList.get_uuids_by_host',
-                return_value=objects.InstanceList())
+    @mock.patch('nova.objects.InstanceList.get_count_by_hosts',
+                return_value=0)
     @mock.patch('nova.objects.HostMapping.get_by_host',
                 side_effect=exception.HostMappingNotFound(name='host1'))
     @mock.patch('nova.objects.Service.destroy')
     def test_compute_service_delete_host_mapping_not_found(
-            self, service_delete, get_instances, get_hm):
+            self, service_delete, get_hm, get_count_by_hosts):
         """Tests that we are still able to successfully delete a nova-compute
         service even if the HostMapping is not found.
         """
@@ -727,7 +727,7 @@ class ServicesTestV21(test.TestCase):
             self.controller.delete(self.req, 2)
             ctxt = self.req.environ['nova.context']
             service_get_by_id.assert_called_once_with(ctxt, 2)
-            get_instances.assert_called_once_with(ctxt, 'host1')
+            get_count_by_hosts.assert_called_once_with(ctxt, ['host1'])
             get_aggregates_by_host.assert_called_once_with(ctxt, 'host1')
             delete_resource_provider.assert_called_once_with(
                 ctxt, service_get_by_id.return_value.compute_node,
