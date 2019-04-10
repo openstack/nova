@@ -16,6 +16,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import instance_actions
 from nova import context as nova_context
+from nova.db import api as db_api
 from nova import exception
 from nova import objects
 from nova.scheduler import weights
@@ -580,6 +581,22 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
 
         # Explicitly delete the server and make sure it's gone from all cells.
         self.delete_server_and_assert_cleanup(server)
+
+        # Run the DB archive code in all cells to make sure we did not mess
+        # up some referential constraint.
+        self._archive_cell_dbs()
+
+    def _archive_cell_dbs(self):
+        ctxt = nova_context.get_admin_context()
+        archived_instances_count = 0
+        for cell in self.cell_mappings.values():
+            with nova_context.target_cell(ctxt, cell) as cctxt:
+                results = db_api.archive_deleted_rows(
+                    context=cctxt, max_rows=1000)[0]
+                archived_instances_count += results.get('instances', 0)
+        # We expect to have archived at least one instance.
+        self.assertGreaterEqual(archived_instances_count, 1,
+                                'No instances were archived from any cell.')
 
     def assert_resize_revert_notifications(self):
         # We should have gotten three notifications:
