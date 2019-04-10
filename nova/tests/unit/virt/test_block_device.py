@@ -191,7 +191,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'destination_type': 'volume',
          'connection_info': '{"fake": "connection_info"}',
          'snapshot_id': 'fake-snapshot-id-1',
-         'volume_id': 'fake-volume-id-2',
          'boot_index': -1,
          'volume_type': None})
 
@@ -379,6 +378,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertEqual(test_bdm._bdm_obj.id, 3)
         self.assertEqual(test_bdm.volume_id, 'fake-volume-id-1')
         self.assertEqual(test_bdm.volume_size, 8)
+        self.assertEqual('fake-volume-id-1', test_bdm.get('volume_id'))
 
     def test_driver_snapshot_block_device(self):
         self._test_driver_device("volsnapshot")
@@ -389,6 +389,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertEqual(test_bdm.snapshot_id, 'fake-snapshot-id-1')
         self.assertEqual(test_bdm.volume_id, 'fake-volume-id-2')
         self.assertEqual(test_bdm.volume_size, 3)
+        self.assertEqual('fake-snapshot-id-1', test_bdm.get('snapshot_id'))
 
     def test_driver_image_block_device(self):
         self._test_driver_device('volimage')
@@ -398,6 +399,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertEqual(test_bdm._bdm_obj.id, 5)
         self.assertEqual(test_bdm.image_id, 'fake-image-id-1')
         self.assertEqual(test_bdm.volume_size, 1)
+        self.assertEqual('fake-image-id-1', test_bdm.get('image_id'))
 
     def test_driver_image_block_device_destination_local(self):
         self._test_driver_device('volimage')
@@ -413,8 +415,9 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         test_bdm = self.driver_classes['volblank'](
             self.volblank_bdm)
         self.assertEqual(6, test_bdm._bdm_obj.id)
-        self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
+        self.assertIsNone(test_bdm.volume_id)
         self.assertEqual(3, test_bdm.volume_size)
+        self.assertIsNone(test_bdm.get('volume_id'))
 
     def _test_call_wait_func(self, delete_on_termination, delete_fail=False):
         test_bdm = self.driver_classes['volume'](self.volume_bdm)
