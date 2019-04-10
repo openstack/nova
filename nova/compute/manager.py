@@ -8204,13 +8204,21 @@ class ComputeManager(manager.Manager):
             _event.send(event)
         else:
             # If it's a network-vif-unplugged event and the instance is being
-            # deleted then we don't need to make this a warning as it's
-            # expected. There are other things which could trigger this like
-            # detaching an interface, but we don't have a task state for that.
+            # deleted or live migrated then we don't need to make this a
+            # warning as it's expected. There are other expected things which
+            # could trigger this event like detaching an interface, but we
+            # don't have a task state for that.
+            # TODO(mriedem): We have other move operations and things like
+            # hard reboot (probably rebuild as well) which trigger this event
+            # but nothing listens for network-vif-unplugged. We should either
+            # handle those other known cases or consider just not logging a
+            # warning if we get this event and the instance is undergoing some
+            # task state transition.
             if (event.name == 'network-vif-unplugged' and
-                    instance.task_state == task_states.DELETING):
-                LOG.debug('Received event %s for instance which is being '
-                          'deleted.', event.key, instance=instance)
+                    instance.task_state in (
+                        task_states.DELETING, task_states.MIGRATING)):
+                LOG.debug('Received event %s for instance with task_state %s.',
+                          event.key, instance.task_state, instance=instance)
             else:
                 LOG.warning('Received unexpected event %(event)s for '
                             'instance with vm_state %(vm_state)s and '
