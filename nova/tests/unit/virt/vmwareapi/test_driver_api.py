@@ -36,6 +36,7 @@ from oslo_vmware import vim_util as oslo_vim_util
 
 from nova.compute import api as compute_api
 from nova.compute import power_state
+from nova.compute import provider_tree
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
@@ -246,6 +247,22 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.fake_image_uuid = self.image.id
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self.vnc_host = 'ha-host'
+
+        # create compute node resource provider
+        self.cn_rp = dict(
+            uuid=uuidsentinel.cn,
+            name=self.node_name,
+        )
+        # create shared storage resource provider
+        self.shared_rp = dict(
+            uuid=uuidsentinel.shared_storage,
+            name='shared_storage_rp',
+        )
+
+        self.pt = provider_tree.ProviderTree()
+        self.pt.new_root(self.cn_rp['name'], self.cn_rp['uuid'], generation=0)
+        self.pt.new_root(self.shared_rp['name'], self.shared_rp['uuid'],
+                         generation=0)
 
     def tearDown(self):
         super(VMwareAPIVMTestCase, self).tearDown()
@@ -2129,7 +2146,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 stats['supported_instances'])
 
     @mock.patch('nova.virt.vmwareapi.ds_util.get_available_datastores')
-    def test_get_inventory(self, mock_get_avail_ds):
+    def test_update_provider_tree(self, mock_get_avail_ds):
         ds1 = ds_obj.Datastore(ref='fake-ref', name='datastore1',
                                capacity=10 * units.Gi, freespace=3 * units.Gi)
         ds2 = ds_obj.Datastore(ref='fake-ref', name='datastore2',
@@ -2137,7 +2154,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         ds3 = ds_obj.Datastore(ref='fake-ref', name='datastore3',
                                capacity=50 * units.Gi, freespace=15 * units.Gi)
         mock_get_avail_ds.return_value = [ds1, ds2, ds3]
-        inv = self.conn.get_inventory(self.node_name)
+        # confirm provider tree has no inventory
+        self.assertFalse(self.pt.has_inventory(self.node_name))
+        # now update it
+        self.conn.update_provider_tree(self.pt, self.node_name)
         expected = {
             orc.VCPU: {
                 'total': 32,
@@ -2145,6 +2165,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 'min_unit': 1,
                 'max_unit': 16,
                 'step_size': 1,
+                'allocation_ratio': 16.0,
             },
             orc.MEMORY_MB: {
                 'total': 2048,
@@ -2152,6 +2173,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 'min_unit': 1,
                 'max_unit': 1024,
                 'step_size': 1,
+                'allocation_ratio': 1.5,
             },
             orc.DISK_GB: {
                 'total': 95,
@@ -2159,9 +2181,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 'min_unit': 1,
                 'max_unit': 25,
                 'step_size': 1,
+                'allocation_ratio': 1.0,
             },
         }
-        self.assertEqual(expected, inv)
+        inventory = self.pt.data(self.node_name).inventory
+        self.assertEqual(expected, inventory)
 
     def test_invalid_datastore_regex(self):
 
