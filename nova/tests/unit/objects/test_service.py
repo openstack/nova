@@ -56,6 +56,7 @@ def _fake_service(**kwargs):
     fake_service.update(kwargs)
     return fake_service
 
+
 fake_service = _fake_service()
 
 OPTIONAL = ['availability_zone', 'compute_node']

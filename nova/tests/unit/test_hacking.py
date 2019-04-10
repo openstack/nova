@@ -16,7 +16,7 @@ import sys
 import textwrap
 
 import mock
-import pep8
+import pycodestyle
 import testtools
 
 from nova.hacking import checks
@@ -25,10 +25,10 @@ from nova import test
 
 class HackingTestCase(test.NoDBTestCase):
     """This class tests the hacking checks in nova.hacking.checks by passing
-    strings to the check methods like the pep8/flake8 parser would. The parser
-    loops over each line in the file and then passes the parameters to the
-    check method. The parameter names in the check method dictate what type of
-    object is passed to the check method. The parameter types are::
+    strings to the check methods like the pycodestyle/flake8 parser would. The
+    parser loops over each line in the file and then passes the parameters to
+    the check method. The parameter names in the check method dictate what type
+    of object is passed to the check method. The parameter types are::
 
         logical_line: A processed line with the following modifications:
             - Multi-line statements converted to a single line.
@@ -45,7 +45,7 @@ class HackingTestCase(test.NoDBTestCase):
         indent_level: indentation (with tabs expanded to multiples of 8)
         previous_indent_level: indentation on previous line
         previous_logical: previous logical line
-        filename: Path of the file being run through pep8
+        filename: Path of the file being run through pycodestyle
 
     When running a test on a check method the return will be False/None if
     there is no violation in the sample input. If there is an error a tuple is
@@ -270,20 +270,20 @@ class HackingTestCase(test.NoDBTestCase):
             len(list(checks.use_jsonutils("json.dumb",
                                  "./nova/virt/xenapi/driver.py"))))
 
-    # We are patching pep8 so that only the check under test is actually
+    # We are patching pycodestyle so that only the check under test is actually
     # installed.
-    @mock.patch('pep8._checks',
+    @mock.patch('pycodestyle._checks',
                 {'physical_line': {}, 'logical_line': {}, 'tree': {}})
     def _run_check(self, code, checker, filename=None):
-        pep8.register_check(checker)
+        pycodestyle.register_check(checker)
 
         lines = textwrap.dedent(code).strip().splitlines(True)
 
-        checker = pep8.Checker(filename=filename, lines=lines)
+        checker = pycodestyle.Checker(filename=filename, lines=lines)
         # NOTE(sdague): the standard reporter has printing to stdout
         # as a normal part of check_all, which bleeds through to the
         # test output stream in an unhelpful way. This blocks that printing.
-        with mock.patch('pep8.StandardReport.get_file_results'):
+        with mock.patch('pycodestyle.StandardReport.get_file_results'):
             checker.check_all()
         checker.report._deferred_print.sort()
         return checker.report._deferred_print
@@ -587,7 +587,7 @@ class HackingTestCase(test.NoDBTestCase):
     def test_check_doubled_words(self):
         errors = [(1, 0, "N343")]
 
-        # Artificial break to stop pep8 detecting the test !
+        # Artificial break to stop flake8 detecting the test !
         code = "This is the" + " the best comment"
         self._assert_has_errors(code, checks.check_doubled_words,
                                 expected_errors=errors)

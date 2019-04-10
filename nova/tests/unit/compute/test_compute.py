@@ -2519,10 +2519,10 @@ class ComputeTestCase(BaseTestCase,
 
         with testtools.ExpectedException(
                 exception.InstanceNotRescuable, expected_message):
-                self.compute.rescue_instance(
-                    self.context, instance=inst_obj,
-                    rescue_password='password', rescue_image_ref=None,
-                    clean_shutdown=True)
+            self.compute.rescue_instance(
+                self.context, instance=inst_obj,
+                rescue_password='password', rescue_image_ref=None,
+                clean_shutdown=True)
 
         self.assertEqual(vm_states.ERROR, inst_obj.vm_state)
         mock_get.assert_called_once_with(mock.ANY, inst_obj, mock.ANY)

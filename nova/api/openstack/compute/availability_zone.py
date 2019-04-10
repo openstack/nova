@@ -88,9 +88,11 @@ class AvailabilityZoneController(wsgi.Controller):
                 hosts[host] = {}
                 for service in host_services[zone + host]:
                     alive = self.servicegroup_api.service_is_up(service)
-                    hosts[host][service['binary']] = {'available': alive,
-                                      'active': True != service['disabled'],
-                                      'updated_at': service['updated_at']}
+                    hosts[host][service['binary']] = {
+                        'available': alive,
+                        'active': service['disabled'] is not True,
+                        'updated_at': service['updated_at']
+                    }
             result.append({'zoneName': zone,
                            'zoneState': {'available': True},
                            "hosts": hosts})

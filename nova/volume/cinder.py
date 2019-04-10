@@ -424,7 +424,8 @@ def translate_volume_exception(method):
 
 
 def translate_attachment_exception(method):
-    """Transforms the exception for the attachment but keeps its traceback intact.
+    """Transforms the exception for the attachment but keeps its traceback
+    intact.
     """
     def wrapper(self, ctx, attachment_id, *args, **kwargs):
         try:

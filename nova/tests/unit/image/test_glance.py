@@ -48,6 +48,7 @@ class tzinfo(datetime.tzinfo):
     def utcoffset(*args, **kwargs):
         return datetime.timedelta()
 
+
 NOW_DATETIME = datetime.datetime(2010, 10, 11, 10, 30, 22, tzinfo=tzinfo())
 
 
@@ -66,6 +67,7 @@ class FakeSchema(object):
 
     def raw(self):
         return copy.deepcopy(self.raw_schema)
+
 
 image_fixtures = {
     'active_image_v1': {

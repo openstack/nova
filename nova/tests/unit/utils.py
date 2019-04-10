@@ -103,6 +103,7 @@ def get_test_instance(context=None, flavor=None, obj=False):
         instance = db.instance_create(context, test_instance)
     return instance
 
+
 FAKE_NETWORK_VLAN = 100
 FAKE_NETWORK_BRIDGE = 'br0'
 FAKE_NETWORK_INTERFACE = 'eth0'

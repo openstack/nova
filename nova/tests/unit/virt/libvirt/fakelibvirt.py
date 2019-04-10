@@ -1034,7 +1034,7 @@ class Domain(object):
       <address uuid='%(address_uuid)s'/>
     </source>
     </hostdev>
-            ''' % hostdev
+            ''' % hostdev  # noqa
 
         return '''<domain type='kvm'>
   <name>%(name)s</name>

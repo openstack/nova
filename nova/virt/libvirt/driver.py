@@ -164,6 +164,7 @@ class InjectionInfo(collections.namedtuple(
         return ('InjectionInfo(network_info=%r, files=%r, '
                 'admin_pass=<SANITIZED>)') % (self.network_info, self.files)
 
+
 libvirt_volume_drivers = [
     'iscsi=nova.virt.libvirt.volume.iscsi.LibvirtISCSIVolumeDriver',
     'iser=nova.virt.libvirt.volume.iser.LibvirtISERVolumeDriver',
@@ -582,14 +583,14 @@ class LibvirtDriver(driver.ComputeDriver):
         # new enough) and "native TLS" options at the same time is
         # nonsensical.
         if (CONF.libvirt.live_migration_tunnelled and
-            CONF.libvirt.live_migration_with_native_tls):
-                msg = _("Setting both 'live_migration_tunnelled' and "
-                        "'live_migration_with_native_tls' at the same "
-                        "time is invalid. If you have the relevant "
-                        "libvirt and QEMU versions, and TLS configured "
-                        "in your environment, pick "
-                        "'live_migration_with_native_tls'.")
-                raise exception.Invalid(msg)
+                CONF.libvirt.live_migration_with_native_tls):
+            msg = _("Setting both 'live_migration_tunnelled' and "
+                    "'live_migration_with_native_tls' at the same "
+                    "time is invalid. If you have the relevant "
+                    "libvirt and QEMU versions, and TLS configured "
+                    "in your environment, pick "
+                    "'live_migration_with_native_tls'.")
+            raise exception.Invalid(msg)
 
         # TODO(sbauza): Remove this code once mediated devices are persisted
         # across reboots.

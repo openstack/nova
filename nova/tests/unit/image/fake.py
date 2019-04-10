@@ -292,6 +292,7 @@ class _FakeImageService(object):
             return 'fake_location'
         return None
 
+
 _fakeImageService = _FakeImageService()
 
 

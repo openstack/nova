@@ -151,8 +151,9 @@ class ServerMigrationsTestsV21(test.NoDBTestCase):
             webob.exc.HTTPNotFound)
 
     def test_force_complete_unexpected_error(self):
-            self._test_force_complete_failed_with_exception(
-                exception.NovaException(), webob.exc.HTTPInternalServerError)
+        self._test_force_complete_failed_with_exception(
+            exception.NovaException(),
+            webob.exc.HTTPInternalServerError)
 
 
 class ServerMigrationsTestsV223(ServerMigrationsTestsV21):

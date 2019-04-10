@@ -145,6 +145,7 @@ def vm_ref_cache_from_name(func):
         return _vm_ref_cache(id, func, session, name)
     return wrapper
 
+
 # the config key which stores the VNC port
 VNC_CONFIG_KEY = 'config.extraConfig["RemoteDisplay.vnc.port"]'
 

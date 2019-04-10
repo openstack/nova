@@ -88,6 +88,7 @@ def _monkey_patch():
                     "importing and not executing nova code.",
                     ', '.join(problems))
 
+
 # NOTE(mdbooth): This workaround is required to avoid breaking sphinx. See
 # separate comment in doc/source/conf.py. It may also be useful for other
 # non-nova utilities. Ideally the requirement for this workaround will be

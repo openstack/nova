@@ -19,12 +19,12 @@ from oslo_log import log as logging
 import paste.urlmap
 import six
 
+from nova.api.openstack import wsgi
+
 if six.PY2:
     import urllib2
 else:
     from urllib import request as urllib2
-
-from nova.api.openstack import wsgi
 
 
 LOG = logging.getLogger(__name__)

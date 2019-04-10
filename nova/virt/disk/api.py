@@ -27,9 +27,6 @@ import os
 import random
 import tempfile
 
-if os.name != 'nt':
-    import crypt
-
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -43,6 +40,9 @@ from nova.virt.disk.mount import api as mount
 from nova.virt.disk.vfs import api as vfs
 from nova.virt.image import model as imgmodel
 from nova.virt import images
+
+if os.name != 'nt':
+    import crypt
 
 
 LOG = logging.getLogger(__name__)

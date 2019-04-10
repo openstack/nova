@@ -153,17 +153,17 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vm_util, 'reconfigure_vm')
     def test_update_volume_details(self, reconfigure_vm,
                                    get_vm_extra_config_spec):
-            volume_uuid = '26f5948e-52a3-4ee6-8d48-0a379afd0828'
-            device_uuid = '0d86246a-2adb-470d-a9f7-bce09930c5d'
-            self._volumeops._update_volume_details(
-                mock.sentinel.vm_ref, volume_uuid, device_uuid)
+        volume_uuid = '26f5948e-52a3-4ee6-8d48-0a379afd0828'
+        device_uuid = '0d86246a-2adb-470d-a9f7-bce09930c5d'
+        self._volumeops._update_volume_details(
+            mock.sentinel.vm_ref, volume_uuid, device_uuid)
 
-            get_vm_extra_config_spec.assert_called_once_with(
-                self._volumeops._session.vim.client.factory,
-                {'volume-%s' % volume_uuid: device_uuid})
-            reconfigure_vm.assert_called_once_with(self._volumeops._session,
-                                                   mock.sentinel.vm_ref,
-                                                   mock.sentinel.extra_config)
+        get_vm_extra_config_spec.assert_called_once_with(
+            self._volumeops._session.vim.client.factory,
+            {'volume-%s' % volume_uuid: device_uuid})
+        reconfigure_vm.assert_called_once_with(self._volumeops._session,
+                                               mock.sentinel.vm_ref,
+                                               mock.sentinel.extra_config)
 
     def _fake_connection_info(self):
         return {'driver_volume_type': 'vmdk',

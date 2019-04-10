@@ -2501,12 +2501,12 @@ class TestResize(BaseTestCase):
         ctx = mock.MagicMock()
 
         with test.nested(
-            mock.patch.object(self.rt, '_update'),
-            mock.patch.object(self.rt.pci_tracker, 'free_device')
-            ) as (update_mock, mock_pci_free_device):
-                self.rt.drop_move_claim(ctx, instance, _NODENAME)
-                mock_pci_free_device.assert_called_once_with(
-                    pci_dev, mock.ANY)
+                mock.patch.object(self.rt, '_update'),
+                mock.patch.object(self.rt.pci_tracker, 'free_device')
+                ) as (update_mock, mock_pci_free_device):
+            self.rt.drop_move_claim(ctx, instance, _NODENAME)
+            mock_pci_free_device.assert_called_once_with(
+                pci_dev, mock.ANY)
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
