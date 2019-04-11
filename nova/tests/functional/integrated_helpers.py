@@ -267,7 +267,7 @@ class InstanceHelperMixin(object):
 
     def _build_minimal_create_server_request(self, api, name, image_uuid=None,
                                              flavor_id=None, networks=None,
-                                             az=None):
+                                             az=None, host=None):
         server = {}
 
         # We now have a valid imageId
@@ -282,6 +282,9 @@ class InstanceHelperMixin(object):
             server['networks'] = networks
         if az is not None:
             server['availability_zone'] = az
+        # This requires at least microversion 2.74 to work
+        if host is not None:
+            server['host'] = host
         return server
 
     def _wait_until_deleted(self, server):
