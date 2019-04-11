@@ -677,7 +677,7 @@ class ComputeTaskManager(base.Base):
                             # the allocation of the instance to another host
                             # TODO(gibi): handle if the below call raises
                             self._fill_provider_mapping(
-                                context, instance.uuid, request_spec)
+                                context, instance.uuid, request_spec, host)
                     else:
                         # Some deployments use different schedulers that do not
                         # use Placement, so they will not have an
@@ -1263,7 +1263,8 @@ class ComputeTaskManager(base.Base):
                 with obj_target_cell(inst, cell0):
                     inst.destroy()
 
-    def _fill_provider_mapping(self, context, instance_uuid, request_spec):
+    def _fill_provider_mapping(
+            self, context, instance_uuid, request_spec, host_selection):
         """Fills out the request group - resource provider mapping in the
         request spec.
 
@@ -1275,26 +1276,26 @@ class ComputeTaskManager(base.Base):
         replaced with a simpler code that copies the group - RP
         mapping out from the Selection object returned by the scheduler's
         select_destinations call.
+
+        :param context: The security context
+        :param instance_uuid: The UUID of the instance for which the provider
+            mapping is filled
+        :param request_spec: The RequestSpec object associated with the
+            operation
+        :param host_selection: The Selection object returned by the scheduler
+            for this operation
         """
         # Exit early if this request spec does not require mappings.
         if not request_spec.maps_requested_resources:
             return
-        # TODO(mriedem): Could we use the Selection.allocation_request here
-        # to get the resource providers rather than making an API call to
-        # placement per instance being scheduled? Granted that is a
-        # PUT /allocations/{consumer_id} *request* payload rather than a
-        # *response* but at least currently they are in the same format and
-        # could make this faster.
-        allocs = self.report_client.get_allocs_for_consumer(
-            context, instance_uuid)['allocations']
-        if not allocs:
-            # Technically out-of-tree scheduler drivers can still not create
-            # allocations in placement so move on if there are no allocations
-            # for the instance.
-            LOG.debug('No allocations found for instance after scheduling. '
-                      'Assuming the scheduler driver is not using Placement.',
-                      instance_uuid=instance_uuid)
-            return
+
+        # Technically out-of-tree scheduler drivers can still not create
+        # allocations in placement but if request_spec.maps_requested_resources
+        # is not empty and the scheduling succeeded then placement has to be
+        # involved
+        ar = jsonutils.loads(host_selection.allocation_request)
+        allocs = ar['allocations']
+
         # TODO(mriedem): Short-term we can optimize this by passing a cache by
         # reference of the RP->traits mapping because if we are processing
         # a multi-create request we could have the same RPs being used for
@@ -1307,6 +1308,9 @@ class ComputeTaskManager(base.Base):
             rp_uuid: self.report_client.get_provider_traits(
                 context, rp_uuid).traits
             for rp_uuid in allocs}
+        # NOTE(gibi): The allocs dict is in the format of the PUT /allocations
+        # and that format can change. The current format can be detected from
+        # host_selection.allocation_request_version
         request_spec.map_requested_resources_to_providers(
             allocs, provider_traits)
 
@@ -1430,7 +1434,7 @@ class ComputeTaskManager(base.Base):
             # map allocations to resource providers in the request spec.
             try:
                 self._fill_provider_mapping(
-                    context, instance.uuid, request_spec)
+                    context, instance.uuid, request_spec, host)
             except Exception as exc:
                 # If anything failed here we need to cleanup and bail out.
                 with excutils.save_and_reraise_exception():
