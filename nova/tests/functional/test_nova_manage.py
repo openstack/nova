@@ -633,6 +633,14 @@ class TestNovaManagePlacementHealAllocations(
         allocations = allocations['allocations']
         self.assertIn(rp_uuid, allocations)
         self.assertFlavorMatchesAllocation(self.flavor, server['id'], rp_uuid)
+        # First do a dry run.
+        result = self.cli.heal_allocations(verbose=True, dry_run=True)
+        # Nothing changed so the return code should be 4.
+        self.assertEqual(4, result, self.output.getvalue())
+        output = self.output.getvalue()
+        self.assertIn('Processed 0 instances.', output)
+        self.assertIn('[dry-run] Update allocations for instance %s' %
+                      server['id'], output)
         # Now run heal_allocations which should update the consumer info.
         result = self.cli.heal_allocations(verbose=True)
         self.assertEqual(0, result, self.output.getvalue())
@@ -644,6 +652,19 @@ class TestNovaManagePlacementHealAllocations(
             '/allocations/%s' % server['id'], version='1.12').body
         self.assertEqual(server['tenant_id'], allocations['project_id'])
         self.assertEqual(server['user_id'], allocations['user_id'])
+
+    def test_heal_allocations_dry_run(self):
+        """Tests to make sure the --dry-run option does not commit changes."""
+        # Create a server with no allocations.
+        server, rp_uuid = self._boot_and_assert_no_allocations(
+            self.flavor, 'cell1')
+        result = self.cli.heal_allocations(verbose=True, dry_run=True)
+        # Nothing changed so the return code should be 4.
+        self.assertEqual(4, result, self.output.getvalue())
+        output = self.output.getvalue()
+        self.assertIn('Processed 0 instances.', output)
+        self.assertIn('[dry-run] Create allocations for instance %s on '
+                      'provider %s' % (server['id'], rp_uuid), output)
 
 
 class TestNovaManagePlacementSyncAggregates(

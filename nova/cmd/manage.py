@@ -1833,7 +1833,7 @@ class PlacementCommands(object):
         return node_uuid
 
     def _heal_allocations_for_instance(self, ctxt, instance, node_cache,
-                                       output, placement):
+                                       output, placement, dry_run):
         """Checks the given instance to see if it needs allocation healing
 
         :param ctxt: cell-targeted nova.context.RequestContext
@@ -1843,6 +1843,8 @@ class PlacementCommands(object):
         :param outout: function that takes a single message for verbose output
         :param placement: nova.scheduler.client.report.SchedulerReportClient
             to communicate with the Placement service API.
+        :param dry_run: Process instances and print output but do not commit
+            any changes.
         :return: True if allocations were created or updated for the instance,
             None if nothing needed to be done
         :raises: nova.exception.ComputeHostNotFound if a compute node for a
@@ -1902,16 +1904,21 @@ class PlacementCommands(object):
             # We use CONSUMER_GENERATION_VERSION for PUT
             # /allocations/{consumer_id} to mirror the body structure from
             # get_allocs_for_consumer.
-            resp = placement.put(
-                '/allocations/%s' % instance.uuid,
-                allocations, version=report.CONSUMER_GENERATION_VERSION)
-            if resp:
-                output(_('Successfully updated allocations for '
-                         'instance %s.') % instance.uuid)
-                return True
+            if dry_run:
+                output(_('[dry-run] Update allocations for instance '
+                         '%(instance)s: %(allocations)s') %
+                       {'instance': instance.uuid, 'allocations': allocations})
             else:
-                raise exception.AllocationUpdateFailed(
-                    consumer_uuid=instance.uuid, error=resp.text)
+                resp = placement.put(
+                    '/allocations/%s' % instance.uuid,
+                    allocations, version=report.CONSUMER_GENERATION_VERSION)
+                if resp:
+                    output(_('Successfully updated allocations for '
+                             'instance %s.') % instance.uuid)
+                    return True
+                else:
+                    raise exception.AllocationUpdateFailed(
+                        consumer_uuid=instance.uuid, error=resp.text)
 
         # This instance doesn't have allocations so we need to find
         # its compute node resource provider.
@@ -1922,21 +1929,27 @@ class PlacementCommands(object):
         # on its embedded flavor.
         resources = scheduler_utils.resources_from_flavor(
             instance, instance.flavor)
-        if placement.put_allocations(
-                ctxt, node_uuid, instance.uuid, resources,
-                instance.project_id, instance.user_id,
-                consumer_generation=None):
-            output(_('Successfully created allocations for '
-                     'instance %(instance)s against resource '
-                     'provider %(provider)s.') %
-                   {'instance': instance.uuid, 'provider': node_uuid})
-            return True
+        if dry_run:
+            output(_('[dry-run] Create allocations for instance %(instance)s '
+                     'on provider %(node_uuid)s: %(resources)s') %
+                   {'instance': instance.uuid, 'node_uuid': node_uuid,
+                    'resources': resources})
         else:
-            raise exception.AllocationCreateFailed(
-                instance=instance.uuid, provider=node_uuid)
+            if placement.put_allocations(
+                    ctxt, node_uuid, instance.uuid, resources,
+                    instance.project_id, instance.user_id,
+                    consumer_generation=None):
+                output(_('Successfully created allocations for '
+                         'instance %(instance)s against resource '
+                         'provider %(provider)s.') %
+                       {'instance': instance.uuid, 'provider': node_uuid})
+                return True
+            else:
+                raise exception.AllocationCreateFailed(
+                    instance=instance.uuid, provider=node_uuid)
 
     def _heal_instances_in_cell(self, ctxt, max_count, unlimited, output,
-                                placement):
+                                placement, dry_run):
         """Checks for instances to heal in a given cell.
 
         :param ctxt: cell-targeted nova.context.RequestContext
@@ -1946,6 +1959,8 @@ class PlacementCommands(object):
         :param outout: function that takes a single message for verbose output
         :param placement: nova.scheduler.client.report.SchedulerReportClient
             to communicate with the Placement service API.
+        :param dry_run: Process instances and print output but do not commit
+            any changes.
         :return: Number of instances that had allocations created.
         :raises: nova.exception.ComputeHostNotFound if a compute node for a
             given instance cannot be found
@@ -1981,7 +1996,8 @@ class PlacementCommands(object):
             # continue.
             for instance in instances:
                 if self._heal_allocations_for_instance(
-                        ctxt, instance, node_cache, output, placement):
+                        ctxt, instance, node_cache, output, placement,
+                        dry_run):
                     num_processed += 1
 
             # Make sure we don't go over the max count. Note that we
@@ -2019,7 +2035,10 @@ class PlacementCommands(object):
                '0 or 4.')
     @args('--verbose', action='store_true', dest='verbose', default=False,
           help='Provide verbose output during execution.')
-    def heal_allocations(self, max_count=None, verbose=False):
+    @args('--dry-run', action='store_true', dest='dry_run', default=False,
+          help='Runs the command and prints output but does not commit any '
+               'changes. The return code should be 4.')
+    def heal_allocations(self, max_count=None, verbose=False, dry_run=False):
         """Heals instance allocations in the Placement service
 
         Return codes:
@@ -2033,8 +2052,6 @@ class PlacementCommands(object):
         * 127: Invalid input.
         """
         # NOTE(mriedem): Thoughts on ways to expand this:
-        # - add a --dry-run option to just print which instances would have
-        #   allocations created for them
         # - allow passing a specific cell to heal
         # - allow filtering on enabled/disabled cells
         # - allow passing a specific instance to heal
@@ -2096,7 +2113,8 @@ class PlacementCommands(object):
             with context.target_cell(ctxt, cell) as cctxt:
                 try:
                     num_processed += self._heal_instances_in_cell(
-                        cctxt, limit_per_cell, unlimited, output, placement)
+                        cctxt, limit_per_cell, unlimited, output, placement,
+                        dry_run)
                 except exception.ComputeHostNotFound as e:
                     print(e.format_message())
                     return 2
