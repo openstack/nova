@@ -206,6 +206,8 @@ class TestCase(testtools.TestCase):
             os.environ.get('OS_TEST_TIMEOUT', 0),
             self.TIMEOUT_SCALING_FACTOR))
 
+        self.useFixture(nova_fixtures.OpenStackSDKFixture())
+
         self.useFixture(fixtures.NestedTempfile())
         self.useFixture(fixtures.TempHomeDir())
         self.useFixture(log_fixture.get_logging_handle_error_fixture())

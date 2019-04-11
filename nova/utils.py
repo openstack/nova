@@ -34,6 +34,7 @@ import eventlet
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as ks_loading
 import netaddr
+from openstack import connection
 import os_resource_classes as orc
 from os_service_types import service_types
 from oslo_concurrency import lockutils
@@ -1158,6 +1159,38 @@ def strtime(at):
     return at.strftime("%Y-%m-%dT%H:%M:%S.%f")
 
 
+def _get_conf_group(service_type):
+    # Get the conf group corresponding to the service type.
+    confgrp = _SERVICE_TYPES.get_project_name(service_type)
+    if not confgrp or not hasattr(CONF, confgrp):
+        # Try the service type as the conf group.  This is necessary for e.g.
+        # placement, while it's still part of the nova project.
+        # Note that this might become the first thing we try if/as we move to
+        # using service types for conf group names in general.
+        confgrp = service_type
+        if not confgrp or not hasattr(CONF, confgrp):
+            raise exception.ConfGroupForServiceTypeNotFound(stype=service_type)
+    return confgrp
+
+
+def _get_auth_and_session(confgrp, ksa_auth=None, ksa_session=None):
+    # Ensure we have an auth.
+    # NOTE(efried): This could be None, and that could be okay - e.g. if the
+    # result is being used for get_endpoint() and the conf only contains
+    # endpoint_override.
+    if not ksa_auth:
+        if ksa_session and ksa_session.auth:
+            ksa_auth = ksa_session.auth
+        else:
+            ksa_auth = ks_loading.load_auth_from_conf_options(CONF, confgrp)
+
+    if not ksa_session:
+        ksa_session = ks_loading.load_session_from_conf_options(
+            CONF, confgrp, auth=ksa_auth)
+
+    return ksa_auth, ksa_session
+
+
 def get_ksa_adapter(service_type, ksa_auth=None, ksa_session=None,
                     min_version=None, max_version=None):
     """Construct a keystoneauth1 Adapter for a given service type.
@@ -1191,34 +1224,33 @@ def get_ksa_adapter(service_type, ksa_auth=None, ksa_session=None,
     :raise: ConfGroupForServiceTypeNotFound If no conf group name could be
             found for the specified service_type.
     """
-    # Get the conf group corresponding to the service type.
-    confgrp = _SERVICE_TYPES.get_project_name(service_type)
-    if not confgrp or not hasattr(CONF, confgrp):
-        # Try the service type as the conf group.  This is necessary for e.g.
-        # placement, while it's still part of the nova project.
-        # Note that this might become the first thing we try if/as we move to
-        # using service types for conf group names in general.
-        confgrp = service_type
-        if not confgrp or not hasattr(CONF, confgrp):
-            raise exception.ConfGroupForServiceTypeNotFound(stype=service_type)
+    confgrp = _get_conf_group(service_type)
 
-    # Ensure we have an auth.
-    # NOTE(efried): This could be None, and that could be okay - e.g. if the
-    # result is being used for get_endpoint() and the conf only contains
-    # endpoint_override.
-    if not ksa_auth:
-        if ksa_session and ksa_session.auth:
-            ksa_auth = ksa_session.auth
-        else:
-            ksa_auth = ks_loading.load_auth_from_conf_options(CONF, confgrp)
-
-    if not ksa_session:
-        ksa_session = ks_loading.load_session_from_conf_options(
-            CONF, confgrp, auth=ksa_auth)
+    ksa_auth, ksa_session = _get_auth_and_session(
+        confgrp, ksa_auth, ksa_session)
 
     return ks_loading.load_adapter_from_conf_options(
         CONF, confgrp, session=ksa_session, auth=ksa_auth,
         min_version=min_version, max_version=max_version, raise_exc=False)
+
+
+def get_sdk_adapter(service_type):
+    """Construct an openstacksdk-brokered Adapter for a given service type.
+
+    We expect to find a conf group whose name corresponds to the service_type's
+    project according to the service-types-authority.  That conf group must
+    provide ksa auth, session, and adapter options.
+
+    :param service_type: String name of the service type for which the Adapter
+                         is to be constructed.
+    :return: An openstack.proxy.Proxy object for the specified service_type.
+    :raise: ConfGroupForServiceTypeNotFound If no conf group name could be
+            found for the specified service_type.
+    """
+    confgrp = _get_conf_group(service_type)
+    _, sess = _get_auth_and_session(confgrp)
+    conn = connection.Connection(session=sess, oslo_conf=CONF)
+    return getattr(conn, service_type)
 
 
 def get_endpoint(ksa_adapter):
