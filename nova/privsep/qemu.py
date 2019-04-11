@@ -55,6 +55,8 @@ def unprivileged_convert_image(source, dest, in_format, out_format,
     # just like 'writethrough', calls fsync(2)|fdatasync(2), which
     # ensures to safely write the data to the physical disk.
 
+    # NOTE(mikal): there is an assumption here that the source and destination
+    # are in the instances_path. Is that worth enforcing?
     if nova.privsep.utils.supports_direct_io(instances_path):
         cache_mode = 'none'
     else:
