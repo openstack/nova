@@ -112,7 +112,7 @@ def revert_allocation_for_migration(context, source_cn, instance, migration):
 class MigrationTask(base.TaskBase):
     def __init__(self, context, instance, flavor,
                  request_spec, clean_shutdown, compute_rpcapi,
-                 query_client, report_client, host_list):
+                 query_client, report_client, host_list, network_api):
         super(MigrationTask, self).__init__(context, instance)
         self.clean_shutdown = clean_shutdown
         self.request_spec = request_spec
@@ -122,6 +122,7 @@ class MigrationTask(base.TaskBase):
         self.query_client = query_client
         self.reportclient = report_client
         self.host_list = host_list
+        self.network_api = network_api
 
         # Persist things from the happy path so we don't have to look
         # them up if we need to roll back

@@ -60,6 +60,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         self.ensure_network_metadata_mock = _p.start()
         self.addCleanup(_p.stop)
 
+        self.mock_network_api = mock.Mock()
+
     def _generate_task(self):
         return migrate.MigrationTask(self.context, self.instance, self.flavor,
                                      self.request_spec,
@@ -67,7 +69,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
                                      compute_rpcapi.ComputeAPI(),
                                      query.SchedulerQueryClient(),
                                      report.SchedulerReportClient(),
-                                     host_list=None)
+                                     host_list=None,
+                                     network_api=self.mock_network_api)
 
     @mock.patch.object(objects.MigrationList, 'get_by_filters')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
