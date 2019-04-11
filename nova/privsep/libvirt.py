@@ -72,8 +72,7 @@ def ploop_init(size, disk_format, fs_type, disk_path):
     :param disk_path: ploop image file
     """
     processutils.execute('ploop', 'init', '-s', size, '-f', disk_format, '-t',
-                         fs_type, disk_path, run_as_root=True,
-                         check_exit_code=True)
+                         fs_type, disk_path, check_exit_code=True)
 
     # Add read access for all users, because "ploop init" creates
     # disk with rw rights only for root. OpenStack user should have access
@@ -98,7 +97,7 @@ def ploop_resize(disk_path, size):
                          '--size', '%dM' % (size // units.Mi),
                          '--resize_partition',
                          '--hdd', disk_path,
-                         run_as_root=True, check_exit_code=True)
+                         check_exit_code=True)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
@@ -111,7 +110,7 @@ def ploop_restore_descriptor(image_dir, base_delta, fmt):
     """
     processutils.execute('ploop', 'restore-descriptor', '-f', fmt,
                          image_dir, base_delta,
-                         run_as_root=True, check_exit_code=True)
+                         check_exit_code=True)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
@@ -227,7 +226,7 @@ def systemd_run_qb_mount(qb_vol, mnt_base, cfg_file=None):
     return processutils.execute(*sysdr_cmd)
 
 
-# NOTE(kaisers): this method is deliberately not wrapped in a privsep entryp.
+# NOTE(kaisers): this method is deliberately not wrapped in a privsep entry.
 def unprivileged_qb_mount(qb_vol, mnt_base, cfg_file=None):
     """Mount QB volume"""
     mnt_cmd = ['mount.quobyte', '--disable-xattrs', qb_vol, mnt_base]
@@ -242,7 +241,7 @@ def umount(mnt_base):
     unprivileged_umount(mnt_base)
 
 
-# NOTE(kaisers): this method is deliberately not wrapped in a privsep entryp.
+# NOTE(kaisers): this method is deliberately not wrapped in a privsep entry.
 def unprivileged_umount(mnt_base):
     """Unmount volume"""
     umnt_cmd = ['umount', mnt_base]
