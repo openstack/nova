@@ -148,6 +148,7 @@ _DEFAULT_QUOTA_NAME = 'default'
 PER_PROJECT_QUOTAS = ['fixed_ips', 'floating_ips', 'networks']
 
 
+# NOTE(stephenfin): This is required and used by oslo.db
 def get_backend():
     """The backend is this module itself."""
     return sys.modules[__name__]
@@ -963,15 +964,6 @@ def floating_ip_create(context, values):
     return floating_ip_ref
 
 
-def _floating_ip_count_by_project(context, project_id):
-    nova.context.authorize_project_context(context, project_id)
-    # TODO(tr3buchet): why leave auto_assigned floating IPs out?
-    return model_query(context, models.FloatingIp, read_deleted="no").\
-                   filter_by(project_id=project_id).\
-                   filter_by(auto_assigned=False).\
-                   count()
-
-
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
@@ -1505,16 +1497,6 @@ def fixed_ips_by_virtual_interface(context, vif_id):
 @pick_context_manager_writer
 def fixed_ip_update(context, address, values):
     _fixed_ip_get_by_address(context, address).update(values)
-
-
-def _fixed_ip_count_by_project(context, project_id):
-    nova.context.authorize_project_context(context, project_id)
-    return model_query(context, models.FixedIp, (models.FixedIp.id,),
-                       read_deleted="no").\
-                join((models.Instance,
-                      models.Instance.uuid == models.FixedIp.instance_uuid)).\
-                filter(models.Instance.project_id == project_id).\
-                count()
 
 
 ###################
@@ -4084,14 +4066,6 @@ def security_group_destroy(context, security_group_id):
     model_query(context, models.SecurityGroupIngressRule).\
             filter_by(parent_group_id=security_group_id).\
             soft_delete()
-
-
-def _security_group_count_by_project_and_user(context, project_id, user_id):
-    nova.context.authorize_project_context(context, project_id)
-    return model_query(context, models.SecurityGroup, read_deleted="no").\
-                   filter_by(project_id=project_id).\
-                   filter_by(user_id=user_id).\
-                   count()
 
 
 ###################
