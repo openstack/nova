@@ -1,0 +1,6 @@
+---
+other:
+  - |
+    An ``--instance`` option has been added to the
+    ``nova-manage placement heal_allocations`` CLI which allows running the
+    command on a specific instance given its UUID.
