@@ -1513,13 +1513,6 @@ class ComputeTaskManager(base.Base):
                                               'build_instances', updates, exc,
                                               request_spec)
 
-            # TODO(mnaser): The cell mapping should already be populated by
-            #               this point to avoid setting it below here.
-            inst_mapping = objects.InstanceMapping.get_by_instance_uuid(
-                context, instance.uuid)
-            inst_mapping.cell_mapping = cell
-            inst_mapping.save()
-
             # In order to properly clean-up volumes when deleting a server in
             # ERROR status with no host, we need to store BDMs in the same
             # cell.
@@ -1534,6 +1527,18 @@ class ComputeTaskManager(base.Base):
             if tags:
                 with nova_context.target_cell(context, cell) as cctxt:
                     self._create_tags(cctxt, instance.uuid, tags)
+
+            # NOTE(mdbooth): To avoid an incomplete instance record being
+            #                returned by the API, the instance mapping must be
+            #                created after the instance record is complete in
+            #                the cell, and before the build request is
+            #                destroyed.
+            # TODO(mnaser): The cell mapping should already be populated by
+            #               this point to avoid setting it below here.
+            inst_mapping = objects.InstanceMapping.get_by_instance_uuid(
+                context, instance.uuid)
+            inst_mapping.cell_mapping = cell
+            inst_mapping.save()
 
             # Be paranoid about artifacts being deleted underneath us.
             try:
