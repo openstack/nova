@@ -20,6 +20,7 @@ from nova import config
 from nova import context
 from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 
 CONF = config.CONF
@@ -374,6 +375,7 @@ class TestNovaManagePlacementHealAllocations(
         # allocations via the CLI.
         self.flags(driver='caching_scheduler', group='scheduler')
         super(TestNovaManagePlacementHealAllocations, self).setUp()
+        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
         self.cli = manage.PlacementCommands()
         # We need to start a compute in each non-cell0 cell.
         for cell_name, cell_mapping in self.cell_mappings.items():
@@ -396,11 +398,14 @@ class TestNovaManagePlacementHealAllocations(
         self.scheduler_service.manager.driver.all_host_states = None
         self.scheduler_service.start()
 
-    def _boot_and_assert_no_allocations(self, flavor, hostname):
+    def _boot_and_assert_no_allocations(self, flavor, hostname,
+                                        volume_backed=False):
         """Creates a server on the given host and asserts neither have usage
 
         :param flavor: the flavor used to create the server
         :param hostname: the host on which to create the server
+        :param volume_backed: True if the server should be volume-backed and
+            as a result not have any DISK_GB allocation
         :returns: two-item tuple of the server and the compute node resource
                   provider uuid
         """
@@ -409,6 +414,15 @@ class TestNovaManagePlacementHealAllocations(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
         server_req['availability_zone'] = 'nova:%s' % hostname
+        if volume_backed:
+            vol_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+            server_req['block_device_mapping_v2'] = [{
+                'source_type': 'volume',
+                'destination_type': 'volume',
+                'boot_index': 0,
+                'uuid': vol_id
+            }]
+            server_req['imageRef'] = ''
         created_server = self.api.post_server({'server': server_req})
         server = self._wait_for_state_change(
             self.admin_api, created_server, 'ACTIVE')
@@ -682,8 +696,8 @@ class TestNovaManagePlacementHealAllocations(
         self._boot_and_assert_no_allocations(
             self.flavor, 'cell1')
         # Create another that we will process specifically.
-        server, _ = self._boot_and_assert_no_allocations(
-            self.flavor, 'cell1')
+        server, rp_uuid = self._boot_and_assert_no_allocations(
+            self.flavor, 'cell1', volume_backed=True)
         # First do a dry run to make sure two instances need processing.
         result = self.cli.heal_allocations(
             max_count=2, verbose=True, dry_run=True)
@@ -704,6 +718,12 @@ class TestNovaManagePlacementHealAllocations(
         self.assertNotIn('Running batches', output)
         # There shouldn't be any message about max count reached.
         self.assertNotIn('Max count reached.', output)
+        # Make sure there is no DISK_GB allocation for the volume-backed
+        # instance but there is a VCPU allocation based on the flavor.
+        allocs = self._get_allocations_by_server_uuid(
+            server['id'])[rp_uuid]['resources']
+        self.assertNotIn('DISK_GB', allocs)
+        self.assertEqual(self.flavor['vcpus'], allocs['VCPU'])
 
         # Now run it again on the specific instance and it should be done.
         result = self.cli.heal_allocations(
