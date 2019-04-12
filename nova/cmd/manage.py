@@ -1913,7 +1913,7 @@ class PlacementCommands(object):
                     instance=instance.uuid, provider=node_uuid)
 
     def _heal_instances_in_cell(self, ctxt, max_count, unlimited, output,
-                                placement, dry_run):
+                                placement, dry_run, instance_uuid):
         """Checks for instances to heal in a given cell.
 
         :param ctxt: cell-targeted nova.context.RequestContext
@@ -1925,6 +1925,7 @@ class PlacementCommands(object):
             to communicate with the Placement service API.
         :param dry_run: Process instances and print output but do not commit
             any changes.
+        :param instance_uuid: UUID of a specific instance to process.
         :return: Number of instances that had allocations created.
         :raises: nova.exception.ComputeHostNotFound if a compute node for a
             given instance cannot be found
@@ -1950,6 +1951,8 @@ class PlacementCommands(object):
         # automatically pick up where we left off without the user having
         # to pass it in (if unlimited is False).
         filters = {'deleted': False}
+        if instance_uuid:
+            filters['uuid'] = instance_uuid
         instances = objects.InstanceList.get_by_filters(
             ctxt, filters=filters, sort_key='created_at', sort_dir='asc',
             limit=max_count, expected_attrs=['flavor'])
@@ -1968,7 +1971,8 @@ class PlacementCommands(object):
             # don't include instances that already have allocations in the
             # max_count number, only the number of instances that have
             # successfully created allocations.
-            if not unlimited and num_processed == max_count:
+            # If a specific instance was requested we return here as well.
+            if (not unlimited and num_processed == max_count) or instance_uuid:
                 return num_processed
 
             # Use a marker to get the next page of instances in this cell.
@@ -2001,7 +2005,11 @@ class PlacementCommands(object):
     @args('--dry-run', action='store_true', dest='dry_run', default=False,
           help='Runs the command and prints output but does not commit any '
                'changes. The return code should be 4.')
-    def heal_allocations(self, max_count=None, verbose=False, dry_run=False):
+    @args('--instance', metavar='<instance_uuid>', dest='instance_uuid',
+          help='UUID of a specific instance to process. If specified '
+               '--max-count has no effect.')
+    def heal_allocations(self, max_count=None, verbose=False, dry_run=False,
+                         instance_uuid=None):
         """Heals instance allocations in the Placement service
 
         Return codes:
@@ -2017,7 +2025,6 @@ class PlacementCommands(object):
         # NOTE(mriedem): Thoughts on ways to expand this:
         # - allow passing a specific cell to heal
         # - allow filtering on enabled/disabled cells
-        # - allow passing a specific instance to heal
         # - add a force option to force allocations for instances which have
         #   task_state is not None (would get complicated during a migration);
         #   for example, this could cleanup ironic instances that have
@@ -2036,7 +2043,10 @@ class PlacementCommands(object):
         # count, should we have separate options to be specific, i.e. --total
         # and --batch-size? Then --batch-size defaults to 50 and --total
         # defaults to None to mean unlimited.
-        if max_count is not None:
+        if instance_uuid:
+            max_count = 1
+            unlimited = False
+        elif max_count is not None:
             try:
                 max_count = int(max_count)
             except ValueError:
@@ -2051,10 +2061,24 @@ class PlacementCommands(object):
             output(_('Running batches of %i until complete') % max_count)
 
         ctxt = context.get_admin_context()
-        cells = objects.CellMappingList.get_all(ctxt)
-        if not cells:
-            output(_('No cells to process.'))
-            return 4
+        # If we are going to process a specific instance, just get the cell
+        # it is in up front.
+        if instance_uuid:
+            try:
+                im = objects.InstanceMapping.get_by_instance_uuid(
+                    ctxt, instance_uuid)
+                cells = objects.CellMappingList(objects=[im.cell_mapping])
+            except exception.InstanceMappingNotFound:
+                print('Unable to find cell for instance %s, is it mapped? Try '
+                      'running "nova-manage cell_v2 verify_instance" or '
+                      '"nova-manage cell_v2 map_instances".' %
+                      instance_uuid)
+                return 127
+        else:
+            cells = objects.CellMappingList.get_all(ctxt)
+            if not cells:
+                output(_('No cells to process.'))
+                return 4
 
         placement = report.SchedulerReportClient()
         num_processed = 0
@@ -2077,7 +2101,7 @@ class PlacementCommands(object):
                 try:
                     num_processed += self._heal_instances_in_cell(
                         cctxt, limit_per_cell, unlimited, output, placement,
-                        dry_run)
+                        dry_run, instance_uuid)
                 except exception.ComputeHostNotFound as e:
                     print(e.format_message())
                     return 2
@@ -2090,7 +2114,9 @@ class PlacementCommands(object):
                 # don't include instances that already have allocations in the
                 # max_count number, only the number of instances that have
                 # successfully created allocations.
-                if num_processed == max_count:
+                # If a specific instance was provided then we'll just exit
+                # the loop and process it below (either return 4 or 0).
+                if num_processed == max_count and not instance_uuid:
                     output(_('Max count reached. Processed %s instances.')
                            % num_processed)
                     return 1
