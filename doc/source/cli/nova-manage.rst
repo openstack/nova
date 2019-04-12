@@ -335,7 +335,7 @@ Nova Cells v2
 Placement
 ~~~~~~~~~
 
-``nova-manage placement heal_allocations [--max-count <max_count>] [--verbose] [--dry-run]``
+``nova-manage placement heal_allocations [--max-count <max_count>] [--verbose] [--dry-run] [--instance <instance_uuid>]``
     Iterates over non-cell0 cells looking for instances which do not have
     allocations in the Placement service and which are not undergoing a task
     state transition. For each instance found, allocations are created against
@@ -356,6 +356,9 @@ Placement
 
     Specify ``--dry-run`` to print output but not commit any changes. The
     return code should be 4.
+
+    Specify ``--instance`` to process a specific instance given its UUID. If
+    specified the ``--max-count`` option has no effect.
 
     This command requires that the ``[api_database]/connection`` and
     ``[placement]`` configuration options are set. Placement API >= 1.28 is
