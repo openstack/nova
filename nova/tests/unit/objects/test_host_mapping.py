@@ -11,7 +11,9 @@
 #    under the License.
 
 import mock
+from oslo_db import exception as db_exc
 from oslo_utils.fixture import uuidsentinel as uuids
+import six
 
 from nova import context
 from nova import exception
@@ -310,3 +312,41 @@ Creating host mapping for service host1
 Found 1 unmapped computes in cell: %(cell)s""" % {'cell': uuids.cell1}
 
         self.assertEqual(expected, '\n'.join(lines))
+
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    @mock.patch('nova.objects.HostMapping.create')
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_not_mapped')
+    def test_discover_hosts_duplicate(self, mock_cn_get, mock_hm_get,
+                                      mock_hm_create, mock_cm):
+        mock_cm.return_value = [objects.CellMapping(name='foo',
+                                                    uuid=uuids.cm)]
+        mock_cn_get.return_value = [objects.ComputeNode(host='bar',
+                                                        uuid=uuids.cn)]
+        mock_hm_get.side_effect = exception.HostMappingNotFound(name='bar')
+        mock_hm_create.side_effect = db_exc.DBDuplicateEntry()
+
+        ctxt = context.get_admin_context()
+        exp = self.assertRaises(exception.HostMappingExists,
+                                host_mapping.discover_hosts, ctxt)
+        expected = "Host 'bar' mapping already exists"
+        self.assertIn(expected, six.text_type(exp))
+
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.HostMapping.create')
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    def test_discover_services_duplicate(self, mock_srv, mock_hm_create,
+                                         mock_hm_get, mock_cm):
+        mock_cm.return_value = [objects.CellMapping(name='foo',
+                                                    uuid=uuids.cm)]
+        mock_srv.return_value = [objects.Service(host='bar')]
+        mock_hm_get.side_effect = exception.HostMappingNotFound(name='bar')
+        mock_hm_create.side_effect = db_exc.DBDuplicateEntry()
+
+        ctxt = context.get_admin_context()
+        exp = self.assertRaises(exception.HostMappingExists,
+                                host_mapping.discover_hosts, ctxt,
+                                by_service=True)
+        expected = "Host 'bar' mapping already exists"
+        self.assertIn(expected, six.text_type(exp))

@@ -1642,6 +1642,22 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
                                                     mock.ANY,
                                                     True)
 
+    @mock.patch('nova.objects.host_mapping.discover_hosts')
+    def test_discover_hosts_mapping_exists(self, mock_discover_hosts):
+        mock_discover_hosts.side_effect = exception.HostMappingExists(
+            name='fake')
+        ret = self.commands.discover_hosts()
+        output = self.output.getvalue().strip()
+        self.assertEqual(2, ret)
+        expected = ("ERROR: Duplicate host mapping was encountered. This "
+                    "command should be run once after all compute hosts "
+                    "have been deployed and should not be run in parallel. "
+                    "When run in parallel, the commands will collide with "
+                    "each other trying to map the same hosts in the database "
+                    "at the same time. Error: Host 'fake' mapping already "
+                    "exists")
+        self.assertEqual(expected, output)
+
     def test_validate_transport_url_in_conf(self):
         from_conf = 'fake://user:pass@host:5672/'
         self.flags(transport_url=from_conf)

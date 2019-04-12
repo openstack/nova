@@ -25,6 +25,7 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_service import periodic_task
+import six
 from stevedore import driver
 
 import nova.conf
@@ -43,6 +44,8 @@ LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
 QUOTAS = quota.QUOTAS
+
+HOST_MAPPING_EXISTS_WARNING = False
 
 
 class SchedulerManager(manager.Manager):
@@ -67,13 +70,24 @@ class SchedulerManager(manager.Manager):
         spacing=CONF.scheduler.discover_hosts_in_cells_interval,
         run_immediately=True)
     def _discover_hosts_in_cells(self, context):
-        host_mappings = host_mapping_obj.discover_hosts(context)
-        if host_mappings:
-            LOG.info('Discovered %(count)i new hosts: %(hosts)s',
-                     {'count': len(host_mappings),
-                      'hosts': ','.join(['%s:%s' % (hm.cell_mapping.name,
-                                                    hm.host)
-                                         for hm in host_mappings])})
+        global HOST_MAPPING_EXISTS_WARNING
+        try:
+            host_mappings = host_mapping_obj.discover_hosts(context)
+            if host_mappings:
+                LOG.info('Discovered %(count)i new hosts: %(hosts)s',
+                         {'count': len(host_mappings),
+                          'hosts': ','.join(['%s:%s' % (hm.cell_mapping.name,
+                                                        hm.host)
+                                             for hm in host_mappings])})
+        except exception.HostMappingExists as exp:
+            msg = ('This periodic task should only be enabled on a single '
+                   'scheduler to prevent collisions between multiple '
+                   'schedulers: %s' % six.text_type(exp))
+            if not HOST_MAPPING_EXISTS_WARNING:
+                LOG.warning(msg)
+                HOST_MAPPING_EXISTS_WARNING = True
+            else:
+                LOG.debug(msg)
 
     @periodic_task.periodic_task(spacing=CONF.scheduler.periodic_task_interval,
                                  run_immediately=True)

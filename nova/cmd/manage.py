@@ -1281,7 +1281,7 @@ class CellV2Commands(object):
     @args('--strict', action='store_true',
           help=_('Considered successful (exit code 0) only when an unmapped '
                  'host is discovered. Any other outcome will be considered a '
-                 'failure (exit code 1).'))
+                 'failure (non-zero exit code).'))
     @args('--by-service', action='store_true', default=False,
           dest='by_service',
           help=_('Discover hosts by service instead of compute node'))
@@ -1293,14 +1293,28 @@ class CellV2Commands(object):
         to the db it's configured to use. This command will check the db for
         each cell, or a single one if passed in, and map any hosts which are
         not currently mapped. If a host is already mapped nothing will be done.
+
+        This command should be run once after all compute hosts have been
+        deployed and should not be run in parallel. When run in parallel,
+        the commands will collide with each other trying to map the same hosts
+        in the database at the same time.
         """
         def status_fn(msg):
             if verbose:
                 print(msg)
 
         ctxt = context.RequestContext()
-        hosts = host_mapping_obj.discover_hosts(ctxt, cell_uuid, status_fn,
-                                                by_service)
+        try:
+            hosts = host_mapping_obj.discover_hosts(ctxt, cell_uuid, status_fn,
+                                                    by_service)
+        except exception.HostMappingExists as exp:
+            print(_('ERROR: Duplicate host mapping was encountered. This '
+                    'command should be run once after all compute hosts have '
+                    'been deployed and should not be run in parallel. When '
+                    'run in parallel, the commands will collide with each '
+                    'other trying to map the same hosts in the database at '
+                    'the same time. Error: %s') % exp)
+            return 2
         # discover_hosts will return an empty list if no hosts are discovered
         if strict:
             return int(not hosts)
