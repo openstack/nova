@@ -37,42 +37,42 @@ class LoopTestCase(test.NoDBTestCase):
     @mock.patch('nova.privsep.fs.loopremove')
     def test_get_dev(self, mock_loopremove, mock_loopsetup):
         tempdir = self.useFixture(fixtures.TempDir()).path
-        l = loop.LoopMount(self.file, tempdir)
+        mount = loop.LoopMount(self.file, tempdir)
         self.useFixture(fixtures.MonkeyPatch('nova.utils.execute',
                                              _fake_noop))
 
         # No error logged, device consumed
-        self.assertTrue(l.get_dev())
-        self.assertTrue(l.linked)
-        self.assertEqual('', l.error)
-        self.assertEqual('/dev/loop0', l.device)
+        self.assertTrue(mount.get_dev())
+        self.assertTrue(mount.linked)
+        self.assertEqual('', mount.error)
+        self.assertEqual('/dev/loop0', mount.device)
 
         # Free
-        l.unget_dev()
-        self.assertFalse(l.linked)
-        self.assertEqual('', l.error)
-        self.assertIsNone(l.device)
+        mount.unget_dev()
+        self.assertFalse(mount.linked)
+        self.assertEqual('', mount.error)
+        self.assertIsNone(mount.device)
 
     @mock.patch('nova.privsep.fs.loopsetup', return_value=('', 'doh'))
     def test_inner_get_dev_fails(self, mock_loopsetup):
         tempdir = self.useFixture(fixtures.TempDir()).path
-        l = loop.LoopMount(self.file, tempdir)
+        mount = loop.LoopMount(self.file, tempdir)
 
         # No error logged, device consumed
-        self.assertFalse(l._inner_get_dev())
-        self.assertFalse(l.linked)
-        self.assertNotEqual('', l.error)
-        self.assertIsNone(l.device)
+        self.assertFalse(mount._inner_get_dev())
+        self.assertFalse(mount.linked)
+        self.assertNotEqual('', mount.error)
+        self.assertIsNone(mount.device)
 
         # Free
-        l.unget_dev()
-        self.assertFalse(l.linked)
-        self.assertIsNone(l.device)
+        mount.unget_dev()
+        self.assertFalse(mount.linked)
+        self.assertIsNone(mount.device)
 
     @mock.patch('nova.privsep.fs.loopsetup', return_value=('', 'doh'))
     def test_get_dev_timeout(self, mock_loopsetup):
         tempdir = self.useFixture(fixtures.TempDir()).path
-        l = loop.LoopMount(self.file, tempdir)
+        mount = loop.LoopMount(self.file, tempdir)
         self.useFixture(fixtures.MonkeyPatch('time.sleep', _fake_noop))
         self.useFixture(fixtures.MonkeyPatch(('nova.virt.disk.mount.api.'
                                               'MAX_DEVICE_WAIT'), -10))
@@ -80,16 +80,17 @@ class LoopTestCase(test.NoDBTestCase):
         # Always fail to get a device
         def fake_get_dev_fails():
             return False
-        l._inner_get_dev = fake_get_dev_fails
+
+        mount._inner_get_dev = fake_get_dev_fails
 
         # Fail to get a device
-        self.assertFalse(l.get_dev())
+        self.assertFalse(mount.get_dev())
 
     @mock.patch('nova.privsep.fs.loopremove')
     def test_unget_dev(self, mock_loopremove):
         tempdir = self.useFixture(fixtures.TempDir()).path
-        l = loop.LoopMount(self.file, tempdir)
+        mount = loop.LoopMount(self.file, tempdir)
 
         # This just checks that a free of something we don't have doesn't
         # throw an exception
-        l.unget_dev()
+        mount.unget_dev()

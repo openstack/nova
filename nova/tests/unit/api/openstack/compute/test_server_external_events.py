@@ -55,10 +55,9 @@ def fake_get_by_filters(cls, context, filters, expected_attrs=None):
         assert expected_attrs_set.issubset(full_expected_attrs_set), \
             ('%s is not a subset of %s' % (expected_attrs_set,
                                            full_expected_attrs_set))
-    l = objects.InstanceList(objects=[
+    return objects.InstanceList(objects=[
         inst for inst in fake_instances.values()
         if inst.uuid in filters['uuid']])
-    return l
 
 
 @classmethod
