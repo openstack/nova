@@ -66,20 +66,12 @@ def delete_net_dev(dev):
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def delete_net_dev_escalated(dev):
-    _delete_net_dev_inner(dev)
-
-
-def _delete_net_dev_inner(dev):
     processutils.execute('ip', 'link', 'delete', dev,
                          check_exit_code=[0, 2, 254])
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def set_device_mtu(dev, mtu):
-    _set_device_mtu_inner(dev, mtu)
-
-
-def _set_device_mtu_inner(dev, mtu):
     if mtu:
         processutils.execute('ip', 'link', 'set', dev, 'mtu',
                              mtu, check_exit_code=[0, 2, 254])
@@ -200,11 +192,6 @@ def route_delete_deprecated(dev, routes):
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def create_tap_dev(dev, mac_address=None, multiqueue=False):
-    _create_tap_dev_inner(dev, mac_address=mac_address,
-                          multiqueue=multiqueue)
-
-
-def _create_tap_dev_inner(dev, mac_address=None, multiqueue=False):
     if not device_exists(dev):
         try:
             # First, try with 'ip'
