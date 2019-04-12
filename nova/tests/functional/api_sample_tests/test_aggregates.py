@@ -28,7 +28,7 @@ class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def _test_aggregate_create(self):
         subs = {
-            "aggregate_id": '(?P<id>\d+)'
+            "aggregate_id": r'(?P<id>\d+)'
         }
         response = self._do_post('os-aggregates', 'aggregate-post-req', subs)
         return self._verify_response('aggregate-post-resp',
@@ -102,7 +102,7 @@ class AggregatesV2_41_SampleJsonTest(AggregatesSampleJsonTest):
 
     def _test_aggregate_create(self):
         subs = {
-            "aggregate_id": '(?P<id>\d+)',
+            "aggregate_id": r'(?P<id>\d+)',
         }
         response = self._do_post('os-aggregates', 'aggregate-post-req', subs)
         # This feels like cheating since we're getting the uuid from the

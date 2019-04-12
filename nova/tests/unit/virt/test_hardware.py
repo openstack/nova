@@ -1734,9 +1734,9 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[1].memory_usage, 128)
 
     def test_topo_usage_with_network_metadata(self):
-        """Validate behavior with network_metadata.
+        r"""Validate behavior with network_metadata.
 
-        Ensure we handle ``NUMACell``\s that have ``network_metadata`` set
+        Ensure we handle ``NUMACell``\ s that have ``network_metadata`` set
         along with those where this is unset.
         """
 

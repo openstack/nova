@@ -88,7 +88,7 @@ class VMwareVCDriver(driver.ComputeDriver):
     # We assume <mo id> consists of alphanumeric, _ and -.
     # We assume cluster name is everything between the first ( and the last ).
     # We pull out <mo id> for re-use.
-    LEGACY_NODENAME = re.compile('([\w-]+)\(.+\)')
+    LEGACY_NODENAME = re.compile(r'([\w-]+)\(.+\)')
 
     # The vCenter driver includes API that acts on ESX hosts or groups
     # of ESX hosts in clusters or non-cluster logical-groupings.

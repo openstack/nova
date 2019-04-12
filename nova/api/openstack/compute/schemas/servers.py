@@ -136,7 +136,7 @@ _hints = {
         'build_near_host_ip': parameter_types.ip_address,
         'cidr': {
             'type': 'string',
-            'pattern': '^\/[0-9a-f.:]+$'
+            'pattern': '^/[0-9a-f.:]+$'
         },
     },
     # NOTE: As this Mail:

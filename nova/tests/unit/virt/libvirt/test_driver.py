@@ -13171,8 +13171,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 return None
 
         def fake_node_device_lookup_by_name(address):
-            pattern = ("pci_%(hex)s{4}_%(hex)s{2}_%(hex)s{2}_%(oct)s{1}"
-                       % dict(hex='[\da-f]', oct='[0-8]'))
+            pattern = "pci_%(hex)s{4}_%(hex)s{2}_%(hex)s{2}_%(oct)s{1}" % {
+                'hex': r'[\da-f]', 'oct': '[0-8]'}
             pattern = re.compile(pattern)
             if pattern.match(address) is None:
                 raise fakelibvirt.libvirtError()
@@ -15801,8 +15801,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertRaisesRegex(
                 exception.InvalidNetworkNUMAAffinity,
                 "Invalid NUMA network affinity configured: the physnet 'bar' "
-                "was listed in '\[neutron\] physnets' but no corresponding "
-                "'\[neutron_physnet_bar\] numa_nodes' option was defined.",
+                "was listed in '\\[neutron\\] physnets' but no corresponding "
+                "'\\[neutron_physnet_bar\\] numa_nodes' option was defined.",
                 drvr._get_host_numa_topology)
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)

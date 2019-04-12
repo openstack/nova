@@ -337,7 +337,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
         project_id_exp = '(%s|%s)' % (PROJECT_ID, self.project_id)
 
-        url_re = self._get_host() + "/v(2|2\.1)/" + project_id_exp
+        url_re = self._get_host() + r"/v(2|2\.1)/" + project_id_exp
         new_url = self._get_host() + "/" + self.api_major_version
         if self._use_project_id:
             new_url += "/" + self.project_id
@@ -431,13 +431,13 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
     def _get_regexes(self):
         text = r'(\\"|[^"])*'
-        isotime_re = '\d{4}-[0,1]\d-[0-3]\dT\d{2}:\d{2}:\d{2}Z'
-        strtime_re = '\d{4}-[0,1]\d-[0-3]\dT\d{2}:\d{2}:\d{2}\.\d{6}'
-        strtime_url_re = ('\d{4}-[0,1]\d-[0-3]\d'
-                          '\+\d{2}\%3A\d{2}\%3A\d{2}\.\d{6}')
-        xmltime_re = ('\d{4}-[0,1]\d-[0-3]\d '
-                      '\d{2}:\d{2}:\d{2}'
-                      '(\.\d{6})?(\+00:00)?')
+        isotime_re = r'\d{4}-[0,1]\d-[0-3]\dT\d{2}:\d{2}:\d{2}Z'
+        strtime_re = r'\d{4}-[0,1]\d-[0-3]\dT\d{2}:\d{2}:\d{2}\.\d{6}'
+        strtime_url_re = (r'\d{4}-[0,1]\d-[0-3]\d'
+                          r'\+\d{2}\%3A\d{2}\%3A\d{2}\.\d{6}')
+        xmltime_re = (r'\d{4}-[0,1]\d-[0-3]\d '
+                      r'\d{2}:\d{2}:\d{2}'
+                      r'(\.\d{6})?(\+00:00)?')
 
         # NOTE(claudiub): the x509 keypairs are different from the
         # ssh keypairs. For example, the x509 fingerprint has 40 bytes.

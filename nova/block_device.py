@@ -419,7 +419,7 @@ def validate_and_default_volume_size(bdm):
                 details=_("Invalid volume_size."))
 
 
-_ephemeral = re.compile('^ephemeral(\d|[1-9]\d+)$')
+_ephemeral = re.compile(r'^ephemeral(\d|[1-9]\d+)$')
 
 
 def is_ephemeral(device_name):
@@ -499,7 +499,7 @@ def strip_prefix(device_name):
     return _pref.sub('', device_name) if device_name else device_name
 
 
-_nums = re.compile('\d+')
+_nums = re.compile(r'\d+')
 
 
 def get_device_letter(device_name):

@@ -35,7 +35,7 @@ LOG = logging.getLogger(__name__)
 # Examples:
 # - vxw-dvs-22-virtualwire-89-sid-5008-NAME
 # - vxw-dvs-22-virtualwire-89-sid-5008-UUID
-VWIRE_REGEX = re.compile('vxw-dvs-(\d+)-virtualwire-(\d+)-sid-(\d+)-(.*)')
+VWIRE_REGEX = re.compile(r'vxw-dvs-(\d+)-virtualwire-(\d+)-sid-(\d+)-(.*)')
 
 
 def _get_name_from_dvs_name(dvs_name):

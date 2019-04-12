@@ -60,9 +60,8 @@ class _TestNUMA(object):
         numacell.pin_cpus(set([2, 3]))
         self.assertEqual(set([4]), numacell.free_cpus)
 
-        expect_msg = (
-            exception.CPUPinningUnknown.msg_fmt % {'requested': "\[1, 55\]",
-                                                   'cpuset': "\[1, 2, 3, 4\]"})
+        expect_msg = exception.CPUPinningUnknown.msg_fmt % {
+            'requested': r'\[1, 55\]', 'cpuset': r'\[1, 2, 3, 4\]'}
         with testtools.ExpectedException(exception.CPUPinningUnknown,
                                          expect_msg):
             numacell.pin_cpus(set([1, 55]))
@@ -70,8 +69,8 @@ class _TestNUMA(object):
         self.assertRaises(exception.CPUPinningInvalid,
                           numacell.pin_cpus, set([1, 4]))
 
-        expect_msg = (exception.CPUUnpinningUnknown.msg_fmt %
-                      {'requested': "\[1, 55\]", 'cpuset': "\[1, 2, 3, 4\]"})
+        expect_msg = exception.CPUUnpinningUnknown.msg_fmt % {
+            'requested': r'\[1, 55\]', 'cpuset': r'\[1, 2, 3, 4\]'}
         with testtools.ExpectedException(exception.CPUUnpinningUnknown,
                                          expect_msg):
             numacell.unpin_cpus(set([1, 55]))

@@ -34,7 +34,7 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
                                  'get-vnc-console-post-req',
                                 {'action': 'os-getVNCConsole'})
         subs = {"url":
-                "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"}
+            "((https?):((//)|(\\\\))+([\\w\\d:#@%/;$()~_?\\+-=\\\\.&](#!)?)*)"}
         self._verify_response('get-vnc-console-post-resp', subs, response, 200)
 
     def test_get_spice_console(self):
@@ -43,7 +43,7 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
                                  'get-spice-console-post-req',
                                 {'action': 'os-getSPICEConsole'})
         subs = {"url":
-                "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"}
+            "((https?):((//)|(\\\\))+([\\w\\d:#@%/;$()~_?\\+-=\\\\.&](#!)?)*)"}
         self._verify_response('get-spice-console-post-resp', subs,
                               response, 200)
 
@@ -53,7 +53,7 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
                                  'get-rdp-console-post-req',
                                 {'action': 'os-getRDPConsole'})
         subs = {"url":
-                "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"}
+            "((https?):((//)|(\\\\))+([\\w\\d:#@%/;$()~_?\\+-=\\\\.&](#!)?)*)"}
         self._verify_response('get-rdp-console-post-resp', subs,
                               response, 200)
 
@@ -63,7 +63,7 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
                                  'get-serial-console-post-req',
                                 {'action': 'os-getSerialConsole'})
         subs = {"url":
-                "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"}
+            "((https?):((//)|(\\\\))+([\\w\\d:#@%/;$()~_?\\+-=\\\\.&](#!)?)*)"}
         self._verify_response('get-serial-console-post-resp', subs,
                               response, 200)
 
@@ -78,7 +78,7 @@ class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
 
     def setUp(self):
         super(ConsolesV26SampleJsonTests, self).setUp()
-        self.http_regex = "(https?://)([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*"
+        self.http_regex = '(https?://)([\\w\\d:#@%/;$()~_?\\+-=\\\\.&](#!)?)*'
 
     def test_create_console(self):
         uuid = self._post_server()
@@ -97,7 +97,7 @@ class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
 
     def setUp(self):
         super(ConsolesV28SampleJsonTests, self).setUp()
-        self.http_regex = "(https?://)([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*"
+        self.http_regex = '(https?://)([\\w\\d:#@%/;$()~_?\\+-=\\\\.&](#!)?)*'
         self.flags(enabled=True, group='mks')
 
     def test_create_mks_console(self):

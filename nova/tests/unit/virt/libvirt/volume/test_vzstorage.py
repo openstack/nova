@@ -58,8 +58,9 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
         connection_info = {'data': {'export': wrong_export_string,
                                     'name': self.name}}
 
-        err_pattern = ("^Valid share format is "
-                    "\[mds\[,mds1\[\.\.\.\]\]:/\]clustername\[:password\]$")
+        err_pattern = (
+            "^Valid share format is "
+            r"\[mds\[,mds1\[\.\.\.\]\]:/\]clustername\[:password\]$")
         self.assertRaisesRegex(exception.InvalidVolume,
                                 err_pattern,
                                 drv.connect_volume,

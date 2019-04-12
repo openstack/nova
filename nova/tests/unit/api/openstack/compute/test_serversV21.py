@@ -1509,13 +1509,13 @@ class ServersControllerTest(ControllerTest):
                          cell_down_support=False, all_tenants=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip', search_opts)
-            self.assertEqual(search_opts['ip'], '10\..*')
+            self.assertEqual(search_opts['ip'], r'10\..*')
             return objects.InstanceList(
                 objects=[fakes.stub_instance_obj(100, uuid=uuids.fake)])
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req('/fake/servers?ip=10\..*')
+        req = self.req(r'/fake/servers?ip=10\..*')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))

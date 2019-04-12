@@ -311,7 +311,7 @@ class DsUtilTestCase(test.NoDBTestCase):
 
     def test_get_datastore_with_regex(self):
         # Test with a regex that matches with a datastore
-        datastore_valid_regex = re.compile("^openstack.*\d$")
+        datastore_valid_regex = re.compile(r"^openstack.*\d$")
         fake_objects = fake.FakeRetrieveResult()
         fake_objects.add_object(fake.Datastore("openstack-ds0"))
         fake_objects.add_object(fake.Datastore("fake-ds0"))
@@ -323,7 +323,7 @@ class DsUtilTestCase(test.NoDBTestCase):
         self.assertEqual("openstack-ds0", result.name)
 
     def test_get_datastore_with_token(self):
-        regex = re.compile("^ds.*\d$")
+        regex = re.compile(r"^ds.*\d$")
         fake0 = fake.FakeRetrieveResult()
         fake0.add_object(fake.Datastore("ds0", 10 * units.Gi, 5 * units.Gi))
         fake0.add_object(fake.Datastore("foo", 10 * units.Gi, 9 * units.Gi))

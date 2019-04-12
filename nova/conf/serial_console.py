@@ -36,7 +36,7 @@ This service is typically executed on the controller node.
     cfg.StrOpt('port_range',
         default=DEFAULT_PORT_RANGE,
         regex=r'^\d+:\d+$',
-        help="""
+        help=r"""
 A range of TCP ports a guest can use for its backend.
 
 Each instance which gets created will use one port out of this range. If the
@@ -45,9 +45,9 @@ instance won't get launched.
 
 Possible values:
 
-* Each string which passes the regex ``^\d+:\d+$`` For example ``10000:20000``.
-  Be sure that the first port number is lower than the second port number
-  and that both are in range from 0 to 65535.
+* Each string which passes the regex ``^\d+:\d+$`` For example
+  ``10000:20000``. Be sure that the first port number is lower than the second
+  port number and that both are in range from 0 to 65535.
 """),
     # TODO(macsz) check if WS protocol is still being used
     cfg.URIOpt('base_url',

@@ -232,7 +232,7 @@ def ec2_vol_id_to_uuid(ec2_id):
     return get_volume_uuid_from_int_id(ctxt, int_id)
 
 
-_ms_time_regex = re.compile('^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,6}Z$')
+_ms_time_regex = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,6}Z$')
 
 
 def status_to_ec2_attach_status(volume):
@@ -462,4 +462,4 @@ def regex_from_ec2_regex(ec2_re):
                 py_re += '\\\\' + next_char
         else:
             py_re += re.escape(char)
-    return '\A%s\Z(?s)' % py_re
+    return r'(?s)\A%s\Z' % py_re

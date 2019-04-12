@@ -149,7 +149,7 @@ Possible values:
 """),
     cfg.StrOpt('qemu_img_cmd',
         default="qemu-img.exe",
-        help="""
+        help=r"""
 qemu-img command
 
 qemu-img is required for some of the image related operations
