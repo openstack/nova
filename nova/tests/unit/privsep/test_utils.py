@@ -18,6 +18,7 @@ import os
 
 import nova.privsep.utils
 from nova import test
+from nova.tests import fixtures
 
 
 class SupportDirectIOTestCase(test.NoDBTestCase):
@@ -125,3 +126,14 @@ class SupportDirectIOTestCase(test.NoDBTestCase):
         self.mock_write.assert_not_called()
         self.mock_close.assert_not_called()
         self.mock_unlink.assert_called_once_with(self.test_path)
+
+
+class UtilsTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(UtilsTestCase, self).setUp()
+        self.useFixture(fixtures.PrivsepFixture())
+
+    @mock.patch('os.kill')
+    def test_kill(self, mock_kill):
+        nova.privsep.utils.kill(42, -9)
+        mock_kill.assert_called_with(42, -9)
