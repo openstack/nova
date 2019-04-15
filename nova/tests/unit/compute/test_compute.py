@@ -4540,33 +4540,6 @@ class ComputeTestCase(BaseTestCase,
              self.context)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
 
-    @mock.patch.object(fake.FakeDriver, "macs_for_instance")
-    def test_run_instance_queries_macs(self, mock_mac):
-        # run_instance should ask the driver for node mac addresses and pass
-        # that to the network_api in use.
-        fake_network.unset_stub_network_methods(self)
-        instance = self._create_fake_instance_obj()
-
-        macs = set(['01:23:45:67:89:ab'])
-
-        mock_mac.return_value = macs
-
-        with mock.patch.object(self.compute.network_api,
-                               'allocate_for_instance') as mock_allocate:
-            mock_allocate.return_value = (
-                fake_network.fake_get_instance_nw_info(self, 1, 1))
-            self.compute._build_networks_for_instance(self.context, instance,
-                    requested_networks=None, security_groups=None,
-                    resource_provider_mapping=None)
-
-        security_groups = None if CONF.use_neutron else []
-        mock_allocate.assert_called_once_with(self.context, instance,
-                vpn=False, requested_networks=None, macs=macs,
-                security_groups=security_groups,
-                bind_host_id=self.compute.host,
-                resource_provider_mapping=None)
-        mock_mac.assert_called_once_with(test.MatchType(instance_obj.Instance))
-
     def test_instance_set_to_error_on_uncaught_exception(self):
         # Test that instance is set to error state when exception is raised.
         instance = self._create_fake_instance_obj()
