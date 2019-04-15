@@ -183,7 +183,7 @@ class NetworkAPI(base.Base):
         raise NotImplementedError()
 
     def allocate_for_instance(self, context, instance, vpn,
-                              requested_networks, macs=None,
+                              requested_networks,
                               security_groups=None, bind_host_id=None,
                               attach=False, resource_provider_mapping=None):
         """Allocates all network structures for an instance.
@@ -193,9 +193,6 @@ class NetworkAPI(base.Base):
         :param vpn: A boolean, if True, indicate a vpn to access the instance.
         :param requested_networks: A list of requested_networks,
             Optional value containing network_id, fixed_ip, and port_id.
-        :param macs: None or a set of MAC addresses that the instance
-            should use. macs is supplied by the hypervisor driver (contrast
-            with requested_networks which is user supplied).
         :param security_groups: None or security groups to allocate for
             instance.
         :param bind_host_id: the host ID to attach to the ports being created.

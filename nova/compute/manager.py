@@ -1486,7 +1486,6 @@ class ComputeManager(manager.Manager):
                 nwinfo = self.network_api.allocate_for_instance(
                         context, instance, vpn=is_vpn,
                         requested_networks=requested_networks,
-                        macs=None,  # TODO(mriedem): Remove macs kwarg.
                         security_groups=security_groups,
                         bind_host_id=bind_host_id,
                         resource_provider_mapping=resource_provider_mapping)

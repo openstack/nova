@@ -213,7 +213,7 @@ class API(base_api.NetworkAPI):
 
     @base_api.refresh_cache
     def allocate_for_instance(self, context, instance, vpn,
-                              requested_networks, macs=None,
+                              requested_networks,
                               security_groups=None,
                               bind_host_id=None, attach=False,
                               resource_provider_mapping=None):
@@ -224,9 +224,6 @@ class API(base_api.NetworkAPI):
         :param vpn: A boolean, if True, indicate a vpn to access the instance.
         :param requested_networks: A list of requested_network tuples
             containing network_id and fixed_ip
-        :param macs: None or a set of MAC addresses that the instance
-            should use. macs is supplied by the hypervisor driver (contrast
-            with requested_networks which is user supplied).
         :param security_groups: None or security groups to allocate for
             instance.
         :param bind_host_id: ignored by this driver.
@@ -246,7 +243,6 @@ class API(base_api.NetworkAPI):
         args['project_id'] = instance.project_id
         args['host'] = instance.host
         args['rxtx_factor'] = flavor['rxtx_factor']
-        args['macs'] = macs
 
         # Check to see if we're asked to 'auto' allocate networks because if
         # so we need to just null out the requested_networks value so the

@@ -604,7 +604,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         mock_allocate.assert_called_once_with(
             self.context, instance, vpn=is_vpn,
-            requested_networks=req_networks, macs=None,
+            requested_networks=req_networks,
             security_groups=sec_groups,
             bind_host_id=instance.get('host'),
             resource_provider_mapping=rp_mapping)
