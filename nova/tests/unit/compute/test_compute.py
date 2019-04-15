@@ -6270,6 +6270,7 @@ class ComputeTestCase(BaseTestCase,
         # cleanup
         db.instance_destroy(c, instance['uuid'])
 
+    @mock.patch.object(cinder.API, 'attachment_delete')
     @mock.patch.object(fake.FakeDriver, 'get_instance_disk_info')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'pre_live_migration')
     @mock.patch.object(objects.ComputeNode,
@@ -6282,7 +6283,8 @@ class ComputeTestCase(BaseTestCase,
     def test_live_migration_exception_rolls_back(self, mock_save,
                                 mock_rollback, mock_remove,
                                 mock_get_bdms,
-                                mock_get_node, mock_pre, mock_get_disk):
+                                mock_get_node, mock_pre, mock_get_disk,
+                                mock_attachment_delete):
         # Confirm exception when pre_live_migration fails.
         c = context.get_admin_context()
 
@@ -6300,20 +6302,26 @@ class ComputeTestCase(BaseTestCase,
         # All the fake BDMs we've generated, in order
         fake_bdms = []
 
+        # A list of the attachment_ids returned by gen_fake_bdms
+        fake_attachment_ids = []
+
         def gen_fake_bdms(obj, instance):
-            # generate a unique fake connection_info every time we're called,
-            # simulating connection_info being mutated elsewhere.
+            # generate a unique fake connection_info and attachment_id every
+            # time we're called, simulating attachment_id and connection_info
+            # being mutated elsewhere.
             bdms = objects.BlockDeviceMappingList(objects=[
                 objects.BlockDeviceMapping(
-                    **fake_block_device.FakeDbBlockDeviceDict(
+                    **fake_block_device.AnonFakeDbBlockDeviceDict(
                         {'volume_id': uuids.volume_id_1,
+                         'attachment_id': uuidutils.generate_uuid(),
                          'source_type': 'volume',
                          'connection_info':
                             jsonutils.dumps(uuidutils.generate_uuid()),
                          'destination_type': 'volume'})),
                 objects.BlockDeviceMapping(
-                    **fake_block_device.FakeDbBlockDeviceDict(
+                    **fake_block_device.AnonFakeDbBlockDeviceDict(
                         {'volume_id': uuids.volume_id_2,
+                         'attachment_id': uuidutils.generate_uuid(),
                          'source_type': 'volume',
                          'connection_info':
                             jsonutils.dumps(uuidutils.generate_uuid()),
@@ -6321,6 +6329,7 @@ class ComputeTestCase(BaseTestCase,
             ])
             for bdm in bdms:
                 bdm.save = mock.Mock()
+                fake_attachment_ids.append(bdm.attachment_id)
             fake_bdms.append(bdms)
             return bdms
 
@@ -6369,10 +6378,13 @@ class ComputeTestCase(BaseTestCase,
         # BDMs with unique connection_info every time it's called. These are
         # stored in fake_bdms in the order they were generated. We assert here
         # that the last BDMs generated (in _rollback_live_migration) now have
-        # the same connection_info as the first BDMs generated (before calling
-        # pre_live_migration), and that we saved them.
+        # the same connection_info and attachment_id as the first BDMs
+        # generated (before calling pre_live_migration), and that we saved
+        # them.
         self.assertGreater(len(fake_bdms), 1)
         for source_bdm, final_bdm in zip(fake_bdms[0], fake_bdms[-1]):
+            self.assertEqual(source_bdm.attachment_id,
+                             final_bdm.attachment_id)
             self.assertEqual(source_bdm.connection_info,
                              final_bdm.connection_info)
             final_bdm.save.assert_called()
@@ -6385,6 +6397,11 @@ class ComputeTestCase(BaseTestCase,
             destroy_disks=True,
             migrate_data=test.MatchType(
                             migrate_data_obj.XenapiLiveMigrateData))
+        # Assert that the final attachment_ids returned by
+        # BlockDeviceMappingList.get_by_instance_uuid are then deleted.
+        mock_attachment_delete.assert_has_calls([
+            mock.call(c, fake_attachment_ids.pop()),
+            mock.call(c, fake_attachment_ids.pop())], any_order=True)
 
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'pre_live_migration')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
