@@ -103,6 +103,28 @@ class TestUtils(test.NoDBTestCase):
         self._test_resources_from_request_spec(expected_resources, flavor,
                                                image)
 
+    def test_resources_from_request_spec_flavor_forbidden_trait(self):
+        flavor = objects.Flavor(vcpus=1,
+                                memory_mb=1024,
+                                root_gb=10,
+                                ephemeral_gb=5,
+                                swap=0,
+                                extra_specs={
+                                    'trait:CUSTOM_FLAVOR_TRAIT': 'forbidden'})
+        expected_resources = utils.ResourceRequest()
+        expected_resources._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+            forbidden_traits={
+                'CUSTOM_FLAVOR_TRAIT',
+            }
+        )
+        self._test_resources_from_request_spec(expected_resources, flavor)
+
     def test_resources_from_request_spec_with_no_disk(self):
         flavor = objects.Flavor(vcpus=1,
                                 memory_mb=1024,
