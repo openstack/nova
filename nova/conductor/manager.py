@@ -691,8 +691,9 @@ class ComputeTaskManager(base.Base):
                                 # provider mapping as the above claim call
                                 # moves the allocation of the instance to
                                 # another host
-                                self._fill_provider_mapping(
-                                    context, request_spec, host)
+                                scheduler_utils.fill_provider_mapping(
+                                    context, self.report_client, request_spec,
+                                    host)
                         except Exception as exc:
                             self._cleanup_when_reschedule_fails(
                                 context, instance, exc, legacy_request_spec,
@@ -1282,55 +1283,6 @@ class ComputeTaskManager(base.Base):
                 with obj_target_cell(inst, cell0):
                     inst.destroy()
 
-    def _fill_provider_mapping(self, context, request_spec, host_selection):
-        """Fills out the request group - resource provider mapping in the
-        request spec.
-
-        This is a workaround as placement does not return which RP
-        fulfills which granular request group in the allocation candidate
-        request. There is a spec proposing a solution in placement:
-        https://review.opendev.org/#/c/597601/
-        When that spec is implemented then this function can be
-        replaced with a simpler code that copies the group - RP
-        mapping out from the Selection object returned by the scheduler's
-        select_destinations call.
-
-        :param context: The security context
-        :param request_spec: The RequestSpec object associated with the
-            operation
-        :param host_selection: The Selection object returned by the scheduler
-            for this operation
-        """
-        # Exit early if this request spec does not require mappings.
-        if not request_spec.maps_requested_resources:
-            return
-
-        # Technically out-of-tree scheduler drivers can still not create
-        # allocations in placement but if request_spec.maps_requested_resources
-        # is not empty and the scheduling succeeded then placement has to be
-        # involved
-        ar = jsonutils.loads(host_selection.allocation_request)
-        allocs = ar['allocations']
-
-        # NOTE(gibi): Getting traits from placement for each instance in a
-        # instance multi-create scenario is unnecessarily expensive. But
-        # instance multi-create cannot be used with pre-created neutron ports
-        # and this code can only be triggered with such pre-created ports so
-        # instance multi-create is not an issue. If this ever become an issue
-        # in the future then we could stash the RP->traits mapping on the
-        # Selection object since we can pull the traits for each provider from
-        # the GET /allocation_candidates response in the scheduler (or leverage
-        # the change from the spec mentioned in the docstring above).
-        provider_traits = {
-            rp_uuid: self.report_client.get_provider_traits(
-                context, rp_uuid).traits
-            for rp_uuid in allocs}
-        # NOTE(gibi): The allocs dict is in the format of the PUT /allocations
-        # and that format can change. The current format can be detected from
-        # host_selection.allocation_request_version
-        request_spec.map_requested_resources_to_providers(
-            allocs, provider_traits)
-
     def schedule_and_build_instances(self, context, build_requests,
                                      request_specs, image,
                                      admin_password, injected_files,
@@ -1450,7 +1402,8 @@ class ComputeTaskManager(base.Base):
             # allocations in the scheduler) for this instance, we may need to
             # map allocations to resource providers in the request spec.
             try:
-                self._fill_provider_mapping(context, request_spec, host)
+                scheduler_utils.fill_provider_mapping(
+                    context, self.report_client, request_spec, host)
             except Exception as exc:
                 # If anything failed here we need to cleanup and bail out.
                 with excutils.save_and_reraise_exception():

@@ -47,6 +47,7 @@ from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields
 from nova.scheduler.client import query
+from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures
@@ -968,8 +969,8 @@ class _BaseTaskTestCase(object):
         # build_instances() is a cast, we need to wait for it to complete
         self.useFixture(cast_as_call.CastAsCall(self))
 
-        @mock.patch('nova.conductor.manager.ComputeTaskManager.'
-                    '_fill_provider_mapping')
+        @mock.patch('nova.scheduler.utils.'
+                    'fill_provider_mapping')
         @mock.patch('nova.scheduler.utils.claim_resources')
         @mock.patch('nova.objects.request_spec.RequestSpec.from_primitives',
                     return_value=request_spec)
@@ -1018,8 +1019,11 @@ class _BaseTaskTestCase(object):
                 host_list=expected_build_run_host_list)
 
             mock_rp_mapping.assert_called_once_with(
-                self.context, mock.ANY, test.MatchType(objects.Selection))
-            actual_request_spec = mock_rp_mapping.mock_calls[0][1][1]
+                self.context,
+                test.MatchType(report.SchedulerReportClient),
+                test.MatchType(objects.RequestSpec),
+                test.MatchType(objects.Selection))
+            actual_request_spec = mock_rp_mapping.mock_calls[0][1][2]
             self.assertEqual(
                 rg1.resources,
                 actual_request_spec.requested_resources[0].resources)
@@ -1043,8 +1047,8 @@ class _BaseTaskTestCase(object):
         # build_instances() is a cast, we need to wait for it to complete
         self.useFixture(cast_as_call.CastAsCall(self))
 
-        @mock.patch('nova.conductor.manager.ComputeTaskManager.'
-                    '_fill_provider_mapping')
+        @mock.patch('nova.scheduler.utils.'
+                    'fill_provider_mapping')
         @mock.patch('nova.scheduler.utils.claim_resources',
                     # simulate that the first claim fails during re-schedule
                     side_effect=[False, True])
@@ -1100,8 +1104,11 @@ class _BaseTaskTestCase(object):
 
             # called only once when the claim succeeded
             mock_rp_mapping.assert_called_once_with(
-                self.context, mock.ANY, test.MatchType(objects.Selection))
-            actual_request_spec = mock_rp_mapping.mock_calls[0][1][1]
+                self.context,
+                test.MatchType(report.SchedulerReportClient),
+                test.MatchType(objects.RequestSpec),
+                test.MatchType(objects.Selection))
+            actual_request_spec = mock_rp_mapping.mock_calls[0][1][2]
             self.assertEqual(
                 rg1.resources,
                 actual_request_spec.requested_resources[0].resources)
@@ -2233,8 +2240,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     @mock.patch('nova.conductor.manager.ComputeTaskManager.'
                 '_cleanup_build_artifacts')
-    @mock.patch('nova.conductor.manager.ComputeTaskManager.'
-                '_fill_provider_mapping', side_effect=test.TestingException)
+    @mock.patch('nova.scheduler.utils.'
+                'fill_provider_mapping', side_effect=test.TestingException)
     def test_schedule_and_build_instances_fill_request_spec_error(
             self, mock_fill, mock_cleanup):
         self.assertRaises(
