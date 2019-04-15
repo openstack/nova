@@ -85,7 +85,7 @@ def fake_inst_obj(context):
         vcpus=1,
         fixed_ips=[],
         root_device_name='/dev/sda1',
-        hostname='test.novadomain',
+        hostname='test',
         display_name='my_displayname',
         metadata={},
         device_metadata=fake_metadata_objects(),
@@ -310,11 +310,19 @@ class MetadataTestCase(test.TestCase):
         self.flags(use_neutron=True)
         self._test_security_groups()
 
-    def test_local_hostname_fqdn(self):
+    def test_local_hostname(self):
+        self.flags(dhcp_domain=None)
         md = fake_InstanceMetadata(self, self.instance.obj_clone())
         data = md.get_ec2_metadata(version='2009-04-04')
         self.assertEqual(data['meta-data']['local-hostname'],
-            "%s.%s" % (self.instance['hostname'], CONF.dhcp_domain))
+            self.instance['hostname'])
+
+    def test_local_hostname_fqdn(self):
+        self.flags(dhcp_domain='fakedomain')
+        md = fake_InstanceMetadata(self, self.instance.obj_clone())
+        data = md.get_ec2_metadata(version='2009-04-04')
+        self.assertEqual('%s.fakedomain' % self.instance['hostname'],
+                         data['meta-data']['local-hostname'])
 
     def test_format_instance_mapping(self):
         # Make sure that _format_instance_mappings works.
