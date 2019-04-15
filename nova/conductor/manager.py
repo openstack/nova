@@ -692,7 +692,7 @@ class ComputeTaskManager(base.Base):
                                 # moves the allocation of the instance to
                                 # another host
                                 self._fill_provider_mapping(
-                                    context, instance.uuid, request_spec, host)
+                                    context, request_spec, host)
                         except Exception as exc:
                             self._cleanup_when_reschedule_fails(
                                 context, instance, exc, legacy_request_spec,
@@ -1282,8 +1282,7 @@ class ComputeTaskManager(base.Base):
                 with obj_target_cell(inst, cell0):
                     inst.destroy()
 
-    def _fill_provider_mapping(
-            self, context, instance_uuid, request_spec, host_selection):
+    def _fill_provider_mapping(self, context, request_spec, host_selection):
         """Fills out the request group - resource provider mapping in the
         request spec.
 
@@ -1297,8 +1296,6 @@ class ComputeTaskManager(base.Base):
         select_destinations call.
 
         :param context: The security context
-        :param instance_uuid: The UUID of the instance for which the provider
-            mapping is filled
         :param request_spec: The RequestSpec object associated with the
             operation
         :param host_selection: The Selection object returned by the scheduler
@@ -1453,8 +1450,7 @@ class ComputeTaskManager(base.Base):
             # allocations in the scheduler) for this instance, we may need to
             # map allocations to resource providers in the request spec.
             try:
-                self._fill_provider_mapping(
-                    context, instance.uuid, request_spec, host)
+                self._fill_provider_mapping(context, request_spec, host)
             except Exception as exc:
                 # If anything failed here we need to cleanup and bail out.
                 with excutils.save_and_reraise_exception():

@@ -1018,9 +1018,8 @@ class _BaseTaskTestCase(object):
                 host_list=expected_build_run_host_list)
 
             mock_rp_mapping.assert_called_once_with(
-                self.context, instance.uuid, mock.ANY,
-                test.MatchType(objects.Selection))
-            actual_request_spec = mock_rp_mapping.mock_calls[0][1][2]
+                self.context, mock.ANY, test.MatchType(objects.Selection))
+            actual_request_spec = mock_rp_mapping.mock_calls[0][1][1]
             self.assertEqual(
                 rg1.resources,
                 actual_request_spec.requested_resources[0].resources)
@@ -1101,9 +1100,8 @@ class _BaseTaskTestCase(object):
 
             # called only once when the claim succeeded
             mock_rp_mapping.assert_called_once_with(
-                self.context, instance.uuid, mock.ANY,
-                test.MatchType(objects.Selection))
-            actual_request_spec = mock_rp_mapping.mock_calls[0][1][2]
+                self.context, mock.ANY, test.MatchType(objects.Selection))
+            actual_request_spec = mock_rp_mapping.mock_calls[0][1][1]
             self.assertEqual(
                 rg1.resources,
                 actual_request_spec.requested_resources[0].resources)
