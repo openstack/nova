@@ -61,21 +61,6 @@
     timeout: 3600
 
 - job:
-    name: nova-tox-functional-py35
-    parent: openstack-tox-functional-py35
-    description: |
-      Run tox-based functional tests for the OpenStack Nova project
-      under cPython version 3.5. with Nova specific irrelevant-files list.
-      Uses tox with the ``functional-py35`` environment.
-    required-projects:
-      - openstack/placement
-    irrelevant-files: *functional-irrelevant-files
-    vars:
-      tox_envlist: functional-py35
-      tox_install_siblings: true
-    timeout: 3600
-
-- job:
     name: nova-tox-functional-py36
     parent: openstack-tox
     nodeset: ubuntu-bionic
@@ -234,7 +219,6 @@
       - openstack-cover-jobs
       - openstack-lower-constraints-jobs
       - openstack-python-jobs
-      - openstack-python35-jobs
       - openstack-python36-jobs
       - openstack-python37-jobs
       - periodic-stable-jobs
@@ -264,7 +248,7 @@
         - nova-lvm
         - nova-next
         - nova-tox-functional
-        - nova-tox-functional-py35
+        - nova-tox-functional-py36
         - tempest-full-py3:
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-slow-py3:
@@ -276,7 +260,7 @@
         - nova-grenade-live-migration
         - nova-live-migration
         - nova-tox-functional
-        - nova-tox-functional-py35
+        - nova-tox-functional-py36
         - nova-next
         - tempest-full-py3:
             irrelevant-files: *dsvm-irrelevant-files
@@ -314,7 +298,6 @@
             irrelevant-files: *dsvm-irrelevant-files
         - os-vif-ovs:
             irrelevant-files: *dsvm-irrelevant-files
-        # NOTE(mriedem): Consider moving nova-tox-functional-py36 to the
-        # check and gate queues once it's stable (like openstack-python36-jobs)
-        - nova-tox-functional-py36
+        # NOTE(mriedem): Consider moving nova-tox-functional-py37 to the
+        # check and gate queues once it's stable (like openstack-python37-jobs)
         - nova-tox-functional-py37
