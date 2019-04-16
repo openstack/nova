@@ -49,24 +49,25 @@ class ConsoleAuthTokensController(wsgi.Controller):
         # with one instance, which can only be in one cell.
         for result in results.values():
             if not nova_context.is_cell_failure_sentinel(result):
-                connect_info = result.to_dict()
+                connect_info = result
                 break
 
         if not connect_info:
             raise webob.exc.HTTPNotFound(explanation=_("Token not found"))
 
-        console_type = connect_info.get('console_type')
+        console_type = connect_info.console_type
 
         if rdp_only and console_type != "rdp-html5":
             raise webob.exc.HTTPUnauthorized(
                 explanation=_("The requested console type details are not "
                               "accessible"))
 
-        return {'console':
-                {i: connect_info[i]
-                 for i in ['instance_uuid', 'host', 'port',
-                           'internal_access_path']
-                 if i in connect_info}}
+        return {'console': {
+            'instance_uuid': connect_info.instance_uuid,
+            'host': connect_info.host,
+            'port': connect_info.port,
+            'internal_access_path': connect_info.internal_access_path,
+        }}
 
     @wsgi.Controller.api_version("2.1", "2.30")
     @wsgi.expected_errors((400, 401, 404))

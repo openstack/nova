@@ -64,15 +64,15 @@ class XCPVNCProxy(object):
 
     def handshake(self, req, connect_info, sockets):
         """Execute hypervisor-specific vnc auth handshaking (if needed)."""
-        host = connect_info['host']
-        port = int(connect_info['port'])
+        host = connect_info.host
+        port = connect_info.port
 
         server = eventlet.connect((host, port))
 
         # Handshake as necessary
-        if connect_info.get('internal_access_path'):
-            server.sendall("CONNECT %s HTTP/1.1\r\n\r\n" %
-                        connect_info['internal_access_path'])
+        if 'internal_access_path' in connect_info:
+            path = connect_info.internal_access_path
+            server.sendall('CONNECT %s HTTP/1.1\r\n\r\n' % path)
 
             data = ""
             while True:
@@ -132,8 +132,7 @@ class XCPVNCProxy(object):
             ctxt = context.get_admin_context()
 
             try:
-                connect_info = objects.ConsoleAuthToken.validate(
-                    ctxt, token).to_dict()
+                connect_info = objects.ConsoleAuthToken.validate(ctxt, token)
             except exception.InvalidToken:
                 LOG.info("Request made with invalid token: %s", req)
                 start_response('401 Not Authorized',
