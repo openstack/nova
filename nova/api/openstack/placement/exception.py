@@ -67,7 +67,7 @@ class NotFound(_BaseException):
 
 
 class Exists(_BaseException):
-        msg_fmt = _("Resource already exists.")
+    msg_fmt = _("Resource already exists.")
 
 
 class InvalidInventory(_BaseException):
@@ -188,7 +188,7 @@ class ProjectNotFound(NotFound):
 
 
 class ProjectExists(Exists):
-        msg_fmt = _("The project %(external_id)s already exists.")
+    msg_fmt = _("The project %(external_id)s already exists.")
 
 
 class UserNotFound(NotFound):
@@ -196,7 +196,7 @@ class UserNotFound(NotFound):
 
 
 class UserExists(Exists):
-        msg_fmt = _("The user %(external_id)s already exists.")
+    msg_fmt = _("The user %(external_id)s already exists.")
 
 
 class ConsumerNotFound(NotFound):

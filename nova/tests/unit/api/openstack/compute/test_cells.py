@@ -84,7 +84,7 @@ class BaseCellsTest(test.NoDBTestCase):
         cells[1]['transport_url'] = insecure_transport_url(
                 cells[1]['transport_url'])
         for i, cell in enumerate(cells):
-                cell['capabilities'] = self.fake_capabilities[i]
+            cell['capabilities'] = self.fake_capabilities[i]
         return cells
 
 

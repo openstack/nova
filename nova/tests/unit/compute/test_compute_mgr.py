@@ -252,11 +252,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                       bdms=mock_bdms)])
 
     def _make_compute_node(self, hyp_hostname, cn_id):
-            cn = mock.Mock(spec_set=['hypervisor_hostname', 'id',
-                                     'destroy'])
-            cn.id = cn_id
-            cn.hypervisor_hostname = hyp_hostname
-            return cn
+        cn = mock.Mock(spec_set=['hypervisor_hostname', 'id',
+                                 'destroy'])
+        cn.id = cn_id
+        cn.hypervisor_hostname = hyp_hostname
+        return cn
 
     def test_update_available_resource_for_node(self):
         rt = self._mock_rt(spec_set=['update_available_resource'])

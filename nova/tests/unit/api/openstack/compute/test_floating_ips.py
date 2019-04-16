@@ -88,12 +88,13 @@ def network_api_disassociate(self, context, instance, floating_address):
 
 
 def fake_instance_get(context, instance_id):
-        return objects.Instance(**{
+    return objects.Instance(**{
         "id": 1,
         "uuid": uuids.fake,
         "name": 'fake',
         "user_id": 'fakeuser',
-        "project_id": '123'})
+        "project_id": '123'
+    })
 
 
 def stub_nw_info(test):
@@ -759,8 +760,8 @@ class FloatingIpTestV21(test.TestCase):
                                              fixed_address=None):
             floating_ips = ["10.10.10.10", "10.10.10.11"]
             if floating_address not in floating_ips:
-                    raise exception.FloatingIpNotFoundForAddress(
-                            address=floating_address)
+                raise exception.FloatingIpNotFoundForAddress(
+                    address=floating_address)
 
         self.stubs.Set(network.api.API, "associate_floating_ip",
                        fake_network_api_associate)
@@ -775,8 +776,8 @@ class FloatingIpTestV21(test.TestCase):
                                                          floating_address):
             floating_ips = ["10.10.10.10", "10.10.10.11"]
             if floating_address not in floating_ips:
-                    raise exception.FloatingIpNotFoundForAddress(
-                            address=floating_address)
+                raise exception.FloatingIpNotFoundForAddress(
+                    address=floating_address)
 
         self.stubs.Set(network.api.API, "get_floating_ip_by_address",
                        network_api_get_floating_ip_by_address)

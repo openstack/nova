@@ -17,7 +17,6 @@ import ast
 import os
 import re
 
-import pep8
 import six
 
 """
@@ -122,7 +121,7 @@ class BaseASTChecker(ast.NodeVisitor):
     """
 
     def __init__(self, tree, filename):
-        """This object is created automatically by pep8.
+        """This object is created automatically by pycodestyle.
 
         :param tree: an AST tree
         :param filename: name of the file being analyzed
@@ -132,12 +131,12 @@ class BaseASTChecker(ast.NodeVisitor):
         self._errors = []
 
     def run(self):
-        """Called automatically by pep8."""
+        """Called automatically by pycodestyle."""
         self.visit(self._tree)
         return self._errors
 
     def add_error(self, node, message=None):
-        """Add an error caused by a node to the list of errors for pep8."""
+        """Add an error caused by a node to the list of errors."""
         message = message or self.CHECK_DESC
         error = (node.lineno, node.col_offset, message, self.__class__)
         self._errors.append(error)
@@ -558,10 +557,10 @@ def assert_equal_in(logical_line):
                   "contents.")
 
 
-def check_http_not_implemented(logical_line, physical_line, filename):
+def check_http_not_implemented(logical_line, physical_line, filename, noqa):
     msg = ("N339: HTTPNotImplemented response must be implemented with"
            " common raise_feature_not_supported().")
-    if pep8.noqa(physical_line):
+    if noqa:
         return
     if ("nova/api/openstack/compute" not in filename):
         return
@@ -722,7 +721,7 @@ def no_log_warn(logical_line):
         yield (0, msg)
 
 
-def check_context_log(logical_line, physical_line, filename):
+def check_context_log(logical_line, physical_line, filename, noqa):
     """check whether context is being passed to the logs
 
     Not correct: LOG.info(_LI("Rebooting instance"), context=context)
@@ -731,10 +730,10 @@ def check_context_log(logical_line, physical_line, filename):
 
     N353
     """
-    if "nova/tests" in filename:
+    if noqa:
         return
 
-    if pep8.noqa(physical_line):
+    if "nova/tests" in filename:
         return
 
     if log_remove_context.match(logical_line):

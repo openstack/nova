@@ -190,4 +190,6 @@ def _register_network_quota():
         QUOTAS.register_resource(quota.CountableResource('networks',
                                                           _network_count,
                                                          'quota_networks'))
+
+
 _register_network_quota()

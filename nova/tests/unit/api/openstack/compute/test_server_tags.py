@@ -327,7 +327,7 @@ class ServerTagsTest(test.TestCase):
                           NON_EXISTING_UUID, TAG1)
 
     def test_delete_all_non_existing_instance(self):
-            req = self._get_request(
-                '/v2/fake/servers/%s/tags' % NON_EXISTING_UUID, 'DELETE')
-            self.assertRaises(exc.HTTPNotFound, self.controller.delete_all,
-                              req, NON_EXISTING_UUID)
+        req = self._get_request(
+            '/v2/fake/servers/%s/tags' % NON_EXISTING_UUID, 'DELETE')
+        self.assertRaises(exc.HTTPNotFound, self.controller.delete_all,
+                          req, NON_EXISTING_UUID)

@@ -4192,7 +4192,7 @@ class _ComputeAPIUnitTestMixIn(object):
         with context.target_cell(self.context, mapping.cell_mapping) as cc:
             cell_context = cc
         for instance in instances:
-                instance._context = cell_context
+            instance._context = cell_context
 
         volume_id = uuidutils.generate_uuid()
         events = [
@@ -4260,7 +4260,7 @@ class _ComputeAPIUnitTestMixIn(object):
         with context.target_cell(self.context, mapping.cell_mapping) as cc:
             cell_context = cc
         for instance in instances:
-                instance._context = cell_context
+            instance._context = cell_context
 
         events = [
             objects.InstanceExternalEvent(
@@ -6817,12 +6817,12 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         connector = conn_info['connector']
 
         with mock.patch.object(self.compute_api.network_api,
-                               'deallocate_for_instance') as mock_deallocate, \
-             mock.patch.object(self.compute_api.volume_api,
-                              'terminate_connection') as mock_terminate_conn, \
-             mock.patch.object(self.compute_api.volume_api,
-                              'detach') as mock_detach:
-                self.compute_api.delete(self.context, inst)
+                     'deallocate_for_instance') as mock_deallocate, \
+                 mock.patch.object(self.compute_api.volume_api,
+                     'terminate_connection') as mock_terminate_conn, \
+                 mock.patch.object(self.compute_api.volume_api,
+                     'detach') as mock_detach:
+            self.compute_api.delete(self.context, inst)
 
         mock_deallocate.assert_called_once_with(self.context, inst)
         mock_detach.assert_called_once_with(self.context, volume_id,

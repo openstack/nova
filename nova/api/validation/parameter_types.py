@@ -164,6 +164,7 @@ def _build_regex_range(ws=True, invert=False, exclude=None):
             regex += "-" + re.escape(c)
     return regex
 
+
 valid_name_regex_base = '^(?![%s])[%s]*(?<![%s])$'
 
 

@@ -364,6 +364,7 @@ class TestNotificationBase(test.NoDBTestCase):
         self.assertFalse(payload.populated)
         self.assertFalse(mock_emit.called)
 
+
 notification_object_data = {
     'AggregateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'AggregatePayload': '1.1-1eb9adcc4440d8627de6ec37c6398746',

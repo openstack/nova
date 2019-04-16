@@ -232,7 +232,8 @@ class RequestContext(context.RequestContext):
         return context
 
     def can(self, action, target=None, fatal=True):
-        """Verifies that the given action is valid on the target in this context.
+        """Verifies that the given action is valid on the target in this
+        context.
 
         :param action: string representing the action to be checked.
         :param target: dictionary representing the object of the action

@@ -7002,9 +7002,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             # Call can be unpackaged as a tuple of args and kwargs
             # so we want to check the first arg in the args list
             if (len(call) == 2 and len(call[0]) == 2 and
-                call[0][1] in perf_events and
-                'Monitoring Intel CMT' in call[0][0]):
-                    warning_count += 1
+                    call[0][1] in perf_events and
+                    'Monitoring Intel CMT' in call[0][0]):
+                warning_count += 1
         self.assertEqual(3, warning_count)
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):

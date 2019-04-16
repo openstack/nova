@@ -105,6 +105,7 @@ def enrich_help_text(alt_db_opts):
                 # texts here if needed.
                 alt_db_opt.help = db_opt.help + alt_db_opt.help
 
+
 # NOTE(cdent): See the note above on api_db_group. The same issues
 # apply here.
 

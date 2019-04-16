@@ -254,9 +254,9 @@ class InstanceHelperMixin(object):
                 break
             retry_count += 1
             if retry_count == max_retries:
-                    self.fail('Wait for state change failed, '
-                              'expected_params=%s, server=%s'
-                              % (expected_params, server))
+                self.fail('Wait for state change failed, '
+                          'expected_params=%s, server=%s' % (
+                              expected_params, server))
             time.sleep(0.5)
 
         return server

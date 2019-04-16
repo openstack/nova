@@ -469,7 +469,7 @@ class TestCompareResult(test.NoDBTestCase):
         response_data = 'bar'
 
         with testtools.ExpectedException(KeyError):
-                self.ast._compare_result(
-                    expected=template_data,
-                    result=response_data,
-                    result_str="Test")
+            self.ast._compare_result(
+                expected=template_data,
+                result=response_data,
+                result_str="Test")

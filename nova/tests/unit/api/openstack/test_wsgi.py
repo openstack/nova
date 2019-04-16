@@ -252,7 +252,7 @@ class ResourceTest(MicroversionedTest):
     def get_req_id_header_name(self, request):
         header_name = 'x-openstack-request-id'
         if utils.get_api_version(request) < 3:
-                header_name = 'x-compute-request-id'
+            header_name = 'x-compute-request-id'
 
         return header_name
 

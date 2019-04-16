@@ -1677,9 +1677,9 @@ class CellV2Commands(object):
 
         if (self._non_unique_transport_url_database_connection_checker(ctxt,
                 cell_mapping, transport_url, db_connection)):
-                # We use the return code 3 before 2 to avoid changing the
-                # semantic meanings of return codes.
-                return 3
+            # We use the return code 3 before 2 to avoid changing the
+            # semantic meanings of return codes.
+            return 3
 
         if transport_url:
             cell_mapping.transport_url = transport_url

@@ -413,7 +413,7 @@ class CrossCellLister(object):
 
             if context.is_cell_failure_sentinel(item._db_record):
                 if (not CONF.api.list_records_by_skipping_down_cells and
-                    not cell_down_support):
+                        not cell_down_support):
                     # Value the config
                     # ``CONF.api.list_records_by_skipping_down_cells`` only if
                     # cell_down_support is False and generate the exception
@@ -422,10 +422,10 @@ class CrossCellLister(object):
                     # be skipped now to either construct minimal constructs
                     # later if cell_down_support is True or to simply return
                     # the skipped results if cell_down_support is False.
-                        raise exception.NovaException(
-                            _('Cell %s is not responding but configuration '
-                              'indicates that we should fail.')
-                              % item.cell_uuid)
+                    raise exception.NovaException(
+                        _('Cell %s is not responding but configuration '
+                          'indicates that we should fail.')
+                          % item.cell_uuid)
                 LOG.warning('Cell %s is not responding and hence is '
                             'being omitted from the results',
                             item.cell_uuid)

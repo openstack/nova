@@ -57,6 +57,7 @@ def get_binary_name():
     """Grab the name of the binary we're running in."""
     return os.path.basename(inspect.stack()[-1][1])[:16]
 
+
 binary_name = get_binary_name()
 
 

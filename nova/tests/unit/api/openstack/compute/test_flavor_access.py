@@ -75,9 +75,9 @@ def fake_get_flavor_by_flavor_id(context, flavorid):
 
 def _has_flavor_access(flavorid, projectid):
     for access in ACCESS_LIST:
-        if access['flavor_id'] == flavorid and \
-           access['project_id'] == projectid:
-                return True
+        if (access['flavor_id'] == flavorid and
+                access['project_id'] == projectid):
+            return True
     return False
 
 
