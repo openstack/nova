@@ -311,14 +311,14 @@ class MetadataTestCase(test.TestCase):
         self._test_security_groups()
 
     def test_local_hostname(self):
-        self.flags(dhcp_domain=None)
+        self.flags(dhcp_domain=None, group='api')
         md = fake_InstanceMetadata(self, self.instance.obj_clone())
         data = md.get_ec2_metadata(version='2009-04-04')
         self.assertEqual(data['meta-data']['local-hostname'],
             self.instance['hostname'])
 
     def test_local_hostname_fqdn(self):
-        self.flags(dhcp_domain='fakedomain')
+        self.flags(dhcp_domain='fakedomain', group='api')
         md = fake_InstanceMetadata(self, self.instance.obj_clone())
         data = md.get_ec2_metadata(version='2009-04-04')
         self.assertEqual('%s.fakedomain' % self.instance['hostname'],

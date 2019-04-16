@@ -465,24 +465,6 @@ Related options:
 
 * ``use_neutron``
 """),
-    cfg.StrOpt("dhcp_domain",
-        default="novalocal",
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-nova-network is deprecated, as are any related configuration options.
-""",
-        help="""
-This option allows you to specify the domain for the DHCP server.
-
-Possible values:
-
-* Any string that is a valid domain name.
-
-Related options:
-
-* ``use_neutron``
-"""),
     cfg.StrOpt("l3_lib",
         default="nova.network.l3.LinuxNetL3",
         deprecated_for_removal=True,
