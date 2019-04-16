@@ -10,14 +10,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import six
-
 from nova import context as nova_context
 from nova.db import api as db_api
 from nova.objects import virtual_interface
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as fake_image
@@ -82,10 +79,10 @@ class FillVirtualInterfaceListMigration(
         # Since the above (archive stuff) removed the fake instance, do the
         # migration again to recreate it so we can exercise the code path.
         virtual_interface.fill_virtual_interface_list(ctxt, max_count=50)
-        # Now list deleted servers.
-        # FIXME(mriedem): This blows up trying to load fields (flavor) on the
-        # deleted marker flavor (bug 1825034).
-        ex = self.assertRaises(api_client.OpenStackApiException,
-                               self.api.get_servers,
-                               search_opts={'all_tenants': 1, 'deleted': 1})
-        self.assertIn('OrphanedObjectError', six.text_type(ex))
+        # Now list deleted servers. The fake marker instance should be excluded
+        # from the API results.
+        for detail in (True, False):
+            servers = self.api.get_servers(detail=detail,
+                                           search_opts={'all_tenants': 1,
+                                                        'deleted': 1})
+            self.assertEqual(0, len(servers))
