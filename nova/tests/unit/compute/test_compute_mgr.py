@@ -2810,14 +2810,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(event_obj, event.wait())
         self.assertEqual({}, self.compute.instance_events._events)
 
+    @ddt.data(task_states.DELETING,
+              task_states.MIGRATING)
     @mock.patch('nova.compute.manager.LOG')
-    def test_process_instance_event_deleting(self, mock_log):
+    def test_process_instance_event_expected_task(self, task_state, mock_log):
         """Tests that we don't log a warning when we get a
-        network-vif-unplugged event for an instance that's being deleted.
+        network-vif-unplugged event for an instance that's undergoing a task
+        state transition that will generate the expected event.
         """
         inst_obj = objects.Instance(uuid=uuids.instance,
                                     vm_state=vm_states.ACTIVE,
-                                    task_state=task_states.DELETING)
+                                    task_state=task_state)
         event_obj = objects.InstanceExternalEvent(name='network-vif-unplugged',
                                                   tag=uuids.port_id)
         with mock.patch.object(self.compute.instance_events,
@@ -2827,8 +2830,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_log.debug.assert_called()
         self.assertThat(mock_log.debug.call_args[0][0],
                         testtools.matchers.MatchesRegex(
-                            'Received event .* for instance which is being '
-                            'deleted.'))
+                            'Received event .* for instance with task_state '
+                            '%s'))
 
     @mock.patch('nova.compute.manager.LOG')
     def test_process_instance_event_unexpected_warning(self, mock_log):
