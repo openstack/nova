@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Unsetting '[DEFAULT] dhcp_domain' will now correctly result in the metadata
+    service/config drive providing an instance hostname of '${hostname}' instead
+    of '${hostname}None', as was previously seen.

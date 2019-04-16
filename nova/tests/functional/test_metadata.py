@@ -59,7 +59,7 @@ class MetadataTest(test.TestCase):
                 projects=[])
         instance = objects.Instance(ctxt, flavor=flavor, vcpus=1,
                                     memory_mb=256, root_gb=0, ephemeral_gb=0,
-                                    project_id='fake')
+                                    project_id='fake', hostname='test')
         instance.create()
 
         # NOTE(mikal): We could create a network and a fixed IP here, but it
@@ -100,6 +100,9 @@ class MetadataTest(test.TestCase):
         url = '%sopenstack/latest/meta_data.json' % self.md_url
         res = requests.request('GET', url, timeout=5)
         self.assertEqual(200, res.status_code)
+        j = jsonutils.loads(res.text)
+        self.assertIn('hostname', j)
+        self.assertEqual('test.novalocal', j['hostname'])
 
     def test_lookup_external_service(self):
         self.flags(
