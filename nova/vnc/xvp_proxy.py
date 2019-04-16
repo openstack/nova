@@ -26,9 +26,10 @@ from oslo_log import log as logging
 import webob
 
 import nova.conf
-from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
+from nova import exception
 from nova.i18n import _LI
+from nova import objects
 from nova import utils
 from nova import version
 from nova import wsgi
@@ -131,10 +132,11 @@ class XCPVNCProxy(object):
                 return "Invalid Request"
 
             ctxt = context.get_admin_context()
-            api = consoleauth_rpcapi.ConsoleAuthAPI()
-            connect_info = api.check_token(ctxt, token)
 
-            if not connect_info:
+            try:
+                connect_info = objects.ConsoleAuthToken.validate(
+                    ctxt, token).to_dict()
+            except exception.InvalidToken:
                 LOG.info(_LI("Request made with invalid token: %s"), req)
                 start_response('401 Not Authorized',
                                [('content-type', 'text/html')])
