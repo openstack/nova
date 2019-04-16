@@ -136,6 +136,8 @@ Upgrade
   * Checks to ensure block-storage (cinder) API version 3.44 is
     available in order to support multi-attach volumes.
     If ``[cinder]/auth_type`` is not configured this is a no-op check.
+  * The "**nova-consoleauth** service" upgrade check was removed since the
+    service was removed in Train.
 
 See Also
 ========

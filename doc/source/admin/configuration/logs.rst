@@ -22,9 +22,6 @@ The corresponding log file of each Compute service is stored in the
    * - ``nova-conductor.log``
      - ``openstack-nova-conductor``
      - ``nova-conductor``
-   * - ``nova-consoleauth.log``
-     - ``openstack-nova-consoleauth``
-     - ``nova-consoleauth``
    * - ``nova-network.log`` [#a]_
      - ``openstack-nova-network``
      - ``nova-network``

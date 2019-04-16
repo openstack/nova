@@ -370,18 +370,15 @@ Finalize installation
 
 * Start the Compute services and configure them to start when the system boots:
 
-  .. note:: ``nova-consoleauth`` is deprecated since 18.0.0 (Rocky) and will
-            be removed in an upcoming release. Console proxies should be
-            deployed per cell. If performing a fresh install (not an upgrade),
-            then you likely do not need to install the ``nova-consoleauth``
-            service. See
-            :oslo.config:option:`workarounds.enable_consoleauth` for details.
-
   .. code-block:: console
 
-     # systemctl enable openstack-nova-api.service \
-       openstack-nova-consoleauth openstack-nova-scheduler.service \
-       openstack-nova-conductor.service openstack-nova-novncproxy.service
-     # systemctl start openstack-nova-api.service \
-       openstack-nova-consoleauth openstack-nova-scheduler.service \
-       openstack-nova-conductor.service openstack-nova-novncproxy.service
+     # systemctl enable \
+         openstack-nova-api.service \
+         openstack-nova-scheduler.service \
+         openstack-nova-conductor.service \
+         openstack-nova-novncproxy.service
+     # systemctl start \
+         openstack-nova-api.service \
+         openstack-nova-scheduler.service \
+         openstack-nova-conductor.service \
+         openstack-nova-novncproxy.service
