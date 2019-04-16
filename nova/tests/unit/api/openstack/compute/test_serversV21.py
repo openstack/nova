@@ -4049,28 +4049,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(exception.ValidationError,
                           self.controller.create,
                           self.req, body=self.body)
-    # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the os-networks extension tests
-    # def test_create_server_with_invalid_networks_parameter(self):
-    #     self.ext_mgr.extensions = {'os-networks': 'fake'}
-    #     image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-    #     flavor_ref = 'http://localhost/123/flavors/3'
-    #     body = {
-    #         'server': {
-    #         'name': 'server_test',
-    #         'imageRef': image_href,
-    #         'flavorRef': flavor_ref,
-    #         'networks': {'uuid': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'},
-    #         }
-    #     }
-    #     req = fakes.HTTPRequest.blank('/fake/servers')
-    #     req.method = 'POST'
-    #     req.body = jsonutils.dump_as_bytes(body)
-    #     req.headers["content-type"] = "application/json"
-    #     self.assertRaises(webob.exc.HTTPBadRequest,
-    #                       self.controller.create,
-    #                       req,
-    #                       body)
 
     def test_create_server_with_deleted_image(self):
         # Get the fake image service so we can set the status to deleted
@@ -4141,47 +4119,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.req.headers["content-type"] = "application/json"
         self.controller.create(self.req, body=self.body).obj['server']
-
-    # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the os-keypairs extension tests
-    # def test_create_instance_with_keypairs_enabled(self):
-    #     self.ext_mgr.extensions = {'os-keypairs': 'fake'}
-    #     key_name = 'green'
-    #
-    #     params = {'key_name': key_name}
-    #     old_create = compute_api.API.create
-    #
-    #     # NOTE(sdague): key pair goes back to the database,
-    #     # so we need to stub it out for tests
-    #     def key_pair_get(context, user_id, name):
-    #         return {'public_key': 'FAKE_KEY',
-    #                 'fingerprint': 'FAKE_FINGERPRINT',
-    #                 'name': name}
-    #
-    #     def create(*args, **kwargs):
-    #         self.assertEqual(kwargs['key_name'], key_name)
-    #         return old_create(*args, **kwargs)
-    #
-    #     self.stub_out('nova.db.api.key_pair_get', key_pair_get)
-    #     self.stubs.Set(compute_api.API, 'create', create)
-    #     self._test_create_extra(params)
-    #
-    # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the os-networks extension tests
-    # def test_create_instance_with_networks_enabled(self):
-    #     self.ext_mgr.extensions = {'os-networks': 'fake'}
-    #     net_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-    #     requested_networks = [{'uuid': net_uuid}]
-    #     params = {'networks': requested_networks}
-    #     old_create = compute_api.API.create
-
-    #     def create(*args, **kwargs):
-    #         result = [('76fa36fc-c930-4bf3-8c8a-ea2a2420deb6', None)]
-    #         self.assertEqual(kwargs['requested_networks'], result)
-    #         return old_create(*args, **kwargs)
-
-    #     self.stubs.Set(compute_api.API, 'create', create)
-    #     self._test_create_extra(params)
 
     @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.PortRequiresFixedIP(
