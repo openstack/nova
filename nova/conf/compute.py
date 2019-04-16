@@ -1289,7 +1289,7 @@ registered in the database as an enabled service. Sometimes it can be useful
 to register new compute services in disabled state and then enabled them at a
 later point in time. This option only sets this behavior for nova-compute
 services, it does not auto-disable other services like nova-conductor,
-nova-scheduler, nova-consoleauth, or nova-osapi_compute.
+nova-scheduler, or nova-osapi_compute.
 
 Possible values:
 

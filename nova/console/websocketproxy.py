@@ -30,7 +30,6 @@ import websockify
 
 from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
-from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import exception
 from nova.i18n import _
@@ -125,14 +124,8 @@ class NovaProxyRequestHandlerBase(object):
                                                          str(port),
                                                          console_type)
 
-    def _get_connect_info_consoleauth(self, ctxt, token):
-        # NOTE(PaulMurray) consoleauth check_token() validates the token
-        # and does an rpc to compute manager to check the console port
-        # is correct.
-        rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
-        return rpcapi.check_token(ctxt, token=token)
-
-    def _get_connect_info_database(self, ctxt, token):
+    def _get_connect_info(self, ctxt, token):
+        """Validate the token and get the connect info."""
         # NOTE(PaulMurray) ConsoleAuthToken.validate validates the token.
         # We call the compute manager directly to check the console port
         # is correct.
@@ -144,25 +137,6 @@ class NovaProxyRequestHandlerBase(object):
 
         if not valid_port:
             raise exception.InvalidToken(token='***')
-
-        return connect_info
-
-    def _get_connect_info(self, ctxt, token):
-        """Validate the token and get the connect info."""
-        connect_info = None
-
-        # NOTE(melwitt): If consoleauth is enabled to aid in transitioning
-        # to the database backend, check it first before falling back to
-        # the database. Tokens that existed pre-database-backend will
-        # reside in the consoleauth service storage.
-        if CONF.workarounds.enable_consoleauth:
-            connect_info = self._get_connect_info_consoleauth(ctxt, token)
-        # If consoleauth is enabled to aid in transitioning to the database
-        # backend and we didn't find a token in the consoleauth service
-        # storage, check the database for a token because it's probably a
-        # post-database-backend token, which are stored in the database.
-        if not connect_info:
-            connect_info = self._get_connect_info_database(ctxt, token)
 
         return connect_info
 

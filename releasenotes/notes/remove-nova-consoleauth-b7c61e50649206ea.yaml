@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The ``nova-consoleauth`` service has been deprecated since the 18.0.0
+    Rocky release and has now been removed. The following configuration
+    options have been removed:
+
+    * ``[upgrade_levels] consoleauth``
+    * ``[workarounds] enable_consoleauth``

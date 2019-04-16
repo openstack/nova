@@ -37,7 +37,6 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import conductor
 import nova.conf
-from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.db import api as db
 from nova import exception
@@ -992,8 +991,6 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(image_api.API, 'delete')
     @mock.patch.object(objects.InstanceMapping, 'save')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
-    @mock.patch.object(consoleauth_rpcapi.ConsoleAuthAPI,
-                       'delete_tokens_for_instance')
     @mock.patch.object(compute_utils,
                        'notify_about_instance_usage')
     @mock.patch.object(db, 'instance_destroy')
@@ -1010,7 +1007,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def _test_delete(self, delete_type, mock_save, mock_bdm_get, mock_elevated,
                      mock_get_cn, mock_up, mock_record, mock_inst_update,
                      mock_deallocate, mock_inst_meta, mock_inst_destroy,
-                     mock_notify_legacy, mock_del_token, mock_get_inst,
+                     mock_notify_legacy, mock_get_inst,
                      mock_save_im, mock_image_delete, mock_mig_get,
                      mock_notify, **attrs):
         expected_save_calls = [mock.call()]
@@ -1175,11 +1172,6 @@ class _ComputeAPIUnitTestMixIn(object):
                 mock_terminate.assert_called_once_with(
                     self.context, inst, [])
 
-        if CONF.workarounds.enable_consoleauth:
-            mock_del_token.assert_called_once_with(self.context, instance_uuid)
-        else:
-            mock_del_token.assert_not_called()
-
         if is_shelved:
             mock_image_delete.assert_called_once_with(self.context,
                                                       snapshot_id)
@@ -1204,9 +1196,7 @@ class _ComputeAPIUnitTestMixIn(object):
                           task_state=task_states.RESIZE_FINISH,
                           old_flavor=old_flavor)
 
-    @ddt.data(True, False)
-    def test_delete_in_resized(self, enable_consoleauth):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_delete_in_resized(self):
         self._test_delete('delete', vm_state=vm_states.RESIZED)
 
     def test_delete_shelved(self):
@@ -1215,9 +1205,7 @@ class _ComputeAPIUnitTestMixIn(object):
                           vm_state=vm_states.SHELVED,
                           system_metadata=fake_sys_meta)
 
-    @ddt.data(True, False)
-    def test_delete_shelved_offloaded(self, enable_consoleauth):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_delete_shelved_offloaded(self):
         fake_sys_meta = {'shelved_image_id': SHELVED_IMAGE}
         self._test_delete('delete',
                           vm_state=vm_states.SHELVED_OFFLOADED,
@@ -1235,9 +1223,7 @@ class _ComputeAPIUnitTestMixIn(object):
                           vm_state=vm_states.SHELVED_OFFLOADED,
                           system_metadata=fake_sys_meta)
 
-    @ddt.data(True, False)
-    def test_delete_shelved_exception(self, enable_consoleauth):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_delete_shelved_exception(self):
         fake_sys_meta = {'shelved_image_id': SHELVED_IMAGE_EXCEPTION}
         self._test_delete('delete',
                           vm_state=vm_states.SHELVED,
@@ -1252,9 +1238,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_delete_soft_in_resized(self):
         self._test_delete('soft_delete', vm_state=vm_states.RESIZED)
 
-    @ddt.data(True, False)
-    def test_delete_soft(self, enable_consoleauth):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_delete_soft(self):
         self._test_delete('soft_delete')
 
     def test_delete_forced(self):
