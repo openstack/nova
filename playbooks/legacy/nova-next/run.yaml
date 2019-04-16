@@ -45,6 +45,8 @@
           [[post-config|$NOVA_CONF]]
           [compute]
           resource_provider_association_refresh = 0
+          [quota]
+          count_usage_from_placement = True
 
           EOF
         executable: /bin/bash
