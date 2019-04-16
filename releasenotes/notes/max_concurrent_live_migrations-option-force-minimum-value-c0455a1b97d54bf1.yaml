@@ -1,0 +1,5 @@
+---
+upgrade:
+  - The ``max_concurrent_live_migrations`` configuration option has been
+    restricted by the minimum value and now raises a ValueError
+    if the value is less than 0.

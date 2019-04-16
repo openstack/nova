@@ -621,9 +621,9 @@ Possible Values:
 * 0 : treated as unlimited.
 * Any positive integer representing maximum concurrent builds.
 """),
-    # TODO(sfinucan): Add min parameter
     cfg.IntOpt('max_concurrent_live_migrations',
         default=1,
+        min=0,
         help="""
 Maximum number of live migrations to run concurrently. This limit is enforced
 to avoid outbound live migrations overwhelming the host/network and causing
@@ -633,7 +633,6 @@ that doing so is safe and stable in your environment.
 Possible values:
 
 * 0 : treated as unlimited.
-* Negative value defaults to 0.
 * Any positive integer representing maximum number of live migrations
   to run concurrently.
 """),
