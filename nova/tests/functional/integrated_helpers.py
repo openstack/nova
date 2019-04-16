@@ -116,7 +116,6 @@ class _IntegratedTestBase(test.TestCase):
         if 'cell1' in self.cell_mappings:
             self.flags(transport_url=self.cell_mappings['cell1'].transport_url)
         self.conductor = self.start_service('conductor')
-        self.consoleauth = self.start_service('consoleauth')
 
         if self.USE_NEUTRON:
             self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))

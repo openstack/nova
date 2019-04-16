@@ -70,8 +70,6 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
         self.start_service('conductor')
         self.start_service('scheduler')
         self.start_service('compute')
-        # The consoleauth service is needed for deleting console tokens.
-        self.start_service('consoleauth')
 
         self.useFixture(cast_as_call.CastAsCall(self))
 

@@ -2,13 +2,6 @@
     "availabilityZoneInfo": [
         {
             "hosts": {
-                "consoleauth": {
-                    "nova-consoleauth": {
-                        "active": true,
-                        "available": true,
-                        "updated_at": %(strtime_or_none)s
-                    }
-                },
                 "conductor": {
                     "nova-conductor": {
                         "active": true,

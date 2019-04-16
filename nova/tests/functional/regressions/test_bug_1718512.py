@@ -75,10 +75,6 @@ class TestRequestSpecRetryReschedule(test.TestCase,
         self.admin_api.microversion = 'latest'
         self.api.microversion = 'latest'
 
-        # The consoleauth service is needed for deleting console tokens when
-        # the server is deleted.
-        self.start_service('consoleauth')
-
         # Use our custom weigher defined above to make sure that we have
         # a predictable scheduling sort order.
         self.flags(weight_classes=[__name__ + '.HostNameWeigher'],

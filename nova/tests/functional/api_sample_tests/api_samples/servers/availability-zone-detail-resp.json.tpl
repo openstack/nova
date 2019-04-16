@@ -9,13 +9,6 @@
                         "updated_at": null
                     }
                 },
-                "consoleauth": {
-                    "nova-consoleauth": {
-                        "active": true,
-                        "available": true,
-                        "updated_at": null
-                    }
-                },
                 "network": {
                     "nova-network": {
                         "active": true,

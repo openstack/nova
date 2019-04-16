@@ -47,7 +47,6 @@ class TestListServersIpFilter(test.TestCase):
                    group='filter_scheduler')
         self.start_service('scheduler')
         self.start_service('compute')
-        self.start_service('consoleauth')
 
         self.useFixture(cast_as_call.CastAsCall(self))
 
