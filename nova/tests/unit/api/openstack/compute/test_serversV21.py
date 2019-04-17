@@ -793,7 +793,7 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(0, len(res_dict['servers']))
         self.mock_get_all.assert_called_once_with(
             req.environ['nova.context'],
-            expected_attrs=expected_attrs,
+            expected_attrs=sorted(expected_attrs),
             limit=1000, marker=None,
             search_opts={'deleted': False, 'project_id': 'fake'},
             sort_dirs=['desc'], sort_keys=['created_at'],
@@ -918,6 +918,15 @@ class ServersControllerTest(ControllerTest):
             expected_attrs=mock.ANY, sort_keys=[], sort_dirs=[],
             cell_down_support=False, all_tenants=False)
 
+    def test_get_servers_ignore_locked_sort_key(self):
+        # Prior to microversion 2.73 locked sort key is ignored.
+        req = self.req('/fake/servers?sort_key=locked&sort_dir=asc')
+        self.controller.detail(req)
+        self.mock_get_all.assert_called_once_with(
+            mock.ANY, search_opts=mock.ANY, limit=mock.ANY, marker=mock.ANY,
+            expected_attrs=mock.ANY, sort_keys=[], sort_dirs=[],
+            cell_down_support=False, all_tenants=False)
+
     def test_get_servers_ignore_sort_key_only_one_dir(self):
         req = self.req(
             '/fake/servers?sort_key=user_id&sort_key=vcpus&sort_dir=asc')
@@ -969,6 +978,30 @@ class ServersControllerTest(ControllerTest):
         self.mock_get_all.side_effect = fake_get_all
 
         req = self.req('/fake/servers?unknownoption=whee')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(1, len(servers))
+        self.assertEqual(uuids.fake, servers[0]['id'])
+        self.mock_get_all.assert_called_once_with(
+            req.environ['nova.context'], expected_attrs=[],
+            limit=1000, marker=None,
+            search_opts={'deleted': False, 'project_id': 'fake'},
+            sort_dirs=['desc'], sort_keys=['created_at'],
+            cell_down_support=False, all_tenants=False)
+
+    def test_get_servers_with_locked_filter(self):
+        # Prior to microversion 2.73 locked filter parameter is ignored.
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False, all_tenants=False):
+            db_list = [fakes.stub_instance(100, uuid=uuids.fake)]
+            return instance_obj._make_instance_list(
+                context, objects.InstanceList(), db_list, FIELDS)
+
+        self.mock_get_all.side_effect = fake_get_all
+
+        req = self.req('/fake/servers?locked=true')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
@@ -2512,6 +2545,107 @@ class ServersControllerTestV271(ControllerTest):
         servers = self.controller.show(req, FAKE_UUID)
         expect_sg = []
         self.assertEqual(expect_sg, servers['server']['server_groups'])
+
+
+class ServersControllerTestV273(ControllerTest):
+    """Server Controller test for microversion 2.73
+
+    The intent here is simply to verify that when showing server details
+    after microversion 2.73 the response will also have the locked_reason
+    key for the servers.
+    """
+    wsgi_api_version = '2.73'
+
+    def setUp(self):
+        super(ServersControllerTestV273, self).setUp()
+
+    def req(self, url, use_admin_context=False):
+        return fakes.HTTPRequest.blank(url,
+                                       use_admin_context=use_admin_context,
+                                       version=self.wsgi_api_version)
+
+    def test_get_servers_with_locked_filter(self):
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False, all_tenants=False):
+            db_list = [fakes.stub_instance(
+                       100, uuid=uuids.fake, locked_by='fake')]
+            return instance_obj._make_instance_list(
+                context, objects.InstanceList(), db_list, FIELDS)
+
+        self.mock_get_all.side_effect = fake_get_all
+
+        req = self.req('/fake/servers?locked=true')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(1, len(servers))
+        self.assertEqual(uuids.fake, servers[0]['id'])
+        search = {'deleted': False, 'project_id': 'fake', 'locked': True}
+        self.mock_get_all.assert_called_once_with(
+            req.environ['nova.context'], expected_attrs=[],
+            limit=1000, marker=None,
+            search_opts=search,
+            sort_dirs=['desc'], sort_keys=['created_at'],
+            cell_down_support=False, all_tenants=False)
+
+    def test_get_servers_with_locked_filter_invalid_value(self):
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False, all_tenants=False):
+            db_list = [fakes.stub_instance(
+                       100, uuid=uuids.fake, locked_by='fake')]
+            return instance_obj._make_instance_list(
+                context, objects.InstanceList(), db_list, FIELDS)
+
+        self.mock_get_all.side_effect = fake_get_all
+
+        req = self.req('/fake/servers?locked=price')
+        exp = self.assertRaises(webob.exc.HTTPBadRequest,
+                                self.controller.index, req)
+        self.assertIn("Unrecognized value 'price'", six.text_type(exp))
+
+    def test_get_servers_with_locked_filter_empty_value(self):
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False, all_tenants=False):
+            db_list = [fakes.stub_instance(
+                       100, uuid=uuids.fake, locked_by='fake')]
+            return instance_obj._make_instance_list(
+                context, objects.InstanceList(), db_list, FIELDS)
+
+        self.mock_get_all.side_effect = fake_get_all
+
+        req = self.req('/fake/servers?locked=')
+        exp = self.assertRaises(webob.exc.HTTPBadRequest,
+                                self.controller.index, req)
+        self.assertIn("Unrecognized value ''", six.text_type(exp))
+
+    def test_get_servers_with_locked_sort_key(self):
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False, all_tenants=False):
+            db_list = [fakes.stub_instance(
+                       100, uuid=uuids.fake, locked_by='fake')]
+            return instance_obj._make_instance_list(
+                context, objects.InstanceList(), db_list, FIELDS)
+
+        self.mock_get_all.side_effect = fake_get_all
+
+        req = self.req('/fake/servers?sort_dir=desc&sort_key=locked')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(1, len(servers))
+        self.assertEqual(uuids.fake, servers[0]['id'])
+        self.mock_get_all.assert_called_once_with(
+            req.environ['nova.context'], expected_attrs=[],
+            limit=1000, marker=None,
+            search_opts={'deleted': False, 'project_id': 'fake'},
+            sort_dirs=['desc'], sort_keys=['locked'],
+            cell_down_support=False, all_tenants=False)
 
 
 class ServersControllerDeleteTest(ControllerTest):

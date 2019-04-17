@@ -68,7 +68,8 @@ class InstancePayload(base.NotificationPayloadBase):
     # Version 1.6: Add request_id field
     # Version 1.7: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
-    VERSION = '1.7'
+    # Version 1.8: Added locked_reason field
+    VERSION = '1.8'
     fields = {
         'uuid': fields.UUIDField(),
         'user_id': fields.StringField(nullable=True),
@@ -113,6 +114,7 @@ class InstancePayload(base.NotificationPayloadBase):
         'request_id': fields.StringField(nullable=True),
         'action_initiator_user': fields.StringField(nullable=True),
         'action_initiator_project': fields.StringField(nullable=True),
+        'locked_reason': fields.StringField(nullable=True),
     }
 
     def __init__(self, context, instance, bdms=None):
@@ -132,6 +134,7 @@ class InstancePayload(base.NotificationPayloadBase):
                                                  context.user_id) else None
         self.action_initiator_user = context.user_id
         self.action_initiator_project = context.project_id
+        self.locked_reason = instance.system_metadata.get("locked_reason")
         self.populate_schema(instance=instance)
 
 
@@ -147,7 +150,8 @@ class InstanceActionPayload(InstancePayload):
     # Version 1.6: Added request_id field to InstancePayload
     # Version 1.7: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
-    VERSION = '1.7'
+    # Version 1.8: Added locked_reason field to InstancePayload
+    VERSION = '1.8'
     fields = {
         'fault': fields.ObjectField('ExceptionPayload', nullable=True),
         'request_id': fields.StringField(nullable=True),
@@ -169,7 +173,8 @@ class InstanceActionVolumePayload(InstanceActionPayload):
     # Version 1.4: Added request_id field to InstancePayload
     # Version 1.5: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
-    VERSION = '1.5'
+    # Version 1.6: Added locked_reason field to InstancePayload
+    VERSION = '1.6'
     fields = {
         'volume_id': fields.UUIDField()
     }
@@ -194,7 +199,8 @@ class InstanceActionVolumeSwapPayload(InstanceActionPayload):
     # Version 1.6: Added request_id field to InstancePayload
     # Version 1.7: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
-    VERSION = '1.7'
+    # Version 1.8: Added locked_reason field to InstancePayload
+    VERSION = '1.8'
     fields = {
         'old_volume_id': fields.UUIDField(),
         'new_volume_id': fields.UUIDField(),
@@ -229,7 +235,8 @@ class InstanceCreatePayload(InstanceActionPayload):
     #         1.10: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
     #         1.11: Added instance_name to InstanceCreatePayload
-    VERSION = '1.11'
+    # Version 1.12: Added locked_reason field to InstancePayload
+    VERSION = '1.12'
     fields = {
         'keypairs': fields.ListOfObjectsField('KeypairPayload'),
         'tags': fields.ListOfStringsField(),
@@ -262,7 +269,8 @@ class InstanceActionResizePrepPayload(InstanceActionPayload):
     # Version 1.1: Added request_id field to InstancePayload
     # Version 1.2: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
-    VERSION = '1.2'
+    # Version 1.3: Added locked_reason field to InstancePayload
+    VERSION = '1.3'
     fields = {
         'new_flavor': fields.ObjectField('FlavorPayload', nullable=True)
     }
@@ -287,7 +295,8 @@ class InstanceUpdatePayload(InstancePayload):
     # Version 1.7: Added request_id field to InstancePayload
     # Version 1.8: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
-    VERSION = '1.8'
+    # Version 1.9: Added locked_reason field to InstancePayload
+    VERSION = '1.9'
     fields = {
         'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
@@ -314,7 +323,8 @@ class InstanceActionRescuePayload(InstanceActionPayload):
     # Version 1.1: Added request_id field to InstancePayload
     # Version 1.2: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
-    VERSION = '1.2'
+    # Version 1.3: Added locked_reason field to InstancePayload
+    VERSION = '1.3'
     fields = {
         'rescue_image_ref': fields.UUIDField(nullable=True)
     }
@@ -338,7 +348,8 @@ class InstanceActionRebuildPayload(InstanceActionPayload):
     #              signal the change of nova_object.name.
     # Version 1.8: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
-    VERSION = '1.8'
+    # Version 1.9: Added locked_reason field to InstancePayload
+    VERSION = '1.9'
     fields = {
         'trusted_image_certificates': fields.ListOfStringsField(
             nullable=True)
@@ -688,7 +699,8 @@ class InstanceActionSnapshotPayload(InstanceActionPayload):
     # Version 1.7: Added request_id field to InstancePayload
     # Version 1.8: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
-    VERSION = '1.8'
+    # Version 1.9: Added locked_reason field to InstancePayload
+    VERSION = '1.9'
     fields = {
         'snapshot_image_id': fields.UUIDField(),
     }
@@ -706,7 +718,8 @@ class InstanceExistsPayload(InstancePayload):
     # Version 1.0: Initial version
     # Version 1.1: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
-    VERSION = '1.1'
+    # Version 1.2: Added locked_reason field to InstancePayload
+    VERSION = '1.2'
     fields = {
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
         'bandwidth': fields.ListOfObjectsField('BandwidthPayload'),

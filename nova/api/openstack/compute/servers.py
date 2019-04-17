@@ -111,7 +111,8 @@ class ServersController(wsgi.Controller):
         self.network_api = network_api.API()
 
     @wsgi.expected_errors((400, 403))
-    @validation.query_schema(schema_servers.query_params_v266, '2.66')
+    @validation.query_schema(schema_servers.query_params_v273, '2.73')
+    @validation.query_schema(schema_servers.query_params_v266, '2.66', '2.72')
     @validation.query_schema(schema_servers.query_params_v226, '2.26', '2.65')
     @validation.query_schema(schema_servers.query_params_v21, '2.1', '2.25')
     def index(self, req):
@@ -125,7 +126,8 @@ class ServersController(wsgi.Controller):
         return servers
 
     @wsgi.expected_errors((400, 403))
-    @validation.query_schema(schema_servers.query_params_v266, '2.66')
+    @validation.query_schema(schema_servers.query_params_v273, '2.73')
+    @validation.query_schema(schema_servers.query_params_v266, '2.66', '2.72')
     @validation.query_schema(schema_servers.query_params_v226, '2.26', '2.65')
     @validation.query_schema(schema_servers.query_params_v21, '2.1', '2.25')
     def detail(self, req):
@@ -273,6 +275,9 @@ class ServersController(wsgi.Controller):
         # further down the stack.
         search_opts.pop('all_tenants', None)
 
+        if 'locked' in search_opts:
+            search_opts['locked'] = common.is_locked(search_opts)
+
         elevated = None
         if all_tenants:
             if is_detail:
@@ -291,9 +296,11 @@ class ServersController(wsgi.Controller):
 
         limit, marker = common.get_limit_and_marker(req)
         sort_keys, sort_dirs = common.get_sort_params(req.params)
+        blacklist = schema_servers.SERVER_LIST_IGNORE_SORT_KEY
+        if api_version_request.is_supported(req, min_version='2.73'):
+            blacklist = schema_servers.SERVER_LIST_IGNORE_SORT_KEY_V273
         sort_keys, sort_dirs = remove_invalid_sort_keys(
-            context, sort_keys, sort_dirs,
-            schema_servers.SERVER_LIST_IGNORE_SORT_KEY, ('host', 'node'))
+            context, sort_keys, sort_dirs, blacklist, ('host', 'node'))
 
         expected_attrs = []
         if is_detail:
@@ -303,6 +310,8 @@ class ServersController(wsgi.Controller):
                 expected_attrs.append("tags")
             if api_version_request.is_supported(req, '2.63'):
                 expected_attrs.append("trusted_certs")
+            if api_version_request.is_supported(req, '2.73'):
+                expected_attrs.append("system_metadata")
 
             # merge our expected attrs with what the view builder needs for
             # showing details
@@ -1220,6 +1229,8 @@ class ServersController(wsgi.Controller):
             opt_list += TAG_SEARCH_FILTERS
         if api_version_request.is_supported(req, min_version='2.66'):
             opt_list += ('changes-before',)
+        if api_version_request.is_supported(req, min_version='2.73'):
+            opt_list += ('locked',)
         return opt_list
 
     def _get_instance(self, context, instance_uuid):

@@ -1,0 +1,14 @@
+{
+    "rebuild" : {
+        "accessIPv4" : "1.2.3.4",
+        "accessIPv6" : "80fe::",
+        "OS-DCF:diskConfig": "AUTO",
+        "imageRef" : "70a599e0-31e7-49b7-b260-868f441e862b",
+        "name" : "foobar",
+        "adminPass" : "seekr3t",
+        "metadata" : {
+            "meta_var" : "meta_val"
+        },
+        "user_data": "ZWNobyAiaGVsbG8gd29ybGQi"
+    }
+}

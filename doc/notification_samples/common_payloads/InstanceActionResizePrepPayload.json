@@ -27,5 +27,5 @@
         "task_state": "resize_prep"
     },
     "nova_object.name": "InstanceActionResizePrepPayload",
-    "nova_object.version": "1.2"
+    "nova_object.version": "1.3"
 }

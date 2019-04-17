@@ -37,9 +37,10 @@
         "uuid":"178b0921-8f85-4257-88b6-2e743b5a975c",
         "request_id": "req-5b6c791d-5709-4f36-8fbe-c3e02869e35d",
         "action_initiator_user": "fake",
-        "action_initiator_project": "6f70656e737461636b20342065766572"
+        "action_initiator_project": "6f70656e737461636b20342065766572",
+        "locked_reason": null
     },
     "nova_object.name":"InstancePayload",
     "nova_object.namespace":"nova",
-    "nova_object.version":"1.7"
+    "nova_object.version":"1.8"
 }

@@ -400,6 +400,7 @@ class TestInstanceNotificationSample(
             self._test_interface_attach_and_detach,
             self._test_interface_attach_error,
             self._test_lock_unlock_instance,
+            self._test_lock_unlock_instance_with_reason,
         ]
 
         for action in actions:
@@ -1923,6 +1924,30 @@ class TestInstanceNotificationSample(
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-lock',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-unlock',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    def _test_lock_unlock_instance_with_reason(self, server):
+        self.api.post_server_action(
+            server['id'], {'lock': {"locked_reason": "global warming"}})
+        self._wait_for_server_parameter(self.api, server, {'locked': True})
+        self.api.post_server_action(server['id'], {'unlock': {}})
+        self._wait_for_server_parameter(self.api, server, {'locked': False})
+        # Two versioned notifications are generated
+        # 0. instance-lock
+        # 1. instance-unlock
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-lock-with-reason',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},

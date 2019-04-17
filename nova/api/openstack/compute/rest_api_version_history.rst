@@ -930,3 +930,13 @@ API limitations:
   request is not yet supported.
 
 .. _QoS minimum bandwidth rule: https://docs.openstack.org/neutron/latest/admin/config-qos-min-bw.html
+
+2.73
+----
+
+API microversion 2.73 adds support for specifying a reason when locking the
+server and exposes this information via ``GET /servers/detail``,
+``GET /servers/{server_id}``, ``PUT servers/{server_id}`` and
+``POST /servers/{server_id}/action`` where the action is rebuild. It also
+supports ``locked`` as a filter/sort parameter for ``GET /servers/detail``
+and ``GET /servers``.

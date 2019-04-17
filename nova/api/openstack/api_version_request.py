@@ -178,6 +178,12 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.72 - Add support for neutron ports with resource request during server
              create. Server move operations are not yet supported for servers
              with such ports.
+    * 2.73 - Adds support for specifying a reason when locking the server and
+             exposes this via the response from ``GET /servers/detail``,
+             ``GET /servers/{server_id}``, ``PUT servers/{server_id}`` and
+             ``POST /servers/{server_id}/action`` where the action is rebuild.
+             It also supports ``locked`` as a filter/sort parameter for
+             ``GET /servers/detail`` and ``GET /servers``.
 """
 
 # The minimum and maximum versions of the API supported
@@ -186,7 +192,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.72"
+_MAX_API_VERSION = "2.73"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

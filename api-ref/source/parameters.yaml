@@ -975,6 +975,18 @@ locked_by_query_server:
   in: query
   required: false
   type: string
+locked_query_server:
+  description: |
+    Specify the ``locked`` query parameter to list all locked or unlocked
+    instances. If the value is specified, ``1``, ``t``, ``true``,
+    ``on``, ``y`` and ``yes`` are treated as ``True``. ``0``, ``f``,
+    ``false``, ``off``, ``n`` and ``no`` are treated as ``False``.
+    (They are case-insensitive.) Any other value provided will be considered
+    invalid.
+  in: query
+  required: false
+  type: boolean
+  min_version: 2.73
 marker:
   description: |
     The ID of the last-seen item. Use the ``limit`` parameter to make an initial limited
@@ -1259,6 +1271,7 @@ sort_key_server:
     - ``key_name``
     - ``launch_index``
     - ``launched_at``
+    - ``locked`` (New in version 2.73)
     - ``locked_by``
     - ``node``
     - ``power_state``
@@ -4315,9 +4328,11 @@ local_gb_used_total:
 lock:
   description: |
     The action to lock a server.
+    This parameter can be ``null``.
+    Up to microversion 2.73, this parameter should be ``null``.
   in: body
   required: true
-  type: none
+  type: object
 locked:
   description: |
     True if the instance is locked otherwise False.
@@ -4325,6 +4340,20 @@ locked:
   required: true
   type: boolean
   min_version: 2.9
+locked_reason_req:
+  description: |
+    The reason behind locking a server. Limited to 255 characters in length.
+  in: body
+  required: false
+  type: string
+  min_version: 2.73
+locked_reason_resp:
+  description: |
+    The reason behind locking a server.
+  in: body
+  required: true
+  type: string
+  min_version: 2.73
 mac_addr:
   description: |
     The MAC address.

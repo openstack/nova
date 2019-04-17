@@ -39,3 +39,38 @@ class LockServerSamplesJsonTest(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'unlock-server', {})
         self.assertEqual(202, response.status_code)
+
+
+class LockServerSamplesJsonTestV273(test_servers.ServersSampleBase):
+    sample_dir = "os-lock-server"
+    microversion = '2.73'
+    scenarios = [('v2_73', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        """setUp Method for LockServer api samples extension
+
+        This method creates the server that will be used in each test
+        """
+        super(LockServerSamplesJsonTestV273, self).setUp()
+        self.uuid = self._post_server()
+
+    def test_post_lock_server(self):
+        # backwards compatibility.
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 name='lock-server', subs={})
+        self.assertEqual(202, response.status_code)
+
+    def test_post_lock_server_with_reason(self):
+        # Get api samples to lock server request.
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 name='lock-server-with-reason', subs={})
+        self.assertEqual(202, response.status_code)
+
+    def test_post_unlock_server(self):
+        # Get api samples to unlock server request.
+        # We first call the previous test to lock the server with reason
+        # and then unlock it to post a response for unlock.
+        self.test_post_lock_server_with_reason()
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 name='unlock-server', subs={})
+        self.assertEqual(202, response.status_code)

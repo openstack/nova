@@ -330,6 +330,10 @@ class ViewBuilder(common.ViewBuilder):
             server["server"]["locked"] = (True if instance["locked_by"]
                                           else False)
 
+        if api_version_request.is_supported(request, min_version="2.73"):
+            server["server"]["locked_reason"] = (instance.system_metadata.get(
+                                                 "locked_reason"))
+
         if api_version_request.is_supported(request, min_version="2.19"):
             server["server"]["description"] = instance.get(
                                                 "display_description")

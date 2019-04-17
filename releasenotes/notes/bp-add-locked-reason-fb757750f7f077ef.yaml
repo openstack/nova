@@ -1,0 +1,18 @@
+---
+features:
+  - |
+    Added a new ``locked_reason`` option in microversion 2.73 to the
+    ``POST /servers/{server_id}/action`` request where the action is lock.
+    It enables the user to specify a reason when locking a server. This
+    information will be exposed through the response of the following APIs:
+
+    - ``GET servers/{server_id}``
+    - ``GET /servers/detail``
+    - ``POST /servers/{server_id}/action`` where the action is rebuild
+    - ``PUT servers/{server_id}``
+
+    In addition, ``locked`` will be supported as a valid filter/sort parameter
+    for ``GET /servers/detail`` and ``GET /servers`` so that users can filter
+    servers based on their locked value. Also the instance action versioned
+    notifications for the lock/unlock actions now contain the ``locked_reason``
+    field.
