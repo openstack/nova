@@ -107,6 +107,8 @@ Extra Specs
    the ``cpu_shares_level`` option outside of documentation and (possibly)
    useless tests. We should assess which drivers each option actually apply to.
 
+.. _extra-specs-CPU-limits:
+
 CPU limits
   You can configure the CPU limits with control parameters. For example, to
   configure the I/O limit, use:
@@ -161,6 +163,8 @@ CPU limits
     In this example, an instance of ``FLAVOR-NAME`` can only consume a maximum
     of 50% CPU of a physical CPU computing capability.
 
+.. _extra-specs-memory-limits:
+
 Memory limits
   For VMware, you can configure the memory limits with control parameters.
 
@@ -191,6 +195,8 @@ Memory limits
        $ openstack flavor set FLAVOR-NAME \
            --property quota:memory_shares_level=custom \
            --property quota:memory_shares_share=15
+
+.. _extra-specs-disk-io-limits:
 
 Disk I/O limits
   For VMware, you can configure the resource limits for disk with control
@@ -223,6 +229,8 @@ Disk I/O limits
        $ openstack flavor set FLAVOR-NAME \
            --property quota:disk_io_reservation=2000
 
+.. _extra-specs-disk-tuning:
+
 Disk tuning
   Using disk I/O quotas, you can set maximum disk write to 10 MB per second for
   a VM user. For example:
@@ -240,6 +248,8 @@ Disk tuning
   - ``disk_write_iops_sec``
   - ``disk_total_bytes_sec``
   - ``disk_total_iops_sec``
+
+.. _extra-specs-bandwidth-io:
 
 Bandwidth I/O
   The vif I/O options are:
@@ -300,6 +310,8 @@ Bandwidth I/O
      using `Data rate units on Wikipedia
      <https://en.wikipedia.org/wiki/Data_rate_units>`_.
 
+.. _extra-specs-hardware-video-ram:
+
 Hardware video RAM
   Specify ``hw_video:ram_max_mb`` to control the maximum RAM for the video
   image. Used in conjunction with the ``hw_video_ram`` image property.
@@ -313,6 +325,8 @@ Hardware video RAM
   See https://pubs.vmware.com/vi-sdk/visdk250/ReferenceGuide/vim.vm.device.VirtualVideoCard.html
   for more information on how this is used to set the ``videoRamSizeInKB`` attribute with
   the vmware driver.
+
+.. _extra-specs-watchdog-behavior:
 
 Watchdog behavior
   For the libvirt driver, you can enable and set the behavior of a virtual
@@ -340,6 +354,8 @@ Watchdog behavior
      Watchdog behavior set using a specific image's properties will override
      behavior set using flavors.
 
+.. _extra-specs-random-number-generator:
+
 Random-number generator
   If a random-number generator device has been added to the instance through
   its image properties, the device can be enabled and configured using:
@@ -356,6 +372,8 @@ Random-number generator
   - RATE-BYTES: (integer) Allowed amount of bytes that the guest can read from
     the host's entropy per period.
   - RATE-PERIOD: (integer) Duration of the read period in seconds.
+
+.. _extra-specs-cpu-topology:
 
 CPU topology
   For the libvirt driver, you can define the topology of the processors in the
@@ -549,6 +567,8 @@ CPU real-time policy
      The ``hw:cpu_realtime_mask`` option is only valid if ``hw:cpu_realtime``
      is set to ``yes``.
 
+.. _extra-specs-emulator-threads-policy:
+
 Emulator threads policy
   For the libvirt driver, you can assign a separate pCPU to an instance that
   will be used for emulator threads, which are emulator processes not directly
@@ -587,6 +607,8 @@ Emulator threads policy
      * - ``hw:emulator_threads_policy`` = ``isolate``
        - Pinned to a single pCPU distinct from the instance's pCPUs
        - Pinned to a single pCPU distinct from the instance's pCPUs
+
+.. _extra-specs-large-pages-allocation:
 
 Large pages allocation
   You can configure the size of large pages used to back the VMs.
@@ -636,6 +658,8 @@ PCI passthrough
   - COUNT: (integer) The amount of PCI devices of type ALIAS to be assigned to
     a guest.
 
+.. _extra-specs-hiding-hypervisor-signature:
+
 Hiding hypervisor signature
   Some hypervisors add a signature to their guests. While the presence
   of the signature can enable some paravirtualization features on the
@@ -658,6 +682,8 @@ Hiding hypervisor signature
   - VALUE: (string) 'true' or 'false'. 'false' is equivalent to the
     property not existing.
 
+.. _extra-specs-secure-boot:
+
 Secure Boot
   When your Compute services use the Hyper-V hypervisor, you can enable secure
   boot for Windows and Linux instances.
@@ -672,6 +698,8 @@ Secure Boot
   - ``required``: Enable Secure Boot for instances running with this flavor.
   - ``disabled`` or ``optional``: (default) Disable Secure Boot for instances
     running with this flavor.
+
+.. _extra-specs-required-resources:
 
 Custom resource classes and standard resource classes to override
     Added in the 16.0.0 Pike release.
@@ -744,6 +772,8 @@ Forbidden traits
     Traits can be managed using the `osc-placement plugin`_.
 
 .. _osc-placement plugin: https://docs.openstack.org/osc-placement/latest/index.html
+
+.. _extra-specs-numbered-resource-groupings:
 
 Numbered groupings of resource classes and traits
     Added in the 18.0.0 Rocky release.
