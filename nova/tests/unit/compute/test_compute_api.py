@@ -1831,12 +1831,14 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_confirm_resize_with_migration_ref(self):
         self._test_confirm_resize(mig_ref_passed=True)
 
+    @mock.patch('nova.availability_zones.get_host_availability_zone',
+                return_value='nova')
     @mock.patch('nova.objects.Quotas.check_deltas')
     @mock.patch('nova.objects.Migration.get_by_instance_and_status')
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
     def _test_revert_resize(self, mock_get_reqspec, mock_elevated,
-                            mock_get_migration, mock_check):
+                            mock_get_migration, mock_check, mock_get_host_az):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
         fake_inst.old_flavor = fake_inst.flavor
@@ -1879,11 +1881,14 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_revert_resize(self):
         self._test_revert_resize()
 
+    @mock.patch('nova.availability_zones.get_host_availability_zone',
+                return_value='nova')
     @mock.patch('nova.objects.Quotas.check_deltas')
     @mock.patch('nova.objects.Migration.get_by_instance_and_status')
     @mock.patch('nova.context.RequestContext.elevated')
     def test_revert_resize_concurrent_fail(self, mock_elevated,
-                                           mock_get_migration, mock_check):
+                                           mock_get_migration, mock_check,
+                                           mock_get_host_az):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
         fake_inst.old_flavor = fake_inst.flavor
