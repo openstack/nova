@@ -109,10 +109,6 @@ class InterfaceFullstackWithNeutron(test_servers.ServersTestBase):
     api_major_version = 'v2.1'
     USE_NEUTRON = True
 
-    def setUp(self):
-        super(InterfaceFullstackWithNeutron, self).setUp()
-        self.useFixture(nova_fixtures.NeutronFixture(self))
-
     def test_detach_interface_negative_invalid_state(self):
         # Create server with network
         image = self.api.get_images()[0]['id']
