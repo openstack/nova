@@ -10,11 +10,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import six
-
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as fake_image
@@ -73,10 +70,11 @@ class VolumeBackedResizeDiskDown(test.TestCase,
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
         # Now try to resize the server with the flavor that has smaller disk.
+        # This should be allowed since the server is volume-backed and the
+        # disk size in the flavor shouldn't matter.
         data = {'resize': {'flavorRef': flavor1['id']}}
-        # FIXME(mriedem): This will raise FlavorDiskSmallerThanMinDisk as a 500
-        # error until bug 1825020 is fixed.
-        ex = self.assertRaises(api_client.OpenStackApiException,
-                               self.api.post_server_action, server['id'], data)
-        self.assertEqual(500, ex.response.status_code)
-        self.assertIn('FlavorDiskSmallerThanMinDisk', six.text_type(ex))
+        self.api.post_server_action(server['id'], data)
+        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        # Now confirm the resize just to complete the operation.
+        self.api.post_server_action(server['id'], {'confirmResize': None})
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
