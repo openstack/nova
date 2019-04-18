@@ -61,6 +61,66 @@ checks are made in order:
    values from the database.
 
 
+Quota usage from placement
+==========================
+
+Starting in the Train (20.0.0) release, it is possible to configure quota usage
+counting of cores and ram from the placement service and instances from
+instance mappings in the API database instead of counting resources from cell
+databases. This makes quota usage counting resilient in the presence of `down
+or poor-performing cells`_.
+
+Quota usage counting from placement is opt-in via configuration option:
+
+.. code-block:: ini
+
+   [quota]
+   count_usage_from_placement = True
+
+There are some things to note when opting in to counting quota usage from
+placement:
+
+* Counted usage will not be accurate in an environment where multiple Nova
+  deployments are sharing a placement deployment because currently placement
+  has no way of partitioning resource providers between different Nova
+  deployments. Operators who are running multiple Nova deployments that share a
+  placement deployment should not set the
+  :oslo.config:option:`quota.count_usage_from_placement` configuration option
+  to ``True``.
+
+* Behavior will be different for resizes. During a resize, resource allocations
+  are held on both the source and destination (even on the same host, see
+  https://bugs.launchpad.net/nova/+bug/1790204) until the resize is confirmed
+  or reverted. Quota usage will be inflated for servers in this state and
+  operators should weigh the advantages and disadvantages before enabling
+  :oslo.config:option:`quota.count_usage_from_placement`.
+
+* The ``populate_queued_for_delete`` and ``populate_user_id`` online data
+  migrations must be completed before usage can be counted from placement.
+  Until the data migration is complete, the system will fall back to legacy
+  quota usage counting from cell databases depending on the result of an EXISTS
+  database query during each quota check, if
+  :oslo.config:option:`quota.count_usage_from_placement` is set to ``True``.
+  Operators who want to avoid the performance hit from the EXISTS queries
+  should wait to set the :oslo.config:option:`quota.count_usage_from_placement`
+  configuration option to ``True`` until after they have completed their online
+  data migrations via ``nova-manage db online_data_migrations``.
+
+* Behavior will be different for unscheduled servers in ``ERROR`` state. A
+  server in ``ERROR`` state that has never been scheduled to a compute host
+  will not have placement allocations, so it will not consume quota usage for
+  cores and ram.
+
+* Behavior will be different for servers in ``SHELVED_OFFLOADED`` state. A
+  server in ``SHELVED_OFFLOADED`` state will not have placement allocations, so
+  it will not consume quota usage for cores and ram. Note that because of this,
+  it will be possible for a request to unshelve a server to be rejected if the
+  user does not have enough quota available to support the cores and ram needed
+  by the server to be unshelved.
+
+.. _down or poor-performing cells: https://developer.openstack.org/api-guide/compute/down_cells.html
+
+
 Known issues
 ============
 
