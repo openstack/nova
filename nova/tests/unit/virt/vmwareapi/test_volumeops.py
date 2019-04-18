@@ -226,9 +226,15 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                                                             disk_uuid)
 
     def test_detach_volume_vmdk(self):
+        client_factory = self._volumeops._session.vim.client.factory
 
-        vmdk_info = vm_util.VmdkInfo('fake-path', 'lsiLogic', 'thin',
-                                     1024, 'fake-device')
+        virtual_controller = client_factory.create(
+            'ns0:VirtualLsiLogicController')
+        virtual_controller.key = 100
+
+        virtual_disk = client_factory.create('ns0:VirtualDisk')
+        virtual_disk.controllerKey = virtual_controller.key
+
         with test.nested(
             mock.patch.object(vm_util, 'get_vm_ref',
                               return_value=mock.sentinel.vm_ref),
@@ -236,15 +242,17 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                               return_value=mock.sentinel.volume_ref),
             mock.patch.object(self._volumeops,
                               '_get_vmdk_backed_disk_device',
-                              return_value=mock.sentinel.device),
-            mock.patch.object(vm_util, 'get_vmdk_info',
-                              return_value=vmdk_info),
+                              return_value=virtual_disk),
+            mock.patch.object(vm_util, '_get_device_disk_type',
+                              return_value='fake-disk-type'),
             mock.patch.object(self._volumeops, '_consolidate_vmdk_volume'),
             mock.patch.object(self._volumeops, 'detach_disk_from_vm'),
             mock.patch.object(self._volumeops, '_update_volume_details'),
+            mock.patch.object(self._volumeops._session, '_call_method',
+                              return_value=[virtual_controller])
         ) as (get_vm_ref, get_volume_ref, get_vmdk_backed_disk_device,
-              get_vmdk_info, consolidate_vmdk_volume, detach_disk_from_vm,
-              update_volume_details):
+              _get_device_disk_type, consolidate_vmdk_volume,
+              detach_disk_from_vm, update_volume_details, session_call_method):
 
             connection_info = {'driver_volume_type': 'vmdk',
                                'serial': 'volume-fake-id',
@@ -262,39 +270,46 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                 connection_info['data']['volume'])
             get_vmdk_backed_disk_device.assert_called_once_with(
                 mock.sentinel.vm_ref, connection_info['data'])
-            get_vmdk_info.assert_called_once_with(self._volumeops._session,
-                                                  mock.sentinel.volume_ref)
+            adapter_type = vm_util.CONTROLLER_TO_ADAPTER_TYPE.get(
+                virtual_controller.__class__.__name__)
             consolidate_vmdk_volume.assert_called_once_with(
-                instance, mock.sentinel.vm_ref, mock.sentinel.device,
-                mock.sentinel.volume_ref, adapter_type=vmdk_info.adapter_type,
-                disk_type=vmdk_info.disk_type)
+                instance, mock.sentinel.vm_ref, virtual_disk,
+                mock.sentinel.volume_ref, adapter_type=adapter_type,
+                disk_type='fake-disk-type')
             detach_disk_from_vm.assert_called_once_with(mock.sentinel.vm_ref,
                                                         instance,
-                                                        mock.sentinel.device)
+                                                        virtual_disk)
             update_volume_details.assert_called_once_with(
                 mock.sentinel.vm_ref, connection_info['data']['volume_id'], "")
 
     def test_detach_volume_vmdk_invalid(self):
+        client_factory = self._volumeops._session.vim.client.factory
+
+        virtual_controller = client_factory.create(
+            'ns0:VirtualIDEController')
+        virtual_controller.key = 100
+
+        virtual_disk = client_factory.create('ns0:VirtualDisk')
+        virtual_disk.controllerKey = virtual_controller.key
+
         connection_info = {'driver_volume_type': 'vmdk',
                            'serial': 'volume-fake-id',
                            'data': {'volume': 'vm-10',
                                     'volume_id': 'volume-fake-id'}}
         instance = mock.MagicMock(name='fake-name', vm_state=vm_states.ACTIVE)
-        vmdk_info = vm_util.VmdkInfo('fake-path', constants.ADAPTER_TYPE_IDE,
-                                     constants.DISK_TYPE_PREALLOCATED, 1024,
-                                     'fake-device')
         with test.nested(
             mock.patch.object(vm_util, 'get_vm_ref',
                               return_value=mock.sentinel.vm_ref),
             mock.patch.object(self._volumeops, '_get_volume_ref'),
             mock.patch.object(self._volumeops,
-                              '_get_vmdk_backed_disk_device'),
-            mock.patch.object(vm_util, 'get_vmdk_info',
-                              return_value=vmdk_info),
+                              '_get_vmdk_backed_disk_device',
+                              return_value=virtual_disk),
             mock.patch.object(vm_util, 'get_vm_state',
-                              return_value=power_state.RUNNING)
+                              return_value=power_state.RUNNING),
+            mock.patch.object(self._volumeops._session, '_call_method',
+                              return_value=[virtual_controller])
         ) as (get_vm_ref, get_volume_ref, get_vmdk_backed_disk_device,
-              get_vmdk_info, get_vm_state):
+              get_vm_state, session_call_method):
             self.assertRaises(exception.Invalid,
                 self._volumeops._detach_volume_vmdk, connection_info,
                 instance)
@@ -305,7 +320,6 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                 connection_info['data']['volume'])
             get_vmdk_backed_disk_device.assert_called_once_with(
                 mock.sentinel.vm_ref, connection_info['data'])
-            self.assertTrue(get_vmdk_info.called)
             get_vm_state.assert_called_once_with(self._volumeops._session,
                                                  instance)
 

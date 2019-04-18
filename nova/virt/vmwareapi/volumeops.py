@@ -516,20 +516,26 @@ class VMwareVolumeOps(object):
 
         device = self._get_vmdk_backed_disk_device(vm_ref, data)
 
-        # Get details required for adding disk device such as
-        # adapter_type, disk_type
-        vmdk = vm_util.get_vmdk_info(self._session, volume_ref)
+        hardware_devices = vm_util.get_hardware_devices(self._session, vm_ref)
+        adapter_type = None
+        for hw_device in hardware_devices:
+            if hw_device.key == device.controllerKey:
+                adapter_type = vm_util.CONTROLLER_TO_ADAPTER_TYPE.get(
+                    hw_device.__class__.__name__)
+                break
 
         # IDE does not support disk hotplug
-        if vmdk.adapter_type == constants.ADAPTER_TYPE_IDE:
+        if adapter_type == constants.ADAPTER_TYPE_IDE:
             state = vm_util.get_vm_state(self._session, instance)
             if state != power_state.SHUTDOWN:
                 raise exception.Invalid(_('%s does not support disk '
-                                          'hotplug.') % vmdk.adapter_type)
+                                          'hotplug.') % adapter_type)
+
+        disk_type = vm_util._get_device_disk_type(device)
 
         self._consolidate_vmdk_volume(instance, vm_ref, device, volume_ref,
-                                      adapter_type=vmdk.adapter_type,
-                                      disk_type=vmdk.disk_type)
+                                      adapter_type=adapter_type,
+                                      disk_type=disk_type)
 
         self.detach_disk_from_vm(vm_ref, instance, device)
 
