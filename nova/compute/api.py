@@ -2744,14 +2744,9 @@ class API(base.Base):
         if expected_attrs:
             fields.extend(expected_attrs)
 
-        if CONF.cells.enable:
-            insts = self._do_old_style_instance_list_for_poor_cellsv1_users(
-                context, filters, limit, marker, fields, sort_keys,
-                sort_dirs)
-        else:
-            insts, down_cell_uuids = instance_list.get_instance_objects_sorted(
-                context, filters, limit, marker, fields, sort_keys, sort_dirs,
-                cell_down_support=cell_down_support)
+        insts, down_cell_uuids = instance_list.get_instance_objects_sorted(
+            context, filters, limit, marker, fields, sort_keys, sort_dirs,
+            cell_down_support=cell_down_support)
 
         def _get_unique_filter_method():
             seen_uuids = set()
@@ -2792,51 +2787,6 @@ class API(base.Base):
                 down_cell_uuids, project, limit) + instances)
 
         return instances
-
-    def _do_old_style_instance_list_for_poor_cellsv1_users(self,
-                                                           context, filters,
-                                                           limit, marker,
-                                                           fields,
-                                                           sort_keys,
-                                                           sort_dirs):
-        try:
-            cell0_mapping = objects.CellMapping.get_by_uuid(context,
-                objects.CellMapping.CELL0_UUID)
-        except exception.CellMappingNotFound:
-            cell0_instances = objects.InstanceList(objects=[])
-        else:
-            with nova_context.target_cell(context, cell0_mapping) as cctxt:
-                try:
-                    cell0_instances = self._get_instances_by_filters(
-                        cctxt, filters, limit=limit, marker=marker,
-                        fields=fields, sort_keys=sort_keys,
-                        sort_dirs=sort_dirs)
-                    # If we found the marker in cell0 we need to set it to None
-                    # so we don't expect to find it in the cells below.
-                    marker = None
-                except exception.MarkerNotFound:
-                    # We can ignore this since we need to look in the cell DB
-                    cell0_instances = objects.InstanceList(objects=[])
-        # Only subtract from limit if it is not None
-        limit = (limit - len(cell0_instances)) if limit else limit
-
-        # There is only planned support for a single cell here. Multiple cell
-        # instance lists should be proxied to project Searchlight, or a similar
-        # alternative.
-        if limit is None or limit > 0:
-            # NOTE(melwitt): If we're on cells v1, we need to read
-            # instances from the top-level database because reading from
-            # cells results in changed behavior, because of the syncing.
-            # We can remove this path once we stop supporting cells v1.
-            cell_instances = self._get_instances_by_filters(
-                context, filters, limit=limit, marker=marker,
-                fields=fields, sort_keys=sort_keys,
-                sort_dirs=sort_dirs)
-        else:
-            LOG.debug('Limit excludes any results from real cells')
-            cell_instances = objects.InstanceList(objects=[])
-
-        return cell0_instances + cell_instances
 
     @staticmethod
     def _ip_filter(inst_models, filters, limit):
