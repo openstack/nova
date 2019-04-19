@@ -2941,10 +2941,13 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         # Ensure the allocation records still exist on the host.
         source_rp_uuid = self._get_provider_uuid_by_host(hostname)
         source_usages = self._get_provider_usages(source_rp_uuid)
-        # FIXME(mriedem): This is wrong for the _finish_resize case.
-        # The new_flavor should have been subtracted from the doubled
-        # allocation which just leaves us with the original flavor.
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        if failing_method == '_finish_resize':
+            # finish_resize will drop the old flavor allocations.
+            self.assertFlavorMatchesAllocation(self.flavor2, source_usages)
+        else:
+            # The new_flavor should have been subtracted from the doubled
+            # allocation which just leaves us with the original flavor.
+            self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
 
     def test_resize_to_same_host_prep_resize_fails(self):
         self._test_resize_to_same_host_instance_fails(

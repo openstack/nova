@@ -24,12 +24,23 @@ class FinishResizeErrorAllocationCleanupTestCase(
 
     compute_driver = 'fake.FakeFinishMigrationFailDriver'
 
+    # ProviderUsageBaseTestCase uses the AllServicesCurrent fixture which
+    # means we'll use migration-based allocations by default. This flag allows
+    # us to control the logic in conductor to handle legacy allocations where
+    # the source (old flavor) and dest (new flavor) node allocations are
+    # doubled up on the instance.
+    migration_based_allocations = True
+
     def setUp(self):
         super(FinishResizeErrorAllocationCleanupTestCase, self).setUp()
         # Get the flavors we're going to use.
         flavors = self.api.get_flavors()
         self.flavor1 = flavors[0]
         self.flavor2 = flavors[1]
+
+        self.stub_out('nova.conductor.tasks.migrate.'
+                      'should_do_migration_allocation',
+                      lambda *args, **kwargs: self.migration_based_allocations)
 
     def _resize_and_assert_error(self, server, dest_host):
         # Now resize the server and wait for it to go to ERROR status because
@@ -67,16 +78,20 @@ class FinishResizeErrorAllocationCleanupTestCase(
         # allocations should still exist with the new flavor.
         source_rp_uuid = self._get_provider_uuid_by_host('host1')
         dest_rp_uuid = self._get_provider_uuid_by_host('host2')
-        # FIXME(mriedem): This is bug 1825537 where the allocations are
-        # reverted when finish_resize fails so the dest node resource provider
-        # does not have any allocations and the instance allocations are for
-        # the old flavor on the source node resource provider even though the
-        # instance is not running on the source host nor pointed at the source
-        # host in the DB.
-        # self.assertFlavorMatchesAllocation(
-        #     self.flavor2, server['id'], dest_rp_uuid)
         dest_rp_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor2, dest_rp_usages)
+        # And the source node provider should not have any usage.
+        source_rp_usages = self._get_provider_usages(source_rp_uuid)
         no_usage = {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}
-        self.assertEqual(no_usage, dest_rp_usages)
-        source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertEqual(no_usage, source_rp_usages)
+
+
+class FinishResizeErrorAllocationCleanupLegacyTestCase(
+        FinishResizeErrorAllocationCleanupTestCase):
+    """Variant of FinishResizeErrorAllocationCleanupTestCase which does not
+    use migration-based allocations, e.g. tests the scenario that there are
+    older computes in the deployment so the source and dest node allocations
+    are doubled up on the instance consumer record rather than the migration
+    record.
+    """
+    migration_based_allocations = False
