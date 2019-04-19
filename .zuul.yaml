@@ -8,7 +8,7 @@
       Contains common configuration.
     timeout: 10800
     required-projects:
-      - openstack-infra/devstack-gate
+      - openstack/devstack-gate
       - openstack/nova
       - openstack/tempest
     irrelevant-files:
@@ -35,7 +35,7 @@
       each other.
     timeout: 10800
     required-projects:
-      - openstack-infra/devstack-gate
+      - openstack/devstack-gate
       - openstack/nova
       - openstack/tempest
     irrelevant-files:
