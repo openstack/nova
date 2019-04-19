@@ -8,7 +8,7 @@
       Contains common configuration.
     timeout: 10800
     required-projects:
-      - openstack-infra/devstack-gate
+      - openstack/devstack-gate
       - openstack/nova
       - openstack/tempest
     irrelevant-files: &dsvm-irrelevant-files
@@ -35,7 +35,7 @@
       each other.
     timeout: 10800
     required-projects:
-      - openstack-infra/devstack-gate
+      - openstack/devstack-gate
       - openstack/nova
       - openstack/tempest
     irrelevant-files: *dsvm-irrelevant-files
@@ -206,8 +206,8 @@
     run: playbooks/legacy/nova-grenade-live-migration/run.yaml
     post-run: playbooks/legacy/nova-grenade-live-migration/post.yaml
     required-projects:
-      - openstack-dev/grenade
-      - openstack-infra/devstack-gate
+      - openstack/grenade
+      - openstack/devstack-gate
       - openstack/nova
     irrelevant-files: *live-migration-irrelevant-files
 
