@@ -66,16 +66,9 @@ class FinishResizeErrorAllocationCleanupTestCase(
         # allocations should still exist with the new flavor.
         source_rp_uuid = self._get_provider_uuid_by_host('host1')
         dest_rp_uuid = self._get_provider_uuid_by_host('host2')
-        # FIXME(mriedem): This is bug 1825537 where the allocations are
-        # reverted when finish_resize fails so the dest node resource provider
-        # does not have any allocations and the instance allocations are for
-        # the old flavor on the source node resource provider even though the
-        # instance is not running on the source host nor pointed at the source
-        # host in the DB.
-        # self.assertFlavorMatchesAllocation(
-        #     self.flavor2, server['id'], dest_rp_uuid)
-        dest_rp_usages = self._get_provider_usages(dest_rp_uuid)
-        no_usage = {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}
-        self.assertEqual(no_usage, dest_rp_usages)
         self.assertFlavorMatchesAllocation(
-            self.flavor1, server['id'], source_rp_uuid)
+            self.flavor2, server['id'], dest_rp_uuid)
+        # And the source node provider should not have any usage.
+        source_rp_usages = self._get_provider_usages(source_rp_uuid)
+        no_usage = {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}
+        self.assertEqual(no_usage, source_rp_usages)
