@@ -117,14 +117,20 @@ class IronicClientWrapper(object):
                 ksa_adap = utils.get_ksa_adapter(
                     nova.conf.ironic.DEFAULT_SERVICE_TYPE,
                     ksa_auth=auth_plugin, ksa_session=sess,
-                    min_version=IRONIC_API_VERSION,
+                    min_version=(IRONIC_API_VERSION[0], 0),
                     max_version=(IRONIC_API_VERSION[0], ks_disc.LATEST))
                 ironic_url = ksa_adap.get_endpoint()
+                ironic_url_none_reason = 'returned None'
             except exception.ServiceNotFound:
                 # NOTE(efried): No reason to believe service catalog lookup
                 # won't also fail in ironic client init, but this way will
                 # yield the expected exception/behavior.
                 ironic_url = None
+                ironic_url_none_reason = 'raised ServiceNotFound'
+
+            if ironic_url is None:
+                LOG.warning("Could not discover ironic_url via keystoneauth1: "
+                            "Adapter.get_endpoint %s", ironic_url_none_reason)
 
         try:
             cli = ironic.client.get_client(IRONIC_API_VERSION[0],
