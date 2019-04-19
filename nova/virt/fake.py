@@ -627,6 +627,13 @@ class MediumFakeDriver(FakeDriver):
     local_gb = 1028
 
 
+class FakeFinishMigrationFailDriver(FakeDriver):
+    """FakeDriver variant that will raise an exception from finish_migration"""
+
+    def finish_migration(self, *args, **kwargs):
+        raise exception.VirtualInterfaceCreateException()
+
+
 class FakeRescheduleDriver(FakeDriver):
     """FakeDriver derivative that triggers a reschedule on the first spawn
     attempt. This is expected to only be used in tests that have more than
