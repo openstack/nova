@@ -20,6 +20,7 @@ import shutil
 import tempfile
 
 from castellan import key_manager
+import ddt
 import fixtures
 import mock
 from oslo_concurrency import lockutils
@@ -58,6 +59,7 @@ class FakeConn(object):
         return FakeSecret()
 
 
+@ddt.ddt
 class _ImageTestCase(object):
 
     def mock_create_image(self, image):
@@ -206,6 +208,28 @@ class _ImageTestCase(object):
         image = self.image_class(self.INSTANCE, self.NAME)
         self.assertEqual(2361393152, image.get_disk_size(image.path))
         get_disk_size.assert_called_once_with(image.path)
+
+    def _test_libvirt_info_scsi_with_unit(self, disk_unit):
+        # The address should be set if bus is scsi and unit is set.
+        # Otherwise, it should not be set at all.
+        image = self.image_class(self.INSTANCE, self.NAME)
+        disk_info = {
+            'bus': 'scsi',
+            'dev': '/dev/sda',
+            'type': 'disk',
+        }
+        disk = image.libvirt_info(disk_info, cache_mode='none', extra_specs={},
+                                  hypervisor_version=4004001,
+                                  disk_unit=disk_unit)
+        if disk_unit:
+            self.assertEqual(0, disk.device_addr.controller)
+            self.assertEqual(disk_unit, disk.device_addr.unit)
+        else:
+            self.assertIsNone(disk.device_addr)
+
+    @ddt.data(5, None)
+    def test_libvirt_info_scsi_with_unit(self, disk_unit):
+        self._test_libvirt_info_scsi_with_unit(disk_unit)
 
 
 class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
@@ -1279,6 +1303,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                          model)
 
 
+@ddt.ddt
 class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
     FSID = "FakeFsID"
     POOL = "FakePool"
@@ -1502,6 +1527,17 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         mock_mon_addrs.side_effect = get_mon_addrs
 
         super(RbdTestCase, self).test_libvirt_info()
+
+    @ddt.data(5, None)
+    @mock.patch.object(rbd_utils.RBDDriver, "get_mon_addrs")
+    def test_libvirt_info_scsi_with_unit(self, disk_unit, mock_mon_addrs):
+        def get_mon_addrs():
+            hosts = ["server1", "server2"]
+            ports = ["1899", "1920"]
+            return hosts, ports
+        mock_mon_addrs.side_effect = get_mon_addrs
+
+        super(RbdTestCase, self)._test_libvirt_info_scsi_with_unit(disk_unit)
 
     @mock.patch.object(rbd_utils.RBDDriver, "get_mon_addrs")
     def test_get_model(self, mock_mon_addrs):
