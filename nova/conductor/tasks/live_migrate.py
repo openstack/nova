@@ -14,6 +14,7 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 import six
 
+from nova import availability_zones
 from nova.compute import power_state
 from nova.conductor.tasks import base
 import nova.conf
@@ -76,6 +77,10 @@ class LiveMigrationTask(base.TaskBase):
             scheduler_utils.claim_resources_on_destination(
                 self.scheduler_client.reportclient, self.instance,
                 source_node, dest_node)
+
+        self.instance.availability_zone = (
+            availability_zones.get_host_availability_zone(
+                self.context, self.destination))
 
         # TODO(johngarbutt) need to move complexity out of compute manager
         # TODO(johngarbutt) disk_over_commit?
