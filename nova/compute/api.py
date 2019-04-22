@@ -3188,6 +3188,19 @@ class API(base.Base):
         self._check_quota_for_upsize(context, instance, instance.flavor,
                                      instance.old_flavor)
 
+        # The AZ for the server may have changed when it was migrated so while
+        # we are in the API and have access to the API DB, update the
+        # instance.availability_zone before casting off to the compute service.
+        # Note that we do this in the API to avoid an "up-call" from the
+        # compute service to the API DB. This is not great in case something
+        # fails during revert before the instance.host is updated to the
+        # original source host, but it is good enough for now. Long-term we
+        # could consider passing the AZ down to compute so it can set it when
+        # the instance.host value is set in finish_revert_resize.
+        instance.availability_zone = (
+            availability_zones.get_host_availability_zone(
+                context, migration.source_compute))
+
         instance.task_state = task_states.RESIZE_REVERTING
         instance.save(expected_task_state=[None])
 
