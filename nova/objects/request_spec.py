@@ -784,7 +784,7 @@ class RequestSpec(base.NovaObject):
         This is a workaround as placement does not return which RP fulfills
         which granular request group in the allocation candidate request. There
         is a spec proposing a solution in placement:
-        https://review.openstack.org/#/c/597601/
+        https://review.opendev.org/#/c/597601/
 
         :param placement_allocations: The overall allocation made by the
                                       scheduler for this RequestSpec

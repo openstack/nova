@@ -34,7 +34,7 @@ prior to upgrading to Ocata.
 
 Reference the `Ocata changes`_ for implementation details.
 
-.. _Ocata changes: https://review.openstack.org/#/q/topic:bp/resource-providers-scheduler-db-filters+status:merged+file:%255Enova/cmd/status.py
+.. _Ocata changes: https://review.opendev.org/#/q/topic:bp/resource-providers-scheduler-db-filters+status:merged+file:%255Enova/cmd/status.py
 
 Guidelines
 ==========
@@ -95,9 +95,9 @@ Guidelines
 * All checks should have an accompanying upgrade release note.
 
 .. _grenade uses them: https://github.com/openstack-dev/grenade/blob/dc7f4a4ba/projects/60_nova/upgrade.sh#L96
-.. _openstack-ansible: https://review.openstack.org/#/c/575125/
-.. _in Rocky: https://review.openstack.org/#/c/581813/
-.. _blocker migration: https://review.openstack.org/#/c/289450/
+.. _openstack-ansible: https://review.opendev.org/#/c/575125/
+.. _in Rocky: https://review.opendev.org/#/c/581813/
+.. _blocker migration: https://review.opendev.org/#/c/289450/
 
 Structure
 =========
@@ -170,10 +170,10 @@ The results feed into a standard output for the checks:
 .. note:: Long-term the framework for upgrade checks will come from the
           `oslo.upgradecheck library`_.
 
-.. _initial change: https://review.openstack.org/#/c/411517/
-.. _cells v2 check: https://review.openstack.org/#/c/411525/
-.. _placement check: https://review.openstack.org/#/c/413250/
-.. _oslo.upgradecheck library: http://git.openstack.org/cgit/openstack/oslo.upgradecheck/
+.. _initial change: https://review.opendev.org/#/c/411517/
+.. _cells v2 check: https://review.opendev.org/#/c/411525/
+.. _placement check: https://review.opendev.org/#/c/413250/
+.. _oslo.upgradecheck library: http://opendev.org/openstack/oslo.upgradecheck/
 
 Other
 =====

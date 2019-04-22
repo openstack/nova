@@ -621,7 +621,7 @@ With the API, use the ``os:scheduler_hints`` key:
        }
    }
 
-.. _HostState: http://git.openstack.org/cgit/openstack/nova/tree/nova/scheduler/host_manager.py
+.. _HostState: https://opendev.org/openstack/nova/src/branch/master/nova/scheduler/host_manager.py
 
 MetricsFilter
 -------------
@@ -1539,4 +1539,4 @@ There are some rules associated with capability-defined traits.
 5. Compute capability traits are standard traits defined in the `os-traits`_
    library.
 
-.. _os-traits: http://git.openstack.org/cgit/openstack/os-traits/tree/os_traits/compute
+.. _os-traits: https://opendev.org/openstack/os-traits/src/branch/master/os_traits/compute

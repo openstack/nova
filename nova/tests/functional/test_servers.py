@@ -2755,7 +2755,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.api.post_server_action(server['id'], post)
 
         # NOTE(elod.illes): Should be changed to non-polling solution when
-        # patch https://review.openstack.org/#/c/482629/ gets merged:
+        # patch https://review.opendev.org/#/c/482629/ gets merged:
         # fake_notifier.wait_for_versioned_notifications(
         #     'compute_task.rebuild_server')
         self._wait_for_notification_event_type('compute_task.rebuild_server')

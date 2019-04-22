@@ -17,7 +17,7 @@
 # It's used to configure which tempest tests actually get run.  You can find
 # the CI job configuration here:
 #
-# http://git.openstack.org/cgit/openstack-infra/project-config/tree/jenkins/jobs/lvm.yaml
+# https://opendev.org/openstack/nova/src/branch/master/playbooks/legacy/nova-lvm/run.yaml
 #
 
 # Construct a regex to use when limiting scope of tempest

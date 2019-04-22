@@ -1290,7 +1290,7 @@ class ComputeTaskManager(base.Base):
         This is a workaround as placement does not return which RP
         fulfills which granular request group in the allocation candidate
         request. There is a spec proposing a solution in placement:
-        https://review.openstack.org/#/c/597601/
+        https://review.opendev.org/#/c/597601/
         When that spec is implemented then this function can be
         replaced with a simpler code that copies the group - RP
         mapping out from the Selection object returned by the scheduler's

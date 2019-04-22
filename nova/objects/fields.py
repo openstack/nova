@@ -1252,6 +1252,6 @@ class ListOfListsOfStringsField(fields.AutoTypedField):
 
 
 # TODO(mriedem): Replace this with the version from oslo.versiondobjects
-# when https://review.openstack.org/#/c/634700/ is released.
+# when https://review.opendev.org/#/c/634700/ is released.
 class ListOfUUIDField(AutoTypedField):
     AUTO_TYPE = List(fields.UUID())

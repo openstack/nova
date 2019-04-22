@@ -497,7 +497,7 @@ Upgrade Notes
   was deprecated in Kilo
   (https://wiki.openstack.org/wiki/ReleaseNotes/Kilo#Upgrade_Notes_2) has
   been completely removed in Mitaka. This has been replaced by the new
-  ec2-api project (http://git.openstack.org/cgit/openstack/ec2-api/).
+  ec2-api project (http://opendev.org/openstack/ec2-api/).
   
   .. warning:: Some installation tools (such as ``packstack``) hardcode the
     value of ``enabled_apis`` in your nova.conf. While the defaults
@@ -712,6 +712,6 @@ Other Notes
 
 .. releasenotes/notes/remove-ec2-api-service-c17a35ed297355b8.yaml @ b'eec7a55319b3f22949735227199ce49b851519b8'
 
-- Nova's EC2 API support which was deprecated in Kilo (https://wiki.openstack.org/wiki/ReleaseNotes/Kilo#Upgrade_Notes_2) is removed from Mitaka. This has been replaced by the new ec2-api project (http://git.openstack.org/cgit/openstack/ec2-api/).
+- Nova's EC2 API support which was deprecated in Kilo (https://wiki.openstack.org/wiki/ReleaseNotes/Kilo#Upgrade_Notes_2) is removed from Mitaka. This has been replaced by the new ec2-api project (http://opendev.org/openstack/ec2-api/).
 
 

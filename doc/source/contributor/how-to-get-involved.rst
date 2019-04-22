@@ -279,7 +279,7 @@ reviews:
    -  Maybe take a look at things you want to see merged, bug fixes and
       features, or little code fixes
    -  Look for things that have been waiting a long time for a review:
-      https://review.openstack.org/#/q/project:openstack/nova+status:open+age:2weeks
+      https://review.opendev.org/#/q/project:openstack/nova+status:open+age:2weeks
    -  If you get through the above lists, try other tools, such as:
       http://status.openstack.org/reviews
 

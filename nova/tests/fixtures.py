@@ -272,7 +272,7 @@ class DatabasePoisonFixture(fixtures.Fixture):
         #   to the code you're testing (for example: EventReporterStub)
         #
         # - peruse some of the other database poison warning fixes here:
-        #   https://review.openstack.org/#/q/topic:bug/1568414
+        #   https://review.opendev.org/#/q/topic:bug/1568414
         raise Exception('This test uses methods that set internal oslo_db '
                         'state, but it does not claim to use the database. '
                         'This will conflict with the setup of tests that '

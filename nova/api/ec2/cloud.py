@@ -27,5 +27,5 @@ class CloudController(object):
             'The in tree EC2 API has been removed in Mitaka. '
             'Please remove entries from api-paste.ini and use '
             'the OpenStack ec2-api project '
-            'http://git.openstack.org/cgit/openstack/ec2-api/'
+            'http://opendev.org/openstack/ec2-api/'
         )

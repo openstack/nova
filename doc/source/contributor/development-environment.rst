@@ -71,7 +71,7 @@ Getting the code
 
 Grab the code from git::
 
-    git clone https://git.openstack.org/openstack/nova
+    git clone https://opendev.org/openstack/nova
     cd nova
 
 
