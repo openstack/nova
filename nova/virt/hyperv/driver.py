@@ -369,3 +369,10 @@ class HyperVDriver(driver.ComputeDriver):
 
     def unrescue(self, instance, network_info):
         self._vmops.unrescue_instance(instance)
+
+    def update_provider_tree(self, provider_tree, nodename, allocations=None):
+        inventory = provider_tree.data(nodename).inventory
+        alloc_ratios = self._get_allocation_ratios(inventory)
+
+        self._hostops.update_provider_tree(
+            provider_tree, nodename, alloc_ratios, allocations)

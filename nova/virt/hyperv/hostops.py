@@ -20,12 +20,14 @@ import datetime
 import platform
 import time
 
+import os_resource_classes as orc
 from os_win import constants as os_win_const
 from os_win import utilsfactory
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
 
+from nova.compute import utils as compute_utils
 import nova.conf
 from nova.i18n import _
 from nova import objects
@@ -251,3 +253,39 @@ class HostOps(object):
         return "%s up %s,  0 users,  load average: 0, 0, 0" % (
                    str(time.strftime("%H:%M:%S")),
                    str(datetime.timedelta(milliseconds=int(tick_count64))))
+
+    def update_provider_tree(self, provider_tree, nodename,
+                             allocation_ratios, allocations=None):
+        resources = self.get_available_resource()
+
+        inventory = {
+            orc.VCPU: {
+                'total': resources['vcpus'],
+                'min_unit': 1,
+                'max_unit': resources['vcpus'],
+                'step_size': 1,
+                'allocation_ratio': allocation_ratios[orc.VCPU],
+                'reserved': CONF.reserved_host_cpus,
+            },
+            orc.MEMORY_MB: {
+                'total': resources['memory_mb'],
+                'min_unit': 1,
+                'max_unit': resources['memory_mb'],
+                'step_size': 1,
+                'allocation_ratio': allocation_ratios[orc.MEMORY_MB],
+                'reserved': CONF.reserved_host_memory_mb,
+            },
+            # TODO(lpetrut): once #1784020 is fixed, we can skip reporting
+            # shared storage capacity
+            orc.DISK_GB: {
+                'total': resources['local_gb'],
+                'min_unit': 1,
+                'max_unit': resources['local_gb'],
+                'step_size': 1,
+                'allocation_ratio': allocation_ratios[orc.DISK_GB],
+                'reserved': compute_utils.convert_mb_to_ceil_gb(
+                    CONF.reserved_host_disk_mb),
+            },
+        }
+
+        provider_tree.update_inventory(nodename, inventory)
