@@ -2216,6 +2216,31 @@ class API(base_api.NetworkAPI):
                         raise exception.NetworkNotFound(network_id=id_str)
         return ports_needed_per_instance
 
+    def get_requested_resource_for_instance(self, context, instance_uuid):
+        """Collect resource requests from the ports associated to the instance
+
+        :param context: nova request context
+        :param instance_uuid: The UUID of the instance
+        :return: A list of RequestGroup objects
+        """
+
+        neutron = get_client(context)
+        # get the ports associated to this instance
+        data = neutron.list_ports(
+            device_id=instance_uuid, fields=['id', 'resource_request'])
+        resource_requests = []
+
+        for port in data.get('ports', []):
+            if port.get('resource_request'):
+                # NOTE(gibi): explicitly orphan the RequestGroup by setting
+                # context=None as we never intended to save it to the DB.
+                resource_requests.append(
+                    objects.RequestGroup.from_port_request(
+                        context=None, port_uuid=port['id'],
+                        port_resource_request=port['resource_request']))
+
+        return resource_requests
+
     def validate_networks(self, context, requested_networks, num_instances):
         """Validate that the tenant can use the requested networks.
 
