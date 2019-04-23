@@ -131,6 +131,10 @@ class IronicClientWrapper(object):
             if ironic_url is None:
                 LOG.warning("Could not discover ironic_url via keystoneauth1: "
                             "Adapter.get_endpoint %s", ironic_url_none_reason)
+                # NOTE(eandersson): We pass in region here to make sure
+                # that the Ironic client can make an educated decision when
+                # we don't have a valid endpoint to pass on.
+                kwargs['region_name'] = ironic_conf.region_name
 
         try:
             cli = ironic.client.get_client(IRONIC_API_VERSION[0],

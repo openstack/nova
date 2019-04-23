@@ -42,6 +42,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         self.ironicclient = client_wrapper.IronicClientWrapper()
         # Do not waste time sleeping
         cfg.CONF.set_override('api_retry_interval', 0, 'ironic')
+        cfg.CONF.set_override('region_name', 'RegionOne', 'ironic')
         get_ksa_adapter_p = mock.patch('nova.utils.get_ksa_adapter')
         self.addCleanup(get_ksa_adapter_p.stop)
         self.get_ksa_adapter = get_ksa_adapter_p.start()
@@ -115,6 +116,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
                     'retry_interval': CONF.ironic.api_retry_interval,
                     'os_ironic_api_version': ['1.38', '1.37'],
                     'ironic_url': None,
+                    'region_name': CONF.ironic.region_name,
                     'interface': ['internal', 'public']}
         mock_ir_cli.assert_called_once_with(1, **expected)
 
