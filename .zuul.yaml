@@ -20,6 +20,7 @@
       - ^nova/hacking/.*$
       - ^nova/locale/.*$
       - ^nova/tests/.*$
+      - ^nova/test.py$
       - ^releasenotes/.*$
       - ^setup.cfg$
       - ^tests-py3.txt$
@@ -116,6 +117,7 @@
       - ^nova/hacking/.*$
       - ^nova/locale/.*$
       - ^nova/tests/(?!live_migration/).*$
+      - ^nova/test.py$
       - ^releasenotes/.*$
       - ^setup.cfg$
       - ^tests-py3.txt$
@@ -143,6 +145,7 @@
       - ^nova/hacking/.*$
       - ^nova/locale/.*$
       - ^nova/tests/.*$
+      - ^nova/test.py$
       - ^releasenotes/.*$
       - ^setup.cfg$
       - ^tests-py3.txt$
