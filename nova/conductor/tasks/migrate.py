@@ -203,8 +203,12 @@ class MigrationTask(base.TaskBase):
         # is not forced to be the original host
         self.request_spec.reset_forced_destinations()
 
-        # TODO(gibi): We need to make sure that the requested_resources field
-        # is re calculated based on neutron ports.
+        port_res_req = self.network_api.get_requested_resource_for_instance(
+            self.context, self.instance.uuid)
+        # NOTE(gibi): When cyborg or other module wants to handle similar
+        # non-nova resources then here we have to collect all the external
+        # resource requests in a single list and add them to the RequestSpec.
+        self.request_spec.requested_resources = port_res_req
 
         self._restrict_request_spec_to_cell(legacy_props)
 
@@ -242,6 +246,10 @@ class MigrationTask(base.TaskBase):
             # The selected host is the first item in the list, with the
             # alternates being the remainder of the list.
             selection, self.host_list = selection_list[0], selection_list[1:]
+
+            scheduler_utils.fill_provider_mapping(
+                self.context, self.reportclient, self.request_spec, selection)
+
         else:
             # This is a reschedule that will use the supplied alternate hosts
             # in the host_list as destinations. Since the resources on these
@@ -264,6 +272,10 @@ class MigrationTask(base.TaskBase):
                             elevated, self.reportclient, self.request_spec,
                             self.instance.uuid, alloc_req,
                             selection.allocation_request_version)
+                    if host_available:
+                        scheduler_utils.fill_provider_mapping(
+                            self.context, self.reportclient, self.request_spec,
+                            selection)
                 else:
                     # Some deployments use different schedulers that do not
                     # use Placement, so they will not have an
