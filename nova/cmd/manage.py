@@ -1658,6 +1658,59 @@ class PlacementCommands(object):
         node_cache[instance.node] = node_uuid
         return node_uuid
 
+    def _heal_missing_alloc(
+            self, ctxt, instance, node_cache, dry_run, output, placement):
+
+        node_uuid = self._get_compute_node_uuid(
+            ctxt, instance, node_cache)
+
+        # Now get the resource allocations for the instance based
+        # on its embedded flavor.
+        resources = scheduler_utils.resources_from_flavor(
+            instance, instance.flavor)
+        if dry_run:
+            output(_('[dry-run] Create allocations for instance %(instance)s '
+                     'on provider %(node_uuid)s: %(resources)s') %
+                   {'instance': instance.uuid, 'node_uuid': node_uuid,
+                    'resources': resources})
+        else:
+            if placement.put_allocations(
+                    ctxt, node_uuid, instance.uuid, resources,
+                    instance.project_id, instance.user_id,
+                    consumer_generation=None):
+                output(_('Successfully created allocations for '
+                         'instance %(instance)s against resource '
+                         'provider %(provider)s.') %
+                       {'instance': instance.uuid, 'provider': node_uuid})
+                return True
+            else:
+                raise exception.AllocationCreateFailed(
+                    instance=instance.uuid, provider=node_uuid)
+
+    def _heal_missing_project_and_user_id(
+            self, allocations, instance, dry_run, output, placement):
+
+        allocations['project_id'] = instance.project_id
+        allocations['user_id'] = instance.user_id
+        # We use CONSUMER_GENERATION_VERSION for PUT
+        # /allocations/{consumer_id} to mirror the body structure from
+        # get_allocs_for_consumer.
+        if dry_run:
+            output(_('[dry-run] Update allocations for instance '
+                     '%(instance)s: %(allocations)s') %
+                   {'instance': instance.uuid, 'allocations': allocations})
+        else:
+            resp = placement.put(
+                '/allocations/%s' % instance.uuid,
+                allocations, version=report.CONSUMER_GENERATION_VERSION)
+            if resp:
+                output(_('Successfully updated allocations for '
+                         'instance %s.') % instance.uuid)
+                return True
+            else:
+                raise exception.AllocationUpdateFailed(
+                    consumer_uuid=instance.uuid, error=resp.text)
+
     def _heal_allocations_for_instance(self, ctxt, instance, node_cache,
                                        output, placement, dry_run):
         """Checks the given instance to see if it needs allocation healing
@@ -1725,54 +1778,13 @@ class PlacementCommands(object):
             # and re-put them. We don't use put_allocations here
             # because we don't want to mess up shared or nested
             # provider allocations.
-            allocations['project_id'] = instance.project_id
-            allocations['user_id'] = instance.user_id
-            # We use CONSUMER_GENERATION_VERSION for PUT
-            # /allocations/{consumer_id} to mirror the body structure from
-            # get_allocs_for_consumer.
-            if dry_run:
-                output(_('[dry-run] Update allocations for instance '
-                         '%(instance)s: %(allocations)s') %
-                       {'instance': instance.uuid, 'allocations': allocations})
-            else:
-                resp = placement.put(
-                    '/allocations/%s' % instance.uuid,
-                    allocations, version=report.CONSUMER_GENERATION_VERSION)
-                if resp:
-                    output(_('Successfully updated allocations for '
-                             'instance %s.') % instance.uuid)
-                    return True
-                else:
-                    raise exception.AllocationUpdateFailed(
-                        consumer_uuid=instance.uuid, error=resp.text)
+            return self._heal_missing_project_and_user_id(
+                allocations, instance, dry_run, output, placement)
 
         # This instance doesn't have allocations so we need to find
         # its compute node resource provider.
-        node_uuid = self._get_compute_node_uuid(
-            ctxt, instance, node_cache)
-
-        # Now get the resource allocations for the instance based
-        # on its embedded flavor.
-        resources = scheduler_utils.resources_from_flavor(
-            instance, instance.flavor)
-        if dry_run:
-            output(_('[dry-run] Create allocations for instance %(instance)s '
-                     'on provider %(node_uuid)s: %(resources)s') %
-                   {'instance': instance.uuid, 'node_uuid': node_uuid,
-                    'resources': resources})
-        else:
-            if placement.put_allocations(
-                    ctxt, node_uuid, instance.uuid, resources,
-                    instance.project_id, instance.user_id,
-                    consumer_generation=None):
-                output(_('Successfully created allocations for '
-                         'instance %(instance)s against resource '
-                         'provider %(provider)s.') %
-                       {'instance': instance.uuid, 'provider': node_uuid})
-                return True
-            else:
-                raise exception.AllocationCreateFailed(
-                    instance=instance.uuid, provider=node_uuid)
+        return self._heal_missing_alloc(
+            ctxt, instance, node_cache, dry_run, output, placement)
 
     def _heal_instances_in_cell(self, ctxt, max_count, unlimited, output,
                                 placement, dry_run, instance_uuid):
