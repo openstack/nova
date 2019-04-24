@@ -272,6 +272,7 @@ class API(base.Base):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.servicegroup_api = servicegroup.API()
+        self.host_api = HostAPI(self.compute_rpcapi, self.servicegroup_api)
         self.notifier = rpc.get_notifier('compute', CONF.host)
         if CONF.ephemeral_storage_encryption.enabled:
             self.key_manager = key_manager.API()
@@ -1785,7 +1786,8 @@ class API(base.Base):
 
         if availability_zone:
             available_zones = availability_zones.\
-                get_availability_zones(context.elevated(), True)
+                get_availability_zones(context.elevated(), self.host_api,
+                                       get_only_available=True)
             if forced_host is None and availability_zone not in \
                     available_zones:
                 msg = _('The requested availability zone is not available')
@@ -4968,9 +4970,9 @@ def _find_service_in_cell(context, service_id=None, service_host=None):
 class HostAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host operations."""
 
-    def __init__(self, rpcapi=None):
+    def __init__(self, rpcapi=None, servicegroup_api=None):
         self.rpcapi = rpcapi or compute_rpcapi.ComputeAPI()
-        self.servicegroup_api = servicegroup.API()
+        self.servicegroup_api = servicegroup_api or servicegroup.API()
         super(HostAPI, self).__init__()
 
     def _assert_host_exists(self, context, host_name, must_be_up=False):

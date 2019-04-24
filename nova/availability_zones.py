@@ -109,27 +109,21 @@ def update_host_availability_zone_cache(context, host, availability_zone=None):
     cache.set(cache_key, availability_zone)
 
 
-def get_availability_zones(context, get_only_available=False,
-                           with_hosts=False, enabled_services=None,
-                           hostapi=None):
+def get_availability_zones(context, hostapi, get_only_available=False,
+                           with_hosts=False, enabled_services=None):
     """Return available and unavailable zones on demand.
 
-        :param get_only_available: flag to determine whether to return
-            available zones only, default False indicates return both
-            available zones and not available zones, True indicates return
-            available zones only
-        :param with_hosts: whether to return hosts part of the AZs
-        :type with_hosts: bool
-        :param enabled_services: list of enabled services to use; if None
-            enabled services will be retrieved from all cells with zones set
-        :param hostapi: nova.compute.api.HostAPI instance
+    :param context: nova auth RequestContext
+    :param hostapi: nova.compute.api.HostAPI instance
+    :param get_only_available: flag to determine whether to return
+        available zones only, default False indicates return both
+        available zones and not available zones, True indicates return
+        available zones only
+    :param with_hosts: whether to return hosts part of the AZs
+    :type with_hosts: bool
+    :param enabled_services: list of enabled services to use; if None
+        enabled services will be retrieved from all cells with zones set
     """
-    # TODO(mriedem): Make hostapi a required arg in a non-backportable FUP.
-    if hostapi is None:
-        # NOTE(danms): Avoid circular import
-        from nova import compute
-        hostapi = compute.HostAPI()
-
     if enabled_services is None:
         enabled_services = hostapi.service_get_all(
             context, {'disabled': False}, set_zones=True, all_cells=True)

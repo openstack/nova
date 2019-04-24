@@ -46,7 +46,7 @@ class AvailabilityZoneController(wsgi.Controller):
         ctxt = context.elevated()
         available_zones, not_available_zones = \
             availability_zones.get_availability_zones(
-                ctxt, hostapi=self.host_api)
+                ctxt, self.host_api)
 
         filtered_available_zones = \
             self._get_filtered_availability_zones(available_zones, True)
@@ -64,8 +64,7 @@ class AvailabilityZoneController(wsgi.Controller):
 
         available_zones, not_available_zones = (
             availability_zones.get_availability_zones(
-                ctxt, enabled_services=enabled_services,
-                hostapi=self.host_api))
+                ctxt, self.host_api, enabled_services=enabled_services))
 
         zone_hosts = {}
         host_services = {}
