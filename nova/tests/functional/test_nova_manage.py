@@ -652,13 +652,14 @@ class TestNovaManagePlacementHealAllocations(
         self.assertEqual(4, result, self.output.getvalue())
         output = self.output.getvalue()
         self.assertIn('Processed 0 instances.', output)
-        self.assertIn('[dry-run] Update allocations for instance %s' %
-                      server['id'], output)
+        self.assertIn('[dry-run] Update allocations for instance %s'
+                      % server['id'], output)
         # Now run heal_allocations which should update the consumer info.
         result = self.cli.heal_allocations(verbose=True)
         self.assertEqual(0, result, self.output.getvalue())
         output = self.output.getvalue()
-        self.assertIn('Successfully updated allocations for instance', output)
+        self.assertIn(
+            'Successfully updated allocations for', output)
         self.assertIn('Processed 1 instances.', output)
         # Now assert that the consumer was actually updated.
         allocations = self.placement_api.get(
@@ -676,8 +677,9 @@ class TestNovaManagePlacementHealAllocations(
         self.assertEqual(4, result, self.output.getvalue())
         output = self.output.getvalue()
         self.assertIn('Processed 0 instances.', output)
-        self.assertIn('[dry-run] Create allocations for instance %s on '
-                      'provider %s' % (server['id'], rp_uuid), output)
+        self.assertIn('[dry-run] Create allocations for instance '
+                      '%s' % server['id'], output)
+        self.assertIn(rp_uuid, output)
 
     def test_heal_allocations_specific_instance(self):
         """Tests the case that a specific instance is processed and only that
