@@ -768,10 +768,13 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         """
 
         ctx = context.get_admin_context()
-        for compute in self.computes.values():
-            LOG.info('Running periodic for compute (%s)',
-                compute.manager.host)
-            compute.manager.update_available_resource(ctx)
+        for host, compute in self.computes.items():
+            LOG.info('Running periodic for compute (%s)', host)
+            # Make sure the context is targeted to the proper cell database
+            # for multi-cell tests.
+            with context.target_cell(
+                    ctx, self.host_mappings[host].cell_mapping) as cctxt:
+                compute.manager.update_available_resource(cctxt)
         LOG.info('Finished with periodics')
 
     def _move_and_check_allocations(self, server, request, old_flavor,
