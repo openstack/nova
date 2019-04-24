@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ddt
 import mock
 
 from nova import exception
@@ -130,6 +131,7 @@ class LibvirtISCSIVolumeBaseTestCase(LibvirtVolumeBaseTestCase):
         return ret
 
 
+@ddt.ddt
 class LibvirtVolumeTestCase(LibvirtISCSIVolumeBaseTestCase):
 
     def _assertDiskInfoEquals(self, tree, disk_info):
@@ -373,3 +375,21 @@ class LibvirtVolumeTestCase(LibvirtISCSIVolumeBaseTestCase):
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self.assertIsNone(tree.find("encryption"))
+
+    @ddt.data(5, None)
+    def test_libvirt_volume_driver_address_tag_scsi_unit(self, disk_unit):
+        # The address tag should be set if bus is scsi and unit is set.
+        # Otherwise, it should not be set at all.
+        libvirt_driver = volume.LibvirtVolumeDriver(self.fake_host)
+        connection_info = {'data': {'device_path': '/foo'}}
+        disk_info = {'bus': 'scsi', 'dev': 'sda', 'type': 'disk'}
+        if disk_unit:
+            disk_info['unit'] = disk_unit
+        conf = libvirt_driver.get_config(connection_info, disk_info)
+        tree = conf.format_dom()
+        address = tree.find('address')
+        if disk_unit:
+            self.assertEqual('0', address.attrib['controller'])
+            self.assertEqual(str(disk_unit), address.attrib['unit'])
+        else:
+            self.assertIsNone(address)
