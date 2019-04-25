@@ -69,6 +69,18 @@ class VMwareVCDriver(driver.ComputeDriver):
         "supports_attach_interface": True,
         "supports_multiattach": False,
         "supports_trusted_certs": False,
+
+        # Image type support flags
+        "supports_image_type_aki": False,
+        "supports_image_type_ami": False,
+        "supports_image_type_ari": False,
+        "supports_image_type_iso": True,
+        "supports_image_type_qcow2": False,
+        "supports_image_type_raw": False,
+        "supports_image_type_vdi": False,
+        "supports_image_type_vhd": False,
+        "supports_image_type_vhdx": False,
+        "supports_image_type_vmdk": True,
     }
 
     # Legacy nodename is of the form: <mo id>(<cluster name>)
