@@ -1499,6 +1499,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 else:
                     LOG.exception(_('Failed to attach volume at mountpoint: '
                                     '%s'), mountpoint, instance=instance)
+                self._disconnect_volume(context, connection_info, instance,
+                                        encryption=encryption)
         except Exception:
             LOG.exception(_('Failed to attach volume at mountpoint: %s'),
                           mountpoint, instance=instance)
