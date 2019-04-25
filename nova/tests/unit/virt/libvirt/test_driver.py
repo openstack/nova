@@ -7775,11 +7775,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.patch.object(drvr._host, 'get_guest'),
             mock.patch('nova.virt.libvirt.driver.LOG'),
             mock.patch.object(drvr, '_connect_volume'),
+            mock.patch.object(drvr, '_disconnect_volume'),
             mock.patch.object(drvr, '_get_volume_config'),
             mock.patch.object(drvr, '_check_discard_for_attach_volume'),
             mock.patch.object(drvr, '_build_device_metadata'),
         ) as (mock_get_guest, mock_log, mock_connect_volume,
-              mock_get_volume_config, mock_check_discard, mock_build_metadata):
+              mock_disconnect_volume, mock_get_volume_config,
+              mock_check_discard, mock_build_metadata):
 
             mock_conf = mock.MagicMock()
             mock_guest = mock.MagicMock()
@@ -7793,6 +7795,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.context, connection_info, instance, "/dev/vdb",
                 disk_bus=bdm['disk_bus'], device_type=bdm['device_type'])
             mock_log.warning.assert_called_once()
+            mock_disconnect_volume.assert_called_once()
 
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
     def test_attach_volume_with_libvirt_exception(self, mock_get_info):
@@ -7814,11 +7817,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.patch.object(drvr._host, 'get_guest'),
             mock.patch('nova.virt.libvirt.driver.LOG'),
             mock.patch.object(drvr, '_connect_volume'),
+            mock.patch.object(drvr, '_disconnect_volume'),
             mock.patch.object(drvr, '_get_volume_config'),
             mock.patch.object(drvr, '_check_discard_for_attach_volume'),
             mock.patch.object(drvr, '_build_device_metadata'),
         ) as (mock_get_guest, mock_log, mock_connect_volume,
-              mock_get_volume_config, mock_check_discard, mock_build_metadata):
+              mock_disconnect_volume, mock_get_volume_config,
+              mock_check_discard, mock_build_metadata):
 
             mock_conf = mock.MagicMock()
             mock_guest = mock.MagicMock()
@@ -7833,6 +7838,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 disk_bus=bdm['disk_bus'], device_type=bdm['device_type'])
             mock_log.exception.assert_called_once_with(u'Failed to attach '
                 'volume at mountpoint: %s', '/dev/vdb', instance=instance)
+            mock_disconnect_volume.assert_called_once()
 
     @mock.patch('nova.utils.get_image_from_system_metadata')
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
