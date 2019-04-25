@@ -1490,11 +1490,15 @@ class LibvirtDriver(driver.ComputeDriver):
         # distributions provide Libvirt 3.3.0 or earlier with
         # https://libvirt.org/git/?p=libvirt.git;a=commit;h=7189099 applied.
         except libvirt.libvirtError as ex:
-            if 'Incorrect number of padding bytes' in six.text_type(ex):
-                LOG.warning(_('Failed to attach encrypted volume due to a '
-                    'known Libvirt issue, see the following bug for details: '
-                    'https://bugzilla.redhat.com/show_bug.cgi?id=1447297'))
-                raise
+            with excutils.save_and_reraise_exception():
+                if 'Incorrect number of padding bytes' in six.text_type(ex):
+                    LOG.warning(_('Failed to attach encrypted volume due to a '
+                                  'known Libvirt issue, see the following bug '
+                                  'for details: '
+                                  'https://bugzilla.redhat.com/1447297'))
+                else:
+                    LOG.exception(_('Failed to attach volume at mountpoint: '
+                                    '%s'), mountpoint, instance=instance)
         except Exception:
             LOG.exception(_('Failed to attach volume at mountpoint: %s'),
                           mountpoint, instance=instance)
