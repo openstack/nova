@@ -75,6 +75,18 @@ class XenAPIDriver(driver.ComputeDriver):
         "supports_device_tagging": True,
         "supports_multiattach": False,
         "supports_trusted_certs": False,
+
+        # Image type support flags
+        "supports_image_type_aki": False,
+        "supports_image_type_ami": False,
+        "supports_image_type_ari": False,
+        "supports_image_type_iso": False,
+        "supports_image_type_qcow2": False,
+        "supports_image_type_raw": True,
+        "supports_image_type_vdi": True,
+        "supports_image_type_vhd": True,
+        "supports_image_type_vhdx": False,
+        "supports_image_type_vmdk": False,
     }
 
     def __init__(self, virtapi, read_only=False):
