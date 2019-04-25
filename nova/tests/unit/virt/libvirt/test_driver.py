@@ -6954,6 +6954,66 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         _set_cache_mode.assert_called_once_with(config)
         self.assertEqual(config_guest_disk.to_xml(), config.to_xml())
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_driver')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_attach_encryptor')
+    def test_connect_volume_encryption_success(
+            self, mock_attach_encryptor, mock_get_volume_driver):
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_volume_driver = mock.MagicMock(
+            spec=volume_drivers.LibvirtBaseVolumeDriver)
+        mock_get_volume_driver.return_value = mock_volume_driver
+
+        connection_info = {'driver_volume_type': 'fake',
+                           'data': {'device_path': '/fake',
+                                    'access_mode': 'rw',
+                                    'volume_id': uuids.volume_id}}
+        encryption = {'provider': encryptors.LUKS,
+                      'encryption_key_id': uuids.encryption_key_id}
+        instance = mock.sentinel.instance
+
+        drvr._connect_volume(self.context, connection_info, instance,
+                             encryption=encryption)
+
+        mock_get_volume_driver.assert_called_once_with(connection_info)
+        mock_volume_driver.connect_volume.assert_called_once_with(
+            connection_info, instance)
+        mock_attach_encryptor.assert_called_once_with(
+            self.context, connection_info, encryption, True)
+        mock_volume_driver.disconnect_volume.assert_not_called()
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_driver')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_attach_encryptor')
+    def test_connect_volume_encryption_fail(
+            self, mock_attach_encryptor, mock_get_volume_driver):
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_volume_driver = mock.MagicMock(
+            spec=volume_drivers.LibvirtBaseVolumeDriver)
+        mock_get_volume_driver.return_value = mock_volume_driver
+
+        connection_info = {'driver_volume_type': 'fake',
+                           'data': {'device_path': '/fake',
+                                    'access_mode': 'rw',
+                                    'volume_id': uuids.volume_id}}
+        encryption = {'provider': encryptors.LUKS,
+                      'encryption_key_id': uuids.encryption_key_id}
+        instance = mock.sentinel.instance
+        mock_attach_encryptor.side_effect = processutils.ProcessExecutionError
+
+        self.assertRaises(processutils.ProcessExecutionError,
+                          drvr._connect_volume,
+                          self.context, connection_info, instance,
+                          encryption=encryption)
+
+        mock_get_volume_driver.assert_called_once_with(connection_info)
+        mock_volume_driver.connect_volume.assert_called_once_with(
+            connection_info, instance)
+        mock_attach_encryptor.assert_called_once_with(
+            self.context, connection_info, encryption, True)
+        mock_volume_driver.disconnect_volume.assert_called_once_with(
+            connection_info, instance)
+
     @mock.patch.object(key_manager, 'API')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryption')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_use_native_luks')
