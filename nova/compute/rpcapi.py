@@ -364,6 +364,9 @@ class ComputeAPI(object):
         * 5.0 - Remove 4.x compatibility
         * 5.1 - Make prep_resize() take a RequestSpec object rather than a
                 legacy dict.
+        * 5.2 - Add request_spec parameter for the following: resize_instance,
+                finish_resize, revert_resize, finish_revert_resize,
+                unshelve_instance
     '''
 
     VERSION_ALIASES = {
@@ -596,22 +599,45 @@ class ComputeAPI(object):
                    instance=instance, volume_id=volume_id,
                    attachment_id=attachment_id)
 
-    def finish_resize(self, ctxt, instance, migration, image, disk_info, host):
-        client = self.router.client(ctxt)
-        version = '5.0'
-        cctxt = client.prepare(
-                server=host, version=version)
-        cctxt.cast(ctxt, 'finish_resize',
-                   instance=instance, migration=migration,
-                   image=image, disk_info=disk_info)
+    def finish_resize(self, ctxt, instance, migration, image, disk_info, host,
+                      request_spec):
+        msg_args = {
+            'instance': instance,
+            'migration': migration,
+            'image': image,
+            'disk_info': disk_info,
+            'request_spec': request_spec,
+        }
 
-    def finish_revert_resize(self, ctxt, instance, migration, host):
         client = self.router.client(ctxt)
-        version = '5.0'
+        version = '5.2'
+
+        if not client.can_send_version(version):
+            msg_args.pop('request_spec')
+            version = '5.0'
+
         cctxt = client.prepare(
                 server=host, version=version)
-        cctxt.cast(ctxt, 'finish_revert_resize',
-                   instance=instance, migration=migration)
+        cctxt.cast(ctxt, 'finish_resize', **msg_args)
+
+    def finish_revert_resize(self, ctxt, instance, migration, host,
+                             request_spec):
+        msg_args = {
+            'instance': instance,
+            'migration': migration,
+            'request_spec': request_spec,
+        }
+
+        client = self.router.client(ctxt)
+        version = '5.2'
+
+        if not client.can_send_version(version):
+            msg_args.pop('request_spec')
+            version = '5.0'
+
+        cctxt = client.prepare(
+                server=host, version=version)
+        cctxt.cast(ctxt, 'finish_revert_resize', **msg_args)
 
     def get_console_output(self, ctxt, instance, tail_length):
         version = '5.0'
@@ -882,14 +908,20 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'reset_network', instance=instance)
 
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
-                        clean_shutdown=True):
+                        request_spec, clean_shutdown=True):
         msg_args = {'instance': instance, 'migration': migration,
                     'image': image,
                     'instance_type': instance_type,
                     'clean_shutdown': clean_shutdown,
+                    'request_spec': request_spec,
         }
-        version = '5.0'
+        version = '5.2'
         client = self.router.client(ctxt)
+
+        if not client.can_send_version(version):
+            msg_args.pop('request_spec')
+            version = '5.0'
+
         cctxt = client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'resize_instance', **msg_args)
@@ -900,13 +932,24 @@ class ComputeAPI(object):
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'resume_instance', instance=instance)
 
-    def revert_resize(self, ctxt, instance, migration, host):
+    def revert_resize(self, ctxt, instance, migration, host, request_spec):
+
+        msg_args = {
+            'instance': instance,
+            'migration': migration,
+            'request_spec': request_spec,
+        }
+
         client = self.router.client(ctxt)
-        version = '5.0'
+        version = '5.2'
+
+        if not client.can_send_version(version):
+            msg_args.pop('request_spec')
+            version = '5.0'
+
         cctxt = client.prepare(
                 server=_compute_host(host, instance), version=version)
-        cctxt.cast(ctxt, 'revert_resize',
-                   instance=instance, migration=migration)
+        cctxt.cast(ctxt, 'revert_resize', **msg_args)
 
     def rollback_live_migration_at_destination(self, ctxt, instance, host,
                                                destroy_disks,
@@ -1052,16 +1095,24 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'shelve_offload_instance', instance=instance,
                    clean_shutdown=clean_shutdown)
 
-    def unshelve_instance(self, ctxt, instance, host, image=None,
+    def unshelve_instance(self, ctxt, instance, host, request_spec, image=None,
                           filter_properties=None, node=None):
-        version = '5.0'
+        version = '5.2'
         msg_kwargs = {
             'instance': instance,
             'image': image,
             'filter_properties': filter_properties,
             'node': node,
+            'request_spec': request_spec,
         }
-        cctxt = self.router.client(ctxt).prepare(
+
+        client = self.router.client(ctxt)
+
+        if not client.can_send_version(version):
+            msg_kwargs.pop('request_spec')
+            version = '5.0'
+
+        cctxt = client.prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'unshelve_instance', **msg_kwargs)
 

@@ -1303,7 +1303,8 @@ class _BaseTaskTestCase(object):
             # NOTE(sbauza): Since the instance is dehydrated when passing
             # through the RPC API, we can only assert mock.ANY for it
             unshelve_instance.assert_called_once_with(
-                self.context, mock.ANY, host['host'], image=mock.ANY,
+                self.context, mock.ANY, host['host'],
+                test.MatchType(objects.RequestSpec), image=mock.ANY,
                 filter_properties=filter_properties, node=host['nodename']
             )
 
@@ -1397,7 +1398,7 @@ class _BaseTaskTestCase(object):
         mock_schedule.assert_called_once_with(
             self.context, fake_spec, [instance.uuid], return_alternates=False)
         mock_unshelve.assert_called_once_with(
-            self.context, instance, 'fake_host', image='fake_image',
+            self.context, instance, 'fake_host', fake_spec, image='fake_image',
             filter_properties=dict(
                 # populate_filter_properties adds limits={}
                 fake_spec.to_legacy_filter_properties_dict(), limits={}),
@@ -1488,7 +1489,7 @@ class _BaseTaskTestCase(object):
         mock_schedule.assert_called_once_with(
             self.context, fake_spec, [instance.uuid], return_alternates=False)
         mock_unshelve.assert_called_once_with(
-            self.context, instance, 'fake_host', image=None,
+            self.context, instance, 'fake_host', fake_spec, image=None,
             filter_properties={'limits': {}}, node='fake_node')
 
     def test_rebuild_instance(self):

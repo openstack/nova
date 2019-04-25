@@ -347,7 +347,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             self.compute.unshelve_instance(
                 self.context, instance, image=image,
                 filter_properties=filter_properties,
-                node=node)
+                node=node, request_spec=objects.RequestSpec())
 
         mock_notify_instance_action.assert_has_calls([
             mock.call(self.context, instance, 'fake-mini',
@@ -446,7 +446,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         with mock.patch.object(instance, 'save') as mock_save:
             mock_save.side_effect = check_save
             self.compute.unshelve_instance(self.context, instance, image=None,
-                    filter_properties=filter_properties, node=node)
+                    filter_properties=filter_properties, node=node,
+                    request_spec=objects.RequestSpec())
 
         mock_notify_instance_action.assert_has_calls([
             mock.call(self.context, instance, 'fake-mini',
@@ -540,7 +541,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             self.assertRaises(test.TestingException,
                               self.compute.unshelve_instance,
                               self.context, instance, image=None,
-                              filter_properties=filter_properties, node=node)
+                              filter_properties=filter_properties, node=node,
+                              request_spec=objects.RequestSpec())
 
         mock_notify_instance_action.assert_called_once_with(
             self.context, instance, 'fake-mini', action='unshelve',

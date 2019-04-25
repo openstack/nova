@@ -902,8 +902,8 @@ class ComputeTaskManager(base.Base):
                         availability_zones.get_host_availability_zone(
                             context, host))
                     self.compute_rpcapi.unshelve_instance(
-                            context, instance, host, image=image,
-                            filter_properties=filter_properties, node=node)
+                        context, instance, host, request_spec, image=image,
+                        filter_properties=filter_properties, node=node)
             except (exception.NoValidHost,
                     exception.UnsupportedPolicyException):
                 instance.task_state = None

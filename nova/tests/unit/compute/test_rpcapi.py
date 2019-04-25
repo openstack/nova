@@ -30,6 +30,7 @@ from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
+from nova.tests.unit import fake_request_spec
 
 
 class ComputeRpcAPITestCase(test.NoDBTestCase):
@@ -50,6 +51,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                     {'source_type': 'volume', 'destination_type': 'volume',
                      'instance_uuid': self.fake_instance_obj.uuid,
                      'volume_id': 'fake-volume-id'}))
+        self.fake_request_spec_obj = fake_request_spec.fake_spec_obj()
         # FIXME(melwitt): Temporary while things have no mappings
         self.patcher1 = mock.patch('nova.objects.InstanceMapping.'
                                    'get_by_instance_uuid')
@@ -236,12 +238,14 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_finish_resize(self):
         self._test_compute_api('finish_resize', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'foo'},
-                image='image', disk_info='disk_info', host='host')
+                image='image', disk_info='disk_info', host='host',
+                request_spec=self.fake_request_spec_obj, version='5.2')
 
     def test_finish_revert_resize(self):
         self._test_compute_api('finish_revert_resize', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},
-                host='host')
+                host='host', request_spec=self.fake_request_spec_obj,
+                version='5.2')
 
     def test_get_console_output(self):
         self._test_compute_api('get_console_output', 'call',
@@ -451,7 +455,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self._test_compute_api('resize_instance', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},
                 image='image', instance_type=self.fake_flavor_obj,
-                clean_shutdown=True, version='5.0')
+                clean_shutdown=True, request_spec=self.fake_request_spec_obj,
+                version='5.2')
 
     def test_resume_instance(self):
         self._test_compute_api('resume_instance', 'cast',
@@ -460,7 +465,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_revert_resize(self):
         self._test_compute_api('revert_resize', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},
-                host='host')
+                host='host', request_spec=self.fake_request_spec_obj,
+                version='5.2')
 
     def test_set_admin_password(self):
         self._test_compute_api('set_admin_password', 'call',
@@ -530,7 +536,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self._test_compute_api('unshelve_instance', 'cast',
                 instance=self.fake_instance_obj, host='host', image='image',
                 filter_properties={'fakeprop': 'fakeval'}, node='node',
-                version='5.0')
+                request_spec=self.fake_request_spec_obj,
+                version='5.2')
 
     def test_volume_snapshot_create(self):
         self._test_compute_api('volume_snapshot_create', 'cast',

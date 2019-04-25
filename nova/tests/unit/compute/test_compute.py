@@ -4645,7 +4645,8 @@ class ComputeTestCase(BaseTestCase,
                                  'clean_shutdown': True}),
             ("unrescue_instance", task_states.UNRESCUING),
             ("revert_resize", task_states.RESIZE_REVERTING,
-                              {'migration': migration}),
+                              {'migration': migration,
+                               'request_spec': {}}),
             ("prep_resize", task_states.RESIZE_PREP,
                             {'image': {},
                              'instance_type': instance_type,
@@ -4659,7 +4660,8 @@ class ComputeTestCase(BaseTestCase,
                                 {'migration': migration,
                                  'image': {},
                                  'instance_type': {},
-                                 'clean_shutdown': True}),
+                                 'clean_shutdown': True,
+                                 'request_spec': {}}),
             ("pause_instance", task_states.PAUSING),
             ("unpause_instance", task_states.UNPAUSING),
             ("suspend_instance", task_states.SUSPENDING),
@@ -4858,7 +4860,8 @@ class ComputeTestCase(BaseTestCase,
             self.compute.finish_resize(self.context,
                                        migration=migration,
                                        disk_info=disk_info, image=image,
-                                       instance=instance)
+                                       instance=instance,
+                                       request_spec=objects.RequestSpec())
 
             mock_setup.assert_called_once_with(self.context, instance,
                                                'fake-mini')
@@ -4912,6 +4915,7 @@ class ComputeTestCase(BaseTestCase,
 
         # create instance
         instance = self._create_fake_instance_obj()
+        request_spec = objects.RequestSpec()
 
         # create volume
         volume = {'instance_uuid': None,
@@ -4996,7 +5000,7 @@ class ComputeTestCase(BaseTestCase,
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type,
-                                 image={}, request_spec={},
+                                 image={}, request_spec=request_spec,
                                  filter_properties={}, node=None,
                                  clean_shutdown=True, migration=None,
                                  host_list=[])
@@ -5015,7 +5019,7 @@ class ComputeTestCase(BaseTestCase,
         self.compute.resize_instance(self.context, instance=instance,
                 migration=migration, image={},
                 instance_type=jsonutils.to_primitive(instance_type),
-                clean_shutdown=True)
+                clean_shutdown=True, request_spec=request_spec)
 
         # assert bdm is unchanged
         disk_info = db.block_device_mapping_get_all_by_instance(
@@ -5050,7 +5054,8 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute.finish_resize(self.context,
                 migration=migration,
-                disk_info={}, image={}, instance=instance)
+                disk_info={}, image={}, instance=instance,
+                request_spec=request_spec)
 
         # assert volume attached correctly
         disk_info = db.block_device_mapping_get_all_by_instance(
@@ -5084,10 +5089,13 @@ class ComputeTestCase(BaseTestCase,
 
         instance_type = objects.Flavor.get_by_name(self.context, 'm1.small')
 
+        request_spec = objects.RequestSpec()
+
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type,
                                  image={},
-                                 request_spec={}, filter_properties={},
+                                 request_spec=request_spec,
+                                 filter_properties={},
                                  node=None, migration=None,
                                  clean_shutdown=True, host_list=[])
 
@@ -5101,7 +5109,8 @@ class ComputeTestCase(BaseTestCase,
         self.assertRaises(test.TestingException, self.compute.finish_resize,
                           self.context,
                           migration=migration,
-                          disk_info={}, image={}, instance=instance)
+                          disk_info={}, image={}, instance=instance,
+                          request_spec=request_spec)
         instance.refresh()
         self.assertEqual(vm_states.ERROR, instance.vm_state)
 
@@ -5209,7 +5218,9 @@ class ComputeTestCase(BaseTestCase,
         new_type = objects.Flavor.get_by_name(self.context, 'm1.small')
         new_type_id = new_type['id']
         flavor_id = new_type['flavorid']
-        self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
+        request_spec = objects.RequestSpec()
+        self.compute.build_and_run_instance(self.context, instance, {},
+                                            request_spec, {},
                                             block_device_mapping=[])
 
         instance.host = 'foo'
@@ -5228,13 +5239,14 @@ class ComputeTestCase(BaseTestCase,
                 instance.uuid, 'pre-migrating')
         self.compute.resize_instance(self.context, instance=instance,
                 migration=migration, image={}, instance_type=new_type,
-                clean_shutdown=True)
+                clean_shutdown=True, request_spec=request_spec)
         time_fixture.advance_time_delta(cur_time - old_time)
         fake_notifier.NOTIFICATIONS = []
 
         self.compute.finish_resize(self.context,
                 migration=migration,
-                disk_info={}, image={}, instance=instance)
+                disk_info={}, image={}, instance=instance,
+                request_spec=request_spec)
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
@@ -5348,6 +5360,7 @@ class ComputeTestCase(BaseTestCase,
                        throw_up)
 
         instance = self._create_fake_instance_obj()
+        request_spec = objects.RequestSpec()
 
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
@@ -5355,7 +5368,7 @@ class ComputeTestCase(BaseTestCase,
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=self.default_flavor, image={},
-                                 request_spec={},
+                                 request_spec=request_spec,
                                  filter_properties={}, node=None,
                                  clean_shutdown=True, migration=None,
                                  host_list=[])
@@ -5371,7 +5384,7 @@ class ComputeTestCase(BaseTestCase,
                           migration=migration, image={},
                           instance_type=jsonutils.to_primitive(
                               self.default_flavor),
-                          clean_shutdown=True)
+                          clean_shutdown=True, request_spec=request_spec)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
         instance.refresh()
@@ -5388,13 +5401,15 @@ class ComputeTestCase(BaseTestCase,
                        throw_up)
 
         instance = self._create_fake_instance_obj()
+        request_spec = objects.RequestSpec()
+
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
         instance.host = 'foo'
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=self.default_flavor, image={},
-                                 request_spec={},
+                                 request_spec=request_spec,
                                  filter_properties={}, node=None,
                                  migration=None, host_list=[],
                                  clean_shutdown=True)
@@ -5410,7 +5425,7 @@ class ComputeTestCase(BaseTestCase,
                           migration=migration, image={},
                           instance_type=jsonutils.to_primitive(
                               self.default_flavor),
-                          clean_shutdown=True)
+                          clean_shutdown=True, request_spec=request_spec)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
         instance.refresh()
@@ -5422,13 +5437,15 @@ class ComputeTestCase(BaseTestCase,
         # Ensure instance can be migrated/resized.
         instance = self._create_fake_instance_obj()
 
+        request_spec = objects.RequestSpec()
+
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
         instance.host = 'foo'
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
                 instance_type=self.default_flavor, image={},
-                request_spec={}, filter_properties={}, node=None,
+                request_spec=request_spec, filter_properties={}, node=None,
                 clean_shutdown=True, migration=None, host_list=[])
 
         # verify 'old_vm_state' was set on system_metadata
@@ -5465,7 +5482,7 @@ class ComputeTestCase(BaseTestCase,
             self.compute.resize_instance(self.context, instance=instance,
                     migration=migration, image={},
                     instance_type=jsonutils.to_primitive(self.default_flavor),
-                    clean_shutdown=clean_shutdown)
+                    clean_shutdown=clean_shutdown, request_spec=request_spec)
             mock_notify_action.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini',
                       action='resize', phase='start', bdms='fake_bdms'),
@@ -5512,6 +5529,8 @@ class ComputeTestCase(BaseTestCase,
         params = {'vm_state': old_vm_state, 'power_state': p_state}
         instance = self._create_fake_instance_obj(params)
 
+        request_spec = objects.RequestSpec()
+
         self.flags(allow_resize_to_same_host=True)
         self.stub_out('nova.virt.fake.FakeDriver.finish_migration', fake)
         self.stub_out('nova.virt.fake.FakeDriver.confirm_migration',
@@ -5522,7 +5541,8 @@ class ComputeTestCase(BaseTestCase,
         # Get initial memory usage
         memory_mb_used = self.rt.compute_nodes[NODENAME].memory_mb_used
 
-        self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
+        self.compute.build_and_run_instance(self.context, instance, {},
+                                            request_spec, {},
                                             block_device_mapping=[])
 
         # Confirm the instance size before the resize starts
@@ -5544,7 +5564,7 @@ class ComputeTestCase(BaseTestCase,
         self.compute.prep_resize(self.context,
                 instance=instance,
                 instance_type=new_instance_type_ref,
-                image={}, request_spec={},
+                image={}, request_spec=request_spec,
                 filter_properties={}, node=None, clean_shutdown=True,
                 migration=None, host_list=None)
 
@@ -5571,10 +5591,12 @@ class ComputeTestCase(BaseTestCase,
                                      migration=migration,
                                      image={},
                                      instance_type=new_instance_type_ref,
-                                     clean_shutdown=True)
+                                     clean_shutdown=True,
+                                     request_spec=request_spec)
         self.compute.finish_resize(self.context,
                     migration=migration,
-                    disk_info={}, image={}, instance=instance)
+                    disk_info={}, image={}, instance=instance,
+                    request_spec=request_spec)
 
         # Memory usage shouldn't had changed
         self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
@@ -5799,7 +5821,10 @@ class ComputeTestCase(BaseTestCase,
 
     def test_revert_resize_with_pci(self):
         self._test_resize_with_pci(
-            self.compute.revert_resize, '0000:0b:00.1')
+            lambda context, instance, migration:
+                self.compute.revert_resize(
+                    context, instance, migration, objects.RequestSpec()),
+            '0000:0b:00.1')
 
     @mock.patch.object(nova.compute.utils, 'notify_about_instance_action')
     def _test_finish_revert_resize(self, mock_notify, power_on,
@@ -5830,6 +5855,7 @@ class ComputeTestCase(BaseTestCase,
                   'info_cache': objects.InstanceInfoCache(
                       network_info=network_model.NetworkInfo([]))}
         instance = self._create_fake_instance_obj(params)
+        request_spec = objects.RequestSpec()
 
         self.stub_out('nova.virt.fake.FakeDriver.finish_migration', fake)
         self.stub_out('nova.virt.fake.FakeDriver.finish_revert_migration',
@@ -5840,7 +5866,8 @@ class ComputeTestCase(BaseTestCase,
         # Get initial memory usage
         memory_mb_used = self.rt.compute_nodes[NODENAME].memory_mb_used
 
-        self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
+        self.compute.build_and_run_instance(self.context, instance, {},
+                                            request_spec, {},
                                             block_device_mapping=[])
 
         instance.refresh()
@@ -5862,7 +5889,7 @@ class ComputeTestCase(BaseTestCase,
         self.compute.prep_resize(self.context,
                 instance=instance,
                 instance_type=new_instance_type_ref,
-                image={}, request_spec={},
+                image={}, request_spec=request_spec,
                 filter_properties={}, node=None,
                 migration=None, clean_shutdown=True, host_list=[])
 
@@ -5888,10 +5915,12 @@ class ComputeTestCase(BaseTestCase,
                                      migration=migration,
                                      image={},
                                      instance_type=new_instance_type_ref,
-                                     clean_shutdown=True)
+                                     clean_shutdown=True,
+                                     request_spec=request_spec)
         self.compute.finish_resize(self.context,
                     migration=migration,
-                    disk_info={}, image={}, instance=instance)
+                    disk_info={}, image={}, instance=instance,
+                    request_spec=request_spec)
 
         # Memory usage shouldn't had changed
         self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
@@ -5909,7 +5938,8 @@ class ComputeTestCase(BaseTestCase,
         instance.save()
 
         self.compute.revert_resize(self.context,
-                migration=migration, instance=instance)
+                migration=migration, instance=instance,
+                request_spec=request_spec)
 
         # Resources from the migration (based on initial flavor) should
         # be freed now
@@ -5928,7 +5958,8 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute.finish_revert_resize(self.context,
                 migration=migration,
-                instance=instance)
+                instance=instance,
+                request_spec=request_spec)
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, 'fake-mini',
                       action='resize_revert', phase='start',
@@ -5980,6 +6011,7 @@ class ComputeTestCase(BaseTestCase,
         params = {'info_cache': objects.InstanceInfoCache(
                       network_info=network_model.NetworkInfo([]))}
         instance = self._create_fake_instance_obj(params)
+        request_spec = objects.RequestSpec()
 
         self.stub_out('nova.virt.fake.FakeDriver.finish_migration', fake)
         self.stub_out('nova.virt.fake.FakeDriver.finish_revert_migration',
@@ -5987,14 +6019,15 @@ class ComputeTestCase(BaseTestCase,
 
         self._stub_out_resize_network_methods()
 
-        self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
+        self.compute.build_and_run_instance(self.context, instance, {},
+                                            request_spec, {},
                                             block_device_mapping=[])
 
         new_instance_type_ref = flavors.get_flavor_by_flavor_id(3)
         self.compute.prep_resize(self.context,
                 instance=instance,
                 instance_type=new_instance_type_ref,
-                image={}, request_spec={},
+                image={}, request_spec=request_spec,
                 filter_properties={}, node=None,
                 clean_shutdown=True, migration=None,
                 host_list=[])
@@ -6013,16 +6046,19 @@ class ComputeTestCase(BaseTestCase,
                                      migration=migration,
                                      image={},
                                      instance_type=new_instance_type_ref,
-                                     clean_shutdown=True)
+                                     clean_shutdown=True,
+                                     request_spec=request_spec)
         self.compute.finish_resize(self.context,
                     migration=migration,
-                    disk_info={}, image={}, instance=instance)
+                    disk_info={}, image={}, instance=instance,
+                    request_spec=request_spec)
 
         instance.task_state = task_states.RESIZE_REVERTING
         instance.save()
 
         self.compute.revert_resize(self.context,
-                migration=migration, instance=instance)
+                migration=migration, instance=instance,
+                request_spec=request_spec)
 
         # NOTE(hanrong): Prove that we pass the right value to the
         # "self.network_api.migrate_instance_finish".
@@ -6033,7 +6069,8 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute.finish_revert_resize(self.context,
                 migration=migration,
-                instance=instance)
+                instance=instance,
+                request_spec=request_spec)
 
         self.assertEqual(instance.host, migration.source_compute)
         self.assertNotEqual(migration.dest_compute, migration.source_compute)
@@ -6053,6 +6090,8 @@ class ComputeTestCase(BaseTestCase,
 
         instance = self._create_fake_instance_obj()
 
+        request_spec = objects.RequestSpec()
+
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
         instance.host = 'foo'
@@ -6060,7 +6099,8 @@ class ComputeTestCase(BaseTestCase,
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=self.default_flavor,
                                  image={},
-                                 request_spec={}, filter_properties={},
+                                 request_spec=request_spec,
+                                 filter_properties={},
                                  node=None, clean_shutdown=True,
                                  migration=None, host_list=[])
         migration = objects.Migration.get_by_instance_and_status(
@@ -6073,7 +6113,7 @@ class ComputeTestCase(BaseTestCase,
                           migration=migration, image={},
                           instance_type=jsonutils.to_primitive(
                               self.default_flavor),
-                          clean_shutdown=True)
+                          clean_shutdown=True, request_spec=request_spec)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
         instance.refresh()
