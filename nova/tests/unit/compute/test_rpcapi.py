@@ -241,11 +241,59 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 image='image', disk_info='disk_info', host='host',
                 request_spec=self.fake_request_spec_obj, version='5.2')
 
+    def test_finish_resize_old_compute(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        rpcapi.router.client.return_value = mock_client
+        # So we expect that the messages is backported therefore the
+        # request_spec is dropped
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        rpcapi.finish_resize(
+            ctxt, instance=self.fake_instance_obj,
+            migration=mock.sentinel.migration, image='image',
+            disk_info='disk_info', host='host',
+            request_spec=self.fake_request_spec_obj)
+
+        mock_client.can_send_version.assert_called_once_with('5.2')
+        mock_client.prepare.assert_called_with(
+            server='host', version='5.0')
+        mock_cctx.cast.assert_called_with(
+            ctxt, 'finish_resize', instance=self.fake_instance_obj,
+            migration=mock.sentinel.migration, image='image',
+            disk_info='disk_info')
+
     def test_finish_revert_resize(self):
         self._test_compute_api('finish_revert_resize', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},
                 host='host', request_spec=self.fake_request_spec_obj,
                 version='5.2')
+
+    def test_finish_revert_resize_old_compute(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        rpcapi.router.client.return_value = mock_client
+        # So we expect that the messages is backported therefore the
+        # request_spec is dropped
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        rpcapi.finish_revert_resize(
+            ctxt, instance=self.fake_instance_obj,
+            migration=mock.sentinel.migration, host='host',
+            request_spec=self.fake_request_spec_obj)
+
+        mock_client.can_send_version.assert_called_once_with('5.2')
+        mock_client.prepare.assert_called_with(
+            server='host', version='5.0')
+        mock_cctx.cast.assert_called_with(
+            ctxt, 'finish_revert_resize', instance=self.fake_instance_obj,
+            migration=mock.sentinel.migration)
 
     def test_get_console_output(self):
         self._test_compute_api('get_console_output', 'call',
@@ -458,6 +506,31 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 clean_shutdown=True, request_spec=self.fake_request_spec_obj,
                 version='5.2')
 
+    def test_resize_instance_old_compute(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        rpcapi.router.client.return_value = mock_client
+        # So we expect that the messages is backported therefore the
+        # request_spec is dropped
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        rpcapi.resize_instance(
+            ctxt, instance=self.fake_instance_obj,
+            migration=mock.sentinel.migration, image='image',
+            instance_type='instance_type', clean_shutdown=True,
+            request_spec=self.fake_request_spec_obj)
+
+        mock_client.can_send_version.assert_called_once_with('5.2')
+        mock_client.prepare.assert_called_with(
+            server=self.fake_instance_obj.host, version='5.0')
+        mock_cctx.cast.assert_called_with(
+            ctxt, 'resize_instance', instance=self.fake_instance_obj,
+            migration=mock.sentinel.migration, image='image',
+            instance_type='instance_type', clean_shutdown=True)
+
     def test_resume_instance(self):
         self._test_compute_api('resume_instance', 'cast',
                                instance=self.fake_instance_obj)
@@ -467,6 +540,29 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},
                 host='host', request_spec=self.fake_request_spec_obj,
                 version='5.2')
+
+    def test_revert_resize_old_compute(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        rpcapi.router.client.return_value = mock_client
+        # So we expect that the messages is backported therefore the
+        # request_spec is dropped
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        rpcapi.revert_resize(
+            ctxt, instance=self.fake_instance_obj,
+            migration=mock.sentinel.migration, host='host',
+            request_spec=self.fake_request_spec_obj)
+
+        mock_client.can_send_version.assert_called_once_with('5.2')
+        mock_client.prepare.assert_called_with(
+            server='host', version='5.0')
+        mock_cctx.cast.assert_called_with(
+            ctxt, 'revert_resize', instance=self.fake_instance_obj,
+            migration=mock.sentinel.migration)
 
     def test_set_admin_password(self):
         self._test_compute_api('set_admin_password', 'call',
@@ -538,6 +634,29 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 filter_properties={'fakeprop': 'fakeval'}, node='node',
                 request_spec=self.fake_request_spec_obj,
                 version='5.2')
+
+    def test_unshelve_instance_old_compute(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        rpcapi.router.client.return_value = mock_client
+        # So we expect that the messages is backported therefore the
+        # request_spec is dropped
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        rpcapi.unshelve_instance(
+            ctxt, instance=self.fake_instance_obj,
+            host='host', request_spec=self.fake_request_spec_obj,
+            image='image')
+
+        mock_client.can_send_version.assert_called_once_with('5.2')
+        mock_client.prepare.assert_called_with(
+            server='host', version='5.0')
+        mock_cctx.cast.assert_called_with(
+            ctxt, 'unshelve_instance', instance=self.fake_instance_obj,
+            image='image', filter_properties=None, node=None)
 
     def test_volume_snapshot_create(self):
         self._test_compute_api('volume_snapshot_create', 'cast',
