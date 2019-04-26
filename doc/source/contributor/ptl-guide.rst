@@ -205,13 +205,13 @@ RC
 
   * https://wiki.openstack.org/wiki/RpcMajorVersionUpdates
 
-  * Example: https://review.openstack.org/541035
+  * Example: https://review.opendev.org/541035
 
 * “Merge latest translations" means translation patches
 
   * Check for translations with:
 
-    * https://review.openstack.org/#/q/status:open+project:openstack/nova+branch:master+topic:zanata/translations
+    * https://review.opendev.org/#/q/status:open+project:openstack/nova+branch:master+topic:zanata/translations
 
 * Should NOT plan to have more than one RC if possible. RC2 should only happen
   if there was a mistake and something was missed for RC, or a new regression
@@ -219,24 +219,24 @@ RC
 
 * Do the RPC version aliases just before RC1 if no further RCs are planned.
   Else do them at RC2. In the past, we used to update all service version
-  aliases (example: https://review.openstack.org/230132) but since we really
+  aliases (example: https://review.opendev.org/230132) but since we really
   only support compute being backlevel/old during a rolling upgrade, we only
   need to update the compute service alias, see related IRC discussion:
   http://eavesdrop.openstack.org/irclogs/%23openstack-nova/%23openstack-nova.2018-08-08.log.html#t2018-08-08T17:13:45
 
-  * Example: https://review.openstack.org/642599
+  * Example: https://review.opendev.org/642599
 
   * More detail on how version aliases work: https://docs.openstack.org/nova/latest/configuration/config.html#upgrade-levels
 
 * Write the reno prelude for the release GA
 
-  * Example: https://review.openstack.org/644412
+  * Example: https://review.opendev.org/644412
 
 * Write the cycle-highlights in marketing-friendly sentences and propose to the
   openstack/releases repo. Usually based on reno prelude but made more readable
   and friendly
 
-  * Example: https://review.openstack.org/644697
+  * Example: https://review.opendev.org/644697
 
 Immediately after RC
 --------------------

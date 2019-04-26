@@ -52,7 +52,7 @@ A very basic controller of a v2.1 API::
         # Defining support for other RESTFul methods based on resource.
 
 
-See `servers.py <http://git.openstack.org/cgit/openstack/nova/tree/nova/api/openstack/compute/servers.py>`_ for ref.
+See `servers.py <https://opendev.org/openstack/nova/src/branch/master/nova/api/openstack/compute/servers.py>`_ for ref.
 
 All of the controller modules should live in the ``nova/api/openstack/compute`` directory.
 
@@ -100,7 +100,7 @@ A basic skeleton of URL mapping in routers.py::
         .
     )
 
-Complete routing list can be found in `routes.py <https://git.openstack.org/cgit/openstack/nova/tree/nova/api/openstack/compute/routes.py>`_.
+Complete routing list can be found in `routes.py <https://opendev.org/openstack/nova/src/branch/master/nova/api/openstack/compute/routes.py>`_.
 
 
 Policy
@@ -308,7 +308,7 @@ The general steps for removing support for a deprecated REST API are:
   the REST API routes that were removed along with any related configuration
   options that were also removed.
 
-Here is an example of the above steps: https://review.openstack.org/567682/
+Here is an example of the above steps: https://review.opendev.org/567682/
 
-.. _route mapping: http://git.openstack.org/cgit/openstack/nova/tree/nova/api/openstack/compute/routes.py
+.. _route mapping: https://opendev.org/openstack/nova/src/branch/master/nova/api/openstack/compute/routes.py
 .. _Obsolete APIs: https://developer.openstack.org/api-ref/compute/#obsolete-apis

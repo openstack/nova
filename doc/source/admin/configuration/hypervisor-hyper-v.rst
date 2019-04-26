@@ -318,7 +318,7 @@ Download the nova code
 
    .. code-block:: none
 
-      PS C:\> git.exe clone https://git.openstack.org/openstack/nova
+      PS C:\> git.exe clone https://opendev.org/openstack/nova
 
 Install nova-compute service
 ----------------------------

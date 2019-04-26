@@ -70,7 +70,7 @@ and is a Kilo release feature.
 Including this workaround in your configuration file safeguards your
 environment from issues that can impair root wrapper performance. Tool changes
 that have impacted `Python Build Reasonableness (PBR)
-<https://git.openstack.org/cgit/openstack-dev/pbr/>`__ for example, are a known
+<https://opendev.org/openstack/pbr/>`__ for example, are a known
 issue that affects root wrapper performance.
 
 To set up this workaround, configure the ``disable_rootwrap`` option in the

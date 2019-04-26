@@ -332,7 +332,7 @@ entirely. A few tips:
 
 Secondly, Nova is a big project, look for things that have been waiting
 a long time for a review:
-https://review.openstack.org/#/q/project:openstack/nova+status:open+age:2weeks
+https://review.opendev.org/#/q/project:openstack/nova+status:open+age:2weeks
 
 Eventually you should get some +1s from people working through the
 review queue. Expect to get -1s as well. You can ask for reviews within

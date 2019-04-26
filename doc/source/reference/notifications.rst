@@ -368,5 +368,5 @@ Existing versioned notifications
 
 .. versioned_notifications::
 
-.. [1] https://review.openstack.org/#/c/463001/
-.. [2] https://review.openstack.org/#/c/453077/
+.. [1] https://review.opendev.org/#/c/463001/
+.. [2] https://review.opendev.org/#/c/453077/

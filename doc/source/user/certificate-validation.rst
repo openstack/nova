@@ -29,7 +29,7 @@ create or rebuild commands, signature verification and certificate validation
 will be performed, regardless of their settings in the Nova configurations.
 See `Using Signature Verification`_ for details.
 
-.. _Cursive: http://git.openstack.org/cgit/openstack/cursive/
+.. _Cursive: http://opendev.org/x/cursive/
 .. _Glance Image Signature Verification documentation: https://docs.openstack.org/glance/latest/user/signature.html
 
 .. note::
@@ -138,8 +138,8 @@ Certificate validation is triggered by one of two ways:
 2. A list of trusted certificate IDs is provided by one of three ways:
 
    .. note:: The command line support is pending changes
-      https://review.openstack.org/#/c/500396/ and
-      https://review.openstack.org/#/c/501926/ to python-novaclient and
+      https://review.opendev.org/#/c/500396/ and
+      https://review.opendev.org/#/c/501926/ to python-novaclient and
       python-openstackclient, respectively.
 
    Environment Variable

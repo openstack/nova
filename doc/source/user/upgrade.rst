@@ -232,7 +232,7 @@ to ease upgrades:
      * `Data migration example
        <http://specs.openstack.org/openstack/nova-specs/specs/kilo/implemented/flavor-from-sysmeta-to-blob.html>`_
      * `Data migration enforcement example
-       <https://review.openstack.org/#/c/174480/15/nova/db/sqlalchemy/migrate_repo/versions/291_enforce_flavors_migrated.py>`_
+       <https://review.opendev.org/#/c/174480/15/nova/db/sqlalchemy/migrate_repo/versions/291_enforce_flavors_migrated.py>`_
        (for sqlalchemy migrate/deprecated scripts):
 
   #. The column can then be removed with a migration at the start of N+2.

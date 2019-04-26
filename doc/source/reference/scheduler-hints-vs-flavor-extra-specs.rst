@@ -156,6 +156,6 @@ Footnotes
 ---------
 
 .. [1] https://github.com/openstack/nova/blob/fbe6f77bc/nova/objects/image_meta.py#L225
-.. [2] https://review.openstack.org/#/c/440580/
+.. [2] https://review.opendev.org/#/c/440580/
 .. [3] https://docs.openstack.org/nova/latest/user/flavors.html#extra-specs
 .. [4] https://github.com/openstack/nova/blob/fbe6f77bc/nova/api/openstack/compute/schemas/scheduler_hints.py

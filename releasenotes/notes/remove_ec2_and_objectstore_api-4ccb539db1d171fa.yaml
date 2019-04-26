@@ -4,4 +4,4 @@ upgrade:
     was deprecated in Kilo
     (https://wiki.openstack.org/wiki/ReleaseNotes/Kilo#Upgrade_Notes_2) has
     been completely removed in Mitaka. This has been replaced by the new
-    ec2-api project (http://git.openstack.org/cgit/openstack/ec2-api/).
+    ec2-api project (http://opendev.org/openstack/ec2-api/).

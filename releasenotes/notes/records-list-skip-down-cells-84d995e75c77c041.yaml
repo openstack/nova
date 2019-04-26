@@ -12,5 +12,5 @@ other:
     `blueprint handling-down-cell`_  where minimal constructs would be returned
     for the down cell instances instead of raising 500s or skipping down cells.
 
-    .. _change e3534d : https://review.openstack.org/#/q/I308b494ab07f6936bef94f4c9da45e9473e3534d
+    .. _change e3534d : https://review.opendev.org/#/q/I308b494ab07f6936bef94f4c9da45e9473e3534d
     .. _blueprint handling-down-cell: https://blueprints.launchpad.net/nova/+spec/handling-down-cell
