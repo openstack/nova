@@ -47,6 +47,7 @@ CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
+# TODO(stephenfin): These should be private
 TRANSPORT = None
 LEGACY_NOTIFIER = None
 NOTIFICATION_TRANSPORT = None
