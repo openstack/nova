@@ -5387,7 +5387,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
             mock_populate_ext_values):
         """Makes sure we rollback ports and VIFs if we fail updating ports"""
         instance = fake_instance.fake_instance_obj(self.context)
-        ntrn = mock.Mock(spec='neutronclient.v2_0.client.Client')
+        ntrn = mock.Mock(spec=client.Client)
         # we have two requests, one with a preexisting port and one where nova
         # created the port (on the same network)
         requests_and_created_ports = [

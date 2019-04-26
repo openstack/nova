@@ -26,6 +26,8 @@ import random
 import warnings
 
 import fixtures
+import futurist
+from keystoneauth1 import adapter as ksa_adap
 import mock
 from neutronclient.common import exceptions as neutron_client_exc
 import os_resource_classes as orc
@@ -1116,7 +1118,7 @@ class SynchronousThreadPoolExecutorFixture(fixtures.Fixture):
 
         def fake_submit(_self, fn, *args, **kwargs):
             result = fn(*args, **kwargs)
-            future = mock.Mock(spec='futurist.Future')
+            future = mock.Mock(spec=futurist.Future)
             future.return_value.result.return_value = result
             return future
         self.useFixture(fixtures.MonkeyPatch(
@@ -1462,7 +1464,7 @@ class NeutronFixture(fixtures.Fixture):
         self.test.stub_out(
             'nova.network.neutronv2.api._get_ksa_client',
             lambda *args, **kwargs: mock.Mock(
-                spec='keystoneauth1.adapter.Adapter'))
+                spec=ksa_adap.Adapter))
         self.test.stub_out(
             'nova.network.neutronv2.api.API._create_port_binding',
             self.fake_create_port_binding)

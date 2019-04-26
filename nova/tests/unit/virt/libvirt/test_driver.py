@@ -8009,10 +8009,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         new_size_in_kb = 20 * 1024 * 1024
 
-        guest = mock.Mock(spec='nova.virt.libvirt.guest.Guest')
+        guest = mock.Mock(spec=libvirt_guest.Guest)
         # block_device
-        block_device = mock.Mock(
-            spec='nova.virt.libvirt.guest.BlockDevice')
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice)
         block_device.resize = mock.Mock()
         guest.get_block_device = mock.Mock(return_value=block_device)
         drvr._host.get_guest = mock.Mock(return_value=guest)
@@ -8083,11 +8082,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         }
         new_size_in_kb = 20 * 1024 * 1024
 
-        guest = mock.Mock(spec='nova.virt.libvirt.guest.Guest')
+        guest = mock.Mock(spec=libvirt_guest.Guest)
         guest.get_power_state = mock.Mock(return_value=power_state.RUNNING)
         # block_device
-        block_device = mock.Mock(
-            spec='nova.virt.libvirt.guest.BlockDevice')
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice)
         block_device.resize = mock.Mock(
             side_effect=fakelibvirt.libvirtError('ERR'))
         guest.get_block_device = mock.Mock(return_value=block_device)
@@ -8111,13 +8109,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         }
         new_size_in_kb = 20 * 1024 * 1024
 
-        guest = mock.Mock(spec='nova.virt.libvirt.guest.Guest')
+        guest = mock.Mock(spec=libvirt_guest.Guest)
         # block_device
-        block_device = mock.Mock(
-            spec='nova.virt.libvirt.guest.BlockDevice')
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice)
         block_device.resize = mock.Mock()
         disk = mock.Mock(
-            spec='nova.virt.libvirt.config.LibvirtConfigGuestDisk',
+            spec=vconfig.LibvirtConfigGuestDisk,
             serial='58a84f6d-3f0c-4e19-a0af-eb657b790657',
             target_dev='vdb')
         guest.get_block_device = mock.Mock(return_value=block_device)
@@ -8148,13 +8145,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         }
         new_size_in_kb = 20 * 1024 * 1024
 
-        guest = mock.Mock(spec='nova.virt.libvirt.guest.Guest')
+        guest = mock.Mock(spec=libvirt_guest.Guest)
         # block_device
-        block_device = mock.Mock(
-            spec='nova.virt.libvirt.guest.BlockDevice')
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice)
         block_device.resize = mock.Mock()
         disk = mock.Mock(
-            spec='nova.virt.libvirt.config.LibvirtConfigGuestDisk',
+            spec=vconfig.LibvirtConfigGuestDisk,
             serial='12345678-abcd-abcd-abcd-0123456789012',
             target_dev='vdb')
         guest.get_block_device = mock.Mock(return_value=block_device)
@@ -20064,7 +20060,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # found on the guest after a libvirt error during detach.
         instance = self._create_instance()
         vif = _fake_network_info(self, 1)[0]
-        guest = mock.Mock(spec='nova.virt.libvirt.guest.Guest')
+        guest = mock.Mock(spec=libvirt_guest.Guest)
         guest.get_power_state = mock.Mock()
         self.drvr._host.get_guest = mock.Mock(return_value=guest)
         error = fakelibvirt.libvirtError(
