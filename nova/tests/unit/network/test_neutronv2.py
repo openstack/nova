@@ -4229,7 +4229,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
                              'pci_vendor_info': 'old_pci_vendor_info'}},
                         {'id': 'fake-port-2',
                          neutronapi.BINDING_HOST_ID: instance.host}]}
-        migration = {'status': 'confirmed'}
+        migration = {'status': 'confirmed',
+                     'migration_type': "migration"}
         list_ports_mock = mock.Mock(return_value=fake_ports)
         get_client_mock.return_value.list_ports = list_ports_mock
 
@@ -4284,7 +4285,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
                             {'pci_slot': '0000:0a:00.1',
                              'physical_network': 'old_phys_net',
                              'pci_vendor_info': 'old_pci_vendor_info'}}]}
-        migration = {'status': 'confirmed'}
+        migration = {'status': 'confirmed',
+                     'migration_type': "migration"}
         list_ports_mock = mock.Mock(return_value=fake_ports)
         get_client_mock.return_value.list_ports = list_ports_mock
 
@@ -4415,6 +4417,51 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
                                      'device_owner': 'compute:%s' %
                                          instance.availability_zone
                                      }})
+
+    @mock.patch.object(neutronapi.API, '_get_pci_mapping_for_migration')
+    @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_bindings_for_instance_with_live_migration(
+            self,
+            get_client_mock,
+            get_devspec_mock,
+            get_pci_mapping_mock):
+
+        devspec = mock.Mock()
+        devspec.get_tags.return_value = {'physical_network': 'physnet1'}
+        get_devspec_mock.return_value = devspec
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        fake_ports = {'ports': [
+            {'id': 'fake-port-1',
+             'binding:vnic_type': 'direct',
+             neutronapi.BINDING_HOST_ID: 'old-host',
+             neutronapi.BINDING_PROFILE:
+                 {'pci_slot': '0000:0a:00.1',
+                  'physical_network': 'phys_net',
+                  'pci_vendor_info': 'vendor_info'}}]}
+        migration = {'status': 'confirmed',
+                     'migration_type': "live-migration"}
+        list_ports_mock = mock.Mock(return_value=fake_ports)
+        get_client_mock.return_value.list_ports = list_ports_mock
+        update_port_mock = mock.Mock()
+        get_client_mock.return_value.update_port = update_port_mock
+
+        self.api._update_port_binding_for_instance(self.context, instance,
+                                                   'new-host', migration)
+        # Assert _get_pci_mapping_for_migration was not called
+        self.assertFalse(get_pci_mapping_mock.called)
+
+        # Assert that update_port() does not update binding:profile
+        # and that it updates host ID
+        called_port_id = update_port_mock.call_args[0][0]
+        called_port_attributes = update_port_mock.call_args[0][1]
+        self.assertEqual(called_port_id, fake_ports['ports'][0]['id'])
+        self.assertNotIn(
+            neutronapi.BINDING_PROFILE, called_port_attributes['port'])
+        self.assertEqual(
+            called_port_attributes['port'][neutronapi.BINDING_HOST_ID],
+            'new-host')
 
     def test_get_pci_mapping_for_migration(self):
         instance = fake_instance.fake_instance_obj(self.context)

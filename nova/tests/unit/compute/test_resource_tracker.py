@@ -3403,3 +3403,48 @@ class OverCommitTestCase(BaseTestCase):
     def test_disk_allocation_ratio_none_negative(self):
         self.assertRaises(ValueError,
                           CONF.set_default, 'disk_allocation_ratio', -1.0)
+
+
+class TestPciTrackerDelegationMethods(BaseTestCase):
+
+    def setUp(self):
+        super(TestPciTrackerDelegationMethods, self).setUp()
+        self._setup_rt()
+        self.rt.pci_tracker = mock.MagicMock()
+        self.context = context.RequestContext(mock.sentinel.user_id,
+                                              mock.sentinel.project_id)
+        self.instance = _INSTANCE_FIXTURES[0].obj_clone()
+
+    def test_claim_pci_devices(self):
+        request = objects.InstancePCIRequest(
+            count=1,
+            spec=[{'vendor_id': 'v', 'product_id': 'p'}])
+        pci_requests = objects.InstancePCIRequests(
+            requests=[request],
+            instance_uuid=self.instance.uuid)
+        self.rt.claim_pci_devices(self.context, pci_requests)
+        self.rt.pci_tracker.claim_instance.assert_called_once_with(
+            self.context, pci_requests, None)
+        self.assertTrue(self.rt.pci_tracker.save.called)
+
+    def test_allocate_pci_devices_for_instance(self):
+        self.rt.allocate_pci_devices_for_instance(self.context, self.instance)
+        self.rt.pci_tracker.allocate_instance.assert_called_once_with(
+            self.instance)
+        self.assertTrue(self.rt.pci_tracker.save.called)
+
+    def test_free_pci_device_allocations_for_instance(self):
+        self.rt.free_pci_device_allocations_for_instance(self.context,
+                                                         self.instance)
+        self.rt.pci_tracker.free_instance_allocations.assert_called_once_with(
+            self.context,
+            self.instance)
+        self.assertTrue(self.rt.pci_tracker.save.called)
+
+    def test_free_pci_device_claims_for_instance(self):
+        self.rt.free_pci_device_claims_for_instance(self.context,
+                                                    self.instance)
+        self.rt.pci_tracker.free_instance_claims.assert_called_once_with(
+            self.context,
+            self.instance)
+        self.assertTrue(self.rt.pci_tracker.save.called)

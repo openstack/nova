@@ -1514,3 +1514,46 @@ class ResourceTracker(object):
     def build_succeeded(self, nodename):
         """Resets the failed_builds stats for the given node."""
         self.stats[nodename].build_succeeded()
+
+    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
+    def claim_pci_devices(self, context, pci_requests):
+        """Claim instance PCI resources
+
+        :param context: security context
+        :param pci_requests: a list of nova.objects.InstancePCIRequests
+        :returns: a list of nova.objects.PciDevice objects
+        """
+        result = self.pci_tracker.claim_instance(
+            context, pci_requests, None)
+        self.pci_tracker.save(context)
+        return result
+
+    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
+    def allocate_pci_devices_for_instance(self, context, instance):
+        """Allocate instance claimed PCI resources
+
+        :param context: security context
+        :param instance: instance object
+        """
+        self.pci_tracker.allocate_instance(instance)
+        self.pci_tracker.save(context)
+
+    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
+    def free_pci_device_allocations_for_instance(self, context, instance):
+        """Free instance allocated PCI resources
+
+        :param context: security context
+        :param instance: instance object
+        """
+        self.pci_tracker.free_instance_allocations(context, instance)
+        self.pci_tracker.save(context)
+
+    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
+    def free_pci_device_claims_for_instance(self, context, instance):
+        """Free instance claimed PCI resources
+
+        :param context: security context
+        :param instance: instance object
+        """
+        self.pci_tracker.free_instance_claims(context, instance)
+        self.pci_tracker.save(context)

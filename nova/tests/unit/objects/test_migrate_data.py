@@ -44,7 +44,15 @@ class _TestLiveMigrateData(object):
 
 class TestLiveMigrateData(test_objects._LocalTest,
                           _TestLiveMigrateData):
-    pass
+    def test_create_skeleton_migrate_vifs(self):
+        vifs = [
+            network_model.VIF(id=uuids.port1),
+            network_model.VIF(id=uuids.port2)]
+        mig_vifs = migrate_data.LiveMigrateData.create_skeleton_migrate_vifs(
+            vifs)
+        self.assertEqual(len(vifs), len(mig_vifs))
+        self.assertEqual([vif['id'] for vif in vifs],
+                         [mig_vif.port_id for mig_vif in mig_vifs])
 
 
 class TestRemoteLiveMigrateData(test_objects._RemoteTest,
