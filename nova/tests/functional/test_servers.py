@@ -2712,6 +2712,70 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
+    def test_resize_confirm_assert_hypervisor_usage_no_periodics(self):
+        """Resize confirm test for bug 1818914 to make sure the tracked
+        resource usage in the os-hypervisors API (not placement) is as
+        expected during a confirmed resize. This intentionally does not
+        use _test_resize_confirm in order to avoid running periodics.
+        """
+        # There should be no usage from a server on either hypervisor.
+        source_rp_uuid = self._get_provider_uuid_by_host('host1')
+        dest_rp_uuid = self._get_provider_uuid_by_host('host2')
+        no_usage = {'vcpus': 0, 'disk': 0, 'ram': 0}
+        for rp_uuid in (source_rp_uuid, dest_rp_uuid):
+            self.assert_hypervisor_usage(
+                rp_uuid, no_usage, volume_backed=False)
+
+        # Create the server and wait for it to be ACTIVE.
+        server = self._boot_and_check_allocations(self.flavor1, 'host1')
+
+        # There should be resource usage for flavor1 on the source host.
+        self.assert_hypervisor_usage(
+            source_rp_uuid, self.flavor1, volume_backed=False)
+        # And still no usage on the dest host.
+        self.assert_hypervisor_usage(
+            dest_rp_uuid, no_usage, volume_backed=False)
+
+        # Resize the server to flavor2 and wait for VERIFY_RESIZE.
+        self.flags(allow_resize_to_same_host=False)
+        resize_req = {
+            'resize': {
+                'flavorRef': self.flavor2['id']
+            }
+        }
+        self.api.post_server_action(server['id'], resize_req)
+        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+
+        # There should be resource usage for flavor1 on the source host.
+        self.assert_hypervisor_usage(
+            source_rp_uuid, self.flavor1, volume_backed=False)
+        # And resource usage for flavor2 on the target host.
+        self.assert_hypervisor_usage(
+            dest_rp_uuid, self.flavor2, volume_backed=False)
+
+        # Now confirm the resize and check hypervisor usage again.
+        self.api.post_server_action(server['id'], {'confirmResize': None})
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        # There should no resource usage for flavor1 on the source host.
+        # FIXME(mriedem): This is bug 1818914 where the source host continues
+        # to report old_flavor usage until the update_available_resource
+        # periodic task runs. Uncomment this once fixed.
+        # self.assert_hypervisor_usage(
+        #     source_rp_uuid, no_usage, volume_backed=False)
+        self.assert_hypervisor_usage(
+            source_rp_uuid, self.flavor1, volume_backed=False)
+        # And resource usage for flavor2 should still be on the target host.
+        self.assert_hypervisor_usage(
+            dest_rp_uuid, self.flavor2, volume_backed=False)
+
+        # Run periodics and make sure usage is still as expected.
+        self._run_periodics()
+        self.assert_hypervisor_usage(
+            source_rp_uuid, no_usage, volume_backed=False)
+        self.assert_hypervisor_usage(
+            dest_rp_uuid, self.flavor2, volume_backed=False)
+
     def _wait_for_notification_event_type(self, event_type, max_retries=50):
         retry_counter = 0
         while True:

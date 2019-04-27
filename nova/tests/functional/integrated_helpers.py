@@ -27,6 +27,7 @@ import os_traits
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 
+from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context
 from nova.db import api as db
@@ -868,3 +869,32 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         self.assertEqual(2, len(allocations))
         self.assertFlavorMatchesUsage(source_root_rp_uuid, flavor)
         self.assertFlavorMatchesUsage(dest_root_rp_uuid, flavor)
+
+    def assert_hypervisor_usage(self, compute_node_uuid, flavor,
+                                volume_backed):
+        """Asserts the given hypervisor's resource usage matches the
+        given flavor (assumes a single instance on the hypervisor).
+
+        :param compute_node_uuid: UUID of the ComputeNode to check.
+        :param flavor: "flavor" entry dict from from GET /flavors/{flavor_id}
+        :param volume_backed: True if the flavor is used with a volume-backed
+            server, False otherwise.
+        """
+        # GET /os-hypervisors/{uuid} requires at least 2.53
+        with utils.temporary_mutation(self.admin_api, microversion='2.53'):
+            hypervisor = self.admin_api.api_get(
+                '/os-hypervisors/%s' % compute_node_uuid).body['hypervisor']
+        if volume_backed:
+            expected_disk_usage = 0
+        else:
+            expected_disk_usage = flavor['disk']
+        # Account for reserved_host_disk_mb.
+        expected_disk_usage += compute_utils.convert_mb_to_ceil_gb(
+            CONF.reserved_host_disk_mb)
+        self.assertEqual(expected_disk_usage, hypervisor['local_gb_used'])
+        # Account for reserved_host_memory_mb.
+        expected_ram_usage = CONF.reserved_host_memory_mb + flavor['ram']
+        self.assertEqual(expected_ram_usage, hypervisor['memory_mb_used'])
+        # Account for reserved_host_cpus.
+        expected_vcpu_usage = CONF.reserved_host_cpus + flavor['vcpus']
+        self.assertEqual(expected_vcpu_usage, hypervisor['vcpus_used'])
