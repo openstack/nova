@@ -33,8 +33,7 @@ from nova.virt.libvirt.volume import quobyte
 
 
 @ddt.ddt
-@mock.patch.object(quobyte, 'found_sysd', False)
-@mock.patch.object(quobyte, 'sysd_checked', False)
+@mock.patch.object(quobyte, '_is_systemd', None)
 class QuobyteTestCase(test.NoDBTestCase):
     """Tests the nova.virt.libvirt.volume.quobyte module utilities."""
 
@@ -74,8 +73,7 @@ class QuobyteTestCase(test.NoDBTestCase):
                                              "is-system-running",
                                              check_exit_code=[0, 1])
         mock_proc.assert_called_once()
-        self.assertTrue(quobyte.sysd_checked)
-        self.assertTrue(quobyte.found_sysd)
+        self.assertTrue(quobyte.is_systemd())
 
     @mock.patch.object(psutil.Process, "name", return_value="NOT_systemd")
     @mock.patch.object(os.path, "exists", return_value=False)
@@ -83,8 +81,7 @@ class QuobyteTestCase(test.NoDBTestCase):
         self.assertFalse(quobyte.is_systemd())
         mock_exists.assert_called_once_with(quobyte.SYSTEMCTL_CHECK_PATH)
         mock_proc.assert_called_once_with()
-        self.assertTrue(quobyte.sysd_checked)
-        self.assertFalse(quobyte.found_sysd)
+        self.assertFalse(quobyte.is_systemd())
 
     @mock.patch.object(psutil.Process, "name", return_value="NOT_systemd")
     @mock.patch.object(processutils, "execute")
@@ -100,8 +97,7 @@ class QuobyteTestCase(test.NoDBTestCase):
                                              "is-system-running",
                                              check_exit_code=[0, 1])
         mock_proc.assert_called_once_with()
-        self.assertTrue(quobyte.sysd_checked)
-        self.assertFalse(quobyte.found_sysd)
+        self.assertFalse(quobyte.is_systemd())
 
     @ddt.data(None, '/some/arbitrary/path')
     @mock.patch.object(fileutils, "ensure_tree")
@@ -113,6 +109,7 @@ class QuobyteTestCase(test.NoDBTestCase):
         export_mnt_base = os.path.join(mnt_base,
                                        utils.get_hash_str(quobyte_volume))
 
+        quobyte._is_systemd = False
         quobyte.mount_volume(quobyte_volume, export_mnt_base, cfg_file)
 
         mock_ensure_tree.assert_called_once_with(export_mnt_base)
@@ -129,7 +126,7 @@ class QuobyteTestCase(test.NoDBTestCase):
         quobyte_volume = '192.168.1.1/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
                                        utils.get_hash_str(quobyte_volume))
-        quobyte.found_sysd = True
+        quobyte._is_systemd = True
 
         quobyte.mount_volume(quobyte_volume, export_mnt_base, cfg_file)
 
@@ -146,7 +143,7 @@ class QuobyteTestCase(test.NoDBTestCase):
         quobyte_volume = '192.168.1.1/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
                                        utils.get_hash_str(quobyte_volume))
-
+        quobyte._is_systemd = False
         self.assertRaises(processutils.ProcessExecutionError,
                           quobyte.mount_volume,
                           quobyte_volume,
@@ -160,6 +157,7 @@ class QuobyteTestCase(test.NoDBTestCase):
         export_mnt_base = os.path.join(mnt_base,
                                        utils.get_hash_str(quobyte_volume))
 
+        quobyte._is_systemd = False
         quobyte.umount_volume(export_mnt_base)
 
         mock_lv_umount.assert_called_once_with(export_mnt_base)
@@ -170,7 +168,7 @@ class QuobyteTestCase(test.NoDBTestCase):
         quobyte_volume = '192.168.1.1/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
                                        utils.get_hash_str(quobyte_volume))
-        quobyte.found_sysd = True
+        quobyte._is_systemd = True
 
         quobyte.umount_volume(export_mnt_base)
 
@@ -183,7 +181,7 @@ class QuobyteTestCase(test.NoDBTestCase):
         quobyte_volume = '192.168.1.1/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
                                        utils.get_hash_str(quobyte_volume))
-        quobyte.found_sysd = True
+        quobyte._is_systemd = True
 
         def exec_side_effect(*cmd, **kwargs):
             exerror = processutils.ProcessExecutionError(
@@ -205,7 +203,7 @@ class QuobyteTestCase(test.NoDBTestCase):
         quobyte_volume = '192.168.1.1/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
                                        utils.get_hash_str(quobyte_volume))
-        quobyte.found_sysd = True
+        quobyte._is_systemd = True
 
         quobyte.umount_volume(export_mnt_base)
 
