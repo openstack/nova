@@ -49,6 +49,7 @@ import six
 import testtools
 
 from nova.compute import resource_tracker
+from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova.db import api as db
 from nova import exception
@@ -282,6 +283,9 @@ class TestCase(testtools.TestCase):
 
         # Reset the global QEMU version flag.
         images.QEMU_VERSION = None
+
+        # Reset the compute RPC API globals (mostly the _ROUTER).
+        compute_rpcapi.reset_globals()
 
         mox_fixture = self.useFixture(moxstubout.MoxStubout())
         self.mox = mox_fixture.mox
