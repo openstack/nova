@@ -2176,3 +2176,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
         LOG.info('Successfully unrescued Ironic node %(node)s',
                  {'node': node_uuid}, instance=instance)
+
+    def manages_network_binding_host_id(self):
+        """IronicDriver manages port bindings for baremetal instances.
+        """
+        return True
