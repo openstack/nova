@@ -19,8 +19,6 @@ from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
 from nova import block_device
-from nova.cells import opts as cells_opts
-from nova.cells import rpcapi as cells_rpcapi
 from nova.db import api as db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import models as db_models
@@ -201,13 +199,6 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
                 the ones that match. Normally only used when creating the
                 instance for the first time.
         """
-        cell_type = cells_opts.get_cell_type()
-        if cell_type == 'api':
-            raise exception.ObjectActionError(
-                    action='create',
-                    reason='BlockDeviceMapping cannot be '
-                           'created in the API cell.')
-
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
@@ -216,7 +207,6 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(action='create',
                                               reason='instance assigned')
 
-        cells_create = update_or_create or None
         if update_or_create:
             db_bdm = db.block_device_mapping_update_or_create(
                     context, updates, legacy=False)
@@ -225,14 +215,6 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
                     context, updates, legacy=False)
 
         self._from_db_object(context, self, db_bdm)
-        # NOTE(alaski): bdms are looked up by instance uuid and device_name
-        # so if we sync up with no device_name an entry will be created that
-        # will not be found on a later update_or_create call and a second bdm
-        # create will occur.
-        if cell_type == 'compute' and db_bdm.get('device_name') is not None:
-            cells_api = cells_rpcapi.CellsAPI()
-            cells_api.bdm_update_or_create_at_top(
-                    context, self, create=cells_create)
 
     @base.remotable
     def create(self):
@@ -250,13 +232,6 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         db.block_device_mapping_destroy(self._context, self.id)
         delattr(self, base.get_attrname('id'))
 
-        cell_type = cells_opts.get_cell_type()
-        if cell_type == 'compute':
-            cells_api = cells_rpcapi.CellsAPI()
-            cells_api.bdm_destroy_at_top(self._context, self.instance_uuid,
-                                         device_name=self.device_name,
-                                         volume_id=self.volume_id)
-
     @base.remotable
     def save(self):
         updates = self.obj_get_changes()
@@ -269,18 +244,6 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         if not updated:
             raise exception.BDMNotFound(id=self.id)
         self._from_db_object(self._context, self, updated)
-        cell_type = cells_opts.get_cell_type()
-        if cell_type == 'compute':
-            create = False
-            # NOTE(alaski): If the device name has just been set this bdm
-            # likely does not exist in the parent cell and we should create it.
-            # If this is a modification of the device name we should update
-            # rather than create which is why None is used here instead of True
-            if 'device_name' in updates:
-                create = None
-            cells_api = cells_rpcapi.CellsAPI()
-            cells_api.bdm_update_or_create_at_top(self._context, self,
-                    create=create)
 
     # NOTE(danms): This method is deprecated and will be removed in
     # v2.0 of the object

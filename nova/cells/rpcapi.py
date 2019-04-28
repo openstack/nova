@@ -413,39 +413,6 @@ class CellsAPI(object):
         cctxt = self.client.prepare(version='1.9')
         return cctxt.call(ctxt, 'get_capacities', cell_name=cell_name)
 
-    def bdm_update_or_create_at_top(self, ctxt, bdm, create=None):
-        """Create or update a block device mapping in API cells.  If
-        create is True, only try to create.  If create is None, try to
-        update but fall back to create.  If create is False, only attempt
-        to update.  This maps to nova-conductor's behavior.
-        """
-        if self.client.can_send_version('1.28'):
-            version = '1.28'
-        else:
-            version = '1.10'
-            bdm = objects_base.obj_to_primitive(bdm)
-        cctxt = self.client.prepare(version=version)
-
-        try:
-            cctxt.cast(ctxt, 'bdm_update_or_create_at_top',
-                       bdm=bdm, create=create)
-        except Exception:
-            LOG.exception("Failed to notify cells of BDM update/create.")
-
-    def bdm_destroy_at_top(self, ctxt, instance_uuid, device_name=None,
-                           volume_id=None):
-        """Broadcast upwards that a block device mapping was destroyed.
-        One of device_name or volume_id should be specified.
-        """
-        cctxt = self.client.prepare(version='1.10')
-        try:
-            cctxt.cast(ctxt, 'bdm_destroy_at_top',
-                       instance_uuid=instance_uuid,
-                       device_name=device_name,
-                       volume_id=volume_id)
-        except Exception:
-            LOG.exception("Failed to notify cells of BDM destroy.")
-
     def get_migrations(self, ctxt, filters):
         """Get all migrations applying the filters."""
         cctxt = self.client.prepare(version='1.11')

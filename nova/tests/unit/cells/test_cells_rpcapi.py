@@ -469,32 +469,6 @@ class CellsAPITestCase(test.NoDBTestCase):
                 expected_args, version='1.6')
         self.assertEqual('fake_response', result)
 
-    def test_bdm_update_or_create_at_top(self):
-        fake_bdm = {'id': 2, 'other': 'meow'}
-
-        call_info = self._stub_rpc_method('cast', None)
-
-        self.cells_rpcapi.bdm_update_or_create_at_top(
-                self.fake_context, fake_bdm, create='fake-create')
-
-        expected_args = {'bdm': fake_bdm, 'create': 'fake-create'}
-        self._check_result(call_info, 'bdm_update_or_create_at_top',
-                expected_args, version='1.28')
-
-    def test_bdm_destroy_at_top(self):
-        call_info = self._stub_rpc_method('cast', None)
-
-        self.cells_rpcapi.bdm_destroy_at_top(self.fake_context,
-                                             uuids.instance,
-                                             device_name='fake-device',
-                                             volume_id='fake-vol')
-
-        expected_args = {'instance_uuid': uuids.instance,
-                         'device_name': 'fake-device',
-                         'volume_id': 'fake-vol'}
-        self._check_result(call_info, 'bdm_destroy_at_top',
-                expected_args, version='1.10')
-
     def test_get_migrations(self):
         call_info = self._stub_rpc_method('call', None)
         filters = {'cell_name': 'ChildCell', 'status': 'confirmed'}
