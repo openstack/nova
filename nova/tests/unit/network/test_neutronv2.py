@@ -4531,6 +4531,57 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
                 constants.BINDING_HOST_ID],
             'new-host')
 
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_bindings_for_instance_with_resource_req(
+            self, get_client_mock):
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        fake_ports = {'ports': [
+            {'id': 'fake-port-1',
+             'binding:vnic_type': 'normal',
+             constants.BINDING_HOST_ID: 'old-host',
+             constants.BINDING_PROFILE:
+                 {'allocation': uuids.source_compute_rp},
+             'resource_request': mock.sentinel.resource_request}]}
+        migration = {'status': 'confirmed',
+                     'migration_type': "migration"}
+        list_ports_mock = mock.Mock(return_value=fake_ports)
+        get_client_mock.return_value.list_ports = list_ports_mock
+
+        self.api._update_port_binding_for_instance(
+            self.context, instance, 'new-host', migration,
+            {'fake-port-1': [uuids.dest_compute_rp]})
+        get_client_mock.return_value.update_port.assert_called_once_with(
+            'fake-port-1',
+            {'port': {'device_owner': 'compute:None',
+                      'binding:profile': {'allocation': uuids.dest_compute_rp},
+                      'binding:host_id': 'new-host'}})
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_bindings_for_instance_with_resource_req_no_mapping(
+            self, get_client_mock):
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        fake_ports = {'ports': [
+            {'id': 'fake-port-1',
+             'binding:vnic_type': 'normal',
+             constants.BINDING_HOST_ID: 'old-host',
+             constants.BINDING_PROFILE:
+                 {'allocation': uuids.source_compute_rp},
+             'resource_request': mock.sentinel.resource_request}]}
+        migration = {'status': 'confirmed',
+                     'migration_type': "migration"}
+        list_ports_mock = mock.Mock(return_value=fake_ports)
+        get_client_mock.return_value.list_ports = list_ports_mock
+
+        ex = self.assertRaises(
+            exception.PortUpdateFailed,
+            self.api._update_port_binding_for_instance, self.context,
+            instance, 'new-host', migration, provider_mappings=None)
+        self.assertIn(
+            "Provider mappings wasn't provided for the port with resource "
+            "request", six.text_type(ex))
+
     def test_get_pci_mapping_for_migration(self):
         instance = fake_instance.fake_instance_obj(self.context)
         instance.migration_context = objects.MigrationContext()
@@ -6211,7 +6262,8 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                                             'migrate_instance_finish',
                                             self.context,
                                             instance,
-                                            migration)
+                                            migration,
+                                            {})
 
     def test_migrate_instance_finish_binding_true_exception(self):
         migration = {'source_compute': self.instance.get('host'),
@@ -6221,7 +6273,8 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                                               'migrate_instance_finish',
                                               self.context,
                                               instance,
-                                              migration)
+                                              migration,
+                                              {})
 
     def test_setup_instance_network_on_host_true(self):
         instance = self._fake_instance_object(self.instance)

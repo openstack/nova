@@ -279,14 +279,14 @@ class ApiTestCase(test.TestCase):
         arg1, arg2, expected = self._stub_migrate_instance_calls(
                 'migrate_instance_finish', True, info)
         expected['host'] = 'fake_compute_dest'
-        self.network_api.migrate_instance_finish(self.context, arg1, arg2)
+        self.network_api.migrate_instance_finish(self.context, arg1, arg2, {})
         self.assertEqual(info['kwargs'], expected)
 
     def test_migrate_instance_finish_without_multihost(self):
         info = {'kwargs': {}}
         arg1, arg2, expected = self._stub_migrate_instance_calls(
                 'migrate_instance_finish', False, info)
-        self.network_api.migrate_instance_finish(self.context, arg1, arg2)
+        self.network_api.migrate_instance_finish(self.context, arg1, arg2, {})
         self.assertEqual(info['kwargs'], expected)
 
     def test_is_multi_host_instance_has_no_fixed_ip(self):
@@ -516,7 +516,8 @@ class ApiTestCase(test.TestCase):
             self.context, instance, 'fake_compute_source')
         fake_migrate_finish.assert_called_once_with(
             self.context, instance,
-            {'source_compute': None, 'dest_compute': 'fake_compute_source'})
+            {'source_compute': None, 'dest_compute': 'fake_compute_source'},
+            None)
 
     @mock.patch('oslo_concurrency.lockutils.lock')
     @mock.patch.object(api.API, '_get_instance_nw_info')

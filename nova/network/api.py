@@ -502,7 +502,8 @@ class API(base_api.NetworkAPI):
 
         self.network_rpcapi.migrate_instance_start(context, **args)
 
-    def migrate_instance_finish(self, context, instance, migration):
+    def migrate_instance_finish(
+            self, context, instance, migration, provider_mappings):
         """Finish migrating the network of an instance."""
         flavor = instance.get_flavor()
         args = dict(
@@ -524,9 +525,9 @@ class API(base_api.NetworkAPI):
     def setup_instance_network_on_host(self, context, instance, host,
                                        migration=None):
         """Setup network for specified instance on host."""
-        self.migrate_instance_finish(context, instance,
-                                     {'source_compute': None,
-                                      'dest_compute': host})
+        self.migrate_instance_finish(
+            context, instance, {'source_compute': None, 'dest_compute': host},
+            None)
 
     def cleanup_instance_network_on_host(self, context, instance, host):
         """Cleanup network for specified instance on host."""
