@@ -56,7 +56,7 @@ class LibvirtTestCase(test.NoDBTestCase):
             'ploop', 'init', '-s', 1024, '-f', 'raw', '-t',
             'ext4', '/fake/path', check_exit_code=True)
         mock_stat.assert_called_with('/fake/path')
-        mock_chmod.asert_called_with('/fake/path', mock.ANY)
+        mock_chmod.assert_called_with('/fake/path', mock.ANY)
 
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_ploop_resize(self, mock_execute):
@@ -135,25 +135,32 @@ class LibvirtTestCase(test.NoDBTestCase):
                 mock.call('ifc_ctl', 'gateway', 'del_port', 'dev')
             ])
 
-    @mock.patch('fcntl.fcntl', return_value=32769)
-    def test_readpty(self, mock_fcntl):
-        mock_open = mock.mock_open()
+    def test_readpty(self):
+        # Conditionally mock `import`
+        orig_import = __import__
+        mock_fcntl = mock.Mock(fcntl=mock.Mock(return_value=32769))
+
+        def fake_import(module, *args):
+            if module == 'fcntl':
+                return mock_fcntl
+            return orig_import(module, *args)
+
         with test.nested(
-                mock.patch.object(six.moves.builtins, 'open', new=mock_open),
-                mock.patch.object(six.moves.builtins, '__import__'),
+                mock.patch.object(six.moves.builtins, 'open',
+                                  new=mock.mock_open()),
+                mock.patch.object(six.moves.builtins, '__import__',
+                                  side_effect=fake_import),
                 ) as (mock_open, mock_import):
             nova.privsep.libvirt.readpty('/fake/path')
 
-            mock_import.assert_called()
-
-            # NOTE(mikal): we can't assert that values from fcntl are passed
-            # here because we can't import fcntl in these tests because it
-            # is not present on Microsoft Windows.
-            mock_fcntl.asert_has_calls(
-                mock.call(mock.ANY, mock.ANY),
-                mock.call(mock.ANY, mock.ANY, 32769 | os.O_NONBLOCK))
-            self.assertTrue(mock.call('/fake/path', 'r') in
-                            mock_open.mock_calls)
+            mock_fileno = mock_open.return_value.fileno.return_value
+            # NOTE(efried): The fact that we see fcntl's mocked return value in
+            # here proves that `import fcntl` was called within the method.
+            mock_fcntl.fcntl.assert_has_calls(
+                [mock.call(mock_fileno, mock_fcntl.F_GETFL),
+                 mock.call(mock_fileno,
+                           mock_fcntl.F_SETFL, 32769 | os.O_NONBLOCK)])
+            self.assertIn(mock.call('/fake/path', 'r'), mock_open.mock_calls)
 
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_xend_probe(self, mock_execute):
