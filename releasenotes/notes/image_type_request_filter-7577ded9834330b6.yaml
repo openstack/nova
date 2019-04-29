@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    The scheduler can now use placement to more efficiently query for hosts that support
+    the disk_format of the image used in a given request. The
+    ``[scheduler]/query_placement_for_image_type_support`` config
+    option enables this behavior, but must not be turned on until all
+    computes have been upgraded to this version and thus are exposing image
+    type support traits.
