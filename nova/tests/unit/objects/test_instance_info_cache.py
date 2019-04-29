@@ -90,7 +90,7 @@ class _TestInstanceInfoCacheObject(object):
         obj.instance_uuid = uuids.info_instance
         obj.network_info = nwinfo
         obj.save(update_cells=update_cells)
-        mock_update.asssert_called_once_with(self.context, obj.instance_uuid,
+        mock_update.assert_called_once_with(self.context, obj.instance_uuid,
                                              {'network_info': nwinfo.json()})
         if update_cells:
             mock_get_type.assert_called_once()
