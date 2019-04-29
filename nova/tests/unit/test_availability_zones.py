@@ -22,6 +22,7 @@ from oslo_utils.fixture import uuidsentinel
 import six
 
 from nova import availability_zones as az
+from nova.compute import api as compute_api
 import nova.conf
 from nova import context
 from nova.db import api as db
@@ -210,16 +211,18 @@ class AvailabilityZoneTestCases(test.TestCase):
         self._add_to_aggregate(service3, agg2)
         self._add_to_aggregate(service4, agg3)
 
-        zones, not_zones = az.get_availability_zones(self.context)
+        host_api = compute_api.HostAPI()
+        zones, not_zones = az.get_availability_zones(self.context, host_api)
 
         self.assertEqual(['nova-test', 'nova-test2'], zones)
         self.assertEqual(['nova-test3', 'nova'], not_zones)
 
-        zones = az.get_availability_zones(self.context, True)
+        zones = az.get_availability_zones(self.context, host_api,
+                                          get_only_available=True)
 
         self.assertEqual(['nova-test', 'nova-test2'], zones)
 
-        zones, not_zones = az.get_availability_zones(self.context,
+        zones, not_zones = az.get_availability_zones(self.context, host_api,
                                                      with_hosts=True)
 
         self.assertJsonEqual(zones,
