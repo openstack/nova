@@ -979,7 +979,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             # Now associate the compute **host name** with an aggregate and
             # ensure the aggregate association is saved properly
             self.client.aggregate_add_host(
-                self.context, agg_uuid, self.compute_name)
+                self.context, agg_uuid, host_name=self.compute_name)
 
             # Check that the ProviderTree cache hasn't been modified (since
             # the aggregate_add_host() method is only called from nova-api and

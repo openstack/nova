@@ -478,7 +478,7 @@ class ComputeHostAPITestCase(test.TestCase):
                                                  aggregate.id,
                                                  'fake-compute-host')
         mock_add_host.assert_called_once_with(
-            mock.ANY, aggregate.uuid, 'fake-compute-host')
+            mock.ANY, aggregate.uuid, host_name='fake-compute-host')
         self.controller.delete(self.req, compute.id)
         result = self.aggregate_api.get_aggregate(self.ctxt,
                                                   aggregate.id).hosts

@@ -150,7 +150,8 @@ class AggregateRequestFiltersTest(test.TestCase,
         # FIXME(efried): This should be a thing we can do without internals
         self.report_client._ensure_resource_provider(
             self.context, host_uuid, name=host)
-        self.report_client.aggregate_add_host(self.context, agg['uuid'], host)
+        self.report_client.aggregate_add_host(self.context, agg['uuid'],
+                                              host_name=host)
 
     def _wait_for_state_change(self, server, from_status):
         for i in range(0, 50):

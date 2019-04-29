@@ -21,7 +21,6 @@ import ddt
 import fixtures
 import mock
 from oslo_db import exception as db_exc
-from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
 from six.moves import StringIO
@@ -2719,64 +2718,42 @@ class TestNovaManagePlacement(test.NoDBTestCase):
             mock.sentinel.cell_context, 'host1')
 
     @mock.patch('nova.compute.api.AggregateAPI.get_aggregate_list',
-                return_value=objects.AggregateList(objects=[
-                    objects.Aggregate(name='foo', hosts=['host1'])]))
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get',
-                return_value=fake_requests.FakeResponse(404))
-    def test_sync_aggregates_get_provider_aggs_provider_not_found(
-            self, mock_placement_get, mock_get_aggs):
-        """Tests the scenario that a resource provider is not found in the
-        placement service for a compute node found in a nova host aggregate.
-        """
-        with mock.patch.object(self.cli, '_get_rp_uuid_for_host',
-                               return_value=uuidsentinel.rp_uuid):
-            result = self.cli.sync_aggregates(verbose=True)
-        self.assertEqual(6, result)
-        self.assertIn('Unable to find matching resource provider record in '
-                      'placement with uuid for the following hosts: '
-                      '(host1=%s)' % uuidsentinel.rp_uuid,
-                      self.output.getvalue())
-        mock_placement_get.assert_called_once_with(
-            '/resource_providers/%s/aggregates' % uuidsentinel.rp_uuid,
-            version='1.19')
-
-    @mock.patch('nova.compute.api.AggregateAPI.get_aggregate_list',
-                return_value=objects.AggregateList(objects=[
-                    objects.Aggregate(name='foo', hosts=['host1'])]))
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get',
-                return_value=fake_requests.FakeResponse(500, content='yikes!'))
+                new=mock.Mock(return_value=objects.AggregateList(objects=[
+                    objects.Aggregate(name='foo', hosts=['host1'],
+                                      uuid=uuidsentinel.aggregate)])))
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'aggregate_add_host')
     def test_sync_aggregates_get_provider_aggs_placement_server_error(
-            self, mock_placement_get, mock_get_aggs):
+            self, mock_agg_add):
         """Tests the scenario that placement returns an unexpected server
         error when getting aggregates for a given resource provider.
         """
+        mock_agg_add.side_effect = (
+            exception.ResourceProviderAggregateRetrievalFailed(
+                uuid=uuidsentinel.rp_uuid))
         with mock.patch.object(self.cli, '_get_rp_uuid_for_host',
                                return_value=uuidsentinel.rp_uuid):
             result = self.cli.sync_aggregates(verbose=True)
         self.assertEqual(2, result)
-        self.assertIn('An error occurred getting resource provider '
-                      'aggregates from placement for provider %s. '
-                      'Error: yikes!' % uuidsentinel.rp_uuid,
+        self.assertIn('Failed to get aggregates for resource provider with '
+                      'UUID %s' % uuidsentinel.rp_uuid,
                       self.output.getvalue())
 
     @mock.patch('nova.compute.api.AggregateAPI.get_aggregate_list',
-                return_value=objects.AggregateList(objects=[
+                new=mock.Mock(return_value=objects.AggregateList(objects=[
                     objects.Aggregate(name='foo', hosts=['host1'],
-                                      uuid=uuidsentinel.aggregate)]))
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
-                return_value=fake_requests.FakeResponse(404))
+                                      uuid=uuidsentinel.aggregate)])))
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'aggregate_add_host')
     def test_sync_aggregates_put_aggregates_fails_provider_not_found(
-            self, mock_placement_put, mock_placement_get, mock_get_aggs):
+            self, mock_agg_add):
         """Tests the scenario that we are trying to add a provider to an
         aggregate in placement but the
         PUT /resource_providers/{rp_uuid}/aggregates call fails with a 404
         because the provider is not found.
         """
-        mock_placement_get.return_value = (
-            fake_requests.FakeResponse(200, content=jsonutils.dumps({
-                'aggregates': [],
-                'resource_provider_generation': 1})))
+        mock_agg_add.side_effect = exception.ResourceProviderNotFound(
+            name_or_uuid=uuidsentinel.rp_uuid)
         with mock.patch.object(self.cli, '_get_rp_uuid_for_host',
                                return_value=uuidsentinel.rp_uuid):
             result = self.cli.sync_aggregates(verbose=True)
@@ -2785,43 +2762,33 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                       'placement with uuid for the following hosts: '
                       '(host1=%s)' % uuidsentinel.rp_uuid,
                       self.output.getvalue())
-        expected_body = {
-            'aggregates': [uuidsentinel.aggregate],
-            'resource_provider_generation': 1
-        }
-        self.assertEqual(1, mock_placement_put.call_count)
-        self.assertDictEqual(expected_body, mock_placement_put.call_args[0][1])
+        mock_agg_add.assert_called_once_with(
+            mock.ANY, uuidsentinel.aggregate, rp_uuid=uuidsentinel.rp_uuid)
 
     @mock.patch('nova.compute.api.AggregateAPI.get_aggregate_list',
-                return_value=objects.AggregateList(objects=[
+                new=mock.Mock(return_value=objects.AggregateList(objects=[
                     objects.Aggregate(name='foo', hosts=['host1'],
-                                      uuid=uuidsentinel.aggregate)]))
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
-                return_value=fake_requests.FakeResponse(
-                    409,
-                    content="Resource provider's generation already changed"))
+                                      uuid=uuidsentinel.aggregate)])))
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'aggregate_add_host')
     def test_sync_aggregates_put_aggregates_fails_generation_conflict(
-            self, mock_placement_put, mock_placement_get, mock_get_aggs):
+            self, mock_agg_add):
         """Tests the scenario that we are trying to add a provider to an
         aggregate in placement but the
-        PUT /resource_providers/{rp_uuid}/aggregates call fails with a 404
-        because the provider is not found.
+        PUT /resource_providers/{rp_uuid}/aggregates call fails with a 409
+        generation conflict (even after retries).
         """
-        mock_placement_get.return_value = (
-            fake_requests.FakeResponse(200, content=jsonutils.dumps({
-                'aggregates': [],
-                'resource_provider_generation': 1})))
+        mock_agg_add.side_effect = exception.ResourceProviderUpdateConflict(
+            uuid=uuidsentinel.rp_uuid, generation=1, error="Conflict!")
         with mock.patch.object(self.cli, '_get_rp_uuid_for_host',
                                return_value=uuidsentinel.rp_uuid):
             result = self.cli.sync_aggregates(verbose=True)
         self.assertEqual(3, result)
         self.assertIn("Failed updating provider aggregates for "
                       "host (host1), provider (%s) and aggregate "
-                      "(%s). Error: Resource provider's generation already "
-                      "changed" %
-                      (uuidsentinel.rp_uuid, uuidsentinel.aggregate),
+                      "(%s)." % (uuidsentinel.rp_uuid, uuidsentinel.aggregate),
                       self.output.getvalue())
+        self.assertIn("Conflict!", self.output.getvalue())
 
 
 class TestNovaManageMain(test.NoDBTestCase):
