@@ -372,7 +372,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
         fake_network_obj = {'type': 'DistributedVirtualPortgroup',
                             'dvpg': 'fake-key',
                             'dvsw': 'fake-props'}
-        mock_network_name.side_effect = [None, fake_network_obj]
+        mock_network_name.side_effect = [fake_network_obj]
         vif_info = network_model.NetworkInfo([
                 network_model.VIF(type=network_model.VIF_TYPE_DVS,
                                   address='DE:AD:BE:EF:00:00',
@@ -381,7 +381,51 @@ class VMwareVifTestCase(test.NoDBTestCase):
         network_ref = vif._get_neutron_network('fake-session',
                                                'fake-cluster',
                                                vif_info)
-        calls = [mock.call('fake-session', 'fa0', 'fake-cluster'),
-                 mock.call('fake-session', 'fake', 'fake-cluster')]
+        calls = [mock.call('fake-session', 'fa0', 'fake-cluster')]
+        mock_network_name.assert_has_calls(calls)
+        self.assertEqual(fake_network_obj, network_ref)
+
+    @mock.patch.object(network_util, 'get_network_with_the_name',
+                       return_value=None)
+    def test_raise_neutron_network_dvs(self, mock_network_name):
+        mock_network_name.side_effect = None
+        vif_info = network_model.NetworkInfo([
+            network_model.VIF(type=network_model.VIF_TYPE_DVS,
+                              address='DE:AD:BE:EF:00:00',
+                              network=self._network)]
+        )[0]
+
+        self.assertRaises(exception.NetworkNotFoundForBridge,
+                          vif._get_neutron_network,
+                          'fake-session',
+                          'fake-cluster',
+                          vif_info)
+
+    @mock.patch.object(network_util, 'get_network_with_the_name')
+    def test_get_neutron_network_dvs_with_dvs_pg_id(self, mock_network_name):
+        fake_network_obj = {'type': 'DistributedVirtualPortgroup',
+                            'dvpg': 'fake-key',
+                            'dvsw': 'fake-props'}
+        mock_network_name.side_effect = [fake_network_obj]
+        vif_details = {
+                'dvs_id': 'fake-props',
+                'pg_id': 'fake-key'
+        }
+        vif_info = network_model.NetworkInfo([
+            network_model.VIF(type=network_model.VIF_TYPE_DVS,
+                              address='DE:AD:BE:EF:00:00',
+                              network=self._network,
+                              details=vif_details)]
+        )[0]
+        network_ref = vif._get_neutron_network('fake-session',
+                                               'fake-cluster',
+                                               vif_info)
+
+        fake_network_ref = {'type': 'DistributedVirtualPortgroup',
+                            'dvpg': 'fake-key',
+                            'dvsw': 'fake-props'}
+
+        self.assertEqual(network_ref, fake_network_ref)
+        calls = []
         mock_network_name.assert_has_calls(calls)
         self.assertEqual(fake_network_obj, network_ref)
