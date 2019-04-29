@@ -463,8 +463,7 @@ class ResourceTracker(object):
             migration = self.tracked_migrations.pop(instance['uuid'])
 
             if not instance_type:
-                ctxt = context.elevated()
-                instance_type = self._get_instance_type(ctxt, instance, prefix,
+                instance_type = self._get_instance_type(instance, prefix,
                                                         migration)
 
             if instance_type is not None:
@@ -1085,8 +1084,7 @@ class ResourceTracker(object):
             # is executed on resize_claim().
             if (instance['instance_type_id'] ==
                     migration.old_instance_type_id):
-                itype = self._get_instance_type(context, instance, 'new_',
-                        migration)
+                itype = self._get_instance_type(instance, 'new_', migration)
                 numa_topology = self._get_migration_context_resource(
                     'numa_topology', instance)
                 # Allocate pci device(s) for the instance.
@@ -1102,15 +1100,13 @@ class ResourceTracker(object):
                 # _update_usage_from_instances().  This method will then be
                 # called, and we need to account for the '_old' resources
                 # (just in case).
-                itype = self._get_instance_type(context, instance, 'old_',
-                        migration)
+                itype = self._get_instance_type(instance, 'old_', migration)
                 numa_topology = self._get_migration_context_resource(
                     'numa_topology', instance, prefix='old_')
 
         elif incoming and not tracked:
             # instance has not yet migrated here:
-            itype = self._get_instance_type(context, instance, 'new_',
-                    migration)
+            itype = self._get_instance_type(instance, 'new_', migration)
             numa_topology = self._get_migration_context_resource(
                 'numa_topology', instance)
             # Allocate pci device(s) for the instance.
@@ -1120,8 +1116,7 @@ class ResourceTracker(object):
 
         elif outbound and not tracked:
             # instance migrated, but record usage for a possible revert:
-            itype = self._get_instance_type(context, instance, 'old_',
-                    migration)
+            itype = self._get_instance_type(instance, 'old_', migration)
             numa_topology = self._get_migration_context_resource(
                 'numa_topology', instance, prefix='old_')
             LOG.debug('Starting to track outgoing migration %s with flavor %s',
@@ -1446,7 +1441,7 @@ class ResourceTracker(object):
             reason = _("Missing keys: %s") % missing_keys
             raise exception.InvalidInput(reason=reason)
 
-    def _get_instance_type(self, context, instance, prefix, migration):
+    def _get_instance_type(self, instance, prefix, migration):
         """Get the instance type from instance."""
         stashed_flavors = migration.migration_type in ('resize',)
         if stashed_flavors:
