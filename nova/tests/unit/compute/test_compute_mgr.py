@@ -8809,6 +8809,130 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
         _test()
 
+    def _generate_volume_bdm_list(self, instance, original=False):
+        # TODO(lyarwood): There are various methods generating fake bdms within
+        # this class, we should really look at writing a small number of
+        # generic reusable methods somewhere to replace all of these.
+        connection_info = "{'data': {'host': 'dest'}}"
+        if original:
+            connection_info = "{'data': {'host': 'original'}}"
+
+        vol1_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': uuids.vol1, 'device_name': '/dev/vdb',
+             'instance_uuid': instance.uuid,
+             'connection_info': connection_info})
+        vol1_bdm.save = mock.Mock()
+        vol2_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': uuids.vol2, 'device_name': '/dev/vdc',
+             'instance_uuid': instance.uuid,
+             'connection_info': connection_info})
+        vol2_bdm.save = mock.Mock()
+
+        if original:
+            vol1_bdm.attachment_id = uuids.vol1_attach_original
+            vol2_bdm.attachment_id = uuids.vol2_attach_original
+        else:
+            vol1_bdm.attachment_id = uuids.vol1_attach
+            vol2_bdm.attachment_id = uuids.vol2_attach
+        return objects.BlockDeviceMappingList(objects=[vol1_bdm, vol2_bdm])
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.remove_volume_connection')
+    def test_remove_remote_volume_connections(self, mock_remove_vol_conn):
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   uuid=uuids.instance)
+        bdms = self._generate_volume_bdm_list(instance)
+
+        self.compute._remove_remote_volume_connections(self.context, 'fake',
+                                                       bdms, instance)
+        mock_remove_vol_conn.assert_has_calls = [
+            mock.call(self.context, instance, bdm.volume_id, 'fake') for
+            bdm in bdms]
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.remove_volume_connection')
+    def test_remove_remote_volume_connections_exc(self, mock_remove_vol_conn):
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   uuid=uuids.instance)
+        bdms = self._generate_volume_bdm_list(instance)
+
+        # Raise an exception for the second call to remove_volume_connections
+        mock_remove_vol_conn.side_effect = [None, test.TestingException]
+
+        # Assert that errors are ignored
+        self.compute._remove_remote_volume_connections(self.context,
+                'fake', bdms, instance)
+
+    @mock.patch('nova.volume.cinder.API.attachment_delete')
+    def test_rollback_volume_bdms(self, mock_delete_attachment):
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   uuid=uuids.instance)
+        bdms = self._generate_volume_bdm_list(instance)
+        original_bdms = self._generate_volume_bdm_list(instance,
+                                                       original=True)
+
+        self.compute._rollback_volume_bdms(self.context, bdms,
+                original_bdms, instance)
+
+        # Assert that we delete the current attachments
+        mock_delete_attachment.assert_has_calls = [
+                mock.call(self.context, uuids.vol1_attach),
+                mock.call(self.context, uuids.vol2_attach)]
+        # Assert that we switch the attachment ids and connection_info for each
+        # bdm back to their original values
+        self.assertEqual(uuids.vol1_attach_original,
+                         bdms[0].attachment_id)
+        self.assertEqual("{'data': {'host': 'original'}}",
+                         bdms[0].connection_info)
+        self.assertEqual(uuids.vol2_attach_original,
+                         bdms[1].attachment_id)
+        self.assertEqual("{'data': {'host': 'original'}}",
+                         bdms[1].connection_info)
+        # Assert that save is called for each bdm
+        bdms[0].save.assert_called_once()
+        bdms[1].save.assert_called_once()
+
+    @mock.patch('nova.compute.manager.LOG')
+    @mock.patch('nova.volume.cinder.API.attachment_delete')
+    def test_rollback_volume_bdms_exc(self, mock_delete_attachment, mock_log):
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   uuid=uuids.instance)
+        bdms = self._generate_volume_bdm_list(instance)
+        original_bdms = self._generate_volume_bdm_list(instance,
+                                                       original=True)
+
+        # Assert that we ignore cinderclient exceptions and continue to attempt
+        # to rollback any remaining bdms.
+        mock_delete_attachment.side_effect = [
+            cinder_exception.ClientException(code=9001), None]
+        self.compute._rollback_volume_bdms(self.context, bdms,
+                original_bdms, instance)
+        self.assertEqual(uuids.vol2_attach_original,
+                         bdms[1].attachment_id)
+        self.assertEqual("{'data': {'host': 'original'}}",
+                         bdms[1].connection_info)
+        bdms[0].save.assert_not_called()
+        bdms[1].save.assert_called_once()
+        mock_log.warning.assert_called_once()
+        self.assertIn('Ignoring cinderclient exception',
+                mock_log.warning.call_args[0][0])
+
+        # Assert that we raise unknown Exceptions
+        mock_log.reset_mock()
+        bdms[0].save.reset_mock()
+        bdms[1].save.reset_mock()
+        mock_delete_attachment.side_effect = test.TestingException
+        self.assertRaises(test.TestingException,
+            self.compute._rollback_volume_bdms, self.context,
+            bdms, original_bdms, instance)
+        bdms[0].save.assert_not_called()
+        bdms[1].save.assert_not_called()
+        mock_log.exception.assert_called_once()
+        self.assertIn('Exception while attempting to rollback',
+                mock_log.exception.call_args[0][0])
+
     @mock.patch.object(objects.ComputeNode,
                        'get_first_node_by_host_for_old_compat')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
