@@ -1843,6 +1843,19 @@ class ComputeDriver(object):
         """
         return instance.get('host')
 
+    def manages_network_binding_host_id(self):
+        """Compute driver manages port bindings.
+
+        Used to indicate whether or not the compute driver is responsible
+        for managing port binding details, such as the host_id.
+        By default the ComputeManager will manage port bindings and the
+        host_id associated with a binding using the network API.
+        However, some backends, like Ironic, will manage the port binding
+        host_id out-of-band and the compute service should not override what
+        is set by the backing hypervisor.
+        """
+        return False
+
 
 def load_compute_driver(virtapi, compute_driver=None):
     """Load a compute driver module.
