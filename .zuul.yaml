@@ -214,6 +214,70 @@
       - openstack/nova
     irrelevant-files: *live-migration-irrelevant-files
 
+- job:
+    name: nova-multi-cell
+    parent: tempest-multinode-full-py3
+    description: |
+      Multi-node python3 job which runs with two nodes and two non-cell0
+      cells. The compute on the controller runs in cell1 and the compute
+      on the subnode runs in cell2.
+    irrelevant-files: *dsvm-irrelevant-files
+    # TODO(mriedem): Make this job voting and gating once we're happy with
+    # its relative stability.
+    voting: false
+    vars:
+      # We use the "all" environment for tempest_test_regex and
+      # tempest_test_blacklist.
+      tox_envlist: all
+      # Run compute API and scenario tests.
+      tempest_test_regex: ^tempest\.(scenario|(api\.compute))
+      tempest_test_blacklist: '{{ ansible_user_dir }}/{{ zuul.projects["opendev.org/openstack/nova"].src_dir }}/devstack/nova-multi-cell-blacklist.txt'
+      devstack_local_conf:
+        test-config:
+          $TEMPEST_CONFIG:
+            compute-feature-enabled:
+              # TODO(mriedem): Enable cold migration once cross-cell resize is
+              # supported. We cannot enable it until then because this job has
+              # one compute in each cell and with
+              # allow_resize_to_same_host=True cold migrate will try to migrate
+              # on the same host which is not supported by the libvirt driver.
+              cold_migration: false
+      devstack_services:
+        # Disable n-novnc until bug 1822873 is fixed.
+        n-novnc: false
+        # Disable other non-essential services that we don't need for this job.
+        c-bak: false
+      devstack_localrc:
+        # Setup two non-cell0 cells (cell1 and cell2).
+        NOVA_NUM_CELLS: 2
+        # Resize to the same host is supported for now since we only have
+        # two computes and they are in different cells.
+        # TODO(mriedem): Disable resize to the same host once cross-cell resize
+        # is supported so all resizes will move across cells.
+        NOVA_ALLOW_MOVE_TO_SAME_HOST: true
+        # We only have two computes and we don't yet support cross-cell live
+        # migration.
+        LIVE_MIGRATION_AVAILABLE: false
+        # Disable n-novnc until bug 1822873 is fixed.
+        NOVA_VNC_ENABLED: false
+    group-vars:
+      peers:
+        devstack_localrc:
+          NOVA_ALLOW_MOVE_TO_SAME_HOST: true
+          LIVE_MIGRATION_AVAILABLE: false
+      subnode:
+        devstack_localrc:
+          # The subnode compute will get registered with cell2.
+          NOVA_CPU_CELL: 2
+          # Disable n-novnc until bug 1822873 is fixed.
+          NOVA_VNC_ENABLED: false
+        devstack_services:
+          # Disable n-novnc until bug 1822873 is fixed.
+          n-novnc: false
+          # Disable other non-essential services that we don't need for this
+          # job.
+          c-bak: false
+
 - project:
     # Please try to keep the list of job names sorted alphabetically.
     templates:
@@ -249,6 +313,7 @@
         - nova-grenade-live-migration
         - nova-live-migration
         - nova-lvm
+        - nova-multi-cell
         - nova-next
         - nova-tox-functional
         - nova-tox-functional-py36

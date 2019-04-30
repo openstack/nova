@@ -1,0 +1,9 @@
+# --blacklist-file contents for the nova-multi-cell job defined in .zuul.yaml
+# See: https://stestr.readthedocs.io/en/latest/MANUAL.html#test-selection
+
+# Exclude tempest.scenario.test_network tests since they are slow and
+# only test advanced neutron features, unrelated to multi-cell testing.
+^tempest.scenario.test_network
+
+# Disable associate floating IP tests until bug 1826472 is fixed.
+tempest.api.compute.floating_ips.test_floating_ips_actions.FloatingIPsAssociationTestJSON
