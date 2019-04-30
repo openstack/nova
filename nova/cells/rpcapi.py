@@ -31,7 +31,6 @@ from oslo_utils import uuidutils
 from nova import cells
 import nova.conf
 from nova import exception
-from nova import objects
 from nova.objects import base as objects_base
 from nova import profiler
 from nova import rpc
@@ -247,17 +246,6 @@ class CellsAPI(object):
                           'last_refreshed': last_refreshed}
         self.client.cast(ctxt, 'bw_usage_update_at_top',
                          bw_update_info=bw_update_info)
-
-    def instance_info_cache_update_at_top(self, ctxt, instance_info_cache):
-        """Broadcast up that an instance's info_cache has changed."""
-        version = '1.35'
-        instance = objects.Instance(uuid=instance_info_cache.instance_uuid,
-                                    info_cache=instance_info_cache)
-        if not self.client.can_send_version('1.35'):
-            instance = objects_base.obj_to_primitive(instance)
-            version = '1.34'
-        cctxt = self.client.prepare(version=version)
-        cctxt.cast(ctxt, 'instance_update_at_top', instance=instance)
 
     def get_cell_info_for_neighbors(self, ctxt):
         """Get information about our neighbor cells from the manager."""

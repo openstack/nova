@@ -314,7 +314,7 @@ class NetworkManager(manager.Manager):
                                                 None, None)
             ic = objects.InstanceInfoCache.new(admin_context, instance_id)
             ic.network_info = nw_info
-            ic.save(update_cells=False)
+            ic.save()
         except exception.InstanceInfoCacheNotFound:
             pass
         groups = instance.security_groups

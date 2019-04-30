@@ -31,8 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 @hooks.add_hook('instance_network_info')
-def update_instance_cache_with_nw_info(impl, context, instance,
-                                       nw_info=None, update_cells=True):
+def update_instance_cache_with_nw_info(impl, context, instance, nw_info=None):
     if instance.deleted:
         LOG.debug('Instance is deleted, no further info cache update',
                   instance=instance)
@@ -52,7 +51,7 @@ def update_instance_cache_with_nw_info(impl, context, instance,
         # from the DB first.
         ic = objects.InstanceInfoCache.new(context, instance.uuid)
         ic.network_info = nw_info
-        ic.save(update_cells=update_cells)
+        ic.save()
         instance.info_cache = ic
     except Exception:
         with excutils.save_and_reraise_exception():
@@ -254,14 +253,8 @@ class NetworkAPI(base.Base):
         """Returns all network info related to an instance."""
         with lockutils.lock('refresh_cache-%s' % instance.uuid):
             result = self._get_instance_nw_info(context, instance, **kwargs)
-            # NOTE(comstud): Don't update API cell with new info_cache every
-            # time we pull network info for an instance.  The periodic healing
-            # of info_cache causes too many cells messages.  Healing the API
-            # will happen separately.
-            update_cells = kwargs.get('update_cells', False)
             update_instance_cache_with_nw_info(self, context, instance,
-                                               nw_info=result,
-                                               update_cells=update_cells)
+                                               nw_info=result)
         return result
 
     def _get_instance_nw_info(self, context, instance, **kwargs):

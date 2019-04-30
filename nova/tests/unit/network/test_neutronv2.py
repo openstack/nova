@@ -715,7 +715,7 @@ class TestNeutronv2Base(test.TestCase):
                 mock.ANY, self.instance, networks=nets_in_requested_net_order,
                 port_ids=ports_in_requested_net_order,
                 admin_client=mocked_client,
-                preexisting_port_ids=preexisting_port_ids, update_cells=True)
+                preexisting_port_ids=preexisting_port_ids)
 
         return nw_info, mocked_client
 
@@ -3573,8 +3573,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         result = self.api.get_instance_nw_info(self.context, instance)
         mock_get.assert_called_once_with(self.context, instance)
         mock_update.assert_called_once_with(self.api, self.context, instance,
-                                            nw_info=fake_result,
-                                            update_cells=False)
+                                            nw_info=fake_result)
         self.assertEqual(fake_result, result)
 
     def _test_validate_networks_fixed_ip_no_dup(self, nets, requested_networks,
