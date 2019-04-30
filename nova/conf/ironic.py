@@ -96,11 +96,11 @@ Related options:
         'peer_list',
         default=[],
         mutable=True,
-        help='List of hostnames for other nova-compute services with the same '
-             'partition_key config value. Nodes matching the partition_key '
-             'value will be distributed between this service and the other '
-             'services specified here. If partition_key is unset, this option '
-             'is ignored.'),
+        help='List of hostnames for all nova-compute services (including '
+             'this host) with this partition_key config value. '
+             'Nodes matching the partition_key value will be distributed '
+             'between all services specified here. '
+             'If partition_key is unset, this option is ignored.'),
 ]
 
 deprecated_opts = {
