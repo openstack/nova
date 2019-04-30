@@ -2574,6 +2574,21 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertTrue(instance.deleted)
         self.assertEqual(0, len(migrations))
 
+    def test_delete_virtual_interfaces_on_instance_destroy(self):
+        # Create the instance.
+        ctxt = context.get_admin_context()
+        uuid = uuidsentinel.uuid1
+        db.instance_create(ctxt, {'uuid': uuid})
+        # Create the VirtualInterface.
+        db.virtual_interface_create(ctxt, {'instance_uuid': uuid})
+        # Make sure the vif is tied to the instance.
+        vifs = db.virtual_interface_get_by_instance(ctxt, uuid)
+        self.assertEqual(1, len(vifs))
+        # Destroy the instance and verify the vif is gone as well.
+        db.instance_destroy(ctxt, uuid)
+        self.assertEqual(
+            0, len(db.virtual_interface_get_by_instance(ctxt, uuid)))
+
     def test_instance_update_and_get_original(self):
         instance = self.create_instance_with_args(vm_state='building')
         (old_ref, new_ref) = db.instance_update_and_get_original(self.ctxt,

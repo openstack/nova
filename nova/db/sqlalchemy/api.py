@@ -1788,6 +1788,8 @@ def instance_destroy(context, instance_uuid, constraint=None):
     model_query(context, models.Migration).\
             filter_by(instance_uuid=instance_uuid).\
             soft_delete()
+    model_query(context, models.VirtualInterface).filter_by(
+        instance_uuid=instance_uuid).soft_delete()
     model_query(context, models.InstanceIdMapping).filter_by(
         uuid=instance_uuid).soft_delete()
     # NOTE(snikitin): We can't use model_query here, because there is no
