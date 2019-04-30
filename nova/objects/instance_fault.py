@@ -16,8 +16,6 @@ import itertools
 
 from oslo_log import log as logging
 
-from nova.cells import opts as cells_opts
-from nova.cells import rpcapi as cells_rpcapi
 from nova.db import api as db
 from nova import exception
 from nova import objects
@@ -78,16 +76,6 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject,
         db_fault = db.instance_fault_create(self._context, values)
         self._from_db_object(self._context, self, db_fault)
         self.obj_reset_changes()
-        # Cells should only try sending a message over to nova-cells
-        # if cells is enabled and we're not the API cell. Otherwise,
-        # if the API cell is calling this, we could end up with
-        # infinite recursion.
-        if cells_opts.get_cell_type() == 'compute':
-            try:
-                cells_rpcapi.CellsAPI().instance_fault_create_at_top(
-                    self._context, db_fault)
-            except Exception:
-                LOG.exception("Failed to notify cells of instance fault")
 
 
 @base.NovaObjectRegistry.register

@@ -1620,29 +1620,6 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
         self.src_msg_runner.instance_delete_everywhere(self.ctxt,
                 instance, 'soft')
 
-    def test_instance_fault_create_at_top(self):
-        fake_instance_fault = {'id': 1,
-                               'message': 'fake-message',
-                               'details': 'fake-details'}
-
-        if_mock = mock.Mock(spec_set=objects.InstanceFault)
-
-        def _check_create():
-            self.assertEqual('fake-message', if_mock.message)
-            self.assertEqual('fake-details', if_mock.details)
-            # Should not be set
-            self.assertNotEqual(1, if_mock.id)
-
-        if_mock.create.side_effect = _check_create
-
-        with mock.patch.object(objects, 'InstanceFault') as if_obj_mock:
-            if_obj_mock.return_value = if_mock
-            self.src_msg_runner.instance_fault_create_at_top(
-                    self.ctxt, fake_instance_fault)
-
-        if_obj_mock.assert_called_once_with(context=self.ctxt)
-        if_mock.create.assert_called_once_with()
-
     def test_bw_usage_update_at_top(self):
         fake_bw_update_info = {'uuid': 'fake_uuid',
                                'mac': 'fake_mac',

@@ -1084,18 +1084,6 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         else:
             self.compute_api.delete(message.ctxt, instance)
 
-    def instance_fault_create_at_top(self, message, instance_fault, **kwargs):
-        """Destroy an instance from the DB if we're a top level cell."""
-        if not self._at_the_top():
-            return
-        items_to_remove = ['id']
-        for key in items_to_remove:
-            instance_fault.pop(key, None)
-        LOG.debug("Got message to create instance fault: %s", instance_fault)
-        fault = objects.InstanceFault(context=message.ctxt)
-        fault.update(instance_fault)
-        fault.create()
-
     def bw_usage_update_at_top(self, message, bw_update_info, **kwargs):
         """Update Bandwidth usage in the DB if we're a top level cell."""
         if not self._at_the_top():
@@ -1404,14 +1392,6 @@ class MessageRunner(object):
                                     'instance_delete_everywhere',
                                     method_kwargs, 'down',
                                     run_locally=False)
-        message.process()
-
-    def instance_fault_create_at_top(self, ctxt, instance_fault):
-        """Create an instance fault at the top level cell."""
-        message = _BroadcastMessage(self, ctxt,
-                                    'instance_fault_create_at_top',
-                                    dict(instance_fault=instance_fault),
-                                    'up', run_locally=False)
         message.process()
 
     def bw_usage_update_at_top(self, ctxt, bw_update_info):

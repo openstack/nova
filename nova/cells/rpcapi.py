@@ -234,12 +234,6 @@ class CellsAPI(object):
         cctxt.cast(ctxt, 'instance_delete_everywhere', instance=instance,
                 delete_type=delete_type)
 
-    def instance_fault_create_at_top(self, ctxt, instance_fault):
-        """Create an instance fault at the top."""
-        instance_fault_p = jsonutils.to_primitive(instance_fault)
-        self.client.cast(ctxt, 'instance_fault_create_at_top',
-                         instance_fault=instance_fault_p)
-
     def bw_usage_update_at_top(self, ctxt, uuid, mac, start_period,
             bw_in, bw_out, last_ctr_in, last_ctr_out, last_refreshed=None):
         """Broadcast upwards that bw_usage was updated."""
