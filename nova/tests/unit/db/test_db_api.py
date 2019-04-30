@@ -137,6 +137,24 @@ def _quota_create(context, project_id, user_id):
                                                     user_id=user_id).hard_limit
 
 
+@sqlalchemy_api.pick_context_manager_reader
+def _assert_instance_id_mapping(_ctxt, tc, inst_uuid, expected_existing=False):
+    # NOTE(mriedem): We can't use ec2_instance_get_by_uuid to assert
+    # the instance_id_mappings record is gone because it hard-codes
+    # read_deleted='yes' and will read the soft-deleted record. So we
+    # do the model_query directly here. See bug 1061166.
+    inst_id_mapping = sqlalchemy_api.model_query(
+        _ctxt, models.InstanceIdMapping).filter_by(uuid=inst_uuid).first()
+    if not expected_existing:
+        tc.assertFalse(inst_id_mapping,
+                       'instance_id_mapping not deleted for '
+                       'instance: %s' % inst_uuid)
+    else:
+        tc.assertTrue(inst_id_mapping,
+                      'instance_id_mapping not found for '
+                      'instance: %s' % inst_uuid)
+
+
 class DbTestCase(test.TestCase):
     def setUp(self):
         super(DbTestCase, self).setUp()
@@ -2948,19 +2966,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual([], db.instance_tag_get_by_instance_uuid(
             ctxt, inst_uuid))
 
-        @sqlalchemy_api.pick_context_manager_reader
-        def _assert_instance_id_mapping(_ctxt):
-            # NOTE(mriedem): We can't use ec2_instance_get_by_uuid to assert
-            # the instance_id_mappings record is gone because it hard-codes
-            # read_deleted='yes' and will read the soft-deleted record. So we
-            # do the model_query directly here. See bug 1061166.
-            inst_id_mapping = sqlalchemy_api.model_query(
-                _ctxt, models.InstanceIdMapping).filter_by(
-                uuid=inst_uuid).first()
-            self.assertFalse(inst_id_mapping,
-                             'instance_id_mapping not deleted for '
-                             'instance: %s' % inst_uuid)
-        _assert_instance_id_mapping(ctxt)
+        _assert_instance_id_mapping(ctxt, self, inst_uuid)
         ctxt.read_deleted = 'yes'
         self.assertEqual(values['system_metadata'],
                          db.instance_system_metadata_get(ctxt, inst_uuid))
@@ -2971,6 +2977,125 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.instance_destroy(ctxt, instance['uuid'])
         self.assertRaises(exception.InstanceNotFound,
                           db.instance_destroy, ctxt, instance['uuid'])
+
+    def test_instance_destroy_hard(self):
+        ctxt = context.get_admin_context()
+        instance = self.create_instance_with_args()
+        uuid = instance['uuid']
+        utc_now = timeutils.utcnow()
+
+        action_values = {
+            'action': 'run_instance',
+            'instance_uuid': uuid,
+            'request_id': ctxt.request_id,
+            'user_id': ctxt.user_id,
+            'project_id': ctxt.project_id,
+            'start_time': utc_now,
+            'updated_at': utc_now,
+            'message': 'action-message'
+        }
+        action = db.action_start(ctxt, action_values)
+
+        action_event_values = {
+            'event': 'schedule',
+            'action_id': action['id'],
+            'instance_uuid': uuid,
+            'start_time': utc_now,
+            'request_id': ctxt.request_id,
+            'host': 'fake-host',
+        }
+        db.action_event_start(ctxt, action_event_values)
+
+        security_group_values = {
+            'name': 'fake_sec_group',
+            'user_id': ctxt.user_id,
+            'project_id': ctxt.project_id,
+            'instances': []
+            }
+        security_group = db.security_group_create(ctxt, security_group_values)
+        db.instance_add_security_group(ctxt, uuid, security_group['id'])
+
+        instance_fault_values = {
+            'message': 'message',
+            'details': 'detail',
+            'instance_uuid': uuid,
+            'code': 404,
+            'host': 'localhost'
+        }
+        db.instance_fault_create(ctxt, instance_fault_values)
+
+        bdm_values = {
+            'instance_uuid': uuid,
+            'device_name': 'fake_device',
+            'source_type': 'volume',
+            'destination_type': 'volume',
+        }
+        block_dev = block_device.BlockDeviceDict(bdm_values)
+        db.block_device_mapping_create(self.ctxt, block_dev, legacy=False)
+
+        migration_values = {
+            "status": "finished",
+            "instance_uuid": uuid,
+            "dest_compute": "fake_host2"
+        }
+        db.migration_create(self.ctxt, migration_values)
+
+        db.virtual_interface_create(ctxt, {'instance_uuid': uuid})
+
+        pool_values = {
+            'address': '192.168.10.10',
+            'username': 'user1',
+            'password': 'passwd1',
+            'console_type': 'type1',
+            'public_hostname': 'public_host1',
+            'host': 'host1',
+            'compute_host': 'compute_host1',
+        }
+        console_pool = db.console_pool_create(ctxt, pool_values)
+        console_values = {
+            'instance_name': instance['name'],
+            'instance_uuid': uuid,
+            'password': 'pass',
+            'port': 7878,
+            'pool_id': console_pool['id']
+        }
+        db.console_create(self.ctxt, console_values)
+
+        # Hard delete the instance
+        db.instance_destroy(ctxt, uuid, hard_delete=True)
+
+        # Check that related records are deleted
+        with utils.temporary_mutation(ctxt, read_deleted="yes"):
+            # Assert that all information related to the instance is not found
+            # even using a context that can read soft deleted records.
+            self.assertEqual(0, len(db.actions_get(ctxt, uuid)))
+            self.assertEqual(0, len(db.action_events_get(ctxt, action['id'])))
+            db_sg = db.security_group_get_by_name(
+                ctxt, ctxt.project_id, security_group_values['name'])
+            self.assertEqual(0, len(db_sg['instances']))
+            instance_faults = db.instance_fault_get_by_instance_uuids(
+                ctxt, [uuid])
+            self.assertEqual(0, len(instance_faults[uuid]))
+            inst_bdms = db.block_device_mapping_get_all_by_instance(ctxt, uuid)
+            self.assertEqual(0, len(inst_bdms))
+            filters = {"isntance_uuid": uuid}
+            inst_migrations = db.migration_get_all_by_filters(ctxt, filters)
+            self.assertEqual(0, len(inst_migrations))
+            vifs = db.virtual_interface_get_by_instance(ctxt, uuid)
+            self.assertEqual(0, len(vifs))
+            self.assertIsNone(db.instance_info_cache_get(ctxt, uuid))
+            self.assertEqual({}, db.instance_metadata_get(ctxt, uuid))
+            self.assertIsNone(db.instance_extra_get_by_instance_uuid(
+                ctxt, uuid))
+            system_meta = db.instance_system_metadata_get(ctxt, uuid)
+            self.assertEqual({}, system_meta)
+            _assert_instance_id_mapping(ctxt, self, uuid)
+            self.assertRaises(exception.InstanceNotFound,
+                              db.instance_destroy, ctxt, uuid)
+            # NOTE(ttsiouts): Should these also be valid?
+            # instance_consoles = db.console_get_all_by_instance(ctxt, uuid)
+            # self.assertEqual(0, len(instance_consoles))
+            # Also FixedIp has the instance_uuid as a foreign key
 
     def test_check_instance_exists(self):
         instance = self.create_instance_with_args()

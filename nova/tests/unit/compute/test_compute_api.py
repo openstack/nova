@@ -1189,7 +1189,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                   inst, '%s.end' % delete_type)])
                 mock_deallocate.assert_called_once_with(self.context, inst)
                 mock_inst_destroy.assert_called_once_with(
-                    self.context, instance_uuid, constraint=None)
+                    self.context, instance_uuid, constraint=None,
+                    hard_delete=False)
                 mock_get_inst.assert_called_with(self.context, instance_uuid)
                 self.assertEqual(2, mock_get_inst.call_count)
                 self.assertTrue(mock_get_inst.return_value.queued_for_delete)
@@ -1440,7 +1441,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
             mock_cons.assert_called_once_with(host=mock.ANY)
             mock_inst_destroy.assert_called_once_with(
-                self.context, instance_uuid, constraint='constraint')
+                self.context, instance_uuid, constraint='constraint',
+                hard_delete=False)
 
     def _fake_do_delete(context, instance, bdms,
                         rservations=None, local=False):

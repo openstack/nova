@@ -1751,7 +1751,8 @@ def instance_create(context, values):
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
-def instance_destroy(context, instance_uuid, constraint=None):
+def instance_destroy(context, instance_uuid, constraint=None,
+                     hard_delete=False):
     if uuidutils.is_uuid_like(instance_uuid):
         instance_ref = _instance_get_by_uuid(context, instance_uuid)
     else:
@@ -1761,37 +1762,31 @@ def instance_destroy(context, instance_uuid, constraint=None):
                     filter_by(uuid=instance_uuid)
     if constraint is not None:
         query = constraint.apply(models.Instance, query)
+    # Either in hard or soft delete, we soft delete the instance first
+    # to make sure that that the constraints were met.
     count = query.soft_delete()
     if count == 0:
         raise exception.ConstraintNotMet()
-    model_query(context, models.SecurityGroupInstanceAssociation).\
-            filter_by(instance_uuid=instance_uuid).\
-            soft_delete()
-    model_query(context, models.InstanceInfoCache).\
-            filter_by(instance_uuid=instance_uuid).\
-            soft_delete()
-    model_query(context, models.InstanceMetadata).\
-            filter_by(instance_uuid=instance_uuid).\
-            soft_delete()
-    model_query(context, models.InstanceFault).\
-            filter_by(instance_uuid=instance_uuid).\
-            soft_delete()
-    model_query(context, models.InstanceExtra).\
-            filter_by(instance_uuid=instance_uuid).\
-            soft_delete()
-    model_query(context, models.InstanceSystemMetadata).\
-            filter_by(instance_uuid=instance_uuid).\
-            soft_delete()
-    model_query(context, models.BlockDeviceMapping).\
-            filter_by(instance_uuid=instance_uuid).\
-            soft_delete()
-    model_query(context, models.Migration).\
-            filter_by(instance_uuid=instance_uuid).\
-            soft_delete()
-    model_query(context, models.VirtualInterface).filter_by(
-        instance_uuid=instance_uuid).soft_delete()
-    model_query(context, models.InstanceIdMapping).filter_by(
-        uuid=instance_uuid).soft_delete()
+
+    models_to_delete = [
+        models.SecurityGroupInstanceAssociation, models.InstanceInfoCache,
+        models.InstanceMetadata, models.InstanceFault, models.InstanceExtra,
+        models.InstanceSystemMetadata, models.BlockDeviceMapping,
+        models.Migration, models.VirtualInterface
+    ]
+
+    # For most referenced models we filter by the instance_uuid column, but for
+    # these models we filter by the uuid column.
+    filtered_by_uuid = [models.InstanceIdMapping]
+
+    for model in models_to_delete + filtered_by_uuid:
+        key = 'instance_uuid' if model not in filtered_by_uuid else 'uuid'
+        filter_ = {key: instance_uuid}
+        if hard_delete:
+            model_query(context, model).filter_by(**filter_).delete()
+        else:
+            model_query(context, model).filter_by(**filter_).soft_delete()
+
     # NOTE(snikitin): We can't use model_query here, because there is no
     # column 'deleted' in 'tags' or 'console_auth_tokens' tables.
     context.session.query(models.Tag).filter_by(
@@ -1803,6 +1798,21 @@ def instance_destroy(context, instance_uuid, constraint=None):
     # can be used by operators to find out what actions were performed on a
     # deleted instance.  Both of these tables are special-cased in
     # _archive_deleted_rows_for_table().
+    if hard_delete:
+        # NOTE(ttsiousts): In case of hard delete, we need to remove the
+        # instance actions too since instance_uuid is a foreign key and
+        # for this we need to delete the corresponding InstanceActionEvents
+        actions = context.session.query(models.InstanceAction).filter_by(
+            instance_uuid=instance_uuid).all()
+        for action in actions:
+            context.session.query(models.InstanceActionEvent).filter_by(
+                action_id=action.id).delete()
+        context.session.query(models.InstanceAction).filter_by(
+            instance_uuid=instance_uuid).delete()
+        # NOTE(ttsiouts): The instance is the last thing to be deleted in
+        # order to respect all constraints
+        context.session.query(models.Instance).filter_by(
+            uuid=instance_uuid).delete()
 
     return instance_ref
 
