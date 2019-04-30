@@ -7655,6 +7655,50 @@ class ComputeManager(manager.Manager):
                 action=fields.NotificationAction.LIVE_MIGRATION_POST_DEST,
                 phase=fields.NotificationPhase.END)
 
+    def _remove_remote_volume_connections(self, context, dest, bdms, instance):
+        """Rollback remote volume connections on the dest"""
+        for bdm in bdms:
+            try:
+                # remove the connection on the destination host
+                # NOTE(lyarwood): This actually calls the cinderv2
+                # os-terminate_connection API if required.
+                self.compute_rpcapi.remove_volume_connection(
+                        context, instance, bdm.volume_id, dest)
+            except Exception:
+                LOG.warning("Ignoring exception while attempting "
+                            "to rollback volume connections for "
+                            "volume %s on host %s.", bdm.volume_id,
+                            dest, instance=instance)
+
+    def _rollback_volume_bdms(self, context, bdms, original_bdms, instance):
+        """Rollback the connection_info and attachment_id for each bdm"""
+        original_bdms_by_volid = {bdm.volume_id: bdm for bdm in original_bdms
+                                  if bdm.is_volume}
+        for bdm in bdms:
+            try:
+                original_bdm = original_bdms_by_volid[bdm.volume_id]
+                if bdm.attachment_id and original_bdm.attachment_id:
+                    # NOTE(lyarwood): 3.44 cinder api flow. Delete the
+                    # attachment used by the bdm and reset it to that of
+                    # the original bdm.
+                    self.volume_api.attachment_delete(context,
+                                                      bdm.attachment_id)
+                    bdm.attachment_id = original_bdm.attachment_id
+                # NOTE(lyarwood): Reset the connection_info to the original
+                bdm.connection_info = original_bdm.connection_info
+                bdm.save()
+            except cinder_exception.ClientException:
+                LOG.warning("Ignoring cinderclient exception when "
+                            "attempting to delete attachment %s for volume"
+                            "%s while rolling back volume bdms.",
+                            bdm.attachment_id, bdm.volume_id,
+                            instance=instance)
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    LOG.exception("Exception while attempting to rollback "
+                                  "BDM for volume %s.", bdm.volume_id,
+                                  instance=instance)
+
     @wrap_exception()
     @wrap_instance_fault
     def _rollback_live_migration(self, context, instance,
@@ -7723,35 +7767,18 @@ class ComputeManager(manager.Manager):
         self.driver.rollback_live_migration_at_source(context, instance,
                                                       migrate_data)
 
-        source_bdms_by_volid = {bdm.volume_id: bdm for bdm in source_bdms
-                                if bdm.is_volume}
-
-        # NOTE(lyarwood): Fetch the current list of BDMs and delete any volume
-        # attachments used by the destination host before rolling back to the
-        # original and still valid source host volume attachments.
+        # NOTE(lyarwood): Fetch the current list of BDMs, disconnect any
+        # connected volumes from the dest and delete any volume attachments
+        # used by the destination host before rolling back to the original
+        # still valid source host volume attachments.
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
-        for bdm in bdms:
-            if bdm.is_volume:
-                # remove the connection on the destination host
-                # NOTE(lyarwood): This actually calls the cinderv2
-                # os-terminate_connection API if required.
-                self.compute_rpcapi.remove_volume_connection(
-                        context, instance, bdm.volume_id, dest)
-
-                source_bdm = source_bdms_by_volid[bdm.volume_id]
-                if bdm.attachment_id and source_bdm.attachment_id:
-                    # NOTE(lyarwood): 3.44 cinder api flow. Delete the
-                    # attachment used by the destination and reset the bdm
-                    # attachment_id to the old attachment of the source host.
-                    self.volume_api.attachment_delete(context,
-                                                      bdm.attachment_id)
-                    bdm.attachment_id = source_bdm.attachment_id
-
-                # NOTE(lyarwood): Rollback the connection_info stored within
-                # the BDM to that used by the source and not the destination.
-                bdm.connection_info = source_bdm.connection_info
-                bdm.save()
+        # TODO(lyarwood): Turn the following into a lookup method within
+        # BlockDeviceMappingList.
+        vol_bdms = [bdm for bdm in bdms if bdm.is_volume]
+        self._remove_remote_volume_connections(context, dest, vol_bdms,
+                                               instance)
+        self._rollback_volume_bdms(context, vol_bdms, source_bdms, instance)
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.start")
