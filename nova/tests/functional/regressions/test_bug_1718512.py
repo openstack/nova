@@ -19,7 +19,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as image_fake
 from nova.tests.unit import policy_fixture
-from nova.virt import fake
 
 
 class HostNameWeigher(weights.BaseHostWeigher):
@@ -86,8 +85,6 @@ class TestRequestSpecRetryReschedule(test.TestCase,
 
         # Let's now start three compute nodes as we said above.
         for host in ['host1', 'host2', 'host3']:
-            fake.set_nodes([host])
-            self.addCleanup(fake.restore_nodes)
             self.start_service('compute', host=host)
 
     def _stub_resize_failure(self, failed_host):

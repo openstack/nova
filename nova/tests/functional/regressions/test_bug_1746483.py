@@ -17,7 +17,6 @@ from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as image_fakes
 from nova.tests.unit import policy_fixture
 from nova import utils
-from nova.virt import fake
 
 CONF = config.CONF
 
@@ -67,8 +66,6 @@ class TestBootFromVolumeIsolatedHostsFilter(
         # Create two compute nodes/services so we can restrict the image
         # we'll use to one of the hosts.
         for host in ('host1', 'host2'):
-            fake.set_nodes([host])
-            self.addCleanup(fake.restore_nodes)
             self.start_service('compute', host=host)
 
     def test_boot_from_volume_with_isolated_image(self):

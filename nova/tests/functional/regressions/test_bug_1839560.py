@@ -19,7 +19,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 from nova import utils
-from nova.virt import fake as fake_virt
 
 LOG = logging.getLogger(__name__)
 
@@ -57,11 +56,15 @@ class PeriodicNodeRecreateTestCase(test.TestCase,
 
     def test_update_available_resource_node_recreate(self):
         # First we create a compute service to manage a couple of fake nodes.
-        # When start_service runs, it will create the node1 and node2
-        # ComputeNodes.
-        fake_virt.set_nodes(['node1', 'node2'])
-        self.addCleanup(fake_virt.restore_nodes)
         compute = self.start_service('compute', 'node1')
+        # When start_service runs, it will create the node1 ComputeNode.
+        compute.manager.driver._set_nodes(['node1', 'node2'])
+        # Run the update_available_resource periodic to register node2.
+        ctxt = context.get_admin_context()
+        compute.manager.update_available_resource(ctxt)
+        # Make sure no compute nodes were orphaned or deleted.
+        self.assertNotIn('Deleting orphan compute node',
+                         self.stdlog.logger.output)
         # Now we should have two compute nodes, make sure the hypervisors API
         # shows them.
         hypervisors = self.api.api_get('/os-hypervisors').body['hypervisors']

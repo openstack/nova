@@ -23,7 +23,6 @@ from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
-from nova.virt import fake
 
 CONF = nova.conf.CONF
 
@@ -113,8 +112,6 @@ class AggregateRequestFiltersTest(test.TestCase,
                      compute service.
         :return: the nova compute service object
         """
-        fake.set_nodes([host])
-        self.addCleanup(fake.restore_nodes)
         compute = self.start_service('compute', host=host)
         self.computes[host] = compute
         return compute

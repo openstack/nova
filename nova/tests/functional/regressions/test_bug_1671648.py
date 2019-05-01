@@ -22,7 +22,6 @@ from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_network
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
-from nova.virt import fake
 
 
 class TestRetryBetweenComputeNodeBuilds(test.TestCase):
@@ -67,17 +66,7 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
 
         # We start two compute services because we're going to fake one
         # of them to fail the build so we can trigger the retry code.
-        # set_nodes() is needed to have each compute service return a
-        # different nodename, so we get two hosts in the list of candidates
-        # for scheduling. Otherwise both hosts will have the same default
-        # nodename "fake-mini". The host passed to start_service controls the
-        # "host" attribute and set_nodes() sets the "nodename" attribute.
-        # We set_nodes() to make host and nodename the same for each compute.
-        fake.set_nodes(['host1'])
-        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host1')
-        fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host='host2')
 
         self.useFixture(cast_as_call.CastAsCall(self))

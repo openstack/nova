@@ -134,14 +134,9 @@ class ServerGroupTestV21(ServerGroupTestBase):
         # tree.
         self.stub_out('nova.virt.driver.load_compute_driver',
                       _fake_load_compute_driver)
-        fake.set_nodes(['compute'])
         self.compute = self.start_service('compute', host='compute')
 
         # NOTE(gibi): start a second compute host to be able to test affinity
-        # NOTE(sbauza): Make sure the FakeDriver returns a different nodename
-        # for the second compute node.
-        fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.compute2 = self.start_service('compute', host='host2')
 
     def test_get_no_groups(self):
@@ -361,7 +356,6 @@ class ServerGroupTestV21(ServerGroupTestBase):
 
     def test_migrate_with_anti_affinity(self):
         # Start additional host to test migration with anti-affinity
-        fake.set_nodes(['host3'])
         self.start_service('compute', host='host3')
 
         created_group = self.api.post_server_groups(self.anti_affinity)
@@ -420,7 +414,6 @@ class ServerGroupTestV21(ServerGroupTestBase):
         self._set_forced_down(host, True)
 
         # Start additional host to test evacuation
-        fake.set_nodes(['host3'])
         self.start_service('compute', host='host3')
 
         post = {'evacuate': {'onSharedStorage': False}}
@@ -605,7 +598,6 @@ class ServerGroupTestV215(ServerGroupTestV21):
         self._set_forced_down(host, True)
 
         # Start additional host to test evacuation
-        fake.set_nodes(['host3'])
         compute3 = self.start_service('compute', host='host3')
 
         post = {'evacuate': {}}
@@ -875,12 +867,8 @@ class ServerGroupTestMultiCell(ServerGroupTestBase):
     def setUp(self):
         super(ServerGroupTestMultiCell, self).setUp()
         # Start two compute services, one per cell
-        fake.set_nodes(['host1'])
-        self.addCleanup(fake.restore_nodes)
         self.compute1 = self.start_service('compute', host='host1',
                                            cell='cell1')
-        fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.compute2 = self.start_service('compute', host='host2',
                                            cell='cell2')
         # This is needed to find a server that is still booting with multiple

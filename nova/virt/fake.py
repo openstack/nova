@@ -25,7 +25,6 @@ semantics of real hypervisor connections.
 
 import collections
 import contextlib
-import copy
 import time
 import uuid
 
@@ -49,31 +48,6 @@ from nova.virt import virtapi
 CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
-
-
-_FAKE_NODES = None
-
-
-def set_nodes(nodes):
-    """Sets FakeDriver's node.list.
-
-    It has effect on the following methods:
-        get_available_nodes()
-        get_available_resource
-
-    To restore the change, call restore_nodes()
-    """
-    global _FAKE_NODES
-    _FAKE_NODES = nodes
-
-
-def restore_nodes():
-    """Resets FakeDriver's node list modified by set_nodes().
-
-    Usually called from tearDown().
-    """
-    global _FAKE_NODES
-    _FAKE_NODES = [CONF.host]
 
 
 class FakeInstance(object):
@@ -164,15 +138,21 @@ class FakeDriver(driver.ComputeDriver):
         self._mounts = {}
         self._interfaces = {}
         self.active_migrations = {}
-        self._nodes = self._init_nodes()
-
-    def _init_nodes(self):
-        if not _FAKE_NODES:
-            set_nodes([CONF.host])
-        return copy.copy(_FAKE_NODES)
+        self._host = None
+        self._nodes = None
 
     def init_host(self, host):
-        return
+        self._host = host
+        # NOTE(gibi): this is unnecessary complex and fragile but this is
+        # how many current functional sample tests expect the node name.
+        self._nodes = (['fake-mini'] if self._host == 'compute'
+                       else [self._host])
+
+    def _set_nodes(self, nodes):
+        # NOTE(gibi): this is not part of the driver interface but used
+        # by our tests to customize the discovered nodes by the fake
+        # driver.
+        self._nodes = nodes
 
     def list_instances(self):
         return [self.instances[uuid].name for uuid in self.instances.keys()]

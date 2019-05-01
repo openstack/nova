@@ -17,7 +17,6 @@ from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
-from nova.virt import fake
 
 
 class TestParallelEvacuationWithServerGroup(
@@ -57,11 +56,7 @@ class TestParallelEvacuationWithServerGroup(
 
         # We start two compute services because we need two instances with
         # anti-affinity server group policy to be booted
-        fake.set_nodes(['host1'])
-        self.addCleanup(fake.restore_nodes)
         self.compute1 = self.start_service('compute', host='host1')
-        fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.compute2 = self.start_service('compute', host='host2')
 
         self.image_id = self.api.get_images()[0]['id']
@@ -123,8 +118,6 @@ class TestParallelEvacuationWithServerGroup(
         self.api.force_down_service('host2', 'nova-compute', True)
 
         # start a third compute to have place for one of the instances
-        fake.set_nodes(['host3'])
-        self.addCleanup(fake.restore_nodes)
         self.compute3 = self.start_service('compute', host='host3')
 
         # evacuate both instances

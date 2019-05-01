@@ -17,7 +17,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
-from nova.virt import fake
 
 
 class TestAvailabilityZoneScheduling(
@@ -52,8 +51,6 @@ class TestAvailabilityZoneScheduling(
 
     def _start_host_in_zone(self, host, zone):
         # Start the nova-compute service.
-        fake.set_nodes([host])
-        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host=host)
         # Create a host aggregate with a zone in which to put this host.
         aggregate_body = {
