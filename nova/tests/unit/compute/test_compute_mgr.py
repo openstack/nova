@@ -8871,7 +8871,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         """
         instance = fake_instance.fake_instance_obj(
             self.context, host=self.compute.host, vm_state=vm_states.STOPPED,
-            expected_attrs=['system_metadata', 'flavor'])
+            node='fake-node', expected_attrs=['system_metadata', 'flavor'])
         migration = mock.MagicMock(spec='nova.objects.Migration')
         request_spec = mock.MagicMock(spec='nova.objects.RequestSpec')
         ex = exception.InstanceFaultRollback(

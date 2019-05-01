@@ -859,8 +859,8 @@ class AbstractDriverTestCase(_VirtDriverTestCase, test.TestCase):
 class FakeConnectionTestCase(_VirtDriverTestCase, test.TestCase):
     def setUp(self):
         self.driver_module = 'nova.virt.fake.FakeDriver'
-        fake.set_nodes(['myhostname'])
         super(FakeConnectionTestCase, self).setUp()
+        self.connection.init_host('myhostname')
 
     def _check_available_resource_fields(self, host_status):
         super(FakeConnectionTestCase, self)._check_available_resource_fields(

@@ -214,9 +214,6 @@ class ServersTest(ServersTestBase):
     def _test_create_server_with_error_with_retries(self):
         # Create a server which will enter error state.
 
-        fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
-        self.flags(host='host2')
         self.compute2 = self.start_service('compute', host='host2')
         self.computes['compute2'] = self.compute2
 
@@ -1509,9 +1506,6 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
         default so that should filter out the host based on the image meta.
         """
 
-        fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
-        self.flags(host='host2')
         self.compute2 = self.start_service('compute', host='host2')
 
         # We hard-code from a fake image since we can't get images
@@ -4397,9 +4391,7 @@ class ServerTestV256Common(ServersTestBase):
 
     def _setup_compute_service(self):
         # Set up 3 compute services in the same cell
-        self.addCleanup(fake.restore_nodes)
         for host in ('host1', 'host2', 'host3'):
-            fake.set_nodes([host])
             self.start_service('compute', host=host)
 
     def _create_server(self, target_host=None):
@@ -4431,9 +4423,7 @@ class ServerTestV256MultiCellTestCase(ServerTestV256Common):
         host_to_cell_mappings = {
             'host1': 'cell1',
             'host2': 'cell2'}
-        self.addCleanup(fake.restore_nodes)
         for host in sorted(host_to_cell_mappings):
-            fake.set_nodes([host])
             self.start_service('compute', host=host,
                                cell=host_to_cell_mappings[host])
 

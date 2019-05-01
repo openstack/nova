@@ -42,7 +42,6 @@ from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 from nova import utils
-from nova.virt import fake
 
 
 CONF = nova.conf.CONF
@@ -450,8 +449,6 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
                           compute service (defaults to cell1)
         :return: the nova compute service object
         """
-        fake.set_nodes([host])
-        self.addCleanup(fake.restore_nodes)
         compute = self.start_service('compute', host=host, cell=cell_name)
         self.computes[host] = compute
         return compute

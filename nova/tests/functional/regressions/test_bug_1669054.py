@@ -13,7 +13,6 @@
 from nova import context
 from nova import objects
 from nova.tests.functional import integrated_helpers
-from nova.virt import fake
 
 
 class ResizeEvacuateTestCase(integrated_helpers._IntegratedTestBase,
@@ -47,8 +46,6 @@ class ResizeEvacuateTestCase(integrated_helpers._IntegratedTestBase,
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
         # Start up another compute service so we can resize.
-        fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         host2 = self.start_service('compute', host='host2')
 
         # Now resize the server to move it to host2.

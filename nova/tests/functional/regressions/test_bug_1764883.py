@@ -19,7 +19,6 @@ from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
-from nova.virt import fake
 
 
 class TestEvacuationWithSourceReturningDuringRebuild(
@@ -63,11 +62,8 @@ class TestEvacuationWithSourceReturningDuringRebuild(
         # Start two computes
         self.computes = {}
 
-        fake.set_nodes(['host1'])
-        self.addCleanup(fake.restore_nodes)
         self.computes['host1'] = self.start_service('compute', host='host1')
 
-        fake.set_nodes(['host2'])
         self.computes['host2'] = self.start_service('compute', host='host2')
 
         self.image_id = self.api.get_images()[0]['id']

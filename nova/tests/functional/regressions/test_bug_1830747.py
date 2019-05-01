@@ -21,7 +21,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as fake_image
-from nova.virt import fake as fake_virt
 
 
 class HostNameWeigher(weights.BaseHostWeigher):
@@ -79,10 +78,8 @@ class MissingReqSpecInstanceGroupUUIDTestCase(
         self.start_service('scheduler')
         # Start two computes, one where the server will be created and another
         # where we'll cold migrate it.
-        self.addCleanup(fake_virt.restore_nodes)
         self.computes = {}  # keep track of the compute services per host name
         for host in ('host1', 'host2'):
-            fake_virt.set_nodes([host])
             compute_service = self.start_service('compute', host=host)
             self.computes[host] = compute_service
 

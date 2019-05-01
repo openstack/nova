@@ -17,7 +17,6 @@ from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
-from nova.virt import fake
 
 
 class TestRescheduleWithVolumesAttached(
@@ -55,11 +54,8 @@ class TestRescheduleWithVolumesAttached(
         self.start_service('scheduler')
 
         # Start two computes to allow the instance to be rescheduled
-        fake.set_nodes(['host1'])
-        self.addCleanup(fake.restore_nodes)
         self.host1 = self.start_service('compute', host='host1')
 
-        fake.set_nodes(['host2'])
         self.host2 = self.start_service('compute', host='host2')
 
         self.image_id = self.api.get_images()[0]['id']

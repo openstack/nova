@@ -22,7 +22,6 @@ from nova.tests.functional.api import client
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
 from nova.tests.unit import fake_notifier
-from nova.virt import fake
 
 COMPUTE_VERSION_OLD_ATTACH_FLOW = \
     compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1
@@ -51,8 +50,6 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         self._wait_for_notification('instance.create.end')
         self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
         # server will boot on the 'compute' host
-        fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.compute2 = self.start_service('compute', host='host2')
 
         actions = [
