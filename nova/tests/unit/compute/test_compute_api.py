@@ -1933,6 +1933,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, fake_inst['uuid'], 'finished')
             mock_inst_save.assert_called_once_with(expected_task_state=[None])
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
     @mock.patch('nova.compute.api.API._validate_flavor_image_nostatus')
     @mock.patch('nova.objects.Migration')
     @mock.patch.object(compute_api.API, '_record_action_start')
@@ -1946,7 +1948,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def _test_resize(self, mock_get_all_by_host,
                      mock_get_by_instance_uuid, mock_get_flavor, mock_upsize,
                      mock_inst_save, mock_count, mock_limit, mock_record,
-                     mock_migration, mock_validate,
+                     mock_migration, mock_validate, mock_is_vol_backed,
                      flavor_id_passed=True,
                      same_host=False, allow_same_host=False,
                      project_id=None,
