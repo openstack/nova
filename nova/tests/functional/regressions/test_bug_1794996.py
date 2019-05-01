@@ -78,4 +78,4 @@ class TestEvacuateDeleteServerRestartOriginalCompute(
         self._delete_and_check_allocations(server)
 
         # restart the source compute
-        self.restart_compute_service(self.compute1)
+        self.compute1 = self.restart_compute_service(self.compute1)

@@ -2284,7 +2284,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             self.flavor1, server['id'], source_rp_uuid, dest_rp_uuid)
 
         # restart the source compute
-        self.restart_compute_service(self.compute1)
+        self.compute1 = self.restart_compute_service(self.compute1)
 
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'false'})
@@ -2355,7 +2355,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             self.flavor1, server['id'], source_rp_uuid, dest_rp_uuid)
 
         # restart the source compute
-        self.restart_compute_service(self.compute1)
+        self.compute1 = self.restart_compute_service(self.compute1)
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'false'})
 
@@ -2453,7 +2453,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             self.flavor1, server['id'], source_rp_uuid, dest_rp_uuid)
 
         # restart the source compute
-        self.restart_compute_service(self.compute1)
+        self.compute1 = self.restart_compute_service(self.compute1)
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'false'})
 
@@ -2533,7 +2533,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
                                            source_rp_uuid)
 
         # restart the source compute
-        self.restart_compute_service(self.compute1)
+        self.compute1 = self.restart_compute_service(self.compute1)
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'false'})
 
@@ -2600,7 +2600,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
                                            source_rp_uuid)
 
         # restart the source compute
-        self.restart_compute_service(self.compute1)
+        self.compute1 = self.restart_compute_service(self.compute1)
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'false'})
 
@@ -5196,7 +5196,7 @@ class ServerMovingTestsWithNestedResourceRequests(
                                            source_rp_uuid)
 
         # restart the source compute
-        self.restart_compute_service(self.compute1)
+        self.compute1 = self.restart_compute_service(self.compute1)
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'false'})
 
