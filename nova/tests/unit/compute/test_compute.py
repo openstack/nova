@@ -157,12 +157,15 @@ class BaseTestCase(test.TestCase):
     def setUp(self):
         super(BaseTestCase, self).setUp()
         self.flags(network_manager='nova.network.manager.FlatManager')
-        fake.set_nodes([NODENAME, NODENAME2])
 
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
         self.compute = compute_manager.ComputeManager()
+        # NOTE(gibi): this is a hack to make the fake virt driver use the nodes
+        # needed for these tests.
+        self.compute.driver._set_nodes([NODENAME, NODENAME2])
+
         # execute power syncing synchronously for testing:
         self.compute._sync_power_pool = eventlet_utils.SyncPool()
 
@@ -279,7 +282,6 @@ class BaseTestCase(test.TestCase):
         instances = db.instance_get_all(ctxt)
         for instance in instances:
             db.instance_destroy(ctxt, instance['uuid'])
-        fake.restore_nodes()
         super(BaseTestCase, self).tearDown()
 
     def _fake_instance(self, updates):

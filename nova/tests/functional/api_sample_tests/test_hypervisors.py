@@ -18,7 +18,6 @@ import mock
 from nova.cells import utils as cells_utils
 from nova import objects
 from nova.tests.functional.api_sample_tests import api_sample_base
-from nova.virt import fake
 
 
 class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
@@ -157,8 +156,6 @@ class HypervisorsSampleJson233Tests(api_sample_base.ApiSampleTestBaseV21):
         # Start a new compute service to fake a record with hypervisor id=2
         # for pagination test.
         host = 'host1'
-        fake.set_nodes([host])
-        self.addCleanup(fake.restore_nodes)
         self.start_service('compute', host=host)
 
     def test_hypervisors_list(self):
@@ -205,8 +202,6 @@ class HypervisorsSampleJson253Tests(HypervisorsSampleJson228Tests):
     def test_hypervisors_detail(self):
         # Start another compute service to get a 2nd compute for paging tests.
         host = 'host2'
-        fake.set_nodes([host])
-        self.addCleanup(fake.restore_nodes)
         service_2 = self.start_service('compute', host=host).service_ref
         compute_node_2 = service_2.compute_node
         marker = self.compute_node_1.uuid

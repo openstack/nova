@@ -16,7 +16,6 @@ from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as image_fake
 from nova.tests.unit import policy_fixture
-from nova.virt import fake
 
 
 class ColdMigrateTargetHostThenLiveMigrateTest(
@@ -60,9 +59,7 @@ class ColdMigrateTargetHostThenLiveMigrateTest(
         self.start_service('conductor')
         self.start_service('scheduler')
 
-        self.addCleanup(fake.restore_nodes)
         for host in ('host1', 'host2'):
-            fake.set_nodes([host])
             self.start_service('compute', host=host)
 
     def test_cold_migrate_target_host_then_live_migrate(self):

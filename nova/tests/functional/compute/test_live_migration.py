@@ -20,7 +20,6 @@ from nova import exception
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_notifier
-from nova.virt import fake
 
 
 class FakeCinderError(object):
@@ -54,8 +53,6 @@ class LiveMigrationCinderFailure(integrated_helpers._IntegratedTestBase,
         # Start a second compte node (the first one was started for us by
         # _IntegratedTestBase. set_nodes() is needed to avoid duplicate
         # nodenames. See comments in test_bug_1702454.py.
-        fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
         self.compute2 = self.start_service('compute', host='host2')
 
     # To get the old Cinder flow we need to hack the service version, otherwise
