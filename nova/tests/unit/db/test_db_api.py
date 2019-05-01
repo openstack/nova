@@ -7359,6 +7359,28 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.compute_node_get_by_host_and_nodename,
                           self.ctxt, 'host1', 'wrong')
 
+    def test_compute_node_get_by_nodename(self):
+        # Create another node on top of the same service
+        compute_node_same_host = self.compute_node_dict.copy()
+        compute_node_same_host['uuid'] = uuidutils.generate_uuid()
+        compute_node_same_host['stats'] = jsonutils.dumps(self.stats)
+        compute_node_same_host['hypervisor_hostname'] = 'node_2'
+
+        node = db.compute_node_create(self.ctxt, compute_node_same_host)
+
+        expected = node
+        result = db.compute_node_get_by_nodename(
+            self.ctxt, 'node_2')
+
+        self._assertEqualObjects(expected, result,
+                    ignored_keys=self._ignored_keys +
+                                 ['stats', 'service'])
+
+    def test_compute_node_get_by_nodename_not_found(self):
+        self.assertRaises(exception.ComputeHostNotFound,
+                          db.compute_node_get_by_nodename,
+                          self.ctxt, 'wrong')
+
     def test_compute_node_get(self):
         compute_node_id = self.item['id']
         node = db.compute_node_get(self.ctxt, compute_node_id)

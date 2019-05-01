@@ -239,6 +239,16 @@ class _TestComputeNodeObject(object):
                          subs=self.subs(),
                          comparators=self.comparators())
 
+    @mock.patch.object(db, 'compute_node_get_by_nodename')
+    def test_get_by_nodename(self, cn_get_by_n):
+        cn_get_by_n.return_value = fake_compute_node
+
+        compute = compute_node.ComputeNode.get_by_nodename(
+            self.context, 'vm.danplanet.com')
+        self.compare_obj(compute, fake_compute_node,
+                         subs=self.subs(),
+                         comparators=self.comparators())
+
     @mock.patch('nova.db.api.compute_node_get_all_by_host')
     def test_get_first_node_by_host_for_old_compat(
             self, cn_get_all_by_host):

@@ -639,6 +639,15 @@ def compute_node_get_by_host_and_nodename(context, host, nodename):
     return results[0]
 
 
+@pick_context_manager_reader
+def compute_node_get_by_nodename(context, hypervisor_hostname):
+    results = _compute_node_fetchall(context,
+            {"hypervisor_hostname": hypervisor_hostname})
+    if not results:
+        raise exception.ComputeHostNotFound(host=hypervisor_hostname)
+    return results[0]
+
+
 @pick_context_manager_reader_allow_async
 def compute_node_get_all_by_host(context, host):
     results = _compute_node_fetchall(context, {"host": host})

@@ -244,6 +244,21 @@ def compute_node_get_by_host_and_nodename(context, host, nodename):
     return IMPL.compute_node_get_by_host_and_nodename(context, host, nodename)
 
 
+def compute_node_get_by_nodename(context, hypervisor_hostname):
+    """Get a compute node by hypervisor_hostname.
+
+    :param context: The security context (admin)
+    :param hypervisor_hostname: Name of the node
+
+    :returns: Dictionary-like object containing properties of the compute node,
+              including its statistics
+
+    Raises ComputeHostNotFound if hypervisor_hostname with the given name
+    doesn't exist.
+    """
+    return IMPL.compute_node_get_by_nodename(context, hypervisor_hostname)
+
+
 def compute_node_get_all(context):
     """Get all computeNodes.
 
