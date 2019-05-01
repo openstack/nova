@@ -558,15 +558,10 @@ class MetadataTestCase(test.TestCase):
 
     @mock.patch('oslo_serialization.base64.encode_as_text',
                 return_value=FAKE_SEED)
-    @mock.patch('nova.cells.rpcapi.CellsAPI.get_keypair_at_top')
     @mock.patch.object(jsonutils, 'dump_as_bytes')
     def _test_as_json_with_options(self, mock_json_dump_as_bytes,
-                          mock_cells_keypair, mock_base64,
-                          is_cells=False, os_version=base.GRIZZLY):
-        if is_cells:
-            self.flags(enable=True, group='cells')
-            self.flags(cell_type='compute', group='cells')
-
+                          mock_base64,
+                          os_version=base.GRIZZLY):
         instance = self.instance
         keypair = self.keypair
         md = fake_InstanceMetadata(self, instance)
@@ -604,44 +599,13 @@ class MetadataTestCase(test.TestCase):
             expose_trusted = md._check_os_version(base.ROCKY, os_version)
             expected_metadata['devices'] = fake_metadata_dicts(
                 True, expose_trusted)
-        mock_cells_keypair.return_value = keypair
         md._metadata_as_json(os_version, 'non useless path parameter')
-        if instance.key_name:
-            if is_cells:
-                mock_cells_keypair.assert_called_once_with(mock.ANY,
-                                                           instance.user_id,
-                                                           instance.key_name)
-                self.assertIsInstance(mock_cells_keypair.call_args[0][0],
-                                      context.RequestContext)
         self.assertEqual(md.md_mimetype, base.MIME_TYPE_APPLICATION_JSON)
         mock_json_dump_as_bytes.assert_called_once_with(expected_metadata)
 
     def test_as_json(self):
         for os_version in base.OPENSTACK_VERSIONS:
             self._test_as_json_with_options(os_version=os_version)
-
-    def test_as_json_with_cells_mode(self):
-        for os_version in base.OPENSTACK_VERSIONS:
-            self._test_as_json_with_options(is_cells=True,
-                                            os_version=os_version)
-
-    @mock.patch('nova.cells.rpcapi.CellsAPI.get_keypair_at_top',
-                side_effect=exception.KeypairNotFound(
-                name='key', user_id='fake_user'))
-    @mock.patch.object(objects.Instance, 'get_by_uuid')
-    def test_as_json_deleted_keypair_in_cells_mode(self,
-                                                   mock_get_keypair_at_top,
-                                                   mock_inst_get_by_uuid):
-        self.flags(enable=True, group='cells')
-        self.flags(cell_type='compute', group='cells')
-
-        instance = self.instance.obj_clone()
-        delattr(instance, 'keypairs')
-        md = fake_InstanceMetadata(self, instance)
-        meta = md._metadata_as_json(base.OPENSTACK_VERSIONS[-1], path=None)
-        meta = jsonutils.loads(meta)
-        self.assertNotIn('keys', meta)
-        self.assertNotIn('public_keys', meta)
 
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_metadata_as_json_deleted_keypair(self, mock_inst_get_by_uuid):
