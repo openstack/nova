@@ -1,0 +1,18 @@
+# Ensure the nova configuration directory exists before writing the policy
+# file to it.
+- name: Create nova conf dir
+  file:
+    path: '{{ nova_config_dir }}'
+    state: directory
+    owner: stack
+  become: yes
+
+# Write the policy file rule for multi-cell resize.
+- name: Setup multi-cell policy
+  copy:
+    content: |
+      # Enable cross-cell resize.
+      "compute:servers:resize:cross_cell": "rule:admin_or_owner"
+    dest: '{{ nova_config_dir }}/policy.yaml'
+    owner: stack
+  become: yes

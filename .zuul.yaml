@@ -296,15 +296,19 @@
       tempest_test_regex: ^tempest\.(scenario|(api\.compute))
       tempest_test_blacklist: '{{ ansible_user_dir }}/{{ zuul.projects["opendev.org/openstack/nova"].src_dir }}/devstack/nova-multi-cell-blacklist.txt'
       devstack_local_conf:
+        post-config:
+          $NOVA_CONF:
+            oslo_policy:
+              # The default policy file is policy.json but the
+              # setup-multi-cell-policy role will write to policy.yaml.
+              policy_file: policy.yaml
         test-config:
           $TEMPEST_CONFIG:
             compute-feature-enabled:
-              # TODO(mriedem): Enable cold migration once cross-cell resize is
-              # supported. We cannot enable it until then because this job has
-              # one compute in each cell and with
-              # allow_resize_to_same_host=True cold migrate will try to migrate
-              # on the same host which is not supported by the libvirt driver.
-              cold_migration: false
+              # Enable cold migration for migrating across cells. Note that
+              # because NOVA_ALLOW_MOVE_TO_SAME_HOST=false, all cold migrations
+              # will move across cells.
+              cold_migration: true
       devstack_services:
         # Disable other non-essential services that we don't need for this job.
         c-bak: false
@@ -312,11 +316,9 @@
         USE_PYTHON3: True
         # Setup two non-cell0 cells (cell1 and cell2).
         NOVA_NUM_CELLS: 2
-        # Resize to the same host is supported for now since we only have
-        # two computes and they are in different cells.
-        # TODO(mriedem): Disable resize to the same host once cross-cell resize
-        # is supported so all resizes will move across cells.
-        NOVA_ALLOW_MOVE_TO_SAME_HOST: true
+        # Disable resize to the same host so all resizes will move across
+        # cells.
+        NOVA_ALLOW_MOVE_TO_SAME_HOST: false
         # We only have two computes and we don't yet support cross-cell live
         # migration.
         LIVE_MIGRATION_AVAILABLE: false
@@ -335,6 +337,9 @@
           # Disable other non-essential services that we don't need for this
           # job.
           c-bak: false
+    # Perform setup for the multi-cell environment. Note that this runs
+    # before devstack is setup on the controller host.
+    pre-run: playbooks/nova-multi-cell/pre.yaml
 
 - job:
     name: nova-osprofiler-redis
