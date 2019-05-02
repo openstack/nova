@@ -29,6 +29,7 @@ class TestUtils(test.NoDBTestCase):
     def setUp(self):
         super(TestUtils, self).setUp()
         self.context = nova_context.get_admin_context()
+        self.mock_host_manager = mock.Mock()
 
     def assertResourceRequestsEqual(self, expected, observed):
         self.assertEqual(expected._limit, observed._limit)
@@ -54,7 +55,8 @@ class TestUtils(test.NoDBTestCase):
     def _test_resources_from_request_spec(self, expected, flavor,
                                           image=objects.ImageMeta()):
         fake_spec = objects.RequestSpec(flavor=flavor, image=image)
-        resources = utils.resources_from_request_spec(fake_spec)
+        resources = utils.resources_from_request_spec(
+            self.context, fake_spec, self.mock_host_manager)
         self.assertResourceRequestsEqual(expected, resources)
         return resources
 
@@ -232,7 +234,8 @@ class TestUtils(test.NoDBTestCase):
                                     "resources:DOESNT_EXIST": 0})
         fake_spec = objects.RequestSpec(flavor=flavor)
         with mock.patch("nova.scheduler.utils.LOG.warning") as mock_log:
-            utils.resources_from_request_spec(fake_spec)
+            utils.resources_from_request_spec(
+                self.context, fake_spec, self.mock_host_manager)
             mock_log.assert_called_once()
             args = mock_log.call_args[0]
             self.assertEqual(args[0], "Received an invalid ResourceClass "
@@ -321,12 +324,14 @@ class TestUtils(test.NoDBTestCase):
                                       requested_destination=destination)
 
         destination.require_aggregates(['foo', 'bar'])
-        req = utils.resources_from_request_spec(reqspec)
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
         self.assertEqual([['foo', 'bar']],
                          req.get_request_group(None).aggregates)
 
         destination.require_aggregates(['baz'])
-        req = utils.resources_from_request_spec(reqspec)
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
         self.assertEqual([['foo', 'bar'], ['baz']],
                          req.get_request_group(None).aggregates)
 
@@ -336,19 +341,23 @@ class TestUtils(test.NoDBTestCase):
                                 swap=0)
         reqspec = objects.RequestSpec(flavor=flavor)
 
-        req = utils.resources_from_request_spec(reqspec)
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
         self.assertEqual([], req.get_request_group(None).aggregates)
 
         reqspec.requested_destination = None
-        req = utils.resources_from_request_spec(reqspec)
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
         self.assertEqual([], req.get_request_group(None).aggregates)
 
         reqspec.requested_destination = objects.Destination()
-        req = utils.resources_from_request_spec(reqspec)
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
         self.assertEqual([], req.get_request_group(None).aggregates)
 
         reqspec.requested_destination.aggregates = None
-        req = utils.resources_from_request_spec(reqspec)
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
         self.assertEqual([], req.get_request_group(None).aggregates)
 
     @mock.patch("nova.scheduler.utils.ResourceRequest.from_extra_specs")
@@ -360,7 +369,8 @@ class TestUtils(test.NoDBTestCase):
                                 swap=0,
                                 extra_specs={"resources:CUSTOM_TEST_CLASS": 1})
         fake_spec = objects.RequestSpec(flavor=flavor)
-        utils.resources_from_request_spec(fake_spec)
+        utils.resources_from_request_spec(
+            self.context, fake_spec, self.mock_host_manager)
         mock_proc.assert_called_once()
 
     @mock.patch("nova.scheduler.utils.ResourceRequest.from_extra_specs")
@@ -371,7 +381,8 @@ class TestUtils(test.NoDBTestCase):
                                 ephemeral_gb=5,
                                 swap=0)
         fake_spec = objects.RequestSpec(flavor=flavor)
-        utils.resources_from_request_spec(fake_spec)
+        utils.resources_from_request_spec(
+            self.context, fake_spec, self.mock_host_manager)
         mock_proc.assert_not_called()
 
     def test_process_missing_extra_specs_value(self):
@@ -383,7 +394,8 @@ class TestUtils(test.NoDBTestCase):
                 swap=0,
                 extra_specs={"resources:CUSTOM_TEST_CLASS": ""})
         fake_spec = objects.RequestSpec(flavor=flavor)
-        utils.resources_from_request_spec(fake_spec)
+        utils.resources_from_request_spec(
+                self.context, fake_spec, self.mock_host_manager)
 
     def test_process_no_force_hosts_or_force_nodes(self):
         flavor = objects.Flavor(vcpus=1,
@@ -408,6 +420,11 @@ class TestUtils(test.NoDBTestCase):
         self.assertEqual(expected_querystring, rr.to_querystring())
 
     def test_process_use_force_nodes(self):
+        fake_nodes = objects.ComputeNodeList(objects=[
+            objects.ComputeNode(host='fake-host',
+                                uuid='12345678-1234-1234-1234-123456789012')])
+        self.mock_host_manager.get_compute_nodes_by_host_or_node.\
+            return_value = fake_nodes
         flavor = objects.Flavor(vcpus=1,
                                 memory_mb=1024,
                                 root_gb=15,
@@ -422,16 +439,58 @@ class TestUtils(test.NoDBTestCase):
                 'MEMORY_MB': 1024,
                 'DISK_GB': 15,
             },
+            in_tree='12345678-1234-1234-1234-123456789012',
         )
-        expected._limit = None
-        resources = utils.resources_from_request_spec(fake_spec)
+        resources = utils.resources_from_request_spec(
+                self.context, fake_spec, self.mock_host_manager)
         self.assertResourceRequestsEqual(expected, resources)
         expected_querystring = (
-            'resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1'
-        )
+            'limit=1000&resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1')
         self.assertEqual(expected_querystring, resources.to_querystring())
+        self.mock_host_manager.get_compute_nodes_by_host_or_node.\
+            assert_called_once_with(self.context, None, 'test', cell=None)
 
     def test_process_use_force_hosts(self):
+        fake_nodes = objects.ComputeNodeList(objects=[
+            objects.ComputeNode(host='fake-host',
+                                uuid='12345678-1234-1234-1234-123456789012')
+            ])
+        self.mock_host_manager.get_compute_nodes_by_host_or_node.\
+            return_value = fake_nodes
+        flavor = objects.Flavor(vcpus=1,
+                                memory_mb=1024,
+                                root_gb=15,
+                                ephemeral_gb=0,
+                                swap=0)
+        fake_spec = objects.RequestSpec(flavor=flavor, force_hosts=['test'])
+        expected = utils.ResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+            in_tree='12345678-1234-1234-1234-123456789012',
+        )
+        resources = utils.resources_from_request_spec(
+                self.context, fake_spec, self.mock_host_manager)
+        self.assertResourceRequestsEqual(expected, resources)
+        expected_querystring = (
+            'limit=1000&resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1')
+        self.assertEqual(expected_querystring, resources.to_querystring())
+        self.mock_host_manager.get_compute_nodes_by_host_or_node.\
+            assert_called_once_with(self.context, 'test', None, cell=None)
+
+    def test_process_use_force_hosts_multinodes_found(self):
+        fake_nodes = objects.ComputeNodeList(objects=[
+            objects.ComputeNode(host='fake-host',
+                                uuid='12345678-1234-1234-1234-123456789012'),
+            objects.ComputeNode(host='fake-host',
+                                uuid='87654321-4321-4321-4321-210987654321'),
+            ])
+        self.mock_host_manager.get_compute_nodes_by_host_or_node.\
+            return_value = fake_nodes
         flavor = objects.Flavor(vcpus=1,
                                 memory_mb=1024,
                                 root_gb=15,
@@ -447,13 +506,55 @@ class TestUtils(test.NoDBTestCase):
                 'DISK_GB': 15,
             },
         )
+        # Validate that the limit is unset
         expected._limit = None
-        resources = utils.resources_from_request_spec(fake_spec)
+
+        resources = utils.resources_from_request_spec(
+                self.context, fake_spec, self.mock_host_manager)
+        self.assertResourceRequestsEqual(expected, resources)
+        # Validate that the limit is unset
+        expected_querystring = (
+            'resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1')
+        self.assertEqual(expected_querystring, resources.to_querystring())
+        self.mock_host_manager.get_compute_nodes_by_host_or_node.\
+            assert_called_once_with(self.context, 'test', None, cell=None)
+
+    def test_process_use_requested_destination(self):
+        fake_cell = objects.CellMapping(uuid=uuids.cell1, name='foo')
+        destination = objects.Destination(
+            host='fake-host', node='fake-node', cell=fake_cell)
+        fake_nodes = objects.ComputeNodeList(objects=[
+            objects.ComputeNode(host='fake-host',
+                                uuid='12345678-1234-1234-1234-123456789012')
+            ])
+        self.mock_host_manager.get_compute_nodes_by_host_or_node.\
+            return_value = fake_nodes
+        flavor = objects.Flavor(vcpus=1,
+                                memory_mb=1024,
+                                root_gb=15,
+                                ephemeral_gb=0,
+                                swap=0)
+        fake_spec = objects.RequestSpec(
+            flavor=flavor, requested_destination=destination)
+        expected = utils.ResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+            in_tree='12345678-1234-1234-1234-123456789012',
+        )
+        resources = utils.resources_from_request_spec(
+                self.context, fake_spec, self.mock_host_manager)
         self.assertResourceRequestsEqual(expected, resources)
         expected_querystring = (
-            'resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1'
-        )
+            'limit=1000&resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1')
         self.assertEqual(expected_querystring, resources.to_querystring())
+        self.mock_host_manager.get_compute_nodes_by_host_or_node.\
+            assert_called_once_with(
+                self.context, 'fake-host', 'fake-node', cell=fake_cell)
 
     def test_resources_from_request_spec_having_requested_resources(self):
         flavor = objects.Flavor(
@@ -466,7 +567,8 @@ class TestUtils(test.NoDBTestCase):
         rg2 = objects.RequestGroup()
         reqspec = objects.RequestSpec(flavor=flavor,
                                       requested_resources=[rg1, rg2])
-        req = utils.resources_from_request_spec(reqspec)
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
         self.assertEqual({'MEMORY_MB': 1024, 'DISK_GB': 15, 'VCPU': 1},
                          req.get_request_group(None).resources)
         self.assertIs(rg1, req.get_request_group(1))
@@ -480,13 +582,15 @@ class TestUtils(test.NoDBTestCase):
                 ephemeral_gb=5,
                 swap=0)
         reqspec = objects.RequestSpec(flavor=flavor)
-        req = utils.resources_from_request_spec(reqspec)
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
         self.assertEqual({'MEMORY_MB': 1024, 'DISK_GB': 15, 'VCPU': 1},
                          req.get_request_group(None).resources)
         self.assertEqual(1, len(list(req.resource_groups())))
 
         reqspec = objects.RequestSpec(flavor=flavor, requested_resources=[])
-        req = utils.resources_from_request_spec(reqspec)
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
         self.assertEqual({'MEMORY_MB': 1024, 'DISK_GB': 15, 'VCPU': 1},
                          req.get_request_group(None).resources)
         self.assertEqual(1, len(list(req.resource_groups())))
