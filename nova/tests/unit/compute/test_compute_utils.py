@@ -27,7 +27,6 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import six
 
-from nova.compute import flavors
 from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
@@ -60,7 +59,7 @@ CONF = nova.conf.CONF
 
 def create_instance(context, user_id='fake', project_id='fake', params=None):
     """Create a test instance."""
-    flavor = flavors.get_flavor_by_name('m1.tiny')
+    flavor = objects.Flavor.get_by_name(context, 'm1.tiny')
     net_info = model.NetworkInfo([])
     info_cache = objects.InstanceInfoCache(network_info=net_info)
     inst = objects.Instance(context=context,
@@ -410,6 +409,7 @@ class UsageInfoTestCase(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
+        self.flavor = objects.Flavor.get_by_name(self.context, 'm1.tiny')
 
         def fake_show(meh, context, id, **kwargs):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
@@ -440,9 +440,9 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['user_id'], self.user_id)
         self.assertEqual(payload['instance_id'], instance['uuid'])
         self.assertEqual(payload['instance_type'], 'm1.tiny')
-        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
+        type_id = self.flavor.id
         self.assertEqual(str(payload['instance_type_id']), str(type_id))
-        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        flavor_id = self.flavor.flavorid
         self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
@@ -473,7 +473,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['uuid'], instance['uuid'])
         flavor = payload['flavor']['nova_object.data']
         self.assertEqual(flavor['name'], 'm1.tiny')
-        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        flavorid = self.flavor.flavorid
         self.assertEqual(str(flavor['flavorid']), str(flavorid))
 
         for attr in ('display_name', 'created_at', 'launched_at',
@@ -504,9 +504,9 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['user_id'], self.user_id)
         self.assertEqual(payload['instance_id'], instance['uuid'])
         self.assertEqual(payload['instance_type'], 'm1.tiny')
-        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
+        type_id = self.flavor.id
         self.assertEqual(str(payload['instance_type_id']), str(type_id))
-        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        flavor_id = self.flavor.flavorid
         self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
@@ -552,9 +552,9 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['user_id'], self.user_id)
         self.assertEqual(payload['uuid'], instance['uuid'])
 
-        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        flavor = payload['flavor']['nova_object.data']
-        self.assertEqual(str(flavor['flavorid']), flavorid)
+        self.assertEqual(
+            self.flavor.flavorid,
+            str(payload['flavor']['nova_object.data']['flavorid']))
 
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'task_state', 'display_description', 'locked',
@@ -598,7 +598,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual('fake', payload['user_id'])
         self.assertEqual(instance['uuid'], payload['uuid'])
 
-        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        flavorid = self.flavor.flavorid
         flavor = payload['flavor']['nova_object.data']
         self.assertEqual(flavorid, str(flavor['flavorid']))
 
@@ -641,9 +641,9 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual('fake', payload['user_id'])
         self.assertEqual(instance['uuid'], payload['uuid'])
 
-        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        flavor = payload['flavor']['nova_object.data']
-        self.assertEqual(flavorid, str(flavor['flavorid']))
+        self.assertEqual(
+            self.flavor.flavorid,
+            str(payload['flavor']['nova_object.data']['flavorid']))
 
         self.assertEqual(0, len(payload['keypairs']))
         for attr in ('display_name', 'created_at', 'launched_at',
@@ -680,9 +680,9 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual('fake', payload['user_id'])
         self.assertEqual(instance.uuid, payload['uuid'])
 
-        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        flavor = payload['flavor']['nova_object.data']
-        self.assertEqual(flavorid, str(flavor['flavorid']))
+        self.assertEqual(
+            self.flavor.flavorid,
+            str(payload['flavor']['nova_object.data']['flavorid']))
 
         self.assertEqual(0, len(payload['keypairs']))
         for attr in ('display_name', 'created_at', 'launched_at',
@@ -718,9 +718,9 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(self.user_id, payload['user_id'])
         self.assertEqual(instance['uuid'], payload['uuid'])
 
-        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        flavor = payload['flavor']['nova_object.data']
-        self.assertEqual(flavorid, str(flavor['flavorid']))
+        self.assertEqual(
+            self.flavor.flavorid,
+            str(payload['flavor']['nova_object.data']['flavorid']))
 
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'task_state'):
@@ -760,9 +760,9 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(self.user_id, payload['user_id'])
         self.assertEqual(instance['uuid'], payload['uuid'])
 
-        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        flavor = payload['flavor']['nova_object.data']
-        self.assertEqual(flavorid, str(flavor['flavorid']))
+        self.assertEqual(
+            self.flavor.flavorid,
+            str(payload['flavor']['nova_object.data']['flavorid']))
 
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'task_state'):
@@ -808,9 +808,9 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['user_id'], self.user_id)
         self.assertEqual(payload['uuid'], instance['uuid'])
 
-        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        flavor = payload['flavor']['nova_object.data']
-        self.assertEqual(str(flavor['flavorid']), flavorid)
+        self.assertEqual(
+            self.flavor.flavorid,
+            str(payload['flavor']['nova_object.data']['flavorid']))
 
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'task_state', 'display_description', 'locked',
@@ -823,7 +823,7 @@ class UsageInfoTestCase(test.TestCase):
     def test_notify_about_resize_prep_instance(self):
         instance = create_instance(self.context)
 
-        new_flavor = flavors.get_flavor_by_name('m1.small')
+        new_flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
 
         compute_utils.notify_about_resize_prep_instance(
             self.context, instance, 'fake-compute', 'start', new_flavor)
@@ -842,9 +842,9 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['user_id'], self.user_id)
         self.assertEqual(payload['uuid'], instance['uuid'])
 
-        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        flavor = payload['flavor']['nova_object.data']
-        self.assertEqual(str(flavor['flavorid']), flavorid)
+        self.assertEqual(
+            self.flavor.flavorid,
+            str(payload['flavor']['nova_object.data']['flavorid']))
 
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'task_state', 'display_description', 'locked',
@@ -869,10 +869,10 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['user_id'], self.user_id)
         self.assertEqual(payload['instance_id'], instance['uuid'])
         self.assertEqual(payload['instance_type'], 'm1.tiny')
-        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEqual(str(payload['instance_type_id']), str(type_id))
-        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(self.flavor.id),
+                         str(payload['instance_type_id']))
+        self.assertEqual(str(self.flavor.flavorid),
+                         str(payload['instance_flavor_id']))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
                      'bandwidth', 'audit_period_beginning',
@@ -943,10 +943,9 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['user_id'], self.user_id)
         self.assertEqual(payload['instance_id'], instance['uuid'])
         self.assertEqual(payload['instance_type'], 'm1.tiny')
-        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEqual(str(payload['instance_type_id']), str(type_id))
-        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(self.flavor.id), str(payload['instance_type_id']))
+        self.assertEqual(str(self.flavor.flavorid),
+                         str(payload['instance_flavor_id']))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description', 'image_meta'):
             self.assertIn(attr, payload, "Key %s not in payload" % attr)
@@ -1299,8 +1298,8 @@ class ComputeUtilsQuotaTestCase(test.TestCase):
         self.context = context.RequestContext('fake', 'fake')
 
     def test_upsize_quota_delta(self):
-        old_flavor = flavors.get_flavor_by_name('m1.tiny')
-        new_flavor = flavors.get_flavor_by_name('m1.medium')
+        old_flavor = objects.Flavor.get_by_name(self.context, 'm1.tiny')
+        new_flavor = objects.Flavor.get_by_name(self.context, 'm1.medium')
 
         expected_deltas = {
             'cores': new_flavor['vcpus'] - old_flavor['vcpus'],

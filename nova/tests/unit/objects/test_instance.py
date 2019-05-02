@@ -23,7 +23,6 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova.cells import rpcapi as cells_rpcapi
-from nova.compute import flavors
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.db import api as db
@@ -1384,13 +1383,13 @@ class _TestInstanceObject(object):
         self.assertIsNotNone(instance.pci_requests)
 
     def test_get_flavor(self):
-        db_flavor = flavors.get_default_flavor()
+        db_flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
         inst = objects.Instance(flavor=db_flavor)
         self.assertEqual(db_flavor['flavorid'],
                          inst.get_flavor().flavorid)
 
     def test_get_flavor_namespace(self):
-        db_flavor = flavors.get_default_flavor()
+        db_flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
         inst = objects.Instance(old_flavor=db_flavor)
         self.assertEqual(db_flavor['flavorid'],
                          inst.get_flavor('old').flavorid)

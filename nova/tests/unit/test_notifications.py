@@ -24,7 +24,6 @@ from oslo_context import fixture as o_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
-from nova.compute import flavors
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
@@ -77,7 +76,7 @@ class NotificationsTestCase(test.TestCase):
         self.decorated_function_called = False
 
     def _wrapped_create(self, params=None):
-        instance_type = flavors.get_flavor_by_name('m1.tiny')
+        instance_type = objects.Flavor.get_by_name(self.context, 'm1.tiny')
         inst = objects.Instance(image_ref=uuids.image_ref,
                                 user_id=self.user_id,
                                 project_id=self.project_id,

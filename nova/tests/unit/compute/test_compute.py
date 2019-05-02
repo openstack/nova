@@ -288,7 +288,7 @@ class BaseTestCase(test.TestCase):
     def _create_fake_instance_obj(self, params=None, type_name='m1.tiny',
                                   services=False, ctxt=None):
         ctxt = ctxt or self.context
-        flavor = flavors.get_flavor_by_name(type_name)
+        flavor = objects.Flavor.get_by_name(ctxt, type_name)
         inst = objects.Instance(context=ctxt)
         inst.vm_state = vm_states.ACTIVE
         inst.task_state = None
@@ -1514,6 +1514,9 @@ class ComputeTestCase(BaseTestCase,
         self.useFixture(fixtures.SynchronousThreadPoolExecutorFixture())
 
         self.image_api = image_api.API()
+        self.default_flavor = objects.Flavor.get_by_name(self.context,
+                                                         'm1.small')
+        self.tiny_flavor = objects.Flavor.get_by_name(self.context, 'm1.tiny')
 
     def test_wrap_instance_fault(self):
         inst = {"uuid": uuids.instance}
@@ -1703,8 +1706,6 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(768, cn.local_gb_used)
 
     def test_create_multiple_instance_with_neutron_port(self):
-        instance_type = flavors.get_default_flavor()
-
         def fake_is_neutron():
             return True
         self.stub_out('nova.utils.is_neutron', fake_is_neutron)
@@ -1713,7 +1714,7 @@ class ComputeTestCase(BaseTestCase,
         self.assertRaises(exception.MultiplePortsNotApplicable,
                           self.compute_api.create,
                           self.context,
-                          instance_type=instance_type,
+                          instance_type=self.default_flavor,
                           image_href=None,
                           max_count=2,
                           requested_networks=requested_networks)
@@ -2442,8 +2443,8 @@ class ComputeTestCase(BaseTestCase,
             self.assertEqual(payload['user_id'], self.user_id)
             self.assertEqual(payload['instance_id'], instance.uuid)
             self.assertEqual(payload['instance_type'], 'm1.tiny')
-            type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-            self.assertEqual(str(payload['instance_type_id']), str(type_id))
+            self.assertEqual(str(self.tiny_flavor.id),
+                             str(payload['instance_type_id']))
             self.assertIn('display_name', payload)
             self.assertIn('created_at', payload)
             self.assertIn('launched_at', payload)
@@ -2493,8 +2494,8 @@ class ComputeTestCase(BaseTestCase,
             self.assertEqual(payload['user_id'], self.user_id)
             self.assertEqual(payload['instance_id'], instance.uuid)
             self.assertEqual(payload['instance_type'], 'm1.tiny')
-            type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-            self.assertEqual(str(payload['instance_type_id']), str(type_id))
+            self.assertEqual(str(self.tiny_flavor.id),
+                             str(payload['instance_type_id']))
             self.assertIn('display_name', payload)
             self.assertIn('created_at', payload)
             self.assertIn('launched_at', payload)
@@ -3079,13 +3080,13 @@ class ComputeTestCase(BaseTestCase,
                    power_state=10003,
                    vm_state=vm_states.ACTIVE,
                    task_state=expected_task,
-                   instance_type=flavors.get_default_flavor(),
+                   instance_type=self.default_flavor,
                    launched_at=timeutils.utcnow()))
         updated_dbinstance2 = fake_instance.fake_db_instance(
             **dict(uuid=uuids.db_instance_2,
                    power_state=10003,
                    vm_state=vm_states.ACTIVE,
-                   instance_type=flavors.get_default_flavor(),
+                   instance_type=self.default_flavor,
                    task_state=expected_task,
                    launched_at=timeutils.utcnow()))
 
@@ -4390,10 +4391,10 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(payload['user_id'], self.user_id)
         self.assertEqual(payload['instance_id'], instance['uuid'])
         self.assertEqual(payload['instance_type'], 'm1.tiny')
-        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEqual(str(payload['instance_type_id']), str(type_id))
-        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(self.tiny_flavor.id),
+                         str(payload['instance_type_id']))
+        self.assertEqual(str(self.tiny_flavor.flavorid),
+                         str(payload['instance_flavor_id']))
         self.assertEqual(payload['state'], 'active')
         self.assertIn('display_name', payload)
         self.assertIn('created_at', payload)
@@ -4524,10 +4525,10 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(payload['user_id'], self.user_id)
         self.assertEqual(payload['instance_id'], instance['uuid'])
         self.assertEqual(payload['instance_type'], 'm1.tiny')
-        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEqual(str(payload['instance_type_id']), str(type_id))
-        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(self.tiny_flavor.id),
+                         str(payload['instance_type_id']))
+        self.assertEqual(str(self.tiny_flavor.flavorid),
+                         str(payload['instance_flavor_id']))
         self.assertIn('display_name', payload)
         self.assertIn('created_at', payload)
         self.assertIn('launched_at', payload)
@@ -4837,10 +4838,10 @@ class ComputeTestCase(BaseTestCase,
         instance = self._create_fake_instance_obj(params)
         image = {}
         disk_info = 'fake-disk-info'
-        instance_type = flavors.get_default_flavor()
+        instance_type = self.default_flavor
 
         if not resize_instance:
-            old_instance_type = flavors.get_flavor_by_name('m1.tiny')
+            old_instance_type = self.tiny_flavor
             instance_type['root_gb'] = old_instance_type['root_gb']
             instance_type['swap'] = old_instance_type['swap']
             instance_type['ephemeral_gb'] = old_instance_type['ephemeral_gb']
@@ -5082,7 +5083,7 @@ class ComputeTestCase(BaseTestCase,
                              jsonutils.dumps(connection_info))
 
         # begin resize
-        instance_type = flavors.get_default_flavor()
+        instance_type = self.default_flavor
         instance.task_state = task_states.RESIZE_PREP
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
@@ -5173,7 +5174,7 @@ class ComputeTestCase(BaseTestCase,
         old_flavor_name = 'm1.tiny'
         instance = self._create_fake_instance_obj(type_name=old_flavor_name)
 
-        instance_type = flavors.get_flavor_by_name('m1.small')
+        instance_type = objects.Flavor.get_by_name(self.context, 'm1.small')
 
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type,
@@ -5196,7 +5197,7 @@ class ComputeTestCase(BaseTestCase,
         instance.refresh()
         self.assertEqual(vm_states.ERROR, instance.vm_state)
 
-        old_flavor = flavors.get_flavor_by_name(old_flavor_name)
+        old_flavor = objects.Flavor.get_by_name(self.context, old_flavor_name)
         self.assertEqual(old_flavor['memory_mb'], instance.memory_mb)
         self.assertEqual(old_flavor['vcpus'], instance.vcpus)
         self.assertEqual(old_flavor['root_gb'], instance.root_gb)
@@ -5208,7 +5209,7 @@ class ComputeTestCase(BaseTestCase,
         old_flavor_name = 'm1.tiny'
         new_flavor_name = 'm1.small'
         instance = self._create_fake_instance_obj(type_name=old_flavor_name)
-        new_flavor = flavors.get_flavor_by_name(new_flavor_name)
+        new_flavor = objects.Flavor.get_by_name(self.context, new_flavor_name)
 
         self.compute._set_instance_info(instance, new_flavor.obj_clone())
 
@@ -5280,10 +5281,10 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(payload['user_id'], self.user_id)
         self.assertEqual(payload['instance_id'], inst_ref['uuid'])
         self.assertEqual(payload['instance_type'], 'm1.tiny')
-        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEqual(str(payload['instance_type_id']), str(type_id))
-        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(self.tiny_flavor.id),
+                         str(payload['instance_type_id']))
+        self.assertEqual(str(self.tiny_flavor.flavorid),
+                         str(payload['instance_flavor_id']))
         self.assertIn('display_name', payload)
         self.assertIn('created_at', payload)
         self.assertIn('launched_at', payload)
@@ -5297,7 +5298,7 @@ class ComputeTestCase(BaseTestCase,
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
         time_fixture = self.useFixture(utils_fixture.TimeFixture(old_time))
         instance = self._create_fake_instance_obj()
-        new_type = flavors.get_flavor_by_name('m1.small')
+        new_type = objects.Flavor.get_by_name(self.context, 'm1.small')
         new_type_id = new_type['id']
         flavor_id = new_type['flavorid']
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
@@ -5368,9 +5369,8 @@ class ComputeTestCase(BaseTestCase,
         instance.task_state = task_states.RESIZE_PREP
         instance.save()
 
-        instance_type = flavors.get_default_flavor()
         self.compute.prep_resize(self.context, instance=instance,
-                instance_type=instance_type, image={},
+                instance_type=self.default_flavor, image={},
                 request_spec={}, filter_properties={}, node=None,
                 clean_shutdown=True, migration=None, host_list=[])
         db.migration_get_by_instance_and_status(self.context.elevated(),
@@ -5393,10 +5393,10 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(payload['user_id'], self.user_id)
         self.assertEqual(payload['instance_id'], instance.uuid)
         self.assertEqual(payload['instance_type'], 'm1.tiny')
-        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEqual(str(payload['instance_type_id']), str(type_id))
-        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(self.tiny_flavor.id),
+                         str(payload['instance_type_id']))
+        self.assertEqual(str(self.tiny_flavor.flavorid),
+                         str(payload['instance_flavor_id']))
         self.assertIn('display_name', payload)
         self.assertIn('created_at', payload)
         self.assertIn('launched_at', payload)
@@ -5406,9 +5406,9 @@ class ComputeTestCase(BaseTestCase,
         self.compute.terminate_instance(self.context, instance, [])
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, 'fake-mini', 'start',
-                      instance_type),
+                      self.default_flavor),
             mock.call(self.context, instance, 'fake-mini', 'end',
-                      instance_type)])
+                      self.default_flavor)])
 
     def test_prep_resize_instance_migration_error_on_none_host(self):
         """Ensure prep_resize raises a migration error if destination host is
@@ -5420,11 +5420,10 @@ class ComputeTestCase(BaseTestCase,
                                             block_device_mapping=[])
         instance.host = None
         instance.save()
-        instance_type = flavors.get_default_flavor()
 
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
                           self.context, instance=instance,
-                          instance_type=instance_type, image={},
+                          instance_type=self.default_flavor, image={},
                           request_spec={},
                           filter_properties={}, node=None,
                           clean_shutdown=True, migration=mock.Mock(),
@@ -5441,14 +5440,13 @@ class ComputeTestCase(BaseTestCase,
                        throw_up)
 
         instance = self._create_fake_instance_obj()
-        instance_type = flavors.get_default_flavor()
 
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
         instance.host = 'foo'
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
-                                 instance_type=instance_type, image={},
+                                 instance_type=self.default_flavor, image={},
                                  request_spec={},
                                  filter_properties={}, node=None,
                                  clean_shutdown=True, migration=None,
@@ -5463,7 +5461,8 @@ class ComputeTestCase(BaseTestCase,
         self.assertRaises(test.TestingException, self.compute.resize_instance,
                           self.context, instance=instance,
                           migration=migration, image={},
-                          instance_type=jsonutils.to_primitive(instance_type),
+                          instance_type=jsonutils.to_primitive(
+                              self.default_flavor),
                           clean_shutdown=True)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
@@ -5481,13 +5480,12 @@ class ComputeTestCase(BaseTestCase,
                        throw_up)
 
         instance = self._create_fake_instance_obj()
-        instance_type = flavors.get_default_flavor()
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
         instance.host = 'foo'
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
-                                 instance_type=instance_type, image={},
+                                 instance_type=self.default_flavor, image={},
                                  request_spec={},
                                  filter_properties={}, node=None,
                                  migration=None, host_list=[],
@@ -5502,7 +5500,8 @@ class ComputeTestCase(BaseTestCase,
         self.assertRaises(test.TestingException, self.compute.resize_instance,
                           self.context, instance=instance,
                           migration=migration, image={},
-                          instance_type=jsonutils.to_primitive(instance_type),
+                          instance_type=jsonutils.to_primitive(
+                              self.default_flavor),
                           clean_shutdown=True)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
@@ -5514,14 +5513,13 @@ class ComputeTestCase(BaseTestCase,
     def _test_resize_instance(self, clean_shutdown=True):
         # Ensure instance can be migrated/resized.
         instance = self._create_fake_instance_obj()
-        instance_type = flavors.get_default_flavor()
 
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
         instance.host = 'foo'
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
-                instance_type=instance_type, image={},
+                instance_type=self.default_flavor, image={},
                 request_spec={}, filter_properties={}, node=None,
                 clean_shutdown=True, migration=None, host_list=[])
 
@@ -5558,7 +5556,7 @@ class ComputeTestCase(BaseTestCase,
                 mock_check_is_bfv):
             self.compute.resize_instance(self.context, instance=instance,
                     migration=migration, image={},
-                    instance_type=jsonutils.to_primitive(instance_type),
+                    instance_type=jsonutils.to_primitive(self.default_flavor),
                     clean_shutdown=clean_shutdown)
             mock_notify_action.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini',
@@ -6141,14 +6139,12 @@ class ComputeTestCase(BaseTestCase,
 
         instance = self._create_fake_instance_obj()
 
-        instance_type = flavors.get_default_flavor()
-
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
         instance.host = 'foo'
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
-                                 instance_type=instance_type,
+                                 instance_type=self.default_flavor,
                                  image={},
                                  request_spec={}, filter_properties={},
                                  node=None, clean_shutdown=True,
@@ -6161,7 +6157,8 @@ class ComputeTestCase(BaseTestCase,
         self.assertRaises(test.TestingException, self.compute.resize_instance,
                           self.context, instance=instance,
                           migration=migration, image={},
-                          instance_type=jsonutils.to_primitive(instance_type),
+                          instance_type=jsonutils.to_primitive(
+                              self.default_flavor),
                           clean_shutdown=True)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
@@ -8632,6 +8629,10 @@ class ComputeAPITestCase(BaseTestCase):
             fake_validate_networks)
         validate_nets_patch.start()
         self.addCleanup(validate_nets_patch.stop)
+        self.default_flavor = objects.Flavor.get_by_name(self.context,
+                                                         'm1.small')
+        self.tiny_flavor = objects.Flavor.get_by_name(self.context,
+                                                      'm1.tiny')
 
     def _run_instance(self, params=None):
         instance = self._create_fake_instance_obj(params, services=True)
@@ -8646,7 +8647,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_too_little_ram(self):
         # Test an instance type with too little memory.
 
-        inst_type = flavors.get_default_flavor()
+        inst_type = self.default_flavor
         inst_type['memory_mb'] = 1
 
         self.fake_image['min_ram'] = 2
@@ -8665,7 +8666,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_too_little_disk(self):
         # Test an instance type with too little disk space.
 
-        inst_type = flavors.get_default_flavor()
+        inst_type = self.default_flavor
         inst_type['root_gb'] = 1
 
         self.fake_image['min_disk'] = 2
@@ -8684,7 +8685,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_too_large_image(self):
         # Test an instance type with too little disk space.
 
-        inst_type = flavors.get_default_flavor()
+        inst_type = self.default_flavor
         inst_type['root_gb'] = 1
 
         self.fake_image['size'] = '1073741825'
@@ -8704,7 +8705,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_just_enough_ram_and_disk(self):
         # Test an instance type with just enough ram and disk space.
 
-        inst_type = flavors.get_default_flavor()
+        inst_type = self.default_flavor
         inst_type['root_gb'] = 2
         inst_type['memory_mb'] = 2
 
@@ -8720,7 +8721,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_no_ram_and_disk_reqs(self):
         # Test an instance type with no min_ram or min_disk.
 
-        inst_type = flavors.get_default_flavor()
+        inst_type = self.default_flavor
         inst_type['root_gb'] = 1
         inst_type['memory_mb'] = 1
 
@@ -8733,8 +8734,6 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_deleted_image(self):
         # If we're given a deleted image by glance, we should not be able to
         # build from it
-        inst_type = flavors.get_default_flavor()
-
         self.fake_image['name'] = 'fake_name'
         self.fake_image['status'] = 'DELETED'
         self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
@@ -8745,13 +8744,11 @@ class ComputeAPITestCase(BaseTestCase):
             self.fake_image['id']})
         with testtools.ExpectedException(exception.ImageNotActive,
                                          expected_message):
-            self.compute_api.create(self.context, inst_type,
+            self.compute_api.create(self.context, self.default_flavor,
                                     self.fake_image['id'])
 
     @mock.patch('nova.virt.hardware.numa_get_constraints')
     def test_create_with_numa_topology(self, numa_constraints_mock):
-        inst_type = flavors.get_default_flavor()
-
         numa_topology = objects.InstanceNUMATopology(
             cells=[objects.InstanceNUMACell(
                 id=0, cpuset=set([1, 2]), memory=512),
@@ -8760,11 +8757,12 @@ class ComputeAPITestCase(BaseTestCase):
         numa_topology.obj_reset_changes()
         numa_constraints_mock.return_value = numa_topology
 
-        instances, resv_id = self.compute_api.create(self.context, inst_type,
+        instances, resv_id = self.compute_api.create(self.context,
+                                                     self.default_flavor,
                                                      self.fake_image['id'])
 
         numa_constraints_mock.assert_called_once_with(
-            inst_type, test.MatchType(objects.ImageMeta))
+            self.default_flavor, test.MatchType(objects.ImageMeta))
         self.assertEqual(
             numa_topology.cells[0].obj_to_primitive(),
             instances[0].numa_topology.cells[0].obj_to_primitive())
@@ -8777,7 +8775,7 @@ class ComputeAPITestCase(BaseTestCase):
         cases = [dict(), dict(display_name=None)]
         for instance in cases:
             (ref, resv_id) = self.compute_api.create(self.context,
-                flavors.get_default_flavor(),
+                self.default_flavor,
                 'f5000000-0000-0000-0000-000000000000', **instance)
             self.assertIsNotNone(ref[0]['display_name'])
 
@@ -8787,7 +8785,7 @@ class ComputeAPITestCase(BaseTestCase):
                                'schedule_and_build_instances') as mock_sbi:
             (ref, resv_id) = self.compute_api.create(
                 self.context,
-                instance_type=flavors.get_default_flavor(),
+                instance_type=self.default_flavor,
                 image_href='f5000000-0000-0000-0000-000000000000')
 
             build_call = mock_sbi.call_args_list[0]
@@ -8803,16 +8801,16 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_saves_flavor(self):
         with mock.patch.object(self.compute_api.compute_task_api,
                                'schedule_and_build_instances') as mock_sbi:
-            instance_type = flavors.get_default_flavor()
             (ref, resv_id) = self.compute_api.create(
                 self.context,
-                instance_type=instance_type,
+                instance_type=self.default_flavor,
                 image_href=uuids.image_href_id)
 
             build_call = mock_sbi.call_args_list[0]
             instance = build_call[1]['build_requests'][0].instance
         self.assertIn('flavor', instance)
-        self.assertEqual(instance_type.flavorid, instance.flavor.flavorid)
+        self.assertEqual(self.default_flavor.flavorid,
+                         instance.flavor.flavorid)
         self.assertNotIn('instance_type_id', instance.system_metadata)
 
     def test_create_instance_associates_security_groups(self):
@@ -8822,7 +8820,7 @@ class ComputeAPITestCase(BaseTestCase):
                                'schedule_and_build_instances') as mock_sbi:
             (ref, resv_id) = self.compute_api.create(
                 self.context,
-                instance_type=flavors.get_default_flavor(),
+                instance_type=self.default_flavor,
                 image_href=uuids.image_href_id,
                 security_groups=['testgroup'])
 
@@ -8833,13 +8831,11 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(group.name, reqspec.security_groups[0].name)
 
     def test_create_instance_with_invalid_security_group_raises(self):
-        instance_type = flavors.get_default_flavor()
-
         pre_build_len = len(db.instance_get_all(self.context))
         self.assertRaises(exception.SecurityGroupNotFoundForProject,
                           self.compute_api.create,
                           self.context,
-                          instance_type=instance_type,
+                          instance_type=self.default_flavor,
                           image_href=None,
                           security_groups=['this_is_a_fake_sec_group'])
         self.assertEqual(pre_build_len,
@@ -8848,21 +8844,16 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_malformed_user_data(self):
         # Test an instance type with malformed user data.
 
-        inst_type = flavors.get_default_flavor()
-
         self.fake_image['min_ram'] = 2
         self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
                       self.fake_show)
 
         self.assertRaises(exception.InstanceUserDataMalformed,
-            self.compute_api.create, self.context, inst_type,
+            self.compute_api.create, self.context, self.default_flavor,
             self.fake_image['id'], user_data=b'banana')
 
     def test_create_with_base64_user_data(self):
         # Test an instance type with ok much user data.
-
-        inst_type = flavors.get_default_flavor()
-
         self.fake_image['min_ram'] = 2
         self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
                       self.fake_show)
@@ -8870,7 +8861,7 @@ class ComputeAPITestCase(BaseTestCase):
         # NOTE(mikal): a string of length 48510 encodes to 65532 characters of
         # base64
         (refs, resv_id) = self.compute_api.create(
-            self.context, inst_type, self.fake_image['id'],
+            self.context, self.default_flavor, self.fake_image['id'],
             user_data=base64.encode_as_text(b'1' * 48510))
 
     def test_populate_instance_for_create(self, num_instances=1):
@@ -8880,14 +8871,13 @@ class ComputeAPITestCase(BaseTestCase):
                         'uuid': uuids.instance}
         instance = objects.Instance()
         instance.update(base_options)
-        inst_type = flavors.get_flavor_by_name("m1.tiny")
         instance = self.compute_api._populate_instance_for_create(
                                 self.context,
                                 instance,
                                 self.fake_image,
                                 1,
                                 security_groups=objects.SecurityGroupList(),
-                                instance_type=inst_type,
+                                instance_type=self.tiny_flavor,
                                 num_instances=num_instances,
                                 shutdown_terminate=False)
         self.assertEqual(str(base_options['image_ref']),
@@ -8914,7 +8904,6 @@ class ComputeAPITestCase(BaseTestCase):
                         'uuid': uuids.instance}
         instance = objects.Instance()
         instance.update(base_options)
-        inst_type = flavors.get_flavor_by_name("m1.tiny")
         self.compute_api.key_manager = key_manager.API()
         index = 1
         instance = self.compute_api._populate_instance_for_create(
@@ -8923,7 +8912,7 @@ class ComputeAPITestCase(BaseTestCase):
                                 self.fake_image,
                                 index,
                                 security_groups=objects.SecurityGroupList(),
-                                instance_type=inst_type,
+                                instance_type=self.tiny_flavor,
                                 num_instances=num_instances,
                                 shutdown_terminate=False)
         self.assertIsNotNone(instance.ephemeral_key_uuid)
@@ -8946,7 +8935,7 @@ class ComputeAPITestCase(BaseTestCase):
                  ('hello_server', 'hello-server')]
         for display_name, hostname in cases:
             (ref, resv_id) = self.compute_api.create(self.context,
-                flavors.get_default_flavor(),
+                self.default_flavor,
                 image_href=uuids.image_href_id,
                 display_name=display_name)
 
@@ -8964,9 +8953,8 @@ class ComputeAPITestCase(BaseTestCase):
         group.create()
         get_group_mock.return_value = group
 
-        inst_type = flavors.get_default_flavor()
         (refs, resv_id) = self.compute_api.create(
-            self.context, inst_type, self.fake_image['id'],
+            self.context, self.default_flavor, self.fake_image['id'],
             scheduler_hints={'group': group.uuid})
         self.assertEqual(len(refs), len(group.members))
 
@@ -8993,9 +8981,8 @@ class ComputeAPITestCase(BaseTestCase):
         group.create()
         get_group_mock.return_value = group
 
-        inst_type = flavors.get_default_flavor()
         self.assertRaises(exception.QuotaError, self.compute_api.create,
-            self.context, inst_type, self.fake_image['id'],
+            self.context, self.default_flavor, self.fake_image['id'],
             scheduler_hints={'group': group.uuid},
             check_server_group_quota=True)
 
@@ -9029,9 +9016,8 @@ class ComputeAPITestCase(BaseTestCase):
         group.create()
         get_group_mock.return_value = group
 
-        inst_type = flavors.get_default_flavor()
         (refs, resv_id) = self.compute_api.create(
-            self.context, inst_type, self.fake_image['id'],
+            self.context, self.default_flavor, self.fake_image['id'],
             scheduler_hints={'group': group.uuid},
             check_server_group_quota=True)
         self.assertEqual(len(refs), len(group.members))
@@ -9040,8 +9026,8 @@ class ComputeAPITestCase(BaseTestCase):
         # members.
         self.assertEqual(2, check_deltas_mock.call_count)
         call1 = mock.call(self.context, {'instances': 1,
-                                         'cores': inst_type.vcpus,
-                                         'ram': inst_type.memory_mb},
+                                         'cores': self.default_flavor.vcpus,
+                                         'ram': self.default_flavor.memory_mb},
                           self.context.project_id,
                           user_id=None,
                           check_project_id=self.context.project_id,
@@ -9057,12 +9043,11 @@ class ComputeAPITestCase(BaseTestCase):
         self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
                       self.fake_show)
 
-        inst_type = flavors.get_default_flavor()
         self.assertRaises(
                 exception.InstanceGroupNotFound,
                 self.compute_api.create,
                 self.context,
-                inst_type,
+                self.default_flavor,
                 self.fake_image['id'],
                 scheduler_hints={'group':
                                      '5b674f73-c8cf-40ef-9965-3b6fe4b304b1'})
@@ -9314,9 +9299,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_hostname_create(self):
         # Ensure instance hostname is set during creation.
-        inst_type = flavors.get_flavor_by_name('m1.tiny')
         (instances, _) = self.compute_api.create(self.context,
-                           inst_type,
+                           self.tiny_flavor,
                            image_href=uuids.image_href_id,
                            display_name='test host')
 
@@ -9949,7 +9933,7 @@ class ComputeAPITestCase(BaseTestCase):
         matches return value from create.
         """
         (refs, resv_id) = self.compute_api.create(self.context,
-                flavors.get_default_flavor(),
+                self.default_flavor,
                 image_href=uuids.image_href_id)
         self.assertEqual(len(refs), 1)
         self.assertEqual(refs[0]['reservation_id'], resv_id)
@@ -9960,7 +9944,7 @@ class ComputeAPITestCase(BaseTestCase):
         in both instances.
         """
         (refs, resv_id) = self.compute_api.create(self.context,
-                flavors.get_default_flavor(),
+                self.default_flavor,
                 image_href=uuids.image_href_id,
                 min_count=2, max_count=2)
         self.assertEqual(len(refs), 2)
@@ -9976,7 +9960,7 @@ class ComputeAPITestCase(BaseTestCase):
         # cells v1
         num_instances = 1
         refs, _ = self.compute_api.create(self.context,
-                flavors.get_default_flavor(),
+                self.default_flavor,
                 image_href=uuids.image_href_id,
                 min_count=num_instances, max_count=num_instances,
                 display_name='x')
@@ -9992,7 +9976,7 @@ class ComputeAPITestCase(BaseTestCase):
         # cells v1
         num_instances = 2
         refs, _ = self.compute_api.create(self.context,
-                flavors.get_default_flavor(),
+                self.default_flavor,
                 image_href=uuids.image_href_id,
                 min_count=num_instances, max_count=num_instances,
                 display_name='x')
@@ -11581,8 +11565,7 @@ class ComputeAPITestCase(BaseTestCase):
         inst['project_id'] = self.project_id
         inst['host'] = 'fake_host'
         inst['node'] = NODENAME
-        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        inst['instance_type_id'] = type_id
+        inst['instance_type_id'] = self.tiny_flavor.id
         inst['ami_launch_index'] = 0
         inst['memory_mb'] = 0
         inst['vcpus'] = 0
@@ -12692,7 +12675,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
     def setUp(self):
         super(DisabledInstanceTypesTestCase, self).setUp()
         self.compute_api = compute.API()
-        self.inst_type = flavors.get_default_flavor()
+        self.inst_type = objects.Flavor.get_by_name(self.context, 'm1.small')
 
     def test_can_build_instance_from_visible_instance_type(self):
         self.inst_type['disabled'] = False
@@ -12815,8 +12798,8 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         super(ComputeRescheduleResizeOrReraiseTestCase, self).setUp()
         self.instance = self._create_fake_instance_obj()
         self.instance_uuid = self.instance['uuid']
-        self.instance_type = flavors.get_flavor_by_name(
-                "m1.tiny")
+        self.instance_type = objects.Flavor.get_by_name(
+            context.get_admin_context(), 'm1.tiny')
 
     @mock.patch('nova.compute.manager.ComputeManager._prep_resize',
                 side_effect=test.TestingException)
@@ -12938,7 +12921,8 @@ class ComputeInactiveImageTestCase(BaseTestCase):
 
     def test_create_instance_with_deleted_image(self):
         # Make sure we can't start an instance with a deleted image.
-        inst_type = flavors.get_flavor_by_name('m1.tiny')
+        inst_type = objects.Flavor.get_by_name(context.get_admin_context(),
+                                               'm1.tiny')
         self.assertRaises(exception.ImageNotActive,
                           self.compute_api.create,
                           self.context, inst_type, uuids.image_instance)
@@ -13443,7 +13427,8 @@ class CheckRequestedImageTestCase(test.TestCase):
         self.context = context.RequestContext(
                 'fake_user_id', 'fake_project_id')
 
-        self.instance_type = flavors.get_default_flavor()
+        self.instance_type = objects.Flavor.get_by_name(self.context,
+                                                        'm1.small')
         self.instance_type['memory_mb'] = 64
         self.instance_type['root_gb'] = 1
 

@@ -44,7 +44,6 @@ from nova.api.metadata import handler
 from nova.api.metadata import password
 from nova.api.metadata import vendordata_dynamic
 from nova import block_device
-from nova.compute import flavors
 from nova import context
 from nova import exception
 from nova.network import model as network_model
@@ -101,7 +100,7 @@ def fake_inst_obj(context):
     inst.info_cache = objects.InstanceInfoCache(context=context,
                                                 instance_uuid=inst.uuid,
                                                 network_info=nwinfo)
-    inst.flavor = flavors.get_default_flavor()
+    inst.flavor = objects.Flavor.get_by_name(context, 'm1.small')
     return inst
 
 

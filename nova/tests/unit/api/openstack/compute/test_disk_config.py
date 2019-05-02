@@ -21,9 +21,9 @@ import six
 
 from nova.api.openstack import compute
 from nova.compute import api as compute_api
-from nova.compute import flavors
 from nova import context as nova_context
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -83,7 +83,8 @@ class DiskConfigTestCaseV21(test.TestCase):
                     'vm_state': '',
                     'auto_disk_config': inst_['auto_disk_config'],
                     'security_groups': inst_['security_groups'],
-                    'instance_type': flavors.get_default_flavor(),
+                    'instance_type': objects.Flavor.get_by_name(context,
+                                                                'm1.small'),
                     })
 
             return inst

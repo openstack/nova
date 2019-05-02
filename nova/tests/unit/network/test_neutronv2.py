@@ -36,7 +36,6 @@ import requests_mock
 import six
 from six.moves import range
 
-from nova.compute import flavors
 from nova import context
 from nova.db.sqlalchemy import api as db_api
 from nova import exception
@@ -3101,7 +3100,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         mock_get_client.return_value = mocked_client
         mocked_client.list_extensions.return_value = {
             'extensions': [{'name': constants.QOS_QUEUE}]}
-        flavor = flavors.get_default_flavor()
+        flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
         flavor['rxtx_factor'] = 1
         instance = objects.Instance(system_metadata={})
         instance.flavor = flavor

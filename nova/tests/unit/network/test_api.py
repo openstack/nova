@@ -22,7 +22,6 @@ import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 
-from nova.compute import flavors
 from nova import context
 from nova import exception
 from nova import network
@@ -140,7 +139,7 @@ class ApiTestCase(test.TestCase):
                                 'macs'],
                               itertools.repeat(mock.ANY)))
             mock_alloc.return_value = []
-            flavor = flavors.get_default_flavor()
+            flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
             flavor['rxtx_factor'] = 0
             instance = objects.Instance(id=1, uuid=uuids.instance,
                                         project_id='project_id',
@@ -253,7 +252,7 @@ class ApiTestCase(test.TestCase):
                                          self.context.project_id)
 
     def _stub_migrate_instance_calls(self, method, multi_host, info):
-        fake_flavor = flavors.get_default_flavor()
+        fake_flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
         fake_flavor['rxtx_factor'] = 1.21
         fake_instance = objects.Instance(
             uuid=uuidutils.generate_uuid(dashed=False),
