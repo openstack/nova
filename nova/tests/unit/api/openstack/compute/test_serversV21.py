@@ -6418,17 +6418,6 @@ class ServersControllerCreateTestV260(test.NoDBTestCase):
         self.assertIn('Multiattach volumes are only supported starting with '
                       'compute API version 2.60', six.text_type(ex))
 
-    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                return_value=compute_api.MIN_COMPUTE_MULTIATTACH - 1)
-    def test_create_server_with_multiattach_fails_not_available(
-            self, mock_get_min_version_all_cells):
-        """Tests the case that the user tries to boot from volume with a
-        multiattach volume but before the deployment is fully upgraded.
-        """
-        ex = self.assertRaises(webob.exc.HTTPConflict, self._post_server)
-        self.assertIn('Multiattach volume support is not yet available',
-                      six.text_type(ex))
-
 
 class ServersControllerCreateTestV263(ServersControllerCreateTest):
     def _create_instance_req(self, certs=None):

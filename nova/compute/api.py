@@ -105,7 +105,6 @@ AGGREGATE_ACTION_UPDATE_META = 'UpdateMeta'
 AGGREGATE_ACTION_DELETE = 'Delete'
 AGGREGATE_ACTION_ADD = 'Add'
 CINDER_V3_ATTACH_MIN_COMPUTE_VERSION = 24
-MIN_COMPUTE_MULTIATTACH = 27
 MIN_COMPUTE_TRUSTED_CERTS = 31
 MIN_COMPUTE_ABORT_QUEUED_LIVE_MIGRATION = 34
 MIN_COMPUTE_VOLUME_TYPE = 36
@@ -1596,8 +1595,7 @@ class API(base.Base):
                         bdm.attachment_id = None
                 except (exception.CinderConnectionFailed,
                         exception.InvalidVolume,
-                        exception.MultiattachNotSupportedOldMicroversion,
-                        exception.MultiattachSupportNotYetAvailable):
+                        exception.MultiattachNotSupportedOldMicroversion):
                     raise
                 except exception.InvalidInput as exc:
                     raise exception.InvalidVolume(reason=exc.format_message())
@@ -4172,11 +4170,6 @@ class API(base.Base):
             min_compute_version = \
                 objects.service.get_minimum_version_all_cells(
                     context, ['nova-compute'])
-            # Check to see if the computes have been upgraded to support
-            # booting from a multiattach volume.
-            if (volume['multiattach'] and
-                    min_compute_version < MIN_COMPUTE_MULTIATTACH):
-                raise exception.MultiattachSupportNotYetAvailable()
 
         if min_compute_version >= CINDER_V3_ATTACH_MIN_COMPUTE_VERSION:
             # Attempt a new style volume attachment, but fallback to old-style

@@ -6622,26 +6622,8 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
                           self.context, volume, instance, bdm,
                           supports_multiattach=False)
 
-    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                return_value=compute_api.MIN_COMPUTE_MULTIATTACH - 1)
-    def test_check_attach_and_reserve_volume_multiattach_new_inst_old_compute(
-            self, get_min_version):
-        """Tests that _check_attach_and_reserve_volume fails if trying
-        to use a multiattach volume to create a new instance but the computes
-        are not all upgraded yet.
-        """
-        instance = self._create_instance_obj()
-        delattr(instance, 'id')
-        volume = {'id': uuids.volumeid, 'multiattach': True}
-        bdm = objects.BlockDeviceMapping(volume_id=uuids.volumeid,
-                                         instance_uuid=instance.uuid)
-        self.assertRaises(exception.MultiattachSupportNotYetAvailable,
-                          self.compute_api._check_attach_and_reserve_volume,
-                          self.context, volume, instance, bdm,
-                          supports_multiattach=True)
-
     @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=compute_api.MIN_COMPUTE_MULTIATTACH)
+                return_value=compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION)
     @mock.patch('nova.volume.cinder.API.get',
                 return_value={'id': uuids.volumeid, 'multiattach': True})
     @mock.patch('nova.volume.cinder.is_microversion_supported',
