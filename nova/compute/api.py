@@ -604,10 +604,18 @@ class API(base.Base):
 
         # Target disk is a volume. Don't check flavor disk size because it
         # doesn't make sense, and check min_disk against the volume size.
-        if (root_bdm is not None and root_bdm.is_volume):
-            # There are 2 possibilities here: either the target volume already
-            # exists, or it doesn't, in which case the bdm will contain the
-            # intended volume size.
+        if root_bdm is not None and root_bdm.is_volume:
+            # There are 2 possibilities here:
+            #
+            # 1. The target volume already exists but bdm.volume_size is not
+            #    yet set because this method is called before
+            #    _bdm_validate_set_size_and_instance during server create.
+            # 2. The target volume doesn't exist, in which case the bdm will
+            #    contain the intended volume size
+            #
+            # Note that rebuild also calls this method with potentially a new
+            # image but you can't rebuild a volume-backed server with a new
+            # image (yet).
             #
             # Cinder does its own check against min_disk, so if the target
             # volume already exists this has already been done and we don't
