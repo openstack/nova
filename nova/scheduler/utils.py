@@ -268,6 +268,7 @@ class ResourceRequest(object):
             required_traits = request_group.required_traits
             forbidden_traits = request_group.forbidden_traits
             aggregates = request_group.aggregates
+            in_tree = request_group.in_tree
 
             resource_query = ",".join(
                 sorted("%s:%s" % (rc, amount)
@@ -289,6 +290,8 @@ class ResourceRequest(object):
                     aggs.append(('member_of%s' % suffix,
                                  'in:' + ','.join(sorted(agglist))))
                 qs_params.extend(sorted(aggs))
+            if in_tree:
+                qs_params.append(('in_tree%s' % suffix, in_tree))
             return qs_params
 
         if self._limit is not None:
