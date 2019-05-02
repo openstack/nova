@@ -162,20 +162,6 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
                 call=True)
         self.assertEqual('fake-response', response)
 
-    def test_instance_update_at_top(self):
-        self.mox.StubOutWithMock(self.msg_runner, 'instance_update_at_top')
-        self.msg_runner.instance_update_at_top(self.ctxt, 'fake-instance')
-        self.mox.ReplayAll()
-        self.cells_manager.instance_update_at_top(self.ctxt,
-                                                  instance='fake-instance')
-
-    def test_instance_destroy_at_top(self):
-        self.mox.StubOutWithMock(self.msg_runner, 'instance_destroy_at_top')
-        self.msg_runner.instance_destroy_at_top(self.ctxt, 'fake-instance')
-        self.mox.ReplayAll()
-        self.cells_manager.instance_destroy_at_top(self.ctxt,
-                                                  instance='fake-instance')
-
     def test_instance_delete_everywhere(self):
         self.mox.StubOutWithMock(self.msg_runner,
                                  'instance_delete_everywhere')

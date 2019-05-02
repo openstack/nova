@@ -34,7 +34,6 @@ from eventlet import queue
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
-from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
@@ -57,7 +56,6 @@ from nova.i18n import _
 from nova import objects
 from nova.objects import base as objects_base
 from nova import rpc
-from nova import utils
 
 CONF = nova.conf.CONF
 
@@ -661,19 +659,10 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         expected_attrs = ['metadata', 'system_metadata', 'security_groups',
                           'info_cache']
 
-        try:
-            instance = objects.Instance.get_by_uuid(message.ctxt,
-                    instance_uuid, expected_attrs=expected_attrs)
-            args[0] = instance
-        except exception.InstanceNotFound:
-            with excutils.save_and_reraise_exception():
-                # Must be a race condition.  Let's try to resolve it by
-                # telling the top level cells that this instance doesn't
-                # exist.
-                instance = objects.Instance(context=message.ctxt,
-                                            uuid=instance_uuid)
-                self.msg_runner.instance_destroy_at_top(message.ctxt,
-                                                        instance)
+        instance = objects.Instance.get_by_uuid(message.ctxt,
+                instance_uuid, expected_attrs=expected_attrs)
+        args[0] = instance
+
         return fn(message.ctxt, *args, **method_info['method_kwargs'])
 
     def update_capabilities(self, message, cell_name, capabilities):
@@ -771,18 +760,8 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         """Validate console port with child cell compute node."""
         # 1st arg is instance_uuid that we need to turn into the
         # instance object.
-        try:
-            instance = objects.Instance.get_by_uuid(message.ctxt,
-                                                    instance_uuid)
-        except exception.InstanceNotFound:
-            with excutils.save_and_reraise_exception():
-                # Must be a race condition.  Let's try to resolve it by
-                # telling the top level cells that this instance doesn't
-                # exist.
-                instance = objects.Instance(context=message.ctxt,
-                                            uuid=instance_uuid)
-                self.msg_runner.instance_destroy_at_top(message.ctxt,
-                                                        instance)
+        instance = objects.Instance.get_by_uuid(message.ctxt,
+                                                instance_uuid)
         return self.compute_rpcapi.validate_console_port(message.ctxt,
                 instance, console_port, console_type)
 
@@ -812,15 +791,6 @@ class _TargetedMessageMethods(_BaseMessageMethods):
             # NOTE(comstud): We need to refresh the instance from this
             # cell's view in the DB.
             instance.refresh()
-        except exception.InstanceNotFound:
-            with excutils.save_and_reraise_exception():
-                # Must be a race condition.  Let's try to resolve it by
-                # telling the top level cells that this instance doesn't
-                # exist.
-                instance = objects.Instance(context=ctxt,
-                                            uuid=instance.uuid)
-                self.msg_runner.instance_destroy_at_top(ctxt,
-                                                        instance)
         except exception.InstanceInfoCacheNotFound:
             if method not in ('delete', 'force_delete'):
                 raise
@@ -1006,70 +976,6 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         if instance.obj_attr_is_set('task_state'):
             return expected_task_state_map.get(instance.task_state)
 
-    def instance_update_at_top(self, message, instance, **kwargs):
-        """Update an instance in the DB if we're a top level cell."""
-        if not self._at_the_top():
-            return
-
-        # Remove things that we can't update in the top level cells.
-        # 'metadata' is only updated in the API cell, so don't overwrite
-        # it based on what child cells say.  Make sure to update
-        # 'cell_name' based on the routing path.
-        items_to_remove = ['id', 'security_groups', 'volumes', 'cell_name',
-                           'name', 'metadata']
-        instance.obj_reset_changes(items_to_remove)
-        instance.cell_name = _reverse_path(message.routing_path)
-
-        # instance.display_name could be unicode
-        instance_repr = utils.get_obj_repr_unicode(instance)
-        LOG.debug("Got update for instance: %(instance)s",
-                  {'instance': instance_repr}, instance_uuid=instance.uuid)
-
-        expected_vm_state = self._get_expected_vm_state(instance)
-        expected_task_state = self._get_expected_task_state(instance)
-
-        # It's possible due to some weird condition that the instance
-        # was already set as deleted... so we'll attempt to update
-        # it with permissions that allows us to read deleted.
-        with utils.temporary_mutation(message.ctxt, read_deleted="yes"):
-            try:
-                with instance.skip_cells_sync():
-                    instance.save(expected_vm_state=expected_vm_state,
-                                  expected_task_state=expected_task_state)
-            except exception.InstanceNotFound:
-                # FIXME(comstud): Strange.  Need to handle quotas here,
-                # if we actually want this code to remain..
-                instance.create()
-            except exception.NotFound:
-                # Can happen if we try to update a deleted instance's
-                # network information, for example.
-                pass
-
-    def instance_destroy_at_top(self, message, instance, **kwargs):
-        """Destroy an instance from the DB if we're a top level cell."""
-        if not self._at_the_top():
-            return
-        LOG.debug("Got update to delete instance",
-                  instance_uuid=instance.uuid)
-        try:
-            instance.destroy()
-        except exception.InstanceNotFound:
-            pass
-        except exception.ObjectActionError:
-            # NOTE(alaski): instance_destroy_at_top will sometimes be called
-            # when an instance does not exist in a cell but does in the parent.
-            # In that case instance.id is not set which causes instance.destroy
-            # to fail thinking that the object has already been destroyed.
-            # That's the right assumption for it to make because without cells
-            # that would be true.  But for cells we'll try to pull the actual
-            # instance and try to delete it again.
-            try:
-                instance = objects.Instance.get_by_uuid(message.ctxt,
-                        instance.uuid)
-                instance.destroy()
-            except exception.InstanceNotFound:
-                pass
-
     def instance_delete_everywhere(self, message, instance, delete_type,
                                    **kwargs):
         """Call compute API delete() or soft_delete() in every cell.
@@ -1091,10 +997,7 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         self.db.bw_usage_update(message.ctxt, **bw_update_info)
 
     def _sync_instance(self, ctxt, instance):
-        if instance.deleted:
-            self.msg_runner.instance_destroy_at_top(ctxt, instance)
-        else:
-            self.msg_runner.instance_update_at_top(ctxt, instance)
+        pass
 
     def sync_instances(self, message, project_id, updated_since, deleted,
                        **kwargs):
@@ -1355,20 +1258,6 @@ class MessageRunner(object):
                                    dict(method_info=method_info), 'down',
                                    cell_name, need_response=call)
         return message.process()
-
-    def instance_update_at_top(self, ctxt, instance):
-        """Update an instance at the top level cell."""
-        message = _BroadcastMessage(self, ctxt, 'instance_update_at_top',
-                                    dict(instance=instance), 'up',
-                                    run_locally=False)
-        message.process()
-
-    def instance_destroy_at_top(self, ctxt, instance):
-        """Destroy an instance at the top level cell."""
-        message = _BroadcastMessage(self, ctxt, 'instance_destroy_at_top',
-                                    dict(instance=instance), 'up',
-                                    run_locally=False)
-        message.process()
 
     def instance_delete_everywhere(self, ctxt, instance, delete_type):
         """This is used by API cell when it didn't know what cell

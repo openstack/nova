@@ -622,10 +622,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         else:
             constraint = None
 
-        cell_type = cells_opts.get_cell_type()
-        if cell_type is not None:
-            stale_instance = self.obj_clone()
-
         try:
             db_inst = db.instance_destroy(self._context, self.uuid,
                                           constraint=constraint,
@@ -634,9 +630,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         except exception.ConstraintNotMet:
             raise exception.ObjectActionError(action='destroy',
                                               reason='host changed')
-        if cell_type == 'compute':
-            cells_api = cells_rpcapi.CellsAPI()
-            cells_api.instance_destroy_at_top(self._context, stale_instance)
         delattr(self, base.get_attrname('id'))
 
     def _save_info_cache(self, context):
@@ -848,10 +841,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
         if cells_update_from_api:
             _handle_cell_update_from_api()
-        elif cell_type == 'compute':
-            if self._sync_cells:
-                cells_api = cells_rpcapi.CellsAPI()
-                cells_api.instance_update_at_top(context, stale_instance)
 
         def _notify():
             # NOTE(danms): We have to be super careful here not to trigger

@@ -26,13 +26,11 @@ from nova.cells import filters
 from nova.cells import weights
 from nova.compute import vm_states
 from nova import context
-from nova.db import api as db
 from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.cells import fakes
 from nova.tests.unit import fake_block_device
-from nova import utils
 
 
 class FakeFilterClass1(filters.BaseCellFilter):
@@ -86,61 +84,6 @@ class CellsSchedulerTestCase(test.TestCase):
                 'filter_properties': {'instance_type': 'fake_type'},
                 'security_groups': 'fake_sec_groups',
                 'block_device_mapping': 'fake_bdm'}
-
-    def test_create_instances_here(self):
-        # Just grab the first instance type
-        inst_type = objects.Flavor.get_by_id(self.ctxt, 1)
-        image = {'properties': {}}
-        instance_uuids = self.instance_uuids
-        instance_props = {'id': 'removed',
-                          'security_groups': 'removed',
-                          'info_cache': 'removed',
-                          'name': 'instance-00000001',
-                          'display_name': 'moo',
-                          'image_ref': uuidsentinel.fake_image_ref,
-                          'user_id': self.ctxt.user_id,
-                          # Test these as lists
-                          'metadata': {'moo': 'cow'},
-                          'system_metadata': {'meow': 'cat'},
-                          'flavor': inst_type,
-                          'project_id': self.ctxt.project_id}
-
-        call_info = {'uuids': []}
-        block_device_mapping = objects.BlockDeviceMappingList(
-            objects=[
-                objects.BlockDeviceMapping(context=self.ctxt,
-                    **fake_block_device.FakeDbBlockDeviceDict(
-                            block_device.create_image_bdm(
-                                uuidsentinel.fake_image_ref),
-                        anon=True))
-               ])
-
-        def _fake_instance_update_at_top(self, _ctxt, instance):
-            call_info['uuids'].append(instance['uuid'])
-
-        self.stub_out('nova.cells.messaging.MessageRunner.'
-                      'instance_update_at_top',
-                      _fake_instance_update_at_top)
-
-        self.scheduler._create_instances_here(self.ctxt, instance_uuids,
-                instance_props, inst_type, image,
-                ['default'], block_device_mapping)
-        self.assertEqual(instance_uuids, call_info['uuids'])
-
-        for count, instance_uuid in enumerate(instance_uuids):
-            bdms = db.block_device_mapping_get_all_by_instance(self.ctxt,
-                                                               instance_uuid)
-            self.assertIsNotNone(bdms)
-            instance = db.instance_get_by_uuid(self.ctxt, instance_uuid)
-            meta = utils.instance_meta(instance)
-            self.assertEqual('cow', meta['moo'])
-            sys_meta = utils.instance_sys_meta(instance)
-            self.assertEqual('cat', sys_meta['meow'])
-            self.assertEqual('moo-%d' % (count + 1), instance['hostname'])
-            self.assertEqual('moo-%d' % (count + 1),
-                             instance['display_name'])
-            self.assertEqual(uuidsentinel.fake_image_ref,
-                             instance['image_ref'])
 
     @mock.patch('nova.objects.Instance.update')
     def test_create_instances_here_pops_problematic_properties(self,
@@ -318,55 +261,6 @@ class CellsSchedulerTestCase(test.TestCase):
 
         self.assertEqual(8, call_info['num_tries'])
         self.assertEqual(self.instance_uuids, call_info['errored_uuids'])
-
-    def test_schedule_method_on_random_exception(self):
-        self.flags(scheduler='nova.cells.scheduler.CellsScheduler',
-                   scheduler_retries=7, group='cells')
-
-        instances = [objects.Instance(uuid=uuid) for uuid in
-                     self.instance_uuids]
-        method_kwargs = {
-                'image': 'fake_image',
-                'instances': instances,
-                'filter_properties': {}}
-
-        call_info = {'num_tries': 0,
-                     'errored_uuids1': [],
-                     'errored_uuids2': []}
-
-        def fake_grab_target_cells(self, filter_properties):
-            call_info['num_tries'] += 1
-            raise test.TestingException()
-
-        def fake_instance_save(inst):
-            self.assertEqual(vm_states.ERROR, inst.vm_state)
-            call_info['errored_uuids1'].append(inst.uuid)
-
-        def fake_instance_update_at_top(self_mr, ctxt, instance):
-            self.assertEqual(vm_states.ERROR, instance['vm_state'])
-            call_info['errored_uuids2'].append(instance['uuid'])
-
-        def fake_build_request_spec(image, instances):
-            request_spec = {
-                    'num_instances': len(instances),
-                    'image': image}
-            return request_spec
-
-        self.stub_out('nova.cells.scheduler.CellsScheduler._grab_target_cells',
-                      fake_grab_target_cells)
-        self.stub_out('nova.objects.Instance.save', fake_instance_save)
-        self.stub_out('nova.cells.messaging.MessageRunner.'
-                      'instance_update_at_top',
-                      fake_instance_update_at_top)
-        self.stub_out('nova.scheduler.utils.build_request_spec',
-                      fake_build_request_spec)
-
-        self.msg_runner.build_instances(self.ctxt, self.my_cell_state,
-                method_kwargs)
-        # Shouldn't retry
-        self.assertEqual(1, call_info['num_tries'])
-        self.assertEqual(self.instance_uuids, call_info['errored_uuids1'])
-        self.assertEqual(self.instance_uuids, call_info['errored_uuids2'])
 
     def test_filter_schedule_skipping(self):
         # if a filter handles scheduling, short circuit

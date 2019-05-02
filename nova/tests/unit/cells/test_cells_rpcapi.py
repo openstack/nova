@@ -152,39 +152,6 @@ class CellsAPITestCase(test.NoDBTestCase):
                            {'cell_name': 'name'}, version='1.9')
         self.assertEqual(capacity_info, result)
 
-    def test_instance_update_at_top(self):
-        fake_info_cache = objects.InstanceInfoCache(
-            instance_uuid=uuids.instance)
-        fake_sys_metadata = {'key1': 'value1',
-                             'key2': 'value2'}
-        fake_attrs = {'id': 2,
-                      'cell_name': 'fake',
-                      'metadata': {'fake': 'fake'},
-                      'info_cache': fake_info_cache,
-                      'system_metadata': fake_sys_metadata}
-        fake_instance = objects.Instance(**fake_attrs)
-
-        call_info = self._stub_rpc_method('cast', None)
-
-        self.cells_rpcapi.instance_update_at_top(
-                self.fake_context, fake_instance)
-
-        expected_args = {'instance': fake_instance}
-        self._check_result(call_info, 'instance_update_at_top',
-                expected_args, version='1.35')
-
-    def test_instance_destroy_at_top(self):
-        fake_instance = objects.Instance(uuid=uuids.instance)
-
-        call_info = self._stub_rpc_method('cast', None)
-
-        self.cells_rpcapi.instance_destroy_at_top(
-                self.fake_context, fake_instance)
-
-        expected_args = {'instance': fake_instance}
-        self._check_result(call_info, 'instance_destroy_at_top',
-                expected_args, version='1.35')
-
     def test_instance_delete_everywhere(self):
         instance = fake_instance.fake_instance_obj(self.fake_context)
 

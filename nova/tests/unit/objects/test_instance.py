@@ -22,7 +22,6 @@ from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
-from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.db import api as db
@@ -30,7 +29,6 @@ from nova import exception
 from nova.network import model as network_model
 from nova import notifications
 from nova import objects
-from nova.objects import base
 from nova.objects import fields
 from nova.objects import instance
 from nova.objects import instance_info_cache
@@ -432,22 +430,15 @@ class _TestInstanceObject(object):
             expected_attrs=['metadata'], use_slave=False)
 
     @mock.patch.object(notifications, 'send_update')
-    @mock.patch.object(cells_rpcapi, 'CellsAPI')
     @mock.patch.object(db, 'instance_info_cache_update')
     @mock.patch.object(db, 'instance_update_and_get_original')
     @mock.patch.object(db, 'instance_get_by_uuid')
-    def _save_test_helper(self, cell_type, save_kwargs,
+    def _save_test_helper(self, save_kwargs,
                           mock_db_instance_get_by_uuid,
                           mock_db_instance_update_and_get_original,
                           mock_db_instance_info_cache_update,
-                          mock_cells_rpcapi_CellsAPI,
                           mock_notifications_send_update):
         """Common code for testing save() for cells/non-cells."""
-        if cell_type:
-            self.flags(enable=True, cell_type=cell_type, group='cells')
-        else:
-            self.flags(enable=False, group='cells')
-
         old_ref = dict(self.fake_instance, host='oldhost', user_data='old',
                        vm_state='old', task_state='old')
         fake_uuid = old_ref['uuid']
@@ -458,7 +449,6 @@ class _TestInstanceObject(object):
         new_ref = dict(old_ref, host='newhost', **expected_updates)
         exp_vm_state = save_kwargs.get('expected_vm_state')
         exp_task_state = save_kwargs.get('expected_task_state')
-        admin_reset = save_kwargs.get('admin_state_reset', False)
         if exp_vm_state:
             expected_updates['expected_vm_state'] = exp_vm_state
         if exp_task_state:
@@ -498,53 +488,24 @@ class _TestInstanceObject(object):
             columns_to_join=['info_cache', 'security_groups',
                              'system_metadata']
         )
-        if cell_type == 'api':
-            mock_cells_rpcapi_CellsAPI.return_value.instance_update_from_api \
-                .assert_called_once_with(
-                self.context, test.MatchType(objects.Instance),
-                exp_vm_state, exp_task_state, admin_reset
-            )
-        elif cell_type == 'compute':
-            mock_cells_rpcapi_CellsAPI.return_value.instance_update_at_top \
-                .assert_called_once_with(
-                self.context, mock.ANY
-            )
         mock_notifications_send_update.assert_called_with(self.context,
                                                           mock.ANY,
                                                           mock.ANY)
 
     def test_save(self):
-        self._save_test_helper(None, {})
-
-    def test_save_in_api_cell(self):
-        self._save_test_helper('api', {})
-
-    def test_save_in_compute_cell(self):
-        self._save_test_helper('compute', {})
+        self._save_test_helper({})
 
     def test_save_exp_vm_state(self):
-        self._save_test_helper(None, {'expected_vm_state': ['meow']})
+        self._save_test_helper({'expected_vm_state': ['meow']})
 
     def test_save_exp_task_state(self):
-        self._save_test_helper(None, {'expected_task_state': ['meow']})
-
-    def test_save_exp_vm_state_api_cell(self):
-        self._save_test_helper('api', {'expected_vm_state': ['meow']})
-
-    def test_save_exp_task_state_api_cell(self):
-        self._save_test_helper('api', {'expected_task_state': ['meow']})
-
-    def test_save_exp_task_state_api_cell_admin_reset(self):
-        self._save_test_helper('api', {'admin_state_reset': True})
+        self._save_test_helper({'expected_task_state': ['meow']})
 
     @mock.patch.object(db, 'instance_update_and_get_original')
     @mock.patch.object(db, 'instance_get_by_uuid')
     @mock.patch.object(notifications, 'send_update')
     def test_save_rename_sends_notification(self, mock_send, mock_get,
                                             mock_update_and_get):
-        # Tests that simply changing the 'display_name' on the instance
-        # will send a notification.
-        self.flags(enable=False, group='cells')
         old_ref = dict(self.fake_instance, display_name='hello')
         fake_uuid = old_ref['uuid']
         expected_updates = dict(display_name='goodbye')
@@ -717,77 +678,6 @@ class _TestInstanceObject(object):
                          'vcpu_model': json_vcpu_model}
         mock_update.assert_called_once_with(self.context, inst.uuid,
                                             expected_vals)
-
-    @mock.patch.object(notifications, 'send_update')
-    @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_from_api')
-    @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_at_top')
-    @mock.patch.object(db, 'instance_update_and_get_original')
-    def _test_skip_cells_sync_helper(self, mock_db_update, mock_update_at_top,
-            mock_update_from_api, mock_notif_update, cell_type):
-        self.flags(enable=True, cell_type=cell_type, group='cells')
-        inst = fake_instance.fake_instance_obj(self.context, cell_name='fake')
-        inst.vm_state = 'foo'
-        inst.task_state = 'bar'
-        inst.cell_name = 'foo!bar@baz'
-
-        old_ref = dict(base.obj_to_primitive(inst), vm_state='old',
-                task_state='old')
-        new_ref = dict(old_ref, vm_state='foo', task_state='bar')
-        newer_ref = dict(new_ref, vm_state='bar', task_state='foo')
-        mock_db_update.side_effect = [(old_ref, new_ref), (new_ref, newer_ref)]
-
-        with inst.skip_cells_sync():
-            inst.save()
-
-        mock_update_at_top.assert_has_calls([])
-        mock_update_from_api.assert_has_calls([])
-        self.assertFalse(mock_notif_update.called)
-
-        inst.vm_state = 'bar'
-        inst.task_state = 'foo'
-
-        def fake_update_from_api(context, instance, expected_vm_state,
-                expected_task_state, admin_state_reset):
-            self.assertEqual('foo!bar@baz', instance.cell_name)
-
-        # This is re-mocked so that cell_name can be checked above.  Since
-        # instance objects have no equality testing assert_called_once_with
-        # doesn't work.
-        with mock.patch.object(cells_rpcapi.CellsAPI,
-                'instance_update_from_api',
-                side_effect=fake_update_from_api) as fake_update_from_api:
-            inst.save()
-
-        self.assertEqual('foo!bar@baz', inst.cell_name)
-        self.assertTrue(mock_notif_update.called)
-        if cell_type == 'compute':
-            mock_update_at_top.assert_called_once_with(self.context, mock.ANY)
-            # Compare primitives since we can't check instance object equality
-            expected_inst_p = base.obj_to_primitive(inst)
-            actual_inst = mock_update_at_top.call_args[0][1]
-            actual_inst_p = base.obj_to_primitive(actual_inst)
-            self.assertEqual(expected_inst_p, actual_inst_p)
-            self.assertFalse(fake_update_from_api.called)
-        elif cell_type == 'api':
-            self.assertFalse(mock_update_at_top.called)
-            fake_update_from_api.assert_called_once_with(self.context,
-                    mock.ANY, None, None, False)
-
-        expected_calls = [
-                mock.call(self.context, inst.uuid,
-                    {'vm_state': 'foo', 'task_state': 'bar',
-                     'cell_name': 'foo!bar@baz'},
-                    columns_to_join=['tags', 'system_metadata']),
-                mock.call(self.context, inst.uuid,
-                    {'vm_state': 'bar', 'task_state': 'foo'},
-                    columns_to_join=['system_metadata', 'tags'])]
-        mock_db_update.assert_has_calls(expected_calls)
-
-    def test_skip_cells_api(self):
-        self._test_skip_cells_sync_helper(cell_type='api')
-
-    def test_skip_cells_compute(self):
-        self._test_skip_cells_sync_helper(cell_type='compute')
 
     @mock.patch.object(db, 'instance_get_by_uuid')
     def test_get_deleted(self, mock_get):
@@ -1257,30 +1147,6 @@ class _TestInstanceObject(object):
         inst.host = None
         self.assertRaises(exception.ObjectActionError,
                           inst.destroy)
-
-    @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_destroy_at_top')
-    @mock.patch.object(db, 'instance_destroy')
-    def test_destroy_cell_sync_to_top(self, mock_destroy, mock_destroy_at_top):
-        self.flags(enable=True, cell_type='compute', group='cells')
-        fake_inst = fake_instance.fake_db_instance(deleted=True)
-        mock_destroy.return_value = fake_inst
-        inst = objects.Instance(context=self.context, id=1,
-                                uuid=uuids.instance)
-        inst.destroy()
-        mock_destroy_at_top.assert_called_once_with(self.context, mock.ANY)
-        actual_inst = mock_destroy_at_top.call_args[0][1]
-        self.assertIsInstance(actual_inst, instance.Instance)
-
-    @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_destroy_at_top')
-    @mock.patch.object(db, 'instance_destroy')
-    def test_destroy_no_cell_sync_to_top(self, mock_destroy,
-                                         mock_destroy_at_top):
-        fake_inst = fake_instance.fake_db_instance(deleted=True)
-        mock_destroy.return_value = fake_inst
-        inst = objects.Instance(context=self.context, id=1,
-                                uuid=uuids.instance)
-        inst.destroy()
-        self.assertFalse(mock_destroy_at_top.called)
 
     def test_destroy_hard(self):
         values = {'user_id': self.context.user_id,

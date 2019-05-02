@@ -201,24 +201,6 @@ class CellsAPI(object):
         cctxt.cast(ctxt, 'build_instances',
                    build_inst_kwargs=build_inst_kwargs)
 
-    def instance_update_at_top(self, ctxt, instance):
-        """Update instance at API level."""
-        version = '1.35'
-        if not self.client.can_send_version('1.35'):
-            instance = objects_base.obj_to_primitive(instance)
-            version = '1.34'
-        cctxt = self.client.prepare(version=version)
-        cctxt.cast(ctxt, 'instance_update_at_top', instance=instance)
-
-    def instance_destroy_at_top(self, ctxt, instance):
-        """Destroy instance at API level."""
-        version = '1.35'
-        if not self.client.can_send_version('1.35'):
-            instance = objects_base.obj_to_primitive(instance)
-            version = '1.34'
-        cctxt = self.client.prepare(version=version)
-        cctxt.cast(ctxt, 'instance_destroy_at_top', instance=instance)
-
     def instance_delete_everywhere(self, ctxt, instance, delete_type):
         """Delete instance everywhere.  delete_type may be 'soft'
         or 'hard'.  This is generally only used to resolve races

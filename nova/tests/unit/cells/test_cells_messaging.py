@@ -25,7 +25,6 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova.cells import messaging
-from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import instance_actions
 from nova.compute import task_states
@@ -745,35 +744,6 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
         # metadata to be present in instance object
         self._run_compute_api_method('shelve')
 
-    @mock.patch.object(objects.Instance, 'get_by_uuid')
-    def test_run_compute_api_method_unknown_instance(self, mock_get_by_uuid):
-        # Unknown instance should send a broadcast up that instance
-        # is gone.
-        instance = fake_instance.fake_instance_obj(self.ctxt)
-        instance_uuid = instance.uuid
-        method_info = {'method': 'reboot',
-                       'method_args': (instance_uuid, 2, 3),
-                       'method_kwargs': {'arg1': 'val1', 'arg2': 'val2'}}
-
-        mock_get_by_uuid.side_effect = exception.InstanceNotFound(
-                instance_id=instance_uuid)
-        with mock.patch.object(self.tgt_msg_runner,
-                               'instance_destroy_at_top') as des_top:
-            response = self.src_msg_runner.run_compute_api_method(
-                    self.ctxt,
-                    self.tgt_cell_name,
-                    method_info,
-                    True)
-
-            self.assertRaises(exception.InstanceNotFound,
-                              response.value_or_raise)
-            des_top.assert_called_with(self.ctxt,
-                                       test.MatchType(objects.Instance))
-            mock_get_by_uuid.assert_called_once_with(
-                self.ctxt, instance.uuid,
-                expected_attrs=['metadata', 'system_metadata',
-                                'security_groups', 'info_cache'])
-
     def test_update_capabilities(self):
         # Route up to API
         self._setup_attrs('child-cell2', 'child-cell2!api-cell')
@@ -1099,26 +1069,6 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
                                                             'delete')
             delete.assert_called_once_with(self.ctxt, instance)
 
-    def test_call_compute_with_obj_unknown_instance(self):
-        instance = objects.Instance()
-        instance.uuid = uuids.fake
-        instance.vm_state = vm_states.ACTIVE
-        instance.task_state = None
-        self.mox.StubOutWithMock(instance, 'refresh')
-        self.mox.StubOutWithMock(self.tgt_msg_runner,
-                                 'instance_destroy_at_top')
-
-        instance.refresh().AndRaise(
-                exception.InstanceNotFound(instance_id=instance.uuid))
-
-        self.tgt_msg_runner.instance_destroy_at_top(self.ctxt,
-                                                    mox.IsA(objects.Instance))
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.InstanceNotFound,
-                          self.tgt_methods_cls._call_compute_api_with_obj,
-                          self.ctxt, instance, 'snapshot', 'name')
-
     def _instance_update_helper(self, admin_state_reset):
         class FakeMessage(object):
             pass
@@ -1190,26 +1140,6 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
 
         _ensure_skip_cells_sync_called()
         self.assertEqual(self.tgt_cell_name, instance.cell_name)
-
-    @mock.patch.object(db, 'instance_update_and_get_original')
-    def test_instance_update_from_api_skips_cell_sync(self, mock_db_update):
-        self.flags(enable=True, cell_type='compute', group='cells')
-        instance = fake_instance.fake_instance_obj(self.ctxt)
-        instance.cell_name = self.tgt_cell_name
-        instance.task_state = 'meow'
-        instance.vm_state = 'wuff'
-        instance.user_data = 'foo'
-        message = ''
-
-        inst_ref = dict(objects_base.obj_to_primitive(instance))
-        mock_db_update.return_value = (inst_ref, inst_ref)
-
-        with mock.patch.object(cells_rpcapi.CellsAPI,
-                'instance_update_at_top') as inst_upd_at_top:
-            self.tgt_methods_cls.instance_update_from_api(message, instance,
-                    expected_vm_state='exp_vm', expected_task_state='exp_task',
-                    admin_state_reset=False)
-            self.assertEqual(0, inst_upd_at_top.call_count)
 
     def _test_instance_action_method(self, method, args, kwargs,
                                      expected_args, expected_kwargs,
@@ -1492,96 +1422,6 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
                                   instance_info)
         self.assertEqual(expected.expected_task_state, expected_task_state)
 
-    def _test_instance_update_at_top(self, exists=True):
-        fake_uuid = fake_server_actions.FAKE_UUID
-        fake_info_cache = objects.InstanceInfoCache(
-            instance_uuid=fake_uuid)
-        fake_sys_metadata = {'key1': 'value1',
-                             'key2': 'value2'}
-        fake_attrs = {'uuid': fake_uuid,
-                      'cell_name': 'fake',
-                      'info_cache': fake_info_cache,
-                      'system_metadata': fake_sys_metadata}
-        fake_instance = objects.Instance(**fake_attrs)
-        expected_cell_name = 'api-cell!child-cell2!grandchild-cell1'
-
-        @mock.patch.object(objects.Instance, 'save')
-        @mock.patch.object(objects.Instance, 'create')
-        @mock.patch('nova.utils.get_obj_repr_unicode')
-        def do_test(mock_goru, mock_create, mock_save):
-            if not exists:
-                error = exception.InstanceNotFound(instance_id=fake_uuid)
-                mock_save.side_effect = error
-
-            self.src_msg_runner.instance_update_at_top(self.ctxt,
-                                                       fake_instance)
-            if exists:
-                mock_save.assert_called_once_with(expected_vm_state=None,
-                                                  expected_task_state=None)
-                self.assertFalse(mock_create.called)
-
-                instance = mock_goru.call_args_list[0][0][0]
-                self.assertEqual(fake_uuid, instance.uuid)
-                self.assertEqual(expected_cell_name, instance.cell_name)
-                self.assertEqual(fake_info_cache.instance_uuid,
-                                 instance.info_cache.instance_uuid)
-                self.assertEqual(fake_sys_metadata, instance.system_metadata)
-            else:
-                mock_save.assert_called_once_with(expected_vm_state=None,
-                                                  expected_task_state=None)
-                mock_create.assert_called_once_with()
-        do_test()
-
-    def test_instance_update_at_top(self):
-        self._test_instance_update_at_top()
-
-    def test_instance_update_at_top_does_not_already_exist(self):
-        self._test_instance_update_at_top(exists=False)
-
-    def test_instance_update_at_top_with_building_state(self):
-        fake_uuid = fake_server_actions.FAKE_UUID
-        fake_info_cache = objects.InstanceInfoCache(
-            instance_uuid=fake_uuid)
-        fake_sys_metadata = {'key1': 'value1',
-                             'key2': 'value2'}
-        fake_attrs = {'uuid': fake_uuid,
-                      'cell_name': 'fake',
-                      'info_cache': fake_info_cache,
-                      'system_metadata': fake_sys_metadata,
-                      'vm_state': vm_states.BUILDING}
-        fake_instance = objects.Instance(**fake_attrs)
-        expected_cell_name = 'api-cell!child-cell2!grandchild-cell1'
-        expected_vm_state = [vm_states.BUILDING, None]
-
-        def fake_save(instance):
-            self.assertEqual(fake_uuid, instance.uuid)
-            self.assertEqual(expected_cell_name, instance.cell_name)
-            self.assertEqual(fake_info_cache, instance.info_cache)
-            self.assertEqual(fake_sys_metadata, instance.system_metadata)
-
-        with mock.patch.object(objects.Instance, 'save',
-                               side_effect=fake_save) as mock_save:
-            self.src_msg_runner.instance_update_at_top(self.ctxt,
-                                                       fake_instance)
-            # Check that save is called with the right expected states.
-            mock_save.assert_called_once_with(
-                expected_vm_state=expected_vm_state, expected_task_state=None)
-
-    def test_instance_destroy_at_top(self):
-        fake_instance = objects.Instance(uuid=uuids.instance)
-
-        with mock.patch.object(objects.Instance, 'destroy') as mock_destroy:
-            self.src_msg_runner.instance_destroy_at_top(self.ctxt,
-                                                        fake_instance)
-            mock_destroy.assert_called_once_with()
-
-    def test_instance_destroy_at_top_incomplete_instance_obj(self):
-        fake_instance = objects.Instance(uuid=uuids.instance)
-        with mock.patch.object(objects.Instance, 'get_by_uuid') as mock_get:
-            self.src_msg_runner.instance_destroy_at_top(self.ctxt,
-                    fake_instance)
-            mock_get.assert_called_once_with(self.ctxt, fake_instance.uuid)
-
     def test_instance_hard_delete_everywhere(self):
         # Reset this, as this is a broadcast down.
         self._setup_attrs(up=False)
@@ -1654,11 +1494,6 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
         instance2 = objects.Instance(uuid=uuids.instance_2, deleted=True)
         fake_instances = [instance1, instance2]
 
-        self.mox.StubOutWithMock(self.tgt_msg_runner,
-                                 'instance_update_at_top')
-        self.mox.StubOutWithMock(self.tgt_msg_runner,
-                                 'instance_destroy_at_top')
-
         self.mox.StubOutWithMock(timeutils, 'parse_isotime')
         self.mox.StubOutWithMock(cells_utils, 'get_instances_to_sync')
 
@@ -1677,8 +1512,6 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
                 updated_since=updated_since_parsed,
                 project_id=project_id,
                 deleted=deleted).AndReturn(fake_instances)
-        self.tgt_msg_runner.instance_update_at_top(self.ctxt, instance1)
-        self.tgt_msg_runner.instance_destroy_at_top(self.ctxt, instance2)
 
         self.mox.ReplayAll()
 
