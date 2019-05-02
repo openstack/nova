@@ -571,8 +571,7 @@ class API(base.Base):
         with each other.
 
         :param context: A context.RequestContext
-        :param image: a dict representation of the image including properties,
-                      enforces the image status is active.
+        :param image: a dict representation of the image including properties
         :param instance_type: Flavor object
         :param root_bdm: BlockDeviceMapping for root disk.  Will be None for
                the resize case.
@@ -665,6 +664,30 @@ class API(base.Base):
                         servers_policies.ZERO_DISK_FLAVOR, fatal=False):
                     raise exception.BootFromVolumeRequiredForZeroDiskFlavor()
 
+        API._validate_flavor_image_numa_pci(
+            image, instance_type, validate_numa=validate_numa,
+            validate_pci=validate_pci)
+
+    @staticmethod
+    def _validate_flavor_image_numa_pci(image, instance_type,
+                                        validate_numa=True,
+                                        validate_pci=False):
+        """Validate the flavor and image NUMA/PCI values.
+
+        This is called from the API service to ensure that the flavor
+        extra-specs and image properties are self-consistent and compatible
+        with each other.
+
+        :param image: a dict representation of the image including properties
+        :param instance_type: Flavor object
+        :param validate_numa: Flag to indicate whether or not to validate
+               the NUMA-related metadata.
+        :param validate_pci: Flag to indicate whether or not to validate
+               the PCI-related metadata.
+        :raises: Many different possible exceptions.  See
+                 api.openstack.compute.servers.INVALID_FLAVOR_IMAGE_EXCEPTIONS
+                 for the full list.
+        """
         image_meta = _get_image_meta_obj(image)
 
         # Only validate values of flavor/image so the return results of
@@ -3623,6 +3646,7 @@ class API(base.Base):
         current_instance_type = instance.get_flavor()
 
         # If flavor_id is not provided, only migrate the instance.
+        volume_backed = None
         if not flavor_id:
             LOG.debug("flavor_id is None. Assuming migration.",
                       instance=instance)
@@ -3630,12 +3654,15 @@ class API(base.Base):
         else:
             new_instance_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, read_deleted="no")
+            # Check to see if we're resizing to a zero-disk flavor which is
+            # only supported with volume-backed servers.
             if (new_instance_type.get('root_gb') == 0 and
-                current_instance_type.get('root_gb') != 0 and
-                not compute_utils.is_volume_backed_instance(context,
-                    instance)):
-                reason = _('Resize to zero disk flavor is not allowed.')
-                raise exception.CannotResizeDisk(reason=reason)
+                    current_instance_type.get('root_gb') != 0):
+                volume_backed = compute_utils.is_volume_backed_instance(
+                        context, instance)
+                if not volume_backed:
+                    reason = _('Resize to zero disk flavor is not allowed.')
+                    raise exception.CannotResizeDisk(reason=reason)
 
         if not new_instance_type:
             raise exception.FlavorNotFound(flavor_id=flavor_id)
@@ -3668,10 +3695,23 @@ class API(base.Base):
         if not same_instance_type:
             image = utils.get_image_from_system_metadata(
                 instance.system_metadata)
-            # Can skip root_bdm check since it will not change during resize.
-            self._validate_flavor_image_nostatus(
-                context, image, new_instance_type, root_bdm=None,
-                validate_pci=True)
+            # Figure out if the instance is volume-backed but only if we didn't
+            # already figure that out above (avoid the extra db hit).
+            if volume_backed is None:
+                volume_backed = compute_utils.is_volume_backed_instance(
+                    context, instance)
+            # If the server is volume-backed, we still want to validate numa
+            # and pci information in the new flavor, but we don't call
+            # _validate_flavor_image_nostatus because how it handles checking
+            # disk size validation was not intended for a volume-backed
+            # resize case.
+            if volume_backed:
+                self._validate_flavor_image_numa_pci(
+                    image, new_instance_type, validate_pci=True)
+            else:
+                self._validate_flavor_image_nostatus(
+                    context, image, new_instance_type, root_bdm=None,
+                    validate_pci=True)
 
         filter_properties = {'ignore_hosts': []}
 
