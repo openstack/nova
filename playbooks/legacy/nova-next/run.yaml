@@ -46,6 +46,9 @@
           [compute]
           resource_provider_association_refresh = 0
 
+          [scheduler]
+          query_placement_for_image_type_support = True
+
           EOF
         executable: /bin/bash
         chdir: '{{ ansible_user_dir }}/workspace'
