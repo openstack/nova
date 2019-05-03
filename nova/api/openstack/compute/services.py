@@ -237,9 +237,14 @@ class ServiceController(wsgi.Controller):
                                                                   ag.id,
                                                                   service.host)
                 # remove the corresponding resource provider record from
-                # placement for this compute node
-                self.placementclient.delete_resource_provider(
-                    context, service.compute_node, cascade=True)
+                # placement for the compute nodes managed by this service;
+                # remember that an ironic compute service can manage multiple
+                # nodes
+                compute_nodes = objects.ComputeNodeList.get_all_by_host(
+                    context, service.host)
+                for compute_node in compute_nodes:
+                    self.placementclient.delete_resource_provider(
+                        context, compute_node, cascade=True)
                 # remove the host_mapping of this host.
                 try:
                     hm = objects.HostMapping.get_by_host(context, service.host)
