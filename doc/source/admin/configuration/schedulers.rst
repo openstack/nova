@@ -1473,6 +1473,8 @@ use :command:`nova-manage cell_v2 create_cell`. See the
 :ref:`man-page-cells-v2` man page for details on command usage.
 
 
+.. _compute-capabilities-as-traits:
+
 Compute capabilities as traits
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1540,3 +1542,7 @@ There are some rules associated with capability-defined traits.
    library.
 
 .. _os-traits: https://opendev.org/openstack/os-traits/src/branch/master/os_traits/compute
+
+:ref:`Further information on capabilities and traits
+<taxonomy_of_traits_and_capabilities>` can be found in the
+:doc:`Technical Reference Deep Dives section </reference/index>`.

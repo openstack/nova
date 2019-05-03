@@ -209,3 +209,30 @@ would become:
   def update_provider_tree(self, provider_tree, nodename):
       provider_tree.add_traits(
           nodename, 'HW_CPU_X86_AVX', 'HW_CPU_X86_AVX2', 'CUSTOM_GOLD')
+
+.. _taxonomy_of_traits_and_capabilities:
+
+Taxonomy of traits and capabilities
+-----------------------------------
+
+There are various types of traits:
+
+- Some are standard (registered in
+  `os-traits <https://docs.openstack.org/os-traits/latest/>`_); others
+  are custom.
+
+- Some are owned by the compute service; others can be managed by
+  operators.
+
+- Some come from driver-supported capabilities, via a mechanism which
+  was `introduced <https://review.opendev.org/538498>`_ to convert
+  them to standard traits on the compute node resource provider.  This
+  mechanism is :ref:`documented in the configuration guide
+  <compute-capabilities-as-traits>`.
+
+This diagram may shed further light on how these traits relate to each
+other and how they are managed.
+
+.. figure:: /figures/traits-taxonomy.svg
+   :width: 800
+   :alt: Venn diagram showing taxonomy of traits and capabilities
