@@ -693,14 +693,13 @@ class HostManager(object):
         timeout = context_module.CELL_TIMEOUT
         nodes_by_cell = context_module.scatter_gather_cells(
             ctxt, cells, timeout, target_fnc)
-        try:
-            # Only one cell should have a value for the compute nodes
-            # so we get it here
-            nodes = next(
-                nodes for nodes in nodes_by_cell.values() if nodes)
-        except StopIteration:
-            # ...or we find no node if none of the cells has a value
-            nodes = objects.ComputeNodeList()
+
+        # Only one cell should have values for the compute nodes
+        # so we get them here, or return an empty list if no cell
+        # has a value
+        nodes = next(
+            (nodes for nodes in nodes_by_cell.values() if nodes),
+            objects.ComputeNodeList())
 
         return nodes
 
