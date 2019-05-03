@@ -248,9 +248,6 @@ QEMU_MAX_SERIAL_PORTS = 4
 # Qemu supports 4 serial consoles, we remove 1 because of the PTY one defined
 ALLOWED_QEMU_SERIAL_PORTS = QEMU_MAX_SERIAL_PORTS - 1
 
-# libvirt postcopy support
-MIN_LIBVIRT_POSTCOPY_VERSION = (1, 3, 3)
-
 MIN_LIBVIRT_OTHER_ARCH = {
     fields.Architecture.AARCH64: MIN_LIBVIRT_KVM_AARCH64_VERSION,
 }
@@ -720,25 +717,17 @@ class LibvirtDriver(driver.ComputeDriver):
             migration_flags |= libvirt.VIR_MIGRATE_TLS
         return migration_flags
 
-    def _is_post_copy_available(self):
-        return self._host.has_min_version(lv_ver=MIN_LIBVIRT_POSTCOPY_VERSION)
-
     def _is_native_luks_available(self):
         return self._host.has_min_version(MIN_LIBVIRT_LUKS_VERSION,
                                           MIN_QEMU_LUKS_VERSION)
 
     def _handle_live_migration_post_copy(self, migration_flags):
         if CONF.libvirt.live_migration_permit_post_copy:
-            if self._is_post_copy_available():
-                migration_flags |= libvirt.VIR_MIGRATE_POSTCOPY
-            else:
-                LOG.info('The live_migration_permit_post_copy is set '
-                         'to True, but it is not supported.')
+            migration_flags |= libvirt.VIR_MIGRATE_POSTCOPY
         return migration_flags
 
     def _handle_live_migration_auto_converge(self, migration_flags):
-        if (self._is_post_copy_available() and
-                (migration_flags & libvirt.VIR_MIGRATE_POSTCOPY) != 0):
+        if self._is_post_copy_enabled(migration_flags):
             LOG.info('The live_migration_permit_post_copy is set to '
                      'True and post copy live migration is available '
                      'so auto-converge will not be in use.')
@@ -8086,10 +8075,7 @@ class LibvirtDriver(driver.ComputeDriver):
                       instance=instance)
 
     def _is_post_copy_enabled(self, migration_flags):
-        if self._is_post_copy_available():
-            if (migration_flags & libvirt.VIR_MIGRATE_POSTCOPY) != 0:
-                return True
-        return False
+        return (migration_flags & libvirt.VIR_MIGRATE_POSTCOPY) != 0
 
     def live_migration_force_complete(self, instance):
         try:

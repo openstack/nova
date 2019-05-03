@@ -423,7 +423,7 @@ The live-migration force complete API also uses post-copy when permitted. If
 post-copy mode is not available, force complete falls back to pausing the VM
 to ensure the live-migration operation will complete.
 
-When using post-copy mode, if the source and destination hosts loose network
+When using post-copy mode, if the source and destination hosts lose network
 connectivity, the VM being live-migrated will need to be rebooted. For more
 details, please see the Administration guide.
 
