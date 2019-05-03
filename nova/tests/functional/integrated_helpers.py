@@ -356,6 +356,14 @@ class InstanceHelperMixin(object):
         self.fail('Timed out waiting for migration with status "%s" for '
                   'instance: %s' % (expected_statuses, server['id']))
 
+    def _wait_for_log(self, log_line):
+        for i in range(10):
+            if log_line in self.stdlog.logger.output:
+                return
+            time.sleep(0.5)
+
+        self.fail('The line "%(log_line)s" did not appear in the log')
+
 
 class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
     """Base test class for functional tests that check provider usage

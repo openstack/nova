@@ -6567,6 +6567,88 @@ class PortResourceRequestBasedSchedulingTest(
         binding_profile = updated_port['binding:profile']
         self.assertNotIn('allocation', binding_profile)
 
+    def test_delete_bound_port_in_neutron_with_resource_request(self):
+        """Neutron sends a network-vif-deleted os-server-external-events
+        notification to nova when a bound port is deleted. Nova detaches the
+        vif from the server. If the port had a resource allocation then that
+        allocation is leaked. This test makes sure that 1) an ERROR is logged
+        when the leak happens. 2) the leaked resource is reclaimed when the
+        server is deleted.
+        """
+        port = self.neutron.port_with_resource_request
+
+        # create a server
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': port['id']}])
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+        # We expect one set of allocations for the compute resources on the
+        # compute rp and one set for the networking resources on the ovs bridge
+        # rp due to the port resource request
+        self.assertEqual(2, len(allocations))
+        compute_allocations = allocations[self.compute1_rp_uuid]['resources']
+        network_allocations = allocations[
+            self.ovs_bridge_rp_per_host[self.compute1_rp_uuid]]['resources']
+
+        self.assertEqual(self._resources_from_flavor(self.flavor),
+                         compute_allocations)
+        self.assertPortMatchesAllocation(port, network_allocations)
+
+        # We expect that only the RP uuid of the networking RP having the port
+        # allocation is sent in the port binding for the port having resource
+        # request
+        updated_port = self.neutron.show_port(port['id'])['port']
+        binding_profile = updated_port['binding:profile']
+        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
+                         binding_profile['allocation'])
+
+        # neutron is faked in the functional test so this test just sends in
+        # a os-server-external-events notification to trigger the
+        # detach + ERROR log.
+        events = {
+            "events": [
+                {
+                    "name": "network-vif-deleted",
+                    "server_uuid": server['id'],
+                    "tag": port['id'],
+                }
+            ]
+        }
+        response = self.api.api_post('/os-server-external-events', events).body
+        self.assertEqual(200, response['events'][0]['code'])
+
+        port_rp_uuid = self.ovs_bridge_rp_per_host[self.compute1_rp_uuid]
+
+        # 1) Nova logs an ERROR about the leak
+        self._wait_for_log(
+            'ERROR [nova.compute.manager] The bound port %(port_id)s is '
+            'deleted in Neutron but the resource allocation on the resource '
+            'provider %(rp_uuid)s is leaked until the server %(server_uuid)s '
+            'is deleted.'
+            % {'port_id': port['id'],
+               'rp_uuid': port_rp_uuid,
+               'server_uuid': server['id']})
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # Nova leaks the port allocation so the server still has the same
+        # allocation before the port delete.
+        self.assertEqual(2, len(allocations))
+        compute_allocations = allocations[self.compute1_rp_uuid]['resources']
+        network_allocations = allocations[port_rp_uuid]['resources']
+
+        self.assertEqual(self._resources_from_flavor(self.flavor),
+                         compute_allocations)
+        self.assertPortMatchesAllocation(port, network_allocations)
+
+        # 2) Also nova will reclaim the leaked resource during the server
+        # delete
+        self._delete_and_check_allocations(server)
+
     def test_two_sriov_ports_one_with_request_two_available_pfs(self):
         """Verify that the port's bandwidth allocated from the same PF as
         the allocated VF.
