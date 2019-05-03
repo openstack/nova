@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    Config option ``[ironic]api_endpoint`` was deprecated in the 17.0.0 Queens
+    release and is now removed. To achieve the same effect, set the
+    ``[ironic]endpoint_override`` option. (However, it is preferred to omit
+    this setting and let the endpoint be discovered via the service catalog.)

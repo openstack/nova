@@ -37,18 +37,6 @@ If using the Ironic driver following options must be set:
 """)
 
 ironic_options = [
-    cfg.URIOpt(
-        'api_endpoint',
-        schemes=['http', 'https'],
-        deprecated_for_removal=True,
-        deprecated_reason='Endpoint lookup uses the service catalog via '
-                          'common keystoneauth1 Adapter configuration '
-                          'options. In the current release, api_endpoint will '
-                          'override this behavior, but will be ignored and/or '
-                          'removed in a future release. To achieve the same '
-                          'result, use the endpoint_override option instead.',
-        sample_default='http://ironic.example.org:6385/',
-        help='URL override for the Ironic API endpoint.'),
     cfg.IntOpt(
         'api_max_retries',
         # TODO(raj_singh): Change this default to some sensible number
@@ -103,16 +91,11 @@ Related options:
              'If partition_key is unset, this option is ignored.'),
 ]
 
-deprecated_opts = {
-    'endpoint_override': [cfg.DeprecatedOpt('api_endpoint',
-                                            group=ironic_group.name)]}
-
 
 def register_opts(conf):
     conf.register_group(ironic_group)
     conf.register_opts(ironic_options, group=ironic_group)
-    confutils.register_ksa_opts(conf, ironic_group, DEFAULT_SERVICE_TYPE,
-                                deprecated_opts=deprecated_opts)
+    confutils.register_ksa_opts(conf, ironic_group, DEFAULT_SERVICE_TYPE)
 
 
 def list_opts():
@@ -121,6 +104,5 @@ def list_opts():
         ks_loading.get_session_conf_options() +
         ks_loading.get_auth_common_conf_options() +
         ks_loading.get_auth_plugin_conf_options('v3password') +
-        confutils.get_ksa_adapter_opts(DEFAULT_SERVICE_TYPE,
-                                       deprecated_opts=deprecated_opts))
+        confutils.get_ksa_adapter_opts(DEFAULT_SERVICE_TYPE))
     }
