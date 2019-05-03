@@ -3201,6 +3201,8 @@ class TestAllocations(SchedulerReportClientTestCase):
         resp_mock = mock.Mock(status_code=204)
         mock_delete.return_value = resp_mock
         self.client.delete_resource_provider(self.context, cn, cascade=True)
+        mock_by_host.assert_called_once_with(
+            self.context, cn.host, cn.hypervisor_hostname, expected_attrs=[])
         self.assertEqual(2, mock_del_alloc.call_count)
         exp_url = "/resource_providers/%s" % uuids.cn
         mock_delete.assert_called_once_with(

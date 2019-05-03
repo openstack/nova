@@ -2169,8 +2169,12 @@ class SchedulerReportClient(object):
             # Delete any allocations for this resource provider.
             # Since allocations are by consumer, we get the consumers on this
             # host, which are its instances.
-            instances = objects.InstanceList.get_by_host_and_node(context,
-                    host, nodename)
+            # TODO(mriedem): Optimize this up by adding an
+            # InstanceList.get_uuids_by_host_and_node method.
+            # Pass expected_attrs=[] to avoid joining on extra columns we
+            # don't use.
+            instances = objects.InstanceList.get_by_host_and_node(
+                context, host, nodename, expected_attrs=[])
             for instance in instances:
                 self.delete_allocation_for_instance(context, instance.uuid)
         try:
