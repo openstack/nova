@@ -4728,11 +4728,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.compute._clean_instance_console_tokens(self.context, instance)
         mock_clean.assert_not_called()
 
-    @mock.patch('nova.objects.ConsoleAuthToken.'
-                'clean_expired_console_auths_for_host')
+    @mock.patch('nova.objects.ConsoleAuthToken.clean_expired_console_auths')
     def test_cleanup_expired_console_auth_tokens(self, mock_clean):
         self.compute._cleanup_expired_console_auth_tokens(self.context)
-        mock_clean.assert_called_once_with(self.context, self.compute.host)
+        mock_clean.assert_called_once_with(self.context)
 
     @mock.patch.object(nova.context.RequestContext, 'elevated')
     @mock.patch.object(nova.objects.InstanceList, 'get_by_host')

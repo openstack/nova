@@ -1864,6 +1864,15 @@ def console_auth_token_destroy_all_by_instance(context, instance_uuid):
                                                            instance_uuid)
 
 
+def console_auth_token_destroy_expired(context):
+    """Delete expired console authorizations.
+
+    The console authorizations expire at the time specified by their
+    'expires' column. This function is used to garbage collect expired tokens.
+    """
+    return IMPL.console_auth_token_destroy_expired(context)
+
+
 def console_auth_token_destroy_expired_by_host(context, host):
     """Delete expired console authorizations belonging to the host.
 

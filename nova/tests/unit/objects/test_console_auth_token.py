@@ -148,6 +148,11 @@ class _TestConsoleAuthToken(object):
         mock_destroy.assert_called_once_with(
             self.context, uuidsentinel.instance)
 
+    @mock.patch('nova.db.api.console_auth_token_destroy_expired')
+    def test_clean_expired_console_auths(self, mock_destroy):
+        token_obj.ConsoleAuthToken.clean_expired_console_auths(self.context)
+        mock_destroy.assert_called_once_with(self.context)
+
     @mock.patch('nova.db.api.console_auth_token_destroy_expired_by_host')
     def test_clean_expired_console_auths_for_host(self, mock_destroy):
         token_obj.ConsoleAuthToken.clean_expired_console_auths_for_host(
