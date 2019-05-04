@@ -28,6 +28,7 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_upgradecheck import upgradecheck
 import pkg_resources
+import six
 from sqlalchemy import func as sqlfunc
 from sqlalchemy import MetaData, Table, and_, select
 from sqlalchemy.sql import false
@@ -37,10 +38,12 @@ import nova.conf
 from nova import config
 from nova import context as nova_context
 from nova.db.sqlalchemy import api as db_session
+from nova import exception
 from nova.i18n import _
 from nova.objects import cell_mapping as cell_mapping_obj
 from nova import utils
 from nova import version
+from nova.volume import cinder
 
 CONF = nova.conf.CONF
 
@@ -49,6 +52,10 @@ CONF = nova.conf.CONF
 # NOTE: If you bump this version, remember to update the history
 # section in the nova-status man page (doc/source/cli/nova-status).
 MIN_PLACEMENT_MICROVERSION = "1.31"
+
+# NOTE(mriedem): 3.44 is needed to work with volume attachment records which
+# are required for supporting multi-attach capable volumes.
+MIN_CINDER_MICROVERSION = '3.44'
 
 
 class UpgradeCommands(upgradecheck.UpgradeCommands):
@@ -456,6 +463,34 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
 
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
+    def _check_cinder(self):
+        """Checks to see that the cinder API is available at a given minimum
+        microversion.
+        """
+        # Check to see if nova is even configured for Cinder yet (fresh install
+        # or maybe not using Cinder at all).
+        if CONF.cinder.auth_type is None:
+            return upgradecheck.Result(upgradecheck.Code.SUCCESS)
+
+        try:
+            # TODO(mriedem): Eventually use get_ksa_adapter here when it
+            # supports cinder.
+            cinder.is_microversion_supported(
+                nova_context.get_admin_context(), MIN_CINDER_MICROVERSION)
+        except exception.CinderAPIVersionNotAvailable:
+            return upgradecheck.Result(
+                upgradecheck.Code.FAILURE,
+                _('Cinder API %s or greater is required. Deploy at least '
+                  'Cinder 12.0.0 (Queens).') % MIN_CINDER_MICROVERSION)
+        except Exception as ex:
+            # Anything else trying to connect, like bad config, is out of our
+            # hands so just return a warning.
+            return upgradecheck.Result(
+                upgradecheck.Code.WARNING,
+                _('Unable to determine Cinder API version due to error: %s') %
+                six.text_type(ex))
+        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
+
     # The format of the check functions is to return an upgradecheck.Result
     # object with the appropriate upgradecheck.Code and details set. If the
     # check hits warnings or failures then those should be stored in the
@@ -474,6 +509,8 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         (_('Request Spec Migration'), _check_request_spec_migration),
         # Added in Stein (but also useful going back to Rocky)
         (_('Console Auths'), _check_console_auths),
+        # Added in Train
+        (_('Cinder API'), _check_cinder),
     )
 
 

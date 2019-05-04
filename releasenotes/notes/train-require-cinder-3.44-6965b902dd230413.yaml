@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The block-storage (cinder) version 3.44 API is now required when working
+    with volume attachments. A check has been added to the
+    ``nova-status upgrade check`` command for this requirement.
