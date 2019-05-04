@@ -109,7 +109,19 @@ CAPABILITY_TRAITS_MAP = {
     "supports_extend_volume": os_traits.COMPUTE_VOLUME_EXTEND,
     "supports_multiattach": os_traits.COMPUTE_VOLUME_MULTI_ATTACH,
     # Added in os-traits 0.8.0.
-    "supports_trusted_certs": os_traits.COMPUTE_TRUSTED_CERTS
+    "supports_trusted_certs": os_traits.COMPUTE_TRUSTED_CERTS,
+
+    # Image type support flags, added in os-traits 0.12.0
+    "supports_image_type_aki": os_traits.COMPUTE_IMAGE_TYPE_AKI,
+    "supports_image_type_ami": os_traits.COMPUTE_IMAGE_TYPE_AMI,
+    "supports_image_type_ari": os_traits.COMPUTE_IMAGE_TYPE_ARI,
+    "supports_image_type_iso": os_traits.COMPUTE_IMAGE_TYPE_ISO,
+    "supports_image_type_qcow2": os_traits.COMPUTE_IMAGE_TYPE_QCOW2,
+    "supports_image_type_raw": os_traits.COMPUTE_IMAGE_TYPE_RAW,
+    "supports_image_type_vdi": os_traits.COMPUTE_IMAGE_TYPE_VDI,
+    "supports_image_type_vhd": os_traits.COMPUTE_IMAGE_TYPE_VHD,
+    "supports_image_type_vhdx": os_traits.COMPUTE_IMAGE_TYPE_VHDX,
+    "supports_image_type_vmdk": os_traits.COMPUTE_IMAGE_TYPE_VMDK,
 }
 
 
@@ -158,6 +170,18 @@ class ComputeDriver(object):
         "supports_extend_volume": False,
         "supports_multiattach": False,
         "supports_trusted_certs": False,
+
+        # Image type support flags
+        "supports_image_type_aki": False,
+        "supports_image_type_ami": False,
+        "supports_image_type_ari": False,
+        "supports_image_type_iso": False,
+        "supports_image_type_qcow2": False,
+        "supports_image_type_raw": False,
+        "supports_image_type_vdi": False,
+        "supports_image_type_vhd": False,
+        "supports_image_type_vhdx": False,
+        "supports_image_type_vmdk": False,
     }
 
     # Indicates if this driver will rebalance nodes among compute service
