@@ -24,7 +24,6 @@ from oslo_log import log as logging
 import sqlalchemy
 from sqlalchemy.sql import null
 
-from nova.api.openstack.placement import db_api as placement_db
 from nova.db.sqlalchemy import api as db_session
 from nova import exception
 from nova.i18n import _
@@ -32,7 +31,6 @@ from nova.i18n import _
 INIT_VERSION = {}
 INIT_VERSION['main'] = 215
 INIT_VERSION['api'] = 0
-INIT_VERSION['placement'] = 0
 _REPOSITORY = {}
 
 LOG = logging.getLogger(__name__)
@@ -43,8 +41,6 @@ def get_engine(database='main', context=None):
         return db_session.get_engine(context=context)
     if database == 'api':
         return db_session.get_api_engine()
-    if database == 'placement':
-        return placement_db.get_placement_engine()
 
 
 def db_sync(version=None, database='main', context=None):
@@ -173,10 +169,7 @@ def _find_migrate_repo(database='main'):
     """Get the path for the migrate repository."""
     global _REPOSITORY
     rel_path = 'migrate_repo'
-    if database == 'api' or database == 'placement':
-        # NOTE(cdent): For the time being the placement database (if
-        # it is being used) is a replica (in structure) of the api
-        # database.
+    if database == 'api':
         rel_path = os.path.join('api_migrations', 'migrate_repo')
     path = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                         rel_path)

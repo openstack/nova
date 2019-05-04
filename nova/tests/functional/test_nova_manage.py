@@ -24,6 +24,7 @@ from nova import test
 from nova.tests.functional import integrated_helpers
 
 CONF = config.CONF
+INCOMPLETE_CONSUMER_ID = '00000000-0000-0000-0000-000000000000'
 
 
 class NovaManageDBIronicTest(test.TestCase):
@@ -626,10 +627,8 @@ class TestNovaManagePlacementHealAllocations(
         # the project_id and user_id are based on the sentinel values.
         allocations = self.placement_api.get(
             '/allocations/%s' % server['id'], version='1.12').body
-        self.assertEqual(CONF.placement.incomplete_consumer_project_id,
-                         allocations['project_id'])
-        self.assertEqual(CONF.placement.incomplete_consumer_user_id,
-                         allocations['user_id'])
+        self.assertEqual(INCOMPLETE_CONSUMER_ID, allocations['project_id'])
+        self.assertEqual(INCOMPLETE_CONSUMER_ID, allocations['user_id'])
         allocations = allocations['allocations']
         self.assertIn(rp_uuid, allocations)
         self.assertFlavorMatchesAllocation(self.flavor, server['id'], rp_uuid)

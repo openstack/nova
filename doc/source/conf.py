@@ -55,7 +55,6 @@ sample_config_basename = '_static/nova'
 
 policy_generator_config_file = [
     ('../../etc/nova/nova-policy-generator.conf', '_static/nova'),
-    ('../../etc/nova/placement-policy-generator.conf', '_static/placement')
 ]
 
 actdiag_html_image_format = 'SVG'

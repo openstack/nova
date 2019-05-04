@@ -18,7 +18,6 @@
 from oslo_log import log
 from oslo_utils import importutils
 
-from nova.api.openstack.placement import db_api as placement_db
 from nova.common import config
 import nova.conf
 from nova.db.sqlalchemy import api as sqlalchemy_api
@@ -62,4 +61,3 @@ def parse_args(argv, default_config_files=None, configure_db=True,
 
     if configure_db:
         sqlalchemy_api.configure(CONF)
-        placement_db.configure(CONF)

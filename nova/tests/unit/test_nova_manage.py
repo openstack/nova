@@ -2561,7 +2561,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                 new_callable=mock.NonCallableMock)  # assert not called
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
                 return_value=fake_requests.FakeResponse(204))
-    def test_heal_allocations_sentinel_consumer(
+    def test_heal_allocations(
             self, mock_put, mock_get_compute_node, mock_get_allocs,
             mock_get_instances, mock_get_all_cells):
         """Tests the scenario that there are allocations created using
@@ -2583,8 +2583,8 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                     }
                 }
             },
-            "project_id": CONF.placement.incomplete_consumer_project_id,
-            "user_id": CONF.placement.incomplete_consumer_user_id
+            "project_id": uuidsentinel.project_id,
+            "user_id": uuidsentinel.user_id
         }
         self.assertEqual(0, self.cli.heal_allocations(verbose=True))
         self.assertIn('Processed 1 instances.', self.output.getvalue())
@@ -2613,7 +2613,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                 return_value=fake_requests.FakeResponse(
                     409, content='Inventory and/or allocations changed while '
                                  'attempting to allocate'))
-    def test_heal_allocations_sentinel_consumer_put_fails(
+    def test_heal_allocations_put_fails(
             self, mock_put, mock_get_allocs, mock_get_instances,
             mock_get_all_cells):
         """Tests the scenario that there are allocations created using
@@ -2633,8 +2633,8 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                     }
                 }
             },
-            "project_id": CONF.placement.incomplete_consumer_project_id,
-            "user_id": CONF.placement.incomplete_consumer_user_id
+            "project_id": uuidsentinel.project_id,
+            "user_id": uuidsentinel.user_id
         }
         self.assertEqual(3, self.cli.heal_allocations(verbose=True))
         self.assertIn(

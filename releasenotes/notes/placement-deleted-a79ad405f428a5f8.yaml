@@ -1,0 +1,13 @@
+---
+other:
+  - |
+    The code for the `placement service
+    <https://docs.openstack.org/placement>`_ was moved to its own
+    `repository <https://git.openstack.org/cgit/openstack/placement>`_ in
+    Stein. The placement code in nova has been deleted.
+upgrade:
+  - |
+    If you upgraded your OpenStack deployment to Stein without switching to use
+    the now independent placement service, you must do so before upgrading to
+    Train. `Instructions <https://docs.openstack.org/placement/latest/upgrade/to-stein.html>`_
+    for one way to do this are available.
