@@ -17,6 +17,7 @@
 """
 WSGI middleware for OpenStack API controllers.
 """
+import nova.monkey_patch  # noqa
 
 from oslo_log import log as logging
 import routes
