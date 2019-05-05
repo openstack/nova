@@ -238,9 +238,8 @@ class RequestContext(context.RequestContext):
         :param action: string representing the action to be checked.
         :param target: dictionary representing the object of the action
             for object creation this should be a dictionary representing the
-            location of the object e.g. ``{'project_id': context.project_id}``.
-            If None, then this default target will be considered:
-            {'project_id': self.project_id, 'user_id': self.user_id}
+            location of the object
+            e.g. ``{'project_id': instance.project_id}``.
         :param fatal: if False, will return False when an exception.Forbidden
            occurs.
 
@@ -250,18 +249,12 @@ class RequestContext(context.RequestContext):
         :return: returns a non-False value (not necessarily "True") if
             authorized and False if not authorized and fatal is False.
         """
-        if target is None:
-            target = self.default_target()
-
         try:
             return policy.authorize(self, action, target)
         except exception.Forbidden:
             if fatal:
                 raise
             return False
-
-    def default_target(self):
-        return {'project_id': self.project_id, 'user_id': self.user_id}
 
     def to_policy_values(self):
         policy = super(RequestContext, self).to_policy_values()
