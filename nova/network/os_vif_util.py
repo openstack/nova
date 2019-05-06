@@ -232,8 +232,7 @@ def _nova_to_osvif_network(network):
     if network.get_meta("multi_host") is not None:
         netobj.multi_host = network.get_meta("multi_host")
     if network.get_meta("should_create_bridge") is not None:
-        netobj.should_provide_bridge = \
-            network.get_meta("should_create_bridge")
+        netobj.should_provide_bridge = network.get_meta("should_create_bridge")
     if network.get_meta("should_create_vlan") is not None:
         netobj.should_provide_vlan = network.get_meta("should_create_vlan")
         if network.get_meta("vlan") is None:
