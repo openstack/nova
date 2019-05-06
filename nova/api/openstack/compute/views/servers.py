@@ -29,6 +29,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.network.security_group import openstack_driver
 from nova import objects
+from nova.objects import virtual_interface
 from nova.policies import extended_server_attributes as esa_policies
 from nova.policies import flavor_extra_specs as fes_policies
 from nova.policies import servers as servers_policies
@@ -422,7 +423,10 @@ class ViewBuilder(common.ViewBuilder):
                             show_host_status=show_host_status,
                             show_sec_grp=show_sec_grp, bdms=bdms,
                             cell_down_support=cell_down_support)["server"]
-                       for server in servers]
+                       for server in servers
+                       # Filter out the fake marker instance created by the
+                       # fill_virtual_interface_list online data migration.
+                       if server.uuid != virtual_interface.FAKE_UUID]
         servers_links = self._get_collection_links(request,
                                                    servers,
                                                    coll_name)
