@@ -7140,8 +7140,7 @@ class LibvirtDriver(driver.ComputeDriver):
         available_least = disk_free_gb * units.Gi - disk_over_committed
         data['disk_available_least'] = available_least / units.Gi
 
-        data['pci_passthrough_devices'] = \
-            self._get_pci_passthrough_devices()
+        data['pci_passthrough_devices'] = self._get_pci_passthrough_devices()
 
         numa_topology = self._get_host_numa_topology()
         if numa_topology:
@@ -7253,8 +7252,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if disk_over_commit is not None:
             data.disk_over_commit = disk_over_commit
         data.disk_available_mb = disk_available_mb
-        data.dst_wants_file_backed_memory = \
-                CONF.libvirt.file_backed_memory > 0
+        data.dst_wants_file_backed_memory = CONF.libvirt.file_backed_memory > 0
         data.file_backed_memory_discard = (CONF.libvirt.file_backed_memory and
             self._host.has_min_version(MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION,
                                        MIN_QEMU_FILE_BACKED_DISCARD_VERSION))
