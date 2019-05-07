@@ -136,10 +136,23 @@ by using query options.
 For different user roles, the user has different query options set:
 
 - For general user, there is limited set of attributes of the servers can be
-  used as query option. ``reservation_id``, ``name``, ``status``, ``image``,
-  ``flavor``, ``ip``, ``changes-since``, ``changes-before``, ``ip6``,
-  ``tags``, ``tags-any``, ``not-tags``, ``not-tags-any`` are supported options
-  to be used. Other options will be ignored by nova silently.
+  used as query option. The supported options are:
+
+  - ``changes-since``
+  - ``flavor``
+  - ``image``
+  - ``ip``
+  - ``ip6`` (New in version 2.5)
+  - ``name``
+  - ``not-tags`` (New in version 2.26)
+  - ``not-tags-any`` (New in version 2.26)
+  - ``reservation_id``
+  - ``status``
+  - ``tags`` (New in version 2.26)
+  - ``tags-any`` (New in version 2.26)
+  - ``changes-before`` (New in version 2.66)
+
+  Other options will be ignored by nova silently.
 
 - For administrator, most of the server attributes can be used as query
   options. Before the Ocata release, the fields in the database schema of
