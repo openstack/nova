@@ -1212,6 +1212,11 @@ class ServersController(wsgi.Controller):
 
     def _get_server_search_options(self, req):
         """Return server search options allowed by non-admin."""
+        # NOTE(mriedem): all_tenants is admin-only by default but because of
+        # tight-coupling between this method, the remove_invalid_options method
+        # and how _get_servers uses them, we include all_tenants here but it
+        # will be removed later for non-admins. Fixing this would be nice but
+        # probably not trivial.
         opt_list = ('reservation_id', 'name', 'status', 'image', 'flavor',
                     'ip', 'changes-since', 'all_tenants')
         if api_version_request.is_supported(req, min_version='2.5'):

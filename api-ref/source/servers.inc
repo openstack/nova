@@ -156,7 +156,6 @@ whitelist will be silently ignored.
 - For non-admin users, whitelist is different from admin users whitelist.
   Valid whitelist for non-admin users includes
 
-  - ``all_tenants``
   - ``changes-since``
   - ``flavor``
   - ``image``
