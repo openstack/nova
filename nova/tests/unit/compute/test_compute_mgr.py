@@ -6139,7 +6139,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     [mock.call(self.context, self.instance,
                         self.requested_networks, self.security_groups)])
         mock_prepspawn.assert_not_called()
-        mock_failedspawn.asset_not_called()
+        mock_failedspawn.assert_not_called()
 
     @mock.patch.object(virt_driver.ComputeDriver, 'failed_spawn_cleanup')
     @mock.patch.object(virt_driver.ComputeDriver, 'prepare_for_spawn')
