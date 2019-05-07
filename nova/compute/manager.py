@@ -5964,9 +5964,9 @@ class ComputeManager(manager.Manager):
         # new style attachments (v3.44). Once we drop support for old style
         # attachments we could think about cleaning up the cinder-initiated
         # swap volume API flows.
-        is_cinder_migration = (
-            True if old_volume['status'] in ('retyping',
-                                             'migrating') else False)
+        is_cinder_migration = False
+        if 'migration_status' in old_volume:
+            is_cinder_migration = old_volume['migration_status'] == 'migrating'
         old_vol_size = old_volume['size']
         new_volume = self.volume_api.get(context, new_volume_id)
         new_vol_size = new_volume['size']
