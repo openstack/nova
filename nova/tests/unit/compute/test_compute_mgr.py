@@ -6171,7 +6171,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                         self.requested_networks, self.security_groups,
                         self.resource_provider_mapping)])
         mock_prepspawn.assert_not_called()
-        mock_failedspawn.asset_not_called()
+        mock_failedspawn.assert_not_called()
 
     @mock.patch.object(virt_driver.ComputeDriver, 'failed_spawn_cleanup')
     @mock.patch.object(virt_driver.ComputeDriver, 'prepare_for_spawn')
@@ -8116,7 +8116,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         result = _do_call()
         mock_clean.assert_called_once_with(self.context, self.instance.uuid)
         mock_rt.free_pci_device_allocations_for_instance.\
-            asset_called_once_with(self.context, self.instance)
+            assert_called_once_with(self.context, self.instance)
         return result
 
     def test_post_live_migration_new_allocations(self):
