@@ -799,6 +799,16 @@ Numbered groupings of resource classes and traits
     * ``none``: Different numbered request groups may be satisfied
       by different providers *or* common providers.
 
+    .. note::
+
+        If more than one group is specified then the ``group_policy`` is
+        mandatory in the request. However such groups might come from other
+        sources than flavor extra_spec (e.g. from Neutron ports with QoS
+        minimum bandwidth policy). If the flavor does not specify any groups
+        and ``group_policy`` but more than one group is coming from other
+        sources then nova will default the ``group_policy`` to ``none`` to
+        avoid scheduler failure.
+
     For example, to create a server with the following VFs:
 
     * One SR-IOV virtual function (VF) on NET1 with bandwidth 10000 bytes/sec

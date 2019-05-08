@@ -66,6 +66,14 @@ class ResourceRequest(object):
         return ', '.join(sorted(
             list(str(rg) for rg in list(self._rg_by_id.values()))))
 
+    @property
+    def group_policy(self):
+        return self._group_policy
+
+    @group_policy.setter
+    def group_policy(self, value):
+        self._group_policy = value
+
     def get_request_group(self, ident):
         if ident not in self._rg_by_id:
             rq_grp = objects.RequestGroup(use_same_provider=bool(ident))
@@ -211,6 +219,10 @@ class ResourceRequest(object):
         for rg in self._rg_by_id.values():
             yield rg.resources
 
+    def get_num_of_numbered_groups(self):
+        return len([ident for ident in self._rg_by_id.keys()
+                    if ident is not None])
+
     def merged_resources(self, flavor_resources=None):
         """Returns a merge of {resource_class: amount} for all resource groups.
 
@@ -300,31 +312,14 @@ class ResourceRequest(object):
             qparams = []
         if self._group_policy is not None:
             qparams.append(('group_policy', self._group_policy))
-        nr_of_numbered_groups = 0
+
         for ident, rg in self._rg_by_id.items():
             # [('resourcesN', 'rclass:amount,rclass:amount,...'),
             #  ('requiredN', 'trait_name,!trait_name,...'),
             #  ('member_ofN', 'in:uuid,uuid,...'),
             #  ('member_ofN', 'in:uuid,uuid,...')]
             qparams.extend(to_queryparams(rg, ident or ''))
-            if ident:
-                nr_of_numbered_groups += 1
-        if nr_of_numbered_groups >= 2 and not self._group_policy:
-            # we know this will fail in placement so help the troubleshooting
-            LOG.warning(
-                "There is more than one numbered request group in the "
-                "allocation candidate query but the flavor did not specify "
-                "any group policy. This query will fail in placement due to "
-                "the missing group policy. If you specified more than one "
-                "numbered request group in the flavor extra_spec or booted "
-                "with more than one neutron port that has resource request "
-                "(i.e. the port has a QoS minimum bandwidth policy rule "
-                "attached) then you have to specify the group policy in the "
-                "flavor extra_spec. If it is OK to let these groups be "
-                "satisfied by overlapping resource providers then use "
-                "'group_policy': 'None'. If you want each group to be "
-                "satisfied from a separate resource provider then use "
-                "'group_policy': 'isolate'.")
+
         return parse.urlencode(sorted(qparams))
 
 
@@ -468,9 +463,12 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager):
                           if rclass not in res_req.merged_resources()}
         # Now we don't need (or want) any remaining zero entries - remove them.
         res_req.strip_zeros()
+
+        numbered_groups_from_flavor = res_req.get_num_of_numbered_groups()
     else:
         # Start with an empty one
         res_req = ResourceRequest()
+        numbered_groups_from_flavor = 0
 
     # Process any image properties
     if 'image' in spec_obj and 'properties' in spec_obj.image:
@@ -547,6 +545,28 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager):
         key in ['group', 'same_host', 'different_host']
         for key in spec_obj.scheduler_hints)):
         res_req._limit = None
+
+    if res_req.get_num_of_numbered_groups() >= 2 and not res_req.group_policy:
+        LOG.warning(
+            "There is more than one numbered request group in the "
+            "allocation candidate query but the flavor did not specify "
+            "any group policy. This query would fail in placement due to "
+            "the missing group policy. If you specified more than one "
+            "numbered request group in the flavor extra_spec then you need to "
+            "specify the group policy in the flavor extra_spec. If it is OK "
+            "to let these groups be satisfied by overlapping resource "
+            "providers then use 'group_policy': 'none'. If you want each "
+            "group to be satisfied from a separate resource provider then "
+            "use 'group_policy': 'isolate'.")
+
+        if numbered_groups_from_flavor <= 1:
+            LOG.info(
+                "At least one numbered request group is defined outside of "
+                "the flavor (e.g. in a port that has a QoS minimum bandwidth "
+                "policy rule attached) but the flavor did not specify any "
+                "group policy. To avoid the placement failure nova defaults "
+                "the group policy to 'none'.")
+            res_req.group_policy = 'none'
 
     return res_req
 

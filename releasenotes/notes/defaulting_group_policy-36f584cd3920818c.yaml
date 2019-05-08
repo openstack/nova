@@ -1,0 +1,19 @@
+---
+other:
+  - |
+    `Numbered request groups`_ can be defined in the flavor extra_spec
+    but they can come from other sources as well (e.g. neutron ports).
+    If there is more than one numbered request group in the
+    allocation candidate query and the flavor does not specify any
+    group policy then the query will fail in placement as group_policy
+    is mandatory in this case. Nova previously printed a warning to the
+    scheduler logs but let the request fail. However the creator of
+    the flavor cannot know if the flavor later on will be used in a boot
+    request that has other numbered request groups. So nova will start
+    defaulting the group_policy to 'none' which means that the resource
+    providers fulfilling the numbered request groups can overlap.
+    Nova will only default the group_policy if it is not provided in the flavor
+    extra_spec, and there is more than one numbered request group present in
+    the final request, and the flavor only provided one or zero of such groups.
+
+    .. _`Numbered request groups`: https://docs.openstack.org/nova/latest/user/flavors.html#extra-specs-numbered-resource-groupings
