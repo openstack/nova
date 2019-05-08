@@ -1838,6 +1838,78 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             new_flavor=new_flavor, source_rp_uuid=source_rp_uuid,
             dest_rp_uuid=dest_rp_uuid)
 
+    def test_migration_confirm_resize_error(self):
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(self.flavor1,
+                                                  source_hostname)
+
+        self._move_and_check_allocations(
+            server, request={'migrate': None}, old_flavor=self.flavor1,
+            new_flavor=self.flavor1, source_rp_uuid=source_rp_uuid,
+            dest_rp_uuid=dest_rp_uuid)
+
+        # Mock failure
+        def fake_confirm_migration(context, migration, instance, network_info):
+            raise exception.MigrationPreCheckError(
+                reason='test_migration_confirm_resize_error')
+
+        with mock.patch('nova.virt.fake.FakeDriver.'
+                        'confirm_migration',
+                        side_effect=fake_confirm_migration):
+
+            # Confirm the migration/resize and check the usages
+            post = {'confirmResize': None}
+            self.api.post_server_action(
+                server['id'], post, check_response_status=[204])
+            server = self._wait_for_state_change(self.api, server, 'ERROR')
+
+        # After confirming and error, we should have an allocation only on the
+        # destination host
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, source_usages,
+                          'Source host %s still has usage after the failed '
+                          'migration_confirm' % source_hostname)
+
+        # Check that the server only allocates resource from the original host
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+
+        self._run_periodics()
+
+        # After confirming and error, we should have an allocation only on the
+        # destination host
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, source_usages,
+                          'Source host %s still has usage after the failed '
+                          'migration_confirm' % source_hostname)
+
+        # Check that the server only allocates resource from the original host
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+
+        self._delete_and_check_allocations(server)
+
     def _test_resize_revert(self, dest_hostname):
         source_hostname = self._other_hostname(dest_hostname)
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
