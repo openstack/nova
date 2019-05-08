@@ -1509,9 +1509,12 @@ class ComputeTestCase(BaseTestCase,
                       test_diagnostics.DiagnosticsComparisonMixin,
                       fake_resource_tracker.RTMockMixin):
     def setUp(self):
+        # This needs to go before we call setUp because the thread pool
+        # executor is created in ComputeManager.__init__, which is called
+        # during setUp.
+        self.useFixture(fixtures.SynchronousThreadPoolExecutorFixture())
         super(ComputeTestCase, self).setUp()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
-        self.useFixture(fixtures.SynchronousThreadPoolExecutorFixture())
 
         self.image_api = image_api.API()
         self.default_flavor = objects.Flavor.get_by_name(self.context,
@@ -6298,11 +6301,13 @@ class ComputeTestCase(BaseTestCase,
                     'resources': mock.sentinel.allocs,
                 }
             }
-            self.assertRaises(test.TestingException,
-                              self.compute.live_migration,
-                              c, dest=dest_host, block_migration=True,
-                              instance=instance, migration=migration,
-                              migrate_data=migrate_data)
+            # This call will not raise TestingException because if a task
+            # submitted to a thread executor raises, the exception will not be
+            # raised unless Future.result() is called.
+            self.compute.live_migration(
+                    c, dest=dest_host, block_migration=True,
+                    instance=instance, migration=migration,
+                    migrate_data=migrate_data)
             mock_setup.assert_called_once_with(c, instance, self.compute.host)
             mock_client.move_allocations.assert_called_once_with(
                 c, migration.uuid, instance.uuid)
@@ -6414,8 +6419,10 @@ class ComputeTestCase(BaseTestCase,
                                'cleanup') as mock_cleanup:
             mock_cleanup.side_effect = test.TestingException
 
-            self.assertRaises(test.TestingException,
-                self.compute.live_migration,
+            # This call will not raise TestingException because if a task
+            # submitted to a thread executor raises, the exception will not be
+            # raised unless Future.result() is called.
+            self.compute.live_migration(
                 c, dest, instance, False, migration, migrate_data)
 
         # ensure we have updated the instance and migration objects
