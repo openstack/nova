@@ -435,11 +435,9 @@ def scatter_gather_cells(context, cell_mappings, timeout, fn, *args, **kwargs):
     queue = eventlet.queue.LightQueue()
     results = {}
 
-    def gather_result(cell_mapping, fn, context, *args, **kwargs):
-        cell_uuid = cell_mapping.uuid
+    def gather_result(cell_uuid, fn, *args, **kwargs):
         try:
-            with target_cell(context, cell_mapping) as cctxt:
-                result = fn(cctxt, *args, **kwargs)
+            result = fn(*args, **kwargs)
         except Exception as e:
             # Only log the exception traceback for non-nova exceptions.
             if not isinstance(e, exception.NovaException):
@@ -449,9 +447,10 @@ def scatter_gather_cells(context, cell_mappings, timeout, fn, *args, **kwargs):
         queue.put((cell_uuid, result))
 
     for cell_mapping in cell_mappings:
-        greenthreads.append((cell_mapping.uuid,
-                             utils.spawn(gather_result, cell_mapping,
-                                         fn, context, *args, **kwargs)))
+        with target_cell(context, cell_mapping) as cctxt:
+            greenthreads.append((cell_mapping.uuid,
+                                 utils.spawn(gather_result, cell_mapping.uuid,
+                                             fn, cctxt, *args, **kwargs)))
 
     with eventlet.timeout.Timeout(timeout, exception.CellTimeout):
         try:
