@@ -7610,6 +7610,26 @@ class LibvirtDriver(driver.ComputeDriver):
                     ' must disable serial console.')
             raise exception.MigrationError(reason=msg)
 
+    def _detach_direct_passthrough_vifs(self, context,
+                                        migrate_data, instance):
+        """detaches passthrough vif to enable live migration
+
+        :param context: security context
+        :param migrate_data: a LibvirtLiveMigrateData object
+        :param instance: instance object that is migrated.
+        """
+        # NOTE(sean-k-mooney): if we have vif data available we
+        # loop over each vif and detach all direct passthrough
+        # vifs to allow sriov live migration.
+        direct_vnics = network_model.VNIC_TYPES_DIRECT_PASSTHROUGH
+        vifs = [vif.source_vif for vif in migrate_data.vifs
+                if "source_vif" in vif and vif.source_vif]
+        for vif in vifs:
+            if vif['vnic_type'] in direct_vnics:
+                LOG.info("Detaching vif %s from instnace "
+                         "%s for live migration", vif['id'], instance.id)
+                self.detach_interface(context, instance, vif)
+
     def _live_migration_operation(self, context, instance, dest,
                                   block_migration, migrate_data, guest,
                                   device_names):
@@ -7684,6 +7704,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         inst_type=instance.flavor,
                         virt_type=CONF.libvirt.virt_type,
                         host=self._host)
+                    self._detach_direct_passthrough_vifs(context,
+                        migrate_data, instance)
                 new_xml_str = libvirt_migrate.get_updated_guest_xml(
                     # TODO(sahid): It's not a really good idea to pass
                     # the method _get_volume_config and we should to find
@@ -8129,6 +8151,40 @@ class LibvirtDriver(driver.ComputeDriver):
                                           instance.ramdisk_id,
                                           instance, fallback_from_host)
 
+    def _reattach_instance_vifs(self, context, instance, network_info):
+        guest = self._host.get_guest(instance)
+        # validate that the guest has the expected number of interfaces
+        # attached.
+        guest_interfaces = guest.get_interfaces()
+        # NOTE(sean-k-mooney): In general len(guest_interfaces) will
+        # be equal to len(network_info) as interfaces will not be hot unplugged
+        # unless they are SR-IOV direct mode interfaces. As such we do not
+        # need an else block here as it would be a noop.
+        if len(guest_interfaces) < len(network_info):
+            # NOTE(sean-k-mooney): we are doing a post live migration
+            # for a guest with sriov vif that were detached as part of
+            # the migration. loop over the vifs and attach the missing
+            # vif as part of the post live migration phase.
+            direct_vnics = network_model.VNIC_TYPES_DIRECT_PASSTHROUGH
+            for vif in network_info:
+                if vif['vnic_type'] in direct_vnics:
+                    LOG.info("Attaching vif %s to instance %s",
+                             vif['id'], instance.id)
+                    self.attach_interface(context, instance,
+                                          instance.image_meta, vif)
+
+    def rollback_live_migration_at_source(self, context, instance,
+                                          migrate_data):
+        """reconnect sriov interfaces after failed live migration
+        :param context: security context
+        :param instance:  the instance being migrated
+        :param migrate_date: a LibvirtLiveMigrateData object
+        """
+        network_info = network_model.NetworkInfo(
+            [vif.source_vif for vif in migrate_data.vifs
+                            if "source_vif" in vif and vif.source_vif])
+        self._reattach_instance_vifs(context, instance, network_info)
+
     def rollback_live_migration_at_destination(self, context, instance,
                                                network_info,
                                                block_device_info,
@@ -8466,11 +8522,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param network_info: instance network information
         :param block_migration: if true, post operation of block_migration.
         """
-        # The source node set the VIR_MIGRATE_PERSIST_DEST flag when live
-        # migrating so the guest xml should already be persisted on the
-        # destination host, so just perform a sanity check to make sure it
-        # made it as expected.
-        self._host.get_guest(instance)
+        self._reattach_instance_vifs(context, instance, network_info)
 
     def _get_instance_disk_info_from_config(self, guest_config,
                                             block_device_info):

@@ -9960,12 +9960,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         guest xml is updated with the migrate_data.vifs configuration.
         """
         instance = objects.Instance(**self.test_instance)
+
+        source_vif_normal = network_model.VIF(
+            id=uuids.port_id, type=network_model.VIF_TYPE_OVS,
+            vnic_type=network_model.VNIC_TYPE_NORMAL, details={'foo': 'bar'},
+            profile={'binding:host_id': 'fake-source-host'})
+
+        vif = objects.VIFMigrateData(port_id=uuids.port_id,
+                                     source_vif=source_vif_normal)
         migrate_data = objects.LibvirtLiveMigrateData(
             serial_listen_addr='',
             target_connect_addr=None,
             bdms=[],
             block_migration=False,
-            vifs=[objects.VIFMigrateData(port_id=uuids.port_id)])
+            vifs=[vif])
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         guest = libvirt_guest.Guest(mock.MagicMock())
@@ -9976,18 +9984,67 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertIsNotNone(get_vif_config)
             return fake_xml
 
+        @mock.patch.object(drvr, "detach_interface")
         @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml',
                     side_effect=fake_get_updated_guest_xml)
         @mock.patch.object(drvr._host, 'has_min_version', return_value=True)
         @mock.patch.object(guest, 'migrate')
-        def _test(migrate, has_min_version, get_updated_guest_xml):
+        def _test_normal(migrate, has_min_version,
+                         get_updated_guest_xml, detach):
             drvr._live_migration_operation(
                 self.context, instance, 'dest.host', False,
                 migrate_data, guest, [])
-            self.assertEqual(1, get_updated_guest_xml.call_count)
+            get_updated_guest_xml.assert_called_once()
             migrate.assert_called()
+            detach.assert_not_called()
 
-        _test()
+        _test_normal()
+
+        source_vif_direct = network_model.VIF(
+            id=uuids.port_id, type=network_model.VIF_TYPE_OVS,
+            vnic_type=network_model.VNIC_TYPE_DIRECT, details={'foo': 'bar'},
+            profile={'binding:host_id': 'fake-source-host'})
+
+        vif_direct = objects.VIFMigrateData(port_id=uuids.port_id,
+                                            source_vif=source_vif_direct)
+        migrate_data = objects.LibvirtLiveMigrateData(
+            serial_listen_addr='', target_connect_addr=None,
+            bdms=[], block_migration=False, vifs=[vif_direct])
+
+        @mock.patch.object(drvr, "detach_interface")
+        @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml',
+                    side_effect=fake_get_updated_guest_xml)
+        @mock.patch.object(drvr._host, 'has_min_version', return_value=True)
+        @mock.patch.object(guest, 'migrate')
+        def _test_direct(migrate, has_min_version,
+                         get_updated_guest_xml, detach):
+            drvr._live_migration_operation(
+                self.context, instance, 'dest.host', False,
+                migrate_data, guest, [])
+            get_updated_guest_xml.assert_called_once()
+            migrate.assert_called()
+            detach.asset_called()
+
+        _test_direct()
+
+        migrate_data = objects.LibvirtLiveMigrateData(
+            serial_listen_addr='', target_connect_addr=None,
+            bdms=[], block_migration=False, vifs=[vif, vif_direct])
+
+        @mock.patch.object(drvr, "detach_interface")
+        @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml',
+                    side_effect=fake_get_updated_guest_xml)
+        @mock.patch.object(drvr._host, 'has_min_version', return_value=True)
+        @mock.patch.object(guest, 'migrate')
+        def _test_mix(migrate, has_min_version, get_updated_guest_xml, detach):
+            drvr._live_migration_operation(
+                self.context, instance, 'dest.host', False,
+                migrate_data, guest, [])
+            get_updated_guest_xml.assert_called_once()
+            migrate.assert_called()
+            detach.asset_called_once()
+
+        _test_mix()
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
@@ -16885,10 +16942,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         for fs in supported_fs:
             self.assertFalse(drvr.is_supported_fs_format(fs))
 
+    @mock.patch("nova.objects.instance.Instance.image_meta",
+                new_callable=mock.PropertyMock())
+    @mock.patch("nova.virt.libvirt.driver.LibvirtDriver.attach_interface")
+    @mock.patch('nova.virt.libvirt.guest.Guest.get_interfaces')
     @mock.patch('nova.virt.libvirt.host.Host.write_instance_config')
     @mock.patch('nova.virt.libvirt.host.Host.get_guest')
     def test_post_live_migration_at_destination(
-            self, mock_get_guest, mock_write_instance_config):
+            self, mock_get_guest, mock_write_instance_config,
+            mock_get_interfaces, mock_attach, mock_image_meta):
         instance = objects.Instance(id=1, uuid=uuids.instance)
         dom = mock.MagicMock()
         guest = libvirt_guest.Guest(dom)
@@ -16896,10 +16958,24 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_guest.return_value = guest
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.post_live_migration_at_destination(mock.ANY, instance, mock.ANY)
+        net_info = network_model.NetworkInfo()
+        mock_get_interfaces.return_type = []
+        drvr.post_live_migration_at_destination(mock.ANY, instance, net_info)
         # Assert that we don't try to write anything to the destination node
         # since the source live migrated with the VIR_MIGRATE_PERSIST_DEST flag
         mock_write_instance_config.assert_not_called()
+        mock_attach.assert_not_called()
+
+        vif = network_model.VIF(id=uuids.port_id,
+            vnic_type=network_model.VNIC_TYPE_NORMAL)
+        vif_direct = network_model.VIF(id=uuids.port_id,
+            vnic_type=network_model.VNIC_TYPE_DIRECT)
+
+        net_info = network_model.NetworkInfo([vif, vif_direct])
+        mock_get_interfaces.return_type = [vif]
+        drvr.post_live_migration_at_destination(mock.ANY, instance, net_info)
+        mock_attach.assert_called_once_with(mock.ANY, instance,
+                                            mock_image_meta, vif_direct)
 
     def test_create_propagates_exceptions(self):
         self.flags(virt_type='lxc', group='libvirt')

@@ -1,0 +1,25 @@
+---
+features:
+  - |
+    In this release SR-IOV live migration support is added to the libvirt
+    virt driver for Neutron interfaces. Neutron SR-IOV interfaces can be
+    grouped into two categories, direct mode interfaces and indirect.
+    Direct mode SR-IOV interfaces are directly attached to the guest and
+    exposed to the guest OS. Indirect mode SR-IOV interfaces have a software
+    interface such as a macvtap between the guest and the SR-IOV device.
+    This feature enables transparent live migration for instances with
+    indirect mode SR-IOV devices. As there is no generic way to copy
+    hardware state during a live migration, direct mode migration is not
+    transparent to the guest. For direct mode interfaces, we mimic the
+    workflow already in place for suspend and resume. For instance with
+    SR-IOV devices, we detach the direct mode interfaces before migration
+    and re-attach them after the migration. As a result, instances
+    with direct mode SR-IOV port will lose network connectivity during a
+    migration unless a bond with a live migratable interface is created
+    within the guest.
+upgrade:
+  - |
+    The Libvirt SR-IOV migration feature intoduced in this release requires
+    both the source and destination node to support the feature. As a result
+    it will be automatically disabled until the conductor and compute nodes
+    have been upgraded.
