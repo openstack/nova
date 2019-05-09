@@ -665,6 +665,59 @@ class TestNovaManagePlacementHealAllocations(
         self.assertIn('[dry-run] Create allocations for instance %s on '
                       'provider %s' % (server['id'], rp_uuid), output)
 
+    def test_heal_allocations_specific_instance(self):
+        """Tests the case that a specific instance is processed and only that
+        instance even though there are two which require processing.
+        """
+        # Create one that we won't process.
+        self._boot_and_assert_no_allocations(
+            self.flavor, 'cell1')
+        # Create another that we will process specifically.
+        server, _ = self._boot_and_assert_no_allocations(
+            self.flavor, 'cell1')
+        # First do a dry run to make sure two instances need processing.
+        result = self.cli.heal_allocations(
+            max_count=2, verbose=True, dry_run=True)
+        # Nothing changed so the return code should be 4.
+        self.assertEqual(4, result, self.output.getvalue())
+        output = self.output.getvalue()
+        self.assertIn('Found 2 candidate instances', output)
+
+        # Now run with our specific instance and it should be the only one
+        # processed. Also run with max_count specified to show it's ignored.
+        result = self.cli.heal_allocations(
+            max_count=10, verbose=True, instance_uuid=server['id'])
+        output = self.output.getvalue()
+        self.assertEqual(0, result, self.output.getvalue())
+        self.assertIn('Found 1 candidate instances', output)
+        self.assertIn('Processed 1 instances.', output)
+        # There shouldn't be any messages about running in batches.
+        self.assertNotIn('Running batches', output)
+        # There shouldn't be any message about max count reached.
+        self.assertNotIn('Max count reached.', output)
+
+        # Now run it again on the specific instance and it should be done.
+        result = self.cli.heal_allocations(
+            verbose=True, instance_uuid=server['id'])
+        output = self.output.getvalue()
+        self.assertEqual(4, result, self.output.getvalue())
+        self.assertIn('Found 1 candidate instances', output)
+        self.assertIn('Processed 0 instances.', output)
+        # There shouldn't be any message about max count reached.
+        self.assertNotIn('Max count reached.', output)
+
+        # Delete the instance mapping and make sure that results in an error
+        # when we run the command.
+        ctxt = context.get_admin_context()
+        im = objects.InstanceMapping.get_by_instance_uuid(ctxt, server['id'])
+        im.destroy()
+        result = self.cli.heal_allocations(
+            verbose=True, instance_uuid=server['id'])
+        output = self.output.getvalue()
+        self.assertEqual(127, result, self.output.getvalue())
+        self.assertIn('Unable to find cell for instance %s, is it mapped?' %
+                      server['id'], output)
+
 
 class TestNovaManagePlacementSyncAggregates(
         integrated_helpers.ProviderUsageBaseTestCase):
