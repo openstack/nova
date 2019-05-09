@@ -562,7 +562,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         is_vpn = 'fake-is-vpn'
         req_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id='fake')])
-        macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
         final_result = 'meow'
         rp_mapping = {}
@@ -574,7 +573,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 side_effect=[test.TestingException()] * 7 + [final_result]):
             res = self.compute._allocate_network_async(self.context, instance,
                                                        req_networks,
-                                                       macs,
                                                        sec_groups,
                                                        is_vpn,
                                                        rp_mapping)
@@ -593,7 +591,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         is_vpn = 'fake-is-vpn'
         req_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id='fake')])
-        macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
         rp_mapping = {}
 
@@ -602,12 +599,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 side_effect=test.TestingException) as mock_allocate:
             self.assertRaises(test.TestingException,
                               self.compute._allocate_network_async,
-                              self.context, instance, req_networks, macs,
+                              self.context, instance, req_networks,
                               sec_groups, is_vpn, rp_mapping)
 
         mock_allocate.assert_called_once_with(
             self.context, instance, vpn=is_vpn,
-            requested_networks=req_networks, macs=macs,
+            requested_networks=req_networks, macs=None,
             security_groups=sec_groups,
             bind_host_id=instance.get('host'),
             resource_provider_mapping=rp_mapping)
@@ -623,7 +620,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         is_vpn = 'fake-is-vpn'
         req_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id='fake')])
-        macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
         final_result = 'zhangtralon'
         rp_mapping = {}
@@ -634,7 +630,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                               final_result]):
             res = self.compute._allocate_network_async(self.context, instance,
                                                        req_networks,
-                                                       macs,
                                                        sec_groups,
                                                        is_vpn,
                                                        rp_mapping)
@@ -647,7 +642,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         req_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id='none')])
         nwinfo = self.compute._allocate_network_async(
-            self.context, mock.sentinel.instance, req_networks, macs=None,
+            self.context, mock.sentinel.instance, req_networks,
             security_groups=['default'], is_vpn=False,
             resource_provider_mapping={})
         self.assertEqual(0, len(nwinfo))
@@ -5235,9 +5230,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.InstanceActionEvent, 'event_start')
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
-    @mock.patch.object(virt_driver.ComputeDriver, 'macs_for_instance')
     def test_rescheduled_exception_with_network_allocated(self,
-            mock_macs_for_instance, mock_event_finish,
+            mock_event_finish,
             mock_event_start, mock_ins_save,
             mock_build_ins, mock_build_and_run):
         self.flags(use_neutron=False)
@@ -5246,7 +5240,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 system_metadata={'network_allocated': 'True'},
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         mock_ins_save.return_value = instance
-        mock_macs_for_instance.return_value = []
         mock_build_and_run.side_effect = exception.RescheduledException(
             reason='', instance_uuid=self.instance.uuid)
 
@@ -5284,9 +5277,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.InstanceActionEvent, 'event_start')
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
-    @mock.patch.object(virt_driver.ComputeDriver, 'macs_for_instance')
     def test_rescheduled_exception_with_network_allocated_with_neutron(self,
-            mock_macs_for_instance, mock_event_finish, mock_event_start,
+            mock_event_finish, mock_event_start,
             mock_ins_save, mock_build_ins, mock_cleanup_network,
             mock_build_and_run):
         """Tests that we always cleanup allocated networks for the instance
@@ -5297,7 +5289,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 system_metadata={'network_allocated': 'True'},
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         mock_ins_save.return_value = instance
-        mock_macs_for_instance.return_value = []
         mock_build_and_run.side_effect = exception.RescheduledException(
             reason='', instance_uuid=self.instance.uuid)
 
@@ -5332,9 +5323,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.InstanceActionEvent, 'event_start')
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
-    @mock.patch.object(virt_driver.ComputeDriver, 'macs_for_instance')
     def test_rescheduled_exception_with_sriov_network_allocated(self,
-            mock_macs_for_instance, mock_event_finish,
+            mock_event_finish,
             mock_event_start, mock_ins_save, mock_cleanup_network,
             mock_build_ins, mock_build_and_run):
         vif1 = fake_network_cache_model.new_vif()
@@ -5353,7 +5343,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         instance.info_cache = info_cache
 
         mock_ins_save.return_value = instance
-        mock_macs_for_instance.return_value = []
         mock_build_and_run.side_effect = exception.RescheduledException(
             reason='', instance_uuid=self.instance.uuid)
 
@@ -6374,7 +6363,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.resource_provider_mapping)
 
         mock_allocate.assert_called_once_with(self.context, instance,
-                self.requested_networks, None, self.security_groups,
+                self.requested_networks, self.security_groups,
                 self.resource_provider_mapping)
         self.assertTrue(hasattr(nw_info_obj, 'wait'), "wait must be there")
 
@@ -6390,7 +6379,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.resource_provider_mapping)
 
         mock_allocate.assert_called_once_with(self.context, instance,
-                self.requested_networks, None, self.security_groups,
+                self.requested_networks, self.security_groups,
                 self.resource_provider_mapping)
         self.assertTrue(hasattr(nw_info_obj, 'wait'), "wait must be there")
 

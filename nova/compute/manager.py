@@ -1462,7 +1462,7 @@ class ComputeManager(manager.Manager):
             raise exception.InstanceExists(name=instance.name)
 
     def _allocate_network_async(self, context, instance, requested_networks,
-                                macs, security_groups, is_vpn,
+                                security_groups, is_vpn,
                                 resource_provider_mapping):
         """Method used to allocate networks in the background.
 
@@ -1486,7 +1486,7 @@ class ComputeManager(manager.Manager):
                 nwinfo = self.network_api.allocate_for_instance(
                         context, instance, vpn=is_vpn,
                         requested_networks=requested_networks,
-                        macs=macs,
+                        macs=None,  # TODO(mriedem): Remove macs kwarg.
                         security_groups=security_groups,
                         bind_host_id=bind_host_id,
                         resource_provider_mapping=resource_provider_mapping)
@@ -1533,14 +1533,13 @@ class ComputeManager(manager.Manager):
         if not self.is_neutron_security_groups:
             security_groups = []
 
-        macs = self.driver.macs_for_instance(instance)
         network_info = self._allocate_network(context, instance,
-                requested_networks, macs, security_groups,
+                requested_networks, security_groups,
                 resource_provider_mapping)
 
         return network_info
 
-    def _allocate_network(self, context, instance, requested_networks, macs,
+    def _allocate_network(self, context, instance, requested_networks,
                           security_groups, resource_provider_mapping):
         """Start network allocation asynchronously.  Return an instance
         of NetworkInfoAsyncWrapper that can be used to retrieve the
@@ -1556,7 +1555,7 @@ class ComputeManager(manager.Manager):
         is_vpn = False
         return network_model.NetworkInfoAsyncWrapper(
                 self._allocate_network_async, context, instance,
-                requested_networks, macs, security_groups, is_vpn,
+                requested_networks, security_groups, is_vpn,
                 resource_provider_mapping)
 
     def _default_root_device_name(self, instance, image_meta, root_bdm):

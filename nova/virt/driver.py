@@ -1549,37 +1549,6 @@ class ComputeDriver(object):
         """Does the driver want networks deallocated on reschedule?"""
         return False
 
-    # NOTE(vsaienko) This method is deprecated, don't use it!
-    # TODO(vsaienko) Remove this function in Ocata.
-    def macs_for_instance(self, instance):
-        """What MAC addresses must this instance have?
-
-        Some hypervisors (such as bare metal) cannot do freeform virtualization
-        of MAC addresses. This method allows drivers to return a set of MAC
-        addresses that the instance is to have. allocate_for_instance will take
-        this into consideration when provisioning networking for the instance.
-
-        Mapping of MAC addresses to actual networks (or permitting them to be
-        freeform) is up to the network implementation layer. For instance,
-        with openflow switches, fixed MAC addresses can still be virtualized
-        onto any L2 domain, with arbitrary VLANs etc, but regular switches
-        require pre-configured MAC->network mappings that will match the
-        actual configuration.
-
-        Most hypervisors can use the default implementation which returns None.
-        Hypervisors with MAC limits should return a set of MAC addresses, which
-        will be supplied to the allocate_for_instance call by the compute
-        manager, and it is up to that call to ensure that all assigned network
-        details are compatible with the set of MAC addresses.
-
-        This is called during spawn_instance by the compute manager.
-
-        :return: None, or a set of MAC ids (e.g. set(['12:34:56:78:90:ab'])).
-            None means 'no constraints', a set means 'these and only these
-            MAC addresses'.
-        """
-        return None
-
     def manage_image_cache(self, context, all_instances):
         """Manage the driver's local image cache.
 
