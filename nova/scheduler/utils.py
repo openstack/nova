@@ -537,6 +537,12 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager):
             # the found nodes from being filtered out in placement.
             res_req._limit = None
 
+    # Don't limit allocation candidates when using affinity/anti-affinity.
+    if ('scheduler_hints' in spec_obj and any(
+        key in ['group', 'same_host', 'different_host']
+        for key in spec_obj.scheduler_hints)):
+        res_req._limit = None
+
     return res_req
 
 
