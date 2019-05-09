@@ -3291,6 +3291,7 @@ class InstanceExtraTestCase(test.TestCase):
         db.instance_extra_update_by_uuid(self.ctxt, self.instance['uuid'],
                                          {'numa_topology': 'changed',
                                           'trusted_certs': "['123', 'foo']",
+                                          'vpmems': "['vpmem0', 'vpmem1']",
                                           })
         inst_extra = db.instance_extra_get_by_instance_uuid(
             self.ctxt, self.instance['uuid'])
@@ -3298,6 +3299,7 @@ class InstanceExtraTestCase(test.TestCase):
         # NOTE(jackie-truong): trusted_certs is stored as a Text type in
         # instance_extra and read as a list of strings
         self.assertEqual("['123', 'foo']", inst_extra.trusted_certs)
+        self.assertEqual("['vpmem0', 'vpmem1']", inst_extra.vpmems)
 
     def test_instance_extra_update_by_uuid_and_create(self):
         @sqlalchemy_api.pick_context_manager_writer
@@ -3322,12 +3324,13 @@ class InstanceExtraTestCase(test.TestCase):
     def test_instance_extra_get_with_columns(self):
         extra = db.instance_extra_get_by_instance_uuid(
             self.ctxt, self.instance['uuid'],
-            columns=['numa_topology', 'vcpu_model', 'trusted_certs'])
+            columns=['numa_topology', 'vcpu_model', 'trusted_certs', 'vpmems'])
         self.assertRaises(SQLAlchemyError,
                           extra.__getitem__, 'pci_requests')
         self.assertIn('numa_topology', extra)
         self.assertIn('vcpu_model', extra)
         self.assertIn('trusted_certs', extra)
+        self.assertIn('vpmems', extra)
 
 
 class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):

@@ -389,6 +389,7 @@ class InstanceExtra(BASE, NovaBase, models.SoftDeleteMixin):
     migration_context = orm.deferred(Column(Text))
     keypairs = orm.deferred(Column(Text))
     trusted_certs = orm.deferred(Column(Text))
+    vpmems = orm.deferred(Column(Text))
     instance = orm.relationship(Instance,
                             backref=orm.backref('extra',
                                                 uselist=False),

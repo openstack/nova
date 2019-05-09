@@ -1027,6 +1027,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             self.assertColumnExists(
                 engine, '%smigrations' % prefix, 'cross_cell_move')
 
+    def _check_398(self, engine, data):
+        self.assertColumnExists(engine, 'instance_extra', 'vpmems')
+        self.assertColumnExists(engine, 'shadow_instance_extra', 'vpmems')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_fixtures.OpportunisticDBTestMixin,
