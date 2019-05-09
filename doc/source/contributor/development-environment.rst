@@ -129,6 +129,12 @@ or Mac OS X 10.7 (OpenSSL 0.9.8r) or Mac OS X  10.10.3 (OpenSSL 0.9.8zc) works
 fine with nova. OpenSSL versions from brew like OpenSSL 1.0.1k work fine
 as well.
 
+Brew is very useful for installing dependencies. As a minimum for running tests,
+install the following::
+
+    brew install python3 postgres
+    python3 -mpip install tox
+
 
 Building the Documentation
 ==========================
