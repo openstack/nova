@@ -4185,6 +4185,87 @@ class _ComputeAPIUnitTestMixIn(object):
                                    host='host2')
             self.assertEqual(2, method.call_count)
 
+    @mock.patch('nova.objects.Migration.get_by_id')
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.context.set_target_cell')
+    @mock.patch('nova.context.get_admin_context')
+    def test_external_instance_event_cross_cell_move(
+            self, get_admin_context, set_target_cell, get_hm_by_host,
+            get_mig_by_id):
+        """Tests a scenario where an external server event comes for an
+        instance undergoing a cross-cell migration so the event is routed
+        to both the source host in the source cell and dest host in dest cell
+        using the properly targeted request contexts.
+        """
+        migration = objects.Migration(
+            id=1, source_compute='host1', dest_compute='host2',
+            cross_cell_move=True)
+        migration_context = objects.MigrationContext(
+            instance_uuid=uuids.instance, migration_id=migration.id,
+            migration_type='resize', cross_cell_move=True)
+        instance = objects.Instance(
+            self.context, uuid=uuids.instance, host=migration.source_compute,
+            migration_context=migration_context)
+        get_mig_by_id.return_value = migration
+        source_cell_mapping = objects.CellMapping(name='source-cell')
+        dest_cell_mapping = objects.CellMapping(name='dest-cell')
+
+        # Wrap _get_relevant_hosts and sort the result for predictable asserts.
+        original_get_relevant_hosts = self.compute_api._get_relevant_hosts
+
+        def wrap_get_relevant_hosts(_self, *a, **kw):
+            hosts, cross_cell_move = original_get_relevant_hosts(*a, **kw)
+            return sorted(hosts), cross_cell_move
+        self.stub_out('nova.compute.api.API._get_relevant_hosts',
+                      wrap_get_relevant_hosts)
+
+        def fake_hm_get_by_host(ctxt, host):
+            if host == migration.source_compute:
+                return objects.HostMapping(
+                    host=host, cell_mapping=source_cell_mapping)
+            if host == migration.dest_compute:
+                return objects.HostMapping(
+                    host=host, cell_mapping=dest_cell_mapping)
+            raise Exception('Unexpected host: %s' % host)
+
+        get_hm_by_host.side_effect = fake_hm_get_by_host
+        # get_admin_context should be called twice in order (source and dest)
+        get_admin_context.side_effect = [
+            mock.sentinel.source_context, mock.sentinel.dest_context]
+
+        event = objects.InstanceExternalEvent(
+            instance_uuid=instance.uuid, name='network-vif-plugged')
+        events = [event]
+
+        with mock.patch.object(self.compute_api.compute_rpcapi,
+                               'external_instance_event') as rpc_mock:
+            self.compute_api.external_instance_event(
+                self.context, [instance], events)
+
+        # We should have gotten the migration because of the migration_context.
+        get_mig_by_id.assert_called_once_with(self.context, migration.id)
+        # We should have gotten two host mappings (for source and dest).
+        self.assertEqual(2, get_hm_by_host.call_count)
+        get_hm_by_host.assert_has_calls([
+            mock.call(self.context, migration.source_compute),
+            mock.call(self.context, migration.dest_compute)])
+        self.assertEqual(2, get_admin_context.call_count)
+        # We should have targeted a context to both cells.
+        self.assertEqual(2, set_target_cell.call_count)
+        set_target_cell.assert_has_calls([
+            mock.call(mock.sentinel.source_context, source_cell_mapping),
+            mock.call(mock.sentinel.dest_context, dest_cell_mapping)])
+        # We should have RPC cast to both hosts in different cells.
+        self.assertEqual(2, rpc_mock.call_count)
+        rpc_mock.assert_has_calls([
+            mock.call(mock.sentinel.source_context, [instance], events,
+                      host=migration.source_compute),
+            mock.call(mock.sentinel.dest_context, [instance], events,
+                      host=migration.dest_compute)],
+            # The rpc calls are based on iterating over a dict which is not
+            # ordered so we have to just assert the calls in any order.
+            any_order=True)
+
     def test_volume_ops_invalid_task_state(self):
         instance = self._create_instance_obj()
         self.assertEqual(instance.vm_state, vm_states.ACTIVE)
