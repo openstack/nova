@@ -380,20 +380,17 @@ class IronicDriver(virt_driver.ComputeDriver):
     def _stop_firewall(self, instance, network_info):
         self.firewall_driver.unfilter_instance(instance, network_info)
 
-    def _set_instance_uuid(self, node, instance):
-
-        patch = [{'path': '/instance_uuid', 'op': 'add',
-                  'value': instance.uuid}]
+    def _set_instance_id(self, node, instance):
         try:
-            # NOTE(TheJulia): Assert an instance UUID to lock the node
+            # NOTE(TheJulia): Assert an instance ID to lock the node
             # from other deployment attempts while configuration is
             # being set.
-            self.ironicclient.call('node.update', node.uuid, patch,
-                                   retry_on_conflict=False)
-        except ironic.exc.BadRequest:
+            self.ironic_connection.update_node(node, retry_on_conflict=False,
+                                               instance_id=instance.uuid)
+        except sdk_exc.SDKException:
             msg = (_("Failed to reserve node %(node)s "
                      "when provisioning the instance %(instance)s")
-                   % {'node': node.uuid, 'instance': instance.uuid})
+                   % {'node': node.id, 'instance': instance.uuid})
             LOG.error(msg)
             raise exception.InstanceDeployFailure(msg)
 
@@ -405,7 +402,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 _("Ironic node uuid not supplied to "
                   "driver for instance %s.") % instance.uuid)
         node = self._get_node(node_uuid)
-        self._set_instance_uuid(node, instance)
+        self._set_instance_id(node, instance)
 
     def failed_spawn_cleanup(self, instance):
         LOG.debug('Failed spawn cleanup called for instance',
