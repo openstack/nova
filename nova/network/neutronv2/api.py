@@ -250,59 +250,6 @@ def _ensure_no_port_binding_failure(port):
         raise exception.PortBindingFailed(port_id=port['id'])
 
 
-def _filter_hypervisor_macs(instance, requested_ports_dict, hypervisor_macs):
-    """Removes macs from set if used by existing ports
-
-    :param instance: The server instance.
-    :type instance: nova.objects.instance.Instance
-    :param requested_ports_dict: dict, keyed by port ID, of ports requested by
-        the user
-    :type requested_ports_dict: dict
-    :param hypervisor_macs: None or a set of MAC addresses that the
-        instance should use. hypervisor_macs are supplied by the hypervisor
-        driver (contrast with requested_networks which is user supplied).
-        NB: NeutronV2 currently assigns hypervisor supplied MAC addresses
-        to arbitrary networks, which requires openflow switches to
-        function correctly if more than one network is being used with
-        the bare metal hypervisor (which is the only one known to limit
-        MAC addresses).
-    :type hypervisor_macs: set
-    :returns a set of available MAC addresses to use if
-            creating a port later; this is the set of hypervisor_macs
-            after removing any MAC addresses from explicitly
-            requested ports.
-    """
-    if not hypervisor_macs:
-        return None
-
-    # Make a copy we can mutate: records macs that have not been used
-    # to create a port on a network. If we find a mac with a
-    # pre-allocated port we also remove it from this set.
-    available_macs = set(hypervisor_macs)
-    if not requested_ports_dict:
-        return available_macs
-
-    for port in requested_ports_dict.values():
-        mac = port['mac_address']
-        if mac not in hypervisor_macs:
-            LOG.debug("Port %(port)s mac address %(mac)s is "
-                      "not in the set of hypervisor macs: "
-                      "%(hyper_macs)s. Nova will overwrite "
-                      "this with a new mac address.",
-                      {'port': port['id'],
-                       'mac': mac,
-                       'hyper_macs': hypervisor_macs},
-                      instance=instance)
-        else:
-            # Don't try to use this MAC if we need to create a
-            # port on the fly later. Identical MACs may be
-            # configured by users into multiple ports so we
-            # discard rather than popping.
-            available_macs.discard(mac)
-
-    return available_macs
-
-
 class API(base_api.NetworkAPI):
     """API for interacting with the neutron 2.x API."""
 
@@ -596,18 +543,6 @@ class API(base_api.NetworkAPI):
                         'network %(network)s.',
                         {'network': network_id}, instance=instance)
             raise exception.FixedIpInvalidOnHost(port_id=port_id)
-
-    @staticmethod
-    def _populate_mac_address(instance, port_req_body, available_macs):
-        # NOTE(johngarbutt) On port_update, this will cause us to override
-        # any previous mac address the port may have had.
-        if available_macs is not None:
-            if not available_macs:
-                raise exception.PortNotFree(
-                    instance=instance.uuid)
-            mac_address = available_macs.pop()
-            port_req_body['port']['mac_address'] = mac_address
-            return mac_address
 
     def _check_external_network_attach(self, context, nets):
         """Check if attaching to external network is permitted."""
@@ -1015,7 +950,7 @@ class API(base_api.NetworkAPI):
         return requests_and_created_ports
 
     def allocate_for_instance(self, context, instance, vpn,
-                              requested_networks, macs=None,
+                              requested_networks,
                               security_groups=None, bind_host_id=None,
                               attach=False, resource_provider_mapping=None):
         """Allocate network resources for the instance.
@@ -1024,14 +959,6 @@ class API(base_api.NetworkAPI):
         :param instance: nova.objects.instance.Instance object.
         :param vpn: A boolean, ignored by this driver.
         :param requested_networks: objects.NetworkRequestList object.
-        :param macs: None or a set of MAC addresses that the instance
-            should use. macs is supplied by the hypervisor driver (contrast
-            with requested_networks which is user supplied).
-            NB: NeutronV2 currently assigns hypervisor supplied MAC addresses
-            to arbitrary networks, which requires openflow switches to
-            function correctly if more than one network is being used with
-            the bare metal hypervisor (which is the only one known to limit
-            MAC addresses).
         :param security_groups: None or security groups to allocate for
             instance.
         :param bind_host_id: the host ID to attach to the ports being created.
@@ -1108,8 +1035,6 @@ class API(base_api.NetworkAPI):
         #
         # Update existing and newly created ports
         #
-        available_macs = _filter_hypervisor_macs(
-            instance, requested_ports_dict, macs)
 
         # We always need admin_client to build nw_info,
         # we sometimes need it when updating ports
@@ -1119,7 +1044,7 @@ class API(base_api.NetworkAPI):
             created_port_ids = self._update_ports_for_instance(
                 context, instance,
                 neutron, admin_client, requests_and_created_ports, nets,
-                bind_host_id, available_macs, requested_ports_dict)
+                bind_host_id, requested_ports_dict)
 
         #
         # Perform a full update of the network_info_cache,
@@ -1143,7 +1068,7 @@ class API(base_api.NetworkAPI):
 
     def _update_ports_for_instance(self, context, instance, neutron,
             admin_client, requests_and_created_ports, nets,
-            bind_host_id, available_macs, requested_ports_dict):
+            bind_host_id, requested_ports_dict):
         """Update ports from network_requests.
 
         Updates the pre-existing ports and the ones created in
@@ -1160,7 +1085,6 @@ class API(base_api.NetworkAPI):
             pre-existing port.
         :param nets: a dict of network_id to networks returned from neutron
         :param bind_host_id: a string for port['binding:host_id']
-        :param available_macs: a list of available mac addresses
         :param requested_ports_dict: dict, keyed by port ID, of ports requested
             by the user
         :returns: tuple with the following::
@@ -1209,8 +1133,6 @@ class API(base_api.NetworkAPI):
                     bind_host_id=bind_host_id)
                 self._populate_pci_mac_address(instance,
                     request.pci_request_id, port_req_body)
-                self._populate_mac_address(
-                    instance, port_req_body, available_macs)
 
                 if created_port_id:
                     port_id = created_port_id

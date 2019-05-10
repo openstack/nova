@@ -16,7 +16,6 @@
 """Tests for network API."""
 
 import copy
-import itertools
 
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -125,30 +124,6 @@ class ApiTestCase(test.TestCase):
                                                     mock.sentinel.mac)
         mock_get_by_id.assert_called_once_with(self.context, 123,
                                                project_only='allow_none')
-
-    def test_allocate_for_instance_handles_macs_passed(self):
-        # If a macs argument is supplied to the 'nova-network' API, it is just
-        # ignored. This test checks that the call down to the rpcapi layer
-        # doesn't pass macs down: nova-network doesn't support hypervisor
-        # mac address limits (today anyhow).
-        macs = set(['ab:cd:ef:01:23:34'])
-        with mock.patch.object(self.network_api.network_rpcapi,
-                               "allocate_for_instance") as mock_alloc:
-            kwargs = dict(zip(['host', 'instance_id', 'project_id',
-                               'requested_networks', 'rxtx_factor', 'vpn',
-                                'macs'],
-                              itertools.repeat(mock.ANY)))
-            mock_alloc.return_value = []
-            flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
-            flavor['rxtx_factor'] = 0
-            instance = objects.Instance(id=1, uuid=uuids.instance,
-                                        project_id='project_id',
-                                        host='host', system_metadata={},
-                                        flavor=flavor, deleted=False)
-            self.network_api.allocate_for_instance(
-                self.context, instance, 'vpn', requested_networks=None,
-                macs=macs)
-            mock_alloc.assert_called_once_with(self.context, **kwargs)
 
     def _do_test_associate_floating_ip(self, orig_instance_uuid):
         """Test post-association logic."""
