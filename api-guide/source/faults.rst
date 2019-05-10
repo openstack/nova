@@ -167,7 +167,7 @@ depending on the type of error. The following link contains a list of possible
 elements along with their associated error codes.
 
 For more information on possible error code, please see:
-http://specs.openstack.org/openstack/api-wg/guidelines/http.html#http-response-codes
+http://specs.openstack.org/openstack/api-wg/guidelines/http/response-codes.html
 
 Asynchronous faults
 ===================

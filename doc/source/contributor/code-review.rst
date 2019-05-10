@@ -111,7 +111,7 @@ very long. So here are some key points:
   * The field names contained in a request/response body should
     use snake_case style, not CamelCase or Mixed_Case style.
 
-* `HTTP Response Codes <http://specs.openstack.org/openstack/api-wg/guidelines/http.html#http-response-codes>`_
+* `HTTP Response Codes <http://specs.openstack.org/openstack/api-wg/guidelines/http/response-codes.html>`_
 
   * Synchronous resource creation: ``201 Created``
   * Asynchronous resource creation: ``202 Accepted``

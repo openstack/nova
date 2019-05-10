@@ -13,7 +13,7 @@ Setting up a devstack environment
 
 For instructions on how to setup devstack with serial console support enabled
 see `this guide
-<http://docs.openstack.org/developer/devstack/guides/nova.html#nova-serialproxy>`_.
+<https://docs.openstack.org/devstack/latest/guides/nova.html#nova-serialproxy>`_.
 
 ---------------
 Testing the API
