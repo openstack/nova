@@ -422,7 +422,8 @@ class TestUtils(test.NoDBTestCase):
     def test_process_use_force_nodes(self):
         fake_nodes = objects.ComputeNodeList(objects=[
             objects.ComputeNode(host='fake-host',
-                                uuid='12345678-1234-1234-1234-123456789012')])
+                                uuid='12345678-1234-1234-1234-123456789012',
+                                hypervisor_hostname='test')])
         self.mock_host_manager.get_compute_nodes_by_host_or_node.\
             return_value = fake_nodes
         flavor = objects.Flavor(vcpus=1,
@@ -453,7 +454,7 @@ class TestUtils(test.NoDBTestCase):
 
     def test_process_use_force_hosts(self):
         fake_nodes = objects.ComputeNodeList(objects=[
-            objects.ComputeNode(host='fake-host',
+            objects.ComputeNode(host='test',
                                 uuid='12345678-1234-1234-1234-123456789012')
             ])
         self.mock_host_manager.get_compute_nodes_by_host_or_node.\
@@ -486,9 +487,9 @@ class TestUtils(test.NoDBTestCase):
 
     def test_process_use_force_hosts_multinodes_found(self):
         fake_nodes = objects.ComputeNodeList(objects=[
-            objects.ComputeNode(host='fake-host',
+            objects.ComputeNode(host='test',
                                 uuid='12345678-1234-1234-1234-123456789012'),
-            objects.ComputeNode(host='fake-host',
+            objects.ComputeNode(host='test',
                                 uuid='87654321-4321-4321-4321-210987654321'),
             ])
         self.mock_host_manager.get_compute_nodes_by_host_or_node.\
@@ -527,7 +528,8 @@ class TestUtils(test.NoDBTestCase):
             host='fake-host', node='fake-node', cell=fake_cell)
         fake_nodes = objects.ComputeNodeList(objects=[
             objects.ComputeNode(host='fake-host',
-                                uuid='12345678-1234-1234-1234-123456789012')
+                                uuid='12345678-1234-1234-1234-123456789012',
+                                hypervisor_hostname='fake-node')
             ])
         self.mock_host_manager.get_compute_nodes_by_host_or_node.\
             return_value = fake_nodes
