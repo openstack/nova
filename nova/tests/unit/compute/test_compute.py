@@ -11261,12 +11261,57 @@ class ComputeAPITestCase(BaseTestCase):
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch.object(compute_utils, 'EventReporter')
+    def test_lock_with_reason(self, mock_event, mock_record, mock_elevate,
+                              mock_notify):
+        mock_elevate.return_value = self.context
+        instance = self._create_fake_instance_obj()
+        self.assertNotIn("locked_reason", instance.system_metadata)
+        self.compute_api.lock(self.context, instance, reason="blah")
+        self.assertEqual("blah", instance.system_metadata["locked_reason"])
+        mock_record.assert_called_once_with(
+            self.context, instance, instance_actions.LOCK
+        )
+        mock_event.assert_called_once_with(self.context,
+                                           'api_lock',
+                                           CONF.host,
+                                           instance.uuid)
+        mock_notify.assert_called_once_with(
+            self.context, instance, CONF.host, action='lock',
+            source='nova-api')
+
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.compute.api.API._record_action_start')
+    @mock.patch.object(compute_utils, 'EventReporter')
     def test_unlock(self, mock_event, mock_record, mock_elevate, mock_notify):
         mock_elevate.return_value = self.context
         instance = self._create_fake_instance_obj()
         self.stub_out('nova.network.api.API.deallocate_for_instance',
                        lambda *a, **kw: None)
         self.compute_api.unlock(self.context, instance)
+        mock_record.assert_called_once_with(
+            self.context, instance, instance_actions.UNLOCK
+        )
+        mock_event.assert_called_once_with(self.context,
+                                           'api_unlock',
+                                           CONF.host,
+                                           instance.uuid)
+        mock_notify.assert_called_once_with(
+            self.context, instance, CONF.host, action='unlock',
+            source='nova-api')
+
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.compute.api.API._record_action_start')
+    @mock.patch.object(compute_utils, 'EventReporter')
+    def test_unlock_with_reason(self, mock_event, mock_record, mock_elevate,
+                                mock_notify):
+        mock_elevate.return_value = self.context
+        sm = {"locked_reason": "blah"}
+        instance = self._create_fake_instance_obj(
+            params={"system_metadata": sm})
+        self.compute_api.unlock(self.context, instance)
+        self.assertNotIn("locked_reason", instance.system_metadata)
         mock_record.assert_called_once_with(
             self.context, instance, instance_actions.UNLOCK
         )

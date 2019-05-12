@@ -1,0 +1,12 @@
+{
+    "event_type":"instance.lock",
+    "payload":{
+        "$ref": "common_payloads/InstanceActionPayload.json#",
+        "nova_object.data":{
+            "locked":true,
+            "locked_reason":"global warming"
+        }
+    },
+    "priority":"INFO",
+    "publisher_id":"nova-api:fake-mini"
+}

@@ -3,7 +3,8 @@
     "payload":{
         "$ref": "common_payloads/InstanceActionPayload.json#",
         "nova_object.data":{
-            "locked":true
+            "locked":true,
+            "locked_reason": null
         }
     },
     "priority":"INFO",

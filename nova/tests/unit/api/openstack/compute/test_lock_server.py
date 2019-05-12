@@ -14,7 +14,9 @@
 #    under the License.
 
 import mock
+import six
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute import lock_server as lock_server_v21
 from nova import context
@@ -40,10 +42,15 @@ class LockServerTestsV21(admin_only_action_common.CommonTests):
                       lambda *a, **kw: self.controller)
 
     def test_lock_unlock(self):
-        self._test_actions(['_lock', '_unlock'])
+        args_map = {'_lock': ((), {"reason": None})}
+        body_map = {'_lock': {"lock": None}}
+        self._test_actions(['_lock', '_unlock'], args_map=args_map,
+            body_map=body_map)
 
     def test_lock_unlock_with_non_existed_instance(self):
-        self._test_actions_with_non_existed_instance(['_lock', '_unlock'])
+        body_map = {'_lock': {"lock": None}}
+        self._test_actions_with_non_existed_instance(['_lock', '_unlock'],
+            body_map=body_map)
 
     def test_unlock_not_authorized(self):
         instance = self._stub_instance_get()
@@ -82,6 +89,84 @@ class LockServerTestsV21(admin_only_action_common.CommonTests):
         with mock.patch.object(self.compute_api, 'unlock') as mock_unlock:
             self.controller._unlock(admin_req, instance.uuid, {'unlock': None})
             mock_unlock.assert_called_once_with(admin_ctxt, instance)
+
+    @mock.patch.object(common, 'get_instance')
+    def test_unlock_with_any_body(self, get_instance_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'])
+        get_instance_mock.return_value = instance
+        # This will pass since there is no schema validation.
+        body = {'unlock': {'blah': 'blah'}}
+
+        with mock.patch.object(self.compute_api, 'unlock') as mock_lock:
+            self.controller._unlock(self.req, instance.uuid, body=body)
+            mock_lock.assert_called_once_with(
+                self.req.environ['nova.context'], instance)
+
+    @mock.patch.object(common, 'get_instance')
+    def test_lock_with_empty_dict_body_is_valid(self, get_instance_mock):
+        # Empty dict with no key in the body is allowed.
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'])
+        get_instance_mock.return_value = instance
+        body = {'lock': {}}
+
+        with mock.patch.object(self.compute_api, 'lock') as mock_lock:
+            self.controller._lock(self.req, instance.uuid, body=body)
+            mock_lock.assert_called_once_with(
+                self.req.environ['nova.context'], instance, reason=None)
+
+
+class LockServerTestsV273(LockServerTestsV21):
+
+    def setUp(self):
+        super(LockServerTestsV273, self).setUp()
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.73')
+
+    @mock.patch.object(common, 'get_instance')
+    def test_lock_with_reason_V273(self, get_instance_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'])
+        get_instance_mock.return_value = instance
+        reason = "I don't want to work"
+        body = {'lock': {"locked_reason": reason}}
+
+        with mock.patch.object(self.compute_api, 'lock') as mock_lock:
+            self.controller._lock(self.req, instance.uuid, body=body)
+            mock_lock.assert_called_once_with(
+                self.req.environ['nova.context'], instance, reason=reason)
+
+    def test_lock_with_reason_exceeding_255_chars(self):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'])
+        reason = 's' * 256
+        body = {'lock': {"locked_reason": reason}}
+
+        exp = self.assertRaises(exception.ValidationError,
+            self.controller._lock, self.req, instance.uuid, body=body)
+        self.assertIn('is too long', six.text_type(exp))
+
+    def test_lock_with_reason_in_invalid_format(self):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'])
+        reason = 256
+        body = {'lock': {"locked_reason": reason}}
+
+        exp = self.assertRaises(exception.ValidationError,
+            self.controller._lock, self.req, instance.uuid, body=body)
+        self.assertIn("256 is not of type 'string'", six.text_type(exp))
+
+    def test_lock_with_invalid_paramater(self):
+        # This will fail from 2.73 since we have a schema check that allows
+        # only locked_reason
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'])
+        body = {'lock': {'blah': 'blah'}}
+
+        exp = self.assertRaises(exception.ValidationError,
+            self.controller._lock, self.req, instance.uuid, body=body)
+        self.assertIn("('blah' was unexpected)", six.text_type(exp))
 
 
 class LockServerPolicyEnforcementV21(test.NoDBTestCase):
@@ -138,7 +223,7 @@ class LockServerPolicyEnforcementV21(test.NoDBTestCase):
         self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
         self.controller._lock(self.req, fakes.FAKE_UUID, body={'lock': {}})
         lock_mock.assert_called_once_with(self.req.environ['nova.context'],
-                                          instance)
+                                          instance, reason=None)
 
     def test_unlock_policy_failed(self):
         rule_name = "os_compute_api:os-lock-server:unlock"

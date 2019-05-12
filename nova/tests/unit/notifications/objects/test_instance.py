@@ -43,6 +43,7 @@ class TestInstanceNotification(test.NoDBTestCase):
             uuid=uuids.instance1,
             locked=False,
             auto_disk_config=False,
+            system_metadata={},
             **instance_values)
         self.payload = {
             'bandwidth': {},
@@ -118,6 +119,7 @@ class TestInstanceNotification(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(ctxt)
         # Set some other fields otherwise populate_schema tries to hit the DB.
         instance.metadata = {}
+        instance.system_metadata = {}
         instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([]))
         payload = instance_notification.InstancePayload(ctxt, instance)

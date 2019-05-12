@@ -170,6 +170,7 @@ whitelist will be silently ignored.
   - ``tags`` (New in version 2.26)
   - ``tags-any`` (New in version 2.26)
   - ``changes-before`` (New in version 2.66)
+  - ``locked`` (New in version 2.73)
 
 
 - For admin user, whitelist includes all filter keys mentioned in
@@ -240,6 +241,7 @@ Request
   - tags: tags_query
   - tags-any: tags_any_query
   - changes-before: changes_before_server
+  - locked: locked_query_server
 
 Response
 --------
@@ -577,6 +579,7 @@ Request
   - tags: tags_query
   - tags-any: tags_any_query
   - changes-before: changes_before_server
+  - locked: locked_query_server
 
 Response
 --------
@@ -646,10 +649,11 @@ Response
   - description: server_description_resp
   - tags: tags
   - trusted_image_certificates: server_trusted_image_certificates_resp
+  - locked_reason: locked_reason_resp
 
-**Example List Servers Detailed (2.63)**
+**Example List Servers Detailed (2.73)**
 
-.. literalinclude:: /../../doc/api_samples/servers/v2.63/servers-details-resp.json
+.. literalinclude:: /../../doc/api_samples/servers/v2.73/servers-details-resp.json
    :language: javascript
 
 **Example List Servers Detailed (2.69)**
@@ -769,10 +773,11 @@ Response
   - tags: tags
   - trusted_image_certificates: server_trusted_image_certificates_resp
   - server_groups: server_groups_2_71
+  - locked_reason: locked_reason_resp
 
-**Example Show Server Details (2.63)**
+**Example Show Server Details (2.73)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.63/server-get-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.73/server-get-resp.json
    :language: javascript
 
 **Example Show Server Details (2.69)**
@@ -861,10 +866,11 @@ Response
   - tags: tags
   - trusted_image_certificates: server_trusted_image_certificates_resp
   - server_groups: server_groups_2_71
+  - locked_reason: locked_reason_resp
 
-**Example Update Server (2.63)**
+**Example Update Server (2.73)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.63/server-update-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.73/server-update-resp.json
    :language: javascript
 
 Delete Server

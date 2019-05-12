@@ -2236,6 +2236,19 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                 {'host': 'host1'})
         self._assertEqualListsOfInstances([instance], result)
 
+    def test_instance_get_all_by_filters_locked_key_true(self):
+        instance = self.create_instance_with_args(locked=True)
+        self.create_instance_with_args(locked=False)
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'locked': True})
+        self._assertEqualListsOfInstances([instance], result)
+
+    def test_instance_get_all_by_filters_locked_key_false(self):
+        self.create_instance_with_args(locked=True)
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'locked': False})
+        self._assertEqualListsOfInstances([], result)
+
     def test_instance_get_all_by_filters_metadata(self):
         instance = self.create_instance_with_args(metadata={'foo': 'bar'})
         self.create_instance_with_args()

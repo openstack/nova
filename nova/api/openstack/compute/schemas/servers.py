@@ -531,6 +531,9 @@ SERVER_LIST_IGNORE_SORT_KEY = [
     'shutdown_terminate', 'user_data', 'vcpus', 'vm_mode'
 ]
 
+# From microversion 2.73 we start offering locked as a valid sort key.
+SERVER_LIST_IGNORE_SORT_KEY_V273 = list(SERVER_LIST_IGNORE_SORT_KEY)
+SERVER_LIST_IGNORE_SORT_KEY_V273.remove('locked')
 
 VALID_SORT_KEYS = {
     "type": "string",
@@ -543,6 +546,14 @@ VALID_SORT_KEYS = {
              'task_state', 'terminated_at', 'updated_at', 'user_id', 'uuid',
              'vm_state'] +
             SERVER_LIST_IGNORE_SORT_KEY
+}
+
+# We reuse the existing list and add locked to the list of valid sort keys.
+VALID_SORT_KEYS_V273 = {
+    "type": "string",
+    "enum": ['locked'] + list(
+            set(VALID_SORT_KEYS["enum"]) - set(SERVER_LIST_IGNORE_SORT_KEY)) +
+            SERVER_LIST_IGNORE_SORT_KEY_V273
 }
 
 query_params_v21 = {
@@ -633,4 +644,10 @@ query_params_v266 = copy.deepcopy(query_params_v226)
 query_params_v266['properties'].update({
     'changes-before': multi_params({'type': 'string',
                                     'format': 'date-time'}),
+})
+
+query_params_v273 = copy.deepcopy(query_params_v266)
+query_params_v273['properties'].update({
+    'sort_key': multi_params(VALID_SORT_KEYS_V273),
+    'locked': parameter_types.common_query_param,
 })

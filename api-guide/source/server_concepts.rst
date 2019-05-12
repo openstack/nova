@@ -151,6 +151,7 @@ For different user roles, the user has different query options set:
   - ``tags`` (New in version 2.26)
   - ``tags-any`` (New in version 2.26)
   - ``changes-before`` (New in version 2.66)
+  - ``locked`` (New in version 2.73)
 
   Other options will be ignored by nova silently.
 

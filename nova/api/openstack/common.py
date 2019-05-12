@@ -512,6 +512,21 @@ def is_all_tenants(search_opts):
     return all_tenants
 
 
+def is_locked(search_opts):
+    """Converts the value of the locked parameter to a boolean. Note that
+    this function will be called only if locked exists in search_opts.
+
+    :param dict search_opts: The search options for a request
+    :returns: boolean indicating if locked is being requested or not
+    """
+    locked = search_opts.get('locked')
+    try:
+        locked = strutils.bool_from_string(locked, strict=True)
+    except ValueError as err:
+        raise exception.InvalidInput(six.text_type(err))
+    return locked
+
+
 def supports_multiattach_volume(req):
     """Check to see if the requested API version is high enough for multiattach
 

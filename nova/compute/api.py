@@ -4023,7 +4023,7 @@ class API(base.Base):
         return self.compute_rpcapi.get_console_output(context,
                 instance=instance, tail_length=tail_length)
 
-    def lock(self, context, instance):
+    def lock(self, context, instance, reason=None):
         """Lock the given instance."""
         # Only update the lock if we are an admin (non-owner)
         is_owner = instance.project_id == context.project_id
@@ -4035,13 +4035,15 @@ class API(base.Base):
                                   instance_actions.LOCK)
 
         @wrap_instance_event(prefix='api')
-        def lock(self, context, instance):
+        def lock(self, context, instance, reason=None):
             LOG.debug('Locking', instance=instance)
             instance.locked = True
             instance.locked_by = 'owner' if is_owner else 'admin'
+            if reason:
+                instance.system_metadata['locked_reason'] = reason
             instance.save()
 
-        lock(self, context, instance)
+        lock(self, context, instance, reason=reason)
         compute_utils.notify_about_instance_action(
             context, instance, CONF.host,
             action=fields_obj.NotificationAction.LOCK,
@@ -4066,6 +4068,7 @@ class API(base.Base):
             LOG.debug('Unlocking', instance=instance)
             instance.locked = False
             instance.locked_by = None
+            instance.system_metadata.pop('locked_reason', None)
             instance.save()
 
         unlock(self, context, instance)

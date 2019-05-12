@@ -383,15 +383,16 @@ See the "Lock, Unlock" item in `Server actions
 <https://developer.openstack.org/api-guide/compute/server_concepts.html#server-actions>`_
 for the restricted actions.
 But administrators can perform actions on the server
-even though the server is locked.
+even though the server is locked. Note that from microversion 2.73 it is
+possible to specify a reason when locking the server.
 
 The `unlock action
 <https://developer.openstack.org/api-ref/compute/#unlock-server-unlock-action>`_
 will unlock a server in locked state so additional actions can
 be performed on the server by non-admin users.
 
-You can know whether a server is locked or not
-by the `List Servers Detailed API
+You can know whether a server is locked or not and the ``locked_reason``
+(if specified, from the 2.73 microversion) by the `List Servers Detailed API
 <https://developer.openstack.org/api-ref/compute/#list-servers-detailed>`_
 or
 the `Show Server Details API
@@ -414,10 +415,16 @@ Request
 
   - server_id: server_id_path
   - lock: lock
+  - locked_reason: locked_reason_req
 
 **Example Lock Server (lock Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-lock-server/lock-server.json
+   :language: javascript
+
+**Example Lock Server (lock Action) (v2.73)**
+
+.. literalinclude:: ../../doc/api_samples/os-lock-server/v2.73/lock-server-with-reason.json
    :language: javascript
 
 Response
@@ -626,10 +633,11 @@ Response
   - user_data: user_data_rebuild_resp
   - trusted_image_certificates: server_trusted_image_certificates_resp
   - server_groups: server_groups_2_71
+  - locked_reason: locked_reason_resp
 
-**Example Rebuild Server (rebuild Action) (v2.63)**
+**Example Rebuild Server (rebuild Action) (v2.73)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.63/server-action-rebuild-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.73/server-action-rebuild-resp.json
    :language: javascript
 
 Remove (Disassociate) Floating Ip (removeFloatingIp Action) (DEPRECATED)

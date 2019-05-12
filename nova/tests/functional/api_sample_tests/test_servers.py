@@ -515,6 +515,62 @@ class ServersSampleJson271Test(ServersSampleBase):
                               subs, response, 200)
 
 
+class ServersSampleJson273Test(ServersSampleBase):
+    microversion = '2.73'
+    scenarios = [('v2_73', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(ServersSampleJson273Test, self).setUp()
+
+    def _post_server_and_lock(self):
+        uuid = self._post_server(use_common_server_api_samples=False)
+        reason = "I don't want to work"
+        self._do_post('servers/%s/action' % uuid,
+            'lock-server-with-reason',
+            {"locked_reason": reason})
+        return uuid
+
+    def test_servers_details_with_locked_reason(self):
+        uuid = self._post_server_and_lock()
+        response = self._do_get('servers/detail')
+        subs = {'id': uuid}
+        self._verify_response('servers-details-resp', subs, response, 200)
+
+    def test_server_get_with_locked_reason(self):
+        uuid = self._post_server_and_lock()
+        response = self._do_get('servers/%s' % uuid)
+        subs = {'id': uuid}
+        self._verify_response('server-get-resp', subs, response, 200)
+
+    def test_server_rebuild_with_empty_locked_reason(self):
+        uuid = self._post_server(use_common_server_api_samples=False)
+        image = fake.get_valid_image_id()
+        params = {
+            'uuid': image,
+            'name': 'foobar',
+            'pass': 'seekr3t',
+            'hostid': '[a-f0-9]+',
+            'access_ip_v4': '1.2.3.4',
+            'access_ip_v6': '80fe::',
+        }
+
+        resp = self._do_post('servers/%s/action' % uuid,
+                             'server-action-rebuild', params)
+        subs = params.copy()
+        del subs['uuid']
+        self._verify_response('server-action-rebuild-resp', subs, resp, 202)
+
+    def test_update_server_with_empty_locked_reason(self):
+        uuid = self._post_server(use_common_server_api_samples=False)
+        subs = {}
+        subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
+        response = self._do_put('servers/%s' % uuid,
+                                'server-update-req', subs)
+        self._verify_response('server-update-resp', subs, response, 200)
+
+
 class ServersUpdateSampleJsonTest(ServersSampleBase):
 
     def test_update_server(self):

@@ -13,8 +13,11 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import lock_server
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova.policies import lock_server as ls_policies
 
@@ -27,6 +30,7 @@ class LockServerController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors(404)
     @wsgi.action('lock')
+    @validation.schema(lock_server.lock_v2_73, "2.73")
     def _lock(self, req, id, body):
         """Lock a server instance."""
         context = req.environ['nova.context']
@@ -34,7 +38,11 @@ class LockServerController(wsgi.Controller):
         context.can(ls_policies.POLICY_ROOT % 'lock',
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})
-        self.compute_api.lock(context, instance)
+        reason = None
+        if (api_version_request.is_supported(req, min_version='2.73') and
+            body['lock'] is not None):
+            reason = body['lock'].get('locked_reason')
+        self.compute_api.lock(context, instance, reason=reason)
 
     @wsgi.response(202)
     @wsgi.expected_errors(404)

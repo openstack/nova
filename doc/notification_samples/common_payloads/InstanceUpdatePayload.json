@@ -29,5 +29,5 @@
     },
     "nova_object.name": "InstanceUpdatePayload",
     "nova_object.namespace": "nova",
-    "nova_object.version": "1.8"
+    "nova_object.version": "1.9"
 }
