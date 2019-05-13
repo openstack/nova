@@ -1844,16 +1844,21 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
         self.swap_volume_instance_uuid = None
         self.swap_volume_instance_error_uuid = None
         self.attachment_error_id = None
-        # A map of volumes to a list of (attachment_id, instance_uuid).
+        # A dict, keyed by volume id, to a dict, keyed by attachment id,
+        # with keys:
+        # - id: the attachment id
+        # - instance_uuid: uuid of the instance attached to the volume
+        # - connector: host connector dict; None if not connected
         # Note that a volume can have multiple attachments even without
         # multi-attach, as some flows create a blank 'reservation' attachment
-        # before deleting another attachment.
-        self.volume_to_attachment = collections.defaultdict(list)
+        # before deleting another attachment. However, a non-multiattach volume
+        # can only have at most one attachment with a host connector at a time.
+        self.volume_to_attachment = collections.defaultdict(dict)
 
     def volume_ids_for_instance(self, instance_uuid):
         for volume_id, attachments in self.volume_to_attachment.items():
-            for _, _instance_uuid in attachments:
-                if _instance_uuid == instance_uuid:
+            for attachment in attachments.values():
+                if attachment['instance_uuid'] == instance_uuid:
                     # we might have multiple volumes attached to this instance
                     # so yield rather than return
                     yield volume_id
@@ -1885,14 +1890,14 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                         else self.swap_volume_instance_error_uuid)
 
                     if attachments:
-                        attachment_id, instance_uuid = attachments[0]
+                        attachment = list(attachments.values())[0]
 
                         volume.update({
                             'status': 'in-use',
                             'attachments': {
                                 instance_uuid: {
                                     'mountpoint': '/dev/vdb',
-                                    'attachment_id': attachment_id
+                                    'attachment_id': attachment['id']
                                 }
                             },
                             'attach_status': 'attached'
@@ -1902,7 +1907,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
             # Check to see if the volume is attached.
             if attachments:
                 # The volume is attached.
-                attachment_id, instance_uuid = attachments[0]
+                attachment = list(attachments.values())[0]
                 volume = {
                     'status': 'in-use',
                     'display_name': volume_id,
@@ -1911,8 +1916,8 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                     'multiattach': volume_id == self.MULTIATTACH_VOL,
                     'size': 1,
                     'attachments': {
-                        instance_uuid: {
-                            'attachment_id': attachment_id,
+                        attachment['instance_uuid']: {
+                            'attachment_id': attachment['id'],
                             'mountpoint': '/dev/vdb'
                         }
                     }
@@ -1956,14 +1961,13 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
             """Find attachment corresponding to ``attachment_id``.
 
             Returns:
-                A tuple of the volume ID, an attachment-instance mapping tuple
-                for the given attachment ID, and a list of attachment-instance
-                mapping tuples for the volume.
+                A tuple of the volume ID, an attachment dict
+                for the given attachment ID, and a dict (keyed by attachment
+                id) of attachment dicts for the volume.
             """
             for volume_id, attachments in self.volume_to_attachment.items():
-                for attachment in attachments:
-                    _attachment_id, instance_uuid = attachment
-                    if attachment_id == _attachment_id:
+                for attachment in attachments.values():
+                    if attachment_id == attachment['id']:
                         return volume_id, attachment, attachments
             raise exception.VolumeAttachmentNotFound(
                 attachment_id=attachment_id)
@@ -1974,8 +1978,10 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
             if self.attachment_error_id is not None:
                 attachment_id = self.attachment_error_id
             attachment = {'id': attachment_id, 'connection_info': {'data': {}}}
-            self.volume_to_attachment[volume_id].append(
-                (attachment_id, instance_uuid))
+            self.volume_to_attachment[volume_id][attachment_id] = {
+                'id': attachment_id,
+                'instance_uuid': instance_uuid,
+                'connector': connector}
             LOG.info('Created attachment %s for volume %s. Total '
                      'attachments for volume: %d', attachment_id, volume_id,
                      len(self.volume_to_attachment[volume_id]))
@@ -1986,7 +1992,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
             # 'attachment' is a tuple defining a attachment-instance mapping
             volume_id, attachment, attachments = (
                 _find_attachment(attachment_id))
-            attachments.remove(attachment)
+            del attachments[attachment_id]
             LOG.info('Deleted attachment %s for volume %s. Total attachments '
                      'for volume: %d', attachment_id, volume_id,
                      len(attachments))
@@ -1994,7 +2000,18 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
         def fake_attachment_update(_self, context, attachment_id, connector,
                                    mountpoint=None):
             # Ensure the attachment exists
-            _find_attachment(attachment_id)
+            volume_id, attachment, attachments = (
+                _find_attachment(attachment_id))
+            # Cinder will only allow one "connected" attachment per
+            # non-multiattach volume at a time.
+            if volume_id != self.MULTIATTACH_VOL:
+                for _attachment in attachments.values():
+                    if _attachment['connector'] is not None:
+                        raise exception.InvalidInput(
+                            'Volume %s is already connected with attachment '
+                            '%s on host %s' % (volume_id, _attachment['id'],
+                            _attachment['connector'].get('host')))
+            attachment['connector'] = connector
             LOG.info('Updating volume attachment: %s', attachment_id)
             attachment_ref = {'driver_volume_type': 'fake_type',
                               'id': attachment_id,
