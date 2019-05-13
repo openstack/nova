@@ -504,6 +504,11 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager):
                 target_cell = destination.cell
             if destination.aggregates:
                 grp = res_req.get_request_group(None)
+                # If the target must be either in aggA *or* in aggB and must
+                # definitely be in aggC, the  destination.aggregates would be
+                #     ['aggA,aggB', 'aggC']
+                # Here we are converting it to
+                #     [['aggA', 'aggB'], ['aggC']]
                 grp.aggregates = [ored.split(',')
                                   for ored in destination.aggregates]
 
