@@ -147,6 +147,15 @@ Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
 the ``policy.json`` file.
 
+.. note::
+
+   As noted, some of the parameters in the response representing totals do not
+   take allocation ratios into account. This can result in a disparity between
+   the totals and the usages. A more accurate representation of state can be
+   obtained using `placement`__.
+
+   __ https://developer.openstack.org/api-ref/placement/#list-resource-provider-usages
+
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
@@ -185,6 +194,15 @@ Shows details for a given hypervisor.
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
 the ``policy.json`` file.
+
+.. note::
+
+   As noted, some of the parameters in the response representing totals do not
+   take allocation ratios into account. This can result in a disparity between
+   the totals and the usages. A more accurate representation of state can be
+   obtained using `placement`__.
+
+   __ https://developer.openstack.org/api-ref/placement/#show-resource-provider-usages
 
 Normal response codes: 200
 

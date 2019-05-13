@@ -2377,13 +2377,15 @@ disabled_reason_body:
   type: string
 disk_available_least:
   description: |
-    The actual free disk on this hypervisor(in GiB).
+    The actual free disk on this hypervisor(in GiB). If allocation ratios used
+    for overcommit are configured, this may be negative.
   in: body
   required: true
   type: integer
 disk_available_least_total:
   description: |
-    The actual free disk on all hypervisors(in GiB).
+    The actual free disk on all hypervisors(in GiB). If allocation ratios used
+    for overcommit are configured, this may be negative.
   in: body
   required: true
   type: integer
@@ -3277,13 +3279,15 @@ forceDelete:
   type: none
 free_ram_mb:
   description: |
-    The free RAM in this hypervisor(in MiB).
+    The free RAM in this hypervisor(in MiB). This does not take allocation
+    ratios used for overcommit into account so this value may be negative.
   in: body
   required: true
   type: integer
 free_ram_mb_total:
   description: |
-    The free RAM on all hypervisors(in MiB).
+    The free RAM on all hypervisors(in MiB). This does not take allocation
+    ratios used for overcommit into account so this value may be negative.
   in: body
   required: true
   type: integer
@@ -3562,13 +3566,17 @@ hypervisor_diagnostics:
   min_version: 2.48
 hypervisor_free_disk_gb:
   description: |
-    The free disk remaining on this hypervisor(in GiB).
+    The free disk remaining on this hypervisor(in GiB). This does not take
+    allocation ratios used for overcommit into account so this value may be
+    negative.
   in: body
   required: true
   type: integer
 hypervisor_free_disk_gb_total:
   description: |
-    The free disk remaining on all hypervisors(in GiB).
+    The free disk remaining on all hypervisors(in GiB). This does not take
+    allocation ratios used for overcommit into account so this value may be
+    negative.
   in: body
   required: true
   type: integer
@@ -3675,13 +3683,17 @@ hypervisor_type_body:
   type: string
 hypervisor_vcpus:
   description: |
-    The number of vcpu in this hypervisor.
+    The number of vcpu in this hypervisor. This does not take allocation
+    ratios used for overcommit into account so there may be disparity between
+    this and the used count.
   in: body
   required: true
   type: integer
 hypervisor_vcpus_total:
   description: |
-    The number of vcpu on all hypervisors.
+    The number of vcpu on all hypervisors. This does not take allocation
+    ratios used for overcommit into account so there may be disparity between
+    this and the used count.
   in: body
   required: true
   type: integer
@@ -4289,7 +4301,9 @@ links:
   type: array
 local_gb:
   description: |
-    The disk in this hypervisor(in GiB).
+    The disk in this hypervisor(in GiB). This does not take allocation
+    ratios used for overcommit into account so there may be disparity between
+    this and the used count.
   in: body
   required: true
   type: integer
@@ -4309,7 +4323,9 @@ local_gb_simple_tenant_usage_optional:
   type: integer
 local_gb_total:
   description: |
-    The disk on all hypervisors(in GiB).
+    The disk on all hypervisors(in GiB). This does not take allocation
+    ratios used for overcommit into account so there may be disparity between
+    this and the used count.
   in: body
   required: true
   type: integer
@@ -4405,7 +4421,9 @@ memory_details_diagnostics:
   min_version: 2.48
 memory_mb:
   description: |
-    The memory of this hypervisor(in MiB).
+    The memory of this hypervisor(in MiB). This does not take allocation
+    ratios used for overcommit into account so there may be disparity between
+    this and the used count.
   in: body
   required: true
   type: integer
@@ -4423,7 +4441,9 @@ memory_mb_simple_tenant_usage_optional:
   type: integer
 memory_mb_total:
   description: |
-    The memory of all hypervisors(in MiB).
+    The memory of all hypervisors(in MiB). This does not take allocation
+    ratios used for overcommit into account so there may be disparity between
+    this and the used count.
   in: body
   required: true
   type: integer
