@@ -2775,6 +2775,11 @@ def _instance_update(context, instance_uuid, values, expected, original=None):
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(instance_uuid)
 
+    # NOTE(mdbooth): We pop values from this dict below, so we copy it here to
+    # ensure there are no side effects for the caller or if we retry the
+    # function due to a db conflict.
+    updates = copy.copy(values)
+
     if expected is None:
         expected = {}
     else:
@@ -2786,8 +2791,8 @@ def _instance_update(context, instance_uuid, values, expected, original=None):
     # updates
     for field in ('task_state', 'vm_state'):
         expected_field = 'expected_%s' % field
-        if expected_field in values:
-            value = values.pop(expected_field, None)
+        if expected_field in updates:
+            value = updates.pop(expected_field, None)
             # Coerce all single values to singleton lists
             if value is None:
                 expected[field] = [None]
@@ -2795,23 +2800,23 @@ def _instance_update(context, instance_uuid, values, expected, original=None):
                 expected[field] = sqlalchemyutils.to_list(value)
 
     # Values which need to be updated separately
-    metadata = values.pop('metadata', None)
-    system_metadata = values.pop('system_metadata', None)
+    metadata = updates.pop('metadata', None)
+    system_metadata = updates.pop('system_metadata', None)
 
-    _handle_objects_related_type_conversions(values)
+    _handle_objects_related_type_conversions(updates)
 
     # Hostname is potentially unique, but this is enforced in code rather
     # than the DB. The query below races, but the number of users of
     # osapi_compute_unique_server_name_scope is small, and a robust fix
     # will be complex. This is intentionally left as is for the moment.
-    if 'hostname' in values:
-        _validate_unique_server_name(context, values['hostname'])
+    if 'hostname' in updates:
+        _validate_unique_server_name(context, updates['hostname'])
 
     compare = models.Instance(uuid=instance_uuid, **expected)
     try:
         instance_ref = model_query(context, models.Instance,
                                    project_only=True).\
-                       update_on_match(compare, 'uuid', values)
+                       update_on_match(compare, 'uuid', updates)
     except update_match.NoRowsMatched:
         # Update failed. Try to find why and raise a specific error.
 
