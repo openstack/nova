@@ -309,13 +309,11 @@ class ResourceTracker(object):
         new_pci_requests = pci_request.get_pci_requests_from_flavor(
             new_instance_type)
         new_pci_requests.instance_uuid = instance.uuid
-        # PCI requests come from two sources: instance flavor and
-        # SR-IOV ports. SR-IOV ports pci_request don't have an alias_name.
-        # On resize merge the SR-IOV ports pci_requests with the new
-        # instance flavor pci_requests.
+        # On resize merge the SR-IOV ports pci_requests
+        # with the new instance flavor pci_requests.
         if instance.pci_requests:
             for request in instance.pci_requests.requests:
-                if request.alias_name is None:
+                if request.source == objects.InstancePCIRequest.NEUTRON_PORT:
                     new_pci_requests.requests.append(request)
         claim = claims.MoveClaim(context, instance, nodename,
                                  new_instance_type, image_meta, self, cn,

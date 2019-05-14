@@ -28,6 +28,12 @@ class InstancePCIRequest(base.NovaObject,
     # Version 1.3: Add requester_id
     VERSION = '1.3'
 
+    # Possible sources for a PCI request:
+    # FLAVOR_ALIAS : Request originated from a flavor alias.
+    # NEUTRON_PORT : Request originated from a neutron port.
+    FLAVOR_ALIAS = 0
+    NEUTRON_PORT = 1
+
     fields = {
         'count': fields.IntegerField(),
         'spec': fields.ListOfDictOfNullableStringsField(),
@@ -39,6 +45,14 @@ class InstancePCIRequest(base.NovaObject,
         'requester_id': fields.StringField(nullable=True),
         'numa_policy': fields.PCINUMAAffinityPolicyField(nullable=True),
     }
+
+    @property
+    def source(self):
+        # PCI requests originate from two sources: instance flavor alias and
+        # neutron SR-IOV ports.
+        # SR-IOV ports pci_request don't have an alias_name.
+        return (InstancePCIRequest.NEUTRON_PORT if self.alias_name is None
+                else InstancePCIRequest.FLAVOR_ALIAS)
 
     def obj_load_attr(self, attr):
         setattr(self, attr, None)
