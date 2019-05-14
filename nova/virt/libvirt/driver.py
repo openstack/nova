@@ -8432,7 +8432,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                          dest=target,
                                          host=fallback_from_host,
                                          receive=True)
-            image.cache(fetch_func=copy_from_host,
+            image.cache(fetch_func=copy_from_host, size=size,
                         filename=filename)
 
     def _create_images_and_backing(self, context, instance, instance_dir,
