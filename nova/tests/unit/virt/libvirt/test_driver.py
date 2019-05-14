@@ -11728,23 +11728,38 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance = objects.Instance(**self.test_instance)
 
         backing_file = imagecache.get_cache_fname(instance.image_ref)
+        backfile_path = os.path.join(base_dir, backing_file)
+        disk_size = 10747904
+        virt_disk_size = 25165824
         disk_info = [
             {u'backing_file': backing_file,
-             u'disk_size': 10747904,
+             u'disk_size': disk_size,
              u'path': u'disk_path',
              u'type': u'qcow2',
-             u'virt_disk_size': 25165824}]
+             u'virt_disk_size': virt_disk_size}]
 
+        def fake_copy_image(src, dest, **kwargs):
+            # backing file should be present and have a smaller size
+            # than instance root disk in order to assert resize_image()
+            if dest == backfile_path:
+                # dest is created under TempDir() fixture,
+                # it will go away after test cleanup
+                with open(dest, 'a'):
+                    pass
         with test.nested(
-            mock.patch.object(libvirt_driver.libvirt_utils, 'copy_image'),
+            mock.patch.object(libvirt_driver.libvirt_utils, 'copy_image',
+                              side_effect=fake_copy_image),
             mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image',
                               side_effect=exception.ImageNotFound(
                                   image_id=uuids.fake_id)),
-        ) as (copy_image_mock, fetch_image_mock):
+            mock.patch.object(imagebackend.Qcow2, 'resize_image'),
+            mock.patch.object(imagebackend.Image, 'get_disk_size',
+                              return_value=disk_size),
+        ) as (copy_image_mock, fetch_image_mock, resize_image_mock,
+              get_disk_size_mock):
             conn._create_images_and_backing(self.context, instance,
                                             "/fake/instance/dir", disk_info,
                                             fallback_from_host="fake_host")
-            backfile_path = os.path.join(base_dir, backing_file)
             kernel_path = os.path.join(CONF.instances_path,
                                        self.test_instance['uuid'],
                                        'kernel')
@@ -11769,6 +11784,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.call(self.context, ramdisk_path, instance.ramdisk_id,
                           trusted_certs)
             ])
+            resize_image_mock.assert_called_once_with(virt_disk_size)
 
         mock_utime.assert_called()
 
