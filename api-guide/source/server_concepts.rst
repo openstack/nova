@@ -623,7 +623,8 @@ Server actions
 
    But administrators can perform the actions on the server
    even though the server is locked. By default, only owner or administrator
-   can lock the sever, and administrator can overwrite owner's lock.
+   can lock the sever, and administrator can overwrite owner's lock along with
+   the locked_reason if it is specified.
 
    Unlock will unlock a server in locked state so additional
    operations can be performed on the server by non-admin users.
