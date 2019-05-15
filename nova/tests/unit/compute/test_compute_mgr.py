@@ -7070,13 +7070,20 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         migration_get_by_id.return_value = self.migration
         instance_get_by_uuid.return_value = self.instance
 
+        def fake_delete_allocation_after_move(_context, instance, migration,
+                                              flavor, nodename):
+            # The migration.status must be 'confirmed' for the method to
+            # properly cleanup the allocation held by the migration.
+            self.assertEqual('confirmed', migration.status)
+
         error = exception.HypervisorUnavailable(
             host=self.migration.source_compute)
         with test.nested(
             mock.patch.object(self.compute, 'network_api'),
             mock.patch.object(self.compute.driver, 'confirm_migration',
                               side_effect=error),
-            mock.patch.object(self.compute, '_delete_allocation_after_move')
+            mock.patch.object(self.compute, '_delete_allocation_after_move',
+                              side_effect=fake_delete_allocation_after_move)
         ) as (
             network_api, confirm_migration, delete_allocation
         ):
