@@ -163,6 +163,8 @@
       services which is important for things like rolling upgrade support.
       The former name for this job was
       "legacy-grenade-dsvm-neutron-multinode-live-migration".
+    required-projects:
+      - openstack/grenade
     run: playbooks/legacy/nova-grenade-live-migration/run.yaml
     post-run: playbooks/legacy/nova-grenade-live-migration/post.yaml
     irrelevant-files:
