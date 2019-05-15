@@ -178,6 +178,12 @@ be the same as not finding any suitable hosts.
 Note that if you enable this flag, you can disable the (less efficient)
 AvailabilityZoneFilter in the scheduler.
 """),
+    cfg.BoolOpt("query_placement_for_image_type_support",
+                default=False,
+                help="""
+This setting causes the scheduler to ask placement only for compute
+hosts that support the ``disk_format`` of the image used in the request.
+"""),
 ]
 
 filter_scheduler_group = cfg.OptGroup(name="filter_scheduler",

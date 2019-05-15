@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os_traits
 from oslo_log import log as logging
 
 import nova.conf
@@ -84,9 +85,38 @@ def map_az_to_placement_aggregate(ctxt, request_spec):
             [agg.uuid for agg in aggregates])
 
 
+def require_image_type_support(ctxt, request_spec):
+    """Request type-specific trait on candidates.
+
+    This will modify the request_spec to request hosts that support the
+    disk_format of the image provided.
+    """
+    if not CONF.scheduler.query_placement_for_image_type_support:
+        return
+
+    if request_spec.is_bfv:
+        # We are booting from volume, and thus compute node image
+        # disk_format support does not matter.
+        return
+
+    disk_format = request_spec.image.disk_format
+    trait_name = 'COMPUTE_IMAGE_TYPE_%s' % disk_format.upper()
+    if not hasattr(os_traits, trait_name):
+        LOG.error(('Computed trait name %r is not valid; '
+                   'is os-traits up to date?'), trait_name)
+        return
+
+    # NOTE(danms): We are using the transient flavor in the request spec
+    # to add the trait that we need. We make sure that we reset the dirty-ness
+    # of this field to avoid persisting it.
+    request_spec.flavor.extra_specs['trait:%s' % trait_name] = 'required'
+    request_spec.obj_reset_changes(fields=['flavor'], recursive=True)
+
+
 ALL_REQUEST_FILTERS = [
     require_tenant_aggregate,
     map_az_to_placement_aggregate,
+    require_image_type_support,
 ]
 
 

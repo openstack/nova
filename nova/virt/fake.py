@@ -135,6 +135,10 @@ class FakeDriver(driver.ComputeDriver):
         "supports_extend_volume": True,
         "supports_multiattach": True,
         "supports_trusted_certs": True,
+
+        # Supported image types
+        "supports_image_type_raw": True,
+        "supports_image_type_vhd": False,
         }
 
     # Since we don't have a real hypervisor, pretend we have lots of

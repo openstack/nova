@@ -152,3 +152,45 @@ class TestRequestFilter(test.NoDBTestCase):
             mock.call(self.context,
                       key='availability_zone',
                       value='myaz')])
+
+    def test_require_image_type_support_disabled(self):
+        self.flags(query_placement_for_image_type_support=False,
+                   group='scheduler')
+        reqspec = objects.RequestSpec(flavor=objects.Flavor(extra_specs={}),
+                                      is_bfv=False)
+        # Assert that we completely skip the filter if disabled
+        request_filter.require_image_type_support(self.context, reqspec)
+        self.assertEqual({}, reqspec.flavor.extra_specs)
+
+    def test_require_image_type_support_volume_backed(self):
+        self.flags(query_placement_for_image_type_support=True,
+                   group='scheduler')
+        reqspec = objects.RequestSpec(flavor=objects.Flavor(extra_specs={}),
+                                      is_bfv=True)
+        # Assert that we completely skip the filter if no image
+        request_filter.require_image_type_support(self.context, reqspec)
+        self.assertEqual({}, reqspec.flavor.extra_specs)
+
+    def test_require_image_type_support_unknown(self):
+        self.flags(query_placement_for_image_type_support=True,
+                   group='scheduler')
+        reqspec = objects.RequestSpec(
+            image=objects.ImageMeta(disk_format='danformat'),
+            flavor=objects.Flavor(extra_specs={}),
+            is_bfv=False)
+        # Assert that we completely skip the filter if no matching trait
+        request_filter.require_image_type_support(self.context, reqspec)
+        self.assertEqual({}, reqspec.flavor.extra_specs)
+
+    def test_require_image_type_support_adds_trait(self):
+        self.flags(query_placement_for_image_type_support=True,
+                   group='scheduler')
+        reqspec = objects.RequestSpec(
+            image=objects.ImageMeta(disk_format='raw'),
+            flavor=objects.Flavor(extra_specs={}),
+            is_bfv=False)
+        # Assert that we add the trait to the flavor as required
+        request_filter.require_image_type_support(self.context, reqspec)
+        self.assertEqual({'trait:COMPUTE_IMAGE_TYPE_RAW': 'required'},
+                         reqspec.flavor.extra_specs)
+        self.assertEqual(set(), reqspec.flavor.obj_what_changed())

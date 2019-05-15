@@ -193,6 +193,28 @@ class ServersTest(ServersTestBase):
         self._run_periodics()
         self.assertEqual([1], list(self._get_node_build_failures().values()))
 
+    def test_create_server_with_image_type_filter(self):
+        self.flags(query_placement_for_image_type_support=True,
+                   group='scheduler')
+
+        raw_image = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
+        vhd_image = 'a440c04b-79fa-479c-bed1-0b816eaec379'
+
+        server = self._build_minimal_create_server_request(
+            image_uuid=vhd_image)
+        server = self.api.post_server({'server': server})
+        server = self.api.get_server(server['id'])
+        errored_server = self._wait_for_state_change(server, server['status'])
+        self.assertEqual('ERROR', errored_server['status'])
+        self.assertIn('No valid host', errored_server['fault']['message'])
+
+        server = self._build_minimal_create_server_request(
+            image_uuid=raw_image)
+        server = self.api.post_server({'server': server})
+        server = self.api.get_server(server['id'])
+        created_server = self._wait_for_state_change(server, server['status'])
+        self.assertEqual('ACTIVE', created_server['status'])
+
     def _test_create_server_with_error_with_retries(self):
         # Create a server which will enter error state.
 
@@ -4526,6 +4548,15 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual(
             expected_usage,
             self.admin_api.get_hypervisor_stats()['local_gb_used'])
+
+    def test_volume_backed_image_type_filter(self):
+        # Enable the image type support filter and ensure that a
+        # non-image-having volume-backed server can still boot
+        self.flags(query_placement_for_image_type_support=True,
+                   group='scheduler')
+        server = self._create_volume_backed_server()
+        created_server = self.api.get_server(server['id'])
+        self.assertEqual('ACTIVE', created_server['status'])
 
     def test_volume_backed_no_disk_allocation(self):
         server = self._create_volume_backed_server()
