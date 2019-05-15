@@ -55,6 +55,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             'ephemeral_gb': 20,
             'instance_type_id': 2,  # m1.tiny
             'config_drive': None,
+            'launched_at': None,
             'system_metadata': {},
         }
         self.test_image_meta = {

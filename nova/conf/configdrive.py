@@ -56,7 +56,8 @@ Force injection to take place on a config drive
 
 When this option is set to true configuration drive functionality will be
 forced enabled by default, otherwise user can still enable configuration
-drives via the REST API or image metadata properties.
+drives via the REST API or image metadata properties. Launched VMs are not
+affected by this option.
 
 Possible values:
 

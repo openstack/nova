@@ -160,8 +160,13 @@ def required_by(instance):
         "img_config_drive",
         fields.ConfigDrivePolicy.OPTIONAL)
 
+    # NOTE(pandatt): Option CONF.force_config_drive only applies to newly
+    # being-built VMs. And already launched VMs shouldn't be forced a config
+    # drive, because they may have been cloud-inited via metadata service, and
+    # do not need and have any config drive device. The `launched_at` property
+    # is an apparent flag to tell VMs being built from launched ones.
     return (instance.config_drive or
-            CONF.force_config_drive or
+            (CONF.force_config_drive and not instance.launched_at) or
             image_prop == fields.ConfigDrivePolicy.MANDATORY
             )
 
