@@ -3154,10 +3154,15 @@ class API(base.Base):
                 if strutils.bool_from_string(instance.system_metadata.get(
                         'image_os_require_quiesce')):
                     raise
-                else:
+
+                if isinstance(err, exception.NovaException):
                     LOG.info('Skipping quiescing instance: %(reason)s.',
-                             {'reason': err},
+                             {'reason': err.format_message()},
                              instance=instance)
+                else:
+                    LOG.info('Skipping quiescing instance because the '
+                             'operation is not supported by the underlying '
+                             'compute driver.', instance=instance)
             # NOTE(tasker): discovered that an uncaught exception could occur
             #               after the instance has been frozen. catch and thaw.
             except Exception as ex:
