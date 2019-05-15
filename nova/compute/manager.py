@@ -3768,9 +3768,16 @@ class ComputeManager(manager.Manager):
                     # Whether an error occurred or not, at this point the
                     # instance is on the dest host so to avoid leaking
                     # allocations in placement, delete them here.
-                    self._delete_allocation_after_move(
-                        context, instance, migration, old_instance_type,
-                        migration.source_node)
+                    # NOTE(mriedem): _delete_allocation_after_move is tightly
+                    # coupled to the migration status on the confirm step so
+                    # we unfortunately have to mutate the migration status to
+                    # have _delete_allocation_after_move cleanup the allocation
+                    # held by the migration consumer.
+                    with utils.temporary_mutation(
+                            migration, status='confirmed'):
+                        self._delete_allocation_after_move(
+                            context, instance, migration, old_instance_type,
+                            migration.source_node)
 
         do_confirm_resize(context, instance, migration.id)
 
