@@ -51,6 +51,32 @@ target host. For information about instance evacuation, see
 
 .. _compute-scheduler-filters:
 
+Prefiltering
+~~~~~~~~~~~~
+
+As of the Rocky release, the scheduling process includes a prefilter
+step to increase the efficiency of subsequent stages. These prefilters
+are largely optional, and serve to augment the request that is sent to
+placement to reduce the set of candidate compute hosts based on
+attributes that placement is able to answer for us ahead of time. In
+addition to the prefilters listed here, also see `Tenant Isolation
+with Placement`_ and `Availability Zones with Placement`_.
+
+Compute Image Type Support
+--------------------------
+
+Starting in the Train release, there is a prefilter available for
+excluding compute nodes that do not support the ``disk_format`` of the
+image used in a boot request. This behavior is enabled by setting
+:oslo.config:option:`[scheduler]/query_placement_for_image_type_support=True
+<scheduler.query_placement_for_image_type_support>`. For
+example, the libvirt driver, when using ceph as an ephemeral backend,
+does not support ``qcow2`` images (without an expensive conversion
+step). In this case (and especially if you have a mix of ceph and
+non-ceph backed computes), enabling this feature will ensure that the
+scheduler does not send requests to boot a ``qcow2`` image to computes
+backed by ceph.
+
 Filter scheduler
 ~~~~~~~~~~~~~~~~
 
