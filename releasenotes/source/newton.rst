@@ -16,9 +16,9 @@ Upgrade Notes
 
 - This release contains a schema migration for the ``nova_api`` database
   in order to address bug 1738094:
-  
+
   https://bugs.launchpad.net/nova/+bug/1738094
-  
+
   The migration is optional and can be postponed if you have not been
   affected by the bug. The bug manifests itself through "Data too long for
   column 'spec'" database errors.
@@ -38,10 +38,10 @@ Bug Fixes
   Similarly, rebuilding an instance on a host that is at capacity for vcpu,
   memory or disk could fail since the scheduler filters would treat it as a
   new build request even though the rebuild is not claiming *new* resources.
-  
+
   Therefore this release contains a fix for those regressions in scheduling
   behavior on rebuild while maintaining the original fix for CVE-2017-16239.
-  
+
   .. note:: The fix relies on a ``RUN_ON_REBUILD`` variable which is checked
             for all scheduler filters during a rebuild. The reasoning behind
             the value for that variable depends on each filter. If you have
@@ -58,7 +58,7 @@ Bug Fixes
   bug is now fixed so that the ``force`` parameter can once again be
   specified during quota updates. There is no new microversion for this
   change since it is an admin-only API.
-  
+
   .. _bug 1733886: https://bugs.launchpad.net/nova/+bug/1733886
 
 
@@ -75,14 +75,14 @@ Security Issues
 .. releasenotes/notes/bug-1664931-validate-image-rebuild-9c5b05a001c94a4d.yaml @ b'698b261a5a2a6c0f31ef5059046ef7196d5cba30'
 
 - `OSSA-2017-005`_: Nova Filter Scheduler bypass through rebuild action
-  
+
   By rebuilding an instance, an authenticated user may be able to circumvent
   the FilterScheduler bypassing imposed filters (for example, the
   ImagePropertiesFilter or the IsolatedHostsFilter). All setups using the
   FilterScheduler (or CachingScheduler) are affected.
-  
+
   The fix is in the `nova-api` and `nova-conductor` services.
-  
+
   .. _OSSA-2017-005: https://security.openstack.org/ossa/OSSA-2017-005.html
 
 
@@ -102,7 +102,7 @@ Bug Fixes
   and running ``nova-manage cell_v2 simple_cell_setup`` or
   ``nova-manage cell_v2 map_cell0`` where the database connection is read
   from config and has special characters in the URL.
-  
+
   .. _bug 1673613: https://launchpad.net/bugs/1673613
 
 .. releasenotes/notes/bug-1691545-1acd6512effbdffb.yaml @ b'd6a628da62f810310ab1bdc2e04222d8010e7b62'
@@ -112,7 +112,7 @@ Bug Fixes
   established. With this fix, objects related to database connections are
   cached in the API service and reused to prevent new connections being
   established for every communication with cell databases.
-  
+
   .. _bug 1691545: https://bugs.launchpad.net/nova/+bug/1691545
 
 .. releasenotes/notes/fix-default-cell0-db-connection-f9717053cc34778e.yaml @ b'f9a3c3fcff89828b7df45149c2d0ee188f439e46'
@@ -168,7 +168,7 @@ Security Issues
 .. releasenotes/notes/bug-1673569-cve-2017-7214-2d7644b356015c93.yaml @ b'c2c91ce44592fc5dc2aacee1cf7f5b5cfd2e9a0a'
 
 - [CVE-2017-7214] Failed notification payload is dumped in logs with auth secrets
-  
+
   * `Bug 1673569 <https://bugs.launchpad.net/nova/+bug/1673569>`_
 
 
@@ -188,24 +188,24 @@ Known Issues
   `ivs`, `iovisor`, `midonet`, and `vrouter` virtual interface types Nova
   previously generated an empty path attribute to the script element
   (`<script path=''/>`) of the interface.
-  
+
   As of Libvirt 1.3.3 (`commit`_) and later Libvirt no longer accepts an
   empty path attribute to the script element of the interface. Notably this
   includes Libvirt 2.0.0 as provided with RHEL 7.3 and CentOS 7.3-1611. The
   creation of virtual machines with offending interface definitions on a host
   with Libvirt 1.3.3 or later will result in an error "libvirtError: Cannot
   find '' in path: No such file or directory".
-  
+
   Additionally, where virtual machines already exist that were created using
   earlier versions of Libvirt interactions with these virtual machines via
   Nova or other utilities (e.g. `virsh`) may result in similar errors.
-  
+
   To mitigate this issue Nova no longer generates an empty path attribute
   to the script element when defining an interface. This resolves the issue
   with regards to virtual machine creation. To resolve the issue with regards
   to existing virtual machines a change to Libvirt is required, this is being
   tracked in `Bugzilla 1412834`_
-  
+
   .. _commit: https://libvirt.org/git/?p=libvirt.git;a=commit;h=9c17d665fdc5f0ab74500a14c30627014c11b2c0
   .. _Bugzilla 1412834: https://bugzilla.redhat.com/show_bug.cgi?id=1412834
 
@@ -222,7 +222,7 @@ Bug Fixes
   legacy v2 API. With this fix, requests to create a server with
   ``boot_index=None`` will be treated as if ``boot_index`` was not specified,
   which defaults to meaning a non-bootable block device.
-  
+
   .. _bug 1662699: https://bugs.launchpad.net/nova/+bug/1662699
 
 
@@ -279,24 +279,24 @@ Prelude
 Nova 14.0.0 release is including a lot of new features and bugfixes. It can be extremely hard to mention all the changes we introduced during that release but we beg you to read at least the upgrade section which describes the required modifications that you need to do for upgrading your cloud from 13.0.0 (Mitaka) to 14.0.0 (Newton).
 That said, a few major changes are worth to notice here. This is not an exhaustive list of things to notice, rather just important things you need to know :
 
-  - Latest API microversion supported for Newton is v2.38
-  - Nova now provides a new placement RESTful API endpoint that is for
-    the moment optional where Nova compute nodes use it for providing
-    resources. For the moment, the nova-scheduler is not using it but we
-    plan to check the placement resources for Ocata. In case you plan to
-    rolling-upgrade the compute nodes between Newton and Ocata, please
-    look in the notes below how to use the new placement API.
-  - Cells V2 now supports booting instances for one cell v2 only. We plan
-    to add a multi-cell support for Ocata. You can prepare for Ocata now
-    by creating a cellv2 now using the nova-manage related commands, but
-    configuring Cells V2 is still fully optional for this cycle.
-  - Nova is now using Glance v2 API for getting image resources.
-  - API microversions 2.36 and above now deprecate the REST resources in
-    Nova used to proxy calls to other service type APIs (eg. /os-volumes).
-    We'll still supporting those until we raise our minimum API version
-    to 2.36 which is not planned yet (we're supporting v2.1 as of now) but
-    you're encouraged to stop using those resources and rather calling the
-    other services that provide those natively.
+- Latest API microversion supported for Newton is v2.38
+- Nova now provides a new placement RESTful API endpoint that is for
+  the moment optional where Nova compute nodes use it for providing
+  resources. For the moment, the nova-scheduler is not using it but we
+  plan to check the placement resources for Ocata. In case you plan to
+  rolling-upgrade the compute nodes between Newton and Ocata, please
+  look in the notes below how to use the new placement API.
+- Cells V2 now supports booting instances for one cell v2 only. We plan
+  to add a multi-cell support for Ocata. You can prepare for Ocata now
+  by creating a cellv2 now using the nova-manage related commands, but
+  configuring Cells V2 is still fully optional for this cycle.
+- Nova is now using Glance v2 API for getting image resources.
+- API microversions 2.36 and above now deprecate the REST resources in
+  Nova used to proxy calls to other service type APIs (eg. /os-volumes).
+  We'll still supporting those until we raise our minimum API version
+  to 2.36 which is not planned yet (we're supporting v2.1 as of now) but
+  you're encouraged to stop using those resources and rather calling the
+  other services that provide those natively.
 
 
 .. _Release Notes_14.0.0_stable_newton:
@@ -332,58 +332,58 @@ New Features
 .. releasenotes/notes/bp-hyper-v-remotefx-1474ef1a082ad1b0.yaml @ b'2d94ae597af349c577b33e785664c9205b12dcc0'
 
 - Hyper-V RemoteFX feature.
-  
+
   Microsoft RemoteFX enhances the visual experience in RDP connections,
   including providing access to virtualized instances of a physical GPU to
   multiple guests running on Hyper-V.
-  
+
   In order to use RemoteFX in Hyper-V 2012 R2, one or more DirectX 11
   capable display adapters must be present and the RDS-Virtualization
   server feature must be installed.
-  
+
   To enable this feature, the following config option must be set in
   the Hyper-V compute node's 'nova.conf' file::
-  
+
       [hyperv]
       enable_remotefx = True
-  
+
   To create instances with RemoteFX capabilities, the following flavor
   extra specs must be used:
-  
+
   **os:resolution**. Guest VM screen resolution size. Acceptable values::
-  
+
       1024x768, 1280x1024, 1600x1200, 1920x1200, 2560x1600, 3840x2160
-  
+
   '3840x2160' is only available on Windows / Hyper-V Server 2016.
-  
+
   **os:monitors**. Guest VM number of monitors. Acceptable values::
-  
+
       [1, 4] - Windows / Hyper-V Server 2012 R2
       [1, 8] - Windows / Hyper-V Server 2016
-  
+
   **os:vram**. Guest VM VRAM amount. Only available on
   Windows / Hyper-V Server 2016. Acceptable values::
-  
+
       64, 128, 256, 512, 1024
-  
+
   There are a few considerations that needs to be kept in mind:
-  
+
   * Not all guests support RemoteFX capabilities.
   * Windows / Hyper-V Server 2012 R2 does not support Generation 2 VMs
     with RemoteFX capabilities.
   * Per resolution, there is a maximum amount of monitors that can be
     added. The limits are as follows:
-  
+
     For Windows / Hyper-V Server 2012 R2::
-  
+
         1024x768: 4
         1280x1024: 4
         1600x1200: 3
         1920x1200: 2
         2560x1600: 1
-  
+
     For Windows / Hyper-V Server 2016::
-  
+
         1024x768: 8
         1280x1024: 8
         1600x1200: 4
@@ -407,7 +407,7 @@ New Features
 
 - Virtuozzo Storage is available as a volume backend in
   libvirt virtualization driver.
-  
+
   .. note:: Only qcow2/raw volume format supported, but not ploop.
 
 .. releasenotes/notes/bp-virtuozzo-instance-resize-support-b523e6e8a0de0fbc.yaml @ b'd4aa455d53c91c6dfebbf9a9850f7b6c3fef4545'
@@ -442,11 +442,11 @@ New Features
   ``auto-allocated-topology`` API to work in Neutron. See the
   `Additional features`_ section of the OpenStack Networking Guide
   for more details for setting up this feature in Neutron.
-  
+
   .. note:: The API does not default to 'auto'. However, python-novaclient
     will default to passing 'auto' for this microversion if no specific
     network values are provided to the CLI.
-  
+
   .. note:: This feature is not available until all of the compute services
     in the deployment are running Newton code. This is to avoid sending a
     server create request to a Mitaka compute that can not understand a
@@ -454,7 +454,7 @@ New Features
     the request as if ``networks`` was not in the server create request body.
     Once all computes are upgraded to Newton, a restart of the nova-api
     service will be required to use this new feature.
-  
+
   .. _Additional features: https://docs.openstack.org/neutron/rocky/admin/intro-os-networking.html
 
 .. releasenotes/notes/glance_v2-15b080e361804976.yaml @ b'f71cd2ca03693655efdbd1109f406ab6f3b58ee6'
@@ -468,7 +468,7 @@ New Features
   consistent hashing to divide the ironic nodes between the nova-compute
   services, with the hash ring being refreshed each time the resource tracker
   runs.
-  
+
   Note that instances will still be owned by the same nova-compute service
   for the entire life of the instance, and so the ironic node that instance
   is on will also be managed by the same nova-compute service until the node
@@ -476,7 +476,7 @@ New Features
   leave instances managed by that service orphaned, and as such most
   instance actions will not work until a nova-compute service with the same
   hostname is brought (back) online.
-  
+
   When nova-compute services are brought up or down, the ring will eventually
   re-balance (when the resource tracker runs on each compute). This may
   result in duplicate compute_node entries for ironic nodes while the
@@ -484,12 +484,12 @@ New Features
   nova-compute service running the ironic virt driver can manage any ironic
   node, if a build request goes to the compute service not currently managing
   the node the build request is for, it will still succeed.
-  
+
   There is no configuration to do to enable this feature; it is always
   enabled.  There are no major changes when only one compute service is
   running. If more compute services are brought online, the bigger changes
   come into play.
-  
+
   Note that this is tested when running with only one nova-compute service,
   but not more than one. As such, this should be used with caution for
   multiple compute hosts until it is properly tested in CI.
@@ -516,17 +516,17 @@ New Features
   by sending SIGHUP to the correct process. Live migration options will apply
   to live migrations currently in progress. Please refer to the configuration
   manual.
-  
+
   * DEFAULT.debug
   * libvirt.live_migration_completion_timeout
   * libvirt.live_migration_progress_timeout
 
 .. releasenotes/notes/notification-transformation-newton-29a9324d1428b7d3.yaml @ b'6a2a1a7d630e4fc0b17af834c2a6750f1553019c'
 
-- 
+-
   The following legacy notifications have been been transformed to
   a new versioned payload:
-  
+
   * instance.delete
   * instance.pause
   * instance.power_on
@@ -536,7 +536,7 @@ New Features
   * instance.resize
   * instance.update
   * compute.exception
-  
+
   Every versioned notification has a sample file stored under
   doc/notification_samples directory. Consult
   http://docs.openstack.org/developer/nova/notifications.html for more information.
@@ -594,7 +594,7 @@ New Features
   and MAC address. For tagged block devices, the exposed
   hardware metadata includes the bus (ex: SCSI), bus
   address (ex: 1:0:2:0) and serial number.
-  
+
   The 2.32 microversion also adds the 2016-06-30 version
   to the metadata API. Starting with 2016-06-30, the
   metadata contains a 'devices' sections which lists any
@@ -698,28 +698,28 @@ Upgrade Notes
 
 .. releasenotes/notes/extensions_remove-37e9d4092981abbe.yaml @ b'76b58b8f895bb9b8afedeed6f01a6117f9194379'
 
-- 
+-
   The following policy enforcement points have been removed as part
   of the restructuring of the Nova API code. The attributes that
   could have been hidden with these policy points will now always be
   shown / accepted.
-  
-   * os_compute_api:os-disk-config - show / accept
-     ``OS-DCF:diskConfig`` parameter on servers
-  
-   * os-access-ips - show / accept ``accessIPv4`` and ``accessIPv6``
-     parameters on servers
-  
+
+  * ``os_compute_api:os-disk-config`` - show / accept
+    ``OS-DCF:diskConfig`` parameter on servers
+
+  * ``os-access-ips`` - show / accept ``accessIPv4`` and ``accessIPv6``
+    parameters on servers
+
   The following entry points have been removed
-  
-   * nova.api.v21.extensions.server.resize - allowed accepting
-     additional parameters on server resize requests.
-  
-   * nova.api.v21.extensions.server.update - allowed accepting
-     additional parameters on server update requests.
-  
-   * nova.api.v21.extensions.server.rebuild - allowed accepting
-     additional parameters on server rebuild requests.
+
+  * ``nova.api.v21.extensions.server.resize`` - allowed accepting
+    additional parameters on server resize requests.
+
+  * ``nova.api.v21.extensions.server.update`` - allowed accepting
+    additional parameters on server update requests.
+
+  * ``nova.api.v21.extensions.server.rebuild`` - allowed accepting
+    additional parameters on server rebuild requests.
 
 .. releasenotes/notes/flavors-moved-to-api-database-b33489ed3b1b246b.yaml @ b'17a8e8a68cbe4045a1bc2889d1bf51f2db7ebcca'
 
@@ -732,7 +732,7 @@ Upgrade Notes
 .. releasenotes/notes/get-me-a-network-992eabc81b5e5347.yaml @ b'd727795d6668abaf17b5afe01d2e1757aebe7e2e'
 
 - The 2.37 microversion enforces the following:
-  
+
   * ``networks`` is required in the server create request body for the API.
     Specifying ``networks: auto`` is similar to not requesting specific
     networks when creating a server before 2.37.
@@ -756,9 +756,9 @@ Upgrade Notes
   instance.id field, for example directory for instance could be named
   ``instance-00000008``. In Grizzly this mechanism was changed,
   instance.uuid is used as an instance directory name, e.g. path to instance:
-  
+
   ``/opt/stack/data/nova/instances/34198248-5541-4d52-a0b4-a6635a7802dd/``.
-  
+
   In Newton backward compatibility is dropped. For instances that haven't
   been restarted since Folsom and earlier maintanance should be scheduled
   before upgrade(stop, rename directory to instance.uuid, then start) so Nova
@@ -828,11 +828,11 @@ Upgrade Notes
 .. releasenotes/notes/remove-deprecated-cinder-options-newton-fc3dce6856101ef8.yaml @ b'fb15c00aa1561973804819d111d52b6d25842293'
 
 - The following deprecated configuration options have been removed from the
-  ``cinder`` section of nova.conf: 
-  
-    - ca_certificates_file
-    - api_insecure
-    - http_timeout
+  ``cinder`` section of ``nova.conf``:
+
+  - ``ca_certificates_file``
+  - ``api_insecure``
+  - ``http_timeout``
 
 .. releasenotes/notes/remove-deprecated-destroy_after_evacuate-option-2557d0634e78abd1.yaml @ b'50b1f1fc267517b5eb4d3da567d6d76c83568f7f'
 
@@ -894,10 +894,10 @@ Upgrade Notes
 
 - The following deprecated configuration options have been removed from the
   ``neutron`` section of nova.conf:
-  
-    - ca_certificates_file
-    - api_insecure
-    - url_timeout
+
+  - ``ca_certificates_file``
+  - ``api_insecure``
+  - ``url_timeout``
 
 .. releasenotes/notes/rm-sched-host-mgr-class-load-2a86749a38f0688d.yaml @ b'7e2f5c7d340a0131ac083ed036e417976d6342da'
 
@@ -966,14 +966,14 @@ Deprecation Notes
 
 - The following nova-manage commands are deprecated for removal in the
   Nova 15.0.0 Ocata release:
-  
+
   * nova-maange account scrub
   * nova-manage fixed *
   * nova-manage floating *
   * nova-manage network *
   * nova-manage project scrub
   * nova-manage vpn *
-  
+
   These commands only work with nova-network which is itself deprecated in
   favor of Neutron.
 
@@ -1016,7 +1016,7 @@ Deprecation Notes
   '2.36'. The 'os-fping' API was deprecated also, this API is only related to
   nova-network and depend on the deployment. The deprecated APIs are as
   below:
-  
+
   - /images
   - /os-networks
   - /os-fixed-ips
@@ -1074,10 +1074,10 @@ Bug Fixes
   of the number of queues on a tap interface in the kernel, nova uses
   flavor.vcpus as the number of queues. if not, nova uses the limit.
   The limits are as follows:
-  
-    * kernels prior to 3.0: 1
-    * kernels 3.x: 8
-    * kernels 4.x: 256
+
+  * kernels prior to 3.0: 1
+  * kernels 3.x: 8
+  * kernels 4.x: 256
 
 .. releasenotes/notes/set_migration_status_to_error_on_live-migration_failure-d1f6f29ceafdd598.yaml @ b'6641852b8ed63bad0917d355f9563f5e9e9bbf75'
 
@@ -1099,7 +1099,7 @@ Other Notes
   Because of this, the sample policy.json file that is shipped with Nova is
   empty and should only be necessary if you want to override the API policy
   from the defaults in the code. To generate the policy file you can run::
-  
+
     oslopolicy-sample-generator --config-file=etc/nova/nova-policy-generator.conf
 
 .. releasenotes/notes/network-allocate-retries-min-a5288476b11bfe55.yaml @ b'883bae38c329abe4a54fba88b642c20a11529193'
