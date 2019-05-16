@@ -21,6 +21,7 @@ import copy
 import datetime
 import errno
 import glob
+import io
 import os
 import random
 import re
@@ -873,18 +874,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(instances_path=temp_dir,
                    firewall_driver=None)
         self.flags(snapshots_directory=temp_dir, group='libvirt')
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.libvirt_utils',
-            fake_libvirt_utils))
 
         self.flags(sysinfo_serial="hardware", group="libvirt")
 
         # normally loaded during nova-compute startup
         os_vif.initialize()
-
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.imagebackend.libvirt_utils',
-            fake_libvirt_utils))
 
         self.stub_out('nova.virt.disk.api.extend',
                       lambda image, size, use_cow=False: None)
@@ -5420,7 +5414,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
     @mock.patch('nova.virt.disk.api.setup_container')
     @mock.patch('oslo_utils.fileutils.ensure_tree')
-    @mock.patch.object(fake_libvirt_utils, 'get_instance_path')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     def test_unmount_fs_if_error_during_lxc_create_domain(self,
             mock_get_inst_path, mock_ensure_tree, mock_setup_container,
             mock_get_info, mock_teardown):
@@ -11703,7 +11697,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             migrate_data, AnyEventletEvent(), disks_to_copy[0])
 
     @mock.patch('os.path.exists', return_value=False)
-    @mock.patch.object(fake_libvirt_utils, 'create_image')
+    @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_fetch_instance_kernel_ramdisk')
     def _do_test_create_images_and_backing(self, disk_type, mock_fetch,
@@ -11753,9 +11747,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               self.context, instance,
                               "/fake/instance/dir", disk_info)
 
+    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
     @mock.patch('nova.privsep.path.utime')
-    def test_create_images_and_backing_images_not_exist_fallback(self,
-                                                                 mock_utime):
+    def test_create_images_and_backing_images_not_exist_fallback(
+            self, mock_utime, mock_create_cow_image):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         base_dir = os.path.join(CONF.instances_path,
@@ -11780,8 +11775,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
              u'virt_disk_size': 25165824}]
 
         with test.nested(
-            mock.patch.object(libvirt_driver.libvirt_utils, 'copy_image'),
-            mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image',
+            mock.patch('nova.virt.libvirt.utils.copy_image'),
+            mock.patch('nova.virt.libvirt.utils.fetch_image',
                               side_effect=exception.ImageNotFound(
                                   image_id=uuids.fake_id)),
         ) as (copy_image_mock, fetch_image_mock):
@@ -11815,9 +11810,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             ])
 
         mock_utime.assert_called()
+        mock_create_cow_image.assert_called_once_with(
+            backfile_path, '/fake/instance/dir/disk_path')
 
+    @mock.patch('nova.virt.libvirt.utils.create_image',
+                new=mock.NonCallableMock())
     @mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image')
-    def test_create_images_and_backing_images_exist(self, mock_fetch_image):
+    def test_create_images_and_backing_images_exist(
+            self, mock_fetch_image):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.test_instance.update({'user_id': 'fake-user',
                                    'os_type': None,
@@ -11843,8 +11843,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertFalse(mock_fetch_image.called)
 
     @mock.patch('nova.privsep.path.utime')
-    def test_create_images_and_backing_ephemeral_gets_created(self,
-                                                              mock_utime):
+    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
+    def test_create_images_and_backing_ephemeral_gets_created(
+            self, mock_create_cow_image, mock_utime):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         base_dir = os.path.join(CONF.instances_path,
@@ -11888,7 +11889,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.call(ephemeral_backing, 1 * units.Gi)
             ])
 
-        mock_utime.assert_called()
+            mock_utime.assert_has_calls([
+                mock.call(root_backing),
+                mock.call(ephemeral_backing)])
+
+            # TODO(efried): Should these be disk_info[path]??
+            mock_create_cow_image.assert_has_calls([
+                mock.call(root_backing, CONF.instances_path + '/disk'),
+                mock.call(ephemeral_backing,
+                          CONF.instances_path + '/disk.local')])
 
     def test_create_images_and_backing_disk_info_none(self):
         instance = objects.Instance(**self.test_instance)
@@ -11975,8 +11984,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'plug_vifs')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_connect_volume')
-    def _test_pre_live_migration_works_correctly_mocked(self,
-            mock_connect, mock_plug,
+    @mock.patch('nova.virt.libvirt.utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
+    def _test_pre_live_migration_works_correctly_mocked(
+            self, mock_file_open, mock_connect, mock_plug,
             target_ret=None, src_supports_native_luks=True,
             dest_supports_native_luks=True, allow_native_luks=True):
         # Creating testdata
@@ -12115,8 +12126,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.virt.driver.block_device_info_get_mapping',
                 return_value=())
+    @mock.patch('nova.virt.libvirt.utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
     def test_pre_live_migration_block_with_config_drive_mocked_with_vfat(
-            self, block_device_info_get_mapping):
+            self, mock_open, mock_block_device_info_get_mapping):
         self.flags(config_drive_format='vfat')
         # Creating testdata
         vol = {'block_device_mapping': [
@@ -12135,7 +12148,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         )
         res_data = drvr.pre_live_migration(
             self.context, instance, vol, [], None, migrate_data)
-        block_device_info_get_mapping.assert_called_once_with(
+        mock_block_device_info_get_mapping.assert_called_once_with(
             {'block_device_mapping': [
                 {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
                 {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}
@@ -12439,7 +12452,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertIsInstance(res,
                                       objects.LibvirtLiveMigrateData)
 
-    def test_pre_live_migration_with_not_shared_instance_path(self):
+    @mock.patch('nova.virt.libvirt.utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
+    def test_pre_live_migration_with_not_shared_instance_path(
+            self, mock_file_open):
         migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
             is_shared_block_storage=False,
             is_shared_instance_path=False,
@@ -12504,7 +12520,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         with test.nested(
             mock.patch.object(os, 'mkdir'),
-            mock.patch.object(fake_libvirt_utils, 'write_to_file'),
+            mock.patch('nova.virt.libvirt.utils.write_to_file'),
             mock.patch.object(drvr, '_create_images_and_backing')
         ) as (
             mkdir, write_to_file, create_images_and_backing
@@ -12517,7 +12533,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             write_to_file.assert_called_with(disk_info_path,
                                              jsonutils.dumps(image_disk_info))
 
-    def test_pre_live_migration_with_perf_events(self):
+    @mock.patch('nova.virt.libvirt.utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
+    def test_pre_live_migration_with_perf_events(self, mock_file_open):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._supported_perf_events = ['cmt']
@@ -12541,8 +12559,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('os.stat')
     @mock.patch('os.path.getsize')
     @mock.patch('nova.virt.disk.api.get_disk_info')
-    def test_get_instance_disk_info_works_correctly(self, mock_qemu_img_info,
-                                                    mock_get_size, mock_stat):
+    @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file',
+                return_value='file')
+    def test_get_instance_disk_info_works_correctly(
+            self, mock_get_disk_backing_file, mock_qemu_img_info,
+            mock_get_size, mock_stat):
         # Test data
         instance = objects.Instance(**self.test_instance)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
@@ -12569,10 +12590,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 return vdmock
         self.create_fake_libvirt_mock(lookupByUUIDString=fake_lookup)
 
-        fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * units.Gi
-        fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * units.Gi
-        fake_libvirt_utils.disk_backing_files['/test/disk.local'] = 'file'
-
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         info = drvr.get_instance_disk_info(instance)
         info = jsonutils.loads(info)
@@ -12593,6 +12610,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_qemu_img_info.called_once_with('/test/disk.local')
         mock_stat.called_once_with('/test/disk')
         mock_get_size.called_once_with('/test/disk')
+        mock_get_disk_backing_file.assert_called()
 
     def test_post_live_migration(self):
         vol1_conn_info = {'data': {'test_data': mock.sentinel.vol1},
@@ -12631,8 +12649,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('os.stat')
     @mock.patch('os.path.getsize')
     @mock.patch('nova.virt.disk.api.get_disk_info')
+    @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file',
+                return_value='file')
     def test_get_instance_disk_info_excludes_volumes(
-            self, mock_qemu_img_info, mock_get_size, mock_stat):
+            self, mock_get_disk_backing_file, mock_qemu_img_info,
+            mock_get_size, mock_stat):
         # Test data
         instance = objects.Instance(**self.test_instance)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
@@ -12665,10 +12686,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 return vdmock
         self.create_fake_libvirt_mock(lookupByUUIDString=fake_lookup)
 
-        fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * units.Gi
-        fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * units.Gi
-        fake_libvirt_utils.disk_backing_files['/test/disk.local'] = 'file'
-
         conn_info = {'driver_volume_type': 'fake'}
         info = {'block_device_mapping': [
                   {'connection_info': conn_info, 'mount_device': '/dev/vdc'},
@@ -12692,6 +12709,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_qemu_img_info.assert_called_once_with('/test/disk.local')
         mock_stat.assert_called_once_with('/test/disk')
         mock_get_size.assert_called_once_with('/test/disk')
+        mock_get_disk_backing_file.assert_called()
 
     @mock.patch('os.stat')
     @mock.patch('os.path.getsize')
@@ -12724,7 +12742,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             if _uuid == instance.uuid:
                 return vdmock
         self.create_fake_libvirt_mock(lookupByUUIDString=fake_lookup)
-        fake_libvirt_utils.disk_sizes[path] = 10 * units.Gi
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         info = drvr.get_instance_disk_info(instance)
@@ -13189,7 +13206,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             if name in ('kernel', 'ramdisk'):
                 cache.assert_called_once_with(
                     context=self.context, filename=mock.ANY, image_id=mock.ANY,
-                    fetch_func=fake_libvirt_utils.fetch_raw_image)
+                    fetch_func=fake_backend.mock_fetch_raw_image)
 
         wantFiles = [
             {'filename': kernel_fname,
@@ -13336,8 +13353,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             instance,
                                             image_meta)
 
-        with mock.patch.object(libvirt_driver.libvirt_utils,
-                               'copy_image') as mock_copy:
+        with mock.patch('nova.virt.libvirt.utils.copy_image') as mock_copy:
             drvr._create_image(self.context, instance, disk_info['mapping'],
                                fallback_from_host='fake-source-host')
             mock_copy.assert_called_once_with(src='fake-target',
@@ -13401,7 +13417,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                               'myVol')])
 
     @mock.patch('nova.privsep.path.utime')
-    def test_create_ephemeral_specified_fs_not_valid(self, mock_utime):
+    @mock.patch('nova.virt.libvirt.utils.fetch_image')
+    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
+    def test_create_ephemeral_specified_fs_not_valid(
+            self, mock_create_cow_image, mock_fetch_image, mock_utime):
         CONF.set_override('default_ephemeral_format', 'ext4')
         ephemerals = [{'device_type': 'disk',
                        'disk_bus': 'virtio',
@@ -13472,7 +13491,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                               '/dev/something', True, None,
                                               None)])
 
-    @mock.patch.object(fake_libvirt_utils, 'create_ploop_image')
+    @mock.patch('nova.virt.libvirt.utils.create_ploop_image')
     def test_create_ephemeral_parallels(self, mock_create_ploop):
         self.flags(virt_type='parallels', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -13485,17 +13504,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                   '20G', 'fs_format')
 
     @mock.patch('nova.privsep.fs.unprivileged_mkfs')
-    def test_create_swap_default(self, fake_mkfs):
+    @mock.patch('nova.virt.libvirt.utils.create_image')
+    def test_create_swap_default(self, mock_create_image, mock_mkfs):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._create_swap('/dev/something', 1)
-        fake_mkfs.assert_has_calls([mock.call('swap', '/dev/something')])
+        mock_mkfs.assert_has_calls([mock.call('swap', '/dev/something')])
 
     def test_ensure_console_log_for_instance_pass(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         with test.nested(
                 mock.patch.object(drvr, '_get_console_log_path'),
-                mock.patch.object(fake_libvirt_utils, 'file_open')
+                mock.patch('nova.virt.libvirt.utils.file_open')
             ) as (mock_path, mock_open):
             drvr._ensure_console_log_for_instance(mock.ANY)
             mock_path.assert_called_once()
@@ -13506,7 +13526,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         with test.nested(
                 mock.patch.object(drvr, '_get_console_log_path'),
-                mock.patch.object(fake_libvirt_utils, 'file_open',
+                mock.patch('nova.virt.libvirt.utils.file_open',
                                   side_effect=IOError(errno.EACCES, 'exc'))
             ) as (mock_path, mock_open):
             drvr._ensure_console_log_for_instance(mock.ANY)
@@ -13518,7 +13538,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         with test.nested(
                 mock.patch.object(drvr, '_get_console_log_path'),
-                mock.patch.object(fake_libvirt_utils, 'file_open',
+                mock.patch('nova.virt.libvirt.utils.file_open',
                                   side_effect=IOError(errno.EREMOTE, 'exc'))
             ) as (mock_path, mock_open):
             self.assertRaises(
@@ -16435,7 +16455,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
     @mock.patch('nova.virt.disk.api.setup_container')
     @mock.patch('oslo_utils.fileutils.ensure_tree')
-    @mock.patch.object(fake_libvirt_utils, 'get_instance_path')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     def test_create_domain_lxc(self, mock_get_inst_path, mock_ensure_tree,
                            mock_setup_container, mock_get_info, mock_clean):
         self.flags(virt_type='lxc', group='libvirt')
@@ -16480,10 +16500,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.virt.disk.api.clean_lxc_namespace')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
-    @mock.patch.object(fake_libvirt_utils, 'chown_for_id_maps')
+    @mock.patch('nova.virt.libvirt.utils.chown_for_id_maps')
     @mock.patch('nova.virt.disk.api.setup_container')
     @mock.patch('oslo_utils.fileutils.ensure_tree')
-    @mock.patch.object(fake_libvirt_utils, 'get_instance_path')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     def test_create_domain_lxc_id_maps(self, mock_get_inst_path,
                                        mock_ensure_tree, mock_setup_container,
                                        mock_chown, mock_get_info, mock_clean):
@@ -16550,7 +16570,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
     @mock.patch('nova.virt.disk.api.setup_container')
     @mock.patch('oslo_utils.fileutils.ensure_tree')
-    @mock.patch.object(fake_libvirt_utils, 'get_instance_path')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     def test_create_domain_lxc_not_running(self, mock_get_inst_path,
                                            mock_ensure_tree,
                                            mock_setup_container,
@@ -17682,8 +17702,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     @mock.patch('nova.privsep.path.chown')
-    def _test_live_snapshot(self, mock_chown, mock_is_job_complete,
-                            can_quiesce=False, require_quiesce=False):
+    def _test_live_snapshot(
+            self, mock_chown, mock_is_job_complete,
+            can_quiesce=False, require_quiesce=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         mock_dom = mock.MagicMock()
         test_image_meta = self.test_image_meta.copy()
@@ -17692,10 +17713,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         with test.nested(
                 mock.patch.object(drvr._conn, 'defineXML', create=True),
-                mock.patch.object(fake_libvirt_utils, 'get_disk_size'),
-                mock.patch.object(fake_libvirt_utils, 'get_disk_backing_file'),
-                mock.patch.object(fake_libvirt_utils, 'create_cow_image'),
-                mock.patch.object(fake_libvirt_utils, 'extract_snapshot'),
+                mock.patch('nova.virt.libvirt.utils.get_disk_size'),
+                mock.patch('nova.virt.libvirt.utils.get_disk_backing_file'),
+                mock.patch('nova.virt.libvirt.utils.create_cow_image'),
+                mock.patch('nova.virt.libvirt.utils.extract_snapshot'),
                 mock.patch.object(drvr, '_set_quiesced')
         ) as (mock_define, mock_size, mock_backing, mock_create_cow,
               mock_snapshot, mock_quiesce):
