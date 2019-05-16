@@ -3103,6 +3103,23 @@ class API(base_api.NetworkAPI):
                         subnet_dict['dhcp_server'] = ip_pair['ip_address']
                         break
 
+            # NOTE(arnaudmorin): If enable_dhcp is set on subnet, but, for
+            # some reason neutron did not have any DHCP port yet, we still
+            # want the network_info to be populated with a valid dhcp_server
+            # value. This is mostly useful for the metadata API (which is
+            # relying on this value to give network_data to the instance).
+            #
+            # This will also help some providers which are using external
+            # DHCP servers not handled by neutron.
+            # In this case, neutron will never create any DHCP port in the
+            # subnet.
+            #
+            # Also note that we cannot set the value to None because then the
+            # value would be discarded by the metadata API.
+            # So the subnet gateway will be used as fallback.
+            if subnet.get('enable_dhcp') and 'dhcp_server' not in subnet_dict:
+                subnet_dict['dhcp_server'] = subnet['gateway_ip']
+
             subnet_object = network_model.Subnet(**subnet_dict)
             for dns in subnet.get('dns_nameservers', []):
                 subnet_object.add_dns(
