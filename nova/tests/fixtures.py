@@ -1358,6 +1358,29 @@ class NeutronFixture(fixtures.Fixture):
         'binding:vnic_type': 'direct',
     }
 
+    port_macvtap_with_resource_request = {
+        'id': 'cbb9707f-3559-4675-a973-4ea89c747f02',
+        'network_id': network_2['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c6',
+        # Do neutron really adds fixed_ips to an direct vnic_type port?
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.13.4',
+                'subnet_id': subnet_2['id']
+            }
+        ],
+        'tenant_id': tenant_id,
+        'resource_request': {
+            "resources": {
+                orc.NET_BW_IGR_KILOBIT_PER_SEC: 10000,
+                orc.NET_BW_EGR_KILOBIT_PER_SEC: 10000},
+            "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_MACVTAP"]
+        },
+        'binding:vnic_type': 'macvtap',
+    }
+
     nw_info = [{
         "profile": {},
         "ovs_interfaceid": "b71f1699-42be-4515-930a-f3ef01f94aa7",

@@ -6148,6 +6148,7 @@ class PortResourceRequestBasedSchedulingTestBase(
 
     CUSTOM_VNIC_TYPE_NORMAL = 'CUSTOM_VNIC_TYPE_NORMAL'
     CUSTOM_VNIC_TYPE_DIRECT = 'CUSTOM_VNIC_TYPE_DIRECT'
+    CUSTOM_VNIC_TYPE_MACVTAP = 'CUSTOM_VNIC_TYPE_MACVTAP'
     CUSTOM_PHYSNET1 = 'CUSTOM_PHYSNET1'
     CUSTOM_PHYSNET2 = 'CUSTOM_PHYSNET2'
     CUSTOM_PHYSNET3 = 'CUSTOM_PHYSNET3'
@@ -6195,6 +6196,8 @@ class PortResourceRequestBasedSchedulingTestBase(
             self.neutron.network_2['id']] = self.neutron.network_2
         self.neutron._subnets[
             self.neutron.subnet_2['id']] = self.neutron.subnet_2
+        macvtap = self.neutron.port_macvtap_with_resource_request
+        self.neutron._ports[macvtap['id']] = copy.deepcopy(macvtap)
 
     def _create_server(self, flavor, networks):
         server_req = self._build_minimal_create_server_request(
@@ -6314,7 +6317,8 @@ class PortResourceRequestBasedSchedulingTestBase(
             orc.NET_BW_IGR_KILOBIT_PER_SEC: {"total": 100000},
             orc.NET_BW_EGR_KILOBIT_PER_SEC: {"total": 100000},
         }
-        traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_PHYSNET2]
+        traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_VNIC_TYPE_MACVTAP,
+                  self.CUSTOM_PHYSNET2]
         self._create_pf_device_rp(
             self.sriov_pf2_rp_uuid, sriov_agent_rp_uuid, inventories, traits,
             device_rp_name="%s:NIC Switch agent:ens2" % compute_name)
@@ -6930,6 +6934,48 @@ class PortResourceRequestBasedSchedulingTest(
             'Exceeded maximum number of retries. Exhausted all hosts '
             'available for retrying build failures for instance',
             server['fault']['message'])
+
+    def test_sriov_macvtap_port_with_resource_request(self):
+        """Verify that vnic type macvtap is also supported"""
+
+        port = self.neutron.port_macvtap_with_resource_request
+
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': port['id']}])
+
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        port = self.neutron.show_port(port['id'])['port']
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect one set of allocations for the compute resources on the
+        # compute rp and one set for the networking resources on the sriov PF2
+        # rp.
+        self.assertEqual(2, len(allocations))
+
+        compute_allocations = allocations[self.compute1_rp_uuid]['resources']
+        self.assertEqual(
+            self._resources_from_flavor(self.flavor),
+            compute_allocations)
+
+        sriov_allocations = allocations[self.sriov_pf2_rp_uuid]['resources']
+        self.assertPortMatchesAllocation(
+            port, sriov_allocations)
+
+        # We expect that only the RP uuid of the networking RP having the port
+        # allocation is sent in the port binding for the port having resource
+        # request
+        port_binding = port['binding:profile']
+        self.assertEqual(
+            self.sriov_pf2_rp_uuid, port_binding['allocation'])
+
+        # We expect that the selected PCI device matches with the RP from
+        # where the bandwidth is allocated from. The bandwidth is allocated
+        # from 0000:02:00 (PF2) so the PCI device should be a VF of that PF
+        self.assertEqual('0000:02:00.1', port_binding['pci_slot'])
 
 
 class PortResourceRequestReSchedulingTest(
