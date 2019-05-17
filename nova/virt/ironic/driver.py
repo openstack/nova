@@ -432,29 +432,24 @@ class IronicDriver(virt_driver.ComputeDriver):
                                                       boot_from_volume)
 
         try:
-            # FIXME(lucasagomes): The "retry_on_conflict" parameter was added
-            # to basically causes the deployment to fail faster in case the
-            # node picked by the scheduler is already associated with another
-            # instance due bug #1341420.
-            self.ironicclient.call('node.update', node.uuid, patch,
-                                   retry_on_conflict=False)
-        except ironic.exc.BadRequest:
+            self.ironic_connection.patch_node(node, patch)
+        except sdk_exc.SDKException as e:
             msg = (_("Failed to add deploy parameters on node %(node)s "
-                     "when provisioning the instance %(instance)s")
-                   % {'node': node.uuid, 'instance': instance.uuid})
+                     "when provisioning the instance %(instance)s: %(reason)s")
+                   % {'node': node.id, 'instance': instance.uuid,
+                      'reason': str(e)})
             LOG.error(msg)
             raise exception.InstanceDeployFailure(msg)
 
-    def _remove_instance_info_from_node(self, node, instance):
-        patch = [{'path': '/instance_info', 'op': 'remove'},
-                 {'path': '/instance_uuid', 'op': 'remove'}]
+    def _remove_instance_info_from_node(self, node):
         try:
-            self.ironicclient.call('node.update', node.uuid, patch)
-        except ironic.exc.BadRequest as e:
+            self.ironic_connection.update_node(node, instance_id=None,
+                                               instance_info={})
+        except sdk_exc.SDKException as e:
             LOG.warning("Failed to remove deploy parameters from node "
                         "%(node)s when unprovisioning the instance "
                         "%(instance)s: %(reason)s",
-                        {'node': node.uuid, 'instance': instance.uuid,
+                        {'node': node.id, 'instance': node.instance_id,
                          'reason': str(e)})
 
     def _add_volume_target_info(self, context, instance, block_device_info):
@@ -515,7 +510,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         self._cleanup_volume_target_info(instance)
         self._unplug_vifs(node, instance, network_info)
         if remove_instance_info:
-            self._remove_instance_info_from_node(node, instance)
+            self._remove_instance_info_from_node(node)
 
     def _wait_for_active(self, instance):
         """Wait for the node to be marked as ACTIVE in Ironic."""
@@ -1342,7 +1337,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 # NOTE(hshiina): if spawn() fails before ironic starts
                 #                provisioning, instance information should be
                 #                removed from ironic node.
-                self._remove_instance_info_from_node(node, instance)
+                self._remove_instance_info_from_node(node)
         finally:
             # NOTE(mgoddard): We don't need to remove instance info at this
             # point since we will have already done it. The destroy will only
