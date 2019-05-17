@@ -248,7 +248,7 @@ class Mount(object):
         LOG.debug("Mount %(dev)s on %(dir)s",
                   {'dev': self.mapped_device, 'dir': self.mount_dir})
         out, err = nova.privsep.fs.mount(None, self.mapped_device,
-                                         self.mount_dir)
+                                         self.mount_dir, None)
         if err:
             self.error = _('Failed to mount filesystem: %s') % err
             LOG.debug(self.error)
