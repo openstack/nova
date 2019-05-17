@@ -99,8 +99,10 @@ List Servers
 
 .. rest_method:: GET /servers
 
-Lists IDs, names, and links for all servers.
+Lists IDs, names, and links for servers.
 
+By default the servers are filtered using the project ID associated
+with the authenticated request.
 
 Servers contain a status attribute that indicates the current server
 state. You can filter on the server status when you complete a list
