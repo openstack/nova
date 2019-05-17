@@ -1809,7 +1809,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         mock_node.get_by_instance_uuid.assert_called_with(
             instance.uuid, fields=ironic_driver._NODE_FIELDS)
-        mock_cleanup_deploy.assert_called_with(node, instance, network_info)
+        mock_cleanup_deploy.assert_called_with(node, instance, network_info,
+                                               remove_instance_info=False)
 
         # For states that makes sense check if set_provision_state has
         # been called
@@ -1842,7 +1843,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_sps.side_effect = exception.NovaException()
         self.assertRaises(exception.NovaException, self.driver.destroy,
                           self.ctx, instance, None, None)
-        mock_clean.assert_called_once_with(node, instance, None)
+        mock_clean.assert_called_once_with(node, instance, None,
+                                           remove_instance_info=False)
 
     @mock.patch.object(FAKE_CLIENT.node, 'update')
     @mock.patch.object(ironic_driver.IronicDriver,
@@ -1861,7 +1863,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_update.side_effect = SystemError('unexpected error')
         self.assertRaises(SystemError, self.driver.destroy,
                           self.ctx, instance, None, None)
-        mock_clean.assert_called_once_with(node, instance, None)
+        mock_clean.assert_called_once_with(node, instance, None,
+                                           remove_instance_info=False)
 
     @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
     @mock.patch.object(ironic_driver.IronicDriver,
@@ -2691,6 +2694,24 @@ class IronicDriverTestCase(test.NoDBTestCase):
         expected_patch = [{'path': '/instance_uuid', 'op': 'remove'}]
         mock_call.has_calls(
             [mock.call('node.update', node.uuid, expected_patch)])
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_stop_firewall')
+    @mock.patch.object(ironic_driver.IronicDriver, '_unplug_vifs')
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_cleanup_volume_target_info')
+    @mock.patch.object(cw.IronicClientWrapper, 'call')
+    def test__cleanup_deploy_no_remove_ii(self, mock_call, mock_vol,
+                                          mock_unvif, mock_stop_fw):
+        # TODO(TheJulia): This REALLY should be updated to cover all of the
+        # calls that take place.
+        node = ironic_utils.get_test_node(driver='fake')
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+        self.driver._cleanup_deploy(node, instance, remove_instance_info=False)
+        mock_vol.assert_called_once_with(instance)
+        mock_unvif.assert_called_once_with(node, instance, None)
+        mock_stop_fw.assert_called_once_with(instance, None)
+        self.assertFalse(mock_call.called)
 
 
 class IronicDriverSyncTestCase(IronicDriverTestCase):
