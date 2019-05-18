@@ -251,8 +251,7 @@ class RequestContext(context.RequestContext):
             authorized and False if not authorized and fatal is False.
         """
         if target is None:
-            target = {'project_id': self.project_id,
-                      'user_id': self.user_id}
+            target = self.default_target()
 
         try:
             return policy.authorize(self, action, target)
@@ -260,6 +259,9 @@ class RequestContext(context.RequestContext):
             if fatal:
                 raise
             return False
+
+    def default_target(self):
+        return {'project_id': self.project_id, 'user_id': self.user_id}
 
     def to_policy_values(self):
         policy = super(RequestContext, self).to_policy_values()
