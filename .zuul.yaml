@@ -251,8 +251,6 @@
               # on the same host which is not supported by the libvirt driver.
               cold_migration: false
       devstack_services:
-        # Disable n-novnc until bug 1822873 is fixed.
-        n-novnc: false
         # Disable other non-essential services that we don't need for this job.
         c-bak: false
       devstack_localrc:
@@ -266,8 +264,6 @@
         # We only have two computes and we don't yet support cross-cell live
         # migration.
         LIVE_MIGRATION_AVAILABLE: false
-        # Disable n-novnc until bug 1822873 is fixed.
-        NOVA_VNC_ENABLED: false
     group-vars:
       peers:
         devstack_localrc:
@@ -277,11 +273,7 @@
         devstack_localrc:
           # The subnode compute will get registered with cell2.
           NOVA_CPU_CELL: 2
-          # Disable n-novnc until bug 1822873 is fixed.
-          NOVA_VNC_ENABLED: false
         devstack_services:
-          # Disable n-novnc until bug 1822873 is fixed.
-          n-novnc: false
           # Disable other non-essential services that we don't need for this
           # job.
           c-bak: false
