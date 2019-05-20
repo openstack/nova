@@ -16,7 +16,6 @@ from oslo_utils import versionutils
 
 from nova.objects import base as obj_base
 from nova.objects import fields
-from nova import utils
 
 # These are special case enums for the auto-allocate scenario. 'none' means
 # do not allocate a network on server create. 'auto' means auto-allocate a
@@ -49,24 +48,15 @@ class NetworkRequest(obj_base.NovaObject):
     def obj_load_attr(self, attr):
         setattr(self, attr, None)
 
-    # TODO(stephenfin): Drop the two item tuple case when we drop it entirely
     def to_tuple(self):
         address = str(self.address) if self.address is not None else None
-        if utils.is_neutron():
-            return self.network_id, address, self.port_id, self.pci_request_id
-        else:
-            return self.network_id, address
+        return self.network_id, address, self.port_id, self.pci_request_id
 
-    # TODO(stephenfin): Drop the two item tuple case when we drop it entirely
     @classmethod
     def from_tuple(cls, net_tuple):
-        if len(net_tuple) == 4:
-            network_id, address, port_id, pci_request_id = net_tuple
-            return cls(network_id=network_id, address=address,
-                       port_id=port_id, pci_request_id=pci_request_id)
-        else:
-            network_id, address = net_tuple
-            return cls(network_id=network_id, address=address)
+        network_id, address, port_id, pci_request_id = net_tuple
+        return cls(network_id=network_id, address=address, port_id=port_id,
+                   pci_request_id=pci_request_id)
 
     @property
     def auto_allocate(self):

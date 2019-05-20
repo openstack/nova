@@ -20,8 +20,6 @@ from oslo_policy import opts as policy_opts
 from nova.conf import neutron
 from nova.conf import paths
 from nova import config
-from nova import ipv6
-from nova.tests.unit import utils
 
 
 class ConfFixture(config_fixture.Config):
@@ -31,19 +29,8 @@ class ConfFixture(config_fixture.Config):
 
         # default group
         self.conf.set_default('compute_driver', 'fake.SmallFakeDriver')
-        self.conf.set_default('fake_network', True)
-        self.conf.set_default('flat_network_bridge', 'br100')
-        self.conf.set_default('floating_ip_dns_manager',
-                              'nova.tests.unit.utils.dns_manager')
-        self.conf.set_default('force_dhcp_release', False)
         self.conf.set_default('host', 'fake-mini')
-        self.conf.set_default('instance_dns_manager',
-                              'nova.tests.unit.utils.dns_manager')
-        self.conf.set_default('network_size', 8)
-        self.conf.set_default('num_networks', 2)
         self.conf.set_default('periodic_enable', False)
-        self.conf.set_default('use_ipv6', True)
-        self.conf.set_default('vlan_interface', 'eth0')
 
         # api_database group
         self.conf.set_default('connection', "sqlite://", group='api_database')
@@ -77,5 +64,3 @@ class ConfFixture(config_fixture.Config):
                           init_rpc=False)
         policy_opts.set_defaults(self.conf)
         neutron.register_dynamic_opts(self.conf)
-        self.addCleanup(utils.cleanup_dns_managers)
-        self.addCleanup(ipv6.api.reset_backend)

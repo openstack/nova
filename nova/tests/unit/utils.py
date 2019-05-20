@@ -27,7 +27,6 @@ import nova.context
 from nova.db import api as db
 from nova import exception
 from nova.image import glance
-from nova.network import minidns
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as obj_base
@@ -135,8 +134,6 @@ FAKE_VIF_MAC = 'de:ad:be:ef:ca:fe'
 
 
 def get_test_network_info(count=1):
-    ipv6 = CONF.use_ipv6
-
     def current():
         subnet_4 = network_model.Subnet(
             cidr=FAKE_NETWORK_IP4_CIDR,
@@ -155,9 +152,7 @@ def get_test_network_info(count=1):
                  network_model.IP(FAKE_NETWORK_IP6_ADDR3)],
             routes=None,
             version=6)
-        subnets = [subnet_4]
-        if ipv6:
-            subnets.append(subnet_6)
+        subnets = [subnet_4, subnet_6]
         network = network_model.Network(
             id=FAKE_NETWORK_UUID,
             bridge=FAKE_NETWORK_BRIDGE,
@@ -185,23 +180,6 @@ def is_osx():
 
 def is_linux():
     return platform.system() == 'Linux'
-
-
-test_dns_managers = []
-
-
-def dns_manager():
-    global test_dns_managers
-    manager = minidns.MiniDNS()
-    test_dns_managers.append(manager)
-    return manager
-
-
-def cleanup_dns_managers():
-    global test_dns_managers
-    for manager in test_dns_managers:
-        manager.delete_dns_file()
-    test_dns_managers = []
 
 
 def killer_xml_body():

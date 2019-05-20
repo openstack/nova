@@ -971,6 +971,7 @@ class FloatingIp(BASE, NovaBase, models.SoftDeleteMixin):
                                 'FixedIp.deleted == 0)')
 
 
+# TODO(stephenfin): Remove in V or later
 class DNSDomain(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a DNS domain with availability zone or project info."""
     __tablename__ = 'dns_domains'

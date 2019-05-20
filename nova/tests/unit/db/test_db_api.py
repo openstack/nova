@@ -7854,44 +7854,6 @@ class CertificateTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualObjects(self.created[1], cert[0])
 
 
-class DnsdomainTestCase(test.TestCase):
-
-    def setUp(self):
-        super(DnsdomainTestCase, self).setUp()
-        self.ctxt = context.get_admin_context()
-        self.domain = 'test.domain'
-        self.testzone = 'testzone'
-        self.project = 'fake'
-
-    def test_dnsdomain_register_for_zone(self):
-        db.dnsdomain_register_for_zone(self.ctxt, self.domain, self.testzone)
-        domain = db.dnsdomain_get(self.ctxt, self.domain)
-        self.assertEqual(domain['domain'], self.domain)
-        self.assertEqual(domain['availability_zone'], self.testzone)
-        self.assertEqual(domain['scope'], 'private')
-
-    def test_dnsdomain_register_for_project(self):
-        db.dnsdomain_register_for_project(self.ctxt, self.domain, self.project)
-        domain = db.dnsdomain_get(self.ctxt, self.domain)
-        self.assertEqual(domain['domain'], self.domain)
-        self.assertEqual(domain['project_id'], self.project)
-        self.assertEqual(domain['scope'], 'public')
-
-    def test_dnsdomain_unregister(self):
-        db.dnsdomain_register_for_zone(self.ctxt, self.domain, self.testzone)
-        db.dnsdomain_unregister(self.ctxt, self.domain)
-        domain = db.dnsdomain_get(self.ctxt, self.domain)
-        self.assertIsNone(domain)
-
-    def test_dnsdomain_get_all(self):
-        d_list = ['test.domain.one', 'test.domain.two']
-        db.dnsdomain_register_for_zone(self.ctxt, d_list[0], 'zone')
-        db.dnsdomain_register_for_zone(self.ctxt, d_list[1], 'zone')
-        db_list = db.dnsdomain_get_all(self.ctxt)
-        db_domain_list = [d.domain for d in db_list]
-        self.assertEqual(sorted(d_list), sorted(db_domain_list))
-
-
 class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     _ignored_keys = ['id', 'deleted', 'deleted_at', 'created_at', 'updated_at']
@@ -8189,9 +8151,6 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.instance_id_mappings = models.InstanceIdMapping.__table__
         self.shadow_instance_id_mappings = sqlalchemyutils.get_table(
             self.engine, "shadow_instance_id_mappings")
-        self.dns_domains = models.DNSDomain.__table__
-        self.shadow_dns_domains = sqlalchemyutils.get_table(
-            self.engine, "shadow_dns_domains")
         self.instances = models.Instance.__table__
         self.shadow_instances = sqlalchemyutils.get_table(
             self.engine, "shadow_instances")
@@ -8472,31 +8431,6 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         rows = self.conn.execute(qst).fetchall()
         self.assertEqual(len(rows), 4)
         return 0
-
-    def test_archive_deleted_rows_no_id_column(self):
-        uuidstr0 = self.uuidstrs[0]
-        ins_stmt = self.dns_domains.insert().values(domain=uuidstr0)
-        self.conn.execute(ins_stmt)
-        update_statement = self.dns_domains.update().\
-                           where(self.dns_domains.c.domain == uuidstr0).\
-                           values(deleted=True, deleted_at=timeutils.utcnow())
-        self.conn.execute(update_statement)
-        qdd = sql.select([self.dns_domains], self.dns_domains.c.domain ==
-                                            uuidstr0)
-        rows = self.conn.execute(qdd).fetchall()
-        self.assertEqual(len(rows), 1)
-        qsdd = sql.select([self.shadow_dns_domains],
-                        self.shadow_dns_domains.c.domain == uuidstr0)
-        rows = self.conn.execute(qsdd).fetchall()
-        self.assertEqual(len(rows), 0)
-        db.archive_deleted_rows(max_rows=1)
-        rows = self.conn.execute(qdd).fetchall()
-        self.assertEqual(len(rows), 0)
-        rows = self.conn.execute(qsdd).fetchall()
-        self.assertEqual(len(rows), 1)
-        self._assert_shadow_tables_empty_except(
-            'shadow_dns_domains',
-        )
 
     def test_archive_deleted_rows_shadow_insertions_equals_deletions(self):
         # Add 2 rows to table

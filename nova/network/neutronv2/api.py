@@ -2496,14 +2496,6 @@ class API(base_api.NetworkAPI):
                                   uuid=network['id'])
         return net_obj
 
-    def delete(self, context, network_uuid):
-        """Delete a network for client."""
-        raise NotImplementedError()
-
-    def get_fixed_ip(self, context, id):
-        """Get a fixed IP from the id."""
-        raise NotImplementedError()
-
     def get_fixed_ip_by_address(self, context, address):
         """Return instance uuids given an address."""
         uuid_maps = self._get_instance_uuids_by_ip(context, address)
@@ -2563,8 +2555,6 @@ class API(base_api.NetworkAPI):
         """Return floating IP pool names."""
         client = get_client(context)
         pools = self._get_floating_ip_pools(client)
-        # Note(salv-orlando): Return a list of names to be consistent with
-        # nova.network.api.get_floating_ip_pools
         return [n['name'] or n['id'] for n in pools]
 
     def _make_floating_ip_obj(self, context, fip, pool_dict, port_dict):
@@ -2639,9 +2629,6 @@ class API(base_api.NetworkAPI):
         return objects.VirtualInterfaceList.get_by_instance_uuid(context,
                                                                  instance.uuid)
 
-    def get_vif_by_mac_address(self, context, mac_address):
-        raise NotImplementedError()
-
     def _get_floating_ip_pool_id_by_name_or_id(self, client, name_or_id):
         search_opts = {constants.NET_EXTERNAL: True, 'fields': 'id'}
         if uuidutils.is_uuid_like(name_or_id):
@@ -2660,27 +2647,10 @@ class API(base_api.NetworkAPI):
                    % name_or_id)
             raise exception.NovaException(message=msg)
 
-    def _get_default_floating_ip_pool_name(self):
-        """Get default pool name from config.
-
-        TODO(stephenfin): Remove this helper function in Queens, opting to
-        use the [neutron] option only.
-        """
-        if CONF.default_floating_pool != 'nova':
-            LOG.warning("Config option 'default_floating_pool' is set to "
-                        "a non-default value. Falling back to this value "
-                        "for now but this behavior will change in a "
-                        "future release. You should unset this value "
-                        "and set the '[neutron] default_floating_pool' "
-                        "option instead.")
-            return CONF.default_floating_pool
-
-        return CONF.neutron.default_floating_pool
-
     def allocate_floating_ip(self, context, pool=None):
         """Add a floating IP to a project from a pool."""
         client = get_client(context)
-        pool = pool or self._get_default_floating_ip_pool_name()
+        pool = pool or CONF.neutron.default_floating_pool
         pool_id = self._get_floating_ip_pool_id_by_name_or_id(client, pool)
 
         param = {'floatingip': {'floating_network_id': pool_id}}
@@ -3276,45 +3246,6 @@ class API(base_api.NetworkAPI):
 
             subnets.append(subnet_object)
         return subnets
-
-    def get_dns_domains(self, context):
-        """Return a list of available dns domains.
-
-        These can be used to create DNS entries for floating IPs.
-        """
-        raise NotImplementedError()
-
-    def add_dns_entry(self, context, address, name, dns_type, domain):
-        """Create specified DNS entry for address."""
-        raise NotImplementedError()
-
-    def modify_dns_entry(self, context, name, address, domain):
-        """Create specified DNS entry for address."""
-        raise NotImplementedError()
-
-    def delete_dns_entry(self, context, name, domain):
-        """Delete the specified dns entry."""
-        raise NotImplementedError()
-
-    def delete_dns_domain(self, context, domain):
-        """Delete the specified dns domain."""
-        raise NotImplementedError()
-
-    def get_dns_entries_by_address(self, context, address, domain):
-        """Get entries for address and domain."""
-        raise NotImplementedError()
-
-    def get_dns_entries_by_name(self, context, name, domain):
-        """Get entries for name and domain."""
-        raise NotImplementedError()
-
-    def create_private_dns_domain(self, context, domain, availability_zone):
-        """Create a private DNS domain with nova availability zone."""
-        raise NotImplementedError()
-
-    def create_public_dns_domain(self, context, domain, project=None):
-        """Create a private DNS domain with optional nova project."""
-        raise NotImplementedError()
 
     def setup_instance_network_on_host(
             self, context, instance, host, migration=None,

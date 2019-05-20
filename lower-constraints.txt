@@ -54,7 +54,6 @@ mccabe==0.2.1
 microversion-parse==0.2.1
 mock==3.0.0
 monotonic==1.4
-mox3==0.20.0
 msgpack==0.5.6
 msgpack-python==0.5.6
 munch==2.2.0

@@ -47,48 +47,6 @@ from nova import utils
 CONF = cfg.CONF
 
 
-class TestConfFixture(testtools.TestCase):
-    """Test the Conf fixtures in Nova.
-
-    This is a basic test that this fixture works like we expect.
-
-    Expectations:
-
-    1. before using the fixture, a default value (api_paste_config)
-       comes through untouched.
-
-    2. before using the fixture, a known default value that we
-       override is correct.
-
-    3. after using the fixture a known value that we override is the
-       new value.
-
-    4. after using the fixture we can set a default value to something
-       random, and it will be reset once we are done.
-
-    There are 2 copies of this test so that you can verify they do the
-    right thing with:
-
-       tox -e py27 test_fixtures -- --concurrency=1
-
-    As regardless of run order, their initial asserts would be
-    impacted if the reset behavior isn't working correctly.
-
-    """
-    def _test_override(self):
-        self.assertEqual('api-paste.ini', CONF.wsgi.api_paste_config)
-        self.assertFalse(CONF.fake_network)
-        self.useFixture(conf_fixture.ConfFixture())
-        CONF.set_default('api_paste_config', 'foo', group='wsgi')
-        self.assertTrue(CONF.fake_network)
-
-    def test_override1(self):
-        self._test_override()
-
-    def test_override2(self):
-        self._test_override()
-
-
 class TestLogging(testtools.TestCase):
     def test_default_logging(self):
         stdlog = self.useFixture(fixtures.StandardLogging())

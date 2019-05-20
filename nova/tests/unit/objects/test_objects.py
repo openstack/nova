@@ -1047,8 +1047,6 @@ object_data = {
     'ComputeNodeList': '1.17-52f3b0962b1c86b98590144463ebb192',
     'ConsoleAuthToken': '1.1-8da320fb065080eb4d3c2e5c59f8bf52',
     'CpuDiagnostics': '1.0-d256f2e442d1b837735fd17dfe8e3d47',
-    'DNSDomain': '1.0-7b0b2dab778454b6a7b6c66afe163a1a',
-    'DNSDomainList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
     'Destination': '1.4-3b440d29459e2c98987ad5b25ad1cb2c',
     'DeviceBus': '1.0-77509ea1ea0dd750d5864b9bd87d3f9d',
     'DeviceMetadata': '1.0-04eb8fd218a49cbc3b1e54b774d179f7',

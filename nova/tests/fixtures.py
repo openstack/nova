@@ -96,11 +96,6 @@ class ServiceFixture(fixtures.Fixture):
         if self.cell:
             context.set_target_cell(self.ctxt, self.cell)
 
-        # NOTE(mikal): we don't have root to manipulate iptables, so just
-        # zero that bit out.
-        self.useFixture(fixtures.MockPatch(
-            'nova.network.linux_net.IptablesManager._apply'))
-
         with mock.patch('nova.context.get_admin_context',
                         return_value=self.ctxt):
             self.service = service.Service.create(**self.kwargs)
@@ -791,18 +786,6 @@ class WarningsFixture(fixtures.Fixture):
             message='Policy enforcement is depending on the value of is_admin.'
                     ' This key is deprecated. Please update your policy '
                     'file to use the standard policy values.')
-        # TODO(takashin): Remove filtering warnings about mox
-        # after removing tests which uses mox and are related to
-        # nova-network in the following files.
-        #
-        # - nova/tests/unit/api/openstack/compute/test_floating_ips.py
-        # - nova/tests/unit/api/openstack/compute/test_security_groups.py
-        # - nova/tests/unit/fake_network.py
-        # - nova/tests/unit/network/test_manager.py
-        warnings.filterwarnings('ignore',
-            module='mox3.mox')
-        # NOTE(gibi): we can remove this once we get rid of Mox in nova
-        warnings.filterwarnings('ignore', message="Using class 'MoxStubout'")
         # NOTE(mriedem): Ignore scope check UserWarnings from oslo.policy.
         warnings.filterwarnings('ignore',
                                 message="Policy .* failed scope check",
@@ -989,12 +972,6 @@ class OSMetadataServer(fixtures.Fixture):
             'debug': True
         }
         self.useFixture(ConfPatcher(**conf_overrides))
-
-        # NOTE(mikal): we don't have root to manipulate iptables, so just
-        # zero that bit out.
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.network.linux_net.IptablesManager._apply',
-            lambda _: None))
 
         self.metadata = service.WSGIService("metadata")
         self.metadata.start()

@@ -1182,58 +1182,6 @@ def floating_ip_update(context, address, values):
 ###################
 
 
-@require_context
-@pick_context_manager_reader
-def dnsdomain_get(context, fqdomain):
-    return model_query(context, models.DNSDomain, read_deleted="no").\
-               filter_by(domain=fqdomain).\
-               with_for_update().\
-               first()
-
-
-def _dnsdomain_get_or_create(context, fqdomain):
-    domain_ref = dnsdomain_get(context, fqdomain)
-    if not domain_ref:
-        dns_ref = models.DNSDomain()
-        dns_ref.update({'domain': fqdomain,
-                        'availability_zone': None,
-                        'project_id': None})
-        return dns_ref
-
-    return domain_ref
-
-
-@pick_context_manager_writer
-def dnsdomain_register_for_zone(context, fqdomain, zone):
-    domain_ref = _dnsdomain_get_or_create(context, fqdomain)
-    domain_ref.scope = 'private'
-    domain_ref.availability_zone = zone
-    context.session.add(domain_ref)
-
-
-@pick_context_manager_writer
-def dnsdomain_register_for_project(context, fqdomain, project):
-    domain_ref = _dnsdomain_get_or_create(context, fqdomain)
-    domain_ref.scope = 'public'
-    domain_ref.project_id = project
-    context.session.add(domain_ref)
-
-
-@pick_context_manager_writer
-def dnsdomain_unregister(context, fqdomain):
-    model_query(context, models.DNSDomain).\
-                 filter_by(domain=fqdomain).\
-                 delete()
-
-
-@pick_context_manager_reader
-def dnsdomain_get_all(context):
-    return model_query(context, models.DNSDomain, read_deleted="no").all()
-
-
-###################
-
-
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
 def fixed_ip_associate(context, address, instance_uuid, network_id=None,
@@ -5329,6 +5277,7 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before):
         # No corresponding shadow table; skip it.
         return rows_archived, deleted_instance_uuids
 
+    # TODO(stephenfin): Drop this when we drop the table
     if tablename == "dns_domains":
         # We have one table (dns_domains) where the key is called
         # "domain" rather than "id"
