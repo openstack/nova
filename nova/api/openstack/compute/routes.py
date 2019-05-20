@@ -351,7 +351,7 @@ volumes_controller = functools.partial(_create_controller,
 
 # NOTE(alex_xu): This is structure of this route list as below:
 # (
-#     ('Route path': {
+#     ('Route path', {
 #         'HTTP method: [
 #             'Controller',
 #             'The method of controller is used to handle this route'
