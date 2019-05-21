@@ -16,6 +16,9 @@
 
 """Tests for the testing base code."""
 
+import os.path
+
+import mock
 from oslo_log import log as logging
 import oslo_messaging as messaging
 import six
@@ -312,3 +315,62 @@ class NovaExceptionReraiseFormatErrorTestCase(test.NoDBTestCase):
         # not enough kwargs
         ex = self.assertRaises(KeyError, FakeImageException, image_id='image')
         self.assertIn('type', six.text_type(ex))
+
+
+class PatchExistsTestCase(test.NoDBTestCase):
+    def test_with_patch_exists_true(self):
+        """Test that "with patch_exists" can fake the existence of a file
+        without changing other file existence checks, and that calls can
+        be asserted on the mocked method.
+        """
+        self.assertFalse(os.path.exists('fake_file'))
+        with self.patch_exists('fake_file', True) as mock_exists:
+            self.assertTrue(os.path.exists('fake_file'))
+            self.assertTrue(os.path.exists(__file__))
+            self.assertFalse(os.path.exists('non-existent/file'))
+            self.assertIn(mock.call('fake_file'), mock_exists.mock_calls)
+
+    def test_with_patch_exists_false(self):
+        """Test that "with patch_exists" can fake the non-existence of a file
+        without changing other file existence checks, and that calls can
+        be asserted on the mocked method.
+        """
+        self.assertTrue(os.path.exists(__file__))
+        with self.patch_exists(__file__, False) as mock_exists:
+            self.assertFalse(os.path.exists(__file__))
+            self.assertTrue(os.path.exists(os.path.dirname(__file__)))
+            self.assertFalse(os.path.exists('non-existent/file'))
+            self.assertIn(mock.call(__file__), mock_exists.mock_calls)
+
+    @test.patch_exists('fake_file', True)
+    def test_patch_exists_decorator_true(self):
+        """Test that @patch_exists can fake the existence of a file
+        without changing other file existence checks.
+        """
+        self.assertTrue(os.path.exists('fake_file'))
+        self.assertTrue(os.path.exists(__file__))
+        self.assertFalse(os.path.exists('non-existent/file'))
+
+    @test.patch_exists(__file__, False)
+    def test_patch_exists_decorator_false(self):
+        """Test that @patch_exists can fake the non-existence of a file
+        without changing other file existence checks.
+        """
+        self.assertFalse(os.path.exists(__file__))
+        self.assertTrue(os.path.exists(os.path.dirname(__file__)))
+        self.assertFalse(os.path.exists('non-existent/file'))
+
+    @test.patch_exists('fake_file1', True)
+    @test.patch_exists('fake_file2', True)
+    @test.patch_exists(__file__, False)
+    def test_patch_exists_multiple_decorators(self):
+        """Test that @patch_exists can be used multiple times on the
+        same method.
+        """
+        self.assertTrue(os.path.exists('fake_file1'))
+        self.assertTrue(os.path.exists('fake_file2'))
+        self.assertFalse(os.path.exists(__file__))
+
+        # Check non-patched parameters
+        self.assertTrue(os.path.exists(os.path.dirname(__file__)))
+        self.assertFalse(os.path.exists('non-existent/file'))
