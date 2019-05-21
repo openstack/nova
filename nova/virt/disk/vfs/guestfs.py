@@ -199,7 +199,14 @@ class VFSGuestFS(vfs.VFS):
 
         try:
             if forceTCG:
-                ret = self.handle.set_backend_settings("force_tcg")
+                # TODO(mriedem): Should we be using set_backend_setting
+                # instead to just set the single force_tcg setting? Because
+                # according to the guestfs docs, set_backend_settings will
+                # overwrite all backend settings. The question is, what would
+                # the value be? True? "set_backend_setting" is available
+                # starting in 1.27.2 which should be new enough at this point
+                # on modern distributions.
+                ret = self.handle.set_backend_settings(["force_tcg"])
                 if ret != 0:
                     LOG.warning('Failed to force guestfs TCG mode. '
                                 'guestfs_set_backend_settings returned: %s',
