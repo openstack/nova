@@ -81,7 +81,10 @@ class LibvirtReportTraitsTests(LibvirtReportTraitsTestBase):
         # trait values are coming from fakelibvirt's baselineCPU result.
         # COMPUTE_NODE is always set on the compute node provider.
         traits = self._get_provider_traits(self.host_uuid)
-        for trait in ('HW_CPU_X86_VMX', 'HW_CPU_X86_AESNI', 'COMPUTE_NODE'):
+        for trait in (
+            'HW_CPU_X86_VMX', 'HW_CPU_X86_INTEL_VMX', 'HW_CPU_X86_AESNI',
+            'COMPUTE_NODE',
+        ):
             self.assertIn(trait, traits)
 
         self._create_trait('CUSTOM_TRAITS')
@@ -96,10 +99,14 @@ class LibvirtReportTraitsTests(LibvirtReportTraitsTestBase):
         # and it's not in the baseline for the host.
         traits = set(self._get_provider_traits(self.host_uuid))
         expected_traits = self.expected_libvirt_driver_capability_traits.union(
-            [u'HW_CPU_X86_VMX', u'HW_CPU_X86_AESNI', u'CUSTOM_TRAITS',
-             # The periodic restored the COMPUTE_NODE trait.
-             u'COMPUTE_NODE']
-        )
+            [
+                'HW_CPU_X86_VMX',
+                'HW_CPU_X86_INTEL_VMX',
+                'HW_CPU_X86_AESNI',
+                'CUSTOM_TRAITS',
+                # The periodic restored the COMPUTE_NODE trait.
+                'COMPUTE_NODE',
+            ])
         for trait in expected_traits:
             self.assertIn(trait, traits)
 
