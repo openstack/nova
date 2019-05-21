@@ -1357,6 +1357,154 @@ class Connection(object):
                    else False for cpu_num in range(total_cpus)]
         return (total_cpus, cpu_map, active_cpus)
 
+    def getDomainCapabilities(self, emulatorbin, arch, machine_type,
+                              virt_type, flags):
+        """Return spoofed domain capabilities."""
+
+        return '''
+<domainCapabilities>
+  <path>/usr/bin/qemu-kvm</path>
+  <domain>kvm</domain>
+  <machine>pc-i440fx-2.11</machine>
+  <arch>x86_64</arch>
+  <vcpu max='255'/>
+  <os supported='yes'>
+    <loader supported='yes'>
+      <value>/usr/share/qemu/ovmf-x86_64-ms-4m-code.bin</value>
+      <value>/usr/share/qemu/ovmf-x86_64-ms-code.bin</value>
+      <enum name='type'>
+        <value>rom</value>
+        <value>pflash</value>
+      </enum>
+      <enum name='readonly'>
+        <value>yes</value>
+        <value>no</value>
+      </enum>
+    </loader>
+  </os>
+  <cpu>
+    <mode name='host-passthrough' supported='yes'/>
+    <mode name='host-model' supported='yes'>
+      <model fallback='forbid'>EPYC-IBPB</model>
+      <vendor>AMD</vendor>
+      <feature policy='require' name='x2apic'/>
+      <feature policy='require' name='tsc-deadline'/>
+      <feature policy='require' name='hypervisor'/>
+      <feature policy='require' name='tsc_adjust'/>
+      <feature policy='require' name='cmp_legacy'/>
+      <feature policy='require' name='invtsc'/>
+      <feature policy='require' name='virt-ssbd'/>
+      <feature policy='disable' name='monitor'/>
+    </mode>
+    <mode name='custom' supported='yes'>
+      <model usable='yes'>qemu64</model>
+      <model usable='yes'>qemu32</model>
+      <model usable='no'>phenom</model>
+      <model usable='yes'>pentium3</model>
+      <model usable='yes'>pentium2</model>
+      <model usable='yes'>pentium</model>
+      <model usable='no'>n270</model>
+      <model usable='yes'>kvm64</model>
+      <model usable='yes'>kvm32</model>
+      <model usable='no'>coreduo</model>
+      <model usable='no'>core2duo</model>
+      <model usable='no'>athlon</model>
+      <model usable='yes'>Westmere</model>
+      <model usable='no'>Westmere-IBRS</model>
+      <model usable='no'>Skylake-Server</model>
+      <model usable='no'>Skylake-Server-IBRS</model>
+      <model usable='no'>Skylake-Client</model>
+      <model usable='no'>Skylake-Client-IBRS</model>
+      <model usable='yes'>SandyBridge</model>
+      <model usable='no'>SandyBridge-IBRS</model>
+      <model usable='yes'>Penryn</model>
+      <model usable='no'>Opteron_G5</model>
+      <model usable='no'>Opteron_G4</model>
+      <model usable='yes'>Opteron_G3</model>
+      <model usable='yes'>Opteron_G2</model>
+      <model usable='yes'>Opteron_G1</model>
+      <model usable='yes'>Nehalem</model>
+      <model usable='no'>Nehalem-IBRS</model>
+      <model usable='no'>IvyBridge</model>
+      <model usable='no'>IvyBridge-IBRS</model>
+      <model usable='no'>Haswell</model>
+      <model usable='no'>Haswell-noTSX</model>
+      <model usable='no'>Haswell-noTSX-IBRS</model>
+      <model usable='no'>Haswell-IBRS</model>
+      <model usable='yes'>EPYC</model>
+      <model usable='yes'>EPYC-IBPB</model>
+      <model usable='yes'>Conroe</model>
+      <model usable='no'>Broadwell</model>
+      <model usable='no'>Broadwell-noTSX</model>
+      <model usable='no'>Broadwell-noTSX-IBRS</model>
+      <model usable='no'>Broadwell-IBRS</model>
+      <model usable='yes'>486</model>
+    </mode>
+  </cpu>
+  <devices>
+    <disk supported='yes'>
+      <enum name='diskDevice'>
+        <value>disk</value>
+        <value>cdrom</value>
+        <value>floppy</value>
+        <value>lun</value>
+      </enum>
+      <enum name='bus'>
+        <value>ide</value>
+        <value>fdc</value>
+        <value>scsi</value>
+        <value>virtio</value>
+        <value>usb</value>
+        <value>sata</value>
+      </enum>
+    </disk>
+    <graphics supported='yes'>
+      <enum name='type'>
+        <value>sdl</value>
+        <value>vnc</value>
+        <value>spice</value>
+      </enum>
+    </graphics>
+    <video supported='yes'>
+      <enum name='modelType'>
+        <value>vga</value>
+        <value>cirrus</value>
+        <value>vmvga</value>
+        <value>qxl</value>
+        <value>virtio</value>
+      </enum>
+    </video>
+    <hostdev supported='yes'>
+      <enum name='mode'>
+        <value>subsystem</value>
+      </enum>
+      <enum name='startupPolicy'>
+        <value>default</value>
+        <value>mandatory</value>
+        <value>requisite</value>
+        <value>optional</value>
+      </enum>
+      <enum name='subsysType'>
+        <value>usb</value>
+        <value>pci</value>
+        <value>scsi</value>
+      </enum>
+      <enum name='capsType'/>
+      <enum name='pciBackend'>
+        <value>default</value>
+        <value>vfio</value>
+      </enum>
+    </hostdev>
+  </devices>
+%(features)s
+</domainCapabilities>''' % {'features': self._domain_capability_features}
+
+    # Features are kept separately so that the tests can patch this
+    # class variable with alternate values.
+    _domain_capability_features = '''  <features>
+    <gic supported='no'/>
+  </features>'''
+
     def getCapabilities(self):
         """Return spoofed capabilities."""
         numa_topology = self.host_info.numa_topology
