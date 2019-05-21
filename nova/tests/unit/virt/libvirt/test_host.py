@@ -658,6 +658,28 @@ class HostTestCase(test.NoDBTestCase):
         features = caps.features
         self.assertEqual([], features)
 
+    def _test_get_domain_capabilities_sev(self, supported):
+        caps = self._test_get_domain_capabilities()
+        self.assertEqual(vconfig.LibvirtConfigDomainCaps, type(caps))
+        features = caps.features
+        self.assertEqual(1, len(features))
+        sev = features[0]
+        self.assertEqual(vconfig.LibvirtConfigDomainCapsFeatureSev, type(sev))
+        self.assertEqual(supported, sev.supported)
+
+    @mock.patch.object(
+        fakelibvirt.virConnect, '_domain_capability_features', new=
+        fakelibvirt.virConnect._domain_capability_features_with_SEV_unsupported
+    )
+    def test_get_domain_capabilities_sev_unsupported(self):
+        self._test_get_domain_capabilities_sev(False)
+
+    @mock.patch.object(
+        fakelibvirt.virConnect, '_domain_capability_features',
+        new=fakelibvirt.virConnect._domain_capability_features_with_SEV)
+    def test_get_domain_capabilities_sev_supported(self):
+        self._test_get_domain_capabilities_sev(True)
+
     @mock.patch.object(fakelibvirt.virConnect, "getHostname")
     def test_get_hostname_caching(self, mock_hostname):
         mock_hostname.return_value = "foo"
