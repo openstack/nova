@@ -187,6 +187,10 @@ class Invalid(NovaException):
     code = 400
 
 
+class InvalidConfiguration(Invalid):
+    msg_fmt = _("Configuration is Invalid.")
+
+
 class InvalidBDM(Invalid):
     msg_fmt = _("Block Device Mapping is Invalid.")
 

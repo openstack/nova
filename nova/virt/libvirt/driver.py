@@ -612,6 +612,18 @@ class LibvirtDriver(driver.ComputeDriver):
                     "'live_migration_with_native_tls'.")
             raise exception.Invalid(msg)
 
+        # Some imagebackends are only able to import raw disk images,
+        # and will fail if given any other format. See the bug
+        # https://bugs.launchpad.net/nova/+bug/1816686 for more details.
+        if CONF.libvirt.images_type in ('rbd',):
+            if not CONF.force_raw_images:
+                msg = _("'[DEFAULT]/force_raw_images = False' is not "
+                        "allowed with '[libvirt]/images_type = rbd'. "
+                        "Please check the two configs and if you really "
+                        "do want to use rbd as images_type, set "
+                        "force_raw_images to True.")
+                raise exception.InvalidConfiguration(msg)
+
         # TODO(sbauza): Remove this code once mediated devices are persisted
         # across reboots.
         if self._host.has_min_version(MIN_LIBVIRT_MDEV_SUPPORT):

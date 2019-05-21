@@ -914,9 +914,28 @@ class Rbd(Image):
         """
         return self.driver.size(self.rbd_name)
 
+    @staticmethod
+    def _remove_non_raw_cache_image(base):
+        # NOTE(boxiang): If the cache image file exists, we will check
+        # the format of it. Only raw format image is compatible for
+        # RBD image backend. If format is not raw, we will remove it
+        # at first. We limit force_raw_images to True this time. So
+        # the format of new cache image must be raw.
+        # We can remove this in 'U' version later.
+        if not os.path.exists(base):
+            return True
+        image_format = images.qemu_img_info(base)
+        if image_format.file_format != 'raw':
+            try:
+                os.remove(base)
+            except OSError as e:
+                LOG.warning("Ignoring failure to remove %(path)s: "
+                            "%(error)s", {'path': base, 'error': e})
+
     def create_image(self, prepare_template, base, size, *args, **kwargs):
 
         if not self.exists():
+            self._remove_non_raw_cache_image(base)
             prepare_template(target=base, *args, **kwargs)
 
         # prepare_template() may have cloned the image into a new rbd
