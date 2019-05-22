@@ -35,11 +35,13 @@ from nova.compute import api as compute_api
 from nova.compute import instance_actions
 from nova.compute import manager as compute_manager
 from nova.compute import rpcapi
+from nova.conductor import manager
 from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova import rc_fields
+from nova.scheduler import utils
 from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -4088,6 +4090,37 @@ class ServerRescheduleTests(integrated_helpers.ProviderUsageBaseTestCase):
         # Ensure the allocation records on the destination host.
         self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
 
+    def test_allocation_fails_during_reschedule(self):
+        """Verify that if nova fails to allocate resources during re-schedule
+        then the server is put into ERROR state properly.
+        """
+
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'some-server', flavor_id=self.flavor1['id'],
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none')
+
+        orig_claim = utils.claim_resources
+        # First call is during boot, we want that to succeed normally. Then the
+        # fake virt driver triggers a re-schedule. During that re-schedule we
+        # simulate that the placement call fails.
+        with mock.patch('nova.scheduler.utils.claim_resources',
+                        side_effect=[
+                            orig_claim,
+                            exception.AllocationUpdateFailed(
+                                consumer_uuid=uuids.inst1, error='testing')]):
+
+            server = self.api.post_server({'server': server_req})
+            # NOTE(gibi): Due to bug 1819460 the server stuck in BUILD state
+            # instead of going to ERROR state
+            server = self._wait_for_state_change(
+                self.admin_api, server, 'ERROR',
+                fail_when_run_out_of_retries=False)
+
+            self.assertEqual('BUILD', server['status'])
+
+        self._delete_and_check_allocations(server)
+
 
 class ServerRescheduleTestsWithNestedResourcesRequest(ServerRescheduleTests):
     compute_driver = 'fake.FakeRescheduleDriverWithNestedCustomResources'
@@ -6807,3 +6840,47 @@ class PortResourceRequestReSchedulingTest(
         updated_port = self.neutron.show_port(port['id'])['port']
         binding_profile = updated_port['binding:profile']
         self.assertNotIn('allocation', binding_profile)
+
+    def test_boot_reschedule_fill_provider_mapping_raises(self):
+        """Verify that if the  _fill_provider_mapping raises during re-schedule
+        then the instance is properly put into ERROR state.
+        """
+
+        port = self.neutron.port_with_resource_request
+
+        # First call is during boot, we want that to succeed normally. Then the
+        # fake virt driver triggers a re-schedule. During that re-schedule the
+        # fill is called again, and we simulate that call raises.
+        fill = manager.ComputeTaskManager._fill_provider_mapping
+
+        with mock.patch(
+                'nova.conductor.manager.ComputeTaskManager.'
+                '_fill_provider_mapping',
+                side_effect=[
+                    fill,
+                    exception.ConsumerAllocationRetrievalFailed(
+                        consumer_uuid=uuids.inst1, error='testing')],
+                autospec=True):
+            server = self._create_server(
+                flavor=self.flavor,
+                networks=[{'port': port['id']}])
+            # NOTE(gibi): Due to bug 1819460 the server stuck in BUILD state
+            server = self._wait_for_state_change(
+                self.admin_api, server, 'ERROR',
+                fail_when_run_out_of_retries=False)
+
+            self.assertEqual('BUILD', server['status'])
+
+        # NOTE(gibi): Due to bug 1819460 the server stuck in BUILD state and no
+        # error is presented to the user
+        # self.assertIn(
+        #     'Failed to retrieve allocations for consumer',
+        #     server['fault']['message'])
+        #
+        # NOTE(gibi): even after delete the allocation of such server is leaked
+        # self._delete_and_check_allocations(server)
+        #
+        # # assert that unbind removes the allocation from the binding
+        # updated_port = self.neutron.show_port(port['id'])['port']
+        # binding_profile = updated_port['binding:profile']
+        # self.assertNotIn('allocation', binding_profile)
