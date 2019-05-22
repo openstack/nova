@@ -6858,8 +6858,8 @@ class PortResourceRequestReSchedulingTest(
                 '_fill_provider_mapping',
                 side_effect=[
                     fill,
-                    exception.ConsumerAllocationRetrievalFailed(
-                        consumer_uuid=uuids.inst1, error='testing')],
+                    exception.ResourceProviderTraitRetrievalFailed(
+                        uuid=uuids.rp1)],
                 autospec=True):
             server = self._create_server(
                 flavor=self.flavor,
@@ -6874,7 +6874,7 @@ class PortResourceRequestReSchedulingTest(
         # NOTE(gibi): Due to bug 1819460 the server stuck in BUILD state and no
         # error is presented to the user
         # self.assertIn(
-        #     'Failed to retrieve allocations for consumer',
+        #     'Failed to get traits for resource provider',
         #     server['fault']['message'])
         #
         # NOTE(gibi): even after delete the allocation of such server is leaked
