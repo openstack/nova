@@ -61,7 +61,7 @@ CONF = nova.conf.CONF
 def create_instance(context, user_id='fake', project_id='fake', params=None):
     """Create a test instance."""
     flavor = flavors.get_flavor_by_name('m1.tiny')
-    net_info = model.NetworkInfo([])
+    net_info = model.NetworkInfo([model.VIF(id=uuids.port_id)])
     info_cache = objects.InstanceInfoCache(network_info=net_info)
     inst = objects.Instance(context=context,
                             image_ref=uuids.fake_image_ref,
