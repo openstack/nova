@@ -25,7 +25,7 @@ import webob.exc
 from nova.api.openstack.compute import services as services_v21
 from nova.api.openstack import wsgi as os_wsgi
 from nova import availability_zones
-from nova import compute
+from nova.compute import api as compute
 from nova import context
 from nova import exception
 from nova import objects

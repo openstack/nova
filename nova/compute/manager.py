@@ -56,7 +56,7 @@ import six
 from six.moves import range
 
 from nova import block_device
-from nova import compute
+from nova.compute import api as compute
 from nova.compute import build_results
 from nova.compute import claims
 from nova.compute import power_state

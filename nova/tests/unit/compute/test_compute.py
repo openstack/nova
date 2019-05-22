@@ -44,8 +44,7 @@ from testtools import matchers as testtools_matchers
 import nova
 from nova import availability_zones
 from nova import block_device
-from nova import compute
-from nova.compute import api as compute_api
+from nova.compute import api as compute
 from nova.compute import flavors
 from nova.compute import instance_actions
 from nova.compute import manager as compute_manager
@@ -103,10 +102,9 @@ FAKE_IMAGE_REF = uuids.image_ref
 NODENAME = 'fakenode1'
 NODENAME2 = 'fakenode2'
 
-COMPUTE_VERSION_NEW_ATTACH_FLOW = \
-    compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION
+COMPUTE_VERSION_NEW_ATTACH_FLOW = compute.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION
 COMPUTE_VERSION_OLD_ATTACH_FLOW = \
-    compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1
+    compute.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1
 
 
 def fake_not_implemented(*args, **kwargs):
@@ -8597,7 +8595,7 @@ class ComputeAPITestCase(BaseTestCase):
         # is written for nova-network and using the database. Neutron-specific
         # security group API tests are covered in
         # nova.tests.unit.network.security_group.test_neutron_driver.
-        self.security_group_api = compute_api.SecurityGroupAPI()
+        self.security_group_api = compute.SecurityGroupAPI()
 
         self.compute_api = compute.API(
                                    security_group_api=self.security_group_api)
@@ -10161,7 +10159,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     @ddt.data(True, False)
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_vnc_console')
-    @mock.patch.object(compute_api.consoleauth_rpcapi.ConsoleAuthAPI,
+    @mock.patch.object(compute.consoleauth_rpcapi.ConsoleAuthAPI,
                        'authorize_console')
     def test_vnc_console(self, enable_consoleauth, mock_auth, mock_get):
         self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
@@ -10204,7 +10202,7 @@ class ComputeAPITestCase(BaseTestCase):
                           self.context, instance, 'novnc')
 
     @ddt.data(True, False)
-    @mock.patch.object(compute_api.consoleauth_rpcapi.ConsoleAuthAPI,
+    @mock.patch.object(compute.consoleauth_rpcapi.ConsoleAuthAPI,
                        'authorize_console')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_spice_console')
     def test_spice_console(self, enable_consoleauth, mock_spice, mock_auth):
@@ -10267,7 +10265,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.context, instance, console_type)
 
     @ddt.data(True, False)
-    @mock.patch.object(compute_api.consoleauth_rpcapi.ConsoleAuthAPI,
+    @mock.patch.object(compute.consoleauth_rpcapi.ConsoleAuthAPI,
                        'authorize_console')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_rdp_console')
     def test_rdp_console(self, enable_consoleauth, mock_rdp, mock_auth):
@@ -10823,10 +10821,10 @@ class ComputeAPITestCase(BaseTestCase):
                  'disk_bus': 'ide',
                  'instance_uuid': instance.uuid}))
         with test.nested(
-             mock.patch.object(compute_api.API,
+             mock.patch.object(compute.API,
                                '_create_volume_bdm',
                                return_value=fake_bdm),
-             mock.patch.object(compute_api.API,
+             mock.patch.object(compute.API,
                                '_check_attach_and_reserve_volume'),
              mock.patch.object(cinder.API, 'attach'),
              mock.patch.object(compute_utils, 'EventReporter')
@@ -10864,10 +10862,10 @@ class ComputeAPITestCase(BaseTestCase):
             fake_bdm.attachment_id = uuids.attachment_id
 
         with test.nested(
-             mock.patch.object(compute_api.API,
+             mock.patch.object(compute.API,
                                '_create_volume_bdm',
                                return_value=fake_bdm),
-             mock.patch.object(compute_api.API,
+             mock.patch.object(compute.API,
                                '_check_attach_and_reserve_volume',
                                side_effect=fake_check_attach_and_reserve),
              mock.patch.object(cinder.API, 'attachment_complete')
@@ -10960,7 +10958,7 @@ class ComputeAPITestCase(BaseTestCase):
     @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch.object(nova.volume.cinder.API, 'begin_detaching')
-    @mock.patch.object(compute_api.API, '_local_cleanup_bdm_volumes')
+    @mock.patch.object(compute.API, '_local_cleanup_bdm_volumes')
     @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume_id')
     def test_detach_volume_shelved_offloaded(self,
                                              mock_block_dev,
@@ -10987,7 +10985,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertTrue(mock_local_cleanup.called)
 
     @mock.patch.object(nova.volume.cinder.API, 'begin_detaching')
-    @mock.patch.object(compute_api.API, '_local_cleanup_bdm_volumes')
+    @mock.patch.object(compute.API, '_local_cleanup_bdm_volumes')
     @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume_id')
     def test_detach_volume_shelved_offloaded_new_flow(self,
                                                       mock_block_dev,
@@ -11403,7 +11401,7 @@ class ComputeAPITestCase(BaseTestCase):
                                                                  [])
         self.assertFalse(mock_refresh.called)
 
-    @mock.patch.object(compute_api.SecurityGroupAPI,
+    @mock.patch.object(compute.SecurityGroupAPI,
                        '_refresh_instance_security_rules')
     @mock.patch.object(objects.InstanceList,
                        'get_by_grantee_security_group_ids')
@@ -11417,7 +11415,7 @@ class ComputeAPITestCase(BaseTestCase):
         mock_refresh.assert_called_once_with(mock.sentinel.ctxt,
                                              mock.sentinel.instances)
 
-    @mock.patch.object(compute_api.SecurityGroupAPI,
+    @mock.patch.object(compute.SecurityGroupAPI,
                        '_refresh_instance_security_rules')
     @mock.patch.object(objects.InstanceList,
                        'get_by_security_group_id')
@@ -11871,7 +11869,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
     def setUp(self):
         super(ComputeAPIAggrTestCase, self).setUp()
-        self.api = compute_api.AggregateAPI()
+        self.api = compute.AggregateAPI()
         self.context = context.get_admin_context()
         self.stub_out('oslo_messaging.rpc.client.call', fake_rpc_method)
         self.stub_out('oslo_messaging.rpc.client.cast', fake_rpc_method)
@@ -12552,7 +12550,7 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(ComputeAPIAggrCallsSchedulerTestCase, self).setUp()
-        self.api = compute_api.AggregateAPI()
+        self.api = compute.AggregateAPI()
         self.context = context.RequestContext('fake', 'fake')
 
     @mock.patch('nova.scheduler.client.query.SchedulerQueryClient.'
@@ -13674,7 +13672,7 @@ class ComputeHooksTestCase(test.BaseHookTestCase):
         self.assert_has_hook('delete_instance', delete_func)
 
     def test_create_instance_has_hook(self):
-        create_func = compute_api.API.create
+        create_func = compute.API.create
         self.assert_has_hook('create_instance', create_func)
 
     def test_build_instance_has_hook(self):

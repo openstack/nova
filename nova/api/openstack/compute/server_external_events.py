@@ -18,7 +18,7 @@ import webob
 from nova.api.openstack.compute.schemas import server_external_events
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova import compute
+from nova.compute import api as compute
 from nova import context as nova_context
 from nova.i18n import _
 from nova import objects

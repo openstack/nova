@@ -37,7 +37,7 @@ from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import vim_util as vutil
 
 from nova.api.metadata import base as instance_metadata
-from nova import compute
+from nova.compute import api as compute
 from nova.compute import power_state
 from nova.compute import task_states
 import nova.conf

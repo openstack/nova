@@ -21,7 +21,7 @@ from nova.api.openstack.compute.schemas import services
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import availability_zones
-from nova import compute
+from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -38,7 +38,7 @@ class ServiceController(wsgi.Controller):
 
     def __init__(self):
         self.host_api = compute.HostAPI()
-        self.aggregate_api = compute.api.AggregateAPI()
+        self.aggregate_api = compute.AggregateAPI()
         self.servicegroup_api = servicegroup.API()
         self.actions = {"enable": self._enable,
                         "disable": self._disable,

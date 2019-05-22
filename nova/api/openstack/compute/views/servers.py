@@ -23,7 +23,7 @@ from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack.compute.views import flavors as views_flavors
 from nova.api.openstack.compute.views import images as views_images
 from nova import availability_zones as avail_zone
-from nova import compute
+from nova.compute import api as compute
 from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception

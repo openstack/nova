@@ -40,7 +40,7 @@ from oslo_utils import versionutils
 import six
 
 from nova import block_device
-from nova import compute
+from nova.compute import api as compute
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states

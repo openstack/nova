@@ -19,7 +19,7 @@ from nova.api.openstack.compute.views import server_tags
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.api.validation import parameter_types
-from nova import compute
+from nova.compute import api as compute
 from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception

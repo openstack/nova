@@ -33,7 +33,7 @@ from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import block_device
-from nova import compute
+from nova.compute import api as compute
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
 import nova.conf

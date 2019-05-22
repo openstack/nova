@@ -25,7 +25,7 @@ from nova.api.openstack.compute.schemas import security_groups as \
                                                   schema_security_groups
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova import compute
+from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
 from nova.network.security_group import openstack_driver

@@ -23,7 +23,7 @@ from webob import exc
 from nova.api.openstack.compute.schemas import assisted_volume_snapshots
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova import compute
+from nova.compute import api as compute
 from nova import exception
 from nova.policies import assisted_volume_snapshots as avs_policies
 

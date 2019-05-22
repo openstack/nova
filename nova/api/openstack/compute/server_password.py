@@ -18,7 +18,7 @@
 from nova.api.metadata import password
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
-from nova import compute
+from nova.compute import api as compute
 from nova.policies import server_password as sp_policies
 
 

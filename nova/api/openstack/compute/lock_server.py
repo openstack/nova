@@ -18,7 +18,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import lock_server
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova import compute
+from nova.compute import api as compute
 from nova.policies import lock_server as ls_policies
 
 
