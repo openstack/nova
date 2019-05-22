@@ -588,6 +588,18 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                           eval(self.remove_host),
                 self.req, "1", body={"remove_host": {}})
 
+    def test_remove_host_resource_provider_update_conflict(self):
+        """Tests that ResourceProviderUpdateConflict is handled as a 409."""
+        side_effect = exception.ResourceProviderUpdateConflict(
+            uuid=uuidsentinel.provider_id, generation=1, error='try again!')
+        with mock.patch.object(self.controller.api,
+                               'remove_host_from_aggregate',
+                               side_effect=side_effect) as mock_rem:
+            self.assertRaises(exc.HTTPConflict, eval(self.remove_host),
+                              self.req, "1",
+                              body={"remove_host": {"host": "bogushost"}})
+            mock_rem.assert_called_once_with(self.context, "1", "bogushost")
+
     def test_set_metadata(self):
         body = {"set_metadata": {"metadata": {"foo": "bar"}}}
         with mock.patch.object(self.controller.api,
