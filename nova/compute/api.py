@@ -3459,6 +3459,9 @@ class API(base.Base):
                                            migration,
                                            migration.source_compute)
 
+    # TODO(mriedem): It looks like for resize (not cold migrate) the only
+    # possible kwarg here is auto_disk_config. Drop this dumb **kwargs and make
+    # it explicitly an auto_disk_config param
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def resize(self, context, instance, flavor_id=None, clean_shutdown=True,
@@ -3588,10 +3591,10 @@ class API(base.Base):
                 host=node.host, node=node.hypervisor_hostname)
 
         self.compute_task_api.resize_instance(context, instance,
-                extra_instance_updates, scheduler_hint=scheduler_hint,
-                flavor=new_instance_type,
-                clean_shutdown=clean_shutdown,
-                request_spec=request_spec)
+            scheduler_hint=scheduler_hint,
+            flavor=new_instance_type,
+            clean_shutdown=clean_shutdown,
+            request_spec=request_spec)
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,

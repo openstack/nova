@@ -84,13 +84,11 @@ class ComputeTaskAPI(object):
     def __init__(self):
         self.conductor_compute_rpcapi = rpcapi.ComputeTaskAPI()
 
-    def resize_instance(self, context, instance, extra_instance_updates,
-                        scheduler_hint, flavor, reservations=None,
-                        clean_shutdown=True, request_spec=None,
-                        host_list=None):
-        # NOTE(comstud): 'extra_instance_updates' is not used here but is
-        # needed for compatibility with the cells_rpcapi version of this
-        # method.
+    # TODO(stephenfin): Remove the 'reservations' parameter since we don't use
+    # reservations anymore
+    def resize_instance(self, context, instance, scheduler_hint, flavor,
+                        reservations=None, clean_shutdown=True,
+                        request_spec=None, host_list=None):
         self.conductor_compute_rpcapi.migrate_server(
             context, instance, scheduler_hint, live=False, rebuild=False,
             flavor=flavor, block_migration=None, disk_over_commit=None,

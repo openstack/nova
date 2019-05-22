@@ -1891,14 +1891,11 @@ class _ComputeAPIUnitTestMixIn(object):
                      flavor_id_passed=True,
                      same_host=False, allow_same_host=False,
                      project_id=None,
-                     extra_kwargs=None,
                      same_flavor=False,
                      clean_shutdown=True,
                      host_name=None,
                      request_spec=True,
                      requested_destination=False):
-        if extra_kwargs is None:
-            extra_kwargs = {}
 
         self.flags(allow_resize_to_same_host=allow_same_host)
 
@@ -1942,8 +1939,6 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.assertEqual(task_states.RESIZE_PREP,
                                  fake_inst.task_state)
                 self.assertEqual(fake_inst.progress, 0)
-                for key, value in extra_kwargs.items():
-                    self.assertEqual(value, getattr(fake_inst, key))
 
             mock_inst_save.side_effect = _check_state
 
@@ -1970,20 +1965,18 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.resize(self.context, fake_inst,
                                     flavor_id='new-flavor-id',
                                     clean_shutdown=clean_shutdown,
-                                    host_name=host_name,
-                                    **extra_kwargs)
+                                    host_name=host_name)
         else:
             if request_spec:
                 self.compute_api.resize(self.context, fake_inst,
                                         clean_shutdown=clean_shutdown,
-                                        host_name=host_name,
-                                        **extra_kwargs)
+                                        host_name=host_name)
             else:
                 self.assertRaises(exception.RequestSpecNotFound,
                                   self.compute_api.resize,
                                   self.context, fake_inst,
                                   clean_shutdown=clean_shutdown,
-                                  host_name=host_name, **extra_kwargs)
+                                  host_name=host_name)
 
         if request_spec:
             if allow_same_host:
@@ -2055,7 +2048,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
             if request_spec:
                 mock_resize.assert_called_once_with(
-                    self.context, fake_inst, extra_kwargs,
+                    self.context, fake_inst,
                     scheduler_hint=scheduler_hint,
                     flavor=test.MatchType(objects.Flavor),
                     clean_shutdown=clean_shutdown,
@@ -2068,9 +2061,6 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_resize(self):
         self._test_resize()
-
-    def test_resize_with_kwargs(self):
-        self._test_resize(extra_kwargs=dict(cow='moo'))
 
     def test_resize_same_host_and_allowed(self):
         self._test_resize(same_host=True, allow_same_host=True)
@@ -2117,9 +2107,6 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_migrate(self):
         self._test_migrate()
-
-    def test_migrate_with_kwargs(self):
-        self._test_migrate(extra_kwargs=dict(cow='moo'))
 
     def test_migrate_same_host_and_allowed(self):
         self._test_migrate(same_host=True, allow_same_host=True)
