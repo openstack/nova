@@ -4842,6 +4842,39 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_delete_instance.assert_called_once_with(
             self.context, instance, bdms)
 
+    @mock.patch('nova.context.RequestContext.elevated')
+    def test_terminate_instance_no_network_info(self, mock_elevated):
+        # Tests that we refresh the network info if it was empty
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE)
+        empty_nw_info = network_model.NetworkInfo()
+        instance.info_cache = objects.InstanceInfoCache(
+            network_info=empty_nw_info)
+        vif = fake_network_cache_model.new_vif()
+        nw_info = network_model.NetworkInfo([vif])
+        bdms = objects.BlockDeviceMappingList()
+        elevated = context.get_admin_context()
+        mock_elevated.return_value = elevated
+
+        # Call shutdown instance
+        with test.nested(
+            mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
+                              return_value=nw_info),
+            mock.patch.object(self.compute, '_get_instance_block_device_info'),
+            mock.patch.object(self.compute.driver, 'destroy')
+        ) as (
+            mock_nw_api_info, mock_get_bdi, mock_destroy
+        ):
+            self.compute._shutdown_instance(self.context, instance, bdms,
+                notify=False, try_deallocate_networks=False)
+
+        # Verify
+        mock_nw_api_info.assert_called_once_with(elevated, instance)
+        mock_get_bdi.assert_called_once_with(elevated, instance, bdms=bdms)
+        # destroy should have been called with the refresh network_info
+        mock_destroy.assert_called_once_with(
+            elevated, instance, nw_info, mock_get_bdi.return_value)
+
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_notify_about_instance_usage')
