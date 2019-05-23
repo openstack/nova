@@ -8300,6 +8300,17 @@ class ComputeManager(manager.Manager):
                          'deleting it from the info cache',
                          {'intf': vif['id']},
                          instance=instance)
+                profile = vif.get('profile', {}) or {}  # profile can be None
+                if profile.get('allocation'):
+                    LOG.error(
+                        'The bound port %(port_id)s is deleted in Neutron but '
+                        'the resource allocation on the resource provider '
+                        '%(rp_uuid)s is leaked until the server '
+                        '%(server_uuid)s is deleted.',
+                        {'port_id': vif['id'],
+                         'rp_uuid': vif['profile']['allocation'],
+                         'server_uuid': instance.uuid})
+
                 del network_info[index]
                 base_net_api.update_instance_cache_with_nw_info(
                                  self.network_api, context,
@@ -8400,8 +8411,6 @@ class ComputeManager(manager.Manager):
                              instance=instance)
             elif event.name == 'network-vif-deleted':
                 try:
-                    # TODO(gibi): If the vif had resource allocation then
-                    # it needs to be deallocated in placement.
                     self._process_instance_vif_deleted_event(context,
                                                              instance,
                                                              event.tag)
