@@ -48,6 +48,7 @@ from oslo_versionedobjects import fixture as ovo_fixture
 from oslotest import mock_fixture
 from oslotest import moxstubout
 import six
+from six.moves import builtins
 import testtools
 
 from nova.compute import resource_tracker
@@ -393,6 +394,17 @@ class TestCase(testtools.TestCase):
                     ...
         """
         return patch_exists(patched_path, result)
+
+    @staticmethod
+    def patch_open(patched_path, read_data):
+        """Provide a static method version of patch_open() which is easier to
+        use as a context manager within a test method via:
+
+            def test_something(self):
+                with self.patch_open(path, "fake contents of file"):
+                    ...
+        """
+        return patch_open(patched_path, read_data)
 
     def flags(self, **kw):
         """Override flag variables for a test."""
@@ -823,3 +835,52 @@ def patch_exists(patched_path, result):
     with mock.patch.object(os.path, "exists") as mock_exists:
         mock_exists.side_effect = fake_exists
         yield mock_exists
+
+
+@contextlib.contextmanager
+def patch_open(patched_path, read_data):
+    """Selectively patch open() so that if it's called with patched_path,
+    return a mock which makes it look like the file contains
+    read_data.  Calls with any other path are passed through to the
+    real open() function.
+
+    Either import and use as a decorator, or use the
+    nova.TestCase.patch_open() static method as a context manager.
+
+    Currently it is *not* recommended to use this if any of the
+    following apply:
+
+    - The code under test will attempt to write to patched_path.
+
+    - You want to patch via decorator *and* make assertions about how the
+      mock is called (since using it in the decorator form will not make
+      the mock available to your code).
+
+    - You want the faked file contents to be determined
+      programmatically (e.g. by matching substrings of patched_path).
+
+    - You expect open() to be called multiple times on the same path
+      and return different file contents each time.
+
+    Additionally within unit tests which only test a very limited code
+    path, it may be possible to ensure that the code path only invokes
+    open() once, in which case it's slightly overkill to do
+    selective patching based on the path.  In this case something like
+    like this may be more appropriate:
+
+        @mock.patch(six.moves.builtins, 'open')
+        def test_my_code(self, mock_open):
+            ...
+            mock_open.assert_called_once_with(path)
+    """
+    real_open = builtins.open
+    m = mock.mock_open(read_data=read_data)
+
+    def selective_fake_open(path, *args, **kwargs):
+        if path == patched_path:
+            return m(patched_path)
+        return real_open(path, *args, **kwargs)
+
+    with mock.patch.object(builtins, 'open') as mock_open:
+        mock_open.side_effect = selective_fake_open
+        yield m

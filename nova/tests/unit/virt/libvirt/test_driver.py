@@ -55,7 +55,6 @@ from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
 import six
-from six.moves import builtins
 from six.moves import range
 
 from nova.api.metadata import base as instance_metadata
@@ -18273,24 +18272,10 @@ class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
             self._test_get_guest_config_sysinfo_serial(self.theuuid)
 
     @test.patch_exists("/etc/machine-id", True)
+    @test.patch_open("/etc/machine-id", theuuid)
     def test_get_guest_config_sysinfo_serial_auto_os(self):
         self.flags(sysinfo_serial="auto", group="libvirt")
-
-        real_open = builtins.open
-        with mock.patch.object(builtins, "open") as mock_open:
-            theuuid = "56b40135-a973-4eb3-87bb-a2382a3e6dbc"
-
-            def fake_open(filename, *args, **kwargs):
-                if filename == "/etc/machine-id":
-                    h = mock.MagicMock()
-                    h.read.return_value = theuuid
-                    h.__enter__.return_value = h
-                    return h
-                return real_open(filename, *args, **kwargs)
-
-            mock_open.side_effect = fake_open
-
-            self._test_get_guest_config_sysinfo_serial(theuuid)
+        self._test_get_guest_config_sysinfo_serial(self.theuuid)
 
     def test_get_guest_config_sysinfo_serial_unique(self):
         self.flags(sysinfo_serial="unique", group="libvirt")

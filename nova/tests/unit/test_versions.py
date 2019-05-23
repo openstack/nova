@@ -13,8 +13,6 @@
 #    under the License.
 
 from oslo_config import cfg
-import six
-from six.moves import builtins
 
 from nova import test
 from nova import version
@@ -32,9 +30,13 @@ class VersionTestCase(test.NoDBTestCase):
         self.assertEqual("5.5.5.5-g9ec3421",
                          version.version_string_with_package())
 
+    @test.patch_open("/etc/nova/release", read_data=
+                     "[Nova]\n"
+                     "vendor = ACME Corporation\n"
+                     "product = ACME Nova\n"
+                     "package = 1337\n")
     def test_release_file(self):
         version.loaded = False
-        real_open = builtins.open
         real_find_file = cfg.CONF.find_file
 
         def fake_find_file(self, name):
@@ -42,17 +44,6 @@ class VersionTestCase(test.NoDBTestCase):
                 return "/etc/nova/release"
             return real_find_file(self, name)
 
-        def fake_open(path, *args, **kwargs):
-            if path == "/etc/nova/release":
-                data = """[Nova]
-vendor = ACME Corporation
-product = ACME Nova
-package = 1337"""
-                return six.StringIO(data)
-
-            return real_open(path, *args, **kwargs)
-
-        self.stub_out('six.moves.builtins.open', fake_open)
         self.stub_out('oslo_config.cfg.ConfigOpts.find_file', fake_find_file)
 
         self.assertEqual(version.vendor_string(), "ACME Corporation")
