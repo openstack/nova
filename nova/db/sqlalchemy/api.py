@@ -5425,20 +5425,42 @@ def _archive_if_instance_deleted(table, shadow_table, instances, conn,
     Logic is: if I have a column called instance_uuid, and that instance
     is deleted, then I can be deleted.
     """
-    query_insert = shadow_table.insert(inline=True).\
-        from_select(
-            [c.name for c in table.c],
-            sql.select(
-                [table],
-                and_(instances.c.deleted != instances.c.deleted.default.arg,
-                     instances.c.uuid == table.c.instance_uuid)).
-            order_by(table.c.id).limit(max_rows))
 
-    query_delete = sql.select(
-        [table.c.id],
-        and_(instances.c.deleted != instances.c.deleted.default.arg,
-             instances.c.uuid == table.c.instance_uuid)).\
-        order_by(table.c.id).limit(max_rows)
+    # NOTE(jake): handle instance_actions_events differently as it relies on
+    # instance_actions.id not instances.uuid
+    if table.name == "instance_actions_events":
+        instance_actions = models.BASE.metadata.tables["instance_actions"]
+        query_insert = shadow_table.insert(inline=True).\
+            from_select(
+                [c.name for c in table.c],
+                sql.select(
+                    [table], and_(
+                        instances.c.deleted != instances.c.deleted.default.arg,
+                        instances.c.uuid == instance_actions.c.instance_uuid,
+                        instance_actions.c.id == table.c.action_id)).
+                order_by(table.c.id).limit(max_rows))
+
+        query_delete = sql.select(
+            [table.c.id],
+            and_(instances.c.deleted != instances.c.deleted.default.arg,
+                 instances.c.uuid == instance_actions.c.instance_uuid,
+                 instance_actions.c.id == table.c.action_id)).\
+            order_by(table.c.id).limit(max_rows)
+    else:
+        query_insert = shadow_table.insert(inline=True).\
+            from_select(
+                [c.name for c in table.c],
+                sql.select(
+                    [table], and_(
+                        instances.c.deleted != instances.c.deleted.default.arg,
+                        instances.c.uuid == table.c.instance_uuid)).
+                order_by(table.c.id).limit(max_rows))
+
+        query_delete = sql.select(
+            [table.c.id],
+            and_(instances.c.deleted != instances.c.deleted.default.arg,
+                 instances.c.uuid == table.c.instance_uuid)).\
+            order_by(table.c.id).limit(max_rows)
     delete_statement = DeleteFromSelect(table, query_delete,
                                         table.c.id)
 
@@ -5490,37 +5512,6 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
     deleted_column = table.c.deleted
     columns = [c.name for c in table.c]
 
-    # NOTE(clecomte): Tables instance_actions and instances_actions_events
-    # have to be manage differently so we soft-delete them here to let
-    # the archive work the same for all tables
-    # NOTE(takashin): The record in table migrations should be
-    # soft deleted when the instance is deleted.
-    # This is just for upgrading.
-    if tablename in ("instance_actions", "migrations"):
-        instances = models.BASE.metadata.tables["instances"]
-        deleted_instances = sql.select([instances.c.uuid]).\
-            where(instances.c.deleted != instances.c.deleted.default.arg)
-        update_statement = table.update().values(deleted=table.c.id).\
-            where(table.c.instance_uuid.in_(deleted_instances))
-
-        conn.execute(update_statement)
-
-    elif tablename == "instance_actions_events":
-        # NOTE(clecomte): we have to grab all the relation from
-        # instances because instance_actions_events rely on
-        # action_id and not uuid
-        instances = models.BASE.metadata.tables["instances"]
-        instance_actions = models.BASE.metadata.tables["instance_actions"]
-        deleted_instances = sql.select([instances.c.uuid]).\
-            where(instances.c.deleted != instances.c.deleted.default.arg)
-        deleted_actions = sql.select([instance_actions.c.id]).\
-            where(instance_actions.c.instance_uuid.in_(deleted_instances))
-
-        update_statement = table.update().values(deleted=table.c.id).\
-            where(table.c.action_id.in_(deleted_actions))
-
-        conn.execute(update_statement)
-
     select = sql.select([column],
                         deleted_column != deleted_column.default.arg).\
                         order_by(column).limit(max_rows)
@@ -5555,8 +5546,11 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
                         "%(tablename)s: %(error)s",
                         {'tablename': tablename, 'error': six.text_type(ex)})
 
-    if ((max_rows is None or rows_archived < max_rows)
-            and 'instance_uuid' in columns):
+    # NOTE(jake): instance_actions_events doesn't have a instance_uuid column
+    # but still needs to be archived as it is a FK constraint
+    if ((max_rows is None or rows_archived < max_rows) and
+            ('instance_uuid' in columns or
+             tablename == 'instance_actions_events')):
         instances = models.BASE.metadata.tables['instances']
         limit = max_rows - rows_archived if max_rows is not None else None
         extra = _archive_if_instance_deleted(table, shadow_table, instances,
