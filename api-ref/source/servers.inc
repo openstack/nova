@@ -156,7 +156,9 @@ There is whitelist for valid filter keys. Any filter key other than from
 whitelist will be silently ignored.
 
 - For non-admin users, whitelist is different from admin users whitelist.
-  Valid whitelist for non-admin users includes
+  The valid whitelist can be configured using the
+  ``os_compute_api:servers:allow_all_filters`` policy rule. By default,
+  the valid whitelist for non-admin users includes
 
   - ``changes-since``
   - ``flavor``
