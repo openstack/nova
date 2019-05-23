@@ -249,11 +249,9 @@ class ServiceController(wsgi.Controller):
                 # related compute_nodes record) delete since it will impact
                 # resource accounting in Placement and orphan the compute node
                 # resource provider.
-                # TODO(mriedem): Use a COUNT SQL query-based function instead
-                # of InstanceList.get_uuids_by_host for performance.
-                instance_uuids = objects.InstanceList.get_uuids_by_host(
-                    context, service['host'])
-                if instance_uuids:
+                num_instances = objects.InstanceList.get_count_by_hosts(
+                    context, [service['host']])
+                if num_instances:
                     raise webob.exc.HTTPConflict(
                         explanation=_('Unable to delete compute service that '
                                       'is hosting instances. Migrate or '
