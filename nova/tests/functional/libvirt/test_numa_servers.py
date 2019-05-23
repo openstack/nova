@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
 import six
 
 import mock
@@ -23,7 +22,6 @@ from oslo_log import log as logging
 from nova.conf import neutron as neutron_conf
 from nova import context as nova_context
 from nova import objects
-from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -142,148 +140,6 @@ class NUMAServersTest(NUMAServersTestBase):
         self._run_build_test(flavor_id, end_status='ERROR')
 
 
-class NUMAAffinityNeutronFixture(nova_fixtures.NeutronFixture):
-    """A custom variant of the stock neutron fixture with more networks.
-
-    There are three networks available: two l2 networks (one flat and one VLAN)
-    and one l3 network (VXLAN).
-    """
-    network_1 = {
-        'id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
-        'status': 'ACTIVE',
-        'subnets': [],
-        'name': 'physical-network-foo',
-        'admin_state_up': True,
-        'tenant_id': nova_fixtures.NeutronFixture.tenant_id,
-        'provider:physical_network': 'foo',
-        'provider:network_type': 'flat',
-        'provider:segmentation_id': None,
-    }
-    network_2 = network_1.copy()
-    network_2.update({
-        'id': 'a252b8cd-2d99-4e82-9a97-ec1217c496f5',
-        'name': 'physical-network-bar',
-        'provider:physical_network': 'bar',
-        'provider:network_type': 'vlan',
-        'provider:segmentation_id': 123,
-    })
-    network_3 = network_1.copy()
-    network_3.update({
-        'id': '877a79cc-295b-4b80-9606-092bf132931e',
-        'name': 'tunneled-network',
-        'provider:physical_network': None,
-        'provider:network_type': 'vxlan',
-        'provider:segmentation_id': 69,
-    })
-
-    subnet_1 = nova_fixtures.NeutronFixture.subnet_1.copy()
-    subnet_1.update({
-        'name': 'physical-subnet-foo',
-    })
-    subnet_2 = nova_fixtures.NeutronFixture.subnet_1.copy()
-    subnet_2.update({
-        'id': 'b4c13749-c002-47ed-bf42-8b1d44fa9ff2',
-        'name': 'physical-subnet-bar',
-        'network_id': network_2['id'],
-    })
-    subnet_3 = nova_fixtures.NeutronFixture.subnet_1.copy()
-    subnet_3.update({
-        'id': '4dacb20b-917f-4275-aa75-825894553442',
-        'name': 'tunneled-subnet',
-        'network_id': network_3['id'],
-    })
-    network_1['subnets'] = [subnet_1]
-    network_2['subnets'] = [subnet_2]
-    network_3['subnets'] = [subnet_3]
-
-    network_1_port_2 = {
-        'id': 'f32582b5-8694-4be8-9a52-c5732f601c9d',
-        'network_id': network_1['id'],
-        'status': 'ACTIVE',
-        'mac_address': '71:ce:c7:8b:cd:dc',
-        'fixed_ips': [
-            {
-                'ip_address': '192.168.1.10',
-                'subnet_id': subnet_1['id']
-            }
-        ],
-        'binding:vif_type': 'ovs',
-        'binding:vnic_type': 'normal',
-    }
-    network_1_port_3 = {
-        'id': '9c7580a0-8b01-41f3-ba07-a114709a4b74',
-        'network_id': network_1['id'],
-        'status': 'ACTIVE',
-        'mac_address': '71:ce:c7:2b:cd:dc',
-        'fixed_ips': [
-            {
-                'ip_address': '192.168.1.11',
-                'subnet_id': subnet_1['id']
-            }
-        ],
-        'binding:vif_type': 'ovs',
-        'binding:vnic_type': 'normal',
-    }
-    network_2_port_1 = {
-        'id': '67d36444-6353-40f5-9e92-59346cf0dfda',
-        'network_id': network_2['id'],
-        'status': 'ACTIVE',
-        'mac_address': 'd2:0b:fd:d7:89:9b',
-        'fixed_ips': [
-            {
-                'ip_address': '192.168.1.6',
-                'subnet_id': subnet_2['id']
-            }
-        ],
-        'binding:vif_type': 'ovs',
-        'binding:vnic_type': 'normal',
-    }
-    network_3_port_1 = {
-        'id': '4bfa1dc4-4354-4840-b0b4-f06196fa1344',
-        'network_id': network_3['id'],
-        'status': 'ACTIVE',
-        'mac_address': 'd2:0b:fd:99:89:9b',
-        'fixed_ips': [
-            {
-                'ip_address': '192.168.2.6',
-                'subnet_id': subnet_3['id']
-            }
-        ],
-        'binding:vif_type': 'ovs',
-        'binding:vnic_type': 'normal',
-    }
-
-    def __init__(self, test):
-        super(NUMAAffinityNeutronFixture, self).__init__(test)
-        self._networks = {
-            self.network_1['id']: self.network_1,
-            self.network_2['id']: self.network_2,
-            self.network_3['id']: self.network_3,
-        }
-        self._net1_ports = [self.network_1_port_2, self.network_1_port_3]
-
-    def create_port(self, body=None):
-        network_id = body['port']['network_id']
-        assert network_id in self._networks, ('Network %s not in fixture' %
-                                              network_id)
-
-        if network_id == self.network_1['id']:
-            port = self._net1_ports.pop(0)
-        elif network_id == self.network_2['id']:
-            port = self.network_2_port_1
-        elif network_id == self.network_3['id']:
-            port = self.network_3_port_1
-
-        # this copy is here to avoid modifying class variables like
-        # network_2_port_1 below at the update call
-        port = copy.deepcopy(port)
-        port.update(body['port'])
-        self._ports[port['id']] = port
-        # this copy is here as nova sometimes modifies the returned port
-        # locally and we want to avoid that nova modifies the fixture internals
-        return {'port': copy.deepcopy(port)}
-
-
 class NUMAServersWithNetworksTest(NUMAServersTestBase):
 
     def setUp(self):
@@ -300,7 +156,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         # we need a bit more intelligent neutron for these tests. Applying the
         # new fixture here means that we re-stub what the previous neutron
         # fixture already stubbed.
-        self.neutron = self.useFixture(NUMAAffinityNeutronFixture(self))
+        self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
 
     def _test_create_server_with_networks(self, flavor_id, networks):
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
@@ -327,7 +183,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         extra_spec = {'hw:numa_nodes': '1'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         networks = [
-            {'uuid': NUMAAffinityNeutronFixture.network_1['id']},
+            {'uuid': base.LibvirtNeutronFixture.network_1['id']},
         ]
 
         status = self._test_create_server_with_networks(
@@ -346,8 +202,8 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         extra_spec = {'hw:numa_nodes': '2'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         networks = [
-            {'uuid': NUMAAffinityNeutronFixture.network_1['id']},
-            {'uuid': NUMAAffinityNeutronFixture.network_2['id']},
+            {'uuid': base.LibvirtNeutronFixture.network_1['id']},
+            {'uuid': base.LibvirtNeutronFixture.network_2['id']},
         ]
 
         status = self._test_create_server_with_networks(
@@ -365,8 +221,8 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         extra_spec = {'hw:numa_nodes': '1'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         networks = [
-            {'uuid': NUMAAffinityNeutronFixture.network_1['id']},
-            {'uuid': NUMAAffinityNeutronFixture.network_2['id']},
+            {'uuid': base.LibvirtNeutronFixture.network_1['id']},
+            {'uuid': base.LibvirtNeutronFixture.network_2['id']},
         ]
 
         status = self._test_create_server_with_networks(
@@ -384,8 +240,8 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         extra_spec = {'hw:numa_nodes': '1'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         networks = [
-            {'uuid': NUMAAffinityNeutronFixture.network_1['id']},
-            {'uuid': NUMAAffinityNeutronFixture.network_3['id']},
+            {'uuid': base.LibvirtNeutronFixture.network_1['id']},
+            {'uuid': base.LibvirtNeutronFixture.network_3['id']},
         ]
 
         status = self._test_create_server_with_networks(
@@ -398,7 +254,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         extra_spec = {'hw:numa_nodes': '1'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         networks = [
-            {'uuid': NUMAAffinityNeutronFixture.network_1['id']},
+            {'uuid': base.LibvirtNeutronFixture.network_1['id']},
         ]
 
         server = self._test_create_server_with_networks(flavor_id, networks)
@@ -408,7 +264,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         # attach an interface from the **same** network
         post = {
             'interfaceAttachment': {
-                'net_id': NUMAAffinityNeutronFixture.network_1['id'],
+                'net_id': base.LibvirtNeutronFixture.network_1['id'],
             }
         }
         self.api.attach_interface(server['id'], post)
@@ -426,7 +282,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         # attach an interface from a **different** network
         post = {
             'interfaceAttachment': {
-                'net_id': NUMAAffinityNeutronFixture.network_2['id'],
+                'net_id': base.LibvirtNeutronFixture.network_2['id'],
             }
         }
         self.api.attach_interface(server['id'], post)
@@ -469,7 +325,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         extra_spec = {'hw:numa_nodes': '1'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         networks = [
-            {'uuid': NUMAAffinityNeutronFixture.network_1['id']},
+            {'uuid': base.LibvirtNeutronFixture.network_1['id']},
         ]
 
         good_server = self._build_server(flavor_id)
@@ -542,7 +398,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         extra_spec = {'hw:numa_nodes': '1'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         networks = [
-            {'uuid': NUMAAffinityNeutronFixture.network_1['id']},
+            {'uuid': base.LibvirtNeutronFixture.network_1['id']},
         ]
 
         good_server = self._build_server(flavor_id)

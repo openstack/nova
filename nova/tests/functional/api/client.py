@@ -526,3 +526,6 @@ class TestOpenStackClient(object):
             'forced_down': forced_down
         }
         return self.api_put('os-services/%s' % service_id, req).body['service']
+
+    def get_server_diagnostics(self, server_id):
+        return self.api_get('/servers/%s/diagnostics' % server_id).body

@@ -201,6 +201,82 @@ class SRIOVServersTest(_PCIServersTestBase):
         self._run_build_test(flavor_id_pfs, end_status='ERROR')
 
 
+class GetServerDiagnosticsServerWithVfTestV21(_PCIServersTestBase):
+
+    api_major_version = 'v2.1'
+    microversion = '2.48'
+    image_ref_parameter = 'imageRef'
+
+    VFS_ALIAS_NAME = 'vfs'
+
+    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(x) for x in (
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.VF_PROD_ID,
+        },
+    )]
+    PCI_ALIAS = [jsonutils.dumps(x) for x in (
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.VF_PROD_ID,
+            'name': VFS_ALIAS_NAME,
+        },
+    )]
+
+    def setUp(self):
+        super(GetServerDiagnosticsServerWithVfTestV21, self).setUp()
+        self.api.microversion = self.microversion
+
+        # The ultimate base class _IntegratedTestBase uses NeutronFixture but
+        # we need a bit more intelligent neutron for these tests. Applying the
+        # new fixture here means that we re-stub what the previous neutron
+        # fixture already stubbed.
+        self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
+
+    def test_get_server_diagnostics_server_with_VF(self):
+
+        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
+                                             cpu_cores=2, cpu_threads=2,
+                                             kB_mem=15740000)
+        pci_info = fakelibvirt.HostPCIDevicesInfo()
+        fake_connection = self._get_connection(host_info, pci_info)
+        self.mock_conn.return_value = fake_connection
+
+        # Create a flavor
+        extra_spec = {"pci_passthrough:alias": "%s:1" % self.VFS_ALIAS_NAME}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        if not self.compute_started:
+            self.compute = self.start_service('compute', host='test_compute0')
+            self.compute_started = True
+
+        # Create server
+        good_server = self._build_server(flavor_id,
+                                       '155d900f-4e14-4e4c-a73d-069cbf4541e6')
+        good_server['networks'] = [
+            {'uuid': base.LibvirtNeutronFixture.network_1['id']},
+            {'uuid': base.LibvirtNeutronFixture.network_4['id']},
+        ]
+
+        post = {'server': good_server}
+        created_server = self.api.post_server(post)
+        self._wait_for_state_change(created_server, 'BUILD')
+
+        diagnostics = self.api.get_server_diagnostics(created_server['id'])
+
+        self.assertEqual(base.LibvirtNeutronFixture.
+                         network_1_port_2['mac_address'],
+                         diagnostics['nic_details'][0]['mac_address'])
+
+        self.assertEqual(base.LibvirtNeutronFixture.
+                         network_4_port_1['mac_address'],
+                         diagnostics['nic_details'][1]['mac_address'])
+
+        self.assertIsNotNone(diagnostics['nic_details'][0]['tx_packets'])
+
+        self.assertIsNone(diagnostics['nic_details'][1]['tx_packets'])
+
+
 class PCIServersTest(_PCIServersTestBase):
 
     ALIAS_NAME = 'a1'
