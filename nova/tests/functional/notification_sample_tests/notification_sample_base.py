@@ -99,7 +99,6 @@ class NotificationSampleTestBase(test.TestCase,
 
         self.start_service('conductor')
         self.start_service('scheduler')
-        self.start_service('network', manager=CONF.network_manager)
         self.compute = self.start_service('compute')
         # Reset the service create notifications
         fake_notifier.reset()
