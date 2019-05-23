@@ -497,8 +497,15 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         if exclude:
             filter_uuids = set(filter_uuids) - set(exclude)
         filters = {'uuid': filter_uuids, 'deleted': False}
+        # Pass expected_attrs=[] to avoid unnecessary joins.
+        # TODO(mriedem): This is pretty inefficient since all we care about
+        # are the hosts. We could optimize this with a single-purpose SQL query
+        # like:
+        #   SELECT host FROM instances WHERE deleted=0 AND host IS NOT NULL
+        #       AND uuid IN ($filter_uuids) GROUP BY host;
         instances = objects.InstanceList.get_by_filters(self._context,
-                                                        filters=filters)
+                                                        filters=filters,
+                                                        expected_attrs=[])
         return list(set([instance.host for instance in instances
                          if instance.host]))
 
