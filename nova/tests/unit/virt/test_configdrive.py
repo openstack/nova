@@ -42,17 +42,31 @@ class ConfigDriveTestCase(test.NoDBTestCase):
 
         self.assertTrue(configdrive.required_by(instance))
 
-    def test_config_flag_force(self):
+    def test_config_flag_force_for_new_vms(self):
         self.flags(force_config_drive=True)
 
         instance = objects.Instance(
             config_drive=None,
+            launched_at=None,
             system_metadata={
                 "image_img_config_drive": "optional",
             }
         )
 
         self.assertTrue(configdrive.required_by(instance))
+
+    def test_config_flag_force_for_existing_vms(self):
+        self.flags(force_config_drive=True)
+
+        instance = objects.Instance(
+            config_drive=None,
+            launched_at='2019-05-17T00:00:00.000000',
+            system_metadata={
+                "image_img_config_drive": "optional",
+            }
+        )
+
+        self.assertFalse(configdrive.required_by(instance))
 
     def test_no_config_drive(self):
         self.flags(force_config_drive=False)
