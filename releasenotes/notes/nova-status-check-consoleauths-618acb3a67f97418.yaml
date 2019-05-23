@@ -1,7 +1,13 @@
 ---
 upgrade:
   - |
-    A new check is added to the ``nova-status upgrade check`` CLI to check for
-    use of the ``nova-consoleauth`` service to warn and provide additional
+    The ``nova-consoleauth`` service is deprecated and should no longer be
+    deployed, however, if there is a requirement to maintain support for
+    existing console sessions through a live/rolling upgrade, operators should
+    set ``[workarounds]enable_consoleauth = True`` in their configuration and
+    continue running ``nova-consoleauth`` for the duration of the live/rolling
+    upgrade.
+    A new check has been added to the ``nova-status upgrade check`` CLI to
+    help with this and it will emit a warning and provide additional
     instructions to set ``[workarounds]enable_consoleauth = True`` while
     performing a live/rolling upgrade.
