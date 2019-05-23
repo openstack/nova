@@ -123,6 +123,11 @@ is configurable in the nova.conf with the
 :oslo.config:option:`notifications.versioned_notifications_topics`
 config option.
 
+A `presentation from the Train summit`_ goes over the background and usage of
+versioned notifications, and provides a demo.
+
+.. _presentation from the Train summit: https://www.openstack.org/videos/summits/denver-2019/nova-versioned-notifications-the-result-of-a-3-year-journey
+
 How to add a new versioned notification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
