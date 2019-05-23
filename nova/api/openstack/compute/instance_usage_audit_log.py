@@ -27,7 +27,9 @@ from nova import utils
 
 
 class InstanceUsageAuditLogController(wsgi.Controller):
+
     def __init__(self):
+        super(InstanceUsageAuditLogController, self).__init__()
         self.host_api = compute.HostAPI()
 
     @wsgi.expected_errors(())

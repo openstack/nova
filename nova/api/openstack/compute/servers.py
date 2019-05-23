@@ -104,9 +104,8 @@ class ServersController(wsgi.Controller):
         # Convenience return
         return robj
 
-    def __init__(self, **kwargs):
-
-        super(ServersController, self).__init__(**kwargs)
+    def __init__(self):
+        super(ServersController, self).__init__()
         self.compute_api = compute.API()
         self.network_api = network_api.API()
 

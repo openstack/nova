@@ -59,8 +59,8 @@ class ServerMigrationsController(wsgi.Controller):
     """The server migrations API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API()
         super(ServerMigrationsController, self).__init__()
+        self.compute_api = compute.API()
 
     @wsgi.Controller.api_version("2.22")
     @wsgi.response(202)

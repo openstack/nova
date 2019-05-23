@@ -47,6 +47,7 @@ class SecurityGroupControllerBase(object):
     """Base class for Security Group controllers."""
 
     def __init__(self):
+        super(SecurityGroupControllerBase, self).__init__()
         self.security_group_api = (
             openstack_driver.get_openstack_security_group_driver())
         self.compute_api = compute.API(
@@ -405,8 +406,8 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
 
 
 class SecurityGroupActionController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(SecurityGroupActionController, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(SecurityGroupActionController, self).__init__()
         self.security_group_api = (
             openstack_driver.get_openstack_security_group_driver())
         self.compute_api = compute.API(

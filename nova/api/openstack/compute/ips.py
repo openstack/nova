@@ -31,8 +31,8 @@ class IPsController(wsgi.Controller):
     # microversion by using V2.1 view builder.
     _view_builder_class = views_addresses.ViewBuilder
 
-    def __init__(self, **kwargs):
-        super(IPsController, self).__init__(**kwargs)
+    def __init__(self):
+        super(IPsController, self).__init__()
         self._compute_api = compute.API()
 
     @wsgi.expected_errors(404)

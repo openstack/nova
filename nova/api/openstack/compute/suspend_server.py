@@ -22,8 +22,8 @@ from nova.policies import suspend_server as ss_policies
 
 
 class SuspendServerController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(SuspendServerController, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(SuspendServerController, self).__init__()
         self.compute_api = compute.API()
 
     @wsgi.response(202)

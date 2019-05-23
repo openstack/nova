@@ -42,8 +42,8 @@ class ImagesController(wsgi.Controller):
 
     _view_builder_class = views_images.ViewBuilder
 
-    def __init__(self, **kwargs):
-        super(ImagesController, self).__init__(**kwargs)
+    def __init__(self):
+        super(ImagesController, self).__init__()
         self._image_api = nova.image.API()
 
     def _get_filters(self, req):

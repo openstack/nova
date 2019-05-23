@@ -756,11 +756,9 @@ class Controller(object):
 
     _view_builder_class = None
 
-    def __init__(self, view_builder=None):
+    def __init__(self):
         """Initialize controller with a view builder instance."""
-        if view_builder:
-            self._view_builder = view_builder
-        elif self._view_builder_class:
+        if self._view_builder_class:
             self._view_builder = self._view_builder_class()
         else:
             self._view_builder = None

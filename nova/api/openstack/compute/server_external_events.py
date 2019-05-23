@@ -31,8 +31,8 @@ LOG = logging.getLogger(__name__)
 class ServerExternalEventsController(wsgi.Controller):
 
     def __init__(self):
-        self.compute_api = compute.API()
         super(ServerExternalEventsController, self).__init__()
+        self.compute_api = compute.API()
 
     @staticmethod
     def _is_event_tag_present_when_required(event):

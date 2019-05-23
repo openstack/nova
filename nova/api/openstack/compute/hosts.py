@@ -35,8 +35,8 @@ LOG = logging.getLogger(__name__)
 class HostController(wsgi.Controller):
     """The Hosts API controller for the OpenStack API."""
     def __init__(self):
-        self.api = compute.HostAPI()
         super(HostController, self).__init__()
+        self.api = compute.HostAPI()
 
     @wsgi.Controller.api_version("2.1", "2.42")
     @validation.query_schema(hosts.index_query)

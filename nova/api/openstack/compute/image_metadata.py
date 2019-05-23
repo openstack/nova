@@ -31,6 +31,7 @@ class ImageMetadataController(wsgi.Controller):
     """The image metadata API controller for the OpenStack API."""
 
     def __init__(self):
+        super(ImageMetadataController, self).__init__()
         self.image_api = nova.image.API()
 
     def _get_image(self, context, image_id):

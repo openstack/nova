@@ -30,8 +30,8 @@ CONF = nova.conf.CONF
 
 
 class RescueController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(RescueController, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(RescueController, self).__init__()
         self.compute_api = compute.API()
 
     # TODO(cyeoh): Should be responding here with 202 Accept

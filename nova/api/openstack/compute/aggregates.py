@@ -24,7 +24,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import aggregates
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova.compute import api as compute_api
+from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
 from nova.policies import aggregates as aggr_policies
@@ -37,7 +37,8 @@ def _get_context(req):
 class AggregateController(wsgi.Controller):
     """The Host Aggregates API controller for the OpenStack API."""
     def __init__(self):
-        self.api = compute_api.AggregateAPI()
+        super(AggregateController, self).__init__()
+        self.api = compute.AggregateAPI()
 
     @wsgi.expected_errors(())
     def index(self, req):

@@ -28,6 +28,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase,
                                           wsgi.Controller):
 
     def __init__(self):
+        super(SecurityGroupDefaultRulesController, self).__init__()
         self.security_group_api = (
             openstack_driver.get_openstack_security_group_driver())
 

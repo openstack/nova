@@ -37,6 +37,7 @@ PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION = '2.69'
 class ServiceController(wsgi.Controller):
 
     def __init__(self):
+        super(ServiceController, self).__init__()
         self.host_api = compute.HostAPI()
         self.aggregate_api = compute.AggregateAPI()
         self.servicegroup_api = servicegroup.API()

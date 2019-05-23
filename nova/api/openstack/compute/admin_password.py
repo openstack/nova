@@ -26,8 +26,8 @@ from nova.policies import admin_password as ap_policies
 
 class AdminPasswordController(wsgi.Controller):
 
-    def __init__(self, *args, **kwargs):
-        super(AdminPasswordController, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(AdminPasswordController, self).__init__()
         self.compute_api = compute.API()
 
     # TODO(eliqiao): Here should be 204(No content) instead of 202 by v2.1+

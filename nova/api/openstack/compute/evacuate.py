@@ -33,8 +33,8 @@ CONF = nova.conf.CONF
 
 
 class EvacuateController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(EvacuateController, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(EvacuateController, self).__init__()
         self.compute_api = compute.API()
         self.host_api = compute.HostAPI()
         self.network_api = network.API()
