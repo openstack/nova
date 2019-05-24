@@ -7177,7 +7177,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                               mock_confirm, mock_nwapi, mock_notify,
                               mock_mig_save, mock_mig_get, mock_inst_get):
             self._mock_rt()
-            self.instance.migration_context = objects.MigrationContext()
+            self.instance.migration_context = objects.MigrationContext(
+                new_pci_devices=None,
+                old_pci_devices=None)
             self.migration.source_compute = self.instance['host']
             self.migration.source_node = self.instance['node']
             self.migration.status = 'confirming'
@@ -7193,6 +7195,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
         do_confirm_resize()
 
+    @mock.patch('nova.objects.MigrationContext.get_pci_mapping_for_migration')
     @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
     @mock.patch('nova.objects.Migration.get_by_id')
     @mock.patch('nova.objects.Instance.get_by_uuid')
@@ -7201,7 +7204,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     @mock.patch('nova.objects.Instance.save')
     def test_confirm_resize_driver_confirm_migration_fails(
             self, instance_save, notify_action, notify_usage,
-            instance_get_by_uuid, migration_get_by_id, add_fault):
+            instance_get_by_uuid, migration_get_by_id, add_fault, get_mapping):
         """Tests the scenario that driver.confirm_migration raises some error
         to make sure the error is properly handled, like the instance and
         migration status is set to 'error'.
@@ -7209,6 +7212,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.migration.status = 'confirming'
         migration_get_by_id.return_value = self.migration
         instance_get_by_uuid.return_value = self.instance
+        self.instance.migration_context = objects.MigrationContext()
 
         error = exception.HypervisorUnavailable(
             host=self.migration.source_compute)
@@ -7216,9 +7220,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             mock.patch.object(self.compute, 'network_api'),
             mock.patch.object(self.compute.driver, 'confirm_migration',
                               side_effect=error),
-            mock.patch.object(self.compute, '_delete_allocation_after_move')
+            mock.patch.object(self.compute, '_delete_allocation_after_move'),
+            mock.patch.object(self.compute,
+                              '_get_updated_nw_info_with_pci_mapping')
         ) as (
-            network_api, confirm_migration, delete_allocation
+            network_api, confirm_migration, delete_allocation, pci_mapping
         ):
             self.assertRaises(exception.HypervisorUnavailable,
                               self.compute.confirm_resize,
@@ -7244,6 +7250,59 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         network_api.setup_networks_on_host.assert_called_once()
         instance_get_by_uuid.assert_called_once()
         migration_get_by_id.assert_called_once()
+
+    def test_confirm_resize_calls_virt_driver_with_old_pci(self):
+        @mock.patch.object(self.migration, 'save')
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch.object(self.compute, 'network_api')
+        @mock.patch.object(self.compute.driver, 'confirm_migration')
+        @mock.patch.object(self.compute, '_delete_allocation_after_move')
+        @mock.patch.object(self.instance, 'drop_migration_context')
+        @mock.patch.object(self.instance, 'save')
+        def do_confirm_resize(mock_save, mock_drop, mock_delete,
+                              mock_confirm, mock_nwapi, mock_notify,
+                              mock_mig_save):
+            # Mock virt driver confirm_resize() to save the provided
+            # network_info, we will check it later.
+            updated_nw_info = []
+
+            def driver_confirm_resize(*args, **kwargs):
+                if 'network_info' in kwargs:
+                    nw_info = kwargs['network_info']
+                else:
+                    nw_info = args[3]
+                updated_nw_info.extend(nw_info)
+
+            mock_confirm.side_effect = driver_confirm_resize
+            self._mock_rt()
+            old_devs = objects.PciDeviceList(
+                objects=[objects.PciDevice(
+                    address='0000:04:00.2',
+                    request_id=uuids.pcidev1)])
+            new_devs = objects.PciDeviceList(
+                objects=[objects.PciDevice(
+                    address='0000:05:00.3',
+                    request_id=uuids.pcidev1)])
+            self.instance.migration_context = objects.MigrationContext(
+                new_pci_devices=new_devs,
+                old_pci_devices=old_devs)
+            # Create VIF with new_devs[0] PCI address.
+            nw_info = network_model.NetworkInfo([
+                network_model.VIF(
+                    id=uuids.port1,
+                    vnic_type=network_model.VNIC_TYPE_DIRECT,
+                    profile={'pci_slot': new_devs[0].address})])
+            mock_nwapi.get_instance_nw_info.return_value = nw_info
+            self.migration.source_compute = self.instance['host']
+            self.migration.source_node = self.instance['node']
+            self.compute._confirm_resize(self.context, self.instance,
+                                         self.migration)
+            # Assert virt driver confirm_migration() was called
+            # with the updated nw_info object.
+            self.assertEqual(old_devs[0].address,
+                             updated_nw_info[0]['profile']['pci_slot'])
+
+        do_confirm_resize()
 
     def test_delete_allocation_after_move_confirm_by_migration(self):
         with mock.patch.object(self.compute, 'reportclient') as mock_report:
@@ -8749,6 +8808,24 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # Migrate vifs profile was unchanged for port ID uuids.port1.
         # i.e 'profile' attribute does not exist.
         self.assertNotIn('profile', unchanged_mig_vif)
+
+    def test_get_updated_nw_info_with_pci_mapping(self):
+        old_dev = objects.PciDevice(address='0000:04:00.2')
+        new_dev = objects.PciDevice(address='0000:05:00.3')
+        pci_mapping = {old_dev.address: new_dev}
+        nw_info = network_model.NetworkInfo([
+                network_model.VIF(
+                    id=uuids.port1,
+                    vnic_type=network_model.VNIC_TYPE_NORMAL),
+                network_model.VIF(
+                    id=uuids.port2,
+                    vnic_type=network_model.VNIC_TYPE_DIRECT,
+                    profile={'pci_slot': old_dev.address})])
+        updated_nw_info = self.compute._get_updated_nw_info_with_pci_mapping(
+            nw_info, pci_mapping)
+        self.assertDictEqual(nw_info[0], updated_nw_info[0])
+        self.assertEqual(new_dev.address,
+                         updated_nw_info[1]['profile']['pci_slot'])
 
 
 class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
