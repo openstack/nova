@@ -1792,7 +1792,11 @@ def instance_destroy(context, instance_uuid, constraint=None,
         key = 'instance_uuid' if model not in filtered_by_uuid else 'uuid'
         filter_ = {key: instance_uuid}
         if hard_delete:
-            model_query(context, model).filter_by(**filter_).delete()
+            # We need to read any soft-deleted related records to make sure
+            # and clean those up as well otherwise we can fail with ForeignKey
+            # constraint errors when hard deleting the instance.
+            model_query(context, model, read_deleted='yes').filter_by(
+                **filter_).delete()
         else:
             model_query(context, model).filter_by(**filter_).soft_delete()
 
