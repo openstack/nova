@@ -250,6 +250,8 @@
               # allow_resize_to_same_host=True cold migrate will try to migrate
               # on the same host which is not supported by the libvirt driver.
               cold_migration: false
+              # NOTE(mriedem): Skip novnc tests until bug 1830417 is fixed.
+              vnc_console: false
       devstack_services:
         # Disable other non-essential services that we don't need for this job.
         c-bak: false
