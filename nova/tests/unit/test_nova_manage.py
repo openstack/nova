@@ -398,7 +398,7 @@ class DBCommandsTestCase(test.NoDBTestCase):
     def _test_archive_deleted_rows(self, mock_get_all, mock_db_archive,
                                    verbose=False):
         result = self.commands.archive_deleted_rows(20, verbose=verbose)
-        mock_db_archive.assert_called_once_with(20)
+        mock_db_archive.assert_called_once_with(20, before=None)
         output = self.output.getvalue()
         if verbose:
             expected = '''\
@@ -449,9 +449,9 @@ Archiving.....complete
             expected = ''
 
         self.assertEqual(expected, self.output.getvalue())
-        mock_db_archive.assert_has_calls([mock.call(20),
-                                          mock.call(20),
-                                          mock.call(20)])
+        mock_db_archive.assert_has_calls([mock.call(20, before=None),
+                                         mock.call(20, before=None),
+                                         mock.call(20, before=None)])
 
     def test_archive_deleted_rows_until_complete_quiet(self):
         self.test_archive_deleted_rows_until_complete(verbose=False)
@@ -487,14 +487,26 @@ Rows were archived, running purge...
             expected = ''
 
         self.assertEqual(expected, self.output.getvalue())
-        mock_db_archive.assert_has_calls([mock.call(20),
-                                          mock.call(20),
-                                          mock.call(20)])
+        mock_db_archive.assert_has_calls([mock.call(20, before=None),
+                                             mock.call(20, before=None),
+                                             mock.call(20, before=None)])
         mock_db_purge.assert_called_once_with(mock.ANY, None,
                                               status_fn=mock.ANY)
 
     def test_archive_deleted_rows_until_stopped_quiet(self):
         self.test_archive_deleted_rows_until_stopped(verbose=False)
+
+    @mock.patch.object(db, 'archive_deleted_rows')
+    @mock.patch.object(objects.CellMappingList, 'get_all')
+    def test_archive_deleted_rows_before(self, mock_get_all, mock_db_archive):
+        mock_db_archive.side_effect = [
+            ({'instances': 10, 'instance_extra': 5}, list()),
+            ({'instances': 5, 'instance_faults': 1}, list()),
+            KeyboardInterrupt]
+        result = self.commands.archive_deleted_rows(20, before='2017-01-13')
+        mock_db_archive.assert_called_once_with(20,
+                before=datetime.datetime(2017, 1, 13))
+        self.assertEqual(1, result)
 
     @mock.patch.object(db, 'archive_deleted_rows', return_value=({}, []))
     @mock.patch.object(objects.CellMappingList, 'get_all')
@@ -502,7 +514,7 @@ Rows were archived, running purge...
                                                      mock_db_archive):
         result = self.commands.archive_deleted_rows(20, verbose=True,
                                                     purge=True)
-        mock_db_archive.assert_called_once_with(20)
+        mock_db_archive.assert_called_once_with(20, before=None)
         output = self.output.getvalue()
         # If nothing was archived, there should be no purge messages
         self.assertIn('Nothing was archived.', output)
@@ -540,7 +552,7 @@ Rows were archived, running purge...
         result = self.commands.archive_deleted_rows(20, verbose=verbose)
 
         self.assertEqual(1, result)
-        mock_db_archive.assert_called_once_with(20)
+        mock_db_archive.assert_called_once_with(20, before=None)
         self.assertEqual(1, mock_reqspec_destroy.call_count)
         mock_members_destroy.assert_called_once()
 

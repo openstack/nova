@@ -1,0 +1,5 @@
+---
+features:
+  - An option ``--before`` has been added to
+    `nova-manage db archive_deleted_rows` command. This options limits
+    archiving of records to  those deleted before the specified date.

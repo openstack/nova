@@ -5416,7 +5416,7 @@ def task_log_end_task(context, task_name, period_beginning, period_ending,
 
 
 def _archive_if_instance_deleted(table, shadow_table, instances, conn,
-                                 max_rows):
+                                 max_rows, before):
     """Look for records that pertain to deleted instances, but may not be
     deleted themselves. This catches cases where we delete an instance,
     but leave some residue because of a failure in a cleanup path or
@@ -5430,38 +5430,27 @@ def _archive_if_instance_deleted(table, shadow_table, instances, conn,
     # instance_actions.id not instances.uuid
     if table.name == "instance_actions_events":
         instance_actions = models.BASE.metadata.tables["instance_actions"]
-        query_insert = shadow_table.insert(inline=True).\
-            from_select(
-                [c.name for c in table.c],
-                sql.select(
-                    [table], and_(
-                        instances.c.deleted != instances.c.deleted.default.arg,
-                        instances.c.uuid == instance_actions.c.instance_uuid,
-                        instance_actions.c.id == table.c.action_id)).
-                order_by(table.c.id).limit(max_rows))
+        query_select = sql.select(
+                [table],
+                and_(instances.c.deleted != instances.c.deleted.default.arg,
+                     instances.c.uuid == instance_actions.c.instance_uuid,
+                     instance_actions.c.id == table.c.action_id))
 
-        query_delete = sql.select(
-            [table.c.id],
-            and_(instances.c.deleted != instances.c.deleted.default.arg,
-                 instances.c.uuid == instance_actions.c.instance_uuid,
-                 instance_actions.c.id == table.c.action_id)).\
-            order_by(table.c.id).limit(max_rows)
     else:
-        query_insert = shadow_table.insert(inline=True).\
-            from_select(
-                [c.name for c in table.c],
-                sql.select(
-                    [table], and_(
-                        instances.c.deleted != instances.c.deleted.default.arg,
-                        instances.c.uuid == table.c.instance_uuid)).
-                order_by(table.c.id).limit(max_rows))
+        query_select = sql.select(
+                [table],
+                and_(instances.c.deleted != instances.c.deleted.default.arg,
+                     instances.c.uuid == table.c.instance_uuid))
 
-        query_delete = sql.select(
-            [table.c.id],
-            and_(instances.c.deleted != instances.c.deleted.default.arg,
-                 instances.c.uuid == table.c.instance_uuid)).\
-            order_by(table.c.id).limit(max_rows)
-    delete_statement = DeleteFromSelect(table, query_delete,
+    if before:
+        query_select = query_select.where(instances.c.deleted_at < before)
+
+    query_select = query_select.order_by(table.c.id).limit(max_rows)
+
+    query_insert = shadow_table.insert(inline=True).\
+        from_select([c.name for c in table.c], query_select)
+
+    delete_statement = DeleteFromSelect(table, query_select,
                                         table.c.id)
 
     try:
@@ -5476,7 +5465,7 @@ def _archive_if_instance_deleted(table, shadow_table, instances, conn,
         return 0
 
 
-def _archive_deleted_rows_for_table(tablename, max_rows):
+def _archive_deleted_rows_for_table(tablename, max_rows, before):
     """Move up to max_rows rows from one tables to the corresponding
     shadow table.
 
@@ -5513,8 +5502,11 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
     columns = [c.name for c in table.c]
 
     select = sql.select([column],
-                        deleted_column != deleted_column.default.arg).\
-                        order_by(column).limit(max_rows)
+                        deleted_column != deleted_column.default.arg)
+    if before:
+        select = select.where(table.c.deleted_at < before)
+
+    select = select.order_by(column).limit(max_rows)
     rows = conn.execute(select).fetchall()
     records = [r[0] for r in rows]
 
@@ -5554,13 +5546,13 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
         instances = models.BASE.metadata.tables['instances']
         limit = max_rows - rows_archived if max_rows is not None else None
         extra = _archive_if_instance_deleted(table, shadow_table, instances,
-                                             conn, limit)
+                                             conn, limit, before)
         rows_archived += extra
 
     return rows_archived, deleted_instance_uuids
 
 
-def archive_deleted_rows(max_rows=None):
+def archive_deleted_rows(max_rows=None, before=None):
     """Move up to max_rows rows from production tables to the corresponding
     shadow tables.
 
@@ -5590,9 +5582,11 @@ def archive_deleted_rows(max_rows=None):
         if (tablename == 'migrate_version' or
                 tablename.startswith(_SHADOW_TABLE_PREFIX)):
             continue
-        rows_archived,\
-        deleted_instance_uuid = _archive_deleted_rows_for_table(
-                tablename, max_rows=max_rows - total_rows_archived)
+        rows_archived, deleted_instance_uuid = (
+            _archive_deleted_rows_for_table(
+                tablename,
+                max_rows=max_rows - total_rows_archived,
+                before=before))
         total_rows_archived += rows_archived
         if tablename == 'instances':
             deleted_instance_uuids = deleted_instance_uuid

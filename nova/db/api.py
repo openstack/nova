@@ -1808,7 +1808,7 @@ def task_log_get(context, task_name, period_beginning,
 ####################
 
 
-def archive_deleted_rows(max_rows=None):
+def archive_deleted_rows(max_rows=None, before=None):
     """Move up to max_rows rows from production tables to corresponding shadow
     tables.
 
@@ -1824,7 +1824,7 @@ def archive_deleted_rows(max_rows=None):
         }
 
     """
-    return IMPL.archive_deleted_rows(max_rows=max_rows)
+    return IMPL.archive_deleted_rows(max_rows=max_rows, before=before)
 
 
 def pcidevice_online_data_migration(context, max_count):
