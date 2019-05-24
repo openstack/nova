@@ -29,10 +29,12 @@ import datetime
 import inspect
 import itertools
 import os
+import os.path
 import pprint
 import sys
 
 import fixtures
+import mock
 from oslo_cache import core as cache
 from oslo_concurrency import lockutils
 from oslo_config import cfg
@@ -64,6 +66,10 @@ from nova.tests.unit import policy_fixture
 from nova import utils
 from nova.virt import images
 
+if six.PY2:
+    import contextlib2 as contextlib
+else:
+    import contextlib
 
 CONF = cfg.CONF
 
@@ -375,6 +381,18 @@ class TestCase(testtools.TestCase):
         on mox) going forward.
         """
         self.useFixture(fixtures.MonkeyPatch(old, new))
+
+    @staticmethod
+    def patch_exists(patched_path, result):
+        """Provide a static method version of patch_exists(), which if you
+        haven't already imported nova.test can be slightly easier to
+        use as a context manager within a test method via:
+
+            def test_something(self):
+                with self.patch_exists(path, True):
+                    ...
+        """
+        return patch_exists(patched_path, result)
 
     def flags(self, **kw):
         """Override flag variables for a test."""
@@ -760,3 +778,48 @@ class ContainKeyValue(object):
     def __repr__(self):
         return "<ContainKeyValue: key " + str(self.wantkey) + \
                " and value " + str(self.wantvalue) + ">"
+
+
+@contextlib.contextmanager
+def patch_exists(patched_path, result):
+    """Selectively patch os.path.exists() so that if it's called with
+    patched_path, return result.  Calls with any other path are passed
+    through to the real os.path.exists() function.
+
+    Either import and use as a decorator / context manager, or use the
+    nova.TestCase.patch_exists() static method as a context manager.
+
+    Currently it is *not* recommended to use this if any of the
+    following apply:
+
+    - You want to patch via decorator *and* make assertions about how the
+      mock is called (since using it in the decorator form will not make
+      the mock available to your code).
+
+    - You want the result of the patched exists() call to be determined
+      programmatically (e.g. by matching substrings of patched_path).
+
+    - You expect exists() to be called multiple times on the same path
+      and return different values each time.
+
+    Additionally within unit tests which only test a very limited code
+    path, it may be possible to ensure that the code path only invokes
+    exists() once, in which case it's slightly overkill to do
+    selective patching based on the path.  In this case something like
+    like this may be more appropriate:
+
+        @mock.patch('os.path.exists', return_value=True)
+        def test_my_code(self, mock_exists):
+            ...
+            mock_exists.assert_called_once_with(path)
+    """
+    real_exists = os.path.exists
+
+    def fake_exists(path):
+        if path == patched_path:
+            return result
+        return real_exists(path)
+
+    with mock.patch.object(os.path, "exists") as mock_exists:
+        mock_exists.side_effect = fake_exists
+        yield mock_exists

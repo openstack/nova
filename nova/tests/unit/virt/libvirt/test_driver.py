@@ -18195,19 +18195,6 @@ class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
         # Don't initialise the Host
         self.useFixture(fixtures.MockPatch('nova.virt.libvirt.driver.host'))
 
-    @contextlib.contextmanager
-    def patch_exists(self, result):
-        real_exists = os.path.exists
-
-        def fake_exists(filename):
-            if filename == "/etc/machine-id":
-                return result
-            return real_exists(filename)
-
-        with mock.patch.object(os.path, "exists") as mock_exists:
-            mock_exists.side_effect = fake_exists
-            yield mock_exists
-
     def _test_get_guest_config_sysinfo_serial(self, expected_serial):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
@@ -18252,7 +18239,7 @@ class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
         with test.nested(
                 mock.patch.object(six.moves.builtins, "open",
                     mock.mock_open(read_data=theuuid)),
-                self.patch_exists(True)):
+                self.patch_exists("/etc/machine-id", True)):
             self._test_get_guest_config_sysinfo_serial(theuuid)
 
     def test_get_guest_config_sysinfo_serial_os_empty_machine_id(self):
@@ -18260,55 +18247,37 @@ class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
         with test.nested(
                 mock.patch.object(six.moves.builtins, "open",
                                   mock.mock_open(read_data="")),
-                self.patch_exists(True)):
+                self.patch_exists("/etc/machine-id", True)):
             self.assertRaises(exception.NovaException,
                     self._test_get_guest_config_sysinfo_serial,
                     None)
 
     def test_get_guest_config_sysinfo_serial_os_no_machine_id_file(self):
         self.flags(sysinfo_serial="os", group="libvirt")
-        with self.patch_exists(False):
+        with self.patch_exists("/etc/machine-id", False):
             self.assertRaises(exception.NovaException,
                     self._test_get_guest_config_sysinfo_serial,
                     None)
 
+    theuuid = "56b40135-a973-4eb3-87bb-a2382a3e6dbc"
+
+    @test.patch_exists("/etc/machine-id", False)
     def test_get_guest_config_sysinfo_serial_auto_hardware(self):
         self.flags(sysinfo_serial="auto", group="libvirt")
 
-        real_exists = os.path.exists
-        with test.nested(
-                mock.patch.object(os.path, "exists"),
-                mock.patch.object(libvirt_driver.LibvirtDriver,
-                                  "_get_host_sysinfo_serial_hardware")
-        ) as (mock_exists, mock_uuid):
-            def fake_exists(filename):
-                if filename == "/etc/machine-id":
-                    return False
-                return real_exists(filename)
+        with mock.patch.object(libvirt_driver.LibvirtDriver,
+                               "_get_host_sysinfo_serial_hardware") \
+                as mock_uuid:
+            mock_uuid.return_value = self.theuuid
 
-            mock_exists.side_effect = fake_exists
+            self._test_get_guest_config_sysinfo_serial(self.theuuid)
 
-            theuuid = "56b40135-a973-4eb3-87bb-a2382a3e6dbc"
-            mock_uuid.return_value = theuuid
-
-            self._test_get_guest_config_sysinfo_serial(theuuid)
-
+    @test.patch_exists("/etc/machine-id", True)
     def test_get_guest_config_sysinfo_serial_auto_os(self):
         self.flags(sysinfo_serial="auto", group="libvirt")
 
-        real_exists = os.path.exists
         real_open = builtins.open
-        with test.nested(
-                mock.patch.object(os.path, "exists"),
-                mock.patch.object(builtins, "open"),
-        ) as (mock_exists, mock_open):
-            def fake_exists(filename):
-                if filename == "/etc/machine-id":
-                    return True
-                return real_exists(filename)
-
-            mock_exists.side_effect = fake_exists
-
+        with mock.patch.object(builtins, "open") as mock_open:
             theuuid = "56b40135-a973-4eb3-87bb-a2382a3e6dbc"
 
             def fake_open(filename, *args, **kwargs):
