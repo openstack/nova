@@ -176,7 +176,7 @@ def check_is_admin(context):
     init()
     # the target is user-self
     credentials = context.to_policy_values()
-    target = credentials
+    target = context.default_target()
     return _ENFORCER.authorize('context_is_admin', target, credentials)
 
 
