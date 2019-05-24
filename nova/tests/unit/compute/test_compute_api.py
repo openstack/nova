@@ -6308,6 +6308,130 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, ids, rebuild=True)
         get_min_version.assert_called_once_with(self.context, 'nova-compute')
 
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_provider_by_name')
+    def test__validate_host_or_node_with_host(
+            self, mock_get_provider_by_name, mock_get_host_node, mock_get_hm):
+        host = 'fake-host'
+        node = None
+
+        self.compute_api._validate_host_or_node(self.context, host, node)
+        mock_get_hm.assert_called_once_with(self.context, 'fake-host')
+        mock_get_host_node.assert_not_called()
+        mock_get_provider_by_name.assert_not_called()
+
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_provider_by_name')
+    def test__validate_host_or_node_with_invalid_host(
+            self, mock_get_provider_by_name, mock_get_host_node, mock_get_hm):
+        host = 'fake-host'
+        node = None
+
+        mock_get_hm.side_effect = exception.HostMappingNotFound(name=host)
+        self.assertRaises(exception.ComputeHostNotFound,
+                          self.compute_api._validate_host_or_node,
+                          self.context, host, node)
+        mock_get_hm.assert_called_once_with(self.context, 'fake-host')
+        mock_get_host_node.assert_not_called()
+        mock_get_provider_by_name.assert_not_called()
+
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_provider_by_name')
+    def test__validate_host_or_node_with_host_and_node(
+            self, mock_get_provider_by_name, mock_get_host_node, mock_get_hm,
+            mock_target_cell):
+        host = 'fake-host'
+        node = 'fake-host'
+
+        self.compute_api._validate_host_or_node(self.context, host, node)
+        mock_get_host_node.assert_called_once_with(
+            mock_target_cell.return_value.__enter__.return_value,
+            'fake-host', 'fake-host')
+        mock_get_hm.assert_called_once_with(self.context, 'fake-host')
+        mock_get_provider_by_name.assert_not_called()
+
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_provider_by_name')
+    def test__validate_host_or_node_with_invalid_host_and_node(
+            self, mock_get_provider_by_name, mock_get_host_node, mock_get_hm,
+            mock_target_cell):
+        host = 'fake-host'
+        node = 'fake-host'
+
+        mock_get_host_node.side_effect = (
+            exception.ComputeHostNotFound(host=host))
+        self.assertRaises(exception.ComputeHostNotFound,
+                          self.compute_api._validate_host_or_node,
+                          self.context, host, node)
+        mock_get_host_node.assert_called_once_with(
+            mock_target_cell.return_value.__enter__.return_value,
+            'fake-host', 'fake-host')
+        mock_get_hm.assert_called_once_with(self.context, 'fake-host')
+        mock_get_provider_by_name.assert_not_called()
+
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_provider_by_name')
+    def test__validate_host_or_node_with_node(
+            self, mock_get_provider_by_name, mock_get_host_node, mock_get_hm):
+        host = None
+        node = 'fake-host'
+
+        self.compute_api._validate_host_or_node(self.context, host, node)
+        mock_get_provider_by_name.assert_called_once_with(
+            self.context, 'fake-host')
+        mock_get_host_node.assert_not_called()
+        mock_get_hm.assert_not_called()
+
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_provider_by_name')
+    def test__validate_host_or_node_with_invalid_node(
+            self, mock_get_provider_by_name, mock_get_host_node, mock_get_hm):
+        host = None
+        node = 'fake-host'
+
+        mock_get_provider_by_name.side_effect = (
+            exception.ResourceProviderNotFound(name_or_uuid=node))
+        self.assertRaises(exception.ComputeHostNotFound,
+                          self.compute_api._validate_host_or_node,
+                          self.context, host, node)
+        mock_get_provider_by_name.assert_called_once_with(
+            self.context, 'fake-host')
+        mock_get_host_node.assert_not_called()
+        mock_get_hm.assert_not_called()
+
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_provider_by_name')
+    def test__validate_host_or_node_with_rp_500_exception(
+            self, mock_get_provider_by_name, mock_get_host_node, mock_get_hm):
+        host = None
+        node = 'fake-host'
+
+        mock_get_provider_by_name.side_effect = (
+            exception.PlacementAPIConnectFailure())
+        self.assertRaises(exception.PlacementAPIConnectFailure,
+                          self.compute_api._validate_host_or_node,
+                          self.context, host, node)
+        mock_get_provider_by_name.assert_called_once_with(
+            self.context, 'fake-host')
+        mock_get_host_node.assert_not_called()
+        mock_get_hm.assert_not_called()
+
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):
