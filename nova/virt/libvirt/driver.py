@@ -7612,7 +7612,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # 'dest' will be substituted into 'migration_uri' so ensure
         # it does't contain any characters that could be used to
-        # exploit the URI accepted by libivrt
+        # exploit the URI accepted by libvirt
         if not libvirt_utils.is_valid_hostname(dest):
             raise exception.InvalidHostname(hostname=dest)
 
