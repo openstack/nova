@@ -3946,6 +3946,40 @@ def _merge_candidates(candidates, group_policy=None):
     return areqs, psums
 
 
+def _exclude_nested_providers(allocation_requests, provider_summaries):
+    """Exclude allocation requests and provider summaries for old microversions
+    if they involve more than one provider from the same tree.
+    """
+    # Build a temporary dict, keyed by root RP UUID of sets of UUIDs of all RPs
+    # in that tree.
+    tree_rps_by_root = collections.defaultdict(set)
+    for ps in provider_summaries:
+        rp_uuid = ps.resource_provider.uuid
+        root_uuid = ps.resource_provider.root_provider_uuid
+        tree_rps_by_root[root_uuid].add(rp_uuid)
+    # We use this to get a list of sets of providers in each tree
+    tree_sets = list(tree_rps_by_root.values())
+
+    for a_req in allocation_requests[:]:
+        alloc_rp_uuids = set([
+            arr.resource_provider.uuid for arr in a_req.resource_requests])
+        # If more than one allocation is provided by the same tree, kill
+        # that allocation request.
+        if any(len(tree_set & alloc_rp_uuids) > 1 for tree_set in tree_sets):
+            allocation_requests.remove(a_req)
+
+    # Exclude eliminated providers from the provider summaries.
+    all_rp_uuids = set()
+    for a_req in allocation_requests:
+        all_rp_uuids |= set(
+            arr.resource_provider.uuid for arr in a_req.resource_requests)
+    for ps in provider_summaries[:]:
+        if ps.resource_provider.uuid not in all_rp_uuids:
+            provider_summaries.remove(ps)
+
+    return allocation_requests, provider_summaries
+
+
 @base.VersionedObjectRegistry.register_if(False)
 class AllocationCandidates(base.VersionedObject):
     """The AllocationCandidates object is a collection of possible allocations
@@ -3965,7 +3999,8 @@ class AllocationCandidates(base.VersionedObject):
     }
 
     @classmethod
-    def get_by_requests(cls, context, requests, limit=None, group_policy=None):
+    def get_by_requests(cls, context, requests, limit=None, group_policy=None,
+                        nested_aware=True):
         """Returns an AllocationCandidates object containing all resource
         providers matching a set of supplied resource constraints, with a set
         of allocation requests constructed from that list of resource
@@ -3989,12 +4024,16 @@ class AllocationCandidates(base.VersionedObject):
                              other.  If the value is "isolate", we will filter
                              out allocation requests where any such
                              RequestGroups are satisfied by the same RP.
+        :param nested_aware: If False, we are blind to nested architecture and
+                             can't pick resources from multiple providers even
+                             if they come from the same tree.
         :return: An instance of AllocationCandidates with allocation_requests
                  and provider_summaries satisfying `requests`, limited
                  according to `limit`.
         """
         alloc_reqs, provider_summaries = cls._get_by_requests(
-            context, requests, limit=limit, group_policy=group_policy)
+            context, requests, limit=limit, group_policy=group_policy,
+            nested_aware=nested_aware)
         return cls(
             context,
             allocation_requests=alloc_reqs,
@@ -4083,7 +4122,7 @@ class AllocationCandidates(base.VersionedObject):
     # reader when that migration is no longer happening.
     @db_api.placement_context_manager.writer
     def _get_by_requests(cls, context, requests, limit=None,
-                         group_policy=None):
+                         group_policy=None, nested_aware=True):
         # TODO(jaypipes): Make a RequestGroupContext object and put these
         # pieces of information in there, passing the context to the various
         # internal functions handling that part of the request.
@@ -4121,6 +4160,10 @@ class AllocationCandidates(base.VersionedObject):
         # or we would have short-circuited above.
         alloc_request_objs, summary_objs = _merge_candidates(
                 candidates, group_policy=group_policy)
+
+        if not nested_aware and has_trees:
+            alloc_request_objs, summary_objs = _exclude_nested_providers(
+                alloc_request_objs, summary_objs)
 
         # Limit the number of allocation request objects. We do this after
         # creating all of them so that we can do a random slice without
