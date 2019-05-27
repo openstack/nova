@@ -53,3 +53,4 @@ operating system, and exposes functionality over a web-based API.
    support-compute.rst
    system-admin.rst
    secure-live-migration-with-qemu-native-tls.rst
+   mitigation-for-Intel-MDS-security-flaws.rst
