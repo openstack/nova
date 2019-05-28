@@ -20,6 +20,7 @@ from nova import context as nova_context
 from nova.db import api as db_api
 from nova import exception
 from nova import objects
+from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
@@ -124,20 +125,28 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         limits = self.api.get_limits()['absolute']
         self.assertEqual(expected_num_instances, limits['totalInstancesUsed'])
 
-    def _create_server(self, flavor, volume_backed=False):
+    def _create_server(self, flavor, volume_backed=False, group_id=None,
+                       no_networking=False):
         """Creates a server and waits for it to be ACTIVE
 
         :param flavor: dict form of the flavor to use
         :param volume_backed: True if the server should be volume-backed
+        :param group_id: UUID of a server group in which to create the server
+        :param no_networking: True if the server should be creating without
+            networking, otherwise it will be created with a specific port and
+            VIF tag
         :returns: server dict response from the GET /servers/{server_id} API
         """
-        # Provide a VIF tag for the pre-existing port. Since VIF tags are
-        # stored in the virtual_interfaces table in the cell DB, we want to
-        # make sure those survive the resize to another cell.
-        networks = [{
-            'port': self.neutron.port_1['id'],
-            'tag': 'private'
-        }]
+        if no_networking:
+            networks = 'none'
+        else:
+            # Provide a VIF tag for the pre-existing port. Since VIF tags are
+            # stored in the virtual_interfaces table in the cell DB, we want to
+            # make sure those survive the resize to another cell.
+            networks = [{
+                'port': self.neutron.port_1['id'],
+                'tag': 'private'
+            }]
         image_uuid = fake_image.get_valid_image_id()
         server = self._build_minimal_create_server_request(
             'test_cross_cell_resize',
@@ -158,7 +167,10 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             # We don't need the imageRef for volume-backed servers.
             server.pop('imageRef', None)
 
-        server = self.api.post_server({'server': server})
+        req = dict(server=server)
+        if group_id:
+            req['os:scheduler_hints'] = {'group': group_id}
+        server = self.api.post_server(req)
         server = self._wait_for_state_change(server, 'ACTIVE')
         # For volume-backed make sure there is one attachment to start.
         if volume_backed:
@@ -865,15 +877,74 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
     # resize_claim and a subsequent alternative host works, and also the
     # case that all hosts fail the resize_claim.
 
-    # TODO(mriedem): Test cross-cell anti-affinity group assumptions from
-    # scheduler utils setup_instance_group where it assumes moves are within
-    # the same cell, so:
-    # 0. create 2 hosts in cell1 and 1 host in cell2
-    # 1. create two servers in an anti-affinity group in cell1
-    # 2. migrate one server to cell2
-    # 3. migrate the other server to cell2 - this should fail during scheduling
-    # because there is already a server from the anti-affinity group on the
-    # host in cell2 but setup_instance_group code may not catch it.
+    def test_anti_affinity_group(self):
+        """Tests an anti-affinity group scenario where a server is moved across
+        cells and then trying to move the other from the same group to the same
+        host in the target cell should be rejected by the scheduler.
+        """
+        # Create an anti-affinity server group for our servers.
+        body = {
+            'server_group': {
+                'name': 'test_anti_affinity_group',
+                'policy': 'anti-affinity'
+            }
+        }
+        group_id = self.api.api_post(
+            '/os-server-groups', body).body['server_group']['id']
+
+        # Create a server in the group in cell1 (should land on host1 due to
+        # HostNameWeigher).
+        flavor = self.api.get_flavors()[0]
+        server1 = self._create_server(
+            flavor, group_id=group_id, no_networking=True)
+
+        # Start another compute host service in cell1.
+        self._start_compute(
+            'host3', cell_name=self.host_to_cell_mappings['host1'])
+        # Create another server but we want it on host3 in cell1. We cannot
+        # use the az forced host parameter because then we will not be able to
+        # move the server across cells later. The HostNameWeigher will prefer
+        # host2 in cell2 so we need to temporarily force host2 down.
+        host2_service_uuid = self.computes['host2'].service_ref.uuid
+        self.admin_api.put_service_force_down(
+            host2_service_uuid, forced_down=True)
+        server2 = self._create_server(
+            flavor, group_id=group_id, no_networking=True)
+        self.assertEqual('host3', server2['OS-EXT-SRV-ATTR:host'])
+        # Remove the forced-down status of the host2 compute service so we can
+        # migrate there.
+        self.admin_api.put_service_force_down(
+            host2_service_uuid, forced_down=False)
+
+        # Now migrate server1 which should move it to host2 in cell2 otherwise
+        # it would violate the anti-affinity policy since server2 is on host3
+        # in cell1.
+        self.admin_api.post_server_action(server1['id'], {'migrate': None})
+        server1 = self._wait_for_state_change(server1, 'VERIFY_RESIZE')
+        self.assertEqual('host2', server1['OS-EXT-SRV-ATTR:host'])
+        self.admin_api.post_server_action(
+            server1['id'], {'confirmResize': None})
+        self._wait_for_state_change(server1, 'ACTIVE')
+
+        # At this point we have:
+        # server1: host2 in cell2
+        # server2: host3 in cell1
+        # The server group hosts should reflect that.
+        ctxt = nova_context.get_admin_context()
+        group = objects.InstanceGroup.get_by_uuid(ctxt, group_id)
+        group_hosts = scheduler_utils._get_instance_group_hosts_all_cells(
+            ctxt, group)
+        self.assertEqual(['host2', 'host3'], sorted(group_hosts))
+
+        # Try to migrate server2 to host2 in cell2 which should fail scheduling
+        # because it violates the anti-affinity policy. Note that without
+        # change I4b67ec9dd4ce846a704d0f75ad64c41e693de0fb in
+        # ServerGroupAntiAffinityFilter this would fail because the scheduler
+        # utils setup_instance_group only looks at the group hosts in the
+        # source cell.
+        self.admin_api.post_server_action(
+            server2['id'], {'migrate': {'host': 'host2'}})
+        self._wait_for_migration_status(server2, ['error'])
 
     # TODO(mriedem): Perform a resize with at-capacity computes, meaning that
     # when we revert we can only fit the instance with the old flavor back
