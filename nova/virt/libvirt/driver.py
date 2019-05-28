@@ -9634,6 +9634,20 @@ class LibvirtDriver(driver.ComputeDriver):
                     vconfig.LibvirtConfigCPUFeature(name=f.name))
 
         xml_str = caps.host.cpu.to_xml()
+        features_xml = self._get_guest_baseline_cpu_features(xml_str)
+        feature_names = []
+        if features_xml:
+            cpu.parse_str(features_xml)
+            feature_names = [f.name for f in cpu.features]
+        return libvirt_utils.cpu_features_to_traits(feature_names)
+
+    def _get_guest_baseline_cpu_features(self, xml_str):
+        """Calls libvirt's baselineCPU API to compute the biggest set of
+        CPU features which is compatible with the given host CPU.
+
+        :param xml_str: XML description of host CPU
+        :return: An XML string of the computed CPU, or None on error
+        """
         LOG.debug("Libvirt baseline CPU %s", xml_str)
         # TODO(lei-zh): baselineCPU is not supported on all platforms.
         # There is some work going on in the libvirt community to replace the
@@ -9641,11 +9655,11 @@ class LibvirtDriver(driver.ComputeDriver):
         # https://www.redhat.com/archives/libvir-list/2018-May/msg01204.html.
         try:
             if hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'):
-                features = self._host.get_connection().baselineCPU(
+                return self._host.get_connection().baselineCPU(
                     [xml_str],
                     libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
             else:
-                features = self._host.get_connection().baselineCPU([xml_str])
+                return self._host.get_connection().baselineCPU([xml_str])
         except libvirt.libvirtError as ex:
             with excutils.save_and_reraise_exception() as ctxt:
                 error_code = ex.get_error_code()
@@ -9654,8 +9668,4 @@ class LibvirtDriver(driver.ComputeDriver):
                     LOG.info('URI %(uri)s does not support full set'
                              ' of host capabilities: %(error)s',
                              {'uri': self._host._uri, 'error': ex})
-                    return libvirt_utils.cpu_features_to_traits([])
-
-        cpu.parse_str(features)
-        return libvirt_utils.cpu_features_to_traits(
-            [f.name for f in cpu.features])
+                    return None
