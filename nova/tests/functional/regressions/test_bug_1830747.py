@@ -11,11 +11,9 @@
 # under the License.
 
 import mock
-import six
 
 import nova.conf
 from nova import context as nova_context
-from nova import exception
 from nova import objects
 from nova.scheduler import weights
 from nova import test
@@ -137,17 +135,10 @@ class MissingReqSpecInstanceGroupUUIDTestCase(
         with mock.patch.dict(host1_driver.capabilities,
                              supports_migrate_to_same_host=False):
             self.api.post_server_action(server['id'], {'migrate': None})
-            # FIXME(mriedem): Due to bug 1830747 we don't go to VERIFY_RESIZE
-            # because the reschedule fails and the instance is put into
-            # ERROR status. When the bug is fixed the status should be
-            # VERIFY_RESIZE and the server should be on host2.
             server = self._wait_for_state_change(
-                self.api, server, 'ERROR')
-            self.assertEqual('host1', server['OS-EXT-SRV-ATTR:host'])
+                self.api, server, 'VERIFY_RESIZE')
+            self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
 
-        # And the RequestSpec.instance_group.uuid should be missing which
-        # leads to us failing to load the RequestSpec.
-        ex = self.assertRaises(exception.ObjectActionError,
-                               objects.RequestSpec.get_by_instance_uuid,
-                               ctxt, server['id'])
-        self.assertIn('unable to load uuid', six.text_type(ex))
+        # The RequestSpec.instance_group.uuid should still be set.
+        reqspec = objects.RequestSpec.get_by_instance_uuid(ctxt, server['id'])
+        self.assertEqual(group_id, reqspec.instance_group.uuid)
