@@ -8154,7 +8154,8 @@ class ComputeManager(manager.Manager):
             return []
 
     @periodic_task.periodic_task(
-        spacing=CONF.running_deleted_instance_poll_interval)
+        spacing=CONF.running_deleted_instance_poll_interval,
+        run_immediately=True)
     def _cleanup_running_deleted_instances(self, context):
         """Cleanup any instances which are erroneously still running after
         having been deleted.
