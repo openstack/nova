@@ -496,13 +496,11 @@ class ComputeManager(manager.Manager):
         self.network_api = network.API()
         self.volume_api = cinder.API()
         self.image_api = image.API()
-        self._last_host_check = 0
         self._last_bw_usage_poll = 0
         self._bw_usage_supported = True
         self._last_bw_usage_cell_update = 0
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
-        self.conductor_api = conductor.API()
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.is_neutron_security_groups = (
             openstack_driver.is_neutron_security_groups())
