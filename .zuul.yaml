@@ -165,6 +165,7 @@
       TLS console proxy code in the libvirt driver.
       Starting in Stein, the job was changed to run with python 3 and enabled
       volume multi-attach testing.
+      Starting in Train, the job enabled counting quota usage from placement.
       Runs all tempest compute API and most scenario tests concurrently.
     run: playbooks/legacy/nova-next/run.yaml
     post-run: playbooks/legacy/nova-next/post.yaml

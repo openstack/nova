@@ -1176,8 +1176,9 @@ def _server_group_count_members_by_user(context, group, user_id):
                 {'user': 'server_group_members': <count across user>}}
     """
     # Because server group members quota counting is not scoped to a project,
-    # but scoped to a particular InstanceGroup and user, we cannot filter our
-    # user_id/queued_for_delete populated check on project_id or user_id.
+    # but scoped to a particular InstanceGroup and user, we have no reasonable
+    # way of pruning down our migration check to only a subset of all instance
+    # mapping records.
     # So, we check whether user_id/queued_for_delete is populated for all
     # records and cache the result to prevent unnecessary checking once the
     # data migration has been completed.
@@ -1185,9 +1186,8 @@ def _server_group_count_members_by_user(context, group, user_id):
     if not UID_QFD_POPULATED_CACHE_ALL:
         LOG.debug('Checking whether user_id and queued_for_delete are '
                   'populated for all projects')
-        uid_qfd_populated = _user_id_queued_for_delete_populated(context)
-        if uid_qfd_populated:
-            UID_QFD_POPULATED_CACHE_ALL = True
+        UID_QFD_POPULATED_CACHE_ALL = _user_id_queued_for_delete_populated(
+            context)
 
     if UID_QFD_POPULATED_CACHE_ALL:
         count = objects.InstanceMappingList.get_count_by_uuids_and_user(
@@ -1308,13 +1308,12 @@ def _instances_cores_ram_count(context, project_id, user_id=None):
                 UID_QFD_POPULATED_CACHE_BY_PROJECT.add(project_id)
         else:
             uid_qfd_populated = True
-        if not uid_qfd_populated:
-            LOG.warning('Falling back to legacy quota counting method for '
-                        'instances, cores, and ram')
-
-    if CONF.quota.count_usage_from_placement and uid_qfd_populated:
-        return _instances_cores_ram_count_api_db_placement(context, project_id,
-                                                           user_id=user_id)
+        if uid_qfd_populated:
+            return _instances_cores_ram_count_api_db_placement(context,
+                                                               project_id,
+                                                               user_id=user_id)
+    LOG.warning('Falling back to legacy quota counting method for instances, '
+                'cores, and ram')
     return _instances_cores_ram_count_legacy(context, project_id,
                                              user_id=user_id)
 

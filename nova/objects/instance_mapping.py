@@ -417,10 +417,6 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
         not included in the count (deleted and SOFT_DELETED instances).
         Instances that are queued_for_deleted=None are not included in the
         count because we are not certain about whether or not they are deleted.
-        When counting quota usage, we will fall back on the legacy counting
-        method and count instances, cores, and ram from cell databases if any
-        unmigrated instance mappings (user_id=None or queued_for_delete=None)
-        are detected, to avoid using a potentially inaccurate count.
 
         :param context: The request context for database access
         :param project_id: The project_id to count across
