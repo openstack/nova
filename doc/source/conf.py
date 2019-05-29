@@ -172,6 +172,9 @@ latex_documents = [
 # -- Options for openstackdocstheme -------------------------------------------
 
 # keep this ordered to keep mriedem happy
+#
+# NOTE(stephenfin): Projects that don't have a release branch, like TripleO and
+# reno, should not be included here
 openstack_projects = [
     'ceilometer',
     'cinder',
@@ -187,7 +190,6 @@ openstack_projects = [
     'oslo.versionedobjects',
     'python-novaclient',
     'python-openstackclient',
-    'reno',
     'watcher',
 ]
 # -- Custom extensions --------------------------------------------------------

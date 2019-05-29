@@ -6,9 +6,10 @@ Release Notes
 What is reno ?
 --------------
 
-Nova uses :reno-doc:`reno <>` for providing release notes in-tree. That means
-that a patch can include a *reno file* or a series can have a follow-on change
-containing that file explaining what the impact is.
+Nova uses `reno <https://docs.openstack.org/reno/latest/>`__ for providing
+release notes in-tree. That means that a patch can include a *reno file* or a
+series can have a follow-on change containing that file explaining what the
+impact is.
 
 A *reno file* is a YAML file written in the ``releasenotes/notes`` tree which
 is generated using the *reno* tool this way:
@@ -20,7 +21,9 @@ is generated using the *reno* tool this way:
 where usually ``<name-your-file>`` can be ``bp-<blueprint_name>`` for a
 blueprint or ``bug-XXXXXX`` for a bugfix.
 
-Refer to the :reno-doc:`reno documentation <user/index.html>` for more information.
+Refer to the `reno documentation
+<https://docs.openstack.org/reno/latest/user/index.html>`__ for more
+information.
 
 
 When a release note is needed
