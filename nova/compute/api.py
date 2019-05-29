@@ -1661,7 +1661,7 @@ class API(base.Base):
             default_hostname = 'Server-%s' % instance.uuid
             instance.hostname = utils.sanitize_hostname(
                 instance.display_name, default_hostname)
-        elif num_instances > 1 and self.cell_type != 'api':
+        elif num_instances > 1:
             old_display_name = instance.display_name
             new_display_name = '%s-%d' % (old_display_name, index + 1)
 

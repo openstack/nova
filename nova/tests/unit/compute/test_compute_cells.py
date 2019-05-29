@@ -456,12 +456,10 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         self.assertEqual(1, mock_msg.call_count)
 
     def test_populate_instance_for_create(self):
-        super(CellsComputeAPITestCase, self).test_populate_instance_for_create(
-            num_instances=2)
+        self.skipTest("Removing cells v1")
 
     def test_multi_instance_display_name(self):
-        super(CellsComputeAPITestCase,
-              self).test_multi_instance_display_name(cells_enabled=True)
+        self.skipTest("Removing cells v1")
 
     @ddt.data(True, False)
     def test_rdp_console(self, enabled_consoleauth):
