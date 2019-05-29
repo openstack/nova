@@ -462,7 +462,6 @@ class ComputeAPI(object):
                   'service': service_version})
         return version_cap
 
-    # Cells overrides this
     def get_client(self, target, version_cap, serializer):
         if CONF.rpc_response_timeout > rpc.HEARTBEAT_THRESHOLD:
             # NOTE(danms): If the operator has overridden RPC timeout

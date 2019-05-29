@@ -16,22 +16,13 @@
 
 from oslo_utils import importutils
 
-# Importing full names to not pollute the namespace and cause possible
-# collisions with use of 'from nova.compute import <foo>' elsewhere.
-import nova.cells.opts
-import nova.exception
-
-
-CELL_TYPE_TO_CLS_NAME = {'api': 'nova.compute.cells_api.ComputeCellsAPI',
-                         'compute': 'nova.compute.api.API',
-                         None: 'nova.compute.api.API',
-                        }
+# TODO(stephenfin): Remove this nonsense
+CELL_TYPE_TO_CLS_NAME = {None: 'nova.compute.api.API'}
 
 
 def _get_compute_api_class_name():
     """Returns the name of compute API class."""
-    cell_type = nova.cells.opts.get_cell_type()
-    return CELL_TYPE_TO_CLS_NAME[cell_type]
+    return CELL_TYPE_TO_CLS_NAME[None]
 
 
 def API(*args, **kwargs):

@@ -56,7 +56,6 @@ import six
 from six.moves import range
 
 from nova import block_device
-from nova.cells import rpcapi as cells_rpcapi
 from nova import compute
 from nova.compute import build_results
 from nova.compute import claims
@@ -507,7 +506,6 @@ class ComputeManager(manager.Manager):
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.is_neutron_security_groups = (
             openstack_driver.is_neutron_security_groups())
-        self.cells_rpcapi = cells_rpcapi.CellsAPI()
         self.query_client = query.SchedulerQueryClient()
         self.instance_events = InstanceEvents()
         self._sync_power_pool = eventlet.GreenPool(

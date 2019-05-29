@@ -48,8 +48,6 @@ class TestProfiler(test.NoDBTestCase):
 
         classes = [
             'nova.api.manager.MetadataManager',
-            'nova.cells.manager.CellsManager',
-            'nova.cells.rpcapi.CellsAPI',
             'nova.compute.api.API',
             'nova.compute.manager.ComputeManager',
             'nova.compute.rpcapi.ComputeAPI',

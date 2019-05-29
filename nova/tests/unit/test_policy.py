@@ -284,8 +284,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         self.fake_policy = jsonutils.loads(fake_policy.policy_data)
 
         self.admin_only_rules = (
-"cells_scheduler_filter:DifferentCellFilter",
-"cells_scheduler_filter:TargetCellFilter",
 "network:attach_external_network",
 "os_compute_api:servers:create:forced_host",
 "os_compute_api:servers:detail:get_all_tenants",

@@ -16,7 +16,6 @@
 import copy
 import datetime
 
-import iso8601
 import mock
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel
@@ -26,7 +25,6 @@ import webob.exc
 from nova.api.openstack.compute import services as services_v21
 from nova.api.openstack import wsgi as os_wsgi
 from nova import availability_zones
-from nova.cells import utils as cells_utils
 from nova import compute
 from nova import context
 from nova import exception
@@ -1315,78 +1313,6 @@ class ServicesTestV253(test.TestCase):
         self.assertEqual("No updates were requested. Fields 'status' or "
                          "'forced_down' should be specified.",
                          six.text_type(ex))
-
-
-class ServicesCellsTestV21(test.TestCase):
-
-    def setUp(self):
-        super(ServicesCellsTestV21, self).setUp()
-
-        host_api = compute.cells_api.HostAPI()
-
-        self._set_up_controller()
-        self.controller.host_api = host_api
-
-        self.useFixture(utils_fixture.TimeFixture(fake_utcnow()))
-
-        services_list = []
-        for service in fake_services_list:
-            service = service.copy()
-            del service['version']
-            service_obj = objects.Service(**service)
-            service_proxy = cells_utils.ServiceProxy(service_obj, 'cell1')
-            services_list.append(service_proxy)
-
-        host_api.cells_rpcapi.service_get_all = (
-            mock.Mock(side_effect=fake_service_get_all(services_list)))
-
-    def _set_up_controller(self):
-        self.controller = services_v21.ServiceController()
-
-    def _process_out(self, res_dict):
-        for res in res_dict['services']:
-            res.pop('disabled_reason')
-
-    def test_services_detail(self):
-        req = fakes.HTTPRequest.blank('/fake/services',
-                                      use_admin_context=True)
-        res_dict = self.controller.index(req)
-        utc = iso8601.UTC
-        response = {'services': [
-                    {'id': 'cell1@1',
-                     'binary': 'nova-scheduler',
-                     'host': 'cell1@host1',
-                     'zone': 'internal',
-                     'status': 'disabled',
-                     'state': 'up',
-                     'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2,
-                                                     tzinfo=utc)},
-                    {'id': 'cell1@2',
-                     'binary': 'nova-compute',
-                     'host': 'cell1@host1',
-                     'zone': 'nova',
-                     'status': 'disabled',
-                     'state': 'up',
-                     'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5,
-                                                     tzinfo=utc)},
-                    {'id': 'cell1@3',
-                     'binary': 'nova-scheduler',
-                     'host': 'cell1@host2',
-                     'zone': 'internal',
-                     'status': 'enabled',
-                     'state': 'down',
-                     'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34,
-                                                     tzinfo=utc)},
-                    {'id': 'cell1@4',
-                     'binary': 'nova-compute',
-                     'host': 'cell1@host2',
-                     'zone': 'nova',
-                     'status': 'disabled',
-                     'state': 'down',
-                     'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38,
-                                                     tzinfo=utc)}]}
-        self._process_out(res_dict)
-        self.assertEqual(response, res_dict)
 
 
 class ServicesPolicyEnforcementV21(test.NoDBTestCase):

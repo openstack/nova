@@ -766,6 +766,8 @@ class NotificationSource(BaseNovaEnum):
     SCHEDULER = 'nova-scheduler'
     NETWORK = 'nova-network'
     CONSOLEAUTH = 'nova-consoleauth'
+    # TODO(stephenfin): Remove when 'NotificationPublisher' object version is
+    # bumped to 3.0
     CELLS = 'nova-cells'
     CONSOLE = 'nova-console'
     METADATA = 'nova-metadata'

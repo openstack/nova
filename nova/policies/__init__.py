@@ -22,7 +22,6 @@ from nova.policies import attach_interfaces
 from nova.policies import availability_zone
 from nova.policies import baremetal_nodes
 from nova.policies import base
-from nova.policies import cells_scheduler
 from nova.policies import console_auth_tokens
 from nova.policies import console_output
 from nova.policies import consoles
@@ -85,7 +84,6 @@ def list_rules():
         attach_interfaces.list_rules(),
         availability_zone.list_rules(),
         baremetal_nodes.list_rules(),
-        cells_scheduler.list_rules(),
         console_auth_tokens.list_rules(),
         console_output.list_rules(),
         consoles.list_rules(),
