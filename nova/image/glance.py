@@ -907,8 +907,8 @@ def _extract_attributes_v2(image, include_locations=False):
               'disk_format': None, 'container_format': None, 'name': None,
               'checksum': None}
     for name, value in image.items():
-        if (name in omit_attrs
-                or name in include_locations_attrs and not include_locations):
+        if (name in omit_attrs or
+                name in include_locations_attrs and not include_locations):
             continue
         elif name == 'visibility':
             output['is_public'] = value == 'public'

@@ -71,8 +71,8 @@ class Monitor(base.CPUMonitorBase):
         # We compute the utilization percentages for each specific CPU time
         # after calculating the delta between the current reading and the
         # previous reading.
-        stats["total"] = (stats["user"] + stats["kernel"]
-                          + stats["idle"] + stats["iowait"])
+        stats["total"] = (stats["user"] + stats["kernel"] +
+                          stats["idle"] + stats["iowait"])
         cputime = float(stats["total"] - self._cpu_stats.get("total", 0))
 
         # NOTE(jwcroppe): Convert all the `perc` values to their integer forms
@@ -92,9 +92,9 @@ class Monitor(base.CPUMonitorBase):
 
         # Compute the current system-wide CPU utilization as a percentage.
         used = stats["user"] + stats["kernel"] + stats["iowait"]
-        prev_used = (self._cpu_stats.get("user", 0)
-                     + self._cpu_stats.get("kernel", 0)
-                     + self._cpu_stats.get("iowait", 0))
+        prev_used = (self._cpu_stats.get("user", 0) +
+                     self._cpu_stats.get("kernel", 0) +
+                     self._cpu_stats.get("iowait", 0))
         perc = (used - prev_used) / cputime
         self._data["cpu.percent"] = int(perc * 100)
 

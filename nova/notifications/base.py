@@ -118,8 +118,8 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
         if old_vm_state != new_vm_state:
             # yes, the vm state is changing:
             fire_update = True
-        elif (CONF.notifications.notify_on_state_change == "vm_and_task_state"
-              and old_task_state != new_task_state):
+        elif (CONF.notifications.notify_on_state_change ==
+                "vm_and_task_state" and old_task_state != new_task_state):
             # yes, the task state is changing:
             fire_update = True
 

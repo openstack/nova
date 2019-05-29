@@ -555,8 +555,8 @@ class TestNeutronv2Base(test.TestCase):
             pre_create_port = (
                 kwargs.get('_break') == 'post_list_networks' or
                 ((requested_networks is None or
-                  requested_networks.as_tuples() == [(None, None, None)])
-                 and len(nets) > 1) or
+                  requested_networks.as_tuples() == [(None, None, None)]) and
+                 len(nets) > 1) or
                 kwargs.get('_break') == 'post_list_extensions')
 
             if pre_create_port:

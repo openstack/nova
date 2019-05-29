@@ -192,8 +192,8 @@ class HostState(object):
                       'updated yet.', compute.uuid)
             return
 
-        if (self.updated and compute.updated_at
-                and self.updated > compute.updated_at):
+        if (self.updated and compute.updated_at and
+                self.updated > compute.updated_at):
             return
         all_ram_mb = compute.memory_mb
 
@@ -393,8 +393,8 @@ class HostManager(object):
         # Refreshing the mapping dict to remove all hosts that are no longer
         # part of the aggregate
         for host in self.host_aggregates_map:
-            if (aggregate.id in self.host_aggregates_map[host]
-                    and host not in aggregate.hosts):
+            if (aggregate.id in self.host_aggregates_map[host] and
+                    host not in aggregate.hosts):
                 self.host_aggregates_map[host].remove(aggregate.id)
 
     def delete_aggregate(self, aggregate):

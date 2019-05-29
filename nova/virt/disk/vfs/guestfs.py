@@ -110,8 +110,8 @@ class VFSGuestFS(vfs.VFS):
                               "event": guestfs.event_to_string(ev),
                               "eh": eh, "buf": buf, "array": array})
 
-            events = (guestfs.EVENT_APPLIANCE | guestfs.EVENT_LIBRARY
-                      | guestfs.EVENT_WARNING | guestfs.EVENT_TRACE)
+            events = (guestfs.EVENT_APPLIANCE | guestfs.EVENT_LIBRARY |
+                      guestfs.EVENT_WARNING | guestfs.EVENT_TRACE)
 
             self.handle.set_trace(True)  # just traces libguestfs API calls
             self.handle.set_verbose(True)

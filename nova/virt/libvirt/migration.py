@@ -40,8 +40,8 @@ libvirt = None
 def graphics_listen_addrs(migrate_data):
     """Returns listen addresses of vnc/spice from a LibvirtLiveMigrateData"""
     listen_addrs = None
-    if (migrate_data.obj_attr_is_set('graphics_listen_addr_vnc')
-        or migrate_data.obj_attr_is_set('graphics_listen_addr_spice')):
+    if (migrate_data.obj_attr_is_set('graphics_listen_addr_vnc') or
+            migrate_data.obj_attr_is_set('graphics_listen_addr_spice')):
         listen_addrs = {'vnc': None, 'spice': None}
     if migrate_data.obj_attr_is_set('graphics_listen_addr_vnc'):
         listen_addrs['vnc'] = str(migrate_data.graphics_listen_addr_vnc)

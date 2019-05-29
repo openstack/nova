@@ -173,8 +173,9 @@ class XenAPIDriver(driver.ComputeDriver):
         # Some padding is done to each value to fit all available VM data
         memory_mb = instance_info['memory_mb']
         vcpus = instance_info.get('vcpus', 1)
-        overhead = ((memory_mb * OVERHEAD_PER_MB) + (vcpus * OVERHEAD_PER_VCPU)
-                        + OVERHEAD_BASE)
+        overhead = ((memory_mb * OVERHEAD_PER_MB) +
+                    (vcpus * OVERHEAD_PER_VCPU) +
+                    OVERHEAD_BASE)
         overhead = math.ceil(overhead)
         return {'memory_mb': overhead}
 

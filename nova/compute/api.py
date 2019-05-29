@@ -1510,8 +1510,8 @@ class API(base.Base):
         # be used for booting.
         boot_indexes = sorted([bdm.boot_index
                                for bdm in block_device_mappings
-                               if bdm.boot_index is not None
-                               and bdm.boot_index >= 0])
+                               if bdm.boot_index is not None and
+                               bdm.boot_index >= 0])
 
         # Each device which is capable of being used as boot device should
         # be given a unique boot index, starting from 0 in ascending order, and
@@ -5389,8 +5389,8 @@ class AggregateAPI(base.Base):
                 context, 'availability_zone', hosts=_hosts)
             conflicting_azs = [
                 agg.availability_zone for agg in host_aggregates
-                if agg.availability_zone != metadata['availability_zone']
-                and agg.id != aggregate.id]
+                if agg.availability_zone != metadata['availability_zone'] and
+                agg.id != aggregate.id]
             if conflicting_azs:
                 msg = _("One or more hosts already in availability zone(s) "
                         "%s") % conflicting_azs

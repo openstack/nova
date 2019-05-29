@@ -218,7 +218,7 @@ class AggregateController(wsgi.Controller):
         # case it is only ['availability_zone']) without worrying about
         # lazy-loading an unset variable
         for key in keys:
-            if ((aggregate.obj_attr_is_set(key)
-                    or key in aggregate.obj_extra_fields) and
+            if ((aggregate.obj_attr_is_set(key) or
+                    key in aggregate.obj_extra_fields) and
                     (show_uuid or key != 'uuid')):
                 yield key, getattr(aggregate, key)

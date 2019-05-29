@@ -102,8 +102,8 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
         db_mapping = (context.session.query(api_models.InstanceMapping)
                         .options(joinedload('cell_mapping'))
                         .filter(
-                            api_models.InstanceMapping.instance_uuid
-                            == instance_uuid)).first()
+                            api_models.InstanceMapping.instance_uuid ==
+                            instance_uuid)).first()
         if not db_mapping:
             raise exception.InstanceMappingNotFound(uuid=instance_uuid)
 

@@ -251,8 +251,8 @@ def fake_virtual_interface_get_by_instance(context, instance_id):
 def fake_virtual_interface_get_by_instance_and_network(context,
                                                        instance_id,
                                                        network_id):
-    vif = [v for v in virtual_interfaces if v['instance_id'] == instance_id
-           and v['network_id'] == network_id]
+    vif = [v for v in virtual_interfaces if v['instance_id'] == instance_id and
+           v['network_id'] == network_id]
     if not vif:
         return None
     return FakeModel(vif[0])

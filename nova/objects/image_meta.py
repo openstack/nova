@@ -580,8 +580,8 @@ class ImageMetaProps(base.NovaObject):
 
     def _set_attr_from_trait_names(self, image_props):
         for trait in [six.text_type(k[6:]) for k, v in image_props.items()
-                      if six.text_type(k).startswith("trait:")
-                      and six.text_type(v) == six.text_type('required')]:
+                      if six.text_type(k).startswith("trait:") and
+                      six.text_type(v) == six.text_type('required')]:
             if 'traits_required' not in self:
                 self.traits_required = []
             self.traits_required.append(trait)

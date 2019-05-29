@@ -586,8 +586,7 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
     if numa_topology:
         min_requested_threads = None
         cell_topologies = [cell.cpu_topology for cell in numa_topology.cells
-                           if ('cpu_topology' in cell
-                               and cell.cpu_topology)]
+                           if ('cpu_topology' in cell and cell.cpu_topology)]
         if cell_topologies:
             min_requested_threads = min(
                     topo.threads for topo in cell_topologies)
@@ -1759,8 +1758,8 @@ def numa_fit_instance_to_host(
                 host_cell_perm, instance_topology.cells):
             try:
                 cpuset_reserved = 0
-                if (instance_topology.emulator_threads_isolated
-                    and len(chosen_instance_cells) == 0):
+                if (instance_topology.emulator_threads_isolated and
+                    len(chosen_instance_cells) == 0):
                     # For the case of isolate emulator threads, to
                     # make predictable where that CPU overhead is
                     # located we always configure it to be on host
@@ -1897,8 +1896,8 @@ def numa_usage_from_instances(host, instances, free=False):
                     cpu_usage_diff *= max(map(len, hostcell.siblings))
                 cpu_usage += sign * cpu_usage_diff
 
-                if (cellid == 0
-                    and instance.emulator_threads_isolated):
+                if (cellid == 0 and
+                    instance.emulator_threads_isolated):
                     # The emulator threads policy when defined
                     # with 'isolate' makes the instance to consume
                     # an additional pCPU as overhead. That pCPU is

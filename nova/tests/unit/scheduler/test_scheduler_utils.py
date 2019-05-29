@@ -163,8 +163,8 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         if force_nodes is None:
             force_nodes = []
         if with_retry:
-            if ((len(force_hosts) == 1 and len(force_nodes) <= 1)
-                 or (len(force_nodes) == 1 and len(force_hosts) <= 1)):
+            if ((len(force_hosts) == 1 and len(force_nodes) <= 1) or
+                 (len(force_nodes) == 1 and len(force_hosts) <= 1)):
                 filter_properties = dict(force_hosts=force_hosts,
                                          force_nodes=force_nodes)
             elif len(force_hosts) > 1 or len(force_nodes) > 1:
@@ -208,8 +208,8 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self.assertEqual(expected_limits,
                          filter_properties.get('limits'))
 
-        if (with_retry and enable_retry_force_hosts
-                       and enable_retry_force_nodes):
+        if (with_retry and enable_retry_force_hosts and
+                enable_retry_force_nodes):
             self.assertEqual([['fake-host', 'fake-node'],
                               ['fake-host', 'fake-node']],
                              filter_properties['retry']['hosts'])

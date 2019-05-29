@@ -332,12 +332,12 @@ class RequestSpec(base.NovaObject):
         :param hint_name: name of the hint
         :param default: the default value if the hint is not there
         """
-        if (not self.obj_attr_is_set('scheduler_hints')
-                or self.scheduler_hints is None):
+        if (not self.obj_attr_is_set('scheduler_hints') or
+                self.scheduler_hints is None):
             return default
         hint_val = self.scheduler_hints.get(hint_name, default)
-        return (hint_val[0] if isinstance(hint_val, list)
-                and len(hint_val) == 1 else hint_val)
+        return (hint_val[0] if isinstance(hint_val, list) and
+                len(hint_val) == 1 else hint_val)
 
     def _to_legacy_image(self):
         return base.obj_to_primitive(self.image) if (
@@ -810,9 +810,9 @@ class RequestSpec(base.NovaObject):
 
         for group in self.requested_resources:
             # See the limitations in the func doc above
-            if (not group.use_same_provider
-                    or group.aggregates
-                    or group.forbidden_traits):
+            if (not group.use_same_provider or
+                    group.aggregates or
+                    group.forbidden_traits):
                 raise NotImplementedError()
 
         # Iterate through every possible group - RP mappings and try to find a

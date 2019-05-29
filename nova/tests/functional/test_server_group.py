@@ -47,8 +47,8 @@ class ServerGroupTestBase(test.TestCase,
     api_major_version = 'v2.1'
     microversion = None
 
-    _enabled_filters = (CONF.filter_scheduler.enabled_filters
-                        + ['ServerGroupAntiAffinityFilter',
+    _enabled_filters = (CONF.filter_scheduler.enabled_filters +
+                        ['ServerGroupAntiAffinityFilter',
                            'ServerGroupAffinityFilter'])
 
     # Override servicegroup parameters to make the tests run faster

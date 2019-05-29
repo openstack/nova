@@ -64,9 +64,8 @@ def _instance_in_resize_state(instance):
     if vm == vm_states.RESIZED:
         return True
 
-    if (vm in [vm_states.ACTIVE, vm_states.STOPPED]
-            and task in (
-                task_states.resizing_states + task_states.rebuild_states)):
+    if vm in [vm_states.ACTIVE, vm_states.STOPPED] and task in (
+            task_states.resizing_states + task_states.rebuild_states):
         return True
 
     return False

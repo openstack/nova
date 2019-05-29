@@ -675,10 +675,10 @@ class GuestTestCase(test.NoDBTestCase):
                             quiesce=True)
         self.domain.snapshotCreateXML(
             '<disk/>', flags=(
-                fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT
-                | fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY
-                | fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA
-                | fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE))
+                fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT |
+                fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY |
+                fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA |
+                fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE))
         conf.to_xml.assert_called_once_with()
 
     def test_pause(self):

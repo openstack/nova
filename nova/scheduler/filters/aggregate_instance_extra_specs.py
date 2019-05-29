@@ -44,8 +44,8 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
         instance_type = spec_obj.flavor
         # If 'extra_specs' is not present or extra_specs are empty then we
         # need not proceed further
-        if (not instance_type.obj_attr_is_set('extra_specs')
-                or not instance_type.extra_specs):
+        if (not instance_type.obj_attr_is_set('extra_specs') or
+                not instance_type.extra_specs):
             return True
 
         metadata = utils.aggregate_metadata_get_by_host(host_state)
