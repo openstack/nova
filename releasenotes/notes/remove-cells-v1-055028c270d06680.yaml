@@ -7,9 +7,9 @@ upgrade:
     simple_cell_setup`` command will no longer check if cells v1 is enabled and
     therefore can no longer exit with ``2``.
 
-    The *cells v1* specific REST APIs have
-    been removed along with their related policy rules. Calling these APIs will
-    now result in a ``410 (Gone)`` error response.
+    The *cells v1* specific REST APIs have been removed along with their
+    related policy rules. Calling these APIs will now result in a ``410
+    (Gone)`` error response.
 
     * ``GET /os-cells``
     * ``POST /os-cells``
@@ -21,6 +21,11 @@ upgrade:
     * ``PUT /os-cells/{cell_id}``
     * ``DELETE /os-cells/{cell_id}``
     * ``GET /os-cells/{cell_id}/capacities``
+
+    The *cells v1* specific policies have been removed.
+
+    * ``cells_scheduler_filter:DifferentCellFilter``
+    * ``cells_scheduler_filter:TargetCellFilter``
 
     The *cells v1* specific configuration options, previously found in
     ``cells``, have been removed.
