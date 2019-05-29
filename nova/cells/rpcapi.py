@@ -382,19 +382,6 @@ class CellsAPI(object):
         cctxt = self.client.prepare(version='1.11')
         return cctxt.call(ctxt, 'get_migrations', filters=filters)
 
-    def instance_update_from_api(self, ctxt, instance, expected_vm_state,
-                                 expected_task_state, admin_state_reset):
-        """Update an instance in its cell.
-
-        This method takes a new-world instance object.
-        """
-        cctxt = self.client.prepare(version='1.16')
-        cctxt.cast(ctxt, 'instance_update_from_api',
-                   instance=instance,
-                   expected_vm_state=expected_vm_state,
-                   expected_task_state=expected_task_state,
-                   admin_state_reset=admin_state_reset)
-
     def start_instance(self, ctxt, instance):
         """Start an instance in its cell.
 

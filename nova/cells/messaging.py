@@ -768,23 +768,6 @@ class _TargetedMessageMethods(_BaseMessageMethods):
     def get_migrations(self, message, filters):
         return self.compute_api.get_migrations(message.ctxt, filters)
 
-    def instance_update_from_api(self, message, instance,
-                                 expected_vm_state,
-                                 expected_task_state,
-                                 admin_state_reset):
-        """Update an instance in this cell."""
-        if not admin_state_reset:
-            # NOTE(comstud): We don't want to nuke this cell's view
-            # of vm_state and task_state unless it's a forced reset
-            # via admin API.
-            instance.obj_reset_changes(['vm_state', 'task_state'])
-        # NOTE(alaski): A cell should be authoritative for its system_metadata
-        # and metadata so we don't want to sync it down from the api.
-        instance.obj_reset_changes(['metadata', 'system_metadata'])
-        with instance.skip_cells_sync():
-            instance.save(expected_vm_state=expected_vm_state,
-                          expected_task_state=expected_task_state)
-
     def _call_compute_api_with_obj(self, ctxt, instance, method, *args,
                                    **kwargs):
         try:
@@ -1474,24 +1457,6 @@ class MessageRunner(object):
                                    'down', cell_name,
                                    need_response=need_response)
         return message.process()
-
-    def instance_update_from_api(self, ctxt, instance,
-                                expected_vm_state, expected_task_state,
-                                admin_state_reset):
-        """Update an instance object in its cell."""
-        cell_name = instance.cell_name
-        if not cell_name:
-            LOG.warning("No cell_name for instance update from API",
-                        instance=instance)
-            return
-        method_kwargs = {'instance': instance,
-                         'expected_vm_state': expected_vm_state,
-                         'expected_task_state': expected_task_state,
-                         'admin_state_reset': admin_state_reset}
-        message = _TargetedMessage(self, ctxt, 'instance_update_from_api',
-                                   method_kwargs, 'down',
-                                   cell_name)
-        message.process()
 
     def start_instance(self, ctxt, instance):
         """Start an instance in its cell."""
