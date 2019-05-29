@@ -775,8 +775,8 @@ class Host(object):
             virt_type,
             flags
         )
-        LOG.info("Libvirt host hypervisor capabilities for arch=%s and "
-                 "machine_type=%s:\n%s", arch, machine_type, xmlstr)
+        LOG.debug("Libvirt host hypervisor capabilities for arch=%s and "
+                  "machine_type=%s:\n%s", arch, machine_type, xmlstr)
         caps = vconfig.LibvirtConfigDomainCaps()
         caps.parse_str(xmlstr)
         return caps
