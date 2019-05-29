@@ -135,10 +135,8 @@ latex_documents = [
 
 # keep this ordered to keep mriedem happy
 #
-# NOTE(kchamart): Versioned TripleO Docs is not a yet a "thing".  Remove
-# this note when they can be versioned, and add 'tripleo-docs' to the
-# set of projects below.
-
+# NOTE(stephenfin): Projects that don't have a release branch, like TripleO and
+# reno, should not be included here
 openstack_projects = [
     'ceilometer',
     'cinder',
@@ -155,7 +153,6 @@ openstack_projects = [
     'placement',
     'python-novaclient',
     'python-openstackclient',
-    'reno',
     'watcher',
 ]
 # -- Custom extensions --------------------------------------------------------
