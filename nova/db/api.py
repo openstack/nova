@@ -30,7 +30,6 @@ these objects be simple dictionaries.
 from oslo_db import concurrency
 from oslo_log import log as logging
 
-from nova.cells import rpcapi as cells_rpcapi
 import nova.conf
 from nova.db import constants
 
@@ -1625,20 +1624,12 @@ def bw_usage_get_by_uuids(context, uuids, start_period):
 
 
 def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
-                    last_ctr_in, last_ctr_out, last_refreshed=None,
-                    update_cells=True):
+                    last_ctr_in, last_ctr_out, last_refreshed=None):
     """Update cached bandwidth usage for an instance's network based on mac
     address.  Creates new record if needed.
     """
     rv = IMPL.bw_usage_update(context, uuid, mac, start_period, bw_in,
             bw_out, last_ctr_in, last_ctr_out, last_refreshed=last_refreshed)
-    if update_cells:
-        try:
-            cells_rpcapi.CellsAPI().bw_usage_update_at_top(context,
-                    uuid, mac, start_period, bw_in, bw_out,
-                    last_ctr_in, last_ctr_out, last_refreshed)
-        except Exception:
-            LOG.exception("Failed to notify cells of bw_usage update")
     return rv
 
 

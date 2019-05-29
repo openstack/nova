@@ -166,30 +166,6 @@ class CellsAPITestCase(test.NoDBTestCase):
         self._check_result(call_info, 'instance_delete_everywhere',
                 expected_args, version='1.27')
 
-    def test_bw_usage_update_at_top(self):
-        update_args = ('fake_uuid', 'fake_mac', 'fake_start_period',
-                'fake_bw_in', 'fake_bw_out', 'fake_ctr_in',
-                'fake_ctr_out')
-        update_kwargs = {'last_refreshed': 'fake_refreshed'}
-
-        call_info = self._stub_rpc_method('cast', None)
-
-        self.cells_rpcapi.bw_usage_update_at_top(
-                self.fake_context, *update_args, **update_kwargs)
-
-        bw_update_info = {'uuid': 'fake_uuid',
-                          'mac': 'fake_mac',
-                          'start_period': 'fake_start_period',
-                          'bw_in': 'fake_bw_in',
-                          'bw_out': 'fake_bw_out',
-                          'last_ctr_in': 'fake_ctr_in',
-                          'last_ctr_out': 'fake_ctr_out',
-                          'last_refreshed': 'fake_refreshed'}
-
-        expected_args = {'bw_update_info': bw_update_info}
-        self._check_result(call_info, 'bw_usage_update_at_top',
-                expected_args)
-
     def test_get_cell_info_for_neighbors(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
         result = self.cells_rpcapi.get_cell_info_for_neighbors(

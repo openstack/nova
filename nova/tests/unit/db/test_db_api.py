@@ -8271,8 +8271,7 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
                             'last_ctr_in': 54321,
                             'last_ctr_out': 67890,
                             'last_refreshed': now}
-        result = db.bw_usage_update(
-            self.ctxt, update_cells=False, **updated_bw_usage)
+        result = db.bw_usage_update(self.ctxt, **updated_bw_usage)
 
         # check that only bw_usage with ID 1 was updated
         self.assertEqual(1, result['id'])

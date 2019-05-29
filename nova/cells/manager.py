@@ -225,10 +225,6 @@ class CellsManager(manager.Manager):
         self.msg_runner.instance_delete_everywhere(ctxt, instance,
                                                    delete_type)
 
-    def bw_usage_update_at_top(self, ctxt, bw_update_info):
-        """Update bandwidth usage at top level cell."""
-        self.msg_runner.bw_usage_update_at_top(ctxt, bw_update_info)
-
     def sync_instances(self, ctxt, project_id, updated_since, deleted):
         """Force a sync of all instances, potentially by project_id,
         and potentially since a certain date/time.

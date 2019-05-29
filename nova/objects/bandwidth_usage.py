@@ -60,6 +60,7 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject):
         if db_bw_usage:
             return cls._from_db_object(context, cls(), db_bw_usage)
 
+    # TODO(stephenfin): Remove 'update_cells' in version 2.0 of the object
     @base.serialize_args
     @base.remotable
     def create(self, uuid, mac, bw_in, bw_out, last_ctr_in,
@@ -67,8 +68,7 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject):
                update_cells=True):
         db_bw_usage = db.bw_usage_update(
             self._context, uuid, mac, start_period, bw_in, bw_out,
-            last_ctr_in, last_ctr_out, last_refreshed=last_refreshed,
-            update_cells=update_cells)
+            last_ctr_in, last_ctr_out, last_refreshed=last_refreshed)
 
         self._from_db_object(self._context, self, db_bw_usage)
 

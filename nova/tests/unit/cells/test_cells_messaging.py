@@ -1388,28 +1388,6 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
         self.src_msg_runner.instance_delete_everywhere(self.ctxt,
                 instance, 'soft')
 
-    def test_bw_usage_update_at_top(self):
-        fake_bw_update_info = {'uuid': 'fake_uuid',
-                               'mac': 'fake_mac',
-                               'start_period': 'fake_start_period',
-                               'bw_in': 'fake_bw_in',
-                               'bw_out': 'fake_bw_out',
-                               'last_ctr_in': 'fake_last_ctr_in',
-                               'last_ctr_out': 'fake_last_ctr_out',
-                               'last_refreshed': 'fake_last_refreshed'}
-
-        # Shouldn't be called for these 2 cells
-        self.mox.StubOutWithMock(self.src_db_inst, 'bw_usage_update')
-        self.mox.StubOutWithMock(self.mid_db_inst, 'bw_usage_update')
-
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'bw_usage_update')
-        self.tgt_db_inst.bw_usage_update(self.ctxt, **fake_bw_update_info)
-
-        self.mox.ReplayAll()
-
-        self.src_msg_runner.bw_usage_update_at_top(self.ctxt,
-                                                   fake_bw_update_info)
-
     def test_sync_instances(self):
         # Reset this, as this is a broadcast down.
         self._setup_attrs(up=False)
