@@ -17,6 +17,8 @@
 """Tests for the testing base code."""
 
 import os.path
+import tempfile
+import uuid
 
 import mock
 from oslo_log import log as logging
@@ -374,3 +376,58 @@ class PatchExistsTestCase(test.NoDBTestCase):
         # Check non-patched parameters
         self.assertTrue(os.path.exists(os.path.dirname(__file__)))
         self.assertFalse(os.path.exists('non-existent/file'))
+
+
+class PatchOpenTestCase(test.NoDBTestCase):
+    fake_contents = "These file contents don't really exist"
+
+    def _test_patched_open(self):
+        """Test that a selectively patched open can fake the contents of a
+        file while still allowing normal, real file operations.
+        """
+        self.assertFalse(os.path.exists('fake_file'))
+
+        with open('fake_file') as f:
+            self.assertEqual(self.fake_contents, f.read())
+
+        # Test we can still open and read this file from within the
+        # same context.  NOTE: We have to make sure we open the .py
+        # file not the corresponding .pyc file.
+        with open(__file__.rstrip('c')) as f:
+            this_file_contents = f.read()
+            self.assertIn("class %s(" % self.__class__.__name__,
+                          this_file_contents)
+            self.assertNotIn("magic concatenated" "string",
+                             this_file_contents)
+
+        # Test we can still create, write to, and then read from a
+        # temporary file, from within the same context.
+        tmp = tempfile.NamedTemporaryFile()
+        tmp_contents = str(uuid.uuid1())
+        with open(tmp.name, 'w') as f:
+            f.write(tmp_contents)
+        with open(tmp.name) as f:
+            self.assertEqual(tmp_contents, f.read())
+
+        return tmp.name
+
+    def test_with_patch_open(self):
+        """Test that "with patch_open" can fake the contents of a file
+        without changing other file operations, and that calls can
+        be asserted on the mocked method.
+        """
+        with self.patch_open('fake_file', self.fake_contents) as mock_open:
+            tmp_name = self._test_patched_open()
+
+            # Test we can make assertions about how the mock_open was called.
+            self.assertIn(mock.call('fake_file'), mock_open.mock_calls)
+            # The mock_open should get bypassed for non-patched path values:
+            self.assertNotIn(mock.call(__file__), mock_open.mock_calls)
+            self.assertNotIn(mock.call(tmp_name), mock_open.mock_calls)
+
+    @test.patch_open('fake_file', fake_contents)
+    def test_patch_open_decorator(self):
+        """Test that @patch_open can fake the contents of a file
+        without changing other file operations.
+        """
+        self._test_patched_open()

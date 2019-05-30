@@ -108,8 +108,7 @@ class GetFunctionByIfnameTestCase(test.NoDBTestCase):
         totalvf_path = "/sys/class/net/%s/device/%s" % (ifname,
                                                         utils._SRIOV_TOTALVFS)
         mock_readlink.return_value = '../../../0000:00:00.1'
-        with mock.patch.object(
-            builtins, 'open', mock.mock_open(read_data='4')) as mock_open:
+        with self.patch_open(totalvf_path, '4') as mock_open:
             address, physical_function = utils.get_function_by_ifname('eth0')
             self.assertEqual(address, '0000:00:00.1')
             self.assertTrue(physical_function)
