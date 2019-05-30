@@ -3070,12 +3070,26 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         bdm_values = {
             'instance_uuid': uuid,
-            'device_name': 'fake_device',
+            'device_name': '/dev/vda',
             'source_type': 'volume',
             'destination_type': 'volume',
         }
         block_dev = block_device.BlockDeviceDict(bdm_values)
         db.block_device_mapping_create(self.ctxt, block_dev, legacy=False)
+
+        # Crate a second BDM that is soft-deleted to simulate that the
+        # volume was detached and the BDM was deleted before the instance
+        # was hard destroyed.
+        bdm2_values = {
+            'instance_uuid': uuid,
+            'device_name': '/dev/vdb',
+            'source_type': 'volume',
+            'destination_type': 'volume',
+        }
+        block_dev2 = block_device.BlockDeviceDict(bdm2_values)
+        bdm2 = db.block_device_mapping_create(
+            self.ctxt, block_dev2, legacy=False)
+        db.block_device_mapping_destroy(self.ctxt, bdm2.id)
 
         migration_values = {
             "status": "finished",
@@ -3122,7 +3136,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.assertEqual(0, len(instance_faults[uuid]))
             inst_bdms = db.block_device_mapping_get_all_by_instance(ctxt, uuid)
             self.assertEqual(0, len(inst_bdms))
-            filters = {"isntance_uuid": uuid}
+            filters = {"instance_uuid": uuid}
             inst_migrations = db.migration_get_all_by_filters(ctxt, filters)
             self.assertEqual(0, len(inst_migrations))
             vifs = db.virtual_interface_get_by_instance(ctxt, uuid)
