@@ -87,8 +87,8 @@ OpenStack Compute consists of the following areas and their components:
 
 The queue
   A central hub for passing messages between daemons. Usually implemented with
-  `RabbitMQ <https://www.rabbitmq.com/>`__, also can be implemented with
-  another AMQP message queue, such as `ZeroMQ <http://www.zeromq.org/>`__.
+  `RabbitMQ <https://www.rabbitmq.com/>`__ but
+  :oslo.messaging-doc:`other options are available <admin/drivers>`.
 
 SQL database
   Stores most build-time and run-time states for a cloud infrastructure,
