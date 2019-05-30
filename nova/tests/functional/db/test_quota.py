@@ -17,6 +17,7 @@ from nova import objects
 from nova import quota
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional.db import test_instance_mapping
 
 
 class QuotaTestCase(test.NoDBTestCase):
@@ -146,3 +147,51 @@ class QuotaTestCase(test.NoDBTestCase):
         self.assertEqual(2, count['user']['instances'])
         self.assertEqual(6, count['user']['cores'])
         self.assertEqual(1536, count['user']['ram'])
+
+    def test_user_id_queued_for_delete_populated(self):
+        ctxt = context.RequestContext('fake-user', 'fake-project')
+
+        # One deleted or SOFT_DELETED instance with user_id=None, should not be
+        # considered by the check.
+        test_instance_mapping.create_mapping(user_id=None,
+                                             queued_for_delete=True)
+
+        # Should be True because deleted instances are not considered.
+        self.assertTrue(quota._user_id_queued_for_delete_populated(ctxt))
+
+        # A non-deleted instance with user_id=None, should be considered in the
+        # check.
+        test_instance_mapping.create_mapping(user_id=None,
+                                             queued_for_delete=False)
+
+        # Should be False because it's not deleted and user_id is unmigrated.
+        self.assertFalse(quota._user_id_queued_for_delete_populated(ctxt))
+
+        # A non-deleted instance in a different project, should be considered
+        # in the check (if project_id is not passed).
+        test_instance_mapping.create_mapping(queued_for_delete=False,
+                                             project_id='other-project')
+
+        # Should be False since only instance 3 has user_id set and we're not
+        # filtering on project.
+        self.assertFalse(quota._user_id_queued_for_delete_populated(ctxt))
+
+        # Should be True because only instance 3 will be considered when we
+        # filter on project.
+        self.assertTrue(
+            quota._user_id_queued_for_delete_populated(
+                ctxt, project_id='other-project'))
+
+        # Add a mapping for an instance that has not yet migrated
+        # queued_for_delete.
+        test_instance_mapping.create_mapping(queued_for_delete=None)
+
+        # Should be False because an unmigrated queued_for_delete was found.
+        self.assertFalse(
+            quota._user_id_queued_for_delete_populated(ctxt))
+
+        # Check again filtering on project. Should be True because the
+        # unmigrated queued_for_delete record is part of a different project.
+        self.assertTrue(
+            quota._user_id_queued_for_delete_populated(
+                ctxt, project_id='other-project'))
