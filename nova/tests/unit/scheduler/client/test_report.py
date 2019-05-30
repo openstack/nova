@@ -4101,3 +4101,89 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
         mock_set_aggs.assert_has_calls([mock.call(
             self.context, uuids.cn1, set([]), use_cache=False,
             generation=gen) for gen in gens])
+
+
+class TestUsages(SchedulerReportClientTestCase):
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
+    def test_get_usages_counts_for_quota_fail(self, mock_get):
+        # First call with project fails
+        mock_get.return_value = fake_requests.FakeResponse(500, content='err')
+        self.assertRaises(exception.UsagesRetrievalFailed,
+                          self.client.get_usages_counts_for_quota,
+                          self.context, 'fake-project')
+        mock_get.assert_called_once_with(
+            '/usages?project_id=fake-project', version='1.9',
+            global_request_id=self.context.global_id)
+        # Second call with project + user fails
+        mock_get.reset_mock()
+        fake_good_response = fake_requests.FakeResponse(
+            200, content=jsonutils.dumps(
+                {'usages': {orc.VCPU: 2,
+                            orc.MEMORY_MB: 512}}))
+        mock_get.side_effect = [fake_good_response,
+                                fake_requests.FakeResponse(500, content='err')]
+        self.assertRaises(exception.UsagesRetrievalFailed,
+                          self.client.get_usages_counts_for_quota,
+                          self.context, 'fake-project', user_id='fake-user')
+        self.assertEqual(2, mock_get.call_count)
+        call1 = mock.call(
+            '/usages?project_id=fake-project', version='1.9',
+            global_request_id=self.context.global_id)
+        call2 = mock.call(
+            '/usages?project_id=fake-project&user_id=fake-user', version='1.9',
+            global_request_id=self.context.global_id)
+        mock_get.assert_has_calls([call1, call2])
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
+    def test_get_usages_counts_for_quota_retries(self, mock_get):
+        # Two attempts have a ConnectFailure and the third succeeds
+        fake_project_response = fake_requests.FakeResponse(
+            200, content=jsonutils.dumps(
+                {'usages': {orc.VCPU: 2,
+                            orc.MEMORY_MB: 512}}))
+        mock_get.side_effect = [ks_exc.ConnectFailure,
+                                ks_exc.ConnectFailure,
+                                fake_project_response]
+        counts = self.client.get_usages_counts_for_quota(self.context,
+                                                         'fake-project')
+        self.assertEqual(3, mock_get.call_count)
+        expected = {'project': {'cores': 2, 'ram': 512}}
+        self.assertDictEqual(expected, counts)
+
+        # Project query succeeds, first project + user query has a
+        # ConnectFailure, second project + user query succeeds
+        mock_get.reset_mock()
+        fake_user_response = fake_requests.FakeResponse(
+            200, content=jsonutils.dumps(
+                {'usages': {orc.VCPU: 1,
+                            orc.MEMORY_MB: 256}}))
+        mock_get.side_effect = [fake_project_response,
+                                ks_exc.ConnectFailure,
+                                fake_user_response]
+        counts = self.client.get_usages_counts_for_quota(
+            self.context, 'fake-project', user_id='fake-user')
+        self.assertEqual(3, mock_get.call_count)
+        expected['user'] = {'cores': 1, 'ram': 256}
+        self.assertDictEqual(expected, counts)
+
+        # Three attempts in a row have a ConnectFailure
+        mock_get.reset_mock()
+        mock_get.side_effect = [ks_exc.ConnectFailure] * 4
+        self.assertRaises(ks_exc.ConnectFailure,
+                          self.client.get_usages_counts_for_quota,
+                          self.context, 'fake-project')
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
+    def test_get_usages_counts_default_zero(self, mock_get):
+        # A project and user are not yet consuming any resources.
+        fake_response = fake_requests.FakeResponse(
+            200, content=jsonutils.dumps({'usages': {}}))
+        mock_get.side_effect = [fake_response, fake_response]
+
+        counts = self.client.get_usages_counts_for_quota(
+            self.context, 'fake-project', user_id='fake-user')
+
+        self.assertEqual(2, mock_get.call_count)
+        expected = {'project': {'cores': 0, 'ram': 0},
+                    'user': {'cores': 0, 'ram': 0}}
+        self.assertDictEqual(expected, counts)

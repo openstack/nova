@@ -2250,6 +2250,11 @@ class InventoryInUse(InvalidInventory):
     pass
 
 
+class UsagesRetrievalFailed(NovaException):
+    msg_fmt = _("Failed to retrieve usages for project '%(project_id)s' and "
+                "user '%(user_id)s'.")
+
+
 class UnsupportedPointerModelRequested(Invalid):
     msg_fmt = _("Pointer model '%(model)s' requested is not supported by "
                 "host.")

@@ -49,6 +49,7 @@ POST_RPS_RETURNS_PAYLOAD_API_VERSION = '1.20'
 AGGREGATE_GENERATION_VERSION = '1.19'
 NESTED_PROVIDER_API_VERSION = '1.14'
 POST_ALLOCATIONS_API_VERSION = '1.13'
+GET_USAGES_VERSION = '1.9'
 
 AggInfo = collections.namedtuple('AggInfo', ['aggregates', 'generation'])
 TraitInfo = collections.namedtuple('TraitInfo', ['traits', 'generation'])
@@ -2322,3 +2323,67 @@ class SchedulerReportClient(object):
         new_aggs = existing_aggs - set([agg_uuid])
         self.set_aggregates_for_provider(
             context, rp_uuid, new_aggs, use_cache=False, generation=gen)
+
+    @staticmethod
+    def _handle_usages_error_from_placement(resp, project_id, user_id=None):
+        msg = ('[%(placement_req_id)s] Failed to retrieve usages for project '
+               '%(project_id)s and user %(user_id)s. Got %(status_code)d: '
+               '%(err_text)s')
+        args = {'placement_req_id': get_placement_request_id(resp),
+                'project_id': project_id,
+                'user_id': user_id or 'N/A',
+                'status_code': resp.status_code,
+                'err_text': resp.text}
+        LOG.error(msg, args)
+        raise exception.UsagesRetrievalFailed(project_id=project_id,
+                                              user_id=user_id or 'N/A')
+
+    @retrying.retry(stop_max_attempt_number=4,
+                    retry_on_exception=lambda e: isinstance(
+                        e, ks_exc.ConnectFailure))
+    def _get_usages(self, context, project_id, user_id=None):
+        url = '/usages?project_id=%s' % project_id
+        if user_id:
+            url = ''.join([url, '&user_id=%s' % user_id])
+        return self.get(url, version=GET_USAGES_VERSION,
+                        global_request_id=context.global_id)
+
+    def get_usages_counts_for_quota(self, context, project_id, user_id=None):
+        """Get the usages counts for the purpose of counting quota usage.
+
+        :param context: The request context
+        :param project_id: The project_id to count across
+        :param user_id: The user_id to count across
+        :returns: A dict containing the project-scoped and user-scoped counts
+                  if user_id is specified. For example:
+                    {'project': {'cores': <count across project>,
+                                 'ram': <count across project>},
+                    {'user': {'cores': <count across user>,
+                              'ram': <count across user>},
+        :raises: `exception.UsagesRetrievalFailed` if a placement API call
+                 fails
+        """
+        total_counts = {'project': {}}
+        # First query counts across all users of a project
+        resp = self._get_usages(context, project_id)
+        if resp:
+            data = resp.json()
+            # The response from placement will not contain a resource class if
+            # there is no usage. We can consider a missing class to be 0 usage.
+            cores = data['usages'].get(orc.VCPU, 0)
+            ram = data['usages'].get(orc.MEMORY_MB, 0)
+            total_counts['project'] = {'cores': cores, 'ram': ram}
+        else:
+            self._handle_usages_error_from_placement(resp, project_id)
+        # If specified, second query counts across one user in the project
+        if user_id:
+            resp = self._get_usages(context, project_id, user_id=user_id)
+            if resp:
+                data = resp.json()
+                cores = data['usages'].get(orc.VCPU, 0)
+                ram = data['usages'].get(orc.MEMORY_MB, 0)
+                total_counts['user'] = {'cores': cores, 'ram': ram}
+            else:
+                self._handle_usages_error_from_placement(resp, project_id,
+                                                         user_id=user_id)
+        return total_counts
