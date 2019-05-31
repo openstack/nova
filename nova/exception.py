@@ -613,10 +613,6 @@ class InstanceUnacceptable(Invalid):
     msg_fmt = _("Instance %(instance_id)s is unacceptable: %(reason)s")
 
 
-class InvalidEc2Id(Invalid):
-    msg_fmt = _("Ec2 id %(ec2_id)s is unacceptable.")
-
-
 class InvalidUUID(Invalid):
     msg_fmt = _("Expected a uuid but received %(uuid)s.")
 
