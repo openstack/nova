@@ -18,17 +18,26 @@
 Nova uses a quota system for setting limits on resources such as number of
 instances or amount of CPU that a specific project or user can use.
 
-Quotas are enforced by making a claim, or reservation, on resources when a
-request is made, such as creating a new server. If the claim fails, the request
-is rejected. If the reservation succeeds then the operation progresses until
-such a point that the reservation is either converted into usage (the operation
-was successful) or rolled back (the operation failed).
+Starting in the 16.0.0 Pike release the quota calculation system in nova was
+overhauled and the old reserve/commit/rollback flow was changed to `count
+resource usage`_ at the point of whatever operation is being performed, such
+as creating or resizing a server. A check will be performed by counting
+current usage for the relevant resource and then if
+:oslo.config:option:`quota.recheck_quota` is True (it is by default) another
+check will be performed to ensure the initial check is still valid.
 
-Typically the quota reservation is made in the nova-api service and the usage
-or rollback is performed in the nova-compute service, at least when dealing
-with a server creation or move operation.
+By default resource usage is counted using the API and cell databases but
+nova can be configured to count some resource usage without using the cell
+databases, see `Quota usage from placement`_ for details.
 
-Quota limits and usage can be retrieved via the ``limits`` REST API.
+Quota limits and usage can be retrieved via the `limits`_ REST API. Quota
+limits can be set per-tenant using the `quota sets`_ REST API or per class
+(all tenants) using the `quota class sets`_ API.
+
+.. _count resource usage: https://specs.openstack.org/openstack/nova-specs/specs/pike/implemented/cells-count-resources-to-check-quota-in-api.html
+.. _limits: https://developer.openstack.org/api-ref/compute/#limits-limits
+.. _quota sets: https://developer.openstack.org/api-ref/compute/#quota-sets-os-quota-sets
+.. _quota class sets: https://developer.openstack.org/api-ref/compute/#quota-class-sets-os-quota-class-sets
 
 Checking quota
 ==============
@@ -49,8 +58,8 @@ checks are made in order:
 
    openstack quota set --class --instances 5 default
 
-* If the above does not provide a resource limit, then rely on the ``quota_*``
-  configuration options for the default limit.
+* If the above does not provide a resource limit, then rely on the
+  :oslo.config:group:`quota` configuration options for the default limit.
 
 .. note:: The API sets the limit in the `quota_classes` table. Once a default
    limit is set via the `default` quota class, that takes precedence over
@@ -132,7 +141,11 @@ See the :ref:`cells documentation <cells-counting-quotas>` for details.
 Future plans
 ============
 
-TODO: talk about quotas in the  `resource counting spec`_ and `nested quotas`_
+Hierarchical quotas
+-------------------
 
-.. _resource counting spec: https://specs.openstack.org/openstack/nova-specs/specs/ocata/approved/cells-count-resources-to-check-quota-in-api.html
-.. _nested quotas: https://specs.openstack.org/openstack/nova-specs/specs/mitaka/approved/nested-quota-driver-api.html
+There has long been a desire to support hierarchical or nested quotas
+leveraging support in the identity service for hierarchical projects.
+See the `unified limits`_ spec for details.
+
+.. _unified limits: https://review.opendev.org/#/c/602201/
