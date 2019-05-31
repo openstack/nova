@@ -1286,10 +1286,6 @@ class CellTimeout(NotFound):
     msg_fmt = _("Timeout waiting for response from cell")
 
 
-class InstanceUnknownCell(NotFound):
-    msg_fmt = _("Cell is not known for instance %(instance_uuid)s")
-
-
 class SchedulerHostFilterNotFound(NotFound):
     msg_fmt = _("Scheduler Host Filter %(filter_name)s could not be found.")
 
