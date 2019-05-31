@@ -224,6 +224,22 @@ def get_network_metadata(network_info):
     }
 
 
+def get_ec2_ip_info(network_info):
+    if not isinstance(network_info, model.NetworkInfo):
+        network_info = model.NetworkInfo.hydrate(network_info)
+
+    ip_info = {}
+    fixed_ips = network_info.fixed_ips()
+    ip_info['fixed_ips'] = [
+        ip['address'] for ip in fixed_ips if ip['version'] == 4]
+    ip_info['fixed_ip6s'] = [
+        ip['address'] for ip in fixed_ips if ip['version'] == 6]
+    ip_info['floating_ips'] = [
+        ip['address'] for ip in network_info.floating_ips()]
+
+    return ip_info
+
+
 def _get_eth_link(vif, ifc_num):
     """Get a VIF or physical NIC representation.
 

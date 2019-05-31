@@ -12,11 +12,106 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.ec2 import ec2utils
+import functools
+
+from oslo_utils import uuidutils
+
+from nova import cache_utils
 from nova.db import api as db
 from nova import exception
 from nova.objects import base
 from nova.objects import fields
+
+
+# NOTE(vish): cache mapping for one week
+_CACHE_TIME = 7 * 24 * 60 * 60
+_CACHE = None
+
+
+def memoize(func):
+    @functools.wraps(func)
+    def memoizer(context, reqid):
+        global _CACHE
+        if not _CACHE:
+            _CACHE = cache_utils.get_client(expiration_time=_CACHE_TIME)
+        key = "%s:%s" % (func.__name__, reqid)
+        key = str(key)
+        value = _CACHE.get(key)
+        if value is None:
+            value = func(context, reqid)
+            _CACHE.set(key, value)
+        return value
+    return memoizer
+
+
+def id_to_ec2_id(instance_id, template='i-%08x'):
+    """Convert an instance ID (int) to an ec2 ID (i-[base 16 number])."""
+    return template % int(instance_id)
+
+
+def id_to_ec2_inst_id(context, instance_id):
+    """Get or create an ec2 instance ID (i-[base 16 number]) from uuid."""
+    if instance_id is None:
+        return None
+    elif uuidutils.is_uuid_like(instance_id):
+        int_id = get_int_id_from_instance_uuid(context, instance_id)
+        return id_to_ec2_id(int_id)
+    else:
+        return id_to_ec2_id(instance_id)
+
+
+@memoize
+def get_int_id_from_instance_uuid(context, instance_uuid):
+    if instance_uuid is None:
+        return
+    try:
+        imap = EC2InstanceMapping.get_by_uuid(context, instance_uuid)
+        return imap.id
+    except exception.NotFound:
+        imap = EC2InstanceMapping(context)
+        imap.uuid = instance_uuid
+        imap.create()
+        return imap.id
+
+
+def glance_id_to_ec2_id(context, glance_id, image_type='ami'):
+    image_id = glance_id_to_id(context, glance_id)
+    if image_id is None:
+        return
+
+    template = image_type + '-%08x'
+    return id_to_ec2_id(image_id, template=template)
+
+
+@memoize
+def glance_id_to_id(context, glance_id):
+    """Convert a glance id to an internal (db) id."""
+    if not glance_id:
+        return
+
+    try:
+        return S3ImageMapping.get_by_uuid(context, glance_id).id
+    except exception.NotFound:
+        s3imap = S3ImageMapping(context, uuid=glance_id)
+        s3imap.create()
+        return s3imap.id
+
+
+def glance_type_to_ec2_type(image_type):
+    """Converts to a three letter image type.
+
+    aki, kernel => aki
+    ari, ramdisk => ari
+    anything else => ami
+
+    """
+    if image_type == 'kernel':
+        return 'aki'
+    if image_type == 'ramdisk':
+        return 'ari'
+    if image_type not in ['aki', 'ari']:
+        return 'ami'
+    return image_type
 
 
 @base.NovaObjectRegistry.register
@@ -119,17 +214,14 @@ class EC2Ids(base.NovaObject):
     def _get_ec2_ids(context, instance):
         ec2_ids = {}
 
-        ec2_ids['instance_id'] = ec2utils.id_to_ec2_inst_id(context,
-                                                            instance.uuid)
-        ec2_ids['ami_id'] = ec2utils.glance_id_to_ec2_id(context,
-                                                         instance.image_ref)
+        ec2_ids['instance_id'] = id_to_ec2_inst_id(context, instance.uuid)
+        ec2_ids['ami_id'] = glance_id_to_ec2_id(context, instance.image_ref)
         for image_type in ['kernel', 'ramdisk']:
             image_id = getattr(instance, '%s_id' % image_type)
             ec2_id = None
             if image_id is not None:
-                ec2_image_type = ec2utils.image_type(image_type)
-                ec2_id = ec2utils.glance_id_to_ec2_id(context, image_id,
-                                                      ec2_image_type)
+                ec2_image_type = glance_type_to_ec2_type(image_type)
+                ec2_id = glance_id_to_ec2_id(context, image_id, ec2_image_type)
             ec2_ids['%s_id' % image_type] = ec2_id
 
         return ec2_ids

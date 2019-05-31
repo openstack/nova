@@ -76,15 +76,15 @@ class MetadataTest(test.TestCase):
                 'nova.network.api.API.get_fixed_ip_by_address',
                 fake_get_fixed_ip_by_address))
 
-        def fake_get_ip_info_for_instance_from_nw_info(nw_info):
+        def fake_get_ec2_ip_info(nw_info):
             return {'fixed_ips': ['127.0.0.2'],
                     'fixed_ip6s': [],
                     'floating_ips': []}
 
         self.useFixture(
             fixtures.MonkeyPatch(
-                'nova.api.ec2.ec2utils.get_ip_info_for_instance_from_nw_info',
-                fake_get_ip_info_for_instance_from_nw_info))
+                'nova.virt.netutils.get_ec2_ip_info',
+                fake_get_ec2_ip_info))
 
     def test_lookup_metadata_root_url(self):
         res = requests.request('GET', self.md_url, timeout=5)

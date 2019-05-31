@@ -113,9 +113,9 @@ class TestRemoteS3ImageMapping(test_objects._RemoteTest, _TestS3ImageMapping):
 
 
 class _TestEC2Ids(object):
-    @mock.patch('nova.api.ec2.ec2utils.image_type')
-    @mock.patch('nova.api.ec2.ec2utils.glance_id_to_ec2_id')
-    @mock.patch('nova.api.ec2.ec2utils.id_to_ec2_inst_id')
+    @mock.patch('nova.objects.ec2.glance_type_to_ec2_type')
+    @mock.patch('nova.objects.ec2.glance_id_to_ec2_id')
+    @mock.patch('nova.objects.ec2.id_to_ec2_inst_id')
     def test_get_by_instance(self, mock_inst, mock_glance, mock_type):
         mock_inst.return_value = 'fake-ec2-inst-id'
         mock_glance.side_effect = ['fake-ec2-ami-id',
@@ -135,8 +135,8 @@ class _TestEC2Ids(object):
         self.assertEqual('fake-ec2-kernel-id', result.kernel_id)
         self.assertEqual('fake-ec2-ramdisk-id', result.ramdisk_id)
 
-    @mock.patch('nova.api.ec2.ec2utils.glance_id_to_ec2_id')
-    @mock.patch('nova.api.ec2.ec2utils.id_to_ec2_inst_id')
+    @mock.patch('nova.objects.ec2.glance_id_to_ec2_id')
+    @mock.patch('nova.objects.ec2.id_to_ec2_inst_id')
     def test_get_by_instance_no_image_ref(self, mock_inst, mock_glance):
         mock_inst.return_value = 'fake-ec2-inst-id'
         mock_glance.return_value = None
@@ -150,9 +150,9 @@ class _TestEC2Ids(object):
         self.assertIsNone(result.kernel_id)
         self.assertIsNone(result.ramdisk_id)
 
-    @mock.patch('nova.api.ec2.ec2utils.image_type')
-    @mock.patch('nova.api.ec2.ec2utils.glance_id_to_ec2_id')
-    @mock.patch('nova.api.ec2.ec2utils.id_to_ec2_inst_id')
+    @mock.patch('nova.objects.ec2.glance_type_to_ec2_type')
+    @mock.patch('nova.objects.ec2.glance_id_to_ec2_id')
+    @mock.patch('nova.objects.ec2.id_to_ec2_inst_id')
     def test_get_by_instance_no_kernel_id(self, mock_inst, mock_glance,
                                           mock_type):
         mock_inst.return_value = 'fake-ec2-inst-id'
@@ -170,9 +170,9 @@ class _TestEC2Ids(object):
         self.assertIsNone(result.kernel_id)
         self.assertEqual('fake-ec2-ramdisk-id', result.ramdisk_id)
 
-    @mock.patch('nova.api.ec2.ec2utils.image_type')
-    @mock.patch('nova.api.ec2.ec2utils.glance_id_to_ec2_id')
-    @mock.patch('nova.api.ec2.ec2utils.id_to_ec2_inst_id')
+    @mock.patch('nova.objects.ec2.glance_type_to_ec2_type')
+    @mock.patch('nova.objects.ec2.glance_id_to_ec2_id')
+    @mock.patch('nova.objects.ec2.id_to_ec2_inst_id')
     def test_get_by_instance_no_ramdisk_id(self, mock_inst, mock_glance,
                                           mock_type):
         mock_inst.return_value = 'fake-ec2-inst-id'
