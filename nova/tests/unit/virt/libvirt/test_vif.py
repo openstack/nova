@@ -630,7 +630,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                     deleted=0,
                     created_at=None, flavorid=1,
                     is_public=True, vcpu_weight=None,
-                    id=2, disabled=False, rxtx_factor=1.0)
+                    id=2, disabled=False, rxtx_factor=1.0,
+                    extra_specs={})
 
         d = vif.LibvirtGenericVIFDriver()
         image_meta = objects.ImageMeta.from_dict(
