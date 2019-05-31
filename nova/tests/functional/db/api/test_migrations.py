@@ -39,6 +39,7 @@ from oslo_db.sqlalchemy import utils as db_utils
 from oslo_serialization import jsonutils
 import sqlalchemy
 from sqlalchemy.engine import reflection
+import testtools
 
 from nova.db import migration
 from nova.db.sqlalchemy.api_migrations import migrate_repo
@@ -128,18 +129,18 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
 
 class TestNovaAPIMigrationsSQLite(NovaAPIModelsSync,
                                   test_fixtures.OpportunisticDBTestMixin,
-                                  test.NoDBTestCase):
+                                  testtools.TestCase):
     pass
 
 
 class TestNovaAPIMigrationsMySQL(NovaAPIModelsSync,
                                  test_fixtures.OpportunisticDBTestMixin,
-                                 test.NoDBTestCase):
+                                 testtools.TestCase):
     FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
 
 class TestNovaAPIMigrationsPostgreSQL(NovaAPIModelsSync,
-        test_fixtures.OpportunisticDBTestMixin, test.NoDBTestCase):
+        test_fixtures.OpportunisticDBTestMixin, testtools.TestCase):
     FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
 
 

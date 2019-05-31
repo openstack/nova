@@ -46,6 +46,7 @@ import sqlalchemy
 from sqlalchemy.engine import reflection
 import sqlalchemy.exc
 from sqlalchemy.sql import null
+import testtools
 
 from nova.db import migration
 from nova.db.sqlalchemy import migrate_repo
@@ -1024,13 +1025,13 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_fixtures.OpportunisticDBTestMixin,
-                               test.NoDBTestCase):
+                               testtools.TestCase):
     pass
 
 
 class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
                               test_fixtures.OpportunisticDBTestMixin,
-                              test.NoDBTestCase):
+                              testtools.TestCase):
     FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
     def test_innodb_tables(self):
@@ -1058,7 +1059,7 @@ class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
 
 class TestNovaMigrationsPostgreSQL(NovaMigrationsCheckers,
                                    test_fixtures.OpportunisticDBTestMixin,
-                                   test.NoDBTestCase):
+                                   testtools.TestCase):
     FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
 
 
