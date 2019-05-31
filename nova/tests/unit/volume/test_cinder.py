@@ -408,8 +408,8 @@ class CinderApiTestCase(test.NoDBTestCase):
         expected_attachment_ref = {
              'id': uuids.attachment_id,
              'volume_id': fake_attachment.volume_id,
+             'attach_mode': 'rw',
              'connection_info': {
-                 'attach_mode': 'rw',
                  'attached_at': fake_attachment.attached_at,
                  'data': {'foo': 'bar', 'target_lun': '1'},
                  'detached_at': None,
@@ -438,8 +438,8 @@ class CinderApiTestCase(test.NoDBTestCase):
         expected_attachment_ref = {
              'id': uuids.attachment_id,
              'volume_id': fake_attachment.volume_id,
+             'attach_mode': 'rw',
              'connection_info': {
-                 'attach_mode': 'rw',
                  'attached_at': fake_attachment.attached_at,
                  'data': {'foo': 'bar', 'target_lun': '1'},
                  'detached_at': None,
