@@ -2991,6 +2991,7 @@ class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):
         super(LibvirtConfigGuestRng, self).__init__(root_name="rng",
                                                       **kwargs)
 
+        self.device_model = 'virtio'
         self.model = 'random'
         self.backend = None
         self.rate_period = None
@@ -2999,7 +3000,7 @@ class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestRng, self).format_dom()
-        dev.set('model', 'virtio')
+        dev.set('model', self.device_model)
 
         backend = etree.Element("backend")
         backend.set("model", self.model)

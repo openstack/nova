@@ -993,3 +993,10 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
             group="libvirt", hw_machine_type=['x86_64=q35', 'foo']))
         self.assertEqual('q35',
                          libvirt_utils.get_default_machine_type('x86_64'))
+
+    def test_get_machine_type_from_image(self):
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw", "properties": {"hw_machine_type": "q35"}
+        })
+        os_mach_type = libvirt_utils.get_machine_type(image_meta)
+        self.assertEqual('q35', os_mach_type)

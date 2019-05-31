@@ -87,12 +87,68 @@ def fake_kvm_guest():
     obj.sysinfo.bios_vendor = "Acme"
     obj.sysinfo.system_version = "1.0.0"
 
+    # obj.devices[0]
     disk = config.LibvirtConfigGuestDisk()
     disk.source_type = "file"
-    disk.source_path = "/tmp/img"
-    disk.target_dev = "/dev/vda"
+    disk.source_path = "/tmp/disk-img"
+    disk.target_dev = "vda"
     disk.target_bus = "virtio"
     obj.add_device(disk)
+
+    # obj.devices[1]
+    disk = config.LibvirtConfigGuestDisk()
+    disk.source_device = "cdrom"
+    disk.source_type = "file"
+    disk.source_path = "/tmp/cdrom-img"
+    disk.target_dev = "sda"
+    disk.target_bus = "sata"
+    obj.add_device(disk)
+
+    # obj.devices[2]
+    intf = config.LibvirtConfigGuestInterface()
+    intf.net_type = "network"
+    intf.mac_addr = "52:54:00:f6:35:8f"
+    intf.model = "virtio"
+    intf.source_dev = "virbr0"
+    obj.add_device(intf)
+
+    # obj.devices[3]
+    balloon = config.LibvirtConfigMemoryBalloon()
+    balloon.model = 'virtio'
+    balloon.period = 11
+    obj.add_device(balloon)
+
+    # obj.devices[4]
+    mouse = config.LibvirtConfigGuestInput()
+    mouse.type = "mouse"
+    mouse.bus = "virtio"
+    obj.add_device(mouse)
+
+    # obj.devices[5]
+    gfx = config.LibvirtConfigGuestGraphics()
+    gfx.type = "vnc"
+    gfx.autoport = True
+    gfx.keymap = "en_US"
+    gfx.listen = "127.0.0.1"
+    obj.add_device(gfx)
+
+    # obj.devices[6]
+    video = config.LibvirtConfigGuestVideo()
+    video.type = 'qxl'
+    obj.add_device(video)
+
+    # obj.devices[7]
+    serial = config.LibvirtConfigGuestSerial()
+    serial.type = "file"
+    serial.source_path = "/tmp/vm.log"
+    obj.add_device(serial)
+
+    # obj.devices[8]
+    rng = config.LibvirtConfigGuestRng()
+    rng.backend = '/dev/urandom'
+    rng.rate_period = '12'
+    rng.rate_bytes = '34'
+    obj.add_device(rng)
 
     return obj
 
@@ -151,9 +207,33 @@ FAKE_KVM_GUEST = """
     </cputune>
     <devices>
       <disk type="file" device="disk">
-        <source file="/tmp/img"/>
-        <target bus="virtio" dev="/dev/vda"/>
+        <source file="/tmp/disk-img"/>
+        <target bus="virtio" dev="vda"/>
       </disk>
+      <disk type="file" device="cdrom">
+        <source file="/tmp/cdrom-img"/>
+        <target bus="sata" dev="sda"/>
+      </disk>
+      <interface type='network'>
+        <mac address='52:54:00:f6:35:8f'/>
+        <model type='virtio'/>
+        <source bridge='virbr0'/>
+      </interface>
+      <memballoon model='virtio'>
+        <stats period='11'/>
+      </memballoon>
+      <input type="mouse" bus="virtio"/>
+      <graphics type="vnc" autoport="yes" keymap="en_US" listen="127.0.0.1"/>
+      <video>
+        <model type='qxl'/>
+      </video>
+      <serial type="file">
+        <source path="/tmp/vm.log"/>
+      </serial>
+      <rng model='virtio'>
+          <rate period='12' bytes='34'/>
+          <backend model='random'>/dev/urandom</backend>
+      </rng>
     </devices>
     <launchSecurity type="sev">
       <policy>0x0033</policy>

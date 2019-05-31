@@ -1137,7 +1137,7 @@ def _get_flavor_image_meta(key, flavor, image_meta, default=None):
     return flavor_policy, image_policy
 
 
-def get_mem_encryption_constraint(flavor, image_meta):
+def get_mem_encryption_constraint(flavor, image_meta, machine_type=None):
     """Return a boolean indicating whether encryption of guest memory was
     requested, either via the hw:mem_encryption extra spec or the
     hw_mem_encryption image property (or both).
@@ -1156,12 +1156,16 @@ def get_mem_encryption_constraint(flavor, image_meta):
         3) the flavor and/or image request memory encryption, but the
            machine type is set to a value which does not contain 'q35'
 
-    This is called from the API layer, so get_machine_type() cannot be
-    called since it relies on being run from the compute node in order
-    to retrieve CONF.libvirt.hw_machine_type.
+    This can be called from the libvirt driver on the compute node, in
+    which case the driver should pass the result of
+    nova.virt.libvirt.utils.get_machine_type() as the machine_type
+    parameter, or from the API layer, in which case get_machine_type()
+    cannot be called since it relies on being run from the compute
+    node in order to retrieve CONF.libvirt.hw_machine_type.
 
     :param instance_type: Flavor object
     :param image: an ImageMeta object
+    :param machine_type: a string representing the machine type (optional)
     :raises: nova.exception.FlavorImageConflict
     :raises: nova.exception.InvalidMachineType
     :returns: boolean indicating whether encryption of guest memory
@@ -1196,7 +1200,7 @@ def get_mem_encryption_constraint(flavor, image_meta):
                           image_meta.name)
 
     _check_mem_encryption_uses_uefi_image(requesters, image_meta)
-    _check_mem_encryption_machine_type(image_meta)
+    _check_mem_encryption_machine_type(image_meta, machine_type)
 
     LOG.debug("Memory encryption requested by %s", " and ".join(requesters))
     return True
@@ -1236,7 +1240,7 @@ def _check_mem_encryption_uses_uefi_image(requesters, image_meta):
     raise exception.FlavorImageConflict(emsg % data)
 
 
-def _check_mem_encryption_machine_type(image_meta):
+def _check_mem_encryption_machine_type(image_meta, machine_type=None):
     # NOTE(aspiers): As explained in the SEV spec, SEV needs a q35
     # machine type in order to bind all the virtio devices to the PCIe
     # bridge so that they use virtio 1.0 and not virtio 0.9, since
@@ -1247,10 +1251,12 @@ def _check_mem_encryption_machine_type(image_meta):
     # So if the image explicitly requests a machine type which is not
     # in the q35 family, raise an exception.
     #
-    # Note that this check occurs at API-level, therefore we can't
-    # check here what value of CONF.libvirt.hw_machine_type may have
-    # been configured on the compute node.
-    mach_type = image_meta.properties.get('hw_machine_type')
+    # This check can be triggered both at API-level, at which point we
+    # can't check here what value of CONF.libvirt.hw_machine_type may
+    # have been configured on the compute node, and by the libvirt
+    # driver, in which case the driver can check that config option
+    # and will pass the machine_type parameter.
+    mach_type = machine_type or image_meta.properties.get('hw_machine_type')
 
     # If hw_machine_type is not specified on the image and is not
     # configured correctly on SEV compute nodes, then a separate check

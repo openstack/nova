@@ -17,6 +17,7 @@ import mock
 from nova.pci import utils as pci_utils
 from nova import test
 from nova.tests.unit import matchers
+from nova.tests.unit.virt.libvirt import fake_libvirt_data
 from nova.virt.libvirt import config
 from nova.virt.libvirt import designer
 from nova.virt.libvirt import host
@@ -224,3 +225,24 @@ class DesignerTestCase(test.NoDBTestCase):
         conf = config.LibvirtConfigGuestInterface()
         designer.set_vif_mtu_config(conf, 9000)
         self.assertEqual(9000, conf.mtu)
+
+    def test_set_driver_iommu_for_sev(self):
+        conf = fake_libvirt_data.fake_kvm_guest()
+        designer.set_driver_iommu_for_sev(conf)
+
+        # All disks/interfaces/memballoon are expected to be virtio,
+        # thus driver_iommu should be on
+        self.assertEqual(9, len(conf.devices))
+        for i in (0, 2, 3, 8):
+            dev = conf.devices[i]
+            self.assertTrue(
+                dev.driver_iommu,
+                "expected device %d to have driver_iommu enabled\n%s" %
+                (i, dev.to_xml()))
+
+        for i in (1, 4, 6):
+            dev = conf.devices[i]
+            self.assertFalse(
+                dev.driver_iommu,
+                "didn't expect device %i to have driver_iommu enabled\n%s" %
+                (i, dev.to_xml()))

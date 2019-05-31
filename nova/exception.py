@@ -2460,6 +2460,11 @@ class FlavorImageConflict(NovaException):
                 "(%(flavor_val)s) and the image (%(image_val)s).")
 
 
+class MissingDomainCapabilityFeatureException(NovaException):
+    msg_fmt = _("Guest config could not be built without domain capabilities "
+                "including <%(feature)s> feature.")
+
+
 class HealPortAllocationException(NovaException):
     msg_fmt = _("Healing port allocation failed.")
 
