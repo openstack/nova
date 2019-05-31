@@ -242,11 +242,13 @@ class RequestSpec(base.NovaObject):
             policies = list(filter_properties.get('group_policies'))
             hosts = list(filter_properties.get('group_hosts'))
             members = list(filter_properties.get('group_members'))
-            # TODO(mriedem): We could try to get the group uuid from the
-            # group hint in the filter_properties.
             self.instance_group = objects.InstanceGroup(policy=policies[0],
                                                         hosts=hosts,
                                                         members=members)
+            # InstanceGroup.uuid is not nullable so only set it if we got it.
+            group_uuid = filter_properties.get('group_uuid')
+            if group_uuid:
+                self.instance_group.uuid = group_uuid
             # hosts has to be not part of the updates for saving the object
             self.instance_group.obj_reset_changes(['hosts'])
         else:
@@ -369,7 +371,8 @@ class RequestSpec(base.NovaObject):
         return {'group_updated': True,
                 'group_hosts': set(self.instance_group.hosts),
                 'group_policies': set([self.instance_group.policy]),
-                'group_members': set(self.instance_group.members)}
+                'group_members': set(self.instance_group.members),
+                'group_uuid': self.instance_group.uuid}
 
     def to_legacy_request_spec_dict(self):
         """Returns a legacy request_spec dict from the RequestSpec object.

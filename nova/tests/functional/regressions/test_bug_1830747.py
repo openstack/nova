@@ -124,6 +124,9 @@ class MissingReqSpecInstanceGroupUUIDTestCase(
             # which we can determine from the filter_properties retry dict.
             filter_properties = scheduler_hint['filter_properties']
             if filter_properties.get('retry', {}).get('exc'):
+                # Assert the group_uuid is passed through the filter properties
+                self.assertIn('group_uuid', filter_properties)
+                self.assertEqual(group_id, filter_properties['group_uuid'])
                 kwargs.pop('request_spec', None)
             return original_resize_instance(
                 _self, context, instance, extra_instance_updates,
