@@ -105,19 +105,6 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
                       ex.explanation)
 
     @mock.patch.object(compute_api.API, 'get')
-    @mock.patch.object(compute_api.API, 'force_delete',
-                side_effect=exception.InstanceUnknownCell(
-                    instance_uuid='fake_uuid'))
-    def test_force_delete_instance_cellunknown(self, mock_force_delete,
-                                               mock_get):
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/fake_uuid/action')
-        ex = self.assertRaises(webob.exc.HTTPNotFound,
-                            self.extension._force_delete,
-                            req, 'fake_uuid', '')
-        self.assertIn('Cell is not known for instance fake_uuid',
-                      ex.explanation)
-
-    @mock.patch.object(compute_api.API, 'get')
     @mock.patch.object(compute_api.API, 'restore')
     def test_restore(self, mock_restore, mock_get):
         instance = fake_instance.fake_instance_obj(

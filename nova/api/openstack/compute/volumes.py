@@ -335,8 +335,7 @@ class VolumeAttachmentController(wsgi.Controller):
             device = self.compute_api.attach_volume(
                 context, instance, volume_id, device, tag=tag,
                 supports_multiattach=supports_multiattach)
-        except (exception.InstanceUnknownCell,
-                exception.VolumeNotFound) as e:
+        except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.InstanceIsLocked,
                 exception.DevicePathInUse,
@@ -449,8 +448,6 @@ class VolumeAttachmentController(wsgi.Controller):
             self.compute_api.detach_volume(context, instance, volume)
         except exception.InvalidVolume as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InvalidInput as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceIsLocked as e:

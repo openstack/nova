@@ -108,16 +108,10 @@ class ServerMetadataController(wsgi.Controller):
                                                              server,
                                                              metadata,
                                                              delete)
-
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-
         except exception.QuotaError as error:
             raise exc.HTTPForbidden(explanation=error.format_message())
-
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
-
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'update metadata', server_id)
@@ -150,13 +144,8 @@ class ServerMetadataController(wsgi.Controller):
         server = common.get_instance(self.compute_api, context, server_id)
         try:
             self.compute_api.delete_instance_metadata(context, server, id)
-
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
-
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'delete metadata', server_id)

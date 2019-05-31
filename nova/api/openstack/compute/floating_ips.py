@@ -272,8 +272,6 @@ class FloatingIPActionController(wsgi.Controller):
         except exception.NoFloatingIpInterface:
             msg = _('l3driver call to add floating IP failed')
             raise webob.exc.HTTPBadRequest(explanation=msg)
-        except exception.InstanceUnknownCell as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.FloatingIpNotFoundForAddress:
             msg = _('floating IP not found')
             raise webob.exc.HTTPNotFound(explanation=msg)

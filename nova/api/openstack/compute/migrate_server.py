@@ -139,8 +139,6 @@ class MigrateServerController(wsgi.Controller):
             self.compute_api.live_migrate(context, instance, block_migration,
                                           disk_over_commit, host, force,
                                           async_)
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.NoValidHost,
                 exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,

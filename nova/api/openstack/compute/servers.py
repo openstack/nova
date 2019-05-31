@@ -852,8 +852,6 @@ class ServersController(wsgi.Controller):
         instance = self._get_server(context, req, id)
         try:
             self.compute_api.confirm_resize(context, instance)
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.MigrationNotFound:
             msg = _("Instance has not been resized.")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -872,8 +870,6 @@ class ServersController(wsgi.Controller):
         instance = self._get_server(context, req, id)
         try:
             self.compute_api.revert_resize(context, instance)
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.MigrationNotFound:
             msg = _("Instance has not been resized.")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -927,8 +923,6 @@ class ServersController(wsgi.Controller):
 
         try:
             self.compute_api.resize(context, instance, flavor_id, **kwargs)
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.QuotaError as error:
             raise exc.HTTPForbidden(
                 explanation=error.format_message())
@@ -967,8 +961,6 @@ class ServersController(wsgi.Controller):
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.InstanceIsLocked,
                 exception.AllocationDeleteFailed) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
@@ -1093,8 +1085,6 @@ class ServersController(wsgi.Controller):
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.ImageNotFound:
             msg = _("Cannot find image for rebuild")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -1188,8 +1178,6 @@ class ServersController(wsgi.Controller):
                                                   instance,
                                                   image_name,
                                                   extra_properties=metadata)
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                         'createImage', id)
@@ -1262,8 +1250,6 @@ class ServersController(wsgi.Controller):
             self.compute_api.start(context, instance)
         except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                 'start', id)
@@ -1282,8 +1268,6 @@ class ServersController(wsgi.Controller):
             self.compute_api.stop(context, instance)
         except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
-        except exception.InstanceUnknownCell as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                 'stop', id)

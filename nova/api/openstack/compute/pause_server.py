@@ -44,8 +44,7 @@ class PauseServerController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'pause', id)
-        except (exception.InstanceUnknownCell,
-                     exception.InstanceNotFound) as e:
+        except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except NotImplementedError:
             common.raise_feature_not_supported()
@@ -65,8 +64,7 @@ class PauseServerController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'unpause', id)
-        except (exception.InstanceUnknownCell,
-                     exception.InstanceNotFound) as e:
+        except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except NotImplementedError:
             common.raise_feature_not_supported()
