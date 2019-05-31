@@ -60,6 +60,7 @@ checks are made in order:
    the database manually as there is no REST API for removing quota class
    values from the database.
 
+.. _quota-usage-from-placement:
 
 Quota usage from placement
 ==========================
@@ -124,10 +125,9 @@ placement:
 Known issues
 ============
 
-TODO: talk about quotas getting out of sync and `how to recover`_
-
-.. _how to recover: https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/refresh-quotas-usage.html
-
+If not :ref:`counting quota usage from placement <quota-usage-from-placement>`
+it is possible for down or poor performing cells to impact quota calculations.
+See the :ref:`cells documentation <cells-counting-quotas>` for details.
 
 Future plans
 ============
