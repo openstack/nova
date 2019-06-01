@@ -35,7 +35,6 @@ from nova.compute import api as compute_api
 from nova.compute import instance_actions
 from nova.compute import manager as compute_manager
 from nova.compute import rpcapi
-from nova.conductor import manager
 from nova import context
 from nova import exception
 from nova import objects
@@ -6352,11 +6351,10 @@ class PortResourceRequestReSchedulingTest(
         # First call is during boot, we want that to succeed normally. Then the
         # fake virt driver triggers a re-schedule. During that re-schedule the
         # fill is called again, and we simulate that call raises.
-        fill = manager.ComputeTaskManager._fill_provider_mapping
+        fill = nova.scheduler.utils.fill_provider_mapping
 
         with mock.patch(
-                'nova.conductor.manager.ComputeTaskManager.'
-                '_fill_provider_mapping',
+                'nova.scheduler.utils.fill_provider_mapping',
                 side_effect=[
                     fill,
                     exception.ResourceProviderTraitRetrievalFailed(

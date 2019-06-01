@@ -1111,3 +1111,56 @@ def get_weight_multiplier(host_state, multiplier_name, multiplier_config):
         value = multiplier_config
 
     return value
+
+
+def fill_provider_mapping(
+        context, report_client, request_spec, host_selection):
+    """Fills out the request group - resource provider mapping in the
+    request spec.
+
+    This is a workaround as placement does not return which RP
+    fulfills which granular request group in the allocation candidate
+    request. There is a spec proposing a solution in placement:
+    https://review.opendev.org/#/c/597601/
+    When that spec is implemented then this function can be
+    replaced with a simpler code that copies the group - RP
+    mapping out from the Selection object returned by the scheduler's
+    select_destinations call.
+
+    :param context: The security context
+    :param report_client: SchedulerReportClient instance to be used to
+        communicate with placement
+    :param request_spec: The RequestSpec object associated with the
+        operation
+    :param host_selection: The Selection object returned by the scheduler
+        for this operation
+    """
+    # Exit early if this request spec does not require mappings.
+    if not request_spec.maps_requested_resources:
+        return
+
+    # Technically out-of-tree scheduler drivers can still not create
+    # allocations in placement but if request_spec.maps_requested_resources
+    # is not empty and the scheduling succeeded then placement has to be
+    # involved
+    ar = jsonutils.loads(host_selection.allocation_request)
+    allocs = ar['allocations']
+
+    # NOTE(gibi): Getting traits from placement for each instance in a
+    # instance multi-create scenario is unnecessarily expensive. But
+    # instance multi-create cannot be used with pre-created neutron ports
+    # and this code can only be triggered with such pre-created ports so
+    # instance multi-create is not an issue. If this ever become an issue
+    # in the future then we could stash the RP->traits mapping on the
+    # Selection object since we can pull the traits for each provider from
+    # the GET /allocation_candidates response in the scheduler (or leverage
+    # the change from the spec mentioned in the docstring above).
+    provider_traits = {
+        rp_uuid: report_client.get_provider_traits(
+            context, rp_uuid).traits
+        for rp_uuid in allocs}
+    # NOTE(gibi): The allocs dict is in the format of the PUT /allocations
+    # and that format can change. The current format can be detected from
+    # host_selection.allocation_request_version
+    request_spec.map_requested_resources_to_providers(
+        allocs, provider_traits)
