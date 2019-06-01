@@ -2107,3 +2107,37 @@ class QuotaCountTestCase(test.NoDBTestCase):
                                          mock.sentinel.project_id,
                                          user_id=mock.sentinel.user_id)
         mock_uid_qfd_populated.assert_not_called()
+
+    @mock.patch('nova.quota._user_id_queued_for_delete_populated')
+    @mock.patch('nova.quota._server_group_count_members_by_user_legacy')
+    @mock.patch('nova.objects.InstanceMappingList.get_count_by_uuids_and_user')
+    @mock.patch('nova.quota._instances_cores_ram_count_legacy')
+    @mock.patch('nova.quota._instances_cores_ram_count_api_db_placement')
+    def test_user_id_queued_for_delete_populated_cache_all(
+            self, mock_api_db_placement_count, mock_legacy_icr_count,
+            mock_api_db_sgm_count, mock_legacy_sgm_count,
+            mock_uid_qfd_populated):
+        # Check the case where the data migration was found to be complete by a
+        # server group members count not scoped to a project.
+        mock_uid_qfd_populated.return_value = True
+        # Server group members call will check whether there are any unmigrated
+        # records.
+        fake_group = mock.Mock()
+        quota._server_group_count_members_by_user(mock.sentinel.context,
+                                                  fake_group,
+                                                  mock.sentinel.user_id)
+        mock_uid_qfd_populated.assert_called_once()
+        # Second server group members call should skip the check for user_id
+        # and queued_for_delete migrated because the result was cached.
+        mock_uid_qfd_populated.reset_mock()
+        quota._server_group_count_members_by_user(mock.sentinel.context,
+                                                  fake_group,
+                                                  mock.sentinel.user_id)
+        mock_uid_qfd_populated.assert_not_called()
+        # A call to count instances, cores, and ram should skip the check for
+        # user_id and queued_for_delete migrated because the result was cached
+        # during the call to count server group members.
+        mock_uid_qfd_populated.reset_mock()
+        quota._instances_cores_ram_count(mock.sentinel.context,
+                                         mock.sentinel.project_id)
+        mock_uid_qfd_populated.assert_not_called()

@@ -43,6 +43,10 @@ PLACEMENT_CLIENT = None
 # If user_id and queued_for_delete are populated for a project, cache the
 # result to avoid doing unnecessary EXISTS database queries.
 UID_QFD_POPULATED_CACHE_BY_PROJECT = set()
+# For the server group members check, we do not scope to a project, so if all
+# user_id and queued_for_delete are populated for all projects, cache the
+# result to avoid doing unnecessary EXISTS database queries.
+UID_QFD_POPULATED_CACHE_ALL = False
 
 
 class DbQuotaDriver(object):
@@ -1126,15 +1130,13 @@ def _security_group_count(context, project_id, user_id=None):
                                                 user_id=user_id)
 
 
-def _server_group_count_members_by_user(context, group, user_id):
+def _server_group_count_members_by_user_legacy(context, group, user_id):
     # NOTE(melwitt): This is mostly duplicated from
     # InstanceGroup.count_members_by_user() to query across multiple cells.
     # We need to be able to pass the correct cell context to
     # InstanceList.get_by_filters().
-    # TODO(melwitt): Counting across cells for instances means we will miss
-    # counting resources if a cell is down. In the future, we should query
-    # placement for cores/ram and InstanceMappings for instances (once we are
-    # deleting InstanceMappings when we delete instances).
+    # NOTE(melwitt): Counting across cells for instances means we will miss
+    # counting resources if a cell is down.
     cell_mappings = objects.CellMappingList.get_all(context)
     greenthreads = []
     filters = {'deleted': False, 'user_id': user_id, 'uuid': group.members}
@@ -1161,6 +1163,41 @@ def _server_group_count_members_by_user(context, group, user_id):
         if build_request.instance_uuid not in instance_uuids:
             count += 1
     return {'user': {'server_group_members': count}}
+
+
+def _server_group_count_members_by_user(context, group, user_id):
+    """Get the count of server group members for a group by user.
+
+    :param context: The request context for database access
+    :param group: The InstanceGroup object with members to count
+    :param user_id: The user_id to count across
+    :returns: A dict containing the user-scoped count. For example:
+
+                {'user': 'server_group_members': <count across user>}}
+    """
+    # Because server group members quota counting is not scoped to a project,
+    # but scoped to a particular InstanceGroup and user, we cannot filter our
+    # user_id/queued_for_delete populated check on project_id or user_id.
+    # So, we check whether user_id/queued_for_delete is populated for all
+    # records and cache the result to prevent unnecessary checking once the
+    # data migration has been completed.
+    global UID_QFD_POPULATED_CACHE_ALL
+    if not UID_QFD_POPULATED_CACHE_ALL:
+        LOG.debug('Checking whether user_id and queued_for_delete are '
+                  'populated for all projects')
+        uid_qfd_populated = _user_id_queued_for_delete_populated(context)
+        if uid_qfd_populated:
+            UID_QFD_POPULATED_CACHE_ALL = True
+
+    if UID_QFD_POPULATED_CACHE_ALL:
+        count = objects.InstanceMappingList.get_count_by_uuids_and_user(
+            context, group.members, user_id)
+        return {'user': {'server_group_members': count}}
+
+    LOG.warning('Falling back to legacy quota counting method for server '
+                'group members')
+    return _server_group_count_members_by_user_legacy(context, group,
+                                                      user_id)
 
 
 def _fixed_ip_count(context, project_id):
@@ -1261,7 +1298,8 @@ def _instances_cores_ram_count(context, project_id, user_id=None):
     if CONF.quota.count_usage_from_placement:
         # If a project has all user_id and queued_for_delete data populated,
         # cache the result to avoid needless database checking in the future.
-        if project_id not in UID_QFD_POPULATED_CACHE_BY_PROJECT:
+        if (not UID_QFD_POPULATED_CACHE_ALL and
+                project_id not in UID_QFD_POPULATED_CACHE_BY_PROJECT):
             LOG.debug('Checking whether user_id and queued_for_delete are '
                       'populated for project_id %s', project_id)
             uid_qfd_populated = _user_id_queued_for_delete_populated(
