@@ -260,9 +260,13 @@ database. This means that a multi-cell environment may incorrectly
 calculate the usage of a tenant if one of the cells is unreachable, as
 those resources cannot be counted. In this case, the tenant may be
 able to consume more resource from one of the available cells, putting
-them far over quota when the unreachable cell returns. In the future,
-placement will provide us with a consistent way to calculate usage
-independent of the actual cell being reachable.
+them far over quota when the unreachable cell returns.
+
+.. note:: Starting in the Train (20.0.0) release, it is possible to configure
+          counting of quota usage from the placement service and API database
+          to make quota usage calculations resilient to down or poor-performing
+          cells in a multi-cell environment. See the
+          :doc:`quotas documentation<quotas>` for more details.
 
 Performance of listing instances
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
