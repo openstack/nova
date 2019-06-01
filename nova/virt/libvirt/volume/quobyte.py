@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import errno
 import os
 
 from oslo_concurrency import processutils
@@ -26,7 +25,6 @@ import nova.conf
 from nova import exception as nova_exception
 from nova.i18n import _
 from nova import utils
-from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import fs
 
 LOG = logging.getLogger(__name__)
@@ -75,7 +73,10 @@ def umount_volume(mnt_base):
 
 
 def validate_volume(mount_path):
-    """Runs a number of tests to be sure this is a (working) Quobyte mount"""
+    """Determine if the volume is a valid Quobyte mount.
+
+    Runs a number of tests to be sure this is a (working) Quobyte mount
+    """
     partitions = psutil.disk_partitions(all=True)
     for p in partitions:
         if mount_path != p.mountpoint:
@@ -90,10 +91,10 @@ def validate_volume(mount_path):
                 msg = (_("The mount %(mount_path)s is not a "
                          "valid Quobyte volume. Stale mount?")
                        % {'mount_path': mount_path})
-            raise nova_exception.InvalidVolume(msg)
+            raise nova_exception.StaleVolumeMount(msg, mount_path=mount_path)
         else:
-            msg = (_("The mount %(mount_path)s is not a valid"
-                     " Quobyte volume according to partition list.")
+            msg = (_("The mount %(mount_path)s is not a valid "
+                     "Quobyte volume according to partition list.")
                    % {'mount_path': mount_path})
             raise nova_exception.InvalidVolume(msg)
     msg = (_("No matching Quobyte mount entry for %(mount_path)s"
@@ -128,39 +129,40 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         data = connection_info['data']
         quobyte_volume = self._normalize_export(data['export'])
         mount_path = self._get_mount_path(connection_info)
-        mounted = libvirt_utils.is_mounted(mount_path,
-                                           SOURCE_PROTOCOL
-                                           + '@' + quobyte_volume)
-        if mounted:
-            try:
-                os.stat(mount_path)
-            except OSError as exc:
-                if exc.errno == errno.ENOTCONN:
-                    mounted = False
-                    LOG.info('Fixing previous mount %s which was not'
-                             ' unmounted correctly.', mount_path)
-                    umount_volume(mount_path)
+        try:
+            validate_volume(mount_path)
+            mounted = True
+        except nova_exception.StaleVolumeMount:
+            mounted = False
+            LOG.info('Fixing previous mount %s which was not '
+                     'unmounted correctly.', mount_path)
+            umount_volume(mount_path)
+        except nova_exception.InvalidVolume:
+            mounted = False
 
         if not mounted:
             mount_volume(quobyte_volume,
                          mount_path,
                          CONF.libvirt.quobyte_client_cfg)
 
-        validate_volume(mount_path)
+        try:
+            validate_volume(mount_path)
+        except (nova_exception.InvalidVolume,
+                nova_exception.StaleVolumeMount) as nex:
+            LOG.error("Could not mount Quobyte volume: %s", nex)
 
     @utils.synchronized('connect_qb_volume')
     def disconnect_volume(self, connection_info, instance):
         """Disconnect the volume."""
 
-        quobyte_volume = self._normalize_export(
-                                        connection_info['data']['export'])
         mount_path = self._get_mount_path(connection_info)
-
-        if libvirt_utils.is_mounted(mount_path, 'quobyte@' + quobyte_volume):
-            umount_volume(mount_path)
+        try:
+            validate_volume(mount_path)
+        except (nova_exception.InvalidVolume,
+                nova_exception.StaleVolumeMount) as exc:
+            LOG.warning("Could not disconnect Quobyte volume mount: %s", exc)
         else:
-            LOG.info("Trying to disconnected unmounted volume at %s",
-                     mount_path)
+            umount_volume(mount_path)
 
     def _normalize_export(self, export):
         protocol = SOURCE_PROTOCOL + "://"
