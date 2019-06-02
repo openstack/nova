@@ -28,6 +28,7 @@ terminating it.
 import base64
 import binascii
 import contextlib
+import copy
 import functools
 import inspect
 import sys
@@ -4025,6 +4026,33 @@ class ComputeManager(manager.Manager):
 
         do_confirm_resize(context, instance, migration.id)
 
+    def _get_updated_nw_info_with_pci_mapping(self, nw_info, pci_mapping):
+        # NOTE(adrianc): This method returns a copy of nw_info if modifications
+        # are made else it returns the original nw_info.
+        updated_nw_info = nw_info
+        if nw_info and pci_mapping:
+            updated_nw_info = copy.deepcopy(nw_info)
+            for vif in updated_nw_info:
+                if vif['vnic_type'] in network_model.VNIC_TYPES_SRIOV:
+                    try:
+                        vif_pci_addr = vif['profile']['pci_slot']
+                        new_addr = pci_mapping[vif_pci_addr].address
+                        vif['profile']['pci_slot'] = new_addr
+                        LOG.debug("Updating VIF's PCI address for VIF %(id)s. "
+                                  "Original value %(orig_val)s, "
+                                  "new value %(new_val)s",
+                                  {'id': vif['id'],
+                                   'orig_val': vif_pci_addr,
+                                   'new_val': new_addr})
+                    except (KeyError, AttributeError):
+                        with excutils.save_and_reraise_exception():
+                            # NOTE(adrianc): This should never happen. If we
+                            # get here it means there is some inconsistency
+                            # with either 'nw_info' or 'pci_mapping'.
+                            LOG.error("Unexpected error when updating network "
+                                      "information with PCI mapping.")
+        return updated_nw_info
+
     def _confirm_resize(self, context, instance, migration=None):
         """Destroys the source instance."""
         self._notify_about_instance_usage(context, instance,
@@ -4043,9 +4071,16 @@ class ComputeManager(manager.Manager):
         # NOTE(tr3buchet): tear down networks on source host
         self.network_api.setup_networks_on_host(context, instance,
                            migration.source_compute, teardown=True)
-
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
+
+        # NOTE(adrianc): Populate old PCI device in VIF profile
+        # to allow virt driver to properly unplug it from Hypervisor.
+        pci_mapping = (instance.migration_context.
+                       get_pci_mapping_for_migration(True))
+        network_info = self._get_updated_nw_info_with_pci_mapping(
+            network_info, pci_mapping)
+
         # TODO(mriedem): Get BDMs here and pass them to the driver.
         self.driver.confirm_migration(context, migration, instance,
                                       network_info)
