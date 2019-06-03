@@ -280,8 +280,8 @@ class MetadataRequestHandler(wsgi.Application):
             encodeutils.to_utf8(CONF.neutron.metadata_proxy_shared_secret),
             encodeutils.to_utf8(requestor_id),
             hashlib.sha256).hexdigest()
-
-        if not secutils.constant_time_compare(expected_signature, signature):
+        if (not signature or
+            not secutils.constant_time_compare(expected_signature, signature)):
             if requestor_id:
                 LOG.warning('X-Instance-ID-Signature: %(signature)s does '
                             'not match the expected value: '
@@ -292,7 +292,6 @@ class MetadataRequestHandler(wsgi.Application):
                              'expected_signature': expected_signature,
                              'requestor_id': requestor_id,
                              'requestor_address': requestor_address})
-
             msg = _('Invalid proxy request signature.')
             raise webob.exc.HTTPForbidden(explanation=msg)
 

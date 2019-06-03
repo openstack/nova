@@ -1529,6 +1529,34 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertEqual(200, response.status_int)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_metadata_lb_proxy_not_signed(self, mock_get_client):
+
+        shared_secret = "testing1234"
+        self.flags(
+            metadata_proxy_shared_secret=shared_secret,
+            service_metadata_proxy=True, group='neutron')
+
+        self.expected_instance_id = b'a-b-c-d'
+
+        # with X-Metadata-Provider
+        proxy_lb_id = 'edge-x'
+
+        mock_client = mock_get_client()
+        mock_client.list_ports.return_value = {
+            'ports': [{'device_id': 'a-b-c-d', 'tenant_id': 'test'}]}
+        mock_client.list_subnets.return_value = {
+            'subnets': [{'network_id': 'f-f-f-f'}]}
+
+        response = fake_request(
+            self, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Metadata-Provider': proxy_lb_id})
+        self.assertEqual(403, response.status_int)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_metadata_lb_proxy_signed_fail(self, mock_get_client):
 
         shared_secret = "testing1234"
