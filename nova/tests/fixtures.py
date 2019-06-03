@@ -1503,13 +1503,13 @@ class NeutronFixture(fixtures.Fixture):
                            lambda *args, **kwargs: self)
 
     @staticmethod
-    def fake_create_port_binding(client, port_id, data):
+    def fake_create_port_binding(context, client, port_id, data):
         # TODO(mriedem): Make this smarter by keeping track of our bindings
         # per port so we can reflect the status accurately.
         return fake_requests.FakeResponse(200, content=jsonutils.dumps(data))
 
     @staticmethod
-    def fake_delete_port_binding(client, port_id, host):
+    def fake_delete_port_binding(context, client, port_id, host):
         # TODO(mriedem): Make this smarter by keeping track of our bindings
         # per port so we can reflect the status accurately.
         return fake_requests.FakeResponse(204)
