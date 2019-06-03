@@ -52,7 +52,8 @@ class MigrateServerController(wsgi.Controller):
             body['migrate'] is not None):
             host_name = body['migrate'].get('host')
 
-        instance = common.get_instance(self.compute_api, context, id)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       expected_attrs=['flavor'])
 
         # We could potentially move this check to conductor and avoid the
         # extra API call to neutron when we support move operations with ports
