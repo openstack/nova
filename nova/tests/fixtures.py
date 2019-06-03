@@ -188,6 +188,12 @@ class StandardLogging(fixtures.Fixture):
         self.useFixture(
             fixtures.MonkeyPatch('oslo_log.log.setup', fake_logging_setup))
 
+    def delete_stored_logs(self):
+        # NOTE(gibi): this depends on the internals of the fixtures.FakeLogger.
+        # This could be enhanced once the PR
+        # https://github.com/testing-cabal/fixtures/pull/42 merges
+        self.logger._output.truncate(0)
+
 
 class OutputStreamCapture(fixtures.Fixture):
     """Capture output streams during tests.
