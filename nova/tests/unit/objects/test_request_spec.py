@@ -232,13 +232,18 @@ class _TestRequestSpecObject(object):
         filt_props['group_policies'] = set(['affinity'])
         filt_props['group_hosts'] = set(['fake1'])
         filt_props['group_members'] = set(['fake-instance1'])
-
-        spec = objects.RequestSpec()
-        spec._populate_group_info(filt_props)
-        self.assertIsInstance(spec.instance_group, objects.InstanceGroup)
-        self.assertEqual('affinity', spec.instance_group.policy)
-        self.assertEqual(['fake1'], spec.instance_group.hosts)
-        self.assertEqual(['fake-instance1'], spec.instance_group.members)
+        # Make sure it can handle group uuid not being present.
+        for group_uuid in (None, uuids.group_uuid):
+            if group_uuid:
+                filt_props['group_uuid'] = group_uuid
+            spec = objects.RequestSpec()
+            spec._populate_group_info(filt_props)
+            self.assertIsInstance(spec.instance_group, objects.InstanceGroup)
+            self.assertEqual('affinity', spec.instance_group.policy)
+            self.assertEqual(['fake1'], spec.instance_group.hosts)
+            self.assertEqual(['fake-instance1'], spec.instance_group.members)
+            if group_uuid:
+                self.assertEqual(uuids.group_uuid, spec.instance_group.uuid)
 
     def test_populate_group_info_missing_values(self):
         filt_props = {}
@@ -489,7 +494,8 @@ class _TestRequestSpecObject(object):
                                            memory_mb=8192.0),
             instance_group=objects.InstanceGroup(hosts=['fake1'],
                                                  policy='affinity',
-                                                 members=['inst1', 'inst2']),
+                                                 members=['inst1', 'inst2'],
+                                                 uuid=uuids.group_uuid),
             scheduler_hints={'foo': ['bar']},
             requested_destination=fake_dest)
         expected = {'ignore_hosts': ['ignoredhost'],
@@ -505,6 +511,7 @@ class _TestRequestSpecObject(object):
                     'group_hosts': set(['fake1']),
                     'group_policies': set(['affinity']),
                     'group_members': set(['inst1', 'inst2']),
+                    'group_uuid': uuids.group_uuid,
                     'scheduler_hints': {'foo': 'bar'},
                     'requested_destination': fake_dest}
         self.assertEqual(expected, spec.to_legacy_filter_properties_dict())
