@@ -12,6 +12,7 @@
 
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
+from oslo_utils import timeutils
 
 from nova import context as nova_context
 from nova import exception
@@ -40,6 +41,28 @@ class TestRequestFilter(test.NoDBTestCase):
             filter.assert_called_once_with(mock.sentinel.context,
                                            mock.sentinel.reqspec)
 
+    @mock.patch.object(timeutils, 'now')
+    def test_log_timer(self, mock_now):
+        mock_now.return_value = 123
+        result = False
+
+        @request_filter.trace_request_filter
+        def tester(c, r):
+            mock_now.return_value += 2
+            return result
+
+        with mock.patch.object(request_filter, 'LOG') as log:
+            # With a False return, no log should be emitted
+            tester(None, None)
+            log.debug.assert_not_called()
+
+            # With a True return, elapsed time should be logged
+            result = True
+            tester(None, None)
+            log.debug.assert_called_once_with('Request filter %r'
+                                              ' took %.1f seconds',
+                                              'tester', 2.0)
+
     @mock.patch('nova.objects.AggregateList.get_by_metadata')
     def test_require_tenant_aggregate_disabled(self, getmd):
         self.flags(limit_tenants_to_placement_aggregate=False,
@@ -49,7 +72,8 @@ class TestRequestFilter(test.NoDBTestCase):
         self.assertFalse(getmd.called)
 
     @mock.patch('nova.objects.AggregateList.get_by_metadata')
-    def test_require_tenant_aggregate(self, getmd):
+    @mock.patch.object(request_filter, 'LOG')
+    def test_require_tenant_aggregate(self, mock_log, getmd):
         getmd.return_value = [
             objects.Aggregate(
                 uuid=uuids.agg1,
@@ -71,6 +95,10 @@ class TestRequestFilter(test.NoDBTestCase):
         # necessarily just the one from context.
         getmd.assert_called_once_with(self.context, value='owner')
 
+        log_lines = [c[0][0] for c in mock_log.debug.call_args_list]
+        self.assertIn('filter added aggregates', log_lines[0])
+        self.assertIn('took %.1f seconds', log_lines[1])
+
     @mock.patch('nova.objects.AggregateList.get_by_metadata')
     def test_require_tenant_aggregate_no_match(self, getmd):
         self.flags(placement_aggregate_required_for_tenants=True,
@@ -87,12 +115,16 @@ class TestRequestFilter(test.NoDBTestCase):
             self.context, mock.MagicMock())
 
     @mock.patch('nova.objects.AggregateList.get_by_metadata')
-    def test_map_az(self, getmd):
+    @mock.patch.object(request_filter, 'LOG')
+    def test_map_az(self, mock_log, getmd):
         getmd.return_value = [objects.Aggregate(uuid=uuids.agg1)]
         reqspec = objects.RequestSpec(availability_zone='fooaz')
         request_filter.map_az_to_placement_aggregate(self.context, reqspec)
         self.assertEqual([uuids.agg1],
                          reqspec.requested_destination.aggregates)
+        log_lines = [c[0][0] for c in mock_log.debug.call_args_list]
+        self.assertIn('filter added aggregates', log_lines[0])
+        self.assertIn('took %.1f seconds', log_lines[1])
 
     @mock.patch('nova.objects.AggregateList.get_by_metadata')
     def test_map_az_no_hint(self, getmd):
@@ -182,7 +214,8 @@ class TestRequestFilter(test.NoDBTestCase):
         request_filter.require_image_type_support(self.context, reqspec)
         self.assertEqual({}, reqspec.flavor.extra_specs)
 
-    def test_require_image_type_support_adds_trait(self):
+    @mock.patch.object(request_filter, 'LOG')
+    def test_require_image_type_support_adds_trait(self, mock_log):
         self.flags(query_placement_for_image_type_support=True,
                    group='scheduler')
         reqspec = objects.RequestSpec(
@@ -194,3 +227,7 @@ class TestRequestFilter(test.NoDBTestCase):
         self.assertEqual({'trait:COMPUTE_IMAGE_TYPE_RAW': 'required'},
                          reqspec.flavor.extra_specs)
         self.assertEqual(set(), reqspec.flavor.obj_what_changed())
+
+        log_lines = [c[0][0] for c in mock_log.debug.call_args_list]
+        self.assertIn('added required trait', log_lines[0])
+        self.assertIn('took %.1f seconds', log_lines[1])
