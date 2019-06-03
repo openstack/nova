@@ -90,7 +90,6 @@ from nova.tests.unit.objects import test_diagnostics
 from nova.tests.unit.objects import test_pci_device
 from nova.tests.unit.objects import test_vcpu_model
 from nova.tests.unit.virt.libvirt import fake_imagebackend
-from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
 from nova import version
@@ -13789,16 +13788,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.host.Host._get_domain')
     @mock.patch.object(libvirt_guest.Guest, 'get_xml_desc')
     def test_get_console_output_logrotate(self, mock_get_xml, get_domain):
-        fake_libvirt_utils.files['console.log'] = b'uvwxyz'
-        fake_libvirt_utils.files['console.log.0'] = b'klmnopqrst'
-        fake_libvirt_utils.files['console.log.1'] = b'abcdefghij'
+        fake_files = {}
+        fake_files['console.log'] = b'uvwxyz'
+        fake_files['console.log.0'] = b'klmnopqrst'
+        fake_files['console.log.1'] = b'abcdefghij'
 
         def mock_path_exists(path):
-            return os.path.basename(path) in fake_libvirt_utils.files
+            return os.path.basename(path) in fake_files
 
         def mock_last_bytes(path, count):
-            with fake_libvirt_utils.file_open(path) as flo:
-                return nova.privsep.path._last_bytes_inner(flo, count)
+            flo = io.BytesIO(fake_files[os.path.basename(path)])
+            return nova.privsep.path._last_bytes_inner(flo, count)
 
         xml = """
         <domain type='kvm'>
@@ -13847,10 +13847,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # span across all files with more bytes than available
         self.assertEqual(b'abcdefghijklmnopqrstuvwxyz', _get_logd_output(30))
         # files are not available
-        fake_libvirt_utils.files = {}
+        fake_files = {}
         self.assertEqual('', _get_logd_output(30))
-        # reset the file for other tests
-        fake_libvirt_utils.files['console.log'] = b'01234567890'
 
     def test_get_host_ip_addr(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -17864,7 +17862,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(1, mock_lm.call_count)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_live_migration")
-    @mock.patch.object(fake_libvirt_utils, "is_valid_hostname")
+    @mock.patch('nova.virt.libvirt.utils.is_valid_hostname')
     def test_live_migration_hostname_invalid(self, mock_hostname, mock_lm):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         mock_hostname.return_value = False
