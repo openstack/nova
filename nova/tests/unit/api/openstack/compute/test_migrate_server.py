@@ -132,7 +132,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
             mock_resize.assert_called_once_with(
                 self.context, instance, host_name=self.host_name)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=None,
+                                              expected_attrs=['flavor'],
                                               cell_down_support=False)
 
     def test_migrate_too_many_instances(self):
