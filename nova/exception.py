@@ -1282,14 +1282,6 @@ class FlavorExtraSpecUpdateCreateFailed(NovaException):
                 "after %(retries)d retries.")
 
 
-class CellNotFound(NotFound):
-    msg_fmt = _("Cell %(cell_name)s doesn't exist.")
-
-
-class CellExists(NovaException):
-    msg_fmt = _("Cell with name %(name)s already exists.")
-
-
 class CellTimeout(NotFound):
     msg_fmt = _("Timeout waiting for response from cell")
 
