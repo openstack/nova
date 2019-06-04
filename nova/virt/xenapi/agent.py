@@ -422,11 +422,18 @@ class SimpleDH(object):
                'pass:%s' % self._shared, '-nosalt']
         if decrypt:
             cmd.append('-d')
-        out, err = processutils.execute(
-            *cmd, process_input=encodeutils.safe_encode(text))
-        if err:
-            raise RuntimeError(_('OpenSSL error: %s') % err)
-        return out
+        try:
+            out, err = processutils.execute(
+                *cmd,
+                process_input=encodeutils.safe_encode(text),
+                check_exit_code=True)
+            if err:
+                LOG.warning("OpenSSL stderr: %s", err)
+            return out
+        except processutils.ProcessExecutionError as e:
+            raise RuntimeError(
+                _('OpenSSL errored with exit code %(exit_code)d: %(stderr)s') %
+                 {'exit_code': e.exit_code, 'stderr': e.stderr})
 
     def encrypt(self, text):
         return self._run_ssl(text).strip('\n')
