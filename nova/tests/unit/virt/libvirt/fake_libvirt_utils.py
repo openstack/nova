@@ -179,6 +179,10 @@ def cpu_features_to_traits(features):
     return libvirt_utils.cpu_features_to_traits(features)
 
 
+def get_machine_type(image_meta):
+    return libvirt_utils.get_machine_type(image_meta)
+
+
 def get_default_machine_type(arch):
     return libvirt_utils.get_default_machine_type(arch)
 

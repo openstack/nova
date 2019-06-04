@@ -6195,10 +6195,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                      image_meta, disk_info)
         self.assertNotEqual(cfg.os_cmdline, "")
 
+    @mock.patch('nova.virt.libvirt.utils.get_arch',
+                return_value=fields.Architecture.ARMV7)
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
-    def test_get_guest_config_armv7(self, mock_numa, mock_storage):
+    def test_get_guest_config_armv7(self, mock_numa, mock_storage,
+                                    mock_get_arch):
         def get_host_capabilities_stub(self):
             cpu = vconfig.LibvirtConfigGuestCPU()
             cpu.arch = fields.Architecture.ARMV7
@@ -6227,12 +6230,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                      image_meta, disk_info)
         self.assertEqual(cfg.os_mach_type, "virt")
 
+    @mock.patch('nova.virt.libvirt.utils.get_arch',
+                return_value=fields.Architecture.AARCH64)
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
     @mock.patch('os.path.exists', return_value=True)
     def test_get_guest_config_aarch64(self, mock_path_exists,
-                                      mock_numa, mock_storage):
+                                      mock_numa, mock_storage, mock_get_arch):
         def get_host_capabilities_stub(self):
             cpu = vconfig.LibvirtConfigGuestCPU()
             cpu.arch = fields.Architecture.AARCH64
@@ -6279,12 +6284,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(TEST_AMOUNT_OF_PCIE_SLOTS, num_ports)
 
+    @mock.patch('nova.virt.libvirt.utils.get_arch',
+                return_value=fields.Architecture.AARCH64)
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
     @mock.patch('os.path.exists', return_value=True)
     def test_get_guest_config_aarch64_with_graphics(self, mock_path_exists,
-                                                    mock_numa, mock_storage):
+                                                    mock_numa, mock_storage,
+                                                    mock_get_arch):
         def get_host_capabilities_stub(self):
             cpu = vconfig.LibvirtConfigGuestCPU()
             cpu.arch = fields.Architecture.AARCH64
@@ -6320,18 +6328,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(usbhost_exists)
         self.assertTrue(keyboard_exists)
 
-    def test_get_guest_config_machine_type_s390(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-
-        caps = vconfig.LibvirtConfigCaps()
-        caps.host = vconfig.LibvirtConfigCapsHost()
-        caps.host.cpu = vconfig.LibvirtConfigGuestCPU()
+    @mock.patch('nova.virt.libvirt.utils.get_arch')
+    def test_get_guest_config_machine_type_s390(self, mock_get_arch):
 
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         host_cpu_archs = (fields.Architecture.S390, fields.Architecture.S390X)
         for host_cpu_arch in host_cpu_archs:
-            caps.host.cpu.arch = host_cpu_arch
-            os_mach_type = drvr._get_machine_type(image_meta, caps)
+            mock_get_arch.return_value = host_cpu_arch
+            os_mach_type = libvirt_utils.get_machine_type(image_meta)
             self.assertEqual('s390-ccw-virtio', os_mach_type)
 
     def test_get_guest_config_machine_type_through_image_meta(self):

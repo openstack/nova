@@ -814,6 +814,29 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         self.assertRaises(exception.NovaException,
                 blockinfo.get_disk_bus_for_disk_dev, 'inv', 'val')
 
+    @mock.patch('nova.virt.libvirt.utils.get_machine_type')
+    @mock.patch('nova.virt.libvirt.utils.get_arch')
+    def test_get_disk_bus_for_device_type_cdrom_with_q35_get_arch(self,
+            mock_get_arch, mock_get_machine_type):
+        instance = objects.Instance(**self.test_instance)
+        mock_get_machine_type.return_value = 'pc-q35-rhel8.0.0'
+        mock_get_arch.return_value = obj_fields.Architecture.X86_64
+        image_meta = {'properties': {}}
+        image_meta = objects.ImageMeta.from_dict(image_meta)
+        bus = blockinfo.get_disk_bus_for_device_type(instance, 'kvm',
+                                                     image_meta,
+                                                     device_type='cdrom')
+        self.assertEqual('sata', bus)
+
+    def test_get_disk_bus_for_device_type_cdrom_with_q35_image_meta(self):
+        instance = objects.Instance(**self.test_instance)
+        image_meta = {'properties': {'hw_machine_type': 'pc-q35-rhel8.0.0'}}
+        image_meta = objects.ImageMeta.from_dict(image_meta)
+        bus = blockinfo.get_disk_bus_for_device_type(instance, 'kvm',
+                                                     image_meta,
+                                                     device_type='cdrom')
+        self.assertEqual('sata', bus)
+
     def test_get_config_drive_type_default(self):
         config_drive_type = blockinfo.get_config_drive_type()
         self.assertEqual('cdrom', config_drive_type)
