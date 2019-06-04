@@ -222,14 +222,14 @@ def get_disk_bus_for_device_type(instance,
                                  device_type="disk"):
     """Determine the best disk bus to use for a device type.
 
-       Considering the currently configured virtualization
-       type, return the optimal disk_bus to use for a given
-       device type. For example, for a disk on KVM it will
-       return 'virtio', while for a CDROM it will return 'ide'
-       on x86_64 and 'scsi' on ppc64.
+    Considering the currently configured virtualization type, return the
+    optimal disk_bus to use for a given device type. For example, for a disk
+    on KVM it will return 'virtio', while for a CDROM, it will return 'ide'
+    for the 'pc' machine type on x86_64, 'sata' for the 'q35' machine type on
+    x86_64 and 'scsi' on ppc64.
 
-       Returns the disk_bus, or returns None if the device
-       type is not supported for this virtualization
+    Returns the disk_bus, or returns None if the device type is not supported
+    for this virtualization
     """
 
     # Prefer a disk bus set against the image first of all
@@ -268,6 +268,14 @@ def get_disk_bus_for_device_type(instance,
                     obj_fields.Architecture.S390X,
                     obj_fields.Architecture.AARCH64):
                 return "scsi"
+            machine_type = libvirt_utils.get_machine_type(image_meta)
+            # NOTE(lyarwood): We can't be any more explicit here as QEMU
+            # provides a version of the Q35 machine type per release.
+            # Additionally downstream distributions can also provide their own.
+            if machine_type and 'q35' in machine_type:
+                # NOTE(lyarwood): The Q35 machine type does not provide an IDE
+                # bus and as such we must use a SATA bus for cdroms.
+                return "sata"
             else:
                 return "ide"
         elif device_type == "disk":

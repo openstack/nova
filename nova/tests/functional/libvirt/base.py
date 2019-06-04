@@ -17,6 +17,8 @@ import copy
 import fixtures
 import mock
 
+from nova.objects import fields as obj_fields
+
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import test_servers as base
@@ -54,6 +56,13 @@ class ServersTestBase(base.ServersTestBase):
         _p = mock.patch('nova.virt.libvirt.host.Host.get_connection')
         self.mock_conn = _p.start()
         self.addCleanup(_p.stop)
+        # As above, mock the 'get_arch' function as we may need to provide
+        # different host architectures during some tests.
+        _a = mock.patch('nova.virt.libvirt.utils.get_arch')
+        self.mock_arch = _a.start()
+        # Default to X86_64
+        self.mock_arch.return_value = obj_fields.Architecture.X86_64
+        self.addCleanup(_a.stop)
 
     def _setup_compute_service(self):
         # NOTE(stephenfin): We don't start the compute service here as we wish
