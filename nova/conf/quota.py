@@ -332,6 +332,15 @@ consume quota usage for cores and ram. Note that because of this, it will be
 possible for a request to unshelve a server to be rejected if the user does not
 have enough quota available to support the cores and ram needed by the server
 to be unshelved.
+
+The ``populate_queued_for_delete`` and ``populate_user_id`` online data
+migrations must be completed before usage can be counted from placement. Until
+the data migration is complete, the system will fall back to legacy quota usage
+counting from cell databases depending on the result of an EXISTS database
+query during each quota check, if this configuration option is set to True.
+Operators who want to avoid the performance hit from the EXISTS queries should
+wait to set this configuration option to True until after they have completed
+their online data migrations via ``nova-manage db online_data_migrations``.
 """),
 ]
 

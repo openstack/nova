@@ -196,7 +196,9 @@ class QuotaTestCase(test.NoDBTestCase):
         self.assertEqual(1536, count['user']['ram'])
 
     def test_user_id_queued_for_delete_populated(self):
-        ctxt = context.RequestContext('fake-user', 'fake-project')
+        ctxt = context.RequestContext(
+            test_instance_mapping.sample_mapping['user_id'],
+            test_instance_mapping.sample_mapping['project_id'])
 
         # One deleted or SOFT_DELETED instance with user_id=None, should not be
         # considered by the check.
