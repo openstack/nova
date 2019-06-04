@@ -57,7 +57,7 @@ additional information on notifications.
         help="Default notification level for outgoing notifications."),
     cfg.StrOpt(
         'notification_format',
-        default='both',
+        default='unversioned',
         choices=[
             ('both', 'Both the legacy unversioned and the new versioned '
              'notifications are emitted'),
@@ -67,12 +67,14 @@ additional information on notifications.
         ],
         deprecated_group='DEFAULT',
         help="""
-Specifies which notification format shall be used by nova.
+Specifies which notification format shall be emitted by nova.
 
-The default value is fine for most deployments and rarely needs to be changed.
-This value can be set to 'versioned' once the infrastructure moves closer to
-consuming the newer format of notifications. After this occurs, this option
-will be removed.
+The versioned notification interface are in feature parity with the legacy
+interface and the versioned interface is actively developed so new consumers
+should used the versioned interface.
+
+However, the legacy interface is heavily used by ceilometer and other mature
+OpenStack components so it remains the default.
 
 Note that notifications can be completely disabled by setting ``driver=noop``
 in the ``[oslo_messaging_notifications]`` group.
