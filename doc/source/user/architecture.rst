@@ -18,7 +18,7 @@
 Nova System Architecture
 ========================
 
-Nova is comprised of multiple server processes, each performing different
+Nova comprises multiple server processes, each performing different
 functions. The user-facing interface is a REST API, while internally Nova
 components communicate via an RPC message passing mechanism.
 
