@@ -77,6 +77,10 @@ class ConfFixture(config_fixture.Config):
         # tests.
         self.conf.set_default('keep_alive', False, group="wsgi")
 
+        # many tests synchronizes on the reception of versioned notifications
+        self.conf.set_default(
+            'notification_format', "both", group="notifications")
+
         config.parse_args([], default_config_files=[], configure_db=False,
                           init_rpc=False)
         policy_opts.set_defaults(self.conf)

@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    To resolve `bug 1805659`_ the default value of
+    ``[notifications]/notification_format`` is changed from ``both`` to
+    ``unversioned``. For more information see the `documentation of the config
+    option`_. If you are using versioned notifications, you will need to adjust
+    your config to ``versioned``"
+
+    .. _`bug 1805659`: https://bugs.launchpad.net/nova/+bug/1805659
+    .. _`documentation of the config option`: https://docs.openstack.org/nova/latest/configuration/config.html#notifications.notification_format
