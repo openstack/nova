@@ -754,15 +754,6 @@ class HostManager(object):
             context, cells, compute_uuids=compute_uuids)
         return self._get_host_states(context, compute_nodes, services)
 
-    def get_all_host_states(self, context):
-        """Returns a generator of HostStates that represents all the hosts
-        the HostManager knows about. Also, each of the consumable resources
-        in HostState are pre-populated and adjusted based on data in the db.
-        """
-        compute_nodes, services = self._get_computes_for_cells(context,
-                                                               self.cells)
-        return self._get_host_states(context, compute_nodes, services)
-
     def _get_host_states(self, context, compute_nodes, services):
         """Returns a generator over HostStates given a list of computes.
 
