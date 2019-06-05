@@ -48,7 +48,12 @@
       Run tox-based functional tests for the OpenStack Nova project with Nova
       specific irrelevant-files list. Uses tox with the ``functional``
       environment.
+
+      This job also provides a parent for other projects to run the nova
+      functional tests on their own changes.
     required-projects:
+      # including nova here makes this job reusable by other projects
+      - openstack/nova
       - openstack/placement
     irrelevant-files: &functional-irrelevant-files
       - ^.*\.rst$
@@ -57,6 +62,9 @@
       - ^nova/locale/.*$
       - ^releasenotes/.*$
     vars:
+      # explicitly stating the work dir makes this job reusable by other
+      # projects
+      zuul_work_dir: src/opendev.org/openstack/nova
       tox_envlist: functional
       tox_install_siblings: true
     timeout: 3600
@@ -93,10 +101,18 @@
       Run tox-based functional tests for the OpenStack Nova project
       under cPython version 3.7 with Nova specific irrelevant-files list.
       Uses tox with the ``functional-py37`` environment.
+
+      This job also provides a parent for other projects to run the nova
+      functional tests on their own changes.
     required-projects:
+      # including nova here makes this job reusable by other projects
+      - openstack/nova
       - openstack/placement
     irrelevant-files: *functional-irrelevant-files
     vars:
+      # explicitly stating the work dir makes this job reusable by other
+      # projects
+      zuul_work_dir: src/opendev.org/openstack/nova
       tox_envlist: functional-py37
       bindep_profile: test py37
       python_version: 3.7
