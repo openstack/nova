@@ -10,12 +10,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from __future__ import absolute_import
+
+import fixtures
 import mock
 
 from nova import context
+from nova.network import model as network_model
 from nova import objects
 from nova import test
-from nova.tests import fixtures
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_server_actions
@@ -24,7 +28,7 @@ from nova.tests.unit import fake_server_actions
 class ComputeManagerTestCase(test.TestCase):
     def setUp(self):
         super(ComputeManagerTestCase, self).setUp()
-        self.useFixture(fixtures.SpawnIsSynchronousFixture())
+        self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
         self.useFixture(cast_as_call.CastAsCall(self))
         self.conductor = self.start_service('conductor')
         self.start_service('scheduler')
@@ -32,6 +36,10 @@ class ComputeManagerTestCase(test.TestCase):
         self.context = context.RequestContext('fake', 'fake')
         fake_server_actions.stub_out_action_events(self)
         fake_network.set_stub_network_methods(self)
+        self.useFixture(fixtures.MockPatch(
+            'nova.network.base_api.NetworkAPI.get_instance_nw_info',
+            return_value=network_model.NetworkInfo(),
+        ))
 
     def test_instance_fault_message_no_traceback_with_retry(self):
         """This test simulates a spawn failure on the last retry attempt.

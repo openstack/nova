@@ -1447,9 +1447,6 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def unplug_vifs(self, instance, network_info):
-        # NOTE(markus_z): 2015-08-18
-        # The compute manager doesn't use this interface, which seems odd
-        # since the manager should be the controlling thing here.
         """Unplug virtual interfaces (VIFs) from networks.
 
         The counter action is :func:`plug_vifs`.
