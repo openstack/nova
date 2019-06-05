@@ -40,7 +40,10 @@ def main():
     config.parse_args(sys.argv)
     logging.setup(CONF, "nova")
 
-    if not CONF.cells.enable:
+    # NOTE(stephenfin): Yes, this is silly, but the whole thing is being
+    # removed and we want to make the diff in individual changes as small as
+    # possible
+    if True:
         LOG.error('Nova network is deprecated and not supported '
                   'except as required for CellsV1 deployments.')
         return 1

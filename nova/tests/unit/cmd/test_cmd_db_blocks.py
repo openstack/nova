@@ -17,7 +17,6 @@ import contextlib
 import mock
 
 from nova.cmd import compute
-from nova.cmd import network
 from nova.db import api as db
 from nova import exception
 from nova import test
@@ -46,12 +45,5 @@ class ComputeMainTest(test.NoDBTestCase):
     def test_compute_main_blocks_db(self):
         with restore_db():
             self._call_main(compute)
-            self.assertRaises(exception.DBNotAllowed,
-                              db.instance_get, 1, 2)
-
-    def test_network_main_blocks_db(self):
-        self.flags(enable=True, group='cells')
-        with restore_db():
-            self._call_main(network)
             self.assertRaises(exception.DBNotAllowed,
                               db.instance_get, 1, 2)
