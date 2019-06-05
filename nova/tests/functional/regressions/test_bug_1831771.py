@@ -97,8 +97,6 @@ class TestDelete(integrated_helpers.ProviderUsageBaseTestCase):
             # assert that we spawned the instance, and unplugged vifs on
             # cleanup
             mock_spawn.assert_called()
-            # FIXME(mdbooth): We should have called unplug_vifs in cleanup, but
-            # we didn't due to bug 1831771
-            mock_unplug_vifs.assert_not_called()
+            mock_unplug_vifs.assert_called()
             # FIXME(mdbooth): Bug 1848666
             self.assertTrue(active_after_deleting_error[0])
