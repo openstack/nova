@@ -427,7 +427,7 @@ class HostManager(object):
             count = 0
             if not computes_by_cell:
                 computes_by_cell = {}
-                for cell in self.cells:
+                for cell in self.cells.values():
                     with context_module.target_cell(context, cell) as cctxt:
                         cell_cns = objects.ComputeNodeList.get_all(
                             cctxt).objects
@@ -735,24 +735,26 @@ class HostManager(object):
                 temp_cells.objects.remove(c)
                 # once its done break for optimization
                 break
-        # NOTE(danms, tssurya): global list of cells cached which
-        # will be refreshed every time a SIGHUP is sent to the scheduler.
-        self.cells = temp_cells
+        # NOTE(danms, tssurya): global dict, keyed by cell uuid, of cells
+        # cached which will be refreshed every time a SIGHUP is sent to the
+        # scheduler.
+        self.cells = {cell.uuid: cell for cell in temp_cells}
         LOG.debug('Found %(count)i cells: %(cells)s',
                   {'count': len(self.cells),
-                   'cells': ', '.join([c.uuid for c in self.cells])})
+                   'cells': ', '.join(self.cells)})
         # NOTE(tssurya): Global cache of only the enabled cells. This way
         # scheduling is limited only to the enabled cells. However this
         # cache will be refreshed every time a cell is disabled or enabled
         # or when a new cell is created as long as a SIGHUP signal is sent
         # to the scheduler.
-        self.enabled_cells = [c for c in self.cells if not c.disabled]
+        self.enabled_cells = [c for c in temp_cells if not c.disabled]
         # Filtering the disabled cells only for logging purposes.
-        disabled_cells = [c for c in self.cells if c.disabled]
-        LOG.debug('Found %(count)i disabled cells: %(cells)s',
-                  {'count': len(disabled_cells),
-                   'cells': ', '.join(
-                   [c.identity for c in disabled_cells])})
+        if LOG.isEnabledFor(logging.DEBUG):
+            disabled_cells = [c for c in temp_cells if c.disabled]
+            LOG.debug('Found %(count)i disabled cells: %(cells)s',
+                      {'count': len(disabled_cells),
+                       'cells': ', '.join(
+                       [c.identity for c in disabled_cells])})
 
     def get_host_states_by_uuids(self, context, compute_uuids, spec_obj):
 

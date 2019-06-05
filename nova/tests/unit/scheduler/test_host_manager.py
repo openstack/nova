@@ -108,10 +108,12 @@ class HostManagerTestCase(test.NoDBTestCase):
                         return_value=cells) as mock_cm:
             self.host_manager.refresh_cells_caches()
             mock_cm.assert_called_once()
+        # Cell2 is not in the enabled list.
         self.assertEqual(2, len(self.host_manager.enabled_cells))
         self.assertEqual(cell_uuid3, self.host_manager.enabled_cells[1].uuid)
+        # But it is still in the full list.
         self.assertEqual(3, len(self.host_manager.cells))
-        self.assertEqual(cell_uuid2, self.host_manager.cells[1].uuid)
+        self.assertIn(cell_uuid2, self.host_manager.cells)
 
     def test_refresh_cells_caches_except_cell0(self):
         ctxt = nova_context.RequestContext('fake-user', 'fake_project')
@@ -546,7 +548,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         mock_get_by_binary.return_value = fakes.SERVICES
         context = 'fake_context'
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.cells)
+            context, self.host_manager.enabled_cells)
 
         # _get_host_states returns a generator, so make a map from it
         host_states_map = {(state.host, state.nodename): state for state in
@@ -612,7 +614,7 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         context = nova_context.get_admin_context()
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.cells)
+            context, self.host_manager.enabled_cells)
 
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
@@ -641,7 +643,7 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         context = nova_context.get_admin_context()
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.cells)
+            context, self.host_manager.enabled_cells)
 
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
@@ -672,7 +674,7 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         context = nova_context.get_admin_context()
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.cells)
+            context, self.host_manager.enabled_cells)
 
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
@@ -718,7 +720,7 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         context = nova_context.get_admin_context()
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.cells)
+            context, self.host_manager.enabled_cells)
 
         self.host_manager._get_host_states(context, compute_nodes, services)
 
@@ -1171,7 +1173,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         context = 'fake_context'
 
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.cells)
+            context, self.host_manager.enabled_cells)
 
         # _get_host_states returns a generator, so make a map from it
         host_states_map = {(state.host, state.nodename): state for state in
@@ -1197,7 +1199,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
         # first call: all nodes
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.cells)
+            context, self.host_manager.enabled_cells)
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
         # _get_host_states returns a generator, so make a map from it
@@ -1207,7 +1209,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
         # second call: just running nodes
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.cells)
+            context, self.host_manager.enabled_cells)
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
         host_states_map = {(state.host, state.nodename): state for state in
@@ -1227,7 +1229,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
         # first call: all nodes
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.cells)
+            context, self.host_manager.enabled_cells)
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
         # _get_host_states returns a generator, so make a map from it
@@ -1237,7 +1239,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
         # second call: no nodes
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.cells)
+            context, self.host_manager.enabled_cells)
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
         host_states_map = {(state.host, state.nodename): state for state in
